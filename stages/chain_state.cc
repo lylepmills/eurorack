@@ -159,9 +159,9 @@ void ChainState::ReceiveRight() {
       request_.request = REQUEST_NONE;
 //    } else if (rx_index == 0xf) {
     } else if (rx_index == 0x7) {
-      // NOTE: I'm pretty sure the above change to the if-statement correctly
+      // TODO: I'm pretty sure the above change to the if-statement correctly
       // solves for the updates to how index extraction works, but not 100%
-      // positive.
+      // positive, verify.
 
       // This suspiciously looks like a state change request packet!
       // We will take care of it later.
@@ -312,7 +312,7 @@ void ChainState::Configure(
                 !channel_state_[channel].configuration().harmosc;
             ++channel;
             ++num_channels;
-            add_more_segments &= channel < last_channel
+            add_more_segments &= channel < last_channel;
           }
           if (dirty || num_channels != oscillator[i].num_channels()) {
             oscillator[i].Configure(num_channels, harmosc_waveshapes);
@@ -337,7 +337,7 @@ void ChainState::Configure(
       harmosc_fundamental = -1.0f;
       
       // Create a normal channel, trying to extend it as far as possible.
-      size_t num_segments = 0;
+      int num_segments = 0;
       bool add_more_segments = true;
       bool dirty = false;
       
@@ -418,6 +418,8 @@ inline void ChainState::UpdateLocalState(
         break;
       case HARMOSC_STATUS_END:
         tx_harmosc_fundamental_ = -1.0f;
+        break;
+      default:
         break;
     }
   }
@@ -713,8 +715,6 @@ void ChainState::HandleRequest(Settings* settings) {
       uint8_t new_loop_bit = loop_bit;
       if ((channel >= request_.argument[0] && channel < request_.argument[3])) {
         new_loop_bit = 0x0;
-        // NOTE: everything in the range is cancelled by default, and only becomes a
-        // new loop if it meets the later checks
       }
       if (channel == request_.argument[1] || channel == request_.argument[2]) {
         if (request_.argument[1] == request_.argument[2]) {

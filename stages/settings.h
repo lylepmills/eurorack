@@ -52,7 +52,7 @@ struct ChannelCalibrationData {
 struct PersistentData {
   ChannelCalibrationData channel_calibration_data[kNumChannels];
   uint8_t padding[16];
-  
+
   enum { tag = 0x494C4143 };  // CALI
 };
 

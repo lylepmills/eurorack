@@ -29,6 +29,7 @@
 #ifndef STAGES_OSCILLATOR_H_
 #define STAGES_OSCILLATOR_H_
 
+#include <algorithm>
 #include <cmath>
 
 #include "stmlib/dsp/dsp.h"
@@ -37,8 +38,12 @@
 #include "stmlib/utils/random.h"
 
 #include "stages/resources.h"
+#include "stages/shared_constants.h"
 
 namespace stages {
+
+using namespace std;
+using namespace stmlib;
 
 enum OscillatorShape {
   OSCILLATOR_SHAPE_IMPULSE_TRAIN,
@@ -52,12 +57,11 @@ enum OscillatorShape {
   OSCILLATOR_SHAPE_SQUARE_TRIANGLE,
 };
 
-const float kSampleRate = 31250.0f;
 const float kMiddleCHz = 261.6255f;
 const float kMaxFrequency = 0.25f;
 const float kMinFrequency = 0.00001f;
-float kScalingGainBasis = 0.66f;
-float kScalingCoefficient = 0.78758f;
+const float kScalingGainBasis = 0.66f;
+const float kScalingCoefficient = 0.78758f;
 
 // TODO - experiment with these, originals below
 //float ouroboros_ratios[] = {

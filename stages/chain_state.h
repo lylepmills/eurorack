@@ -32,13 +32,12 @@
 #include "stmlib/stmlib.h"
 
 #include "stages/io_buffer.h"
-#include "stages/segment_generator.h"
 #include "stages/oscillator.h"
+#include "stages/segment_generator.h"
+#include "stages/shared_constants.h"
 
 namespace stages {
 
-const size_t kMaxChainSize = 6;
-const size_t kMaxNumChannels = kMaxChainSize * kNumChannels;
 const size_t kPacketSize = 24;
 
 class SerialLink;
@@ -174,9 +173,9 @@ class ChainState {
   struct LeftToRightPacket {
     uint8_t last_patched_channel;  // 1 byte
     int8_t segment;  // 1 byte
+    Loop last_loop;  // 2 bytes
     float phase;  // 4 bytes
     float harmosc_fundamental;  // 4 bytes
-    Loop last_loop;  // 2 bytes
     ChannelBitmask switch_pressed[kMaxChainSize];  // 6 bytes
     ChannelBitmask input_patched[kMaxChainSize];  // 6 bytes
   };

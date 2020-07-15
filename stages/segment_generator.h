@@ -34,12 +34,10 @@
 #include "stmlib/utils/gate_flags.h"
 
 #include "stages/delay_line_16_bits.h"
-
 #include "stages/ramp_extractor.h"
+#include "stages/shared_constants.h"
 
 namespace stages {
-
-const float kSampleRate = 31250.0f;
 
 // Each segment generator can handle up to 36 segments. That's a bit of a waste
 // of RAM because the 6 generators running on a module will never have to deal

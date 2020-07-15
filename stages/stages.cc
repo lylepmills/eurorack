@@ -24,20 +24,20 @@
 
 #include <stm32f37x_conf.h>
 
-#include "chain_state.h"
-#include "cv_reader.h"
-#include "drivers/dac.h"
-#include "drivers/gate_inputs.h"
-#include "drivers/serial_link.h"
-#include "drivers/system.h"
-#include "factory_test.h"
-#include "io_buffer.h"
-#include "oscillator.h"
-#include "segment_generator.h"
-#include "settings.h"
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/dsp/units.h"
-#include "ui.h"
+#include "stages/chain_state.h"
+#include "stages/cv_reader.h"
+#include "stages/drivers/dac.h"
+#include "stages/drivers/gate_inputs.h"
+#include "stages/drivers/serial_link.h"
+#include "stages/drivers/system.h"
+#include "stages/factory_test.h"
+#include "stages/io_buffer.h"
+#include "stages/oscillator.h"
+#include "stages/segment_generator.h"
+#include "stages/settings.h"
+#include "stages/ui.h"
 
 using namespace stages;
 using namespace std;
@@ -101,9 +101,6 @@ SegmentGenerator::Output out[kBlockSize];
 float harmosc_out[kBlockSize];
 
 void Process(IOBuffer::Block* block, size_t size) {
-  // NOTE: I don't think we need to pass an out equivalent for oscillator, since
-  // that is just used for passing segment/phase info from R->L, which there is
-  // no need for in the case of the oscillator.
   chain_state.Update(
       *block,
       &settings,

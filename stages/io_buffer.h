@@ -32,13 +32,14 @@
 #include "stmlib/stmlib.h"
 #include "stmlib/utils/gate_flags.h"
 
+#include "stages/shared_constants.h"
+
 #include <algorithm>
 
 namespace stages {
 
 const size_t kNumBlocks = 2;
 const size_t kBlockSize = 8;
-const size_t kNumChannels = 6;
 
 class IOBuffer {
  public:
