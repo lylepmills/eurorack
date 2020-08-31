@@ -100,6 +100,15 @@ class PotController {
     return state_ == POT_STATE_HIDDEN_PARAMETER;
   }
   
+  inline void LockMainParameter(float main_parameter) {
+    Lock();
+    *main_parameter_ = main_parameter;
+  }
+
+  inline float main_parameter() {
+    return *main_parameter_;
+  }
+
   inline void Unlock() {
     if (state_ == POT_STATE_HIDDEN_PARAMETER || was_catching_up_) {
       state_ = POT_STATE_CATCHING_UP;
