@@ -116,6 +116,7 @@ void Init() {
   
   BufferAllocator allocator(shared_buffer, 16384);
   voice.Init(&allocator);
+  patch.aux_crossfade = 1.0f;
   
   volatile size_t counter = 1000000;
   while (counter--);

@@ -197,6 +197,14 @@ void Voice::Render(
 
   bool already_enveloped = pp_s.already_enveloped;
   e->Render(p, out_buffer_, aux_buffer_, size, &already_enveloped);
+
+  // Crossfade the aux output between main and aux models.
+  float out_proportion = 1.0f - patch.aux_crossfade;
+  float aux_proportion = patch.aux_crossfade;
+
+  for (size_t i = 0; i < kMaxBlockSize; ++i) {
+    aux_buffer_[i] = (aux_buffer_[i] * aux_proportion) + (out_buffer_[i] * out_proportion);
+  }
   
   bool lpg_bypass = already_enveloped || \
       (!modulations.level_patched && !modulations.trigger_patched);

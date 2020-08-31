@@ -74,8 +74,12 @@ class PotController {
     offset_ = offset;
   }
   
+  inline bool locked() {
+    return state_ == POT_STATE_LOCKING || state_ == POT_STATE_HIDDEN_PARAMETER;
+  }
+
   inline void Lock() {
-    if (state_ == POT_STATE_LOCKING || state_ == POT_STATE_HIDDEN_PARAMETER) {
+    if (locked()) {
       return;
     }
     if (hidden_parameter_) {
@@ -84,6 +88,14 @@ class PotController {
     }
   }
   
+  inline void ToggleLock() {
+    if (locked()) {
+      Unlock();
+    } else {
+      Lock();
+    }
+  }
+
   inline bool editing_hidden_parameter() const {
     return state_ == POT_STATE_HIDDEN_PARAMETER;
   }

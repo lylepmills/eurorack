@@ -127,6 +127,7 @@ struct Patch {
   int engine;
   float decay;
   float lpg_colour;
+  float aux_crossfade;
 };
 
 struct Modulations {
