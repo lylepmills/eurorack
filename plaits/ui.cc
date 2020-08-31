@@ -69,7 +69,7 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
   
   // Bind pots to parameters.
   pots_[POTS_ADC_CHANNEL_FREQ_POT].Init(
-      &transposition_, NULL, 2.0f, -1.0f);
+      &transposition_, &patch->aux_crossfade, 2.0f, -1.0f);
   pots_[POTS_ADC_CHANNEL_HARMONICS_POT].Init(
       &patch->harmonics, &octave_, 1.0f, 0.0f);
   pots_[POTS_ADC_CHANNEL_TIMBRE_POT].Init(
@@ -117,6 +117,7 @@ void Ui::SaveState() {
   state->lpg_colour = static_cast<uint8_t>(patch_->lpg_colour * 256.0f);
   state->decay = static_cast<uint8_t>(patch_->decay * 256.0f);
   state->octave = static_cast<uint8_t>(octave_ * 256.0f);
+
   settings_->SaveState();
 }
 
@@ -261,12 +262,15 @@ void Ui::ReadSwitches() {
           mode_ = UI_MODE_DISPLAY_OCTAVE;
         }
         
-        // Long, double press: enter calibration mode.
+        // Long, double press: lock coarse frequency.
         if (press_time_[0] >= kLongPressTime &&
             press_time_[1] >= kLongPressTime) {
           press_time_[0] = press_time_[1] = 0;
+          ignore_release_[0] = true;
+          ignore_release_[1] = true;
+
           RealignPots();
-          StartCalibration();
+          pots_[POTS_ADC_CHANNEL_FREQ_POT].ToggleLock();
         }
         
         // Long press or actually editing any hidden parameter: display value
