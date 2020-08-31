@@ -75,6 +75,8 @@ bool Settings::Init() {
   state_.decay = 128;
   state_.octave = 255;
   state_.color_blind = 0;
+  state_.aux_crossfade = 1.0f;
+  state_.frequency_pot_main_parameter = 1000.0f;
   
   bool success = chunk_storage_.Init(&persistent_data_, &state_);
   

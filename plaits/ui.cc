@@ -54,19 +54,7 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
 
   ui_task_ = 0;
   mode_ = UI_MODE_NORMAL;
-  
-  LoadState();
-  
-  if (switches_.pressed_immediate(SWITCH_ROW_2)) {
-    State* state = settings_->mutable_state();
-    if (state->color_blind == 1) {
-      state->color_blind = 0; 
-    } else {
-      state->color_blind = 1; 
-    }
-    settings_->SaveState();
-  }
-  
+
   // Bind pots to parameters.
   pots_[POTS_ADC_CHANNEL_FREQ_POT].Init(
       &transposition_, &patch->aux_crossfade, 2.0f, -1.0f);
@@ -83,6 +71,18 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
   pots_[POTS_ADC_CHANNEL_MORPH_ATTENUVERTER].Init(
       &patch->morph_modulation_amount, NULL, 2.0f, -1.0f);
   
+  LoadState();
+
+  if (switches_.pressed_immediate(SWITCH_ROW_2)) {
+    State* state = settings_->mutable_state();
+    if (state->color_blind == 1) {
+      state->color_blind = 0;
+    } else {
+      state->color_blind = 1;
+    }
+    settings_->SaveState();
+  }
+
   // Keep track of the agreement between the random sequence sent to the 
   // switch and the value read by the ADC.
   normalization_detection_count_ = 0;
@@ -109,6 +109,10 @@ void Ui::LoadState() {
   patch_->lpg_colour = static_cast<float>(state.lpg_colour) / 256.0f;
   patch_->decay = static_cast<float>(state.decay) / 256.0f;
   octave_ = static_cast<float>(state.octave) / 256.0f;
+  patch_->aux_crossfade = static_cast<float>(state.aux_crossfade) / 256.0f;
+  if (state.frequency_pot_main_parameter < 999.0f) {
+    pots_[POTS_ADC_CHANNEL_FREQ_POT].LockMainParameter(state.frequency_pot_main_parameter);
+  }
 }
 
 void Ui::SaveState() {
@@ -117,6 +121,12 @@ void Ui::SaveState() {
   state->lpg_colour = static_cast<uint8_t>(patch_->lpg_colour * 256.0f);
   state->decay = static_cast<uint8_t>(patch_->decay * 256.0f);
   state->octave = static_cast<uint8_t>(octave_ * 256.0f);
+  state->aux_crossfade = static_cast<uint8_t>(patch_->aux_crossfade * 256.0f);
+  if (pots_[POTS_ADC_CHANNEL_FREQ_POT].locked()) {
+    state->frequency_pot_main_parameter = pots_[POTS_ADC_CHANNEL_FREQ_POT].main_parameter();
+  } else {
+    state->frequency_pot_main_parameter = 1000.0f;
+  }
 
   settings_->SaveState();
 }
@@ -271,6 +281,7 @@ void Ui::ReadSwitches() {
 
           RealignPots();
           pots_[POTS_ADC_CHANNEL_FREQ_POT].ToggleLock();
+          SaveState();
         }
         
         // Long press or actually editing any hidden parameter: display value

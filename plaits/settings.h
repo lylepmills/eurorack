@@ -57,7 +57,9 @@ struct State {
   uint8_t decay;
   uint8_t octave;
   uint8_t color_blind;
-  uint8_t padding[3];
+  uint8_t aux_crossfade;
+  float frequency_pot_main_parameter;
+  uint8_t padding[6];
   enum { tag = 0x54415453 };  // STAT
 };
 
