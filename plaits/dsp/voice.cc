@@ -161,6 +161,11 @@ void Voice::Render(
             0.0f : patch.morph_modulation_amount);
   }
 
+  if (kOctaveSwitch) {
+    float octave_setting = floor(patch.freqlock_param * 6.999f) - 3.0f;
+    note += octave_setting * 12.0f;
+  }
+
   p.note = ApplyModulations(
       patch.note + note,
       patch.frequency_modulation_amount,
@@ -198,12 +203,14 @@ void Voice::Render(
   bool already_enveloped = pp_s.already_enveloped;
   e->Render(p, out_buffer_, aux_buffer_, size, &already_enveloped);
 
-  // Crossfade the aux output between main and aux models.
-  float out_proportion = 1.0f - patch.aux_crossfade;
-  float aux_proportion = patch.aux_crossfade;
+  if (kAuxCrossfade) {
+    // Crossfade the aux output between main and aux models.
+    float out_proportion = 1.0f - patch.freqlock_param;
+    float aux_proportion = patch.freqlock_param;
 
-  for (size_t i = 0; i < kMaxBlockSize; ++i) {
-    aux_buffer_[i] = (aux_buffer_[i] * aux_proportion) + (out_buffer_[i] * out_proportion);
+    for (size_t i = 0; i < kMaxBlockSize; ++i) {
+      aux_buffer_[i] = (aux_buffer_[i] * aux_proportion) + (out_buffer_[i] * out_proportion);
+    }
   }
   
   bool lpg_bypass = already_enveloped || \

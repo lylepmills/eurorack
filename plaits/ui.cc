@@ -57,7 +57,7 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
 
   // Bind pots to parameters.
   pots_[POTS_ADC_CHANNEL_FREQ_POT].Init(
-      &transposition_, &patch->aux_crossfade, 2.0f, -1.0f);
+      &transposition_, &patch->freqlock_param, 2.0f, -1.0f);
   pots_[POTS_ADC_CHANNEL_HARMONICS_POT].Init(
       &patch->harmonics, &octave_, 1.0f, 0.0f);
   pots_[POTS_ADC_CHANNEL_TIMBRE_POT].Init(
@@ -109,7 +109,7 @@ void Ui::LoadState() {
   patch_->lpg_colour = static_cast<float>(state.lpg_colour) / 256.0f;
   patch_->decay = static_cast<float>(state.decay) / 256.0f;
   octave_ = static_cast<float>(state.octave) / 256.0f;
-  patch_->aux_crossfade = static_cast<float>(state.aux_crossfade) / 256.0f;
+  patch_->freqlock_param = static_cast<float>(state.freqlock_param) / 256.0f;
   if (state.frequency_pot_main_parameter < 999.0f) {
     pots_[POTS_ADC_CHANNEL_FREQ_POT].LockMainParameter(state.frequency_pot_main_parameter);
   }
@@ -121,7 +121,7 @@ void Ui::SaveState() {
   state->lpg_colour = static_cast<uint8_t>(patch_->lpg_colour * 256.0f);
   state->decay = static_cast<uint8_t>(patch_->decay * 256.0f);
   state->octave = static_cast<uint8_t>(octave_ * 256.0f);
-  state->aux_crossfade = static_cast<uint8_t>(patch_->aux_crossfade * 256.0f);
+  state->freqlock_param = static_cast<uint8_t>(patch_->freqlock_param * 256.0f);
   if (pots_[POTS_ADC_CHANNEL_FREQ_POT].locked()) {
     state->frequency_pot_main_parameter = pots_[POTS_ADC_CHANNEL_FREQ_POT].main_parameter();
   } else {

@@ -63,6 +63,12 @@ const int kMaxEngines = 16;
 const int kMaxTriggerDelay = 8;
 const int kTriggerDelay = 5;
 
+// At most one of these should be enabled, they are the
+// different options for what to do with a locked
+// frequency knob.
+const bool kAuxCrossfade = false;
+const bool kOctaveSwitch = true;
+
 class ChannelPostProcessor {
  public:
   ChannelPostProcessor() { }
@@ -127,7 +133,7 @@ struct Patch {
   int engine;
   float decay;
   float lpg_colour;
-  float aux_crossfade;
+  float freqlock_param;
 };
 
 struct Modulations {
