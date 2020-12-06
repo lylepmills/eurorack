@@ -49,13 +49,14 @@ struct State {
   uint8_t easter_egg;
   uint8_t color_blind;
   uint8_t frequency_locked;
+  uint8_t phase_invert;
   float locked_transpose;
 };
 
 struct SettingsData {
   CalibrationData calibration_data; // 40 bytes
-  State state;  // 9 bytes
-  uint8_t padding[15];
+  State state;  // 10 bytes
+  uint8_t padding[14];
 };
 
 class Settings {
@@ -74,6 +75,10 @@ class Settings {
     data_.state.easter_egg = !data_.state.easter_egg;
   }
   
+  inline void TogglePhaseInversion() {
+    data_.state.phase_invert = !data_.state.phase_invert;
+  }
+
   inline void ToggleFrequencyLocking() {
     data_.state.frequency_locked = !data_.state.frequency_locked;
   }
