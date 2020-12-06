@@ -202,10 +202,10 @@ void CvScaler::Read(Patch* patch, PerformanceState* performance_state, Settings*
   State* mutable_state = settings->mutable_state();
 
   if (first_read_ && mutable_state->frequency_locked) {
-    // If frequency is supposedly locked but the locked transpose value is excessive,
-    // this probably indicates the data is in a weird state such as right after a new install
-    // of this firmware.
-    if (fabs(mutable_state->locked_transpose) > 100.0f) {
+    // If frequency is supposedly locked but the locked transpose value is out of the expected
+    // range 0-60, this probably indicates the data is in a weird state such as right after a
+    // new install of this firmware.
+    if (mutable_state->locked_transpose < -1.0f || mutable_state->locked_transpose > 61.0f) {
       mutable_state->frequency_locked = false;
       settings_dirty = true;
     } else {
@@ -216,10 +216,9 @@ void CvScaler::Read(Patch* patch, PerformanceState* performance_state, Settings*
 
   float transpose = 60.0f * adc_lp_[ADC_CHANNEL_POT_FREQUENCY];
 
-  float octave_transpose = 12.0f * (floor(adc_lp_[ADC_CHANNEL_POT_FREQUENCY] * 6.999f) - 3.0f);
   float hysteresis = 0.0f;
   if (frequency_locked_ && mutable_state->frequency_locked) {
-    transpose = mutable_state->locked_transpose + octave_transpose;
+    transpose = mutable_state->locked_transpose;
   } else {
     hysteresis = transpose - transpose_ > 0.0f ? -0.3f : +0.3f;
     // Quantize the transpose value if and only if the V/OCT input is in use and it isn't

@@ -38,7 +38,7 @@
 
 namespace rings {
 
-const int32_t kLongPressDuration = 3000;
+const int32_t kLongPressDuration = 2000;
 
 using namespace std;
 using namespace stmlib;
