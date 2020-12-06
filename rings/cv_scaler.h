@@ -95,7 +95,7 @@ class CvScaler {
   ~CvScaler() { }
   
   void Init(CalibrationData* calibration_data);
-  void Read(Patch* patch, PerformanceState* performance_state);
+  void Read(Patch* patch, PerformanceState* performance_state, bool frequency_locked);
 
   void DetectAudioNormalization(Codec::Frame* in, size_t size);
 
