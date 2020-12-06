@@ -117,8 +117,17 @@ void FillBuffer(Codec::Frame* input, Codec::Frame* output, size_t size) {
   }
   
   for (size_t i = 0; i < size; ++i) {
-    output[i].l = Clip16(static_cast<int32_t>(out[i] * 32768.0f));
-    output[i].r = Clip16(static_cast<int32_t>(aux[i] * 32768.0f));
+    float crossfade_amount = 0.0f;
+    float r_phase = 1.0f;
+    if (settings.state().frequency_locked) {
+      crossfade_amount = cv_scaler.frequency_pot_value();
+      // Flipped to avoid phasing problems when using the Odd output only.
+      r_phase = -1.0f;
+    }
+    float l_out = Crossfade(out[i], aux[i], crossfade_amount) * 32768.0f;
+    float r_out = Crossfade(aux[i], out[i], crossfade_amount) * 32768.0f * r_phase;
+    output[i].l = Clip16(static_cast<int32_t>(l_out));
+    output[i].r = Clip16(static_cast<int32_t>(r_out));
   }
   ui.set_strumming_flag(performance_state.strum);
 #ifdef PROFILE_INTERRUPT
