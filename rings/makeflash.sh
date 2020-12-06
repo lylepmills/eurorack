@@ -3,10 +3,9 @@
 # Adapted for mac from https://github.com/joeSeggiola/eurorack/blob/stages-multi/stages/makeflash.sh
 
 # This script builds Rings on the vagrant development machine, creating 
-# the WAV file if desired and plays it or uploads it via a connected
-# ARM-USB-OCD-H programmer.
+# the WAV file if desired and plays it.
 # Usage:
-#   ./makeflash.sh [clean] [size] [wav] [upload]
+#   ./makeflash.sh [clean] [size] [wav]
 
 # Build command
 COMMAND=""
@@ -19,9 +18,6 @@ if [[ $* == *size* ]]; then
 fi
 if [[ $* == *wav* ]]; then
     COMMAND="$COMMAND && make -f rings/makefile wav"
-fi
-if [[ $* == *wav* ]]; then
-    COMMAND="$COMMAND && make -f rings/makefile upload"
 fi
 
 # Show command

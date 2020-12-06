@@ -49,12 +49,13 @@ struct State {
   uint8_t easter_egg;
   uint8_t color_blind;
   uint8_t frequency_locked;
+  float locked_transpose;
 };
 
 struct SettingsData {
   CalibrationData calibration_data; // 40 bytes
-  State state;  // 5 bytes
-  uint8_t padding[19];
+  State state;  // 9 bytes
+  uint8_t padding[15];
 };
 
 class Settings {
