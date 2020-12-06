@@ -80,6 +80,8 @@ void CvScaler::Init(CalibrationData* calibration_data) {
   inhibit_strum_ = 0;
   fm_cv_ = 0.0f;
   
+  first_read_ = true;
+  frequency_locked_ = false;
   normalization_probe_enabled_ = true;
   normalization_probe_forced_state_ = false;
 }
@@ -139,7 +141,7 @@ void CvScaler::DetectNormalization() {
     destination = value; \
   }
 
-void CvScaler::Read(Patch* patch, PerformanceState* performance_state) {
+void CvScaler::Read(Patch* patch, PerformanceState* performance_state, Settings* settings) {
   // Process all CVs / pots.
   for (size_t i = 0; i < ADC_CHANNEL_LAST; ++i) {
     const ChannelSettings& settings = channel_settings_[i];
@@ -186,18 +188,7 @@ void CvScaler::Read(Patch* patch, PerformanceState* performance_state) {
   performance_state->fm = fm_cv_ * adc_lp_[ADC_CHANNEL_ATTENUVERTER_FREQUENCY];
   CONSTRAIN(performance_state->fm, -48.0f, 48.0f);
   
-  float transpose = 60.0f * adc_lp_[ADC_CHANNEL_POT_FREQUENCY];
-  float hysteresis = transpose - transpose_ > 0.0f ? -0.3f : +0.3f;
-  transpose_ = static_cast<int32_t>(transpose + hysteresis + 0.5f);
-  
-  float note = calibration_data_->pitch_offset;
-  note += adc_lp_[ADC_CHANNEL_CV_V_OCT] * calibration_data_->pitch_scale;
-  
-  performance_state->note = note;
-  performance_state->tonic = 12.0f + transpose_;
-  
   DetectNormalization();
-  
   // Strumming / internal exciter triggering logic.
   bool internal_strum = normalization_detector_trigger_.normalized();
   bool internal_exciter = normalization_detector_exciter_.normalized();
@@ -206,13 +197,59 @@ void CvScaler::Read(Patch* patch, PerformanceState* performance_state) {
   performance_state->internal_strum = internal_strum;
   performance_state->internal_note = internal_note;
   performance_state->strum = trigger_input_.rising_edge();
-  
-  if (performance_state->internal_note) {
+
+  bool settings_dirty = false;
+  State* mutable_state = settings->mutable_state();
+
+  if (first_read_ && mutable_state->frequency_locked) {
+    // If frequency is supposedly locked but the locked transpose value is excessive,
+    // this probably indicates the data is in a weird state such as right after a new install
+    // of this firmware.
+    if (fabs(mutable_state->locked_transpose) > 100.0f) {
+      mutable_state->frequency_locked = false;
+      settings_dirty = true;
+    } else {
+      frequency_locked_ = true;
+    }
+  }
+  first_read_ = false;
+
+  float transpose = 60.0f * adc_lp_[ADC_CHANNEL_POT_FREQUENCY];
+
+  float octave_transpose = 12.0f * (floor(adc_lp_[ADC_CHANNEL_POT_FREQUENCY] * 6.999f) - 3.0f);
+  float hysteresis = 0.0f;
+  if (frequency_locked_ && mutable_state->frequency_locked) {
+    transpose = mutable_state->locked_transpose + octave_transpose;
+  } else {
+    hysteresis = transpose - transpose_ > 0.0f ? -0.3f : +0.3f;
+    // Quantize the transpose value if and only if the V/OCT input is in use and it isn't
+    // already locked.
+    if (!internal_note) {
+      transpose = floor(transpose + hysteresis + 0.5f);
+    }
+    transpose_ = transpose;
+    // First time through Read() since locking.
+    if (mutable_state->frequency_locked) {
+      mutable_state->locked_transpose = transpose;
+      settings_dirty = true;
+    }
+  }
+  frequency_locked_ = mutable_state->frequency_locked;
+
+  if (settings_dirty) {
+    settings->Save();
+  }
+
+  performance_state->tonic = 12.0f + transpose;
+  if (internal_note) {
     // Remove quantization when nothing is plugged in the V/OCT input.
     performance_state->note = 0.0f;
-    performance_state->tonic = 12.0f + transpose;
+  } else {
+    float note = calibration_data_->pitch_offset;
+    note += adc_lp_[ADC_CHANNEL_CV_V_OCT] * calibration_data_->pitch_scale;
+    performance_state->note = note;
   }
-  
+
   // Hysteresis on chord.
   float chord = calibration_data_->offset[ADC_CHANNEL_CV_STRUCTURE] - \
       adc_.float_value(ADC_CHANNEL_CV_STRUCTURE);
