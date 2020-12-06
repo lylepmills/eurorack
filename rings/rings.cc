@@ -121,8 +121,16 @@ void FillBuffer(Codec::Frame* input, Codec::Frame* output, size_t size) {
     float r_phase = 1.0f;
     if (settings.state().frequency_locked) {
       crossfade_amount = cv_scaler.frequency_pot_value();
-      // Flipped to avoid phasing problems when using the Odd output only.
-      r_phase = -1.0f;
+      // When using the Odd output only r_phase should ideally be negative, to avoid
+      // phase cancellation in the center of the frequency pot range. But when using both
+      // outputs, r_phase is ideally positive so that the Even and Odd outputs aren't
+      // out of phase with each other (especially noticeable in the center when both
+      // waves have the same proportion of even/odd components).
+      // We can't determine here in software which circumstance we're in so the choice
+      // is left to the user depending how they are using the module.
+      if (settings.state().phase_invert) {
+        r_phase = -1.0f;
+      }
     }
     float l_out = Crossfade(out[i], aux[i], crossfade_amount) * 32768.0f;
     float r_out = Crossfade(aux[i], out[i], crossfade_amount) * 32768.0f * r_phase;

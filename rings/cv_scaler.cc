@@ -202,10 +202,11 @@ void CvScaler::Read(Patch* patch, PerformanceState* performance_state, Settings*
   State* mutable_state = settings->mutable_state();
 
   if (first_read_ && mutable_state->frequency_locked) {
-    // If frequency is supposedly locked but the locked transpose value is out of the expected
-    // range 0-60, this probably indicates the data is in a weird state such as right after a
-    // new install of this firmware.
-    if (mutable_state->locked_transpose < -1.0f || mutable_state->locked_transpose > 61.0f) {
+    // If any of the relevant state data is out of its expected range, this probably indicates
+    // it's just in weird state such as right after a new install of this firmware.
+    if (mutable_state->frequency_locked > 1 ||  // type uint8_t but boolean - should just be 0 or 1
+        mutable_state->locked_transpose < -1.0f ||
+        mutable_state->locked_transpose > 61.0f) {
       mutable_state->frequency_locked = false;
       settings_dirty = true;
     } else {
