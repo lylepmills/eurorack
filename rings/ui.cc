@@ -243,11 +243,7 @@ void Ui::OnSwitchPressed(const Event& e) {
 void Ui::OnSwitchReleased(const Event& e) {
   // Check if the other switch is still pressed.
   if (switches_.pressed(1 - e.control_id)) {
-    if (mode_ == UI_MODE_CALIBRATION_C1) {
-      StartNormalizationCalibration();
-    } else {
-      StartCalibration();
-    }
+    settings_->ToggleFrequencyLocking();
     press_time_[0] = press_time_[1] = 0;
     return;
   }

@@ -139,7 +139,7 @@ void CvScaler::DetectNormalization() {
     destination = value; \
   }
 
-void CvScaler::Read(Patch* patch, PerformanceState* performance_state) {
+void CvScaler::Read(Patch* patch, PerformanceState* performance_state, bool frequency_locked) {
   // Process all CVs / pots.
   for (size_t i = 0; i < ADC_CHANNEL_LAST; ++i) {
     const ChannelSettings& settings = channel_settings_[i];
@@ -188,13 +188,18 @@ void CvScaler::Read(Patch* patch, PerformanceState* performance_state) {
   
   float transpose = 60.0f * adc_lp_[ADC_CHANNEL_POT_FREQUENCY];
   float hysteresis = transpose - transpose_ > 0.0f ? -0.3f : +0.3f;
-  transpose_ = static_cast<int32_t>(transpose + hysteresis + 0.5f);
+  if (frequency_locked) {
+    transpose = transpose_;
+    hysteresis = 0.0f;
+  }
+  int32_t quantized_transpose = static_cast<int32_t>(transpose + hysteresis + 0.5f);
+  transpose_ = quantized_transpose;
   
   float note = calibration_data_->pitch_offset;
   note += adc_lp_[ADC_CHANNEL_CV_V_OCT] * calibration_data_->pitch_scale;
   
   performance_state->note = note;
-  performance_state->tonic = 12.0f + transpose_;
+  performance_state->tonic = 12.0f + quantized_transpose;
   
   DetectNormalization();
   
@@ -211,8 +216,11 @@ void CvScaler::Read(Patch* patch, PerformanceState* performance_state) {
     // Remove quantization when nothing is plugged in the V/OCT input.
     performance_state->note = 0.0f;
     performance_state->tonic = 12.0f + transpose;
+    // TODO - is this the right thing to do? we want
+    // 1. when you lock a frequency, it stays that way, when a jack is plugged or unplugged
+    // 2. it is possible to lock from either quantized (jack in) or unquantized (no jack in) state
+    transpose_ = transpose;
   }
-  
   // Hysteresis on chord.
   float chord = calibration_data_->offset[ADC_CHANNEL_CV_STRUCTURE] - \
       adc_.float_value(ADC_CHANNEL_CV_STRUCTURE);
