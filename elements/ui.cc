@@ -148,7 +148,7 @@ void Ui::OnSwitchPressed(const Event& e) {
       break;
     
     case 1:
-      mode_ = UI_MODE_CALIBRATION_1;
+      cv_scaler_->ToggleFrequencyLock();
       break;
     
     case 2:
