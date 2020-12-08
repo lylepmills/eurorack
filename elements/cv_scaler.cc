@@ -88,10 +88,20 @@ void CvScaler::Init() {
     }
     calibration_settings_.boot_in_easter_egg_mode = false;
     calibration_settings_.resonator_model = 0;
+    calibration_settings_.frequency_locked = false;
+    calibration_settings_.locked_pot_note = 0.0f;
     freshly_baked_ = true;
     SaveCalibration();
   }
   
+  // If any of the relevant state data is out of its expected range, this probably indicates
+  // it's just in weird state such as right after a new install of this firmware.
+  if (calibration_settings_.frequency_locked > 1 ||  // type uint8_t but boolean - should just be 0 or 1
+      calibration_settings_.locked_pot_note < -0.0f ||
+      calibration_settings_.locked_pot_note > 100.0f) {
+    calibration_settings_.frequency_locked = false;
+  }
+
   CONSTRAIN(calibration_settings_.resonator_model, 0, 2);
   
   note_ = 0.0f;
@@ -105,6 +115,12 @@ void CvScaler::SaveCalibration() {
   storage.ParsimoniousSave(calibration_settings_, &version_token_);
 }
 
+void CvScaler::ToggleFrequencyLock() {
+  calibration_settings_.frequency_locked = !calibration_settings_.frequency_locked;
+  calibration_settings_.locked_pot_note = pot_note();
+  SaveCalibration();
+}
+
 void CvScaler::ReadPanelPots() {
   // Read one pot from the front panel, and map it to the correct range.
   pots_.Scan();
@@ -112,12 +128,12 @@ void CvScaler::ReadPanelPots() {
   
   switch (law_[index]) {
     case LAW_LINEAR:
-      pot_raw_[index] = static_cast<float>(pots_.value(index)) / 65536.0f;
+      pot_raw_[index] = pot_value_scaled_unipolar(index);
       break;
     
     case LAW_QUADRATIC_BIPOLAR:
       {
-        float x = static_cast<float>(pots_.value(index)) / 32768.0f - 1.0f;
+        float x = pot_value_scaled_bipolar(index);
         float x2 = x * x * 3.3f;
         pot_raw_[index] = x < 0.0f ? -x2 : x2;
       }
@@ -125,7 +141,7 @@ void CvScaler::ReadPanelPots() {
     
     case LAW_QUARTIC_BIPOLAR:
       {
-        float x = static_cast<float>(pots_.value(index)) / 32768.0f - 1.0f;
+        float x = pot_value_scaled_bipolar(index);
         float x2 = x * x;
         float x4 = x2 * x2 * 3.3f;
         pot_raw_[index] = x < 0.0f ? -x4 : x4;
@@ -135,7 +151,7 @@ void CvScaler::ReadPanelPots() {
     case LAW_QUANTIZED_NOTE:
       {
         // 5 octaves.
-        float note = 60.0f * static_cast<float>(pots_.value(index)) / 65536.0f;
+        float note = 60.0f * pot_value_scaled_unipolar(index);
         pot_raw_[index] += 0.5f * (note - pot_raw_[index]);
         float n = pot_raw_[index];
         float hysteresis = n - pot_quantized_[index] > 0.0f ? -0.3f : +0.3f;
@@ -202,8 +218,13 @@ void CvScaler::Read(
   state->modulation = modulation_;
   
   state->note = note_;
-  state->note += pot_quantized_[POT_RESONATOR_COARSE] + 19.0f;
-  state->note += pot_lp_[POT_RESONATOR_FINE] * (2.0f / 3.3f);
+  if (calibration_settings_.frequency_locked) {
+    float octave_transpose = 12.0f * (floor(pot_value_scaled_unipolar(POT_RESONATOR_COARSE) * 6.999f) - 3.0f);
+    float semitone_transpose = 1.0f * (floor(pot_value_scaled_unipolar(POT_RESONATOR_FINE) * 12.999f) - 6.0f);
+    state->note += calibration_settings_.locked_pot_note + octave_transpose + semitone_transpose;
+  } else {
+    state->note += pot_note();
+  }
   state->strength = 1.0f - cv_.float_value(CV_ADC_PRESSURE);
 
   CONSTRAIN(state->strength, 0.0f, 1.0f);

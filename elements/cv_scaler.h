@@ -43,7 +43,9 @@ struct CalibrationSettings {
   float offset[CV_ADC_CHANNEL_LAST];
   uint8_t boot_in_easter_egg_mode;
   uint8_t resonator_model;
-  uint8_t padding[62];
+  uint8_t frequency_locked;
+  float locked_pot_note;
+  uint8_t padding[57];
 };
 
 class Patch;
@@ -122,6 +124,7 @@ class CvScaler {
   }
   
   void SaveCalibration();
+  void ToggleFrequencyLock();
   
   inline bool gate() const { return gate_; }
   inline uint8_t pot_value(size_t index) const {
@@ -148,6 +151,21 @@ class CvScaler {
     calibration_settings_.resonator_model = resonator_model;
   }
   
+  // ranges from (0 to 60) + 19 + (-2 to 2)
+  // = (17 to 81)
+  inline float pot_note() const {
+    return pot_quantized_[POT_RESONATOR_COARSE] + 19.0f +
+        (pot_lp_[POT_RESONATOR_FINE] * (2.0f / 3.3f));
+  }
+
+  inline float pot_value_scaled_unipolar(size_t index) {
+    return static_cast<float>(pots_.value(index)) / 65536.0f;
+  }
+
+  inline float pot_value_scaled_bipolar(size_t index) {
+    return static_cast<float>(pots_.value(index)) / 32768.0f - 1.0f;
+  }
+
   inline bool freshly_baked() const {
     return freshly_baked_;
   }
