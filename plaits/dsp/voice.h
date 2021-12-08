@@ -69,6 +69,8 @@ const int kTriggerDelay = 5;
 const bool kAuxCrossfade = true;
 const bool kOctaveSwitch = false;
 
+const bool kUseModelCVForAuxCrossfade = true;
+
 class ChannelPostProcessor {
  public:
   ChannelPostProcessor() { }
