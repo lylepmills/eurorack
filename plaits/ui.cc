@@ -38,6 +38,7 @@ namespace plaits {
 using namespace std;
 using namespace stmlib;
 
+static const int32_t kMediumPressTime = 200;
 static const int32_t kLongPressTime = 2000;
 
 #define ENABLE_LFO_MODE
@@ -213,6 +214,27 @@ void Ui::UpdateLEDs() {
         leds_.set(0, LED_COLOR_YELLOW);
       }
       break;
+
+    case UI_MODE_FREQUENCY_LOCK:
+      for (int i = 0; i < kNumLEDs; ++i) {
+        if (pots_[POTS_ADC_CHANNEL_FREQ_POT].locked()) {
+          if (settings_->state().color_blind == 0) {
+            leds_.set(i, LED_COLOR_RED);
+          } else {
+            // blink lights in color blind mode
+            if (pwm_counter < triangle) {
+              leds_.set(i, LED_COLOR_YELLOW);
+            }
+          }
+        } else {
+          if (settings_->state().color_blind == 0) {
+            leds_.set(i, LED_COLOR_GREEN);
+          } else {
+            leds_.set(i, LED_COLOR_YELLOW);
+          }
+        }
+      }
+      break;
     
     case UI_MODE_ERROR:
       if (pwm_counter < triangle) {
@@ -273,14 +295,21 @@ void Ui::ReadSwitches() {
         }
         
         // Long, double press: lock coarse frequency.
-        if (press_time_[0] >= kLongPressTime &&
-            press_time_[1] >= kLongPressTime) {
+        if (press_time_[0] >= kMediumPressTime &&
+            press_time_[1] >= kMediumPressTime) {
           press_time_[0] = press_time_[1] = 0;
           ignore_release_[0] = true;
           ignore_release_[1] = true;
 
           RealignPots();
           pots_[POTS_ADC_CHANNEL_FREQ_POT].ToggleLock();
+          // The below get locked when we first press each button, unlock them
+          // since we are not modifying the other hidden parameters.
+          pots_[POTS_ADC_CHANNEL_TIMBRE_POT].Unlock();
+          pots_[POTS_ADC_CHANNEL_MORPH_POT].Unlock();
+          pots_[POTS_ADC_CHANNEL_HARMONICS_POT].Unlock();
+
+          mode_ = UI_MODE_FREQUENCY_LOCK;
           SaveState();
         }
         
@@ -348,6 +377,14 @@ void Ui::ReadSwitches() {
           ignore_release_[i] = true;
           CalibrateC3();
           break;
+        }
+      }
+      break;
+
+    case UI_MODE_FREQUENCY_LOCK:
+      for (int i = 0; i < SWITCH_LAST; ++i) {
+        if (switches_.released(Switch(i))) {
+          mode_ = UI_MODE_NORMAL;
         }
       }
       break;
