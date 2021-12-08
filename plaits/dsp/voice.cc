@@ -108,7 +108,7 @@ void Voice::Render(
   // Engine selection.
   int engine_index = engine_quantizer_.Process(
       patch.engine,
-      engine_cv_,
+      kUseModelCVForAuxCrossfade ? 0.0f : engine_cv_,
       engines_.size(),
       0.25f);
   
@@ -203,13 +203,16 @@ void Voice::Render(
   bool already_enveloped = pp_s.already_enveloped;
   e->Render(p, out_buffer_, aux_buffer_, size, &already_enveloped);
 
+  // Crossfade the aux output between main and aux models.
   if (kAuxCrossfade) {
-    // Crossfade the aux output between main and aux models.
-    float out_proportion = 1.0f - patch.freqlock_param;
     float aux_proportion = patch.freqlock_param;
+    if (kUseModelCVForAuxCrossfade) {
+      aux_proportion += modulations.engine * 0.5f;
+    }
+    CONSTRAIN(aux_proportion, 0.0f, 1.0f);
 
     for (size_t i = 0; i < kMaxBlockSize; ++i) {
-      aux_buffer_[i] = (aux_buffer_[i] * aux_proportion) + (out_buffer_[i] * out_proportion);
+      aux_buffer_[i] = Crossfade(out_buffer_[i], aux_buffer_[i], aux_proportion);
     }
   }
   
