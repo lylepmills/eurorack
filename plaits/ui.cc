@@ -40,6 +40,7 @@ using namespace stmlib;
 
 static const int32_t kMediumPressTime = 200;
 static const int32_t kLongPressTime = 2000;
+static const int32_t kVeryLongPressTime = 5000;
 
 #define ENABLE_LFO_MODE
 
@@ -297,7 +298,6 @@ void Ui::ReadSwitches() {
         // Long, double press: lock coarse frequency.
         if (press_time_[0] >= kMediumPressTime &&
             press_time_[1] >= kMediumPressTime) {
-          press_time_[0] = press_time_[1] = 0;
           ignore_release_[0] = true;
           ignore_release_[1] = true;
 
@@ -383,9 +383,19 @@ void Ui::ReadSwitches() {
 
     case UI_MODE_FREQUENCY_LOCK:
       for (int i = 0; i < SWITCH_LAST; ++i) {
-        if (switches_.released(Switch(i))) {
+        // Keep counting press time so we can switch to calibration mode after a long press.
+        if (switches_.pressed(Switch(i))) {
+          ++press_time_[i];
+        } else {
+          press_time_[0] = press_time_[1] = 0;
           mode_ = UI_MODE_NORMAL;
+          break;
         }
+      }
+
+      if (press_time_[0] >= kVeryLongPressTime &&
+          press_time_[1] >= kVeryLongPressTime) {
+        StartCalibration();
       }
       break;
 
