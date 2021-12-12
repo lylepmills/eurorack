@@ -70,6 +70,7 @@ const bool kAuxCrossfade = true;
 const bool kOctaveSwitch = false;
 
 const bool kUseModelCVForAuxCrossfade = true;
+const bool kUseLevelCVForDecay = false;
 
 class ChannelPostProcessor {
  public:
