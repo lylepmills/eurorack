@@ -214,8 +214,11 @@ void Voice::Render(
   e->Render(p, out_buffer_, aux_buffer_, size, &already_enveloped);
 
   // Crossfade the aux output between main and aux models.
-  if (kAuxCrossfade) {
-    float aux_proportion = patch.freqlock_param;
+  if (kAuxCrossfade || kUseModelCVForAuxCrossfade) {
+    float aux_proportion = 0.5f;
+    if (kAuxCrossfade) {
+      aux_proportion = patch.freqlock_param;
+    }
     if (kUseModelCVForAuxCrossfade) {
       aux_proportion += modulations.engine * 0.5f;
     }
