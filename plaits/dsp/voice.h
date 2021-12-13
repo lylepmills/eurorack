@@ -66,8 +66,8 @@ const int kTriggerDelay = 5;
 // At most one of these should be enabled, they are the
 // different options for what to do with a locked
 // frequency knob.
-const bool kAuxCrossfade = true;
-const bool kOctaveSwitch = false;
+const bool kAuxCrossfade = false;
+const bool kOctaveSwitch = true;
 
 const bool kUseModelCVForAuxCrossfade = true;
 const bool kUseLevelCVForDecay = false;
