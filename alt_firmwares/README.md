@@ -5,7 +5,7 @@ The Plaits alt firmware ([plaits_freqlock.wav](https://github.com/lylepmills/eur
 - **Frequency locking.** It is now possible to lock the frequency of the oscillator, so you can avoid accidentally detuning it once you've tuned it where you want it. When locked, the main frequency knob will no longer affect the frequency of the oscillator, allowing you to keep the module in tune more easily (the V/Oct and FM inputs still work as normal, as does the FM attenuverter).
 - **Frequency knob alt functionality.** When frequency is locked, the frequency knob can control something else. This alt firmware supports two options for what it controls. It can become either an octave switcher or control a crossfade between the main and aux synthesis models on the aux output.
 - **MODEL input alt functionality.** The MODEL input can be repurposed to control aux crossfade with CV. This can be used with or without the frequency knob alt functionality controlling aux crossfade.
-- **LEVEL input alt functionality.** The LEVEL input can be repurposed to control the decay of the internal envelope with CV. This will only take effect if TRIG is patched, otherwise LEVEL will behave as a VCA/VCFA as it normally would.
+- **LEVEL input alt functionality.** The LEVEL input can be repurposed to control the decay of the internal envelope with CV. This will only take effect if TRIG is patched, otherwise LEVEL will control the internal VCA/VCFA as it normally would.
 
 ## How to toggle frequency locking
 To lock or unlock frequency, briefly hold both buttons at once until all the lights flash up either green or red. Green means that frequency is unlocked, and red means it is locked.
