@@ -89,7 +89,7 @@ void Voice::Render(
   bool level_patched = modulations.level_patched;
   float modulation_level = modulations.level;
   float patch_decay = patch.decay;
-  if (kUseLevelCVForDecay) {
+  if (modulations.trigger_patched && patch.level_cv_option == 1) {
     level_patched = false;
     modulation_level = 0.0f;
     patch_decay += modulations.level;
@@ -116,9 +116,10 @@ void Voice::Render(
   }
 
   // Engine selection.
+  bool use_model_cv_for_aux_crossfade = patch.model_cv_option == 1;
   int engine_index = engine_quantizer_.Process(
       patch.engine,
-      kUseModelCVForAuxCrossfade ? 0.0f : engine_cv_,
+      use_model_cv_for_aux_crossfade ? 0.0f : engine_cv_,
       engines_.size(),
       0.25f);
   
@@ -171,7 +172,7 @@ void Voice::Render(
             0.0f : patch.morph_modulation_amount);
   }
 
-  if (kOctaveSwitch) {
+  if (patch.locked_frequency_pot_option == 0) {
     float octave_setting = floor(patch.freqlock_param * 6.999f) - 3.0f;
     note += octave_setting * 12.0f;
   }
@@ -214,12 +215,13 @@ void Voice::Render(
   e->Render(p, out_buffer_, aux_buffer_, size, &already_enveloped);
 
   // Crossfade the aux output between main and aux models.
-  if (kAuxCrossfade || kUseModelCVForAuxCrossfade) {
+  bool use_locked_frequency_pot_for_aux_crossfade = patch.locked_frequency_pot_option == 1;
+  if (use_locked_frequency_pot_for_aux_crossfade || use_model_cv_for_aux_crossfade) {
     float aux_proportion = 0.5f;
-    if (kAuxCrossfade) {
+    if (use_locked_frequency_pot_for_aux_crossfade) {
       aux_proportion = patch.freqlock_param;
     }
-    if (kUseModelCVForAuxCrossfade) {
+    if (use_model_cv_for_aux_crossfade) {
       aux_proportion += modulations.engine * 0.5f;
     }
     CONSTRAIN(aux_proportion, 0.0f, 1.0f);
