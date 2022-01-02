@@ -63,15 +63,6 @@ const int kMaxEngines = 16;
 const int kMaxTriggerDelay = 8;
 const int kTriggerDelay = 5;
 
-// At most one of these should be enabled, they are the
-// different options for what to do with a locked
-// frequency knob.
-const bool kAuxCrossfade = false;
-const bool kOctaveSwitch = true;
-
-const bool kUseModelCVForAuxCrossfade = true;
-const bool kUseLevelCVForDecay = false;
-
 class ChannelPostProcessor {
  public:
   ChannelPostProcessor() { }
@@ -137,6 +128,16 @@ struct Patch {
   float decay;
   float lpg_colour;
   float freqlock_param;
+
+  // 0 - manual octave switching
+  // 1 - manual aux crossfade
+  uint8_t locked_frequency_pot_option;
+  // 0 - cv control of model (original)
+  // 1 - cv control of aux crossfade
+  uint8_t model_cv_option;
+  // 0 - cv control of level (original)
+  // 1 - cv control of decay
+  uint8_t level_cv_option;
 };
 
 struct Modulations {
