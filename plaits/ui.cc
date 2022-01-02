@@ -42,6 +42,11 @@ static const int32_t kMediumPressTime = 200;
 static const int32_t kLongPressTime = 2000;
 static const int32_t kVeryLongPressTime = 5000;
 
+static const uint8_t kNumOptions = 3;
+static const uint8_t kNumLockedFrequencyPotOptions = 2;
+static const uint8_t kNumModelCVOptions = 2;
+static const uint8_t kNumLevelCVOptions = 2;
+
 #define ENABLE_LFO_MODE
 
 void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
@@ -55,6 +60,7 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
   switches_.Init();
 
   ui_task_ = 0;
+  option_index_ = 0;
   mode_ = UI_MODE_NORMAL;
 
   // Bind pots to parameters.
@@ -115,6 +121,10 @@ void Ui::LoadState() {
   if (state.frequency_pot_main_parameter < 999.0f) {
     pots_[POTS_ADC_CHANNEL_FREQ_POT].LockMainParameter(state.frequency_pot_main_parameter);
   }
+
+  patch_->locked_frequency_pot_option = state.locked_frequency_pot_option;
+  patch_->model_cv_option = state.model_cv_option;
+  patch_->level_cv_option = state.level_cv_option;
 }
 
 void Ui::SaveState() {
@@ -129,6 +139,10 @@ void Ui::SaveState() {
   } else {
     state->frequency_pot_main_parameter = 1000.0f;
   }
+
+  state->locked_frequency_pot_option = patch_->locked_frequency_pot_option;
+  state->model_cv_option = patch_->model_cv_option;
+  state->level_cv_option = patch_->level_cv_option;
 
   settings_->SaveState();
 }
@@ -234,6 +248,32 @@ void Ui::UpdateLEDs() {
             leds_.set(i, LED_COLOR_YELLOW);
           }
         }
+      }
+      break;
+
+    case UI_MODE_CHANGE_OPTIONS_PRE_RELEASE:
+    case UI_MODE_CHANGE_OPTIONS:
+      for (int i = 0; i < kNumOptions; ++i) {
+        int option_value = 0;
+        if (i == 0) {
+          option_value = patch_->locked_frequency_pot_option;
+        } else if (i == 1) {
+          option_value = patch_->model_cv_option;
+        } else if (i == 2) {
+          option_value = patch_->level_cv_option;
+        }
+
+        LedColor color = LED_COLOR_OFF;
+        if (option_value == 0) {
+          color = LED_COLOR_GREEN;
+        } else if (option_value == 1) {
+          color = LED_COLOR_RED;
+        }
+        // Dim the other lights
+        if ((i != option_index_) && (pwm_counter & 7)) {
+            color = LED_COLOR_OFF;
+        }
+        leds_.set(i, color);
       }
       break;
     
@@ -395,7 +435,56 @@ void Ui::ReadSwitches() {
 
       if (press_time_[0] >= kVeryLongPressTime &&
           press_time_[1] >= kVeryLongPressTime) {
-        StartCalibration();
+        if (press_time_[0] > press_time_[1]) {
+          press_time_[0] = press_time_[1] = 0;
+          mode_ = UI_MODE_CHANGE_OPTIONS_PRE_RELEASE;
+        } else {
+          StartCalibration();
+        }
+      }
+      break;
+
+    case UI_MODE_CHANGE_OPTIONS_PRE_RELEASE:
+      if ((!switches_.pressed(Switch(0)) && !switches_.pressed(Switch(1))) &&
+          (switches_.released(Switch(0)) || switches_.released(Switch(1)))) {
+        mode_ = UI_MODE_CHANGE_OPTIONS;
+      }
+      break;
+
+    case UI_MODE_CHANGE_OPTIONS:
+      if (switches_.pressed(Switch(0)) && switches_.pressed(Switch(1))) {
+        // Add a bit of extra time so holding both buttons doesn't instantly jump to toggling
+        // frequency locking.
+        press_time_[0] = press_time_[1] = -1000;
+        SaveState();
+        mode_ = UI_MODE_NORMAL;
+        break;
+      }
+      
+      if (switches_.released(Switch(0))) {
+        option_index_ += 1;
+        if (option_index_ >= kNumOptions) {
+          option_index_ = 0;
+        }
+      }
+
+      if (switches_.released(Switch(1))) {
+        if (option_index_ == 0) {
+          patch_->locked_frequency_pot_option += 1;
+          if (patch_->locked_frequency_pot_option >= kNumLockedFrequencyPotOptions) {
+            patch_->locked_frequency_pot_option = 0;
+          }
+        } else if (option_index_ == 1) {
+          patch_->model_cv_option += 1;
+          if (patch_->model_cv_option >= kNumModelCVOptions) {
+            patch_->model_cv_option = 0;
+          }
+        } else if (option_index_ == 2) {
+          patch_->level_cv_option += 1;
+          if (patch_->level_cv_option >= kNumLevelCVOptions) {
+            patch_->level_cv_option = 0;
+          }
+        }
       }
       break;
 
@@ -549,56 +638,56 @@ void Ui::CalibrateC3() {
   normalization_probe_.Init();
 }
 
-uint8_t Ui::HandleFactoryTestingRequest(uint8_t command) {
-  uint8_t argument = command & 0x1f;
-  command = command >> 5;
-  uint8_t reply = 0;
-  switch (command) {
-    case FACTORY_TESTING_READ_POT:
-      reply = pots_adc_.value(PotsAdcChannel(argument)) >> 8;
-      break;
+// uint8_t Ui::HandleFactoryTestingRequest(uint8_t command) {
+//   uint8_t argument = command & 0x1f;
+//   command = command >> 5;
+//   uint8_t reply = 0;
+//   switch (command) {
+//     case FACTORY_TESTING_READ_POT:
+//       reply = pots_adc_.value(PotsAdcChannel(argument)) >> 8;
+//       break;
       
-    case FACTORY_TESTING_READ_CV:
-      reply = (cv_adc_.value(CvAdcChannel(argument)) + 32768) >> 8;
-      break;
+//     case FACTORY_TESTING_READ_CV:
+//       reply = (cv_adc_.value(CvAdcChannel(argument)) + 32768) >> 8;
+//       break;
     
-    case FACTORY_TESTING_READ_NORMALIZATION:
-      reply = (&modulations_->frequency_patched)[argument] ? 0 : 255;
-      break;      
+//     case FACTORY_TESTING_READ_NORMALIZATION:
+//       reply = (&modulations_->frequency_patched)[argument] ? 0 : 255;
+//       break;      
     
-    case FACTORY_TESTING_READ_GATE:
-      reply = switches_.pressed(Switch(argument));
-      break;
+//     case FACTORY_TESTING_READ_GATE:
+//       reply = switches_.pressed(Switch(argument));
+//       break;
       
-    case FACTORY_TESTING_GENERATE_TEST_SIGNAL:
-      if (argument) {
-        mode_ = UI_MODE_TEST;
-      } else {
-        mode_ = UI_MODE_NORMAL;
-      }
-      break;
+//     case FACTORY_TESTING_GENERATE_TEST_SIGNAL:
+//       if (argument) {
+//         mode_ = UI_MODE_TEST;
+//       } else {
+//         mode_ = UI_MODE_NORMAL;
+//       }
+//       break;
       
-    case FACTORY_TESTING_CALIBRATE:
-      {
-        switch (argument) {
-          case 0:
-            patch_->engine = 0;
-            StartCalibration();
-            break;
+//     case FACTORY_TESTING_CALIBRATE:
+//       {
+//         switch (argument) {
+//           case 0:
+//             patch_->engine = 0;
+//             StartCalibration();
+//             break;
           
-          case 1:
-            CalibrateC1();
-            break;
+//           case 1:
+//             CalibrateC1();
+//             break;
           
-          case 2:
-            CalibrateC3();
-            SaveState();
-            break;
-        }
-      }
-      break;
-  }
-  return reply;
-}
+//           case 2:
+//             CalibrateC3();
+//             SaveState();
+//             break;
+//         }
+//       }
+//       break;
+//   }
+//   return reply;
+// }
 
 }  // namespace plaits

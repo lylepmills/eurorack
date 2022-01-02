@@ -37,6 +37,40 @@ namespace plaits {
 using namespace std;
 
 bool Settings::Init() {
+  InitPersistentData();
+  InitState();
+
+  bool success = chunk_storage_.Init(&persistent_data_, &state_);
+
+  // If the settings id changes, what is stored for state cannot
+  // necessarily be interpreted, so we reset the state.
+  if (persistent_data_.settings_id != kSettingsId) {
+    InitState();
+    SaveState();
+    persistent_data_.settings_id = kSettingsId;
+    SavePersistentData();
+  }
+
+  CONSTRAIN(state_.engine, 0, 15);
+
+  return success;
+}
+
+void Settings::InitState() {
+  state_.engine = 0;
+  state_.lpg_colour = 0;
+  state_.decay = 128;
+  state_.octave = 255;
+  state_.color_blind = 0;
+  state_.freqlock_param = 0;
+  state_.locked_frequency_pot_option = 0;
+  state_.model_cv_option = 0;
+  state_.level_cv_option = 0;
+  state_.frequency_pot_main_parameter = 1000.0f;
+}
+
+void Settings::InitPersistentData() {
+  persistent_data_.settings_id = kSettingsId;
   ChannelCalibrationData* c = persistent_data_.channel_calibration_data;
   c[CV_ADC_CHANNEL_MODEL].offset = 0.025f;
   c[CV_ADC_CHANNEL_MODEL].scale = -1.03f;
@@ -69,20 +103,6 @@ bool Settings::Init() {
   c[CV_ADC_CHANNEL_LEVEL].offset = 0.49f;
   c[CV_ADC_CHANNEL_LEVEL].scale = -0.6f;
   c[CV_ADC_CHANNEL_LEVEL].normalization_detection_threshold = 21403;
-  
-  state_.engine = 0;
-  state_.lpg_colour = 0;
-  state_.decay = 128;
-  state_.octave = 255;
-  state_.color_blind = 0;
-  state_.freqlock_param = 0.5f;
-  state_.frequency_pot_main_parameter = 1000.0f;
-  
-  bool success = chunk_storage_.Init(&persistent_data_, &state_);
-  
-  CONSTRAIN(state_.engine, 0, 15);
-
-  return success;
 }
 
 void Settings::SavePersistentData() {

@@ -38,7 +38,7 @@ using namespace stmlib;
 
 // #define PROFILE_INTERRUPT 1
 
-const bool test_adc_noise = false;
+// const bool test_adc_noise = false;
 
 AudioDac audio_dac;
 DebugPort debug_port;
@@ -75,34 +75,37 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
   
   ui.Poll();
   
-  if (test_adc_noise) {
-    static float note_lp = 0.0f;
-    float note = modulations.note;
-    ONE_POLE(note_lp, note, 0.0001f);
-    float cents = (note - note_lp) * 100.0f;
-    CONSTRAIN(cents, -8.0f, +8.0f);
-    while (size--) {
-      output->r = output->l = static_cast<int16_t>(cents * 4040.0f);
-      ++output;
-    }
-  } else if (ui.test_mode()) {
-    // 100 Hz ascending and descending ramps.
-    while (size--) {
-      output->l = ~test_ramp >> 16;
-      output->r = test_ramp >> 16;
-      test_ramp += 8947848;
-      ++output;
-    }
-  } else {
-    voice.Render(patch, modulations, (Voice::Frame*)(output), size);
-    ui.set_active_engine(voice.active_engine());
-  }
+  // if (test_adc_noise) {
+  //   static float note_lp = 0.0f;
+  //   float note = modulations.note;
+  //   ONE_POLE(note_lp, note, 0.0001f);
+  //   float cents = (note - note_lp) * 100.0f;
+  //   CONSTRAIN(cents, -8.0f, +8.0f);
+  //   while (size--) {
+  //     output->r = output->l = static_cast<int16_t>(cents * 4040.0f);
+  //     ++output;
+  //   }
+  // } else if (ui.test_mode()) {
+  //   // 100 Hz ascending and descending ramps.
+  //   while (size--) {
+  //     output->l = ~test_ramp >> 16;
+  //     output->r = test_ramp >> 16;
+  //     test_ramp += 8947848;
+  //     ++output;
+  //   }
+  // } else {
+  //   voice.Render(patch, modulations, (Voice::Frame*)(output), size);
+  //   ui.set_active_engine(voice.active_engine());
+  // }
+
+  voice.Render(patch, modulations, (Voice::Frame*)(output), size);
+  ui.set_active_engine(voice.active_engine());
   
-  if (debug_port.readable()) {
-    uint8_t command = debug_port.Read();
-    uint8_t response = ui.HandleFactoryTestingRequest(command);
-    debug_port.Write(response);
-  }
+  // if (debug_port.readable()) {
+  //   uint8_t command = debug_port.Read();
+  //   uint8_t response = ui.HandleFactoryTestingRequest(command);
+  //   debug_port.Write(response);
+  // }
   
 #ifdef PROFILE_INTERRUPT
   TOC
@@ -120,16 +123,17 @@ void Init() {
   volatile size_t counter = 1000000;
   while (counter--);
   
-  bool freshly_baked = !settings.Init();
+//   bool freshly_baked = !settings.Init();
 
-  if (freshly_baked) {
-#ifdef PROFILE_INTERRUPT
-    DebugPin::Init();
-#else
-    debug_port.Init();
-#endif  // PROFILE_INTERRUPT
-  }
+//   if (freshly_baked) {
+// #ifdef PROFILE_INTERRUPT
+//     DebugPin::Init();
+// #else
+//     debug_port.Init();
+// #endif  // PROFILE_INTERRUPT
+//   }
 
+  settings.Init();
   ui.Init(&patch, &modulations, &settings);
   
   audio_dac.Init(48000, kBlockSize);

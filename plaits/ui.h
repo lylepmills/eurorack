@@ -50,6 +50,8 @@ enum UiMode {
   UI_MODE_DISPLAY_ALTERNATE_PARAMETERS,
   UI_MODE_DISPLAY_OCTAVE,
   UI_MODE_FREQUENCY_LOCK,
+  UI_MODE_CHANGE_OPTIONS_PRE_RELEASE,
+  UI_MODE_CHANGE_OPTIONS,
   UI_MODE_CALIBRATION_C1,
   UI_MODE_CALIBRATION_C3,
   UI_MODE_TEST,
@@ -82,7 +84,7 @@ class Ui {
     return mode_ == UI_MODE_TEST;
   }
 
-  uint8_t HandleFactoryTestingRequest(uint8_t command);
+  // uint8_t HandleFactoryTestingRequest(uint8_t command);
   
  private:
   void UpdateLEDs();
@@ -110,6 +112,7 @@ class Ui {
   Switches switches_;
   
   int ui_task_;
+  int option_index_;
 
   float transposition_;
   float octave_;
