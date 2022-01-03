@@ -172,9 +172,14 @@ void Voice::Render(
             0.0f : patch.morph_modulation_amount);
   }
 
-  if (patch.locked_frequency_pot_option == 0) {
+  if (patch.locked_frequency_pot_option == 1) {
     float octave_setting = floor(patch.freqlock_param * 6.999f) - 3.0f;
     note += octave_setting * 12.0f;
+  }
+
+  if (patch.locked_frequency_pot_option == 2) {
+    float fifth_setting = floor(patch.freqlock_param * 12.999f) - 6.0f;
+    note += fifth_setting * 7.0f;
   }
 
   p.note = ApplyModulations(
@@ -215,7 +220,7 @@ void Voice::Render(
   e->Render(p, out_buffer_, aux_buffer_, size, &already_enveloped);
 
   // Crossfade the aux output between main and aux models.
-  bool use_locked_frequency_pot_for_aux_crossfade = patch.locked_frequency_pot_option == 1;
+  bool use_locked_frequency_pot_for_aux_crossfade = patch.locked_frequency_pot_option == 0;
   if (use_locked_frequency_pot_for_aux_crossfade || use_model_cv_for_aux_crossfade) {
     float aux_proportion = 0.5f;
     if (use_locked_frequency_pot_for_aux_crossfade) {
