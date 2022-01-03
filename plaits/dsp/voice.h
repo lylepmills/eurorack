@@ -129,8 +129,9 @@ struct Patch {
   float lpg_colour;
   float freqlock_param;
 
-  // 0 - manual octave switching
-  // 1 - manual aux crossfade
+  // 0 - manual aux crossfade
+  // 1 - manual octave switching
+  // 2 - manual transposition by fifths
   uint8_t locked_frequency_pot_option;
   // 0 - cv control of model (original)
   // 1 - cv control of aux crossfade
