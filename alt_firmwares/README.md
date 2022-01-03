@@ -16,12 +16,12 @@ The calibration process is the same as the base firmware, except you must long p
 ## How to change the other options
 To access the menu of options for the various alt functionalities, long press (about 5 seconds) both buttons *starting with the one on the left*. The menu is represented by lights for each option. You can navigate between the menu items by pressing the left button, and you can switch the option for that item by pressing the right button. The current settings are represented by the color of the LED lights. In order, they represent the following
 
-### First light - Frequency knob alt functionality
+### First light - Frequency knob alt functionality (when frequency is locked)
 Green means aux crossfade, red means octave switching, yellow means transposition by fifths
 
 ### Second light - MODEL input alt functionality
 Green means model (as in the base firmware), red means aux crossfade
 
 ### Third light - LEVEL input alt functionality
-Green means level (as in the base firmware), red means decay
+Green means level (as in the base firmware), red means decay (when TRIG is patched)
 
