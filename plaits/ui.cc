@@ -43,7 +43,7 @@ static const int32_t kLongPressTime = 2000;
 static const int32_t kVeryLongPressTime = 5000;
 
 static const uint8_t kNumOptions = 3;
-static const uint8_t kNumLockedFrequencyPotOptions = 2;
+static const uint8_t kNumLockedFrequencyPotOptions = 3;
 static const uint8_t kNumModelCVOptions = 2;
 static const uint8_t kNumLevelCVOptions = 2;
 
@@ -268,6 +268,8 @@ void Ui::UpdateLEDs() {
           color = LED_COLOR_GREEN;
         } else if (option_value == 1) {
           color = LED_COLOR_RED;
+        } else if (option_value == 2) {
+          color = LED_COLOR_YELLOW;
         }
         // Dim the other lights
         if ((i != option_index_) && (pwm_counter & 7)) {
