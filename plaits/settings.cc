@@ -67,6 +67,7 @@ void Settings::InitState() {
   state_.model_cv_option = 0;
   state_.level_cv_option = 0;
   state_.aux_output_option = 0;
+  state_.chord_set_option = 0;
   state_.frequency_pot_main_parameter = 1000.0f;
 }
 

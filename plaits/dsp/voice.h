@@ -148,6 +148,9 @@ struct Patch {
   // 1 - 1 octave down
   // 2 - 2 octaves down
   uint8_t aux_subosc_octave_option;
+  // 0 - original chord set
+  // 1 - jon butler chord set
+  uint8_t chord_set_option;
 };
 
 struct Modulations {
