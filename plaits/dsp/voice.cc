@@ -142,6 +142,10 @@ void Voice::Render(
   }
   EngineParameters p;
 
+  if (engine_index == 6) {  // chord engine
+    p.custom_options = patch.chord_set_option;
+  }
+
   bool rising_edge = trigger_state_ && !previous_trigger_state;
   float note = (modulations.note + previous_note_) * 0.5f;
   previous_note_ = modulations.note;

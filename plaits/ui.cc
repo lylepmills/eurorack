@@ -42,12 +42,13 @@ static const int32_t kMediumPressTime = 200;
 static const int32_t kLongPressTime = 2000;
 static const int32_t kVeryLongPressTime = 4000;
 
-static const uint8_t kNumOptions = 5;
+static const uint8_t kNumOptions = 6;
 static const uint8_t kNumLockedFrequencyPotOptions = 3;
 static const uint8_t kNumModelCVOptions = 3;
 static const uint8_t kNumLevelCVOptions = 2;
 static const uint8_t kNumSuboscWaveOptions = 3;
 static const uint8_t kNumSuboscOctaveOptions = 3;
+static const uint8_t kNumChordSetOptions = 2;
 
 #define ENABLE_LFO_MODE
 
@@ -129,6 +130,7 @@ void Ui::LoadState() {
   patch_->level_cv_option = state.level_cv_option;
   patch_->aux_subosc_wave_option = state.aux_output_option & 0x0f;
   patch_->aux_subosc_octave_option = state.aux_output_option >> 4;
+  patch_->chord_set_option = state.chord_set_option;
 }
 
 void Ui::SaveState() {
@@ -148,6 +150,7 @@ void Ui::SaveState() {
   state->model_cv_option = patch_->model_cv_option;
   state->level_cv_option = patch_->level_cv_option;
   state->aux_output_option = (patch_->aux_subosc_octave_option << 4) + patch_->aux_subosc_wave_option;
+  state->chord_set_option = patch_->chord_set_option;
 
   settings_->SaveState();
 }
@@ -270,6 +273,8 @@ void Ui::UpdateLEDs() {
           option_value = patch_->aux_subosc_wave_option;
         } else if (i == 4) {
           option_value = patch_->aux_subosc_octave_option;
+        } else if (i == 5) {
+          option_value = patch_->chord_set_option;
         }
 
         LedColor color = LED_COLOR_OFF;
@@ -511,6 +516,11 @@ void Ui::ReadSwitches() {
           patch_->aux_subosc_octave_option += 1;
           if (patch_->aux_subosc_octave_option >= kNumSuboscOctaveOptions) {
             patch_->aux_subosc_octave_option = 0;
+          }
+        } else if (option_index_ == 5) {
+          patch_->chord_set_option += 1;
+          if (patch_->chord_set_option >= kNumChordSetOptions) {
+            patch_->chord_set_option = 0;
           }
         }
       }

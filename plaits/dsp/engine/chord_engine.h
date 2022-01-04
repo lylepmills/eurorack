@@ -40,14 +40,8 @@ namespace plaits {
 const int kChordNumNotes = 4;
 const int kChordNumVoices = 5;
 const int kChordNumHarmonics = 3;
-
-// #define JON_CHORDS
-
-#ifdef JON_CHORDS
 const int kChordNumChords = 17;
-#else
-const int kChordNumChords = 11;
-#endif  // JON_CHORDS
+const int kChordNumOriginalChords = 11;
 
 class ChordEngine : public Engine {
  public:
