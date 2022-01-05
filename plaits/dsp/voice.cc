@@ -96,6 +96,12 @@ void Voice::Render(
   }
   CONSTRAIN(patch_decay, 0.0f, 1.0f);
 
+  float patch_lpg_colour = patch.lpg_colour;
+  if (patch.model_cv_option == 2) {
+    patch_lpg_colour += modulations.engine;
+  }
+  CONSTRAIN(patch_lpg_colour, 0.0f, 1.0f);
+
   bool previous_trigger_state = trigger_state_;
   if (!previous_trigger_state) {
     if (trigger_value > 0.3f) {
@@ -116,10 +122,9 @@ void Voice::Render(
   }
 
   // Engine selection.
-  bool use_model_cv_for_aux_crossfade = patch.model_cv_option == 1;
   int engine_index = engine_quantizer_.Process(
       patch.engine,
-      use_model_cv_for_aux_crossfade ? 0.0f : engine_cv_,
+      patch.model_cv_option == 0 ? engine_cv_ : 0.0f,
       engines_.size(),
       0.25f);
   
@@ -221,13 +226,14 @@ void Voice::Render(
 
   // Crossfade the aux output between main and aux models.
   bool use_locked_frequency_pot_for_aux_crossfade = patch.locked_frequency_pot_option == 0;
+  bool use_model_cv_for_aux_crossfade = patch.model_cv_option == 1;
   if (use_locked_frequency_pot_for_aux_crossfade || use_model_cv_for_aux_crossfade) {
     float aux_proportion = 0.5f;
     if (use_locked_frequency_pot_for_aux_crossfade) {
       aux_proportion = patch.freqlock_param;
     }
     if (use_model_cv_for_aux_crossfade) {
-      aux_proportion += modulations.engine * 0.5f;
+      aux_proportion += modulations.engine;
     }
     CONSTRAIN(aux_proportion, 0.0f, 1.0f);
 
@@ -241,7 +247,7 @@ void Voice::Render(
   
   // Compute LPG parameters.
   if (!lpg_bypass) {
-    const float hf = patch.lpg_colour;
+    const float hf = patch_lpg_colour;
     const float decay_tail = (20.0f * kBlockSize) / kSampleRate *
         SemitonesToRatio(-72.0f * patch_decay + 12.0f * hf) - short_decay;
     

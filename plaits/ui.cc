@@ -44,7 +44,7 @@ static const int32_t kVeryLongPressTime = 5000;
 
 static const uint8_t kNumOptions = 3;
 static const uint8_t kNumLockedFrequencyPotOptions = 3;
-static const uint8_t kNumModelCVOptions = 2;
+static const uint8_t kNumModelCVOptions = 3;
 static const uint8_t kNumLevelCVOptions = 2;
 
 #define ENABLE_LFO_MODE
