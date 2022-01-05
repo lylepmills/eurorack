@@ -14,7 +14,9 @@ To lock or unlock frequency, briefly hold both buttons at once until all the lig
 The calibration process is the same as the base firmware, except you must long press (about 5 seconds) both buttons *starting with the one on the right* to access the calibration mode.
 
 ## How to change the other options
-To access the menu of options for the various alt functionalities, long press (about 5 seconds) both buttons *starting with the one on the left*. The menu is represented by lights for each option. You can navigate between the menu items by pressing the left button, and you can switch the option for that item by pressing the right button. The current settings are represented by the color of the LED lights. In order, they represent the following
+To access the menu of options for the various alt functionalities, long press (about 5 seconds) both buttons *starting with the one on the left*. To exit the menu, press both buttons at once.
+
+The menu is represented by lights for each option. You can navigate between the menu items by pressing the left button, and you can switch the option for that item by pressing the right button. The current settings are represented by the color of the LED lights. In order, they represent the following
 
 ### First light - Frequency knob alt functionality (when frequency is locked)
 Green means aux crossfade, red means transposition by octaves, yellow means transposition by fifths
