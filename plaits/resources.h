@@ -64,7 +64,7 @@ extern const int16_t lut_ws_double_bump[];
 extern const int8_t lut_lpc_excitation_pulse[];
 extern const int16_t wav_integrated_waves[];
 #define LUT_SINE 0
-#define LUT_SINE_SIZE 1281
+#define LUT_SINE_SIZE 641
 #define LUT_FM_FREQUENCY_QUANTIZER 1
 #define LUT_FM_FREQUENCY_QUANTIZER_SIZE 129
 #define LUT_FOLD 2
