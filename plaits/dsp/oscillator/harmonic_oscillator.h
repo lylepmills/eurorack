@@ -78,7 +78,7 @@ class HarmonicOscillator {
       if (phase_ >= 1.0f) {
         phase_ -= 1.0f;
       }
-      const float two_x = 2.0f * stmlib::Interpolate(lut_sine, phase_, 1024.0f);
+      const float two_x = 2.0f * stmlib::Interpolate(lut_sine, phase_, kSineWavetableSize);
       float previous, current;
       if (first_harmonic_index == 1) {
         previous = 1.0f;
@@ -86,8 +86,8 @@ class HarmonicOscillator {
       } else {
         const float k = first_harmonic_index;
         previous = stmlib::InterpolateWrap(
-            lut_sine, phase_ * (k - 1.0f) + 0.25f, 1024.0f);
-        current = stmlib::InterpolateWrap(lut_sine, phase_ * k, 1024.0f);
+            lut_sine, phase_ * (k - 1.0f) + 0.25f, kSineWavetableSize);
+        current = stmlib::InterpolateWrap(lut_sine, phase_ * k, kSineWavetableSize);
       }
       
       float sum = 0.0f;

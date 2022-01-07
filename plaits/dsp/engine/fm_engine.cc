@@ -54,8 +54,8 @@ void FMEngine::Reset() {
 
 inline float FMEngine::SinePM(uint32_t phase, float fm) const {
   phase += (static_cast<uint32_t>((fm + 4.0f) * 536870912.0f)) << 3;
-  uint32_t integral = phase >> 22;
-  float fractional = static_cast<float>(phase << 10) / 4294967296.0f;
+  uint32_t integral = phase >> 23;
+  float fractional = static_cast<float>(phase << 9) / 4294967296.0f;
   float a = lut_sine[integral];
   float b = lut_sine[integral + 1];
   return a + (b - a) * fractional;

@@ -127,7 +127,7 @@ void WaveshapingEngine::Render(
     float fold_2 = -InterpolateHermite(
         lut_fold_2 + 1, index, 512.0f);
     
-    float sine = InterpolateWrap(lut_sine, aux[i] * 0.25f + 0.5f, 1024.0f);
+    float sine = InterpolateWrap(lut_sine, aux[i] * 0.25f + 0.5f, kSineWavetableSize);
     out[i] = fold;
     aux[i] = sine + (fold_2 - sine) * overtone_gain_modulation.Next();
   }
