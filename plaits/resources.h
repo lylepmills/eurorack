@@ -51,7 +51,6 @@ extern const int8_t* lookup_table_i8_table[];
 extern const int16_t* wavetables_table[];
 
 extern const float lut_sine[];
-const float kSineWavetableSize = 512.0f;
 extern const float lut_fm_frequency_quantizer[];
 extern const float lut_fold[];
 extern const float lut_fold_2[];
