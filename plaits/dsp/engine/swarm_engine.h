@@ -100,7 +100,7 @@ class GrainEnvelope {
       float phase = (phase_ - 0.5f) * size_ratio;
       CONSTRAIN(phase, -1.0f, 1.0f);
       float e = stmlib::InterpolateWrap(
-          lut_sine, 0.5f * phase + 1.25f, 1024.0f);
+          lut_sine, 0.5f * phase + 1.25f, kSineWavetableSize);
       target_amplitude = 0.5f * (e + 1.0f);
     }
     

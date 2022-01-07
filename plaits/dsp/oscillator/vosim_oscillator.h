@@ -120,7 +120,7 @@ class VOSIMOscillator {
 
  private:
   inline float Sine(float phase) {
-    return stmlib::InterpolateWrap(lut_sine, phase, 1024.0f);
+    return stmlib::InterpolateWrap(lut_sine, phase, kSineWavetableSize);
   }
 
   // Oscillator state.

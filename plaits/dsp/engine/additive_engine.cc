@@ -73,7 +73,7 @@ void AdditiveEngine::UpdateAmplitudes(
     gain *= gain;
 
     float b = 0.25f + order * bumps;
-    float bump_factor = 1.0f + InterpolateWrap(lut_sine, b, 1024.0f);
+    float bump_factor = 1.0f + InterpolateWrap(lut_sine, b, kSineWavetableSize);
 
     gain *= bump_factor;
     gain *= gain;

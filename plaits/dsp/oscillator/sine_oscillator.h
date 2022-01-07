@@ -61,7 +61,7 @@ class SineOscillator {
       phase_ -= 1.0f;
     }
     
-    return stmlib::Interpolate(lut_sine, phase_, 1024.0f);
+    return stmlib::Interpolate(lut_sine, phase_, kSineWavetableSize);
   }
   
   inline void Next(float frequency, float amplitude, float* sin, float* cos) {
@@ -74,8 +74,8 @@ class SineOscillator {
       phase_ -= 1.0f;
     }
     
-    *sin = amplitude * stmlib::Interpolate(lut_sine, phase_, 1024.0f);
-    *cos = amplitude * stmlib::Interpolate(lut_sine + 256, phase_, 1024.0f);
+    *sin = amplitude * stmlib::Interpolate(lut_sine, phase_, kSineWavetableSize);
+    *cos = amplitude * stmlib::Interpolate(lut_sine + 128, phase_, kSineWavetableSize);
   }
   
   void Render(float frequency, float amplitude, float* out, size_t size) {
@@ -101,7 +101,7 @@ class SineOscillator {
       if (phase_ >= 1.0f) {
         phase_ -= 1.0f;
       }
-      float s = stmlib::Interpolate(lut_sine, phase_, 1024.0f);
+      float s = stmlib::Interpolate(lut_sine, phase_, kSineWavetableSize);
       if (additive) {
         *out++ += am.Next() * s;
       } else {
