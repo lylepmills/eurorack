@@ -40,12 +40,14 @@ using namespace stmlib;
 
 static const int32_t kMediumPressTime = 200;
 static const int32_t kLongPressTime = 2000;
-static const int32_t kVeryLongPressTime = 5000;
+static const int32_t kVeryLongPressTime = 4000;
 
-static const uint8_t kNumOptions = 3;
+static const uint8_t kNumOptions = 5;
 static const uint8_t kNumLockedFrequencyPotOptions = 3;
 static const uint8_t kNumModelCVOptions = 3;
 static const uint8_t kNumLevelCVOptions = 2;
+static const uint8_t kNumSuboscWaveOptions = 3;
+static const uint8_t kNumSuboscOctaveOptions = 3;
 
 #define ENABLE_LFO_MODE
 
@@ -125,6 +127,8 @@ void Ui::LoadState() {
   patch_->locked_frequency_pot_option = state.locked_frequency_pot_option;
   patch_->model_cv_option = state.model_cv_option;
   patch_->level_cv_option = state.level_cv_option;
+  patch_->aux_subosc_wave_option = state.aux_output_option & 0x0f;
+  patch_->aux_subosc_octave_option = state.aux_output_option >> 4;
 }
 
 void Ui::SaveState() {
@@ -143,6 +147,7 @@ void Ui::SaveState() {
   state->locked_frequency_pot_option = patch_->locked_frequency_pot_option;
   state->model_cv_option = patch_->model_cv_option;
   state->level_cv_option = patch_->level_cv_option;
+  state->aux_output_option = (patch_->aux_subosc_octave_option << 4) + patch_->aux_subosc_wave_option;
 
   settings_->SaveState();
 }
@@ -261,20 +266,29 @@ void Ui::UpdateLEDs() {
           option_value = patch_->model_cv_option;
         } else if (i == 2) {
           option_value = patch_->level_cv_option;
+        } else if (i == 3) {
+          option_value = patch_->aux_subosc_wave_option;
+        } else if (i == 4) {
+          option_value = patch_->aux_subosc_octave_option;
         }
 
         LedColor color = LED_COLOR_OFF;
-        if (option_value == 0) {
+        if (option_value == 0 || option_value == 3) {
           color = LED_COLOR_GREEN;
-        } else if (option_value == 1) {
+        } else if (option_value == 1 || option_value == 4) {
           color = LED_COLOR_RED;
-        } else if (option_value == 2) {
+        } else if (option_value == 2 || option_value == 5) {
           color = LED_COLOR_YELLOW;
         }
+        if ((option_value > 2) && (pwm_counter_ & 128)) {
+          color = LED_COLOR_OFF;
+        }
+
         // Dim the other lights
         if ((i != option_index_) && (pwm_counter & 7)) {
             color = LED_COLOR_OFF;
         }
+
         leds_.set(i, color);
       }
       break;
@@ -439,6 +453,8 @@ void Ui::ReadSwitches() {
           press_time_[1] >= kVeryLongPressTime) {
         if (press_time_[0] > press_time_[1]) {
           press_time_[0] = press_time_[1] = 0;
+          // Undo frequency lock toggle from medium double-press.
+          pots_[POTS_ADC_CHANNEL_FREQ_POT].ToggleLock();
           mode_ = UI_MODE_CHANGE_OPTIONS_PRE_RELEASE;
         } else {
           StartCalibration();
@@ -485,6 +501,16 @@ void Ui::ReadSwitches() {
           patch_->level_cv_option += 1;
           if (patch_->level_cv_option >= kNumLevelCVOptions) {
             patch_->level_cv_option = 0;
+          }
+        } else if (option_index_ == 3) {
+          patch_->aux_subosc_wave_option += 1;
+          if (patch_->aux_subosc_wave_option >= kNumSuboscWaveOptions) {
+            patch_->aux_subosc_wave_option = 0;
+          }
+        } else if (option_index_ == 4) {
+          patch_->aux_subosc_octave_option += 1;
+          if (patch_->aux_subosc_octave_option >= kNumSuboscOctaveOptions) {
+            patch_->aux_subosc_octave_option = 0;
           }
         }
       }
