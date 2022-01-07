@@ -171,9 +171,9 @@ void SAMSpeechSynth::Render(
     *excitation++ = d;
   
     float s = 0;
-    s += lut_sine[formant_phase_[0] >> 22] * formant_amplitude[0];
-    s += lut_sine[formant_phase_[1] >> 22] * formant_amplitude[1];
-    s += lut_sine[formant_phase_[2] >> 22] * formant_amplitude[2];
+    s += lut_sine[formant_phase_[0] >> 23] * formant_amplitude[0];
+    s += lut_sine[formant_phase_[1] >> 23] * formant_amplitude[1];
+    s += lut_sine[formant_phase_[2] >> 23] * formant_amplitude[2];
     s *= (1.0f - phase_);
     *output++ = s;
   }

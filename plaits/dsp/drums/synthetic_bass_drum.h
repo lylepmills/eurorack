@@ -118,7 +118,7 @@ class SyntheticBassDrum {
     float triangle = (phase < 0.5f ? phase : 1.0f - phase) * 4.0f - 1.0f;
     float sine = 2.0f * triangle / (1.0f + fabsf(triangle));
     float clean_sine = stmlib::InterpolateWrap(
-        lut_sine, phase + 0.75f, 1024.0f);
+        lut_sine, phase + 0.75f, kSineWavetableSize);
     return sine + (1.0f - dirtiness) * (clean_sine - sine);
   }
   
