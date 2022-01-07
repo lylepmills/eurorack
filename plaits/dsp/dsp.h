@@ -50,6 +50,8 @@ const float a0 = (440.0f / 8.0f) / kCorrectedSampleRate;
 const size_t kMaxBlockSize = 24;
 const size_t kBlockSize = 12;
 
+const float kSineWavetableSize = 512.0f;
+
 }  // namespace plaits
 
 #endif  // PLAITS_DSP_DSP_H_
