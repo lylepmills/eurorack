@@ -61,6 +61,9 @@ void Voice::Init(BufferAllocator* allocator) {
   engine_quantizer_.Init();
   previous_engine_index_ = -1;
   engine_cv_ = 0.0f;
+
+  sine_oscillator_.Init();
+  oscillator_.Init();
   
   out_post_processor_.Init();
   aux_post_processor_.Init();
@@ -133,6 +136,8 @@ void Voice::Render(
   if (engine_index != previous_engine_index_) {
     e->Reset();
     out_post_processor_.Reset();
+    sine_oscillator_.Init();
+    oscillator_.Init();
     previous_engine_index_ = engine_index;
   }
   EngineParameters p;
@@ -224,6 +229,26 @@ void Voice::Render(
   bool already_enveloped = pp_s.already_enveloped;
   e->Render(p, out_buffer_, aux_buffer_, size, &already_enveloped);
 
+  if (patch.aux_subosc_wave_option >= 1) {
+    float frequency = NoteToFrequency(p.note);
+    if (patch.aux_subosc_octave_option == 1) {
+      frequency /= 2.0f;
+    } else if (patch.aux_subosc_octave_option == 2) {
+      frequency /= 4.0f;
+    }
+
+    if (patch.aux_subosc_wave_option == 1) {
+      oscillator_.Render<OSCILLATOR_SHAPE_SQUARE>(frequency, 0.5f, aux_buffer_, size);
+      // Square comes out a bit too loud compared to the model
+      for (size_t i = 0; i < size; ++i) {
+        aux_buffer_[i] = aux_buffer_[i] * 0.5f;
+      }
+    } else if (patch.aux_subosc_wave_option == 2) {
+      sine_oscillator_.Render(frequency, aux_buffer_, size);
+    }
+  }
+
+
   // Crossfade the aux output between main and aux models.
   bool use_locked_frequency_pot_for_aux_crossfade = patch.locked_frequency_pot_option == 0;
   bool use_model_cv_for_aux_crossfade = patch.model_cv_option == 1;
@@ -237,7 +262,7 @@ void Voice::Render(
     }
     CONSTRAIN(aux_proportion, 0.0f, 1.0f);
 
-    for (size_t i = 0; i < kMaxBlockSize; ++i) {
+    for (size_t i = 0; i < size; ++i) {
       aux_buffer_[i] = Crossfade(out_buffer_[i], aux_buffer_[i], aux_proportion);
     }
   }

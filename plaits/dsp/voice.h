@@ -135,10 +135,19 @@ struct Patch {
   uint8_t locked_frequency_pot_option;
   // 0 - cv control of model (original)
   // 1 - cv control of aux crossfade
+  // 2 - cv control of lpg colour
   uint8_t model_cv_option;
   // 0 - cv control of level (original)
   // 1 - cv control of decay
   uint8_t level_cv_option;
+  // 0 - regular aux model
+  // 1 - square wave
+  // 2 - sine wave
+  uint8_t aux_subosc_wave_option;
+  // 0 - no octave shift
+  // 1 - 1 octave down
+  // 2 - 2 octaves down
+  uint8_t aux_subosc_octave_option;
 };
 
 struct Modulations {
@@ -217,6 +226,9 @@ class Voice {
   VirtualAnalogEngine virtual_analog_engine_;
   WaveshapingEngine waveshaping_engine_;
   WavetableEngine wavetable_engine_;
+
+  SineOscillator sine_oscillator_;
+  Oscillator oscillator_;
 
   stmlib::HysteresisQuantizer engine_quantizer_;
   
