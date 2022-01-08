@@ -38,7 +38,7 @@ namespace plaits {
 
 // This number should be randomly generated in between releases of this firmware that
 // modify the contents of the PersistentData/State structs in a non-backwards-compatible way.
-const uint32_t kSettingsId = 110816904;
+const uint32_t kSettingsId = 414344649;
   
 struct ChannelCalibrationData {
   float offset;
@@ -67,7 +67,8 @@ struct State {
   uint8_t locked_frequency_pot_option;
   uint8_t model_cv_option;
   uint8_t level_cv_option;
-  uint8_t padding[3];
+  uint8_t aux_output_option;
+  uint8_t padding[2];
   enum { tag = 0x54415453 };  // STAT
 };
 
