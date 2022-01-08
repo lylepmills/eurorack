@@ -68,7 +68,8 @@ struct State {
   uint8_t model_cv_option;
   uint8_t level_cv_option;
   uint8_t aux_output_option;
-  uint8_t padding[2];
+  uint8_t chord_set_option;
+  uint8_t padding[1];
   enum { tag = 0x54415453 };  // STAT
 };
 

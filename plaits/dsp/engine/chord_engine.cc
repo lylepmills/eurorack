@@ -37,8 +37,6 @@ namespace plaits {
 using namespace std;
 using namespace stmlib;
 
-#ifdef JON_CHORDS
-
 // Alternative chord table by Jon Butler jonbutler88@gmail.com
 const float chords[kChordNumChords][kChordNumNotes] = {
   // Fixed Intervals
@@ -64,23 +62,19 @@ const float chords[kChordNumChords][kChordNumNotes] = {
   { 0.00f, 3.00f,  6.00f,  9.00f },  // Fully Diminished
 };
 
-#else
-
-const float chords[kChordNumChords][kChordNumNotes] = {
-  { 0.00f, 0.01f, 11.99f, 12.00f },  // OCT
-  { 0.00f, 7.01f,  7.00f, 12.00f },  // 5
-  { 0.00f, 5.00f,  7.00f, 12.00f },  // sus4
-  { 0.00f, 3.00f,  7.00f, 12.00f },  // m
-  { 0.00f, 3.00f,  7.00f, 10.00f },  // m7
-  { 0.00f, 3.00f, 10.00f, 14.00f },  // m9
-  { 0.00f, 3.00f, 10.00f, 17.00f },  // m11
-  { 0.00f, 2.00f,  9.00f, 16.00f },  // 69
-  { 0.00f, 4.00f, 11.00f, 14.00f },  // M9
-  { 0.00f, 4.00f,  7.00f, 11.00f },  // M7
-  { 0.00f, 4.00f,  7.00f, 12.00f },  // M
+const uint8_t originalChordMapping[kChordNumOriginalChords] = {
+  0,  // OCT
+  1,  // 5
+  9,  // sus4
+  2,  // m
+  3,  // m7
+  4,  // m9
+  5,  // m11
+  10, // 69
+  8,  // M9
+  7,  // M7
+  6,  // M
 };
-
-#endif  // JON_CHORDS
 
 void ChordEngine::Init(BufferAllocator* allocator) {
   for (int i = 0; i < kChordNumVoices; ++i) {
@@ -208,8 +202,10 @@ void ChordEngine::Render(
   ONE_POLE(morph_lp_, parameters.morph, 0.1f);
   ONE_POLE(timbre_lp_, parameters.timbre, 0.1f);
 
-  const int chord_index = chord_index_quantizer_.Process(
-      parameters.harmonics * 1.02f, kChordNumChords);
+  bool use_jon_chords = parameters.custom_options != 0;
+  int chord_index = chord_index_quantizer_.Process(
+      parameters.harmonics * 1.02f, use_jon_chords ? kChordNumChords : kChordNumOriginalChords);
+  chord_index = use_jon_chords ? chord_index : originalChordMapping[chord_index];
 
   float harmonics[kChordNumHarmonics * 2 + 2];
   float note_amplitudes[kChordNumVoices];
