@@ -38,4 +38,34 @@ Green means the +0 octaves (same frequency as the main model), red means -1 octa
 ### Sixth light - Chord table option (chord mode only)
 Green means the original chord table, red means the alternate chord table by Jon Butler
 
+#### Original chords
+- Octave
+- Fifth
+- Sus4
+- Minor
+- Minor 7th
+- Minor 9th
+- Minor 11th
+- 69
+- Major 9th
+- Major 7th
+- Major
 
+#### Alternate chords
+- Octave
+- Fifth
+- Minor
+- Minor 7th
+- Minor 9th
+- Minor 11th
+- Major
+- Major 7th
+- Major 9th
+- Sus4
+- 69
+- 6th
+- 10th (Spread maj7)
+- Dominant 7th
+- Dominant 7th (b9)
+- Half Diminished
+- Fully Diminished
