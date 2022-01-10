@@ -37,7 +37,7 @@ namespace plaits {
 using namespace std;
 using namespace stmlib;
 
-// Alternative chord table by Jon Butler jonbutler88@gmail.com
+// The first 17 are an alternative chord table by Jon Butler jonbutler88@gmail.com
 const float chords[kChordNumChords][kChordNumNotes] = {
   // Fixed Intervals
   { 0.00f, 0.01f, 11.99f, 12.00f },  // Octave
@@ -60,6 +60,19 @@ const float chords[kChordNumChords][kChordNumNotes] = {
   { 0.00f, 7.00f, 10.00f, 13.00f },  // Dominant 7th (b9)
   { 0.00f, 3.00f,  6.00f, 10.00f },  // Half Diminished
   { 0.00f, 3.00f,  6.00f,  9.00f },  // Fully Diminished
+
+  // Extras from Joe McMullen
+  { 0.00f, 2.00f,  7.00f, 12.00f },  // Sus2
+  { 0.00f, 2.00f,  7.00f,  8.00f },  // Major #11th
+  { 0.00f, 2.00f,  5.00f,  8.00f },  // Minor 6th
+  { 2.00f, 5.00f,  8.00f, 14.00f },  // Diminished triad
+  { 2.00f, 3.00f,  5.00f, 10.00f },  // Major + 11th
+  { 2.00f, 3.00f,  7.00f, 10.00f },  // Minor + 13th
+  { 0.00f, 4.00f,  5.00f,  9.00f },  // Major 7th
+  { 2.00f, 4.00f,  5.00f,  9.00f },  // Minor + 9th
+  { 2.00f, 5.00f, 11.00f, 14.00f },  // Diminished triad
+  { 2.00f, 5.00f,  7.00f, 11.00f },  // Dominant 7th
+  { 0.00f, 5.00f,  7.00f, 11.00f },  // Quartal 9th
 };
 
 const uint8_t originalChordMapping[kChordNumOriginalChords] = {
@@ -74,6 +87,26 @@ const uint8_t originalChordMapping[kChordNumOriginalChords] = {
   8,  // M9
   7,  // M7
   6,  // M
+};
+
+const uint8_t joeChordMapping[kChordNumAltChords] = {
+  17, // Sus2
+  18, // Major #11th
+  19, // Minor 6th
+  20, // Diminished triad
+  21, // Major + 11th
+  22, // Minor + 13th
+  3,  // Major 6th
+  2,  // Minor Triad
+  1,  // Fifth
+  6,  // Major
+  11, // Minor 7th
+  23, // Major 7th
+  24, // Minor + 9th
+  25, // Diminished triad
+  26, // Dominant 7th
+  27, // Quartal 9th
+  9,  // Sus4
 };
 
 void ChordEngine::Init(BufferAllocator* allocator) {
@@ -202,10 +235,14 @@ void ChordEngine::Render(
   ONE_POLE(morph_lp_, parameters.morph, 0.1f);
   ONE_POLE(timbre_lp_, parameters.timbre, 0.1f);
 
-  bool use_jon_chords = parameters.custom_options != 0;
+  bool use_original_chords = parameters.custom_options == 0;
   int chord_index = chord_index_quantizer_.Process(
-      parameters.harmonics * 1.02f, use_jon_chords ? kChordNumChords : kChordNumOriginalChords);
-  chord_index = use_jon_chords ? chord_index : originalChordMapping[chord_index];
+      parameters.harmonics * 1.02f, use_original_chords ? kChordNumOriginalChords : kChordNumAltChords);
+  if (use_original_chords) {
+    chord_index = originalChordMapping[chord_index];
+  } else if (parameters.custom_options == 2) {
+    chord_index = joeChordMapping[chord_index];
+  }
 
   float harmonics[kChordNumHarmonics * 2 + 2];
   float note_amplitudes[kChordNumVoices];
