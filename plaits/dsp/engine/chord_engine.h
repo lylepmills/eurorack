@@ -40,7 +40,8 @@ namespace plaits {
 const int kChordNumNotes = 4;
 const int kChordNumVoices = 5;
 const int kChordNumHarmonics = 3;
-const int kChordNumChords = 28;
+const int kChordNumChords = 34;
+// It is just a coincidence both alt chord tables have the same number
 const int kChordNumAltChords = 17;
 const int kChordNumOriginalChords = 11;
 
