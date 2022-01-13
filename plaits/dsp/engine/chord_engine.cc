@@ -62,23 +62,24 @@ const float chords[kChordNumChords][kChordNumNotes] = {
   { 0.00f, 3.00f,  6.00f,  9.00f },  // Fully Diminished
 
   ////// Joe McMullen chords
-  { 0.00f,  2.00f, 7.00f, 12.00f },  // Sus2
-  { 8.00f,  0.00f, 2.00f,  7.00f },  // Major #11th
-  { 5.00f,  0.00f, 2.00f,  8.00f },  // Minor 6th
-  { 2.00f,  5.00f, 8.00f, 14.00f },  // Diminished triad
-  { 10.00f, 2.00f, 3.00f,  5.00f },  // Major + 11th
-  { 7.00f,  2.00f, 3.00f, 10.00f },  // Minor + 13th
-  { 3.00f,  0.00f, 7.00f, 10.00f },  // Major 6th
-  { 0.00f,  3.00f, 7.00f, 12.00f },  // Minor Triad
-  { 0.00f,  7.01f, 7.00f, 12.00f },  // Fifth
-  { 0.00f,  4.00f, 7.00f, 12.00f },  // Major
-  { 9.00f,  0.00f, 4.00f,  7.00f },  // Minor 7th
-  { 5.00f,  0.00f, 4.00f,  9.00f },  // Major 7th
-  { 2.00f,  4.00f, 5.00f,  9.00f },  // Minor + 9th
-  { 11.00f, 2.00f, 5.00f, 14.00f },  // Diminished triad
-  { 7.00f,  2.00f, 5.00f, 11.00f },  // Dominant 7th
-  { 5.00f,  0.00f, 7.00f, 11.00f },  // Quartal 9th
-  { 0.00f,  5.00f, 7.00f, 12.00f },  // Sus4
+  {  5.00f, 12.00f, 19.00f, 26.00f }, // iv 6/9
+  { 14.00f,  8.00f, 19.00f, 24.00f }, // iio 7sus4
+  { 10.00f, 17.00f, 19.00f, 26.00f }, // VII 6
+  {  7.00f, 14.00f, 22.00f, 24.00f }, // v m11
+  { 15.00f, 10.00f, 19.00f, 20.00f }, // III add4
+  { 12.00f, 19.00f, 20.00f, 27.00f }, // I addb13
+  {  8.00f, 15.00f, 24.00f, 26.00f }, // VI add#11
+  { 17.00f, 12.00f, 20.00f, 26.00f }, // iv m6
+  { 14.00f, 17.00f, 20.00f, 23.00f }, // iio
+  { 11.00f, 14.00f, 17.00f, 20.00f }, // viio
+  {  7.00f, 14.00f, 17.00f, 23.00f }, // V 7
+  {  4.00f,  7.00f, 17.00f, 23.00f }, // iii add b9
+  { 12.00f,  7.00f, 16.00f, 23.00f }, // I maj7
+  {  9.00f, 12.00f, 16.00f, 23.00f }, // vi m9
+  {  5.00f, 12.00f, 19.00f, 21.00f }, // IV maj9
+  { 14.00f,  9.00f, 17.00f, 24.00f }, // ii m7
+  { 11.00f,  5.00f, 19.00f, 24.00f }, // I maj7sus4/vii
+  {  7.00f, 14.00f, 17.00f, 24.00f }, // V 7sus4
 };
 
 const uint8_t originalChordMapping[kChordNumOriginalChords] = {
@@ -222,12 +223,18 @@ void ChordEngine::Render(
   ONE_POLE(timbre_lp_, parameters.timbre, 0.1f);
 
   bool use_original_chords = parameters.custom_options == 0;
+  int num_chords = kChordNumJonChords;
+  if (use_original_chords) {
+    num_chords = kChordNumOriginalChords;
+  } else if (parameters.custom_options == 2) {
+    num_chords = kChordNumJoeChords;
+  }
   int chord_index = chord_index_quantizer_.Process(
-      parameters.harmonics * 1.02f, use_original_chords ? kChordNumOriginalChords : kChordNumAltChords);
+      parameters.harmonics * 1.02f, num_chords);
   if (use_original_chords) {
     chord_index = originalChordMapping[chord_index];
   } else if (parameters.custom_options == 2) {
-    chord_index = chord_index + kChordNumAltChords;
+    chord_index = chord_index + kChordNumJonChords;
   }
 
   float harmonics[kChordNumHarmonics * 2 + 2];
