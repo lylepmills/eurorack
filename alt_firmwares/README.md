@@ -52,6 +52,7 @@ Green means the original chord table, red means the alternate chord table by Jon
 - Major
 
 #### Alternate chords 1 (by Jon Butler)
+Organized (from full-CCW to full-CW) into neutral, minor, major, and colour chords
 - Octave
 - Fifth
 - Minor
