@@ -36,7 +36,7 @@ Green means the regular aux model, red means a square wave subosc, yellow means 
 Green means the +0 octaves (same frequency as the main model), red means -1 octave, yellow means -2 octaves. Note this will only have an effect if the suboscillator wave option is set to something other than the regular aux model.
 
 ### Sixth light - Chord table option (chord mode only)
-Green means the original chord table, red means the alternate chord table by Jon Butler
+Green means the original chord table, red means the alternate chord table by Jon Butler, yellow means the alternate chord table by Joe McMullen
 
 #### Original chords
 - Octave
@@ -51,7 +51,7 @@ Green means the original chord table, red means the alternate chord table by Jon
 - Major 7th
 - Major
 
-#### Alternate chords
+#### Alternate chords 1 (by Jon Butler)
 - Octave
 - Fifth
 - Minor
@@ -69,3 +69,24 @@ Green means the original chord table, red means the alternate chord table by Jon
 - Dominant 7th (b9)
 - Half Diminished
 - Fully Diminished
+
+#### Alternate chords 2 (by Joe McMullen)
+With this table, instead of Frequency defining the root and Harmonics defining chord type, Frequency defines the key and Harmonics defines the scale position the chord is built from, meaning the root you hear on the aux output shifts around. Note that chord voicings are also more spread out by default with this table. See https://forum.mutable-instruments.net/t/unified-plaits-alt-firmware/19530/19 for more discussion. If that doesn't make sense, don't worry, just use your ears!
+- iv 6/9
+- iio 7sus4
+- VII 6
+- v m11
+- III add4
+- i addb13
+- VI add#11
+- iv m6
+- iio
+- viio
+- V 7
+- iii add b9
+- I maj7
+- vi m9
+- IV maj9
+- ii m7
+- I maj7sus4/vii
+- V 7sus4
