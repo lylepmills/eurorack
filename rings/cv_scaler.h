@@ -117,10 +117,6 @@ class CvScaler {
         adc_lp_[ADC_CHANNEL_ATTENUVERTER_POSITION] < -1.00f;
   }
   
-  inline float frequency_pot_value() const {
-    return adc_lp_[ADC_CHANNEL_POT_FREQUENCY];
-  }
-
   inline void CalibrateC1() {
     cv_c1_ = adc_.float_value(ADC_CHANNEL_CV_V_OCT);
   }
