@@ -255,7 +255,8 @@ void Ui::OnSwitchReleased(const Event& e) {
           settings_->ToggleEasterEgg();
           AnimateEasterEggLeds();
         } else {
-          settings_->TogglePhaseInversion();
+          part_->set_polyphony(3);
+          string_synth_->set_polyphony(3);
         }
         SaveState();
       } else {
