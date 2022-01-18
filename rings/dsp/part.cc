@@ -53,6 +53,7 @@ void Part::Init(uint16_t* reverb_buffer) {
     dc_blocker_[i].Init(1.0f - 10.0f / kSampleRate);
   }
   
+  oscillator_.Init();
   reverb_.Init(reverb_buffer);
   limiter_.Init();
 
@@ -528,6 +529,9 @@ void Part::Process(
           voice, performance_state, patch, frequency, filter_cutoff, size);
     }
     
+    // TODO - should this if/else work different depending on mode?
+    // TODO - should this be an option? to dispatch odd/even voices individually vs
+    //   odd/even harmonics regardless of polyphony setting?
     if (polyphony_ == 1) {
       // Send the two sets of harmonics / pickups to individual outputs.
       for (size_t i = 0; i < size; ++i) {
@@ -547,6 +551,7 @@ void Part::Process(
     for (size_t i = 0; i < size; ++i) {
       float l = out[i];
       float r = aux[i];
+      // TODO - this sure looks like a crossfade, hmm
       out[i] = l * patch.position + (1.0f - patch.position) * r;
       aux[i] = r * patch.position + (1.0f - patch.position) * l;
     }
@@ -563,6 +568,39 @@ void Part::Process(
   
   // Apply limiter to string output.
   limiter_.Process(out, aux, size, model_gains_[model_]);
+
+  float note = note_[active_voice_] + performance_state.tonic + performance_state.fm;
+  float frequency = SemitonesToRatio(note - 69.0f) * a3;
+  if (performance_state.mode != 0) {
+    // TODO - pass through crossfade amount somehow
+    float crossfade_amount = 0.5f;
+    // if (performance_state.mode == 2) {
+    //   crossfade_amount = cv_scaler.frequency_pot_value();
+    // }
+    for (size_t i = 0; i < size; ++i) {
+      aux[i] = Crossfade(out[i], aux[i], crossfade_amount);
+    }
+    // TODO - steal some exciter options from elements
+    // TODO - something is wonky with this square wave below about 3:15 on the freq knob,
+    //   but it looks much wonky without noise in, also structure seems to make a difference
+    //   (wonkier below 2:00ish)
+    if (performance_state.waveform_exciter == 0) {
+      oscillator_.Render<OSCILLATOR_SHAPE_SQUARE>(frequency, 0.5f, out, size);
+      for (size_t i = 0; i < size; ++i) {
+        out[i] /= 2.0f;
+      }
+    } else if (performance_state.waveform_exciter == 1) {
+      oscillator_.Render<OSCILLATOR_SHAPE_IMPULSE_TRAIN>(frequency, 0.5f, out, size);
+      for (size_t i = 0; i < size; ++i) {
+        out[i] /= 1.5f;
+      }
+    } else if (performance_state.waveform_exciter == 2) {
+      oscillator_.Render<OSCILLATOR_SHAPE_SAW>(frequency, 0.5f, out, size);
+      for (size_t i = 0; i < size; ++i) {
+        out[i] /= 2.0f;
+      }
+    }
+  }
 }
 
 /* static */

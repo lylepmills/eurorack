@@ -216,10 +216,15 @@ void CvScaler::Read(Patch* patch, PerformanceState* performance_state, Settings*
   first_read_ = false;
 
   float transpose = 60.0f * adc_lp_[ADC_CHANNEL_POT_FREQUENCY];
+  float octave_transpose = 12.0f * (floor(adc_lp_[ADC_CHANNEL_POT_FREQUENCY] * 6.999f) - 3.0f);
 
   float hysteresis = 0.0f;
   if (frequency_locked_ && mutable_state->frequency_locked) {
     transpose = mutable_state->locked_transpose;
+    // 
+    if (settings->ModeOption() != 2) {
+      transpose += octave_transpose;
+    }
   } else {
     hysteresis = transpose - transpose_ > 0.0f ? -0.3f : +0.3f;
     // Quantize the transpose value if and only if the V/OCT input is in use and it isn't

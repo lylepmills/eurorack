@@ -40,6 +40,7 @@
 #include "rings/dsp/fx/reverb.h"
 #include "rings/dsp/limiter.h"
 #include "rings/dsp/note_filter.h"
+#include "rings/dsp/oscillator.h"
 #include "rings/dsp/patch.h"
 #include "rings/dsp/performance_state.h"
 #include "rings/dsp/plucker.h"
@@ -164,6 +165,7 @@ class Part {
   String string_[kNumStrings];
   stmlib::CosineOscillator lfo_[kNumStrings];
   FMVoice fm_voice_[kMaxPolyphony];
+  Oscillator oscillator_;
   
   stmlib::Svf excitation_filter_[kMaxPolyphony];
   stmlib::DCBlocker dc_blocker_[kMaxPolyphony];

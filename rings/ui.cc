@@ -38,7 +38,11 @@
 
 namespace rings {
 
-const int32_t kLongPressDuration = 2000;
+const int32_t kAnimationDuration = 2000;
+const int32_t kLongPressDuration = 3000;
+const int32_t kMediumPressDuration = 200;
+// TODO - add more options
+const uint8_t kNumOptions = 3;
 
 using namespace std;
 using namespace stmlib;
@@ -70,21 +74,13 @@ void Ui::Init(
   part_->set_model(static_cast<ResonatorModel>(settings_->state().model));
   string_synth_->set_polyphony(settings_->state().polyphony);
   string_synth_->set_fx(static_cast<FxType>(settings_->state().model));
-  mode_ = settings_->state().easter_egg
-      ? UI_MODE_EASTER_EGG_INTRO
-      : UI_MODE_NORMAL;
+  mode_ = UI_MODE_NORMAL;
 }
 
 void Ui::SaveState() {
   settings_->mutable_state()->polyphony = part_->polyphony();
   settings_->mutable_state()->model = part_->model();
   settings_->Save();
-}
-
-void Ui::AnimateEasterEggLeds() {
-  mode_ = settings_->state().easter_egg
-      ? UI_MODE_EASTER_EGG_INTRO
-      : UI_MODE_EASTER_EGG_OUTRO;
 }
 
 void Ui::Poll() {
@@ -94,14 +90,18 @@ void Ui::Poll() {
   
   for (uint8_t i = 0; i < kNumSwitches; ++i) {
     if (switches_.just_pressed(i)) {
-      queue_.AddEvent(CONTROL_SWITCH, i, 0);
       press_time_[i] = system_clock.milliseconds();
     }
     if (switches_.pressed(i) && press_time_[i] != 0) {
       int32_t pressed_time = system_clock.milliseconds() - press_time_[i];
       if (pressed_time > kLongPressDuration) {
-        queue_.AddEvent(CONTROL_SWITCH, i, pressed_time);
+        queue_.AddEvent(CONTROL_SWITCH_HOLD, i, pressed_time);
         press_time_[i] = 0;
+      } else if (pressed_time > kMediumPressDuration &&
+                 mode_ == UI_MODE_NORMAL &&
+                 switches_.pressed(1 - i)) {
+        settings_->ToggleFrequencyLocking();
+        mode_ = UI_MODE_DISPLAY_FREQUENCY_LOCKING;
       }
     }
     if (switches_.released(i) && press_time_[i] != 0) {
@@ -193,8 +193,54 @@ void Ui::Poll() {
       leds_.set(0, false, slow_blink);
       leds_.set(1, false, slow_blink);
       break;
+
+    case UI_MODE_DISPLAY_FREQUENCY_LOCKING:
+      if (settings_->state().frequency_locked) {
+        leds_.set(0, blink, 0);
+        leds_.set(1, blink, 0);
+      } else {
+        leds_.set(0, 0, blink);
+        leds_.set(1, 0, blink);
+      }
+      break;
+
+    case UI_MODE_OPTIONS_MENU:
+      {
+        uint8_t option_value = 0;
+        if (option_menu_item_ == 0) {
+          leds_.set(0, 0, 1);
+          option_value = settings_->ModeOption();
+        } else if (option_menu_item_ == 1) {
+          leds_.set(0, 1, 0);
+          option_value = settings_->WaveformExciterOption();
+        } else if (option_menu_item_ == 2) {
+          leds_.set(0, 1, 1);
+          option_value = settings_->ChordTableOption();
+        }
+
+        if (option_value == 0) {
+          leds_.set(1, 0, 1);
+        } else if (option_value == 1) {
+          leds_.set(1, 1, 0);
+        } else if (option_value == 2) {
+          leds_.set(1, 1, 1);
+        } else if (option_value == 3) {
+          leds_.set(1, 0, slow_blink);
+        } else if (option_value == 4) {
+          leds_.set(1, slow_blink, 0);
+        } else if (option_value == 5) {
+          leds_.set(1, slow_blink, slow_blink);
+        } else if (option_value == 6) {
+          leds_.set(1, 0, blink);
+        } else if (option_value == 7) {
+          leds_.set(1, blink, 0);
+        } else if (option_value == 8) {
+          leds_.set(1, blink, blink);
+        }
+      }
+      break;
     
-    case UI_MODE_EASTER_EGG_INTRO:
+    case UI_MODE_OPTIONS_MENU_INTRO:
       {
         uint8_t pwm_counter = system_clock.milliseconds() & 15;
         uint8_t triangle_1 = (system_clock.milliseconds() / 7) & 31;
@@ -212,7 +258,7 @@ void Ui::Poll() {
       }
       break;
 
-    case UI_MODE_EASTER_EGG_OUTRO:
+    case UI_MODE_OPTIONS_MENU_OUTRO:
       {
         uint8_t pwm_counter = 7;
         uint8_t triangle_1 = (system_clock.milliseconds() / 9) & 31;
@@ -236,77 +282,107 @@ void Ui::FlushEvents() {
   queue_.Flush();
 }
 
-void Ui::OnSwitchPressed(const Event& e) {
+void Ui::IgnoreSwitchReleases() {
+  press_time_[0] = press_time_[1] = 0;
+}
 
+// TODO - maybe instead of switching to outro with long press
+// just press both buttons anywheree
+void Ui::OnSwitchLongHeld(const Event& e) {
+  // If both switches are held with a long press, either enter/exit menu
+  // or go to calibration.
+  if (switches_.pressed(1 - e.control_id)) {
+    if (mode_ == UI_MODE_OPTIONS_MENU) {
+      mode_ = UI_MODE_OPTIONS_MENU_OUTRO;
+      queue_.Touch();
+    } else if (e.control_id == 0) {
+      // Toggle back frequency locking after it was affected by going into menu
+      settings_->ToggleFrequencyLocking();
+      mode_ = UI_MODE_OPTIONS_MENU_INTRO;
+    } else {
+      if (mode_ == UI_MODE_CALIBRATION_C1) {
+        StartNormalizationCalibration();
+      } else {
+        StartCalibration();
+      }
+    }
+  } else if (e.control_id == 0) {
+    part_->set_polyphony(3);
+    string_synth_->set_polyphony(3);
+    SaveState();
+  } else {
+    int32_t model = part_->model();
+    if (model >= 3) {
+      model -= 3;
+    } else {
+      model += 3;
+    }
+    part_->set_model(static_cast<ResonatorModel>(model));
+    string_synth_->set_fx(static_cast<FxType>(model));
+  }
+  IgnoreSwitchReleases();
 }
 
 void Ui::OnSwitchReleased(const Event& e) {
-  // Check if the other switch is still pressed.
-  if (switches_.pressed(1 - e.control_id)) {
-    settings_->ToggleFrequencyLocking();
-    press_time_[0] = press_time_[1] = 0;
-    return;
-  }
-  
-  switch (e.control_id) {
-    case 0:
-      if (e.data >= kLongPressDuration) {
-        if (cv_scaler_->easter_egg()) {
-          settings_->ToggleEasterEgg();
-          AnimateEasterEggLeds();
-        } else {
-          settings_->TogglePhaseInversion();
-        }
-        SaveState();
-      } else {
-        switch (mode_) {
-          case UI_MODE_CALIBRATION_C1:
-            CalibrateC1();
-            break;
-          case UI_MODE_CALIBRATION_C3:
-            CalibrateC3();
-            break;
-          case UI_MODE_CALIBRATION_LOW:
-            CalibrateLow();
-            break;
-          case UI_MODE_CALIBRATION_HIGH:
-            CalibrateHigh();
-            break;
-          default:
-            {
-              int32_t polyphony = part_->polyphony();
-              if (polyphony == 3) {
-                polyphony = 2;
-              }
-              polyphony <<= 1;
-              if (polyphony > 4) {
-                polyphony = 1;
-              }
-              part_->set_polyphony(polyphony);
-              string_synth_->set_polyphony(polyphony);
-              SaveState();
-            }
-            break;
+  if (e.control_id == 0) {
+    switch (mode_) {
+      case UI_MODE_CALIBRATION_C1:
+        CalibrateC1();
+        break;
+      case UI_MODE_CALIBRATION_C3:
+        CalibrateC3();
+        break;
+      case UI_MODE_CALIBRATION_LOW:
+        CalibrateLow();
+        break;
+      case UI_MODE_CALIBRATION_HIGH:
+        CalibrateHigh();
+        break;
+      case UI_MODE_OPTIONS_MENU_INTRO:
+      case UI_MODE_OPTIONS_MENU_OUTRO:
+        break;
+      case UI_MODE_OPTIONS_MENU:
+        option_menu_item_ = (option_menu_item_ + 1) % kNumOptions;
+        break;
+      case UI_MODE_DISPLAY_FREQUENCY_LOCKING:
+        IgnoreSwitchReleases();
+        mode_ = UI_MODE_NORMAL;
+        break;
+      default:
+        {
+          int32_t polyphony = part_->polyphony();
+          if (polyphony == 3) {
+            polyphony = 2;
           }
+          polyphony <<= 1;
+          if (polyphony > 4) {
+            polyphony = 1;
+          }
+          part_->set_polyphony(polyphony);
+          string_synth_->set_polyphony(polyphony);
+          SaveState();
+        }
+        break;
       }
-      break;
-    
-    case 1:
-      if (e.data >= kLongPressDuration) {
-        if (cv_scaler_->easter_egg()) {
-          settings_->ToggleEasterEgg();
-          AnimateEasterEggLeds();
-        } else {
-          int32_t model = part_->model();
-          if (model >= 3) {
-            model -= 3;
-          } else {
-            model += 3;
-          }
-          part_->set_model(static_cast<ResonatorModel>(model));
-          string_synth_->set_fx(static_cast<FxType>(model));
+  } else {
+    switch (mode_) {
+      case UI_MODE_DISPLAY_FREQUENCY_LOCKING:
+        IgnoreSwitchReleases();
+        mode_ = UI_MODE_NORMAL;
+        break;
+      case UI_MODE_OPTIONS_MENU_INTRO:
+      case UI_MODE_OPTIONS_MENU_OUTRO:
+        break;
+      case UI_MODE_OPTIONS_MENU:
+        if (option_menu_item_ == 0) {
+          settings_->SwitchModeOption();
+        } else if (option_menu_item_ == 1) {
+          settings_->SwitchWaveformExciterOption();
+        } else if (option_menu_item_ == 2) {
+          settings_->SwitchChordTableOption();
         }
-      } else {
+        break;
+      default:
         int32_t model = part_->model();
         if (model >= 3) {
           model -= 3;
@@ -315,12 +391,9 @@ void Ui::OnSwitchReleased(const Event& e) {
         }
         part_->set_model(static_cast<ResonatorModel>(model));
         string_synth_->set_fx(static_cast<FxType>(model));
-      }
-      SaveState();
-      break;
-    
-    default:
-      break;
+        SaveState();
+        break;
+    }
   }
 }
 
@@ -368,18 +441,21 @@ void Ui::DoEvents() {
   while (queue_.available()) {
     Event e = queue_.PullEvent();
     if (e.control_type == CONTROL_SWITCH) {
-      if (e.data == 0) {
-        OnSwitchPressed(e);
-      } else {
-        OnSwitchReleased(e);
-      }
+      OnSwitchReleased(e);
+    } else if (e.control_type == CONTROL_SWITCH_HOLD) {
+      OnSwitchLongHeld(e);
     }
   }
   if (queue_.idle_time() > 800 && mode_ == UI_MODE_PANIC) {
     mode_ = UI_MODE_NORMAL;
   }
-  if (mode_ == UI_MODE_EASTER_EGG_INTRO || mode_ == UI_MODE_EASTER_EGG_OUTRO) {
-    if (queue_.idle_time() > 3000) {
+  if (mode_ == UI_MODE_OPTIONS_MENU_INTRO) {
+    if (queue_.idle_time() > kAnimationDuration) {
+      mode_ = UI_MODE_OPTIONS_MENU;
+      queue_.Touch();
+    }
+  } else if (mode_ == UI_MODE_OPTIONS_MENU_OUTRO) {
+    if (queue_.idle_time() > kAnimationDuration) {
       mode_ = UI_MODE_NORMAL;
       queue_.Touch();
     }

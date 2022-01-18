@@ -45,12 +45,14 @@ class StringSynthPart;
 
 enum UiMode {
   UI_MODE_NORMAL,
+  UI_MODE_DISPLAY_FREQUENCY_LOCKING,
+  UI_MODE_OPTIONS_MENU,
+  UI_MODE_OPTIONS_MENU_INTRO,
+  UI_MODE_OPTIONS_MENU_OUTRO,
   UI_MODE_CALIBRATION_C1,
   UI_MODE_CALIBRATION_C3,
   UI_MODE_CALIBRATION_LOW,
   UI_MODE_CALIBRATION_HIGH,
-  UI_MODE_EASTER_EGG_INTRO,
-  UI_MODE_EASTER_EGG_OUTRO,
   UI_MODE_PANIC,
 };
 
@@ -91,8 +93,9 @@ class Ui {
   uint8_t HandleFactoryTestingRequest(uint8_t command);
   
  private:
-  void OnSwitchPressed(const stmlib::Event& e);
   void OnSwitchReleased(const stmlib::Event& e);
+  void OnSwitchLongHeld(const stmlib::Event& e);
+  void IgnoreSwitchReleases();
   void StartCalibration();
   void CalibrateC1();
   void CalibrateC3();
@@ -100,7 +103,6 @@ class Ui {
   void CalibrateLow();
   void CalibrateHigh();
   void SaveState();
-  void AnimateEasterEggLeds();
 
   stmlib::EventQueue<16> queue_;
   
@@ -110,6 +112,7 @@ class Ui {
   UiMode mode_;
   int32_t strumming_flag_counter_;
   int32_t strumming_flag_interval_;
+  uint8_t option_menu_item_;
   
   Settings* settings_;
   CvScaler* cv_scaler_;

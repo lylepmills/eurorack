@@ -49,7 +49,9 @@ struct State {
   uint8_t easter_egg;
   uint8_t color_blind;
   uint8_t frequency_locked;
-  uint8_t phase_invert;
+  uint8_t mode_option;
+  uint8_t waveform_exciter_option;
+  uint8_t chord_table_option;
   float locked_transpose;
 };
 
@@ -70,17 +72,24 @@ class Settings {
   inline CalibrationData* mutable_calibration_data() {
     return &data_.calibration_data;
   }
-  
-  inline void ToggleEasterEgg() {
-    data_.state.easter_egg = !data_.state.easter_egg;
-  }
-  
-  inline void TogglePhaseInversion() {
-    data_.state.phase_invert = !data_.state.phase_invert;
-  }
 
   inline void ToggleFrequencyLocking() {
     data_.state.frequency_locked = !data_.state.frequency_locked;
+  }
+
+  void SwitchModeOption();
+  inline uint8_t ModeOption() {
+    return data_.state.mode_option;
+  }
+
+  void SwitchWaveformExciterOption();
+  inline uint8_t WaveformExciterOption() {
+    return data_.state.waveform_exciter_option;
+  }
+
+  void SwitchChordTableOption();
+  inline uint8_t ChordTableOption() {
+    return data_.state.chord_table_option;
   }
 
   inline State* mutable_state() {

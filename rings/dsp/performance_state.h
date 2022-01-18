@@ -31,6 +31,7 @@
 
 namespace rings {
 
+// TODO - if multiple chord tables, this will need updating
 const int32_t kNumChords = 11;
 
 struct PerformanceState {
@@ -43,6 +44,8 @@ struct PerformanceState {
   float note;
   float fm;
   int32_t chord;
+  uint8_t mode;
+  uint8_t waveform_exciter;
 };
 
 }  // namespace rings

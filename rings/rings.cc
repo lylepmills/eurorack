@@ -94,6 +94,8 @@ void FillBuffer(Codec::Frame* input, Codec::Frame* output, size_t size) {
   
   cv_scaler.DetectAudioNormalization(input, size);
   cv_scaler.Read(&patch, &performance_state, &settings);
+  performance_state.mode = settings.ModeOption();
+  performance_state.waveform_exciter = settings.WaveformExciterOption();
 
   if (settings.state().easter_egg) {
     for (size_t i = 0; i < size; ++i) {
@@ -115,27 +117,10 @@ void FillBuffer(Codec::Frame* input, Codec::Frame* output, size_t size) {
     strummer.Process(in, size, &performance_state);
     part.Process(performance_state, patch, in, out, aux, size);
   }
-  
+
   for (size_t i = 0; i < size; ++i) {
-    float crossfade_amount = 0.0f;
-    float r_phase = 1.0f;
-    if (settings.state().frequency_locked) {
-      crossfade_amount = cv_scaler.frequency_pot_value();
-      // When using the Odd output only r_phase should ideally be negative, to avoid
-      // phase cancellation in the center of the frequency pot range. But when using both
-      // outputs, r_phase is ideally positive so that the Even and Odd outputs aren't
-      // out of phase with each other (especially noticeable in the center when both
-      // waves have the same proportion of even/odd components).
-      // We can't determine here in software which circumstance we're in so the choice
-      // is left to the user depending how they are using the module.
-      if (settings.state().phase_invert) {
-        r_phase = -1.0f;
-      }
-    }
-    float l_out = Crossfade(out[i], aux[i], crossfade_amount) * 32768.0f;
-    float r_out = Crossfade(aux[i], out[i], crossfade_amount) * 32768.0f * r_phase;
-    output[i].l = Clip16(static_cast<int32_t>(l_out));
-    output[i].r = Clip16(static_cast<int32_t>(r_out));
+    output[i].l = Clip16(static_cast<int32_t>(out[i] * 32768.0f));
+    output[i].r = Clip16(static_cast<int32_t>(aux[i] * 32768.0f));
   }
   ui.set_strumming_flag(performance_state.strum);
 #ifdef PROFILE_INTERRUPT
