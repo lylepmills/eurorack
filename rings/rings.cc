@@ -94,7 +94,7 @@ void FillBuffer(Codec::Frame* input, Codec::Frame* output, size_t size) {
   
   cv_scaler.DetectAudioNormalization(input, size);
   cv_scaler.Read(&patch, &performance_state, &settings);
-  performance_state.mode = settings.ModeOption();
+  performance_state.mode = static_cast<PerformanceMode>(settings.ModeOption());
   performance_state.waveform_exciter = settings.WaveformExciterOption();
 
   if (settings.state().easter_egg) {

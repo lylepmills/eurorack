@@ -37,7 +37,9 @@
 
 #include "rings/dsp/dsp.h"
 #include "rings/dsp/fm_voice.h"
+#include "rings/dsp/fx/diffuser.h"
 #include "rings/dsp/fx/reverb.h"
+#include "rings/dsp/exciter.h"
 #include "rings/dsp/limiter.h"
 #include "rings/dsp/note_filter.h"
 #include "rings/dsp/oscillator.h"
@@ -46,6 +48,7 @@
 #include "rings/dsp/plucker.h"
 #include "rings/dsp/resonator.h"
 #include "rings/dsp/string.h"
+#include "rings/dsp/tube.h"
 
 namespace rings {
 
@@ -123,7 +126,19 @@ class Part {
       float frequency,
       float filter_cutoff,
       size_t size);
-  
+
+  inline bool MiniElements(const PerformanceState& performance_state) {
+    return performance_state.mode == MODE_MINI_ELEMENTS_STEREO ||
+        performance_state.mode == MODE_MINI_ELEMENTS_EXCITER;
+  }
+
+  inline bool PositionRepurposed(const PerformanceState& performance_state) {
+    if (!MiniElements(performance_state)) {
+      return false;
+    }
+    return performance_state.waveform_exciter == 1 ||
+        performance_state.waveform_exciter == 2;
+  }
 
   inline float Squash(float x) const {
     if (x < 0.5f) {
@@ -150,6 +165,12 @@ class Part {
       float parameter,
       float* destination,
       size_t num_strings);
+
+  void FillExciterBuffer(
+      const PerformanceState& performance_state,
+      const Patch& patch,
+      float frequency,
+      size_t size);
   
   bool bypass_;
   bool dirty_;
@@ -166,6 +187,11 @@ class Part {
   stmlib::CosineOscillator lfo_[kNumStrings];
   FMVoice fm_voice_[kMaxPolyphony];
   Oscillator oscillator_;
+  Tube tube_;
+  Exciter bow_;
+  Exciter blow_;
+  Exciter strike_;
+  Diffuser diffuser_;
   
   stmlib::Svf excitation_filter_[kMaxPolyphony];
   stmlib::DCBlocker dc_blocker_[kMaxPolyphony];
@@ -177,9 +203,13 @@ class Part {
   float resonator_input_[kMaxBlockSize];
   float sympathetic_resonator_input_[kMaxBlockSize];
   float noise_burst_buffer_[kMaxBlockSize];
+  float exciter_buffer_[kMaxBlockSize];
   
+  // float blow_buffer_[kMaxBlockSize];
   float out_buffer_[kMaxBlockSize];
   float aux_buffer_[kMaxBlockSize];
+
+  float diffuser_buffer_[1024];
   
   Reverb reverb_;
   Limiter limiter_;

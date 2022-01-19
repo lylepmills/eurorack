@@ -197,6 +197,7 @@ void CvScaler::Read(Patch* patch, PerformanceState* performance_state, Settings*
   performance_state->internal_strum = internal_strum;
   performance_state->internal_note = internal_note;
   performance_state->strum = trigger_input_.rising_edge();
+  performance_state->strum_gate = trigger_input_.value();
 
   bool settings_dirty = false;
   State* mutable_state = settings->mutable_state();
@@ -221,8 +222,7 @@ void CvScaler::Read(Patch* patch, PerformanceState* performance_state, Settings*
   float hysteresis = 0.0f;
   if (frequency_locked_ && mutable_state->frequency_locked) {
     transpose = mutable_state->locked_transpose;
-    // 
-    if (settings->ModeOption() != 2) {
+    if ((settings->ModeOption() != 2) && (settings->ModeOption() != 3)) {
       transpose += octave_transpose;
     }
   } else {
@@ -240,6 +240,10 @@ void CvScaler::Read(Patch* patch, PerformanceState* performance_state, Settings*
     }
   }
   frequency_locked_ = mutable_state->frequency_locked;
+  performance_state->frequency_locked = frequency_locked_;
+  if (frequency_locked_) {
+    performance_state->locked_frequency_pot_value = frequency_pot_value();
+  }
 
   if (settings_dirty) {
     settings->Save();

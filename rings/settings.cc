@@ -32,7 +32,7 @@
 
 namespace rings {
 
-const uint8_t kNumModeOptions = 4;
+const uint8_t kNumModeOptions = 5;
 // TODO - exciter options
 const uint8_t kNumWaveformExciterOptions = 3;
 // TODO - is 3 the number of chord tables we want?

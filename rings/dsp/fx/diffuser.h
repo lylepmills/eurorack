@@ -1,4 +1,4 @@
-// Copyright 2015 Emilie Gillet.
+// Copyright 2014 Emilie Gillet.
 //
 // Author: Emilie Gillet (emilie.o.gillet@gmail.com)
 //
@@ -24,42 +24,62 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Note triggering state.
+// Granular diffuser.
 
-#ifndef RINGS_DSP_PERFORMANCE_STATE_H_
-#define RINGS_DSP_PERFORMANCE_STATE_H_
+#ifndef RINGS_DSP_FX_DIFFUSER_H_
+#define RINGS_DSP_FX_DIFFUSER_H_
+
+#include "stmlib/stmlib.h"
+
+#include "rings/dsp/fx/fx_engine.h"
 
 namespace rings {
 
-// TODO - if multiple chord tables, this will need updating
-const int32_t kNumChords = 11;
-
-enum PerformanceMode {
-  MODE_RINGS_STEREO,
-  MODE_RINGS_WAVEFORM,
-  MODE_MINI_ELEMENTS_STEREO,
-  MODE_MINI_ELEMENTS_EXCITER,
-  MODE_EASTER_EGG,
-};
-
-struct PerformanceState {
-  bool strum;
-  bool strum_gate;
-  bool internal_exciter;
-  bool internal_strum;
-  bool internal_note;
-
-  PerformanceMode mode;
-
-  float tonic;
-  float note;
-  float fm;
-  float locked_frequency_pot_value;
-  int32_t chord;
-  uint8_t frequency_locked;
-  uint8_t waveform_exciter;
+class Diffuser {
+ public:
+  Diffuser() { }
+  ~Diffuser() { }
+  
+  void Init(float* buffer) {
+    engine_.Init(buffer);
+  }
+  
+  void Process(float* in_out, size_t size) {
+    typedef E::Reserve<126,
+      E::Reserve<180,
+      E::Reserve<269,
+      E::Reserve<444> > > > Memory;
+    E::DelayLine<Memory, 0> ap1;
+    E::DelayLine<Memory, 1> ap2;
+    E::DelayLine<Memory, 2> ap3;
+    E::DelayLine<Memory, 3> ap4;
+    E::Context c;
+    const float kap = 0.625f;
+    while (size--) {
+      engine_.Start(&c);
+      c.Read(*in_out);
+      c.Read(ap1 TAIL, kap);
+      c.WriteAllPass(ap1, -kap);
+      c.Read(ap2 TAIL, kap);
+      c.WriteAllPass(ap2, -kap);
+      c.Read(ap3 TAIL, kap);
+      c.WriteAllPass(ap3, -kap);
+      c.Read(ap4 TAIL, kap);
+      c.WriteAllPass(ap4, -kap);
+      c.Write(*in_out, 0.0f);
+      ++in_out;
+    }
+  }
+  
+ private:
+  // TODO - this is what elements does
+  // typedef FxEngine<1024, FORMAT_32_BIT> E;
+  typedef FxEngine<1024, FORMAT_32_BIT> E;
+  E engine_;
+  
+  DISALLOW_COPY_AND_ASSIGN(Diffuser);
 };
 
 }  // namespace rings
 
-#endif  // RINGS_DSP_PERFORMANCE_STATE_H_
+#endif  // RINGS_DSP_FX_DIFFUSER_H_

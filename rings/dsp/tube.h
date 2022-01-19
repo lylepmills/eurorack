@@ -1,4 +1,4 @@
-// Copyright 2015 Emilie Gillet.
+// Copyright 2014 Emilie Gillet.
 //
 // Author: Emilie Gillet (emilie.o.gillet@gmail.com)
 //
@@ -24,42 +24,46 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Note triggering state.
+// Simple waveguide tube.
 
-#ifndef RINGS_DSP_PERFORMANCE_STATE_H_
-#define RINGS_DSP_PERFORMANCE_STATE_H_
+#ifndef RINGS_DSP_TUBE_H_
+#define RINGS_DSP_TUBE_H_
+
+#include "stmlib/stmlib.h"
+
+#include <cmath>
+#include <algorithm>
+
+#include "rings/dsp/dsp.h"
 
 namespace rings {
 
-// TODO - if multiple chord tables, this will need updating
-const int32_t kNumChords = 11;
+const size_t kTubeDelaySize = 2048;
 
-enum PerformanceMode {
-  MODE_RINGS_STEREO,
-  MODE_RINGS_WAVEFORM,
-  MODE_MINI_ELEMENTS_STEREO,
-  MODE_MINI_ELEMENTS_EXCITER,
-  MODE_EASTER_EGG,
-};
+class Tube {
+ public:
+  Tube() { }
+  ~Tube() { }
+  
+  void Init();
+  void Process(
+      float frequency,
+      float envelope,
+      float damping,
+      float timbre,
+      float* input_output,
+      float gain,
+      size_t size);
 
-struct PerformanceState {
-  bool strum;
-  bool strum_gate;
-  bool internal_exciter;
-  bool internal_strum;
-  bool internal_note;
+ private:
+  int32_t delay_ptr_;
+  float zero_state_;
+  float pole_state_;
+  float delay_line_[kTubeDelaySize];
 
-  PerformanceMode mode;
-
-  float tonic;
-  float note;
-  float fm;
-  float locked_frequency_pot_value;
-  int32_t chord;
-  uint8_t frequency_locked;
-  uint8_t waveform_exciter;
+  DISALLOW_COPY_AND_ASSIGN(Tube);
 };
 
 }  // namespace rings
 
-#endif  // RINGS_DSP_PERFORMANCE_STATE_H_
+#endif  // RINGS_DSP_TUBE_H_

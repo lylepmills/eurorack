@@ -54,6 +54,17 @@ void Part::Init(uint16_t* reverb_buffer) {
   }
   
   oscillator_.Init();
+
+  tube_.Init();
+  diffuser_.Init(diffuser_buffer_);
+  bow_.Init();
+  bow_.set_model(EXCITER_MODEL_FLOW);
+  bow_.set_parameter(0.7f);
+  bow_.set_timbre(0.5f);  
+  blow_.Init();
+  blow_.set_model(EXCITER_MODEL_GRANULAR_SAMPLE_PLAYER);
+  strike_.Init();  
+
   reverb_.Init(reverb_buffer);
   limiter_.Init();
 
@@ -320,7 +331,11 @@ void Part::RenderModalVoice(
   r.set_frequency(frequency);
   r.set_structure(patch.structure);
   r.set_brightness(patch.brightness * patch.brightness);
-  r.set_position(patch.position);
+  if (PositionRepurposed(performance_state)) {
+    r.set_position(0.0f);
+  } else {
+    r.set_position(patch.position);
+  }
   r.set_damping(patch.damping);
   r.Process(resonator_input_, out_buffer_, aux_buffer_, size);
 }
@@ -342,7 +357,11 @@ void Part::RenderFMVoice(
   v.set_frequency(frequency);
   v.set_ratio(patch.structure);
   v.set_brightness(patch.brightness);
-  v.set_feedback_amount(patch.position);
+  if (PositionRepurposed(performance_state)) {
+    v.set_feedback_amount(0.5f);
+  } else {
+    v.set_feedback_amount(patch.position);
+  }
   v.set_position(/*patch.position*/ 0.0f);
   v.set_damping(patch.damping);
   v.Process(resonator_input_, out_buffer_, aux_buffer_, size);
@@ -388,11 +407,16 @@ void Part::RenderStringVoice(
   // Process external input.
   excitation_filter_[voice].Process<FILTER_MODE_LOW_PASS>(
       resonator_input_, resonator_input_, size);
+  
+  float patch_position = patch.position;
+  if (PositionRepurposed(performance_state)) {
+    patch_position = 0.5f;
+  }
 
   // Add noise burst.
   if (performance_state.internal_exciter) {
     if (voice == active_voice_ && performance_state.strum) {
-      plucker_[voice].Trigger(frequency, filter_cutoff * 8.0f, patch.position);
+      plucker_[voice].Trigger(frequency, filter_cutoff * 8.0f, patch_position);
     }
     plucker_[voice].Process(noise_burst_buffer_, size);
     for (size_t i = 0; i < size; ++i) {
@@ -416,7 +440,7 @@ void Part::RenderStringVoice(
     
     float brightness = patch.brightness;
     float damping = patch.damping;
-    float position = patch.position;
+    float position = patch_position;
     float glide = 1.0f;
     float string_index = static_cast<float>(string) / static_cast<float>(num_strings);
     const float* input = resonator_input_;
@@ -433,8 +457,8 @@ void Part::RenderStringVoice(
       brightness *= (2.0f - brightness);
       brightness *= (2.0f - brightness);
       damping = 0.7f + patch.damping * 0.27f;
-      float amount = (0.5f - fabs(0.5f - patch.position)) * 0.9f;
-      position = patch.position + lfo_value * amount;
+      float amount = (0.5f - fabs(0.5f - patch_position)) * 0.9f;
+      position = patch_position + lfo_value * amount;
       glide = SemitonesToRatio((brightness - 1.0f) * 36.0f);
       input = sympathetic_resonator_input_;
     }
@@ -517,6 +541,13 @@ void Part::Process(
     } else {
       fill(&resonator_input_[0], &resonator_input_[size], 0.0f);
     }
+
+    if (performance_state.mode == MODE_MINI_ELEMENTS_STEREO) {
+      FillExciterBuffer(performance_state, patch, frequency, size);
+      for (size_t i = 0; i < size; ++i) {
+        resonator_input_[i] += exciter_buffer_[i];
+      }
+    }
     
     if (model_ == RESONATOR_MODEL_MODAL) {
       RenderModalVoice(
@@ -548,13 +579,15 @@ void Part::Process(
   }
   
   if (model_ == RESONATOR_MODEL_STRING_AND_REVERB) {
-    for (size_t i = 0; i < size; ++i) {
-      float l = out[i];
-      float r = aux[i];
-      // TODO - this sure looks like a crossfade, hmm
-      out[i] = l * patch.position + (1.0f - patch.position) * r;
-      aux[i] = r * patch.position + (1.0f - patch.position) * l;
+    if (!PositionRepurposed(performance_state)) {
+      for (size_t i = 0; i < size; ++i) {
+        float l = out[i];
+        float r = aux[i];
+        out[i] = l * patch.position + (1.0f - patch.position) * r;
+        aux[i] = r * patch.position + (1.0f - patch.position) * l;
+      }
     }
+
     reverb_.set_amount(0.1f + patch.damping * 0.5f);
     reverb_.set_diffusion(0.625f);
     reverb_.set_time(0.35f + 0.63f * patch.damping);
@@ -571,19 +604,16 @@ void Part::Process(
 
   float note = note_[active_voice_] + performance_state.tonic + performance_state.fm;
   float frequency = SemitonesToRatio(note - 69.0f) * a3;
-  if (performance_state.mode != 0) {
-    // TODO - pass through crossfade amount somehow
+
+  if (performance_state.mode == MODE_RINGS_WAVEFORM ||
+      performance_state.mode == MODE_MINI_ELEMENTS_EXCITER) {
     float crossfade_amount = 0.5f;
-    // if (performance_state.mode == 2) {
-    //   crossfade_amount = cv_scaler.frequency_pot_value();
-    // }
     for (size_t i = 0; i < size; ++i) {
       aux[i] = Crossfade(out[i], aux[i], crossfade_amount);
     }
-    // TODO - steal some exciter options from elements
-    // TODO - something is wonky with this square wave below about 3:15 on the freq knob,
-    //   but it looks much wonky without noise in, also structure seems to make a difference
-    //   (wonkier below 2:00ish)
+  }
+
+  if (performance_state.mode == MODE_RINGS_WAVEFORM) {
     if (performance_state.waveform_exciter == 0) {
       oscillator_.Render<OSCILLATOR_SHAPE_SQUARE>(frequency, 0.5f, out, size);
       for (size_t i = 0; i < size; ++i) {
@@ -600,6 +630,56 @@ void Part::Process(
         out[i] /= 2.0f;
       }
     }
+  } else if (performance_state.mode == MODE_MINI_ELEMENTS_EXCITER) {
+    // TODO - need to figure out how to handle polyphony in the various exciter modes
+    FillExciterBuffer(performance_state, patch, frequency, size);
+    copy(&exciter_buffer_[0], &exciter_buffer_[size], &out[0]);
+  }
+}
+
+void Part::FillExciterBuffer(
+    const PerformanceState& performance_state,
+    const Patch& patch,
+    float frequency,
+    size_t size) {
+  uint8_t exciter_flags = 0;
+  if (performance_state.strum) {
+    exciter_flags |= EXCITER_FLAG_RISING_EDGE;
+  }
+  if (performance_state.strum_gate) {
+    exciter_flags |= EXCITER_FLAG_GATE;
+  }
+
+  if (performance_state.waveform_exciter == 0) {
+    if (performance_state.frequency_locked) {
+      bow_.set_timbre(performance_state.locked_frequency_pot_value);
+    }
+    bow_.Process(exciter_flags, exciter_buffer_, size);
+  } else if (performance_state.waveform_exciter == 1) {
+    if (performance_state.frequency_locked) {
+      blow_.set_timbre(performance_state.locked_frequency_pot_value);
+    }
+    blow_.set_parameter(patch.position);
+    blow_.Process(exciter_flags, exciter_buffer_, size);
+    tube_.Process(
+      frequency,
+      1.0f, // envelope_value
+      patch.damping,
+      1.0f, // tube_level
+      exciter_buffer_,
+      0.5f, // tube_level * 0.5f
+      size);
+    diffuser_.Process(exciter_buffer_, size);
+  } else if (performance_state.waveform_exciter == 2) {
+    if (performance_state.frequency_locked) {
+      strike_.set_timbre(performance_state.locked_frequency_pot_value);
+    }
+    float strike_meta = patch.position;
+    strike_.set_meta(
+      strike_meta <= 0.4f ? strike_meta * 0.625f : strike_meta * 1.25f - 0.25f,
+      EXCITER_MODEL_SAMPLE_PLAYER,
+      EXCITER_MODEL_PARTICLES);
+    strike_.Process(exciter_flags, exciter_buffer_, size);
   }
 }
 

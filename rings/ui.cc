@@ -41,7 +41,6 @@ namespace rings {
 const int32_t kAnimationDuration = 2000;
 const int32_t kLongPressDuration = 3000;
 const int32_t kMediumPressDuration = 200;
-// TODO - add more options
 const uint8_t kNumOptions = 3;
 
 using namespace std;
@@ -90,7 +89,13 @@ void Ui::Poll() {
   
   for (uint8_t i = 0; i < kNumSwitches; ++i) {
     if (switches_.just_pressed(i)) {
-      press_time_[i] = system_clock.milliseconds();
+      if (mode_ == UI_MODE_OPTIONS_MENU && switches_.pressed(1 - i)) {
+        IgnoreSwitchReleases();
+        queue_.Touch();
+        mode_ = UI_MODE_OPTIONS_MENU_OUTRO;
+      } else {
+        press_time_[i] = system_clock.milliseconds();
+      }
     }
     if (switches_.pressed(i) && press_time_[i] != 0) {
       int32_t pressed_time = system_clock.milliseconds() - press_time_[i];
@@ -218,24 +223,39 @@ void Ui::Poll() {
           option_value = settings_->ChordTableOption();
         }
 
-        if (option_value == 0) {
-          leds_.set(1, 0, 1);
-        } else if (option_value == 1) {
-          leds_.set(1, 1, 0);
-        } else if (option_value == 2) {
-          leds_.set(1, 1, 1);
-        } else if (option_value == 3) {
-          leds_.set(1, 0, slow_blink);
-        } else if (option_value == 4) {
-          leds_.set(1, slow_blink, 0);
-        } else if (option_value == 5) {
-          leds_.set(1, slow_blink, slow_blink);
-        } else if (option_value == 6) {
-          leds_.set(1, 0, blink);
-        } else if (option_value == 7) {
-          leds_.set(1, blink, 0);
-        } else if (option_value == 8) {
-          leds_.set(1, blink, blink);
+        // Special casing mode options for color consistency.
+        if (option_menu_item_ == 0) {
+          if (option_value == 0) {
+            leds_.set(1, 0, 1);
+          } else if (option_value == 1) {
+            leds_.set(1, 0, slow_blink);
+          } else if (option_value == 2) {
+            leds_.set(1, 1, 0);
+          } else if (option_value == 3) {
+            leds_.set(1, slow_blink, 0);
+          } else if (option_value == 4) {
+            leds_.set(1, 1, 1);
+          }
+        } else {
+          if (option_value == 0) {
+            leds_.set(1, 0, 1);
+          } else if (option_value == 1) {
+            leds_.set(1, 1, 0);
+          } else if (option_value == 2) {
+            leds_.set(1, 1, 1);
+          } else if (option_value == 3) {
+            leds_.set(1, 0, slow_blink);
+          } else if (option_value == 4) {
+            leds_.set(1, slow_blink, 0);
+          } else if (option_value == 5) {
+            leds_.set(1, slow_blink, slow_blink);
+          } else if (option_value == 6) {
+            leds_.set(1, 0, blink);
+          } else if (option_value == 7) {
+            leds_.set(1, blink, 0);
+          } else if (option_value == 8) {
+            leds_.set(1, blink, blink);
+          }
         }
       }
       break;
@@ -286,18 +306,13 @@ void Ui::IgnoreSwitchReleases() {
   press_time_[0] = press_time_[1] = 0;
 }
 
-// TODO - maybe instead of switching to outro with long press
-// just press both buttons anywheree
 void Ui::OnSwitchLongHeld(const Event& e) {
   // If both switches are held with a long press, either enter/exit menu
   // or go to calibration.
   if (switches_.pressed(1 - e.control_id)) {
-    if (mode_ == UI_MODE_OPTIONS_MENU) {
-      mode_ = UI_MODE_OPTIONS_MENU_OUTRO;
-      queue_.Touch();
-    } else if (e.control_id == 0) {
-      // Toggle back frequency locking after it was affected by going into menu
-      settings_->ToggleFrequencyLocking();
+    // Toggle back frequency locking after it was affected by initiating long-press
+    settings_->ToggleFrequencyLocking();
+    if (e.control_id == 0) {
       mode_ = UI_MODE_OPTIONS_MENU_INTRO;
     } else {
       if (mode_ == UI_MODE_CALIBRATION_C1) {
