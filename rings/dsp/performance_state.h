@@ -31,8 +31,10 @@
 
 namespace rings {
 
-// TODO - if multiple chord tables, this will need updating
-const int32_t kNumChords = 11;
+const int32_t kNumBryanChords = 11;
+const int32_t kNumJonChords = 17;
+const int32_t kNumJoeEasterEggChords = 18;
+const int32_t kMaxNumJoeChords = 23;
 
 enum PerformanceMode {
   MODE_RINGS_STEREO,
@@ -40,6 +42,12 @@ enum PerformanceMode {
   MODE_MINI_ELEMENTS_STEREO,
   MODE_MINI_ELEMENTS_EXCITER,
   MODE_EASTER_EGG,
+};
+
+enum ChordTable {
+  CHORD_TABLE_BRYAN,
+  CHORD_TABLE_JON,
+  CHORD_TABLE_JOE,
 };
 
 struct PerformanceState {
@@ -50,6 +58,7 @@ struct PerformanceState {
   bool internal_note;
 
   PerformanceMode mode;
+  ChordTable chord_table;
 
   float tonic;
   float note;
@@ -58,6 +67,10 @@ struct PerformanceState {
   int32_t chord;
   uint8_t frequency_locked;
   uint8_t waveform_exciter;
+
+  bool MiniElements() const {
+    return (mode == MODE_MINI_ELEMENTS_STEREO) || (mode == MODE_MINI_ELEMENTS_EXCITER);
+  }
 };
 
 }  // namespace rings

@@ -38,8 +38,8 @@
 
 namespace rings {
 
-const int32_t kAnimationDuration = 2000;
-const int32_t kLongPressDuration = 3000;
+const int32_t kAnimationDuration = 1200;
+const int32_t kLongPressDuration = 2800;
 const int32_t kMediumPressDuration = 200;
 const uint8_t kNumOptions = 3;
 
@@ -105,7 +105,6 @@ void Ui::Poll() {
       } else if (pressed_time > kMediumPressDuration &&
                  mode_ == UI_MODE_NORMAL &&
                  switches_.pressed(1 - i)) {
-        settings_->ToggleFrequencyLocking();
         mode_ = UI_MODE_DISPLAY_FREQUENCY_LOCKING;
       }
     }
@@ -200,12 +199,14 @@ void Ui::Poll() {
       break;
 
     case UI_MODE_DISPLAY_FREQUENCY_LOCKING:
+      // Display the opposite of the current setting since we only toggle
+      // on release.
       if (settings_->state().frequency_locked) {
-        leds_.set(0, blink, 0);
-        leds_.set(1, blink, 0);
-      } else {
         leds_.set(0, 0, blink);
         leds_.set(1, 0, blink);
+      } else {
+        leds_.set(0, blink, 0);
+        leds_.set(1, blink, 0);
       }
       break;
 
@@ -221,6 +222,19 @@ void Ui::Poll() {
         } else if (option_menu_item_ == 2) {
           leds_.set(0, 1, 1);
           option_value = settings_->ChordTableOption();
+        }
+
+        bool menu_indicator = (system_clock.milliseconds() % 10000) > 9000;
+        if (menu_indicator) {
+          uint8_t pwm_counter = system_clock.milliseconds() & 15;
+          uint8_t triangle_1 = (system_clock.milliseconds() / 7) & 31;
+          uint8_t triangle_2 = (system_clock.milliseconds() / 17) & 31;
+          triangle_1 = triangle_1 < 16 ? triangle_1 : 31 - triangle_1;
+          triangle_2 = triangle_2 < 16 ? triangle_2 : 31 - triangle_2;
+          leds_.set(
+              0,
+              triangle_1 > pwm_counter,
+              triangle_2 > pwm_counter);
         }
 
         // Special casing mode options for color consistency.
@@ -310,8 +324,6 @@ void Ui::OnSwitchLongHeld(const Event& e) {
   // If both switches are held with a long press, either enter/exit menu
   // or go to calibration.
   if (switches_.pressed(1 - e.control_id)) {
-    // Toggle back frequency locking after it was affected by initiating long-press
-    settings_->ToggleFrequencyLocking();
     if (e.control_id == 0) {
       mode_ = UI_MODE_OPTIONS_MENU_INTRO;
     } else {
@@ -360,6 +372,9 @@ void Ui::OnSwitchReleased(const Event& e) {
         option_menu_item_ = (option_menu_item_ + 1) % kNumOptions;
         break;
       case UI_MODE_DISPLAY_FREQUENCY_LOCKING:
+        if (switches_.pressed(1)) {
+          settings_->ToggleFrequencyLocking();
+        }
         IgnoreSwitchReleases();
         mode_ = UI_MODE_NORMAL;
         break;
@@ -382,6 +397,9 @@ void Ui::OnSwitchReleased(const Event& e) {
   } else {
     switch (mode_) {
       case UI_MODE_DISPLAY_FREQUENCY_LOCKING:
+        if (switches_.pressed(0)) {
+          settings_->ToggleFrequencyLocking();
+        }
         IgnoreSwitchReleases();
         mode_ = UI_MODE_NORMAL;
         break;

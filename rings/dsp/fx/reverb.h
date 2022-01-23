@@ -42,9 +42,8 @@ class Reverb {
   
   void Init(uint16_t* buffer) {
     engine_.Init(buffer);
-    // TODO - should this be updated to 32K for new sample rate?
-    engine_.SetLFOFrequency(LFO_1, 0.5f / 48000.0f);
-    engine_.SetLFOFrequency(LFO_2, 0.3f / 48000.0f);
+    engine_.SetLFOFrequency(LFO_1, 0.5f / kSampleRate);
+    engine_.SetLFOFrequency(LFO_2, 0.3f / kSampleRate);
     lp_ = 0.7f;
     diffusion_ = 0.625f;
   }

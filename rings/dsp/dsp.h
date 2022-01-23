@@ -32,7 +32,6 @@
 #include "stmlib/stmlib.h"
 
 // #define MIC_W
-#define BRYAN_CHORDS
 
 namespace rings {
   

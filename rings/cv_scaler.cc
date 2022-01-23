@@ -142,6 +142,10 @@ void CvScaler::DetectNormalization() {
   }
 
 void CvScaler::Read(Patch* patch, PerformanceState* performance_state, Settings* settings) {
+  performance_state->mode = static_cast<PerformanceMode>(settings->ModeOption());
+  performance_state->chord_table = static_cast<ChordTable>(settings->ChordTableOption());
+  performance_state->waveform_exciter = settings->WaveformExciterOption();
+
   // Process all CVs / pots.
   for (size_t i = 0; i < ADC_CHANNEL_LAST; ++i) {
     const ChannelSettings& settings = channel_settings_[i];
@@ -222,7 +226,7 @@ void CvScaler::Read(Patch* patch, PerformanceState* performance_state, Settings*
   float hysteresis = 0.0f;
   if (frequency_locked_ && mutable_state->frequency_locked) {
     transpose = mutable_state->locked_transpose;
-    if ((settings->ModeOption() != 2) && (settings->ModeOption() != 3)) {
+    if (!performance_state->MiniElements()) {
       transpose += octave_transpose;
     }
   } else {
@@ -264,14 +268,37 @@ void CvScaler::Read(Patch* patch, PerformanceState* performance_state, Settings*
       adc_.float_value(ADC_CHANNEL_CV_STRUCTURE);
   chord *= adc_lp_[ADC_CHANNEL_ATTENUVERTER_STRUCTURE];
   chord += adc_lp_[ADC_CHANNEL_POT_STRUCTURE];
-  chord *= static_cast<float>(kNumChords - 1);
+  int32_t num_chords = NumChords(performance_state, settings->state().polyphony);
+  chord *= static_cast<float>(num_chords - 1);
   hysteresis = chord - chord_ > 0.0f ? -0.1f : +0.1f;
   chord_ = static_cast<int32_t>(chord + hysteresis + 0.5f);
-  CONSTRAIN(chord_, 0, kNumChords - 1);
+  CONSTRAIN(chord_, 0, num_chords - 1);
   performance_state->chord = chord_;
   
   adc_.Convert();
   trigger_input_.Read();
+}
+
+int32_t CvScaler::NumChords(PerformanceState* performance_state, uint8_t polyphony) {
+  switch (performance_state->chord_table) {
+    case CHORD_TABLE_BRYAN:
+      return kNumBryanChords;
+    case CHORD_TABLE_JON:
+      return kNumJonChords;
+    case CHORD_TABLE_JOE:
+      if (performance_state->mode == MODE_EASTER_EGG) {
+        return kNumJoeEasterEggChords;
+      } else if (polyphony == 1) {
+        return 15;
+      } else if (polyphony == 2) {
+        return 21;
+      } else if (polyphony == 3) {
+        return 16;
+      } else {
+        return kMaxNumJoeChords;
+      }
+  }
+  return 0;
 }
 
 }  // namespace rings

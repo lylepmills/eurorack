@@ -195,6 +195,7 @@ class CvScaler {
   
  private:
   void DetectNormalization();
+  int32_t NumChords(PerformanceState* performance_state, uint8_t polyphony);
   
   Adc adc_;
   CalibrationData* calibration_data_;

@@ -127,17 +127,10 @@ class Part {
       float filter_cutoff,
       size_t size);
 
-  inline bool MiniElements(const PerformanceState& performance_state) {
-    return performance_state.mode == MODE_MINI_ELEMENTS_STEREO ||
-        performance_state.mode == MODE_MINI_ELEMENTS_EXCITER;
-  }
-
   inline bool PositionRepurposed(const PerformanceState& performance_state) {
-    if (!MiniElements(performance_state)) {
-      return false;
-    }
-    return performance_state.waveform_exciter == 1 ||
-        performance_state.waveform_exciter == 2;
+    return performance_state.MiniElements() && (
+      performance_state.waveform_exciter == 1 ||
+      performance_state.waveform_exciter == 2);
   }
 
   inline float Squash(float x) const {
@@ -160,6 +153,7 @@ class Part {
   }
 
   void ComputeSympatheticStringsNotes(
+      const PerformanceState& performance_state,
       float tonic,
       float note,
       float parameter,
@@ -170,6 +164,8 @@ class Part {
       const PerformanceState& performance_state,
       const Patch& patch,
       float frequency,
+      int32_t voice,
+      bool is_active_voice,
       size_t size);
   
   bool bypass_;
@@ -190,7 +186,7 @@ class Part {
   Tube tube_;
   Exciter bow_;
   Exciter blow_;
-  Exciter strike_;
+  Exciter strike_[kMaxPolyphony];
   Diffuser diffuser_;
   
   stmlib::Svf excitation_filter_[kMaxPolyphony];

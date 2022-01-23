@@ -72,8 +72,6 @@ class Diffuser {
   }
   
  private:
-  // TODO - this is what elements does
-  // typedef FxEngine<1024, FORMAT_32_BIT> E;
   typedef FxEngine<1024, FORMAT_32_BIT> E;
   E engine_;
   

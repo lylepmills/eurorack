@@ -67,7 +67,6 @@ void Exciter::Process(const uint8_t flags, float* out, size_t size) {
   // Apply filters.
   if (model_ != EXCITER_MODEL_GRANULAR_SAMPLE_PLAYER &&
       model_ != EXCITER_MODEL_SAMPLE_PLAYER) {
-    // TODO - interesting this is coming from timbre, wonder if there's something to be done with frequency?
     uint32_t cutoff_index = static_cast<uint32_t>(timbre_ * 256.0f);
     if (model_ == EXCITER_MODEL_NOISE) {
       uint32_t resonance_index = static_cast<uint32_t>(parameter_ * 256.0f);

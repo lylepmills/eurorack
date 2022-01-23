@@ -27,7 +27,6 @@ sample_data = []
 
 TRUNCATE = False
 
-# TODO - where 32767 is used below, does that need to be updated for the higher sample rate here?
 for i in xrange(1, 10):
   audio_data, sr = audio_io.ReadWavFile('rings/samples/hit_%02d.wav' % i)
   audio_data = audio_data.sum(axis=1)

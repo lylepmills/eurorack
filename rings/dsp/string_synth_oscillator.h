@@ -25,7 +25,6 @@
 // -----------------------------------------------------------------------------
 //
 // Polyblep oscillator used for string synth synthesis.
-// TODO - think about unifying this with regular Oscillator
 
 #ifndef RINGS_DSP_STRING_SYNTH_OSCILLATOR_H_
 #define RINGS_DSP_STRING_SYNTH_OSCILLATOR_H_
