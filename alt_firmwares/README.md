@@ -1,6 +1,6 @@
 # Plaits
 
-The Plaits alt firmware ([plaits_freqlock.wav](https://github.com/lylepmills/eurorack/raw/master/alt_firmwares/plaits_freqlock.wav)) extends the base firmware with several additional features. Unlike earlier versions of this alt firmware, you can now use any combination of the below features that you want with this single firmware, and you can reconfigure those options with a built-in menu.
+The Plaits alt firmware ([download wav](https://github.com/lylepmills/eurorack/raw/master/alt_firmwares/plaits_freqlock.wav)) extends the base firmware with several additional features. Unlike earlier versions of this alt firmware, you can now use any combination of the below features that you want with this single firmware, and you can reconfigure those options with a built-in menu.
 
 - **Frequency locking.** It is now possible to lock the frequency of the oscillator, so you can avoid accidentally detuning it once you've tuned it where you want it. When locked, the main frequency knob will no longer affect the frequency of the oscillator, allowing you to keep the module in tune more easily (the V/Oct and FM inputs still work as normal, as does the FM attenuverter).
 - **Frequency knob alt functionality.** When frequency is locked, the frequency knob can control something else. This alt firmware supports two options for what it controls. It can become either control a crossfade between the main and aux synthesis models on the aux output, or do transposition by octaves, or fifths.
