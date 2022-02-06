@@ -44,6 +44,7 @@ struct CalibrationData {
 };
 
 struct State {
+  float locked_transpose;
   uint8_t polyphony;
   uint8_t model;
   uint8_t easter_egg;
@@ -52,13 +53,13 @@ struct State {
   uint8_t mode_option;
   uint8_t waveform_exciter_option;
   uint8_t chord_table_option;
-  float locked_transpose;
+  uint8_t strum_hold_option;
 };
 
 struct SettingsData {
   CalibrationData calibration_data; // 40 bytes
-  State state;  // 10 bytes
-  uint8_t padding[14];
+  State state;  // 12 bytes
+  uint8_t padding[12];
 };
 
 class Settings {
@@ -90,6 +91,11 @@ class Settings {
   void SwitchChordTableOption();
   inline uint8_t ChordTableOption() {
     return data_.state.chord_table_option;
+  }
+
+  void SwitchStrumHoldOption();
+  inline uint8_t StrumHoldOption() {
+    return data_.state.strum_hold_option;
   }
 
   inline State* mutable_state() {

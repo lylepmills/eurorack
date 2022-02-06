@@ -140,30 +140,30 @@ void Part::ConfigureResonators() {
 // Chord table by Bryan Noll:
 float bryanChords[kMaxPolyphony][kNumBryanChords][8] = {
   {
-    { -12.0f, -0.01f, 0.0f,  0.01f, 0.02f, 11.98f, 11.99f, 12.0f }, // OCT
-    { -12.0f, -5.0f,  0.0f,  6.99f, 7.0f,  11.99f, 12.0f,  19.0f }, // 5
-    { -12.0f, -5.0f,  0.0f,  5.0f,  7.0f,  11.99f, 12.0f,  17.0f }, // sus4
-    { -12.0f, -5.0f,  0.0f,  3.0f,  7.0f,   3.01f, 12.0f,  19.0f }, // m 
-    { -12.0f, -5.0f,  0.0f,  3.0f,  7.0f,   3.01f, 10.0f,  19.0f }, // m7
-    { -12.0f, -5.0f,  0.0f,  3.0f, 14.0f,   3.01f, 10.0f,  19.0f }, // m9
-    { -12.0f, -5.0f,  0.0f,  3.0f,  7.0f,   3.01f, 10.0f,  17.0f }, // m11
-    { -12.0f, -5.0f,  0.0f,  2.0f,  7.0f,   9.0f,  16.0f,  19.0f }, // 69
-    { -12.0f, -5.0f,  0.0f,  4.0f,  7.0f,  11.0f,  14.0f,  19.0f }, // M9
-    { -12.0f, -5.0f,  0.0f,  4.0f,  7.0f,  11.0f,  10.99f, 19.0f }, // M7
+    { -12.0f, -0.01f, 0.0f,  0.01f, 0.02f, 11.98f, 11.99f, 12.0f },  // OCT
+    { -12.0f, -5.0f,  0.0f,  6.99f, 7.0f,  11.99f, 12.0f,  19.0f },  // 5
+    { -12.0f, -5.0f,  0.0f,  5.0f,  7.0f,  11.99f, 12.0f,  17.0f },  // sus4
+    { -12.0f, -5.0f,  0.0f,  3.0f,  7.0f,   3.01f, 12.0f,  19.0f },  // m
+    { -12.0f, -5.0f,  0.0f,  3.0f,  7.0f,   3.01f, 10.0f,  19.0f },  // m7
+    { -12.0f, -5.0f,  0.0f,  3.0f, 14.0f,   3.01f, 10.0f,  19.0f },  // m9
+    { -12.0f, -5.0f,  0.0f,  3.0f,  7.0f,   3.01f, 10.0f,  17.0f },  // m11
+    { -12.0f, -5.0f,  0.0f,  2.0f,  7.0f,   9.0f,  16.0f,  19.0f },  // 69
+    { -12.0f, -5.0f,  0.0f,  4.0f,  7.0f,  11.0f,  14.0f,  19.0f },  // M9
+    { -12.0f, -5.0f,  0.0f,  4.0f,  7.0f,  11.0f,  10.99f, 19.0f },  // M7
     { -12.0f, -5.0f,  0.0f,  4.0f,  7.0f,  11.99f, 12.0f,  19.0f } // M
   },
   { 
-    { -12.0f, 0.0f,  0.01f, 12.0f }, // OCT
-    { -12.0f, 6.99f, 7.0f,  12.0f }, // 5
-    { -12.0f, 5.0f,  7.0f,  12.0f }, // sus4
-    { -12.0f, 3.0f, 11.99f, 12.0f }, // m 
-    { -12.0f, 3.0f, 10.0f,  12.0f }, // m7
-    { -12.0f, 3.0f, 10.0f,  14.0f }, // m9
-    { -12.0f, 3.0f, 10.0f,  17.0f }, // m11
-    { -12.0f, 2.0f,  9.0f,  16.0f }, // 69
-    { -12.0f, 4.0f, 11.0f,  14.0f }, // M9
-    { -12.0f, 4.0f,  7.0f,  11.0f }, // M7
-    { -12.0f, 4.0f,  7.0f,  12.0f }, // M
+    { -12.0f, 0.0f,  0.01f, 12.0f },  // OCT
+    { -12.0f, 6.99f, 7.0f,  12.0f },  // 5
+    { -12.0f, 5.0f,  7.0f,  12.0f },  // sus4
+    { -12.0f, 3.0f, 11.99f, 12.0f },  // m
+    { -12.0f, 3.0f, 10.0f,  12.0f },  // m7
+    { -12.0f, 3.0f, 10.0f,  14.0f },  // m9
+    { -12.0f, 3.0f, 10.0f,  17.0f },  // m11
+    { -12.0f, 2.0f,  9.0f,  16.0f },  // 69
+    { -12.0f, 4.0f, 11.0f,  14.0f },  // M9
+    { -12.0f, 4.0f,  7.0f,  11.0f },  // M7
+    { -12.0f, 4.0f,  7.0f,  12.0f },  // M
   },
   {
     { 0.0f, -12.0f },
@@ -243,42 +243,42 @@ const float jonChords[kMaxPolyphony][kNumJonChords][8] = {
     { -12.0f, 3.00f,  6.00f,  9.00f },  // Fully Diminished
   },
   {
-    { -12.0f,  0.0f },
-    {   0.0f, -5.0f },
-    {   0.0f, 0.01f },
-    {   0.0f,  1.0f },
-    {   0.0f,  2.0f },
-    {   0.0f,  3.0f },
-    {   0.0f,  4.0f },
-    {   0.0f,  5.0f },
-    {   0.0f,  6.0f },
-    {   0.0f,  7.0f },
-    {   0.0f,  8.0f },
-    {   0.0f,  9.0f },
-    {   0.0f, 10.0f },
-    {   0.0f, 11.0f },
-    {   0.0f, 12.0f },
-    {   5.0f, 12.0f },
-    { -12.0f, 12.0f },
+    { 0.0f, 0.01f },  // Unison
+    { 0.0f,  1.0f },  // Minor 2nd
+    { 0.0f,  2.0f },  // Major 2nd
+    { 0.0f,  3.0f },  // Minor 3rd
+    { 0.0f,  4.0f },  // Major 3rd
+    { 0.0f,  5.0f },  // Perfect 4th
+    { 0.0f,  6.0f },  // Diminished 5th
+    { 0.0f,  7.0f },  // Perfect 5th
+    { 0.0f,  8.0f },  // Minor 6th
+    { 0.0f,  9.0f },  // Major 6th
+    { 0.0f, 10.0f },  // Minor 7th
+    { 0.0f, 11.0f },  // Major 7th
+    { 0.0f, 12.0f },  // Octave
+    { 0.0f, 13.0f },  // Minor 9th
+    { 0.0f, 14.0f },  // Major 9th
+    { 0.0f, 15.0f },  // Minor 10th
+    { 0.0f, 16.0f },  // Major 10th
   },
   {
-    { -12.0f,  0.0f },
-    {   0.0f, -5.0f },
-    {   0.0f, 0.01f },
-    {   0.0f,  1.0f },
-    {   0.0f,  2.0f },
-    {   0.0f,  3.0f },
-    {   0.0f,  4.0f },
-    {   0.0f,  5.0f },
-    {   0.0f,  6.0f },
-    {   0.0f,  7.0f },
-    {   0.0f,  8.0f },
-    {   0.0f,  9.0f },
-    {   0.0f, 10.0f },
-    {   0.0f, 11.0f },
-    {   0.0f, 12.0f },
-    {   5.0f, 12.0f },
-    { -12.0f, 12.0f },
+    { 0.0f, 0.01f },  // Unison
+    { 0.0f,  1.0f },  // Minor 2nd
+    { 0.0f,  2.0f },  // Major 2nd
+    { 0.0f,  3.0f },  // Minor 3rd
+    { 0.0f,  4.0f },  // Major 3rd
+    { 0.0f,  5.0f },  // Perfect 4th
+    { 0.0f,  6.0f },  // Diminished 5th
+    { 0.0f,  7.0f },  // Perfect 5th
+    { 0.0f,  8.0f },  // Minor 6th
+    { 0.0f,  9.0f },  // Major 6th
+    { 0.0f, 10.0f },  // Minor 7th
+    { 0.0f, 11.0f },  // Major 7th
+    { 0.0f, 12.0f },  // Octave
+    { 0.0f, 13.0f },  // Minor 9th
+    { 0.0f, 14.0f },  // Major 9th
+    { 0.0f, 15.0f },  // Minor 10th
+    { 0.0f, 16.0f },  // Major 10th
   },
 };
 
@@ -290,87 +290,87 @@ const float jonChords[kMaxPolyphony][kNumJonChords][8] = {
 // polyphony 4 -> cycle through justly tempered intervals based on the shruti of Indian classical music theory
 const float joeChords[kMaxPolyphony][kMaxNumJoeChords][8] = {
   { // Scales
-    { -12.0f, -5.0f, 0.0f, 6.0f,  11.0f, 15.0f, 20.0f, 26.0f }, // Hungarian Minor
-    { -12.0f, -5.0f, 0.0f, 6.0f,  11.0f, 15.0f, 21.0f, 26.0f }, // Lydian Minor
-    { -12.0f, -5.0f, 0.0f, 5.0f,  11.0f, 15.0f, 21.0f, 26.0f }, // Melodic Minor
-    { -12.0f, -5.0f, 0.0f, 5.0f,  11.0f, 15.0f, 20.0f, 26.0f }, // Harmonic Minor
-    { -12.0f, -5.0f, 0.0f, 5.0f,  10.0f, 15.0f, 20.0f, 26.0f }, // Diatonic Minor
-    { -12.0f, -5.0f, 0.0f, 3.0f,  10.0f, 15.0f, 17.0f, 19.0f }, // Pentatonic Minor
-    { -12.0f, -5.0f, 0.0f, 3.0f,  7.0f,  12.0f, 15.0f, 24.0f }, // Triadic Minor
-    { -12.0f, -5.0f, 0.0f, 6.99f, 7.0f,  12.0f, 19.0f, 24.0f }, // Perfect Fifths
-    { -12.0f, -5.0f, 0.0f, 4.0f,  7.0f,  12.0f, 16.0f, 24.0f }, // Triadic Major
-    { -12.0f, -5.0f, 0.0f, 4.0f,  7.0f,  9.0f,  14.0f, 16.0f }, // Pentatonic Major
-    { -12.0f, -5.0f, 0.0f, 5.0f,  11.0f, 16.0f, 21.0f, 26.0f }, // Diatonic Major
-    { -12.0f, -5.0f, 0.0f, 5.0f,  11.0f, 16.0f, 20.0f, 26.0f }, // Harmonic Major
-    { -12.0f, -5.0f, 0.0f, 5.0f,  10.0f, 16.0f, 20.0f, 26.0f }, // Melodic Major
-    { -12.0f, -5.0f, 0.0f, 5.0f,  10.0f, 16.0f, 20.0f, 25.0f }, // Phrygian Major
-    { -12.0f, -5.0f, 0.0f, 5.0f,  11.0f, 16.0f, 20.0f, 25.0f }, // Byzantine Major
+    { -12.0f, -5.0f, 0.0f, 6.0f,  11.0f, 15.0f, 20.0f, 26.0f },  // Hungarian Minor
+    { -12.0f, -5.0f, 0.0f, 6.0f,  11.0f, 15.0f, 21.0f, 26.0f },  // Lydian Minor
+    { -12.0f, -5.0f, 0.0f, 5.0f,  11.0f, 15.0f, 21.0f, 26.0f },  // Melodic Minor
+    { -12.0f, -5.0f, 0.0f, 5.0f,  11.0f, 15.0f, 20.0f, 26.0f },  // Harmonic Minor
+    { -12.0f, -5.0f, 0.0f, 5.0f,  10.0f, 15.0f, 20.0f, 26.0f },  // Diatonic Minor
+    { -12.0f, -5.0f, 0.0f, 3.0f,  10.0f, 15.0f, 17.0f, 19.0f },  // Pentatonic Minor
+    { -12.0f, -5.0f, 0.0f, 3.0f,  7.0f,  12.0f, 15.0f, 24.0f },  // Triadic Minor
+    { -12.0f, -5.0f, 0.0f, 6.99f, 7.0f,  12.0f, 19.0f, 24.0f },  // Perfect Fifths
+    { -12.0f, -5.0f, 0.0f, 4.0f,  7.0f,  12.0f, 16.0f, 24.0f },  // Triadic Major
+    { -12.0f, -5.0f, 0.0f, 4.0f,  7.0f,  9.0f,  14.0f, 16.0f },  // Pentatonic Major
+    { -12.0f, -5.0f, 0.0f, 5.0f,  11.0f, 16.0f, 21.0f, 26.0f },  // Diatonic Major
+    { -12.0f, -5.0f, 0.0f, 5.0f,  11.0f, 16.0f, 20.0f, 26.0f },  // Harmonic Major
+    { -12.0f, -5.0f, 0.0f, 5.0f,  10.0f, 16.0f, 20.0f, 26.0f },  // Melodic Major
+    { -12.0f, -5.0f, 0.0f, 5.0f,  10.0f, 16.0f, 20.0f, 25.0f },  // Phrygian Major
+    { -12.0f, -5.0f, 0.0f, 5.0f,  11.0f, 16.0f, 20.0f, 25.0f },  // Byzantine Major
   },
   { // Functional Harmony
-    { 0.0f,  7.0f,  12.0f, 16.0f }, // I
-    { -3.0f, 9.0f,  12.0f, 16.0f }, // vi
-    { 5.0f,  9.0f,  12.0f, 17.0f }, // IV
-    { 2.0f,  9.0f,  14.0f, 17.0f }, // ii
-    { -1.0f, 11.0f, 14.0f, 17.0f }, // viio
-    { -5.0f, 7.0f,  11.0f, 14.0f }, // V
-    { 4.0f,  7.0f,  11.0f, 16.0f }, // iii
-    { 0.0f,  7.0f,  11.0f, 16.0f }, // Imaj7
-    { -3.0f, 7.0f,  12.0f, 16.0f }, // vim7
-    { 5.0f,  9.0f,  12.0f, 16.0f }, // IVmaj7
-    { 2.0f,  9.0f,  12.0f, 17.0f }, // iim7
-    { -1.0f, 9.0f,  14.0f, 17.0f }, // viim7b5
-    { -5.0f, 5.0f,  11.0f, 14.0f }, // V7
-    { 4.0f,  7.0f,  11.0f, 14.0f }, // iiim7
-    { 0.0f,  7.0f,  11.0f, 17.0f }, // Imaj7sus4
-    { -3.0f, 7.0f,  11.0f, 16.0f }, // vim9
-    { 5.0f,  9.0f,  11.0f, 16.0f }, // IVmaj7#11
-    { 2.0f,  7.0f,  12.0f, 17.0f }, // iim11
-    { -1.0f, 8.0f,  14.0f, 17.0f }, // viio7
-    { -5.0f, 5.0f,  11.0f, 13.0f }, // V7b5
-    { 4.0f,  8.0f,  12.0f, 14.0f }, // III+7
+    { 0.0f,  7.0f,  12.0f, 16.0f },  // I
+    { -3.0f, 9.0f,  12.0f, 16.0f },  // vi
+    { 5.0f,  9.0f,  12.0f, 17.0f },  // IV
+    { 2.0f,  9.0f,  14.0f, 17.0f },  // ii
+    { -1.0f, 11.0f, 14.0f, 17.0f },  // viio
+    { -5.0f, 7.0f,  11.0f, 14.0f },  // V
+    { 4.0f,  7.0f,  11.0f, 16.0f },  // iii
+    { 0.0f,  7.0f,  11.0f, 16.0f },  // Imaj7
+    { -3.0f, 7.0f,  12.0f, 16.0f },  // vim7
+    { 5.0f,  9.0f,  12.0f, 16.0f },  // IVmaj7
+    { 2.0f,  9.0f,  12.0f, 17.0f },  // iim7
+    { -1.0f, 9.0f,  14.0f, 17.0f },  // viim7b5
+    { -5.0f, 5.0f,  11.0f, 14.0f },  // V7
+    { 4.0f,  7.0f,  11.0f, 14.0f },  // iiim7
+    { 0.0f,  7.0f,  11.0f, 17.0f },  // Imaj7sus4
+    { -3.0f, 7.0f,  11.0f, 16.0f },  // vim9
+    { 5.0f,  9.0f,  11.0f, 16.0f },  // IVmaj7#11
+    { 2.0f,  7.0f,  12.0f, 17.0f },  // iim11
+    { -1.0f, 8.0f,  14.0f, 17.0f },  // viio7
+    { -5.0f, 5.0f,  11.0f, 13.0f },  // V7b5
+    { 4.0f,  8.0f,  12.0f, 14.0f },  // III+7
   },
   { // Harmonic Intervals
-    { -12.0f, -11.99f }, // C0
-    { -12.0f, 0.0f    }, // C1
-    { -12.0f, 7.02f   }, // G1
-    { -12.0f, 12.0f   }, // C2
-    { -12.0f, 15.86f  }, // E2
-    { -12.0f, 19.02f  }, // G2
-    { -12.0f, 21.69f  }, // Bb2
-    { -12.0f, 24.0f   }, // C3
-    { -12.0f, 26.04f  }, // D3
-    { -12.0f, 27.86f  }, // E3
-    { -12.0f, 29.51f  }, // F#3
-    { -12.0f, 31.02f  }, // G3
-    { -12.0f, 32.41f  }, // Ab3
-    { -12.0f, 33.69f  }, // Bb3
-    { -12.0f, 34.88f  }, // B3
-    { -12.0f, 36.0f   }, // C4
+    { -12.0f, -11.99f },  // C0
+    { -12.0f, 0.0f    },  // C1
+    { -12.0f, 7.02f   },  // G1
+    { -12.0f, 12.0f   },  // C2
+    { -12.0f, 15.86f  },  // E2
+    { -12.0f, 19.02f  },  // G2
+    { -12.0f, 21.69f  },  // Bb2
+    { -12.0f, 24.0f   },  // C3
+    { -12.0f, 26.04f  },  // D3
+    { -12.0f, 27.86f  },  // E3
+    { -12.0f, 29.51f  },  // F#3
+    { -12.0f, 31.02f  },  // G3
+    { -12.0f, 32.41f  },  // Ab3
+    { -12.0f, 33.69f  },  // Bb3
+    { -12.0f, 34.88f  },  // B3
+    { -12.0f, 36.0f   },  // C4
   },
   { // Just Intervals
-    { 0.0f, 0.01f  }, // Unison
-    { 0.0f, 0.90f  }, // Pythagorean Limma
-    { 0.0f, 1.12f  }, // Minor Diatonic Semitone
-    { 0.0f, 1.82f  }, // Minor Whole Tone
-    { 0.0f, 2.04f  }, // Major Whole Tone
-    { 0.0f, 2.94f  }, // Pythagorean Minor Third
-    { 0.0f, 3.16f  }, // Minor Third
-    { 0.0f, 3.86f  }, // Major Third
-    { 0.0f, 4.08f  }, // Pythagorean Major Third
-    { 0.0f, 4.98f  }, // Perfect Fourth
-    { 0.0f, 5.20f  }, // Acute Fourth
-    { 0.0f, 5.90f  }, // Tritone
-    { 0.0f, 6.12f  }, // Pythagorean Tritone
-    { 0.0f, 7.02f  }, // Perfect Fifth
-    { 0.0f, 7.92f  }, // Pythagorean Minor Sixth
-    { 0.0f, 8.14f  }, // Minor Sixth
-    { 0.0f, 8.84f  }, // Major Sixth
-    { 0.0f, 9.06f  }, // Pythagorean Major Sixth
-    { 0.0f, 9.96f  }, // Pythagorean Minor Seventh
-    { 0.0f, 10.18f }, // Minor Seventh
-    { 0.0f, 10.88f }, // Major Seventh
-    { 0.0f, 11.10f }, // Pythagorean Major Seventh
-    { 0.0f, 12.0f  }, // Octave
+    { 0.0f, 0.01f  },  // Unison
+    { 0.0f, 0.90f  },  // Pythagorean Limma
+    { 0.0f, 1.12f  },  // Minor Diatonic Semitone
+    { 0.0f, 1.82f  },  // Minor Whole Tone
+    { 0.0f, 2.04f  },  // Major Whole Tone
+    { 0.0f, 2.94f  },  // Pythagorean Minor Third
+    { 0.0f, 3.16f  },  // Minor Third
+    { 0.0f, 3.86f  },  // Major Third
+    { 0.0f, 4.08f  },  // Pythagorean Major Third
+    { 0.0f, 4.98f  },  // Perfect Fourth
+    { 0.0f, 5.20f  },  // Acute Fourth
+    { 0.0f, 5.90f  },  // Tritone
+    { 0.0f, 6.12f  },  // Pythagorean Tritone
+    { 0.0f, 7.02f  },  // Perfect Fifth
+    { 0.0f, 7.92f  },  // Pythagorean Minor Sixth
+    { 0.0f, 8.14f  },  // Minor Sixth
+    { 0.0f, 8.84f  },  // Major Sixth
+    { 0.0f, 9.06f  },  // Pythagorean Major Sixth
+    { 0.0f, 9.96f  },  // Pythagorean Minor Seventh
+    { 0.0f, 10.18f },  // Minor Seventh
+    { 0.0f, 10.88f },  // Major Seventh
+    { 0.0f, 11.10f },  // Pythagorean Major Seventh
+    { 0.0f, 12.0f  },  // Octave
   },
 };
 
@@ -443,6 +443,7 @@ void Part::RenderModalVoice(
     int32_t voice,
     const PerformanceState& performance_state,
     const Patch& patch,
+    bool update_patch,
     float frequency,
     float filter_cutoff,
     size_t size) {
@@ -458,18 +459,18 @@ void Part::RenderModalVoice(
   excitation_filter_[voice].Process<FILTER_MODE_LOW_PASS>(
       resonator_input_, resonator_input_, size);
 
-  // TODO - if we S&H everything on every strike, this could be a place to do that
-  //   (probably need to do the same for string and FM voices)
   Resonator& r = resonator_[voice];
   r.set_frequency(frequency);
-  r.set_structure(patch.structure);
-  r.set_brightness(patch.brightness * patch.brightness);
-  if (PositionRepurposed(performance_state)) {
-    r.set_position(0.0f);
-  } else {
-    r.set_position(patch.position);
+  if (update_patch) {
+    r.set_structure(patch.structure);
+    r.set_brightness(patch.brightness * patch.brightness);
+    if (PositionRepurposed(performance_state)) {
+      r.set_position(0.0f);
+    } else {
+      r.set_position(patch.position);
+    }
+    r.set_damping(patch.damping);
   }
-  r.set_damping(patch.damping);
   r.Process(resonator_input_, out_buffer_, aux_buffer_, size);
 }
 
@@ -477,6 +478,7 @@ void Part::RenderFMVoice(
     int32_t voice,
     const PerformanceState& performance_state,
     const Patch& patch,
+    bool update_patch,
     float frequency,
     float filter_cutoff,
     size_t size) {
@@ -488,15 +490,17 @@ void Part::RenderFMVoice(
   }
 
   v.set_frequency(frequency);
-  v.set_ratio(patch.structure);
-  v.set_brightness(patch.brightness);
-  if (PositionRepurposed(performance_state)) {
-    v.set_feedback_amount(0.5f);
-  } else {
-    v.set_feedback_amount(patch.position);
+  if (update_patch) {
+    v.set_ratio(patch.structure);
+    v.set_brightness(patch.brightness);
+    if (PositionRepurposed(performance_state)) {
+      v.set_feedback_amount(0.5f);
+    } else {
+      v.set_feedback_amount(patch.position);
+    }
+    v.set_position(/*patch.position*/ 0.0f);
+    v.set_damping(patch.damping);
   }
-  v.set_position(/*patch.position*/ 0.0f);
-  v.set_damping(patch.damping);
   v.Process(resonator_input_, out_buffer_, aux_buffer_, size);
 }
 
@@ -504,6 +508,7 @@ void Part::RenderStringVoice(
     int32_t voice,
     const PerformanceState& performance_state,
     const Patch& patch,
+    bool update_patch,
     float frequency,
     float filter_cutoff,
     size_t size) {
@@ -513,7 +518,7 @@ void Part::RenderStringVoice(
 
   if (model_ == RESONATOR_MODEL_SYMPATHETIC_STRING ||
       model_ == RESONATOR_MODEL_SYMPATHETIC_STRING_QUANTIZED) {
-    num_strings = 2 * kMaxPolyphony / polyphony_;
+    num_strings = kNumStrings / polyphony_;
     float parameter = model_ == RESONATOR_MODEL_SYMPATHETIC_STRING
         ? patch.structure
         : 2.0f + performance_state.chord;
@@ -597,11 +602,13 @@ void Part::RenderStringVoice(
       input = sympathetic_resonator_input_;
     }
     
-    s.set_dispersion(dispersion);
     s.set_frequency(frequencies[string], glide);
-    s.set_brightness(brightness);
-    s.set_position(position);
-    s.set_damping(damping + string_index * (0.95f - damping));
+    if (update_patch) {
+      s.set_dispersion(dispersion);
+      s.set_brightness(brightness);
+      s.set_position(position);
+      s.set_damping(damping + string_index * (0.95f - damping));
+    }
     s.Process(input, out_buffer_, aux_buffer_, size);
     
     if (string == 0) {
@@ -683,15 +690,18 @@ void Part::Process(
       }
     }
     
+    bool update_patch =
+      (performance_state.strum_hold_option == 0) ||
+      (performance_state.strum && (voice == active_voice_));
     if (model_ == RESONATOR_MODEL_MODAL) {
       RenderModalVoice(
-          voice, performance_state, patch, frequency, filter_cutoff, size);
+          voice, performance_state, patch, update_patch, frequency, filter_cutoff, size);
     } else if (model_ == RESONATOR_MODEL_FM_VOICE) {
       RenderFMVoice(
-          voice, performance_state, patch, frequency, filter_cutoff, size);
+          voice, performance_state, patch, update_patch, frequency, filter_cutoff, size);
     } else {
       RenderStringVoice(
-          voice, performance_state, patch, frequency, filter_cutoff, size);
+          voice, performance_state, patch, update_patch, frequency, filter_cutoff, size);
     }
     
     // TODO: should this be an option? to dispatch odd/even voices individually vs
@@ -798,11 +808,11 @@ void Part::FillExciterBuffer(
     blow_.Process(exciter_flags, exciter_buffer_, size);
     tube_.Process(
       frequency,
-      1.0f, // envelope_value
+      1.0f,  // envelope_value
       patch.damping,
-      1.0f, // tube_level
+      1.0f,  // tube_level
       exciter_buffer_,
-      0.5f, // tube_level * 0.5f
+      0.5f,  // tube_level * 0.5f
       size);
     diffuser_.Process(exciter_buffer_, size);
   } else if (performance_state.waveform_exciter == 2) {

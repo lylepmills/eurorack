@@ -145,6 +145,7 @@ void CvScaler::Read(Patch* patch, PerformanceState* performance_state, Settings*
   performance_state->mode = static_cast<PerformanceMode>(settings->ModeOption());
   performance_state->chord_table = static_cast<ChordTable>(settings->ChordTableOption());
   performance_state->waveform_exciter = settings->WaveformExciterOption();
+  performance_state->strum_hold_option = settings->StrumHoldOption();
 
   // Process all CVs / pots.
   for (size_t i = 0; i < ADC_CHANNEL_LAST; ++i) {

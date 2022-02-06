@@ -109,6 +109,7 @@ class Part {
       int32_t voice,
       const PerformanceState& performance_state,
       const Patch& patch,
+      bool update_patch,
       float frequency,
       float filter_cutoff,
       size_t size);
@@ -116,6 +117,7 @@ class Part {
       int32_t voice,
       const PerformanceState& performance_state,
       const Patch& patch,
+      bool update_patch,
       float frequency,
       float filter_cutoff,
       size_t size);
@@ -123,6 +125,7 @@ class Part {
       int32_t voice,
       const PerformanceState& performance_state,
       const Patch& patch,
+      bool update_patch,
       float frequency,
       float filter_cutoff,
       size_t size);

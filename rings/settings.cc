@@ -35,6 +35,7 @@ namespace rings {
 const uint8_t kNumModeOptions = 5;
 const uint8_t kNumWaveformExciterOptions = 3;
 const uint8_t kNumChordTableOptions = 3;
+const uint8_t kNumStrumHoldOptions = 2;
 
 stmlib::Storage<1> storage;
 
@@ -54,6 +55,7 @@ void Settings::Init() {
     data_.state.mode_option = 0;
     data_.state.waveform_exciter_option = 0;
     data_.state.chord_table_option = 0;
+    data_.state.strum_hold_option = 0;
     data_.state.locked_transpose = 0.0f;
     data_.calibration_data.normalization_detection_threshold = 0.75f;
     freshly_baked_ = true;
@@ -81,6 +83,11 @@ void Settings::SwitchWaveformExciterOption() {
 void Settings::SwitchChordTableOption() {
   uint8_t new_option = (ChordTableOption() + 1) % kNumChordTableOptions;
   mutable_state()->chord_table_option = new_option;
+}
+
+void Settings::SwitchStrumHoldOption() {
+  uint8_t new_option = (StrumHoldOption() + 1) % kNumStrumHoldOptions;
+  mutable_state()->strum_hold_option = new_option;
 }
 
 void Settings::Save() {
