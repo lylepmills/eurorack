@@ -208,7 +208,6 @@ class CvScaler {
   NormalizationDetector normalization_detector_exciter_;
   
   bool normalization_probe_value_[2];
-  int32_t inhibit_strum_;
   
   float adc_lp_[ADC_CHANNEL_LAST];
   float transpose_;

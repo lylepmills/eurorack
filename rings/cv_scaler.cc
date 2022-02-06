@@ -45,11 +45,17 @@ using namespace stmlib;
 /* static */
 ChannelSettings CvScaler::channel_settings_[ADC_CHANNEL_LAST] = {
   { LAW_LINEAR, true, 1.00f },  // ADC_CHANNEL_CV_FREQUENCY
-  { LAW_LINEAR, true, 0.1f },  // ADC_CHANNEL_CV_STRUCTURE
-  { LAW_LINEAR, true, 0.1f },  // ADC_CHANNEL_CV_BRIGHTNESS
-  { LAW_LINEAR, true, 0.05f },  // ADC_CHANNEL_CV_DAMPING
-  { LAW_LINEAR, true, 0.01f },  // ADC_CHANNEL_CV_POSITION
+  { LAW_LINEAR, true, 1.00f },  // ADC_CHANNEL_CV_STRUCTURE
+  { LAW_LINEAR, true, 1.00f },  // ADC_CHANNEL_CV_BRIGHTNESS
+  { LAW_LINEAR, true, 1.00f },  // ADC_CHANNEL_CV_DAMPING
+  { LAW_LINEAR, true, 1.00f },  // ADC_CHANNEL_CV_POSITION
   { LAW_LINEAR, false, 1.00f },  // ADC_CHANNEL_CV_V_OCT
+  // { LAW_LINEAR, true, 1.00f },  // ADC_CHANNEL_CV_FREQUENCY
+  // { LAW_LINEAR, true, 0.1f },  // ADC_CHANNEL_CV_STRUCTURE
+  // { LAW_LINEAR, true, 0.1f },  // ADC_CHANNEL_CV_BRIGHTNESS
+  // { LAW_LINEAR, true, 0.05f },  // ADC_CHANNEL_CV_DAMPING
+  // { LAW_LINEAR, true, 0.01f },  // ADC_CHANNEL_CV_POSITION
+  // { LAW_LINEAR, false, 1.00f },  // ADC_CHANNEL_CV_V_OCT
   { LAW_LINEAR, false, 0.01f },  // ADC_CHANNEL_POT_FREQUENCY
   { LAW_LINEAR, false, 0.01f },  // ADC_CHANNEL_POT_STRUCTURE
   { LAW_LINEAR, false, 0.01f },  // ADC_CHANNEL_POT_BRIGHTNESS
@@ -77,7 +83,6 @@ void CvScaler::Init(CalibrationData* calibration_data) {
   normalization_detector_trigger_.Init(0.05f, 0.9f);
   normalization_detector_v_oct_.Init(0.01f, 0.5f);
   
-  inhibit_strum_ = 0;
   fm_cv_ = 0.0f;
   
   first_read_ = true;

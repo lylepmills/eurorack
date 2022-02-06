@@ -180,6 +180,7 @@ class Part {
   int32_t active_voice_;
   uint32_t step_counter_;
   int32_t polyphony_;
+  int32_t acquisition_delay_;
   
   Resonator resonator_[kMaxPolyphony];
   String string_[kNumStrings];

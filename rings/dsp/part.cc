@@ -39,6 +39,7 @@ using namespace stmlib;
 
 void Part::Init(uint16_t* reverb_buffer) {
   active_voice_ = 0;
+  acquisition_delay_ = 0;
   
   fill(&note_[0], &note_[kMaxPolyphony], 0.0f);
   
@@ -655,6 +656,7 @@ void Part::Process(
     } else {
       active_voice_ = (active_voice_ + 1) % polyphony_;
     }
+    acquisition_delay_ = 3;
   }
   
   note_[active_voice_] = note_filter_.note();
@@ -690,9 +692,18 @@ void Part::Process(
       }
     }
     
-    bool update_patch =
-      (performance_state.strum_hold_option == 0) ||
-      (performance_state.strum && (voice == active_voice_));
+    bool update_patch = true;
+    if (performance_state.strum_hold_option == 1) {
+      update_patch = false;
+      // Introduce a slight delay so that sequenced values where the sequence is driven
+      // by the same gates as the strum gate have enough time to update before being sampled.
+      if (acquisition_delay_ && (voice == active_voice_)) {
+        if (--acquisition_delay_ == 0) {
+          update_patch = true;
+        }
+      }
+    }
+
     if (model_ == RESONATOR_MODEL_MODAL) {
       RenderModalVoice(
           voice, performance_state, patch, update_patch, frequency, filter_cutoff, size);
