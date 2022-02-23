@@ -50,6 +50,7 @@ class Switches {
   }
   
   inline bool just_pressed(int32_t index) const {
+    // 0x80 looks like 10000000
     return switch_state_[index] == 0x80;
   }
 
