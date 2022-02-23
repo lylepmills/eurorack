@@ -198,6 +198,7 @@ class Part {
   Plucker plucker_[kMaxPolyphony];
 
   float note_[kMaxPolyphony];
+  float parameter_[kMaxPolyphony];
   NoteFilter note_filter_;
   
   float resonator_input_[kMaxBlockSize];

@@ -520,22 +520,22 @@ void Part::RenderStringVoice(
   if (model_ == RESONATOR_MODEL_SYMPATHETIC_STRING ||
       model_ == RESONATOR_MODEL_SYMPATHETIC_STRING_QUANTIZED) {
     num_strings = kNumStrings / polyphony_;
-    // TODO - looks like this doesn't respect update_patch for patch.structure
-    //   need to investigate further
-    float parameter = model_ == RESONATOR_MODEL_SYMPATHETIC_STRING
+    if (update_patch) {
+      parameter_[voice] = model_ == RESONATOR_MODEL_SYMPATHETIC_STRING
         ? patch.structure
         : 2.0f + performance_state.chord;
+    }
     ComputeSympatheticStringsNotes(
         performance_state,
         performance_state.tonic + performance_state.fm,
         performance_state.tonic + note_[voice] + performance_state.fm,
-        parameter,
+        parameter_[voice],
         frequencies,
         num_strings);
     for (int32_t i = 0; i < num_strings; ++i) {
       frequencies[i] = SemitonesToRatio(frequencies[i] - 69.0f) * a3;
     }
-  } else {
+  } else { // RESONATOR_MODEL_STRING or RESONATOR_MODEL_STRING_AND_REVERB
     frequencies[0] = frequency;
   }
 
@@ -680,6 +680,7 @@ void Part::Process(
     float filter_q = performance_state.internal_exciter ? 1.5f : 0.8f;
 
     // Process input with excitation filter. Inactive voices receive silence.
+    // TODO - possible this should also be affected by update_patch
     excitation_filter_[voice].set_f_q<FREQUENCY_DIRTY>(filter_cutoff, filter_q);
     if (voice == active_voice_) {
       copy(&in[0], &in[size], &resonator_input_[0]);
