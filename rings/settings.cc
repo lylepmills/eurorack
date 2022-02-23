@@ -47,18 +47,12 @@ void Settings::Init() {
     for (size_t i = 0; i < ADC_CHANNEL_NUM_OFFSETS; ++i) {
       data_.calibration_data.offset[i] = 0.505f;
     }
-    data_.state.polyphony = 1;
-    data_.state.model = 0;
-    data_.state.easter_egg = 0;
-    data_.state.color_blind = 0;
-    data_.state.frequency_locked = 0;
-    data_.state.mode_option = 0;
-    data_.state.waveform_exciter_option = 0;
-    data_.state.chord_table_option = 0;
-    data_.state.strum_hold_option = 0;
-    data_.state.locked_transpose = 0.0f;
     data_.calibration_data.normalization_detection_threshold = 0.75f;
     freshly_baked_ = true;
+    InitState();
+    Save();
+  } else if (data_.state.settings_version_id != kSettingsId) {
+    InitState();
     Save();
   }
   if (data_.calibration_data.normalization_detection_threshold < 0.7f ||
@@ -67,6 +61,20 @@ void Settings::Init() {
   }
   CONSTRAIN(data_.state.polyphony, 1, 4);
   CONSTRAIN(data_.state.model, 0, 5);
+}
+
+void Settings::InitState() {
+  data_.state.settings_version_id = kSettingsId;
+  data_.state.locked_transpose = 0.0f;
+  data_.state.polyphony = 1;
+  data_.state.model = 0;
+  data_.state.easter_egg = 0;
+  data_.state.color_blind = 0;
+  data_.state.frequency_locked = 0;
+  data_.state.mode_option = 0;
+  data_.state.waveform_exciter_option = 0;
+  data_.state.chord_table_option = 0;
+  data_.state.strum_hold_option = 0;
 }
 
 void Settings::SwitchModeOption() {

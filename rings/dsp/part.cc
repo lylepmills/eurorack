@@ -520,6 +520,8 @@ void Part::RenderStringVoice(
   if (model_ == RESONATOR_MODEL_SYMPATHETIC_STRING ||
       model_ == RESONATOR_MODEL_SYMPATHETIC_STRING_QUANTIZED) {
     num_strings = kNumStrings / polyphony_;
+    // TODO - looks like this doesn't respect update_patch for patch.structure
+    //   need to investigate further
     float parameter = model_ == RESONATOR_MODEL_SYMPATHETIC_STRING
         ? patch.structure
         : 2.0f + performance_state.chord;
