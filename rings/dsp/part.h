@@ -184,6 +184,7 @@ class Part {
   
   Resonator resonator_[kMaxPolyphony];
   String string_[kNumStrings];
+  float string_position_[kNumStrings];
   stmlib::CosineOscillator lfo_[kNumStrings];
   FMVoice fm_voice_[kMaxPolyphony];
   Oscillator oscillator_;

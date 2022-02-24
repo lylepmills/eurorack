@@ -550,15 +550,22 @@ void Part::RenderStringVoice(
   excitation_filter_[voice].Process<FILTER_MODE_LOW_PASS>(
       resonator_input_, resonator_input_, size);
   
-  float patch_position = patch.position;
-  if (PositionRepurposed(performance_state)) {
-    patch_position = 0.5f;
+  if (update_patch) {
+    float new_position = patch.position;
+    if (PositionRepurposed(performance_state)) {
+      new_position = 0.5f;
+    }
+
+    for (int32_t string = 0; string < num_strings; ++string) {
+      int32_t i = voice + string * polyphony_;
+      string_position_[i] = new_position;
+    }
   }
 
   // Add noise burst.
   if (performance_state.internal_exciter) {
     if (voice == active_voice_ && performance_state.strum) {
-      plucker_[voice].Trigger(frequency, filter_cutoff * 8.0f, patch_position);
+      plucker_[voice].Trigger(frequency, filter_cutoff * 8.0f, string_position_[voice]);
     }
     plucker_[voice].Process(noise_burst_buffer_, size);
     for (size_t i = 0; i < size; ++i) {
@@ -582,7 +589,7 @@ void Part::RenderStringVoice(
     
     float brightness = patch.brightness;
     float damping = patch.damping;
-    float position = patch_position;
+    float position = string_position_[i];
     float glide = 1.0f;
     float string_index = static_cast<float>(string) / static_cast<float>(num_strings);
     const float* input = resonator_input_;
@@ -599,17 +606,19 @@ void Part::RenderStringVoice(
       brightness *= (2.0f - brightness);
       brightness *= (2.0f - brightness);
       damping = 0.7f + patch.damping * 0.27f;
-      float amount = (0.5f - fabs(0.5f - patch_position)) * 0.9f;
-      position = patch_position + lfo_value * amount;
+      float amount = (0.5f - fabs(0.5f - position)) * 0.9f;
+      position = position + lfo_value * amount;
       glide = SemitonesToRatio((brightness - 1.0f) * 36.0f);
       input = sympathetic_resonator_input_;
     }
     
+    // position is outside the update_patch check because we still want to
+    // include the LFO component
+    s.set_position(position);
     s.set_frequency(frequencies[string], glide);
     if (update_patch) {
       s.set_dispersion(dispersion);
       s.set_brightness(brightness);
-      s.set_position(position);
       s.set_damping(damping + string_index * (0.95f - damping));
     }
     s.Process(input, out_buffer_, aux_buffer_, size);
@@ -666,6 +675,18 @@ void Part::Process(
   fill(&out[0], &out[size], 0.0f);
   fill(&aux[0], &aux[size], 0.0f);
   for (int32_t voice = 0; voice < polyphony_; ++voice) {
+    bool update_patch = true;
+    if (performance_state.strum_hold_option == 1) {
+      update_patch = false;
+      // Introduce a slight delay so that sequenced values where the sequence is driven
+      // by the same gates as the strum gate have enough time to update before being sampled.
+      if (acquisition_delay_ && (voice == active_voice_)) {
+        if (--acquisition_delay_ == 0) {
+          update_patch = true;
+        }
+      }
+    }
+
     // Compute MIDI note value, frequency, and cutoff frequency for excitation
     // filter.
     float cutoff = patch.brightness * (2.0f - patch.brightness);
@@ -680,7 +701,7 @@ void Part::Process(
     float filter_q = performance_state.internal_exciter ? 1.5f : 0.8f;
 
     // Process input with excitation filter. Inactive voices receive silence.
-    // TODO - possible this should also be affected by update_patch
+    // TODO - possible set_f_q here should also be conditional on update_patch
     excitation_filter_[voice].set_f_q<FREQUENCY_DIRTY>(filter_cutoff, filter_q);
     if (voice == active_voice_) {
       copy(&in[0], &in[size], &resonator_input_[0]);
@@ -692,18 +713,6 @@ void Part::Process(
       FillExciterBuffer(performance_state, patch, frequency, voice, voice == active_voice_, size);
       for (size_t i = 0; i < size; ++i) {
         resonator_input_[i] += exciter_buffer_[i];
-      }
-    }
-    
-    bool update_patch = true;
-    if (performance_state.strum_hold_option == 1) {
-      update_patch = false;
-      // Introduce a slight delay so that sequenced values where the sequence is driven
-      // by the same gates as the strum gate have enough time to update before being sampled.
-      if (acquisition_delay_ && (voice == active_voice_)) {
-        if (--acquisition_delay_ == 0) {
-          update_patch = true;
-        }
       }
     }
 
@@ -818,6 +827,7 @@ void Part::FillExciterBuffer(
     if (performance_state.frequency_locked) {
       blow_.set_timbre(performance_state.locked_frequency_pot_value);
     }
+    // TODO - feels like patch params throughout this method could be locked as well if not update_patch
     blow_.set_parameter(patch.position);
     blow_.Process(exciter_flags, exciter_buffer_, size);
     tube_.Process(
