@@ -34,7 +34,7 @@ lookup_tables = []
 int16_lookup_tables = []
 uint32_lookup_tables = []
 
-SAMPLE_RATE = 48000.0
+SAMPLE_RATE = 32000.0
 
 
 
@@ -46,6 +46,29 @@ WAVETABLE_SIZE = 4096
 t = numpy.arange(0.0, WAVETABLE_SIZE + WAVETABLE_SIZE / 4 + 1) / WAVETABLE_SIZE
 x = numpy.sin(2 * numpy.pi * t)
 lookup_tables += [('sine', x)]
+
+
+
+"""----------------------------------------------------------------------------
+Coefficients for approximate filter, 32Hz to 16kHz ; Q = 0.5 to 500
+----------------------------------------------------------------------------"""
+
+frequency = 32 * (10 ** (2.7 * numpy.arange(0, 257) / 256))
+frequency /= SAMPLE_RATE
+
+frequency[frequency >= 0.499] = 0.499
+
+g = numpy.tan(numpy.pi * frequency)
+r = 2.0
+h = 1.0 / (1.0 + r * g + g * g)
+gain = (0.42 / frequency) * (4 ** (frequency * frequency))
+r = 1 / (0.5 * 10 ** (3.0 * numpy.arange(0, 257) / 256))
+
+lookup_tables += [
+  ('approx_svf_gain', gain),
+  ('approx_svf_g', g),
+  ('approx_svf_r', r),
+  ('approx_svf_h', h)]
 
 
 

@@ -32,6 +32,11 @@
 
 namespace rings {
 
+const uint8_t kNumModeOptions = 5;
+const uint8_t kNumWaveformExciterOptions = 3;
+const uint8_t kNumChordTableOptions = 3;
+const uint8_t kNumStrumHoldOptions = 2;
+
 stmlib::Storage<1> storage;
 
 void Settings::Init() {
@@ -42,15 +47,12 @@ void Settings::Init() {
     for (size_t i = 0; i < ADC_CHANNEL_NUM_OFFSETS; ++i) {
       data_.calibration_data.offset[i] = 0.505f;
     }
-    data_.state.polyphony = 1;
-    data_.state.model = 0;
-    data_.state.easter_egg = 0;
-    data_.state.color_blind = 0;
-    data_.state.frequency_locked = 0;
-    data_.state.phase_invert = 1;
-    data_.state.locked_transpose = 0.0f;
     data_.calibration_data.normalization_detection_threshold = 0.75f;
     freshly_baked_ = true;
+    InitState();
+    Save();
+  } else if (data_.state.settings_version_id != kSettingsId) {
+    InitState();
     Save();
   }
   if (data_.calibration_data.normalization_detection_threshold < 0.7f ||
@@ -59,6 +61,41 @@ void Settings::Init() {
   }
   CONSTRAIN(data_.state.polyphony, 1, 4);
   CONSTRAIN(data_.state.model, 0, 5);
+}
+
+void Settings::InitState() {
+  data_.state.settings_version_id = kSettingsId;
+  data_.state.locked_transpose = 0.0f;
+  data_.state.polyphony = 1;
+  data_.state.model = 0;
+  data_.state.easter_egg = 0;
+  data_.state.color_blind = 0;
+  data_.state.frequency_locked = 0;
+  data_.state.mode_option = 0;
+  data_.state.waveform_exciter_option = 0;
+  data_.state.chord_table_option = 0;
+  data_.state.strum_hold_option = 0;
+}
+
+void Settings::SwitchModeOption() {
+  uint8_t new_option = (ModeOption() + 1) % kNumModeOptions;
+  mutable_state()->mode_option = new_option;
+  mutable_state()->easter_egg = new_option == 4;
+}
+
+void Settings::SwitchWaveformExciterOption() {
+  uint8_t new_option = (WaveformExciterOption() + 1) % kNumWaveformExciterOptions;
+  mutable_state()->waveform_exciter_option = new_option;
+}
+
+void Settings::SwitchChordTableOption() {
+  uint8_t new_option = (ChordTableOption() + 1) % kNumChordTableOptions;
+  mutable_state()->chord_table_option = new_option;
+}
+
+void Settings::SwitchStrumHoldOption() {
+  uint8_t new_option = (StrumHoldOption() + 1) % kNumStrumHoldOptions;
+  mutable_state()->strum_hold_option = new_option;
 }
 
 void Settings::Save() {

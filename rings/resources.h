@@ -48,21 +48,46 @@ extern const uint32_t* lookup_table_uint32_table[];
 
 extern const float* lookup_table_table[];
 
+extern const int16_t* sample_table[];
+
+extern const size_t* sample_boundary_table[];
+
 extern const float lut_sine[];
+extern const float lut_approx_svf_gain[];
+extern const float lut_approx_svf_g[];
+extern const float lut_approx_svf_r[];
+extern const float lut_approx_svf_h[];
 extern const float lut_4_decades[];
 extern const float lut_svf_shift[];
 extern const float lut_stiffness[];
 extern const float lut_fm_frequency_quantizer[];
+extern const int16_t smp_sample_data[];
+extern const int16_t smp_noise_sample[];
+extern const size_t smp_boundaries[];
 #define LUT_SINE 0
 #define LUT_SINE_SIZE 5121
-#define LUT_4_DECADES 1
+#define LUT_APPROX_SVF_GAIN 1
+#define LUT_APPROX_SVF_GAIN_SIZE 257
+#define LUT_APPROX_SVF_G 2
+#define LUT_APPROX_SVF_G_SIZE 257
+#define LUT_APPROX_SVF_R 3
+#define LUT_APPROX_SVF_R_SIZE 257
+#define LUT_APPROX_SVF_H 4
+#define LUT_APPROX_SVF_H_SIZE 257
+#define LUT_4_DECADES 5
 #define LUT_4_DECADES_SIZE 257
-#define LUT_SVF_SHIFT 2
+#define LUT_SVF_SHIFT 6
 #define LUT_SVF_SHIFT_SIZE 257
-#define LUT_STIFFNESS 3
+#define LUT_STIFFNESS 7
 #define LUT_STIFFNESS_SIZE 257
-#define LUT_FM_FREQUENCY_QUANTIZER 4
+#define LUT_FM_FREQUENCY_QUANTIZER 8
 #define LUT_FM_FREQUENCY_QUANTIZER_SIZE 129
+#define SMP_SAMPLE_DATA 0
+#define SMP_SAMPLE_DATA_SIZE 128013
+#define SMP_NOISE_SAMPLE 1
+#define SMP_NOISE_SAMPLE_SIZE 40963
+#define SMP_BOUNDARIES 0
+#define SMP_BOUNDARIES_SIZE 10
 
 }  // namespace rings
 

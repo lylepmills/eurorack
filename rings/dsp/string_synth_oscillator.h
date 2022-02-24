@@ -39,12 +39,12 @@ namespace rings {
 
 using namespace stmlib;
 
-enum OscillatorShape {
-  OSCILLATOR_SHAPE_BRIGHT_SQUARE,
-  OSCILLATOR_SHAPE_SQUARE,
-  OSCILLATOR_SHAPE_DARK_SQUARE,
-  OSCILLATOR_SHAPE_TRIANGLE,
-};
+// enum OscillatorShape {
+//   OSCILLATOR_SHAPE_BRIGHT_SQUARE,
+//   OSCILLATOR_SHAPE_SQUARE,
+//   OSCILLATOR_SHAPE_DARK_SQUARE,
+//   OSCILLATOR_SHAPE_TRIANGLE,
+// };
 
 class StringSynthOscillator {
  public:
@@ -132,12 +132,12 @@ class StringSynthOscillator {
         this_sample = 64.0f * (this_sample - 0.5f);
         filter_state += integrator_coefficient * (this_sample - filter_state);
         sample = filter_state;
-      } else if (shape == OSCILLATOR_SHAPE_DARK_SQUARE) {
+      } else if (shape == OSCILLATOR_SHAPE_SQUARE_DARK) {
         const float integrator_coefficient = increment * 2.0f;
         this_sample = 4.0f * (this_sample - 0.5f);
         filter_state += integrator_coefficient * (this_sample - filter_state);
         sample = filter_state;
-      } else if (shape == OSCILLATOR_SHAPE_BRIGHT_SQUARE) {
+      } else if (shape == OSCILLATOR_SHAPE_SQUARE_BRIGHT) {
         const float integrator_coefficient = increment * 2.0f;
         this_sample = 2.0f * this_sample - 1.0f;
         filter_state += integrator_coefficient * (this_sample - filter_state);

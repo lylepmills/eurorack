@@ -35,6 +35,8 @@
 
 namespace rings {
 
+const uint32_t kSettingsId = 414344649;
+
 struct CalibrationData {
   float pitch_offset;
   float pitch_scale;
@@ -44,19 +46,23 @@ struct CalibrationData {
 };
 
 struct State {
+  uint32_t settings_version_id;
+  float locked_transpose;
   uint8_t polyphony;
   uint8_t model;
   uint8_t easter_egg;
   uint8_t color_blind;
   uint8_t frequency_locked;
-  uint8_t phase_invert;
-  float locked_transpose;
+  uint8_t mode_option;
+  uint8_t waveform_exciter_option;
+  uint8_t chord_table_option;
+  uint8_t strum_hold_option;
 };
 
 struct SettingsData {
   CalibrationData calibration_data; // 40 bytes
-  State state;  // 10 bytes
-  uint8_t padding[14];
+  State state;  // 13 bytes
+  uint8_t padding[11];
 };
 
 class Settings {
@@ -65,22 +71,35 @@ class Settings {
   ~Settings() { }
   
   void Init();
+  void InitState();
   void Save();
   
   inline CalibrationData* mutable_calibration_data() {
     return &data_.calibration_data;
   }
-  
-  inline void ToggleEasterEgg() {
-    data_.state.easter_egg = !data_.state.easter_egg;
-  }
-  
-  inline void TogglePhaseInversion() {
-    data_.state.phase_invert = !data_.state.phase_invert;
-  }
 
   inline void ToggleFrequencyLocking() {
     data_.state.frequency_locked = !data_.state.frequency_locked;
+  }
+
+  void SwitchModeOption();
+  inline uint8_t ModeOption() {
+    return data_.state.mode_option;
+  }
+
+  void SwitchWaveformExciterOption();
+  inline uint8_t WaveformExciterOption() {
+    return data_.state.waveform_exciter_option;
+  }
+
+  void SwitchChordTableOption();
+  inline uint8_t ChordTableOption() {
+    return data_.state.chord_table_option;
+  }
+
+  void SwitchStrumHoldOption();
+  inline uint8_t StrumHoldOption() {
+    return data_.state.strum_hold_option;
   }
 
   inline State* mutable_state() {

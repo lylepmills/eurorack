@@ -102,13 +102,11 @@ void StringSynthPart::ComputeRegistration(
   }
 }
 
-#ifdef BRYAN_CHORDS
-
 // Chord table by Bryan Noll:
 // - more compact, leaving room for a bass
 // - more frequent note changes between adjacent chords.
 // - dropped fifth.
-const float chords[kMaxStringSynthPolyphony][kNumChords][kMaxChordSize] = {
+const float bryanChords[kMaxStringSynthPolyphony][kNumBryanChords][kMaxChordSize] = {
   {
     { -12.0f, -0.01f,  0.0f,  0.01f,  0.02f, 11.99f, 12.0f, 24.0f }, // OCT
     { -12.0f, -5.01f, -5.0f,  0.0f,   7.0f,  12.0f,  19.0f, 24.0f }, // 5
@@ -163,68 +161,186 @@ const float chords[kMaxStringSynthPolyphony][kNumChords][kMaxChordSize] = {
   }
 };
 
-#else
-
-// Original chord table:
-// - wider, occupies more room in the spectrum.
-// - minimum number of note changes between adjacent chords.
-// - consistant with the chord table used for the sympathetic strings model.
-const float chords[kMaxStringSynthPolyphony][kNumChords][kMaxChordSize] = {
+// Based on the chord table for Plaits by Jon Butler:
+// - organized into fixed, minor, major, colour chords
+const float jonChords[kMaxStringSynthPolyphony][kNumJonChords][kMaxChordSize] = {
   {
-    { -24.0f, -12.0f, 0.0f, 0.01f, 0.02f, 11.99f, 12.0f, 24.0f },
-    { -24.0f, -12.0f, 0.0f, 3.0f,  7.0f,  10.0f,  19.0f, 24.0f },
-    { -24.0f, -12.0f, 0.0f, 3.0f,  7.0f,  12.0f,  19.0f, 24.0f },
-    { -24.0f, -12.0f, 0.0f, 3.0f,  7.0f,  14.0f,  19.0f, 24.0f },
-    { -24.0f, -12.0f, 0.0f, 3.0f,  7.0f,  17.0f,  19.0f, 24.0f },
-    { -24.0f, -12.0f, 0.0f, 6.99f, 7.0f,  18.99f, 19.0f, 24.0f },
-    { -24.0f, -12.0f, 0.0f, 4.0f,  7.0f,  17.0f,  19.0f, 24.0f },
-    { -24.0f, -12.0f, 0.0f, 4.0f,  7.0f,  14.0f,  19.0f, 24.0f },
-    { -24.0f, -12.0f, 0.0f, 4.0f,  7.0f,  12.0f,  19.0f, 24.0f },
-    { -24.0f, -12.0f, 0.0f, 4.0f,  7.0f,  11.0f,  19.0f, 24.0f },
-    { -24.0f, -12.0f, 0.0f, 5.0f,  7.0f,  12.0f,  17.0f, 24.0f },
+    // Fixed Intervals
+    { -12.0f, -0.01f,  0.0f,  0.01f,  0.02f, 11.99f, 12.0f, 24.0f },  // Octave
+    { -12.0f, -5.01f, -5.0f,  0.0f,   7.0f,  12.0f,  19.0f, 24.0f },  // Fifth
+    // Minor
+    { -12.0f, -5.0f,   0.0f,  0.01f,  3.0f,  12.0f,  19.0f, 24.0f },  // Minor
+    { -12.0f, -5.01f, -5.0f,  0.0f,   3.0f,  10.0f,  19.0f, 24.0f },  // Minor 7th
+    { -12.0f, -5.0f,   0.0f,  3.0f,  10.0f,  14.0f,  19.0f, 24.0f },  // Minor 9th
+    { -12.0f, -5.01f, -5.0f,  0.0f,   3.0f,  10.0f,  17.0f, 24.0f },  // Minor 11th
+    // Major
+    { -12.0f, -5.0f,   0.0f,  4.0f,   7.0f,  12.0f,  19.0f, 24.0f },  // Major
+    { -12.0f, -5.0f,   0.0f,  4.0f,   7.0f,  11.0f,  19.0f, 24.0f },  // Major 7th
+    { -12.0f, -5.0f,   0.0f,  4.0f,  11.0f,  14.0f,  19.0f, 24.0f },  // Major 9th
+    // Colour Chords
+    { -12.0f, -5.0f,   0.0f,  5.0f,   7.0f,  12.0f,  17.0f, 24.0f },  // Sus4
+    { -12.0f, -5.0f,   0.0f,  2.0f,   9.0f,  16.0f,  19.0f, 24.0f },  // 69
+    { -12.0f, -5.0f,   0.0f,  4.0f,   9.0f,  12.0f,  19.0f, 24.0f },  // 6th
+    { -12.0f, -5.0f,   0.0f,  4.0f,   7.0f,  16.0f,  23.0f, 24.0f },  // 10th (Spread maj7)
+    { -12.0f, -5.0f,   0.0f,  4.0f,  10.0f,  12.0f,  19.0f, 24.0f },  // Dominant 7th
+    { -12.0f, -5.0f,   0.0f,  7.0f,  10.0f,  13.0f,  19.0f, 24.0f },  // Dominant 7th (b9)
+    { -12.0f, 0.00f,   3.0f,  6.0f,  10.0f,  12.0f,  18.0f, 24.0f },  // Half Diminished
+    { -12.0f, 0.00f,   3.0f,  6.0f,   9.0f,  12.0f,  18.0f, 24.0f },  // Fully Diminished
   },
   {
-    { -24.0f, -12.0f, 0.0f, 0.01f, 12.0f, 12.01f },
-    { -24.0f, -12.0f, 0.0f, 3.00f, 7.0f,  10.0f },
-    { -24.0f, -12.0f, 0.0f, 3.00f, 7.0f,  12.0f },
-    { -24.0f, -12.0f, 0.0f, 3.00f, 7.0f,  14.0f },
-    { -24.0f, -12.0f, 0.0f, 3.00f, 7.0f,  17.0f },
-    { -24.0f, -12.0f, 0.0f, 6.99f, 12.0f, 19.0f },
-    { -24.0f, -12.0f, 0.0f, 4.00f, 7.0f,  17.0f },
-    { -24.0f, -12.0f, 0.0f, 4.00f, 7.0f,  14.0f },
-    { -24.0f, -12.0f, 0.0f, 4.00f, 7.0f,  12.0f },
-    { -24.0f, -12.0f, 0.0f, 4.00f, 7.0f,  11.0f },
-    { -24.0f, -12.0f, 0.0f, 5.00f, 7.0f, 12.0f },
+    // Fixed Intervals
+    { -12.0f, -0.01f,  0.0f,  0.01f,  12.0f,  12.01f },  // Octave
+    { -12.0f, -5.01f, -5.0f,   0.0f,   7.0f,  12.0f  },  // Fifth
+    // Minor
+    { -12.0f, -5.0f,   0.0f,  0.01f,   3.0f,  12.0f  },  // Minor
+    { -12.0f, -5.01f, -5.0f,   0.0f,   3.0f,  10.0f  },  // Minor 7th
+    { -12.0f, -5.0f,   0.0f,   3.0f,  10.0f,  14.0f  },  // Minor 9th
+    { -12.0f, -5.0f,   0.0f,   3.0f,  10.0f,  17.0f  },  // Minor 11th
+    // Major
+    { -12.0f, -5.0f,   0.0f,   4.0f,   7.0f,  12.0f  },  // Major
+    { -12.0f, -5.0f,   0.0f,   4.0f,   7.0f,  11.0f  },  // Major 7th
+    { -12.0f, -5.0f,   0.0f,   4.0f,  11.0f,  14.0f  },  // Major 9th
+    // Colour Chords
+    { -12.0f, -5.0f,   0.0f,   5.0f,   7.0f,  12.0f  },  // Sus4
+    { -12.0f, -5.0f,   0.0f,   2.0f,   9.0f,  16.0f  },  // 69
+    { -12.0f, -5.0f,   0.0f,   4.0f,   9.0f,  12.0f  },  // 6th
+    { -12.0f, -5.0f,   0.0f,   7.0f,  16.0f,  23.0f  },  // 10th (Spread maj7)
+    { -12.0f, -5.0f,   0.0f,   4.0f,  10.0f,  12.0f  },  // Dominant 7th
+    { -12.0f, -5.0f,   0.0f,   7.0f,  10.0f,  13.0f  },  // Dominant 7th (b9)
+    { -12.0f, 0.00f,   3.0f,   6.0f,  10.0f,  12.0f  },  // Half Diminished
+    { -12.0f, 0.00f,   3.0f,   6.0f,   9.0f,  12.0f  },  // Fully Diminished
   },
   {
-    { -12.0f, 0.0f, 0.01f, 12.0f },
-    { -12.0f, 3.0f, 7.0f,  10.0f },
-    { -12.0f, 3.0f, 7.0f,  12.0f },
-    { -12.0f, 3.0f, 7.0f,  14.0f },
-    { -12.0f, 3.0f, 7.0f,  17.0f },
-    { -12.0f, 7.0f, 12.0f, 19.0f },
-    { -12.0f, 4.0f, 7.0f,  17.0f },
-    { -12.0f, 4.0f, 7.0f,  14.0f },
-    { -12.0f, 4.0f, 7.0f,  12.0f },
-    { -12.0f, 4.0f, 7.0f,  11.0f },
-    { -12.0f, 5.0f, 7.0f, 12.0f },
+    // Fixed Intervals
+    { -12.0f, 0.0f,   0.01f, 12.00f },  // Octave
+    { -12.0f, 6.99f,  7.00f, 12.00f },  // Fifth
+    // Minor
+    { -12.0f, 3.00f, 11.99f, 12.00f },  // Minor
+    { -12.0f, 3.00f,  9.99f, 10.00f },  // Minor 7th
+    { -12.0f, 3.00f, 10.00f, 14.00f },  // Minor 9th
+    { -12.0f, 3.00f, 10.00f, 17.00f },  // Minor 11th
+    // Major
+    { -12.0f, 4.00f,  7.00f, 12.00f },  // Major
+    { -12.0f, 4.00f,  7.00f, 11.00f },  // Major 7th
+    { -12.0f, 4.00f, 11.00f, 14.00f },  // Major 9th
+    // Colour Chords
+    { -12.0f, 5.00f,  7.00f, 12.00f },  // Sus4
+    { -12.0f, 2.00f,  9.00f, 16.00f },  // 69
+    { -12.0f, 4.00f,  7.00f,  9.00f },  // 6th
+    { -12.0f, 7.00f, 16.00f, 23.00f },  // 10th (Spread maj7)
+    { -12.0f, 4.00f,  7.00f, 10.00f },  // Dominant 7th
+    { -12.0f, 7.00f, 10.00f, 13.00f },  // Dominant 7th (b9)
+    { -12.0f, 3.00f,  6.00f, 10.00f },  // Half Diminished
+    { -12.0f, 3.00f,  6.00f,  9.00f },  // Fully Diminished
   },
   {
-    { 0.0f, 0.01f, 12.0f },
-    { 0.0f, 3.0f,  10.0f },
-    { 0.0f, 3.0f,  7.0f },
-    { 0.0f, 3.0f,  14.0f },
-    { 0.0f, 3.0f,  17.0f },
-    { 0.0f, 7.0f,  19.0f },
-    { 0.0f, 4.0f,  17.0f },
-    { 0.0f, 4.0f,  14.0f },
-    { 0.0f, 4.0f,  7.0f },
-    { 0.0f, 4.0f,  11.0f },
-    { 0.0f, 5.0f,  7.0f },
-  }
+    // Fixed Intervals
+    {  0.0f,  0.01f,  12.0f },  // Octave
+    {  0.0f,   7.0f,  12.0f },  // Fifth
+    // Minor
+    {  0.0f,   3.0f,  12.0f },  // Minor
+    {  0.0f,   3.0f,  10.0f },  // Minor 7th
+    {  3.0f,  10.0f,  14.0f },  // Minor 9th
+    {  3.0f,  10.0f,  17.0f },  // Minor 11th
+    // Major
+    {  4.0f,   7.0f,  12.0f },  // Major
+    {  4.0f,   7.0f,  11.0f },  // Major 7th
+    {  4.0f,  11.0f,  14.0f },  // Major 9th
+    // Colour Chords
+    {  5.0f,  7.00f,  12.0f },  // Sus4
+    {  2.0f,  9.00f,  16.0f },  // 69
+    { 4.00f,  7.00f,  9.00f },  // 6th
+    { 7.00f, 16.00f, 23.00f },  // 10th (Spread maj7)
+    { 4.00f,  7.00f, 10.00f },  // Dominant 7th
+    { 7.00f, 10.00f, 13.00f },  // Dominant 7th (b9)
+    { 3.00f,  6.00f, 10.00f },  // Half Diminished
+    { 3.00f,  6.00f,  9.00f },  // Fully Diminished
+  },
 };
 
-#endif  // BRYAN_CHORDS
+// Chord table by Joe McMullen
+const float joeChords[kMaxStringSynthPolyphony][kNumJoeEasterEggChords][kMaxChordSize] = {
+  {
+    { -7.0f,  0.0f,  2.0f,  5.0f, 7.0f,  12.0f, 14.0f, 17.0f }, //  iv 6/9
+    { -4.0f,  0.0f,  2.0f,  7.0f, 8.0f,  12.0f, 14.0f, 20.0f }, //  VI maj7#11
+    { -2.0f,  2.0f,  5.0f,  7.0f, 10.0f, 14.0f, 17.0f, 19.0f }, //  VII 6
+    { -5.0f,  0.0f,  2.0f,  7.0f, 10.0f, 12.0f, 14.0f, 19.0f }, //  v m11
+    { -9.0f,  -2.0f, 3.0f,  7.0f, 8.0f,  10.0f, 15.0f, 19.0f }, //  III add4
+    { -12.0f, -5.0f, 0.0f,  3.0f, 7.0f,  8.0f,  12.0f, 15.0f }, //  I addb13
+    { -4.0f,  0.0f,  2.0f,  3.0f, 8.0f,  12.0f, 14.0f, 15.0f }, //  VI add#11
+    { -7.0f,  0.0f,  2.0f,  5.0f, 8.0f,  12.0f, 14.0f, 17.0f }, //  iv m6
+    { -10.0f, -1.0f, 2.0f,  5.0f, 8.0f,  11.0f, 14.0f, 17.0f }, //  iio
+    { -13.0f, -4.0f, -1.0f, 2.0f, 5.0f,  8.0f,  11.0f, 14.0f }, //  viio
+    { -10.0f, -5.0f, -1.0f, 2.0f, 5.0f,  11.0f, 14.0f, 17.0f }, //  V 7
+    { -8.0f,  -1.0f, 4.0f,  5.0f, 7.0f,  11.0f, 16.0f, 17.0f }, //  iii/IV
+    { -12.0f, -5.0f, 0.0f,  4.0f, 7.0f,  11.0f, 16.0f, 19.0f }, //  I maj7
+    { -3.0f,  0.0f,  4.0f,  9.0f, 11.0f, 12.0f, 16.0f, 21.0f }, //  vi m9
+    { -7.0f,  0.0f,  5.0f,  7.0f, 9.0f,  12.0f, 17.0f, 19.0f }, //  IV maj9
+    { -10.0f, -3.0f, 2.0f,  5.0f, 9.0f,  12.0f, 14.0f, 17.0f }, //  ii m7
+    { -12.0f, -5.0f, 0.0f,  5.0f, 7.0f,  11.0f, 17.0f, 19.0f }, //  I maj7sus4
+    { -12.0f, -5.0f, 0.0f,  5.0f, 7.0f,  12.0f, 14.0f, 19.0f }, //  V 7sus4
+  },
+  {
+    { -7.0f,  0.0f,  2.0f,  5.0f,  7.0f,  12.0f },
+    { -4.0f,  0.0f,  7.0f,  8.0f,  12.0f, 14.0f },
+    { -2.0f,  2.0f,  5.0f,  7.0f,  10.0f, 14.0f },
+    { -5.0f,  2.0f,  7.0f,  10.0f, 12.0f, 14.0f },
+    { -9.0f,  -2.0f, 3.0f,  8.0f,  10.0f, 19.0f },
+    { -12.0f, -5.0f, 0.0f,  7.0f,  8.0f,  15.0f },
+    { -4.0f,  0.0f,  3.0f,  8.0f,  12.0f, 14.0f },
+    { -7.0f,  0.0f,  5.0f,  8.0f,  12.0f, 14.0f },
+    { -10.0f, -1.0f, 2.0f,  8.0f,  11.0f, 17.0f },
+    { -13.0f, -4.0f, -1.0f, 5.0f,  8.0f,  14.0f },
+    { -10.0f, -5.0f, 2.0f,  5.0f,  11.0f, 14.0f },
+    { -8.0f,  -1.0f, 5.0f,  7.0f,  11.0f, 16.0f },
+    { -12.0f, -5.0f, 0.0f,  7.0f,  11.0f, 16.0f },
+    { -3.0f,  4.0f,  9.0f,  11.0f, 12.0f, 16.0f },
+    { -7.0f,  0.0f,  7.0f,  9.0f,  12.0f, 19.0f },
+    { -10.0f, -3.0f, 2.0f,  9.0f,  12.0f, 17.0f },
+    { -12.0f, -5.0f, 0.0f,  7.0f,  11.0f, 17.0f },
+    { -12.0f, -5.0f, 0.0f,  5.0f,  12.0f, 14.0f },
+  },
+  {
+    { 2.0f,  5.0f, 7.0f,  12.0f },
+    { -4.0f, 7.0f, 12.0f, 14.0f },
+    { 5.0f,  7.0f, 10.0f, 14.0f },
+    { 2.0f,  7.0f, 10.0f, 12.0f },
+    { 3.0f,  8.0f, 10.0f, 19.0f },
+    { 0.0f,  7.0f, 8.0f,  15.0f },
+    { 3.0f,  8.0f, 12.0f, 14.0f },
+    { 0.0f,  5.0f, 8.0f,  14.0f },
+    { 2.0f,  8.0f, 11.0f, 17.0f },
+    { -1.0f, 5.0f, 8.0f,  14.0f },
+    { -5.0f, 2.0f, 5.0f,  11.0f },
+    { 5.0f,  7.0f, 11.0f, 16.0f },
+    { 0.0f,  7.0f, 11.0f, 16.0f },
+    { 4.0f,  9.0f, 11.0f, 12.0f },
+    { -7.0f, 9.0f, 12.0f, 19.0f },
+    { 2.0f,  9.0f, 12.0f, 17.0f },
+    { 0.0f,  7.0f, 11.0f, 17.0f },
+    { -5.0f, 5.0f, 12.0f, 14.0f },
+  },
+  {
+    { 5.0f,  7.0f,  12.0f },
+    { -4.0f, 7.0f,  14.0f },
+    { 5.0f,  7.0f,  14.0f },
+    { 2.0f,  10.0f, 12.0f },
+    { 3.0f,  8.0f,  19.0f },
+    { 0.0f,  7.0f,  15.0f },
+    { 3.0f,  12.0f, 14.0f },
+    { 0.0f,  8.0f,  14.0f },
+    { 2.0f,  8.0f,  17.0f },
+    { -1.0f, 5.0f,  14.0f },
+    { -5.0f, 5.0f,  11.0f },
+    { 5.0f,  7.0f,  16.0f },
+    { 0.0f,  7.0f,  16.0f },
+    { 4.0f,  11.0f, 12.0f },
+    { -7.0f, 9.0f,  19.0f },
+    { 2.0f,  12.0f, 17.0f },
+    { 0.0f,  11.0f, 17.0f },
+    { -5.0f, 12.0f, 14.0f },
+  },
+};
 
 void StringSynthPart::ProcessEnvelopes(
     float shape,
@@ -350,7 +466,16 @@ void StringSynthPart::Process(
     
     // Note enough polyphony for smooth transition between chords.
     for (int32_t i = 0; i < chord_size; ++i) {
-      float n = chords[polyphony_ - 1][group_[group].chord][i];
+      float n;
+
+      if (performance_state.chord_table == CHORD_TABLE_BRYAN) {
+        n = bryanChords[polyphony_ - 1][group_[group].chord][i];
+      } else if (performance_state.chord_table == CHORD_TABLE_JON) {
+        n = jonChords[polyphony_ - 1][group_[group].chord][i];
+      } else {
+        n = joeChords[polyphony_ - 1][group_[group].chord][i];
+      }
+
       notes[i].note = n;
       notes[i].amplitude = n >= 0.0f && n <= 17.0f ? 1.0f : 0.7f;
     }

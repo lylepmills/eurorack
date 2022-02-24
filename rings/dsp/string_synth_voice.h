@@ -31,6 +31,7 @@
 
 #include "stmlib/stmlib.h"
 
+#include "rings/dsp/oscillator.h"
 #include "rings/dsp/string_synth_oscillator.h"
 
 namespace rings {
@@ -53,13 +54,13 @@ class StringSynthVoice {
       size_t summed_harmonics,
       float* out,
       size_t size) {
-    oscillator_[0].template Render<OSCILLATOR_SHAPE_DARK_SQUARE, true>(
+    oscillator_[0].template Render<OSCILLATOR_SHAPE_SQUARE_DARK, true>(
         frequency, amplitudes[0], amplitudes[1], out, size);
     amplitudes += 2;
     
     for (size_t i = 1; i < summed_harmonics; ++i) {
       frequency *= 2.0f;
-      oscillator_[i].template Render<OSCILLATOR_SHAPE_BRIGHT_SQUARE, false>(
+      oscillator_[i].template Render<OSCILLATOR_SHAPE_SQUARE_BRIGHT, false>(
           frequency, amplitudes[0], amplitudes[1], out, size);
       amplitudes += 2;
     }

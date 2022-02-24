@@ -103,19 +103,19 @@ class CvScaler {
     return true;
   }
   
-  inline bool easter_egg() const {
-    return adc_lp_[ADC_CHANNEL_POT_FREQUENCY] < 0.1f &&
-        adc_lp_[ADC_CHANNEL_POT_STRUCTURE] > 0.9f &&
-        adc_lp_[ADC_CHANNEL_POT_BRIGHTNESS] < 0.1f &&
-        adc_lp_[ADC_CHANNEL_POT_POSITION] > 0.9f &&
-        adc_lp_[ADC_CHANNEL_POT_DAMPING] > 0.4f &&
-        adc_lp_[ADC_CHANNEL_POT_DAMPING] < 0.6f &&
-        adc_lp_[ADC_CHANNEL_ATTENUVERTER_BRIGHTNESS] < -1.00f &&
-        adc_lp_[ADC_CHANNEL_ATTENUVERTER_FREQUENCY] > 1.00f &&
-        adc_lp_[ADC_CHANNEL_ATTENUVERTER_DAMPING] < -1.00f &&
-        adc_lp_[ADC_CHANNEL_ATTENUVERTER_STRUCTURE] > 1.00f &&
-        adc_lp_[ADC_CHANNEL_ATTENUVERTER_POSITION] < -1.00f;
-  }
+  // inline bool easter_egg() const {
+  //   return adc_lp_[ADC_CHANNEL_POT_FREQUENCY] < 0.1f &&
+  //       adc_lp_[ADC_CHANNEL_POT_STRUCTURE] > 0.9f &&
+  //       adc_lp_[ADC_CHANNEL_POT_BRIGHTNESS] < 0.1f &&
+  //       adc_lp_[ADC_CHANNEL_POT_POSITION] > 0.9f &&
+  //       adc_lp_[ADC_CHANNEL_POT_DAMPING] > 0.4f &&
+  //       adc_lp_[ADC_CHANNEL_POT_DAMPING] < 0.6f &&
+  //       adc_lp_[ADC_CHANNEL_ATTENUVERTER_BRIGHTNESS] < -1.00f &&
+  //       adc_lp_[ADC_CHANNEL_ATTENUVERTER_FREQUENCY] > 1.00f &&
+  //       adc_lp_[ADC_CHANNEL_ATTENUVERTER_DAMPING] < -1.00f &&
+  //       adc_lp_[ADC_CHANNEL_ATTENUVERTER_STRUCTURE] > 1.00f &&
+  //       adc_lp_[ADC_CHANNEL_ATTENUVERTER_POSITION] < -1.00f;
+  // }
   
   inline float frequency_pot_value() const {
     return adc_lp_[ADC_CHANNEL_POT_FREQUENCY];
@@ -195,6 +195,7 @@ class CvScaler {
   
  private:
   void DetectNormalization();
+  int32_t NumChords(PerformanceState* performance_state, uint8_t polyphony);
   
   Adc adc_;
   CalibrationData* calibration_data_;
@@ -207,7 +208,6 @@ class CvScaler {
   NormalizationDetector normalization_detector_exciter_;
   
   bool normalization_probe_value_[2];
-  int32_t inhibit_strum_;
   
   float adc_lp_[ADC_CHANNEL_LAST];
   float transpose_;

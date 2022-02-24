@@ -32,11 +32,10 @@
 #include "stmlib/stmlib.h"
 
 // #define MIC_W
-#define BRYAN_CHORDS
 
 namespace rings {
   
-static const float kSampleRate = 48000.0f;
+static const float kSampleRate = 32000.0f;
 const float a3 = 440.0f / kSampleRate;
 const size_t kMaxBlockSize = 24;
 

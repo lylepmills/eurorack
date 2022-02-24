@@ -68,6 +68,7 @@ includes = """
 """
 
 import lookup_tables
+import samples
 
 create_specialized_manager = True
 
@@ -77,5 +78,9 @@ resources = [
   (lookup_tables.uint32_lookup_tables,
    'lookup_table_uint32', 'LUT', 'uint32_t', int, False),
   (lookup_tables.lookup_tables,
-   'lookup_table', 'LUT', 'float', float, False)
+   'lookup_table', 'LUT', 'float', float, False),
+  (samples.sample_data,
+   'sample', 'SMP', 'int16_t', int, False),
+  (samples.boundaries,
+   'sample_boundary', 'SMP', 'size_t', int, False),
 ]
