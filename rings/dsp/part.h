@@ -166,6 +166,7 @@ class Part {
   void FillExciterBuffer(
       const PerformanceState& performance_state,
       const Patch& patch,
+      bool update_patch,
       float frequency,
       int32_t voice,
       bool is_active_voice,

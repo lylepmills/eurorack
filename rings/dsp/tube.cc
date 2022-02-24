@@ -44,7 +44,6 @@ void Tube::Init() {
 void Tube::Process(
     float frequency,
     float envelope,
-    float damping,
     float timbre,
     float* input_output,
     float gain,
@@ -57,7 +56,7 @@ void Tube::Process(
   
   if (envelope >= 1.0f) envelope = 1.0f;
   
-  damping = 3.6f - damping * 1.8f;
+  float damping = 3.6f - damping_ * 1.8f;
   float lpf_coefficient = frequency * (1.0f + timbre * timbre * 256.0f);
   if (lpf_coefficient >= 0.995f) lpf_coefficient = 0.995f;
   

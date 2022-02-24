@@ -49,14 +49,18 @@ class Tube {
   void Process(
       float frequency,
       float envelope,
-      float damping,
       float timbre,
       float* input_output,
       float gain,
       size_t size);
 
+  void set_damping(float damping) {
+    damping_ = damping;
+  }
+
  private:
   int32_t delay_ptr_;
+  float damping_;
   float zero_state_;
   float pole_state_;
   float delay_line_[kTubeDelaySize];

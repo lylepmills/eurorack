@@ -438,8 +438,6 @@ void StringSynthPart::Process(
     active_group_ = (active_group_ + 1) % polyphony_;
     envelope_flags[active_group_] = ENVELOPE_FLAG_RISING_EDGE;
     acquisition_delay_ = 3;
-    // TODO - this seems to be a CV delay, something we could use on the other part
-    // 
   }
   if (acquisition_delay_) {
     --acquisition_delay_;

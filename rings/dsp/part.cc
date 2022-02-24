@@ -701,8 +701,9 @@ void Part::Process(
     float filter_q = performance_state.internal_exciter ? 1.5f : 0.8f;
 
     // Process input with excitation filter. Inactive voices receive silence.
-    // TODO - possible set_f_q here should also be conditional on update_patch
-    excitation_filter_[voice].set_f_q<FREQUENCY_DIRTY>(filter_cutoff, filter_q);
+    if (update_patch) {
+      excitation_filter_[voice].set_f_q<FREQUENCY_DIRTY>(filter_cutoff, filter_q);
+    }
     if (voice == active_voice_) {
       copy(&in[0], &in[size], &resonator_input_[0]);
     } else {
@@ -710,7 +711,7 @@ void Part::Process(
     }
 
     if (performance_state.mode == MODE_MINI_ELEMENTS_STEREO) {
-      FillExciterBuffer(performance_state, patch, frequency, voice, voice == active_voice_, size);
+      FillExciterBuffer(performance_state, patch, update_patch, frequency, voice, voice == active_voice_, size);
       for (size_t i = 0; i < size; ++i) {
         resonator_input_[i] += exciter_buffer_[i];
       }
@@ -796,7 +797,7 @@ void Part::Process(
       }
     }
   } else if (performance_state.mode == MODE_MINI_ELEMENTS_EXCITER) {
-    FillExciterBuffer(performance_state, patch, frequency, 0, true, size);
+    FillExciterBuffer(performance_state, patch, true, frequency, 0, true, size);
     copy(&exciter_buffer_[0], &exciter_buffer_[size], &aux[0]);
   }
 }
@@ -804,6 +805,7 @@ void Part::Process(
 void Part::FillExciterBuffer(
     const PerformanceState& performance_state,
     const Patch& patch,
+    bool update_patch,
     float frequency,
     int32_t voice,
     bool is_active_voice,
@@ -827,20 +829,21 @@ void Part::FillExciterBuffer(
     if (performance_state.frequency_locked) {
       blow_.set_timbre(performance_state.locked_frequency_pot_value);
     }
-    // TODO - feels like patch params throughout this method could be locked as well if not update_patch
-    blow_.set_parameter(patch.position);
+    if (update_patch) {
+      blow_.set_parameter(patch.position);
+      tube_.set_damping(patch.damping);
+    }
     blow_.Process(exciter_flags, exciter_buffer_, size);
     tube_.Process(
       frequency,
       1.0f,  // envelope_value
-      patch.damping,
       1.0f,  // tube_level
       exciter_buffer_,
       0.5f,  // tube_level * 0.5f
       size);
     diffuser_.Process(exciter_buffer_, size);
   } else if (performance_state.waveform_exciter == 2) {
-    if (is_active_voice) {
+    if (is_active_voice && update_patch) {
       if (performance_state.frequency_locked) {
         strike_[voice].set_timbre(performance_state.locked_frequency_pot_value);
       }
