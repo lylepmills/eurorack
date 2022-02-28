@@ -113,7 +113,6 @@ class Ui {
   int32_t strumming_flag_counter_;
   int32_t strumming_flag_interval_;
   uint8_t option_menu_item_;
-  bool startup_calibration_;
   
   Settings* settings_;
   CvScaler* cv_scaler_;

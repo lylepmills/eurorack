@@ -239,7 +239,7 @@ int main(void) {
   InitializeReception();
   Init();
 
-  bool exit_updater = (!switches.pressed_immediate(0)) || switches.pressed_immediate(1);
+  bool exit_updater = !switches.pressed_immediate(0);
   
   while (!exit_updater) {
     bool error = false;
