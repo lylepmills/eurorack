@@ -97,6 +97,8 @@ With this table, instead of Frequency defining the root and Harmonics defining c
 
 # Rings
 
+update 2/27/22: the first release of this firmware purported to have a way of accessing calibration on powerup, however it didn't work correctly. if you are using a version of this firmware downloaded prior to 2/27/22, you won't be able to access calibration. if you download the firmware after 2/27/22, the procedure to reach calibration described below will work.
+
 The Rings alt firmware ([download wav](https://github.com/lylepmills/eurorack/raw/master/alt_firmwares/rings_mini_elements.wav)) extends the base firmware with several additional features, all configurable with a menu. The main new addition is a "Mini-Elements" mode which borrows some of the functionality of Elements to give Rings a wider palette of options for internal excitation.
 
 ## Features of this alt firmware
