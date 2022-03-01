@@ -146,8 +146,8 @@ In **Rings** and **Mini-Elements** modes (i.e. every mode except the Easter Egg 
 In the **Easter Egg** mode and the [Western Chords](https://synthmodes.com/modules/rings/#western) resonator mode, this option controls the chord table used (“Western Chords” is not a very accurate name for some of these chord tables, but for lack of a better name I’ll continue to refer to it that way below)
 * Solid green: Classic chord table
 * Solid red: Alt chord table based on the one for Plaits by Jon Butler (organized a bit differently with a few more chords, based on these ones): https://github.com/lylepmills/eurorack/blob/8bd0b5e2b8088253e341ec1a50a876850e854c73/plaits/dsp/engine/chord_engine.cc#L42-L62 At higher polyphony levels (3 or 4) in the Western Chords mode, instead of chords this cycles through the first 16 standard intervals (unison to major 10th)
-* Solid yellow: Alt chord tables by Joe McMullen. This mode is jam-packed with not one but five different chord table concepts depending on whether you are in the Easter Egg mode and your polyphony settings.
-    * Easter Egg mode: Same table as Joe’s chord table for Plaits, see https://github.com/lylepmills/eurorack/blob/master/alt_firmwares/README.md#alternate-chords-2-by-joe-mcmullen
+* Solid yellow: Alt chord tables by Joe McMullen. This mode is jam-packed with not one but five different chord table concepts depending on whether you are in the Easter Egg mode and your polyphony settings. Refer to [Joe's writeup](https://forum.mutable-instruments.net/t/mini-elements-alt-firmware-for-rings/19768/7) for more details.
+    * Easter Egg mode: Same table as Joe’s chord table for Plaits.
     * Western Chords (polyphony 1): Cycles through 15 scales so that Rings can be used like Martenot’s Palme Diffuseur
     * Western Chords (polyphony 2): Cycles through 21 triads, sevenths and some more exotic chords all within a single key
     * Western Chords (polyphony 3): Cycles through the first 16 harmonic intervals from the overtone series
