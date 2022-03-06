@@ -525,10 +525,14 @@ void Part::RenderStringVoice(
         ? patch.structure
         : 2.0f + performance_state.chord;
     }
+    float fm = performance_state.fm;
+    if (performance_state.FMInputRepurposed()) {
+      fm = 0.0f;
+    }
     ComputeSympatheticStringsNotes(
         performance_state,
-        performance_state.tonic + performance_state.fm,
-        performance_state.tonic + note_[voice] + performance_state.fm,
+        performance_state.tonic + fm,
+        performance_state.tonic + note_[voice] + fm,
         parameter_[voice],
         frequencies,
         num_strings);
@@ -645,7 +649,6 @@ void Part::Process(
     float* out,
     float* aux,
     size_t size) {
-
   // Copy inputs to outputs when bypass mode is enabled.
   if (bypass_) {
     copy(&in[0], &in[size], &out[0]);
@@ -671,6 +674,11 @@ void Part::Process(
   }
   
   note_[active_voice_] = note_filter_.note();
+
+  float fm = performance_state.fm;
+  if (performance_state.FMInputRepurposed()) {
+    fm = 0.0f;
+  }
   
   fill(&out[0], &out[size], 0.0f);
   fill(&aux[0], &aux[size], 0.0f);
@@ -690,7 +698,8 @@ void Part::Process(
     // Compute MIDI note value, frequency, and cutoff frequency for excitation
     // filter.
     float cutoff = patch.brightness * (2.0f - patch.brightness);
-    float note = note_[voice] + performance_state.tonic + performance_state.fm;
+    float note = note_[voice] + performance_state.tonic + fm;
+
     float frequency = SemitonesToRatio(note - 69.0f) * a3;
     float filter_cutoff_range = performance_state.internal_exciter
       ? frequency * SemitonesToRatio((cutoff - 0.5f) * 96.0f)
@@ -769,7 +778,7 @@ void Part::Process(
   // Apply limiter to string output.
   limiter_.Process(out, aux, size, model_gains_[model_]);
 
-  float note = note_[active_voice_] + performance_state.tonic + performance_state.fm;
+  float note = note_[active_voice_] + performance_state.tonic + fm;
   float frequency = SemitonesToRatio(note - 69.0f) * a3;
 
   if (performance_state.mode == MODE_RINGS_WAVEFORM ||
@@ -820,16 +829,22 @@ void Part::FillExciterBuffer(
     exciter_flags |= EXCITER_FLAG_GATE;
   }
 
+  bool update_timbre = performance_state.frequency_locked || performance_state.FMInputRepurposed();
+  float timbre = performance_state.locked_frequency_pot_value;
+  if (performance_state.FMInputRepurposed()) {
+    timbre += performance_state.fm;
+    CONSTRAIN(timbre, 0.0f, 1.0f);
+  }
   if (is_active_voice && performance_state.waveform_exciter == 0) {
-    if (performance_state.frequency_locked) {
-      bow_.set_timbre(performance_state.locked_frequency_pot_value);
+    if (update_patch && update_timbre) {
+      bow_.set_timbre(timbre);
     }
     bow_.Process(exciter_flags, exciter_buffer_, size);
   } else if (is_active_voice && performance_state.waveform_exciter == 1) {
-    if (performance_state.frequency_locked) {
-      blow_.set_timbre(performance_state.locked_frequency_pot_value);
-    }
     if (update_patch) {
+      if (update_timbre) {
+        blow_.set_timbre(timbre);
+      }
       blow_.set_parameter(patch.position);
       tube_.set_damping(patch.damping);
     }
@@ -844,8 +859,8 @@ void Part::FillExciterBuffer(
     diffuser_.Process(exciter_buffer_, size);
   } else if (performance_state.waveform_exciter == 2) {
     if (is_active_voice && update_patch) {
-      if (performance_state.frequency_locked) {
-        strike_[voice].set_timbre(performance_state.locked_frequency_pot_value);
+      if (update_timbre) {
+        strike_[voice].set_timbre(timbre);
       }
       float strike_meta = patch.position;
       strike_[voice].set_meta(
