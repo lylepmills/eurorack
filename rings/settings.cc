@@ -36,6 +36,7 @@ const uint8_t kNumModeOptions = 5;
 const uint8_t kNumWaveformExciterOptions = 3;
 const uint8_t kNumChordTableOptions = 3;
 const uint8_t kNumStrumHoldOptions = 2;
+const uint8_t kNumFMInputOptions = 2;
 
 stmlib::Storage<1> storage;
 
@@ -75,6 +76,7 @@ void Settings::InitState() {
   data_.state.waveform_exciter_option = 0;
   data_.state.chord_table_option = 0;
   data_.state.strum_hold_option = 0;
+  data_.state.fm_input_option = 0;
 }
 
 void Settings::SwitchModeOption() {
@@ -96,6 +98,11 @@ void Settings::SwitchChordTableOption() {
 void Settings::SwitchStrumHoldOption() {
   uint8_t new_option = (StrumHoldOption() + 1) % kNumStrumHoldOptions;
   mutable_state()->strum_hold_option = new_option;
+}
+
+void Settings::SwitchFMInputOption() {
+  uint8_t new_option = (FMInputOption() + 1) % kNumFMInputOptions;
+  mutable_state()->fm_input_option = new_option;
 }
 
 void Settings::Save() {

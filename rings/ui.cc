@@ -41,7 +41,7 @@ namespace rings {
 const int32_t kAnimationDuration = 1200;
 const int32_t kLongPressDuration = 2800;
 const int32_t kMediumPressDuration = 200;
-const uint8_t kNumOptions = 4;
+const uint8_t kNumOptions = 5;
 
 using namespace std;
 using namespace stmlib;
@@ -227,6 +227,9 @@ void Ui::Poll() {
         } else if (option_menu_item_ == 3) {
           leds_.set(0, 0, slow_blink);
           option_value = settings_->ChordTableOption();
+        } else if (option_menu_item_ == 4) {
+          leds_.set(0, slow_blink, 0);
+          option_value = settings_->FMInputOption();
         }
 
         bool menu_indicator = (system_clock.milliseconds() % 10000) > 9000;
@@ -418,6 +421,8 @@ void Ui::OnSwitchReleased(const Event& e) {
           settings_->SwitchStrumHoldOption();
         } else if (option_menu_item_ == 3) {
           settings_->SwitchChordTableOption();
+        } else if (option_menu_item_ == 4) {
+          settings_->SwitchFMInputOption();
         }
         break;
       default:

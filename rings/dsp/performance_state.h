@@ -68,9 +68,14 @@ struct PerformanceState {
   uint8_t frequency_locked;
   uint8_t waveform_exciter;
   uint8_t strum_hold_option;
+  uint8_t fm_input_option;
 
   bool MiniElements() const {
     return (mode == MODE_MINI_ELEMENTS_STEREO) || (mode == MODE_MINI_ELEMENTS_EXCITER);
+  }
+
+  bool FMInputRepurposed() const {
+    return MiniElements() && (fm_input_option == 1);
   }
 };
 

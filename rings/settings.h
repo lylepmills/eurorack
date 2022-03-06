@@ -35,7 +35,7 @@
 
 namespace rings {
 
-const uint32_t kSettingsId = 414344649;
+const uint32_t kSettingsId = 259583919;
 
 struct CalibrationData {
   float pitch_offset;
@@ -57,12 +57,13 @@ struct State {
   uint8_t waveform_exciter_option;
   uint8_t chord_table_option;
   uint8_t strum_hold_option;
+  uint8_t fm_input_option;
 };
 
 struct SettingsData {
   CalibrationData calibration_data; // 40 bytes
-  State state;  // 13 bytes
-  uint8_t padding[11];
+  State state;  // 14 bytes
+  uint8_t padding[10];
 };
 
 class Settings {
@@ -100,6 +101,11 @@ class Settings {
   void SwitchStrumHoldOption();
   inline uint8_t StrumHoldOption() {
     return data_.state.strum_hold_option;
+  }
+
+  void SwitchFMInputOption();
+  inline uint8_t FMInputOption() {
+    return data_.state.fm_input_option;
   }
 
   inline State* mutable_state() {
