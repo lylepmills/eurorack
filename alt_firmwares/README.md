@@ -153,6 +153,11 @@ In the **Easter Egg** mode and the [Western Chords](https://synthmodes.com/mo
     * Western Chords (polyphony 3): Cycles through the first 16 harmonic intervals from the overtone series
     * Western Chords (polyphony 4): Cycles through 23 justly tempered intervals based on the Shruti of Indian classical music theory
 
+### Page 5: Blinking red - FM CV input destination (2 options)
+In **Mini-Elements** modes only, this option controls whether to use the FM CV input to control exciter Timbre. This option has no effect on other modes.
+* Solid green: FM CV input controls FM (i.e. status quo for Rings)
+* Solid red: FM CV input controls exciter timbre in mini-Elements modes
+
 ## Mini-Elements mode
 The Mini-Elements modes are, of course, based on [Elements](https://mutable-instruments.net/modules/elements/). They directly borrow some of the extra functionality of Elements that Rings lacks, in particular the exciter section of Elements. This gives Rings a wider palette of options for internal excitation compared with the stock firmware. Given the much more limited panel real estate on Rings compared with Elements, obviously a few compromises had to be made, chiefly that you can only use one exciter type at a time (Bow, Blow, or Strike) and there is no Envelope control.
 
