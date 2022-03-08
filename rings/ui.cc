@@ -352,6 +352,7 @@ void Ui::OnSwitchLongHeld(const Event& e) {
     }
     part_->set_model(static_cast<ResonatorModel>(model));
     string_synth_->set_fx(static_cast<FxType>(model));
+    SaveState();
   }
   IgnoreSwitchReleases();
 }
