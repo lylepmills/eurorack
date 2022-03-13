@@ -40,7 +40,6 @@ using namespace stmlib;
 
 static const int32_t kMediumPressTime = 200;
 static const int32_t kLongPressTime = 2000;
-static const int32_t kVeryLongPressTime = 4000;
 
 static const uint8_t kNumOptions = 6;
 static const uint8_t kNumLockedFrequencyPotOptions = 3;
@@ -359,6 +358,21 @@ void Ui::ReadSwitches() {
         if (pots_[POTS_ADC_CHANNEL_HARMONICS_POT].editing_hidden_parameter()) {
           mode_ = UI_MODE_DISPLAY_OCTAVE;
         }
+
+        // Long, double press: enter calibration mode.
+        if (press_time_[2] >= kLongPressTime &&
+            press_time_[3] >= kLongPressTime) {
+          press_time_[2] = press_time_[3] = 0;
+          RealignPots();
+          StartCalibration();
+        }
+
+        // Long, double press: enter options menu.
+        if (press_time_[0] >= kMediumPressTime &&
+          press_time_[3] >= kMediumPressTime) {
+          press_time_[0] = press_time_[3] = 0;
+          mode_ = UI_MODE_CHANGE_OPTIONS_PRE_RELEASE;
+        }
         
         // Long, double press: lock coarse frequency.
         if (press_time_[0] >= kMediumPressTime &&
@@ -471,85 +485,69 @@ void Ui::ReadSwitches() {
       break;
 
     case UI_MODE_FREQUENCY_LOCK:
-      for (int i = 0; i < SWITCH_LAST; ++i) {
-        // Keep counting press time so we can switch to calibration mode after a long press.
-        if (switches_.pressed(Switch(i))) {
-          ++press_time_[i];
-        } else if (i == 0 || i == 1) {
+      for (int i = 0; i < 2; ++i) {
+        if (switches_.released(Switch(i))) {
           press_time_[0] = press_time_[1] = 0;
           mode_ = UI_MODE_NORMAL;
           break;
         }
       }
 
-      if (press_time_[0] >= kVeryLongPressTime &&
-          press_time_[1] >= kVeryLongPressTime) {
-        if (press_time_[0] > press_time_[1]) {
-          press_time_[0] = press_time_[1] = 0;
-          // Undo frequency lock toggle from medium double-press.
-          pots_[POTS_ADC_CHANNEL_FREQ_POT].ToggleLock();
-          mode_ = UI_MODE_CHANGE_OPTIONS_PRE_RELEASE;
-        } else {
-          StartCalibration();
-        }
-      }
       break;
 
     case UI_MODE_CHANGE_OPTIONS_PRE_RELEASE:
-      if ((!switches_.pressed(Switch(0)) && !switches_.pressed(Switch(1))) &&
-          (switches_.released(Switch(0)) || switches_.released(Switch(1)))) {
+      if ((!switches_.pressed(Switch(0)) && !switches_.pressed(Switch(3))) &&
+          (switches_.released(Switch(0)) || switches_.released(Switch(3)))) {
         mode_ = UI_MODE_CHANGE_OPTIONS;
       }
       break;
 
     case UI_MODE_CHANGE_OPTIONS:
-      if (switches_.pressed(Switch(0)) && switches_.pressed(Switch(1))) {
-        // Add a bit of extra time so holding both buttons doesn't instantly jump to toggling
-        // frequency locking.
-        press_time_[0] = press_time_[1] = -1000;
+      if (switches_.pressed(Switch(0)) && switches_.pressed(Switch(3))) {
+        // Add a bit of extra time so holding both buttons doesn't instantly jump 
+        // back into the options menu.
+        ignore_release_[0] = ignore_release_[3] = true;
+        press_time_[0] = press_time_[3] = -2000;
         SaveState();
         mode_ = UI_MODE_NORMAL;
         break;
       }
+
+      if (switches_.released(Switch(3))) {
+        option_index_ = (option_index_ - 1 + kNumOptions) % kNumOptions;
+      }
       
       if (switches_.released(Switch(0))) {
-        option_index_ += 1;
-        if (option_index_ >= kNumOptions) {
-          option_index_ = 0;
-        }
+        option_index_ = (option_index_ + 1) % kNumOptions;
       }
 
-      if (switches_.released(Switch(1))) {
+      if (switches_.released(Switch(1)) || switches_.released(Switch(2))) {
+        int delta = switches_.released(Switch(1)) ? -1 : 1;
+
         if (option_index_ == 0) {
-          patch_->locked_frequency_pot_option += 1;
-          if (patch_->locked_frequency_pot_option >= kNumLockedFrequencyPotOptions) {
-            patch_->locked_frequency_pot_option = 0;
-          }
+          patch_->locked_frequency_pot_option = 
+            (patch_->locked_frequency_pot_option + delta + kNumLockedFrequencyPotOptions)
+            % kNumLockedFrequencyPotOptions;
         } else if (option_index_ == 1) {
-          patch_->model_cv_option += 1;
-          if (patch_->model_cv_option >= kNumModelCVOptions) {
-            patch_->model_cv_option = 0;
-          }
+          patch_->model_cv_option = 
+            (patch_->model_cv_option + delta + kNumModelCVOptions)
+            % kNumModelCVOptions;
         } else if (option_index_ == 2) {
-          patch_->level_cv_option += 1;
-          if (patch_->level_cv_option >= kNumLevelCVOptions) {
-            patch_->level_cv_option = 0;
-          }
+          patch_->level_cv_option = 
+            (patch_->level_cv_option + delta + kNumLevelCVOptions)
+            % kNumLevelCVOptions;
         } else if (option_index_ == 3) {
-          patch_->aux_subosc_wave_option += 1;
-          if (patch_->aux_subosc_wave_option >= kNumSuboscWaveOptions) {
-            patch_->aux_subosc_wave_option = 0;
-          }
+          patch_->aux_subosc_wave_option = 
+            (patch_->aux_subosc_wave_option + delta + kNumSuboscWaveOptions)
+            % kNumSuboscWaveOptions;
         } else if (option_index_ == 4) {
-          patch_->aux_subosc_octave_option += 1;
-          if (patch_->aux_subosc_octave_option >= kNumSuboscOctaveOptions) {
-            patch_->aux_subosc_octave_option = 0;
-          }
+          patch_->aux_subosc_octave_option = 
+            (patch_->aux_subosc_octave_option + delta + kNumSuboscOctaveOptions)
+            % kNumSuboscOctaveOptions;
         } else if (option_index_ == 5) {
-          patch_->chord_set_option += 1;
-          if (patch_->chord_set_option >= kNumChordSetOptions) {
-            patch_->chord_set_option = 0;
-          }
+          patch_->chord_set_option = 
+            (patch_->chord_set_option + delta + kNumChordSetOptions)
+            % kNumChordSetOptions;
         }
       }
       break;
