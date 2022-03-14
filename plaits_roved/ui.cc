@@ -371,6 +371,12 @@ void Ui::ReadSwitches() {
         if (press_time_[0] >= kMediumPressTime &&
           press_time_[3] >= kMediumPressTime) {
           press_time_[0] = press_time_[3] = 0;
+
+          // The below get locked when we first press each button, unlock them
+          // since we are not modifying the other hidden parameters.
+          pots_[POTS_ADC_CHANNEL_TIMBRE_POT].Unlock();
+          pots_[POTS_ADC_CHANNEL_MORPH_POT].Unlock();
+
           mode_ = UI_MODE_CHANGE_OPTIONS_PRE_RELEASE;
         }
         
