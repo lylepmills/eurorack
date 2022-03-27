@@ -53,6 +53,8 @@
 #include "plaits/dsp/engine/waveshaping_engine.h"
 #include "plaits/dsp/engine/wavetable_engine.h"
 
+#include "plaits/dsp/oscillator/square_oscillator.h"
+
 #include "plaits/dsp/envelope.h"
 
 #include "plaits/dsp/fx/low_pass_gate.h"
@@ -107,7 +109,7 @@ class ChannelPostProcessor {
       }
     }
   }
-  
+
  private:
   stmlib::Limiter limiter_;
   LowPassGate lpg_;
@@ -230,8 +232,8 @@ class Voice {
   WaveshapingEngine waveshaping_engine_;
   WavetableEngine wavetable_engine_;
 
-  SineOscillator sine_oscillator_;
-  Oscillator oscillator_;
+  FastSineOscillator sine_oscillator_;
+  SquareOscillator square_oscillator_;
 
   stmlib::HysteresisQuantizer engine_quantizer_;
   
