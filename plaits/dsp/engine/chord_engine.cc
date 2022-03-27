@@ -258,13 +258,17 @@ void ChordEngine::Render(
   const float waveform = max((morph_lp_ - 0.535f) * 2.15f, 0.0f);
   
   for (int note = 0; note < kChordNumVoices; ++note) {
-    float wavetable_amount = (morph_lp_ > fade_point[note]) ? 1.0f : 0.0f;
+    float wavetable_amount = 100.0f * (morph_lp_ - fade_point[note]);
+    CONSTRAIN(wavetable_amount, 0.0f, 1.0f);
 
-    float divide_down_amount = 1.0f - wavetable_amount;
+    float divide_down_amount = 100.0f * (fade_point[note] - morph_lp_);
+    CONSTRAIN(divide_down_amount, 0.0f, 1.0f);
+
     float* destination = (1 << note) & aux_note_mask ? aux : out;
     
     const float note_f0 = f0 * ratios[note];
-    float divide_down_gain = 0.5f;
+    float divide_down_gain = 4.0f - note_f0 * 32.0f;
+    CONSTRAIN(divide_down_gain, 0.0f, 1.0f);
     divide_down_amount *= divide_down_gain;
     
     if (wavetable_amount) {
@@ -275,9 +279,7 @@ void ChordEngine::Render(
           wavetable,
           destination,
           size);
-    }
-    
-    if (divide_down_amount) {
+    } else {
       divide_down_voice_[note].Render(
           note_f0,
           harmonics,
