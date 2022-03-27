@@ -80,7 +80,7 @@ Organized (from full-CCW to full-CW) into neutral, minor, major, and colour chor
 - Fully Diminished
 
 #### Alternate chords 2 (by Joe McMullen)
-With this table, instead of Frequency defining the root and Harmonics defining chord type, Frequency defines the key and Harmonics defines the scale position the chord is built from, meaning the root you hear on the aux output shifts around. Note that chord voicings are also more spread out by default with this table. See https://forum.mutable-instruments.net/t/unified-plaits-alt-firmware/19530/19 for more discussion. If that doesn't make sense, don't worry, just use your ears!
+With this table, instead of Frequency defining the root and Harmonics defining chord type, Frequency defines the key and Harmonics defines the scale position the chord is built from, meaning the root you hear on the aux output shifts around. Note that chord voicings are also more spread out by default with this table. See [this writeup from Joe](https://forum.mutable-instruments.net/t/unified-plaits-alt-firmware/19530/19) for more info. If that doesn't make sense, don't worry, just use your ears!
 - iv 6/9
 - iio 7sus4
 - VII 6
@@ -103,9 +103,9 @@ With this table, instead of Frequency defining the root and Harmonics defining c
 ## Technical notes
 The original Plaits firmware makes the most of its processor, and runs quite close to that processor's limits in terms of both the amount of code it can store, and the CPU load of that code (at least, in certain modes). As such, to pack in everything this alt firmware can do, several minor adjustments have been made to the behavior of the base firmware for efficiency reasons.
 
-- The size of the sine lookup-table (used in several modes) has been halved (max error 2e-5) (https://forum.mutable-instruments.net/t/unified-plaits-alt-firmware/19530/7 for more details)
+- The size of the sine lookup-table (used in several modes) has been halved (max error 2e-5, see [this comment from Émilie](https://forum.mutable-instruments.net/t/unified-plaits-alt-firmware/19530/7) for more info)
 - The internal sample rate for the audio path has been dropped from 48K to 44.1K
-- The crossfading behavior between the string synth and the wavetable synth in chord mode right around 12 o'clock on the morph knob has been tweaked such that each note fades completely out and then back in again one at a time (instead of crossfading between the two synths)
+- The crossfading behavior between the string synth and the wavetable synth in chord mode right around 12 o'clock on the morph knob has been tweaked such that each note fades completely out and then back in again, one note at a time (instead of crossfading between the two synths)
 
 When it comes to CPU usage, various things contribute, e.g. using the suboscillator adds a bit of CPU, using the trig input + internal envelopes adds a bit of CPU, aux crossfading adds a bit of CPU, etc. So far I have been able to make enough performance tweaks to address all combinations of settings which can lead to CPU overload *that I know of*. In other words, at time of writing (3/27/22), any combination of settings *should* work fine without hitting CPU limits, but fair warning: that isn't a guarantee that no more such scenarios will be found in the future.
 
