@@ -31,6 +31,7 @@
 
 #include "stmlib/stmlib.h"
 
+#include "plaits/dsp/dsp.h"
 #include "plaits/dsp/fx/fx_engine.h"
 
 namespace plaits {
@@ -42,7 +43,7 @@ class Diffuser {
   
   void Init(uint16_t* buffer) {
     engine_.Init(buffer);
-    engine_.SetLFOFrequency(LFO_1, 0.3f / 48000.0f);
+    engine_.SetLFOFrequency(LFO_1, 0.3f / kSampleRate);
     lp_decay_ = 0.0f;
   }
   
