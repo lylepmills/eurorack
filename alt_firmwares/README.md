@@ -1,6 +1,11 @@
 # Plaits
 
-The Plaits alt firmware ([download wav](https://github.com/lylepmills/eurorack/raw/master/alt_firmwares/plaits_freqlock.wav)) extends the base firmware with several additional features. Unlike earlier versions of this alt firmware, you can now use any combination of the below features that you want with this single firmware, and you can reconfigure those options with a built-in menu.
+[discussion](https://forum.mutable-instruments.net/t/unified-plaits-alt-firmware/19530)
+[download](https://github.com/lylepmills/eurorack/raw/master/alt_firmwares/plaits_freqlock.wav)
+
+*update 3/27/22: versions of this firmware downloaded prior to 3/27/22 are known to have had some issues with hitting CPU limits of the module, producing digital aliasing distortions in certain modes with certain combinations of settings. updating to the latest version of the firmware is recommended to avoid running into those problems.*
+
+The Plaits alt firmware extends the base firmware with several additional features. Unlike earlier versions of this alt firmware, you can now use any combination of the below features that you want with this single firmware, and you can reconfigure those options with a built-in menu.
 
 ## Features of this alt firmware
 
@@ -94,12 +99,23 @@ With this table, instead of Frequency defining the root and Harmonics defining c
 - I maj7sus4/vii
 - V 7sus4
 
+## Technical notes
+The original Plaits firmware makes the most of its processor, and runs quite close to that processor's limits in terms of both the amount of code it can store, and the CPU load of that code (at least, in certain modes). As such, to pack in everything this alt firmware can do, several minor adjustments have been made to the behavior of the base firmware for efficiency reasons.
+
+- The size of the sine lookup-table (used in several modes) has been halved (max error 2e-5) (https://forum.mutable-instruments.net/t/unified-plaits-alt-firmware/19530/7 for more details)
+- The internal sample rate for the audio path has been dropped from 48K to 44.1K
+- The crossfading behavior between the string synth and the wavetable synth in chord mode right around 12 o'clock on the morph knob has been tweaked such that each note fades completely out and then back in again one at a time (instead of crossfading between the two synths)
+
+When it comes to CPU usage, various things contribute, e.g. using the suboscillator adds a bit of CPU, using the trig input + internal envelopes adds a bit of CPU, aux crossfading adds a bit of CPU, etc. So far I have been able to make enough performance tweaks to address all combinations of settings which can lead to CPU overload *that I know of*. In other words, at time of writing (3/27/22), any combination of settings *should* work fine without hitting CPU limits, but fair warning: that isn't a guarantee that no more such scenarios will be found in the future.
 
 # Rings
 
+[discussion](https://forum.mutable-instruments.net/t/mini-elements-alt-firmware-for-rings/19768)
+[download](https://github.com/lylepmills/eurorack/raw/master/alt_firmwares/rings_mini_elements.wav)
+
 *update 2/27/22: the first release of this firmware purported to have a way of accessing calibration on powerup, however it didn't work correctly. if you are using a version of this firmware downloaded prior to 2/27/22, you won't be able to access calibration. if you download the firmware after 2/27/22, the procedure to reach calibration described below will work.*
 
-The Rings alt firmware ([download wav](https://github.com/lylepmills/eurorack/raw/master/alt_firmwares/rings_mini_elements.wav)) extends the base firmware with several additional features, all configurable with a menu. The main new addition is a "Mini-Elements" mode which borrows some of the functionality of Elements to give Rings a wider palette of options for internal excitation.
+The Rings alt firmware extends the base firmware with several additional features, all configurable with a menu. The main new addition is a "Mini-Elements" mode which borrows some of the functionality of Elements to give Rings a wider palette of options for internal excitation.
 
 ## Features of this alt firmware
 
