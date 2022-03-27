@@ -136,7 +136,7 @@ void Init() {
   settings.Init();
   ui.Init(&patch, &modulations, &settings);
   
-  audio_dac.Init(48000, kBlockSize);
+  audio_dac.Init(44100, kBlockSize);
 
   audio_dac.Start(&FillBuffer);
   IWDG_Enable();
