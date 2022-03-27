@@ -117,7 +117,7 @@ void ChordEngine::Reset() {
 }
 
 const float fade_point[kChordNumVoices] = {
-  0.55f, 0.47f, 0.49f, 0.51f, 0.53f
+  0.52f, 0.48f, 0.49f, 0.50f, 0.51f
 };
 
 const int kRegistrationTableSize = 8;
@@ -258,15 +258,13 @@ void ChordEngine::Render(
   const float waveform = max((morph_lp_ - 0.535f) * 2.15f, 0.0f);
   
   for (int note = 0; note < kChordNumVoices; ++note) {
-    float wavetable_amount = 50.0f * (morph_lp_ - fade_point[note]);
-    CONSTRAIN(wavetable_amount, 0.0f, 1.0f);
+    float wavetable_amount = (morph_lp_ > fade_point[note]) ? 1.0f : 0.0f;
 
     float divide_down_amount = 1.0f - wavetable_amount;
     float* destination = (1 << note) & aux_note_mask ? aux : out;
     
     const float note_f0 = f0 * ratios[note];
-    float divide_down_gain = 4.0f - note_f0 * 32.0f;
-    CONSTRAIN(divide_down_gain, 0.0f, 1.0f);
+    float divide_down_gain = 0.5f;
     divide_down_amount *= divide_down_gain;
     
     if (wavetable_amount) {
