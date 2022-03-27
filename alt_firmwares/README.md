@@ -1,6 +1,7 @@
 # Plaits
 
 [discussion](https://forum.mutable-instruments.net/t/unified-plaits-alt-firmware/19530)
+
 [download](https://github.com/lylepmills/eurorack/raw/master/alt_firmwares/plaits_freqlock.wav)
 
 *update 3/27/22: versions of this firmware downloaded prior to 3/27/22 are known to have had some issues with hitting CPU limits of the module, producing digital aliasing distortions in certain modes with certain combinations of settings. updating to the latest version of the firmware is recommended to avoid running into those problems.*
@@ -111,6 +112,7 @@ When it comes to CPU usage, various things contribute, e.g. using the suboscilla
 # Rings
 
 [discussion](https://forum.mutable-instruments.net/t/mini-elements-alt-firmware-for-rings/19768)
+
 [download](https://github.com/lylepmills/eurorack/raw/master/alt_firmwares/rings_mini_elements.wav)
 
 *update 2/27/22: the first release of this firmware purported to have a way of accessing calibration on powerup, however it didn't work correctly. if you are using a version of this firmware downloaded prior to 2/27/22, you won't be able to access calibration. if you download the firmware after 2/27/22, the procedure to reach calibration described below will work.*
