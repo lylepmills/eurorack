@@ -35,8 +35,6 @@
 #include "rings/settings.h"
 #include "rings/ui.h"
 
-// #define PROFILE_INTERRUPT 1
-
 using namespace rings;
 using namespace stmlib;
 
@@ -67,12 +65,12 @@ void PendSV_Handler() { }
 
 void SysTick_Handler() {
   ui.Poll();
-  if (settings.freshly_baked()) {
-    if (debug_port.readable()) {
-      uint8_t command = debug_port.Read();
-      uint8_t response = ui.HandleFactoryTestingRequest(command);
-      debug_port.Write(response);
-    }
+
+  // TODO - I believe this is only 1khz with current settings
+  if (debug_port.readable()) {
+    debug_port.Read();
+    debug_port.Write(0x0);  // TODO - necessary?
+    ui.BlinkLights();
   }
 }
 
@@ -86,9 +84,6 @@ const float kNoiseGateThreshold = 0.00003f;
 float in_level = 0.0f;
 
 void FillBuffer(Codec::Frame* input, Codec::Frame* output, size_t size) {
-#ifdef PROFILE_INTERRUPT
-  TIC
-#endif  // PROFILE_INTERRUPT
   PerformanceState performance_state;
   Patch patch;
   
@@ -121,9 +116,6 @@ void FillBuffer(Codec::Frame* input, Codec::Frame* output, size_t size) {
     output[i].r = Clip16(static_cast<int32_t>(aux[i] * 32768.0f));
   }
   ui.set_strumming_flag(performance_state.strum);
-#ifdef PROFILE_INTERRUPT
-  TOC
-#endif  // PROFILE_INTERRUPT
 }
 
 void Init() {
@@ -149,13 +141,8 @@ void Init() {
   }
   codec.set_line_input_gain(22);
 
-  if (settings.freshly_baked()) {
-#ifdef PROFILE_INTERRUPT
-    DebugPin::Init();
-#else
-    debug_port.Init();
-#endif  // PROFILE_INTERRUPT
-  }
+  debug_port.Init();
+
   sys.StartTimers();
 }
 
@@ -163,5 +150,6 @@ int main(void) {
   Init();
   while (1) {
     ui.DoEvents();
+    // TODO - should we move midi handling here instead?
   }
 }

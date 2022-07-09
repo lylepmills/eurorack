@@ -53,6 +53,7 @@ enum UiMode {
   UI_MODE_CALIBRATION_C3,
   UI_MODE_CALIBRATION_LOW,
   UI_MODE_CALIBRATION_HIGH,
+  UI_MODE_BLINK,
   UI_MODE_PANIC,
 };
 
@@ -89,6 +90,11 @@ class Ui {
       strumming_flag_interval_ = 0;
     }
   }
+
+  void BlinkLights() {
+    blink_timer_ = 0;
+    mode_ = UI_MODE_BLINK;
+  }
   
   uint8_t HandleFactoryTestingRequest(uint8_t command);
   
@@ -112,6 +118,7 @@ class Ui {
   UiMode mode_;
   int32_t strumming_flag_counter_;
   int32_t strumming_flag_interval_;
+  int32_t blink_timer_;
   uint8_t option_menu_item_;
   
   Settings* settings_;

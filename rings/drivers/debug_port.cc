@@ -50,7 +50,8 @@ void DebugPort::Init() {
   
   // Initialize USART.
   USART_InitTypeDef usart_init;
-  usart_init.USART_BaudRate = 9600;
+  // usart_init.USART_BaudRate = 9600;  // ORIGINAL
+  usart_init.USART_BaudRate = 31250;  // MIDI (YARNS)
   usart_init.USART_WordLength = USART_WordLength_8b;
   usart_init.USART_StopBits = USART_StopBits_1;
   usart_init.USART_Parity = USART_Parity_No;

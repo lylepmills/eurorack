@@ -59,7 +59,6 @@ void Ui::Init(
   part_ = part;
   string_synth_ = string_synth;
   
-  mode_ = UI_MODE_NORMAL;
   if (switches_.pressed_immediate(1)) {
     State* state = settings_->mutable_state();
     if (state->color_blind == 1) {
@@ -74,6 +73,7 @@ void Ui::Init(
   part_->set_model(static_cast<ResonatorModel>(settings_->state().model));
   string_synth_->set_polyphony(settings_->state().polyphony);
   string_synth_->set_fx(static_cast<FxType>(settings_->state().model));
+  blink_timer_ = 0;
   mode_ = UI_MODE_NORMAL;
 }
 
@@ -177,6 +177,16 @@ void Ui::Poll() {
           --strumming_flag_counter_;
           leds_.set(0, false, false);
         }
+      }
+      break;
+
+    case UI_MODE_BLINK:
+      ++blink_timer_;
+      leds_.set(0, blink, blink);
+      leds_.set(1, blink, blink);
+      if (blink_timer_ >= 5000) {
+        blink_timer_ = 0;
+        mode_ = UI_MODE_NORMAL;
       }
       break;
     
