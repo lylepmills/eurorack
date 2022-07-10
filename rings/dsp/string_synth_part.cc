@@ -502,11 +502,17 @@ void StringSynthPart::Process(
       }
 
       float frequency = SemitonesToRatio(note - 69.0f) * a3;
+      // TODO - I guess this would be where we would conditionally just render root to out or aux
+      // could make the first entry of each chord table the once to replace with 0.0f
+      float* render_output = (group + chord_note) & 1 ? out : aux;
+      if (performance_state.mode == MODE_EASTER_EGG_ROOT) {
+        render_output = (chord_note == 0) ? aux : out;
+      }
       voice_[group * chord_size + chord_note].Render(
           frequency,
           amplitudes,
           num_harmonics,
-          (group + chord_note) & 1 ? out : aux,
+          render_output,
           size);
     }
   }

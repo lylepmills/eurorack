@@ -257,6 +257,8 @@ void Ui::Poll() {
             leds_.set(1, slow_blink, 0);
           } else if (option_value == 4) {
             leds_.set(1, 1, 1);
+          } else if (option_value == 5) {
+            leds_.set(1, slow_blink, slow_blink);
           }
         } else {
           if (option_value == 0) {
