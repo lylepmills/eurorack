@@ -32,6 +32,7 @@
 #include "rings/dsp/strummer.h"
 #include "rings/dsp/string_synth_part.h"
 #include "rings/cv_scaler.h"
+#include "rings/midi_handler.h"
 #include "rings/settings.h"
 #include "rings/ui.h"
 
@@ -42,6 +43,7 @@ uint16_t reverb_buffer[32768] __attribute__ ((section (".ccmdata")));
 
 Codec codec;
 CvScaler cv_scaler;
+MidiHandler midi_handler;
 DebugPort debug_port;
 Part part;
 Settings settings;
@@ -68,8 +70,8 @@ void SysTick_Handler() {
 
   // TODO - I believe this is only 1khz with current settings
   if (debug_port.readable()) {
-    debug_port.Read();
-    debug_port.Write(0x0);  // TODO - necessary?
+    uint8_t message = debug_port.Read();
+    debug_port.Write(message);
     ui.BlinkLights();
   }
 }
