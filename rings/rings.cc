@@ -69,6 +69,7 @@ void SysTick_Handler() {
   // TODO - I believe this is only 1khz with current settings
   if (midi_io.readable()) {
     uint8_t message = midi_io.Read();
+    midi_handler.PushByte(message);
     midi_io.Write(message);
   }
 }
@@ -150,6 +151,7 @@ int main(void) {
   Init();
   while (1) {
     ui.DoEvents();
+    midi_handler.ProcessInput();
     // TODO - should we move midi handling here instead?
   }
 }
