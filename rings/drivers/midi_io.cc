@@ -26,13 +26,13 @@
 //
 // UART driver for conversing with the factory testing program.
 
-#include "rings/drivers/debug_port.h"
+#include "rings/drivers/midi_io.h"
 
 #include <stm32f4xx_conf.h>
 
 namespace rings {
 
-void DebugPort::Init() {
+void MidiIO::Init() {
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
   
@@ -51,7 +51,7 @@ void DebugPort::Init() {
   // Initialize USART.
   USART_InitTypeDef usart_init;
   // usart_init.USART_BaudRate = 9600;  // ORIGINAL
-  usart_init.USART_BaudRate = 31250;  // MIDI (YARNS)
+  usart_init.USART_BaudRate = 31250;  // MIDI
   usart_init.USART_WordLength = USART_WordLength_8b;
   usart_init.USART_StopBits = USART_StopBits_1;
   usart_init.USART_Parity = USART_Parity_No;

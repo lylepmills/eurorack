@@ -26,8 +26,8 @@
 //
 // UART driver for conversing with the factory testing program.
 
-#ifndef RINGS_DRIVERS_DEBUG_PORT_H_
-#define RINGS_DRIVERS_DEBUG_PORT_H_
+#ifndef RINGS_DRIVERS_MIDI_IO_H_
+#define RINGS_DRIVERS_MIDI_IO_H_
 
 #include "stmlib/stmlib.h"
 
@@ -35,11 +35,11 @@
 
 namespace rings {
 
-class DebugPort {
+class MidiIO {
  public:
   
-  DebugPort() { }
-  ~DebugPort() { }
+  MidiIO() { }
+  ~MidiIO() { }
   
   void Init();
   
@@ -60,9 +60,9 @@ class DebugPort {
   }
   
  private:
-  DISALLOW_COPY_AND_ASSIGN(DebugPort);
+  DISALLOW_COPY_AND_ASSIGN(MidiIO);
 };
 
 }  // namespace rings
 
-#endif  // RINGS_DRIVERS_DEBUG_PORT_H_
+#endif  // RINGS_DRIVERS_MIDI_IO_H_

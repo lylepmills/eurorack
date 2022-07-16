@@ -24,8 +24,7 @@
 
 #include "rings/drivers/adc.h"
 #include "rings/drivers/codec.h"
-#include "rings/drivers/debug_pin.h"
-#include "rings/drivers/debug_port.h"
+#include "rings/drivers/midi_io.h"
 #include "rings/drivers/system.h"
 #include "rings/drivers/version.h"
 #include "rings/dsp/part.h"
@@ -43,8 +42,7 @@ uint16_t reverb_buffer[32768] __attribute__ ((section (".ccmdata")));
 
 Codec codec;
 CvScaler cv_scaler;
-MidiHandler midi_handler;
-DebugPort debug_port;
+MidiIO midi_io;
 Part part;
 Settings settings;
 StringSynthPart string_synth;
@@ -69,10 +67,9 @@ void SysTick_Handler() {
   ui.Poll();
 
   // TODO - I believe this is only 1khz with current settings
-  if (debug_port.readable()) {
-    uint8_t message = debug_port.Read();
-    debug_port.Write(message);
-    ui.BlinkLights();
+  if (midi_io.readable()) {
+    uint8_t message = midi_io.Read();
+    midi_io.Write(message);
   }
 }
 
@@ -134,6 +131,7 @@ void Init() {
   settings.Init();
   cv_scaler.Init(settings.mutable_calibration_data());
   ui.Init(&settings, &cv_scaler, &part, &string_synth);
+  midi_handler.Init(&ui);
   
   if (!codec.Init(!version.revised(), kSampleRate)) {
     ui.Panic();
@@ -143,7 +141,7 @@ void Init() {
   }
   codec.set_line_input_gain(22);
 
-  debug_port.Init();
+  midi_io.Init();
 
   sys.StartTimers();
 }

@@ -41,8 +41,12 @@ MidiHandler::MidiBuffer MidiHandler::input_buffer_;
 stmlib_midi::MidiStreamParser<MidiHandler> MidiHandler::parser_;
 
 /* static */
-void MidiHandler::Init() {
+Ui* MidiHandler::ui_;
+
+/* static */
+void MidiHandler::Init(Ui* ui) {
   input_buffer_.Init();
+  ui_ = ui;
 }
 
 /* extern */

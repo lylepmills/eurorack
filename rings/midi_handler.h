@@ -34,18 +34,22 @@
 #include "stmlib/utils/ring_buffer.h"
 #include "stmlib/midi/midi.h"
 
+#include "rings/ui.h"
+
 namespace rings {
 
 class MidiHandler {
  public:
-  typedef stmlib::RingBuffer<uint8_t, 128> MidiBuffer;
+  // NOTE: original (from yarns) is 128 but anything over 64 makes RAM overflow
+  typedef stmlib::RingBuffer<uint8_t, 64> MidiBuffer;
    
   MidiHandler() { }
   ~MidiHandler() { }
   
-  static void Init();
+  static void Init(Ui* ui);
   
   static void NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
+    ui_->BlinkLights();
   }
   
   static void NoteOff(uint8_t channel, uint8_t note, uint8_t velocity) {
@@ -127,6 +131,8 @@ class MidiHandler {
  private:  
   static MidiBuffer input_buffer_; 
   static stmlib_midi::MidiStreamParser<MidiHandler> parser_;
+
+  static Ui* ui_;
      
   DISALLOW_COPY_AND_ASSIGN(MidiHandler);
 };
