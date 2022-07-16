@@ -40,8 +40,8 @@ namespace rings {
 
 class MidiHandler {
  public:
-  // NOTE: original (from yarns) is 128 but anything over 64 makes RAM overflow
-  typedef stmlib::RingBuffer<uint8_t, 64> MidiBuffer;
+  // NOTE: original (from yarns) is 128 but anything over 32 currently makes RAM overflow
+  typedef stmlib::RingBuffer<uint8_t, 32> MidiBuffer;
    
   MidiHandler() { }
   ~MidiHandler() { }

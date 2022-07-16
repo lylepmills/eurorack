@@ -64,9 +64,11 @@ void DebugMon_Handler() { }
 void PendSV_Handler() { }
 
 void SysTick_Handler() {
-  ui.Poll();
+  static uint8_t counter;
+  if ((++counter & 7) == 0) {
+    ui.Poll();
+  }
 
-  // TODO - I believe this is only 1khz with current settings
   if (midi_io.readable()) {
     uint8_t message = midi_io.Read();
     midi_handler.PushByte(message);
@@ -152,6 +154,5 @@ int main(void) {
   while (1) {
     ui.DoEvents();
     midi_handler.ProcessInput();
-    // TODO - should we move midi handling here instead?
   }
 }

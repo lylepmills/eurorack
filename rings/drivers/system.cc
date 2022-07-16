@@ -39,7 +39,7 @@ void System::Init(bool application) {
 }
 
 void System::StartTimers() {
-  SysTick_Config(F_CPU / 1000);
+  SysTick_Config(F_CPU / 8000);
 }
 
 }  // namespace rings
