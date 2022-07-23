@@ -34,6 +34,7 @@
 #include "stmlib/stmlib.h"
 #include "stmlib/dsp/cosine_oscillator.h"
 #include "stmlib/dsp/delay_line.h"
+#include "stmlib/utils/ring_buffer.h"
 
 #include "rings/dsp/dsp.h"
 #include "rings/dsp/fm_voice.h"
@@ -62,6 +63,11 @@ enum ResonatorModel {
   RESONATOR_MODEL_SYMPATHETIC_STRING_QUANTIZED,
   RESONATOR_MODEL_STRING_AND_REVERB,
   RESONATOR_MODEL_LAST
+};
+
+struct MidiNoteData {
+  uint8_t note;
+  uint8_t velocity;
 };
 
 const int32_t kMaxPolyphony = 4;
@@ -102,6 +108,8 @@ class Part {
       dirty_ = true;
     }
   }
+
+  void MidiNoteOn(uint8_t note, uint8_t velocity);
 
  private:
   void ConfigureResonators();
@@ -199,6 +207,8 @@ class Part {
   stmlib::DCBlocker dc_blocker_[kMaxPolyphony];
   Plucker plucker_[kMaxPolyphony];
 
+  typedef stmlib::RingBuffer<MidiNoteData, kMaxPolyphony> MidiNoteBuffer;
+  MidiNoteBuffer midi_note_buffer_;
   float note_[kMaxPolyphony];
   float parameter_[kMaxPolyphony];
   NoteFilter note_filter_;

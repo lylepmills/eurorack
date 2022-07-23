@@ -44,9 +44,13 @@ stmlib_midi::MidiStreamParser<MidiHandler> MidiHandler::parser_;
 Ui* MidiHandler::ui_;
 
 /* static */
-void MidiHandler::Init(Ui* ui) {
+Part* MidiHandler::part_;
+
+/* static */
+void MidiHandler::Init(Ui* ui, Part* part) {
   input_buffer_.Init();
   ui_ = ui;
+  part_ = part;
 }
 
 /* extern */

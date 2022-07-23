@@ -34,6 +34,7 @@
 #include "stmlib/utils/ring_buffer.h"
 #include "stmlib/midi/midi.h"
 
+#include "rings/dsp/part.h"
 #include "rings/ui.h"
 
 namespace rings {
@@ -46,9 +47,10 @@ class MidiHandler {
   MidiHandler() { }
   ~MidiHandler() { }
   
-  static void Init(Ui* ui);
+  static void Init(Ui* ui, Part* part);
   
   static void NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
+    part_->MidiNoteOn(note, velocity);
     ui_->BlinkLights();
   }
   
@@ -132,6 +134,7 @@ class MidiHandler {
   static MidiBuffer input_buffer_; 
   static stmlib_midi::MidiStreamParser<MidiHandler> parser_;
 
+  static Part* part_;
   static Ui* ui_;
      
   DISALLOW_COPY_AND_ASSIGN(MidiHandler);

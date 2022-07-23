@@ -449,6 +449,7 @@ void Part::RenderModalVoice(
     float filter_cutoff,
     size_t size) {
   // Internal exciter is a pulse, pre-filter.
+  // TODO - needs updating for midi
   if (performance_state.internal_exciter &&
       voice == active_voice_ &&
       performance_state.strum) {
@@ -484,6 +485,7 @@ void Part::RenderFMVoice(
     float filter_cutoff,
     size_t size) {
   FMVoice& v = fm_voice_[voice];
+  // TODO - needs updating for midi
   if (performance_state.internal_exciter &&
       voice == active_voice_ &&
       performance_state.strum) {
@@ -568,6 +570,7 @@ void Part::RenderStringVoice(
 
   // Add noise burst.
   if (performance_state.internal_exciter) {
+    // TODO - needs updating for midi
     if (voice == active_voice_ && performance_state.strum) {
       plucker_[voice].Trigger(frequency, filter_cutoff * 8.0f, string_position_[voice]);
     }
@@ -642,6 +645,13 @@ const int32_t kPingPattern[] = {
   1, 0, 2, 1, 0, 2, 1, 0
 };
 
+void Part::MidiNoteOn(uint8_t note, uint8_t velocity) {
+  MidiNoteData note_data;
+  note_data.note = note;
+  note_data.velocity = velocity;
+  midi_note_buffer_.Overwrite(note_data);
+}
+
 void Part::Process(
     const PerformanceState& performance_state,
     const Patch& patch,
@@ -662,9 +672,14 @@ void Part::Process(
       performance_state.note,
       performance_state.strum);
 
+  // TODO - what if we had like a midi_voices bitmap
+  // so we could tell elsewhere if it had been triggered
+  // or just an active_voices bitmap
+  // TODO - midi_note_buffer_.readable()
+  // TODO - midi_note_buffer_.ImmediateRead()
   if (performance_state.strum) {
     note_[active_voice_] = note_filter_.stable_note();
-    if (polyphony_ > 1 && polyphony_ & 1) {
+    if (polyphony_ > 1 && polyphony_ & 1) {  // i.e. polyphony_ == 3
       active_voice_ = kPingPattern[step_counter_ % 8];
       step_counter_ = (step_counter_ + 1) % 8;
     } else {
@@ -684,6 +699,7 @@ void Part::Process(
   fill(&aux[0], &aux[size], 0.0f);
   for (int32_t voice = 0; voice < polyphony_; ++voice) {
     bool update_patch = true;
+    // TODO - figure out how to handle this for midi voices
     if (performance_state.strum_hold_option == 1) {
       update_patch = false;
       // Introduce a slight delay so that sequenced values where the sequence is driven

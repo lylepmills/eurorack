@@ -134,7 +134,10 @@ void Init() {
   settings.Init();
   cv_scaler.Init(settings.mutable_calibration_data());
   ui.Init(&settings, &cv_scaler, &part, &string_synth);
-  midi_handler.Init(&ui);
+  // TODO - need to pass string_synth, need to figure out how to decide
+  // which to send midi notes to
+  midi_handler.Init(&ui, &part);
+  midi_io.Init();
   
   if (!codec.Init(!version.revised(), kSampleRate)) {
     ui.Panic();
@@ -143,8 +146,6 @@ void Init() {
     ui.Panic();
   }
   codec.set_line_input_gain(22);
-
-  midi_io.Init();
 
   sys.StartTimers();
 }
