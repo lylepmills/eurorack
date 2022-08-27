@@ -39,7 +39,11 @@ using namespace stmlib;
 
 void Part::Init(uint16_t* reverb_buffer) {
   active_voice_ = 0;
+  // last_cv_voice_ = 0;
+  strummed_voices_ = 0;
+  gated_voices_ = 0;
   acquisition_delay_ = 0;
+  using_midi_ = false;
   
   fill(&note_[0], &note_[kMaxPolyphony], 0.0f);
   
@@ -449,10 +453,7 @@ void Part::RenderModalVoice(
     float filter_cutoff,
     size_t size) {
   // Internal exciter is a pulse, pre-filter.
-  // TODO - needs updating for midi
-  if (performance_state.internal_exciter &&
-      voice == active_voice_ &&
-      performance_state.strum) {
+  if (performance_state.internal_exciter && IsStrummedVoice(voice)) {
     resonator_input_[0] += 0.25f * SemitonesToRatio(
         filter_cutoff * filter_cutoff * 24.0f) / filter_cutoff;
   }
@@ -485,10 +486,7 @@ void Part::RenderFMVoice(
     float filter_cutoff,
     size_t size) {
   FMVoice& v = fm_voice_[voice];
-  // TODO - needs updating for midi
-  if (performance_state.internal_exciter &&
-      voice == active_voice_ &&
-      performance_state.strum) {
+  if (performance_state.internal_exciter && IsStrummedVoice(voice)) {
     v.TriggerInternalEnvelope();
   }
 
@@ -570,8 +568,7 @@ void Part::RenderStringVoice(
 
   // Add noise burst.
   if (performance_state.internal_exciter) {
-    // TODO - needs updating for midi
-    if (voice == active_voice_ && performance_state.strum) {
+    if (IsStrummedVoice(voice)) {
       plucker_[voice].Trigger(frequency, filter_cutoff * 8.0f, string_position_[voice]);
     }
     plucker_[voice].Process(noise_burst_buffer_, size);
@@ -646,10 +643,25 @@ const int32_t kPingPattern[] = {
 };
 
 void Part::MidiNoteOn(uint8_t note, uint8_t velocity) {
+  using_midi_ = true;
   MidiNoteData note_data;
   note_data.note = note;
   note_data.velocity = velocity;
   midi_note_buffer_.Overwrite(note_data);
+}
+
+void Part::IncrementActiveVoice() {
+  // if (last_cv_voice_ == active_voice_) {
+  if (!using_midi_) {
+    note_[active_voice_] = note_filter_.stable_note();
+  }
+
+  if (polyphony_ > 1 && polyphony_ & 1) {  // i.e. polyphony_ == 3
+    active_voice_ = kPingPattern[step_counter_ % 8];
+    step_counter_ = (step_counter_ + 1) % 8;
+  } else {
+    active_voice_ = (active_voice_ + 1) % polyphony_;
+  }
 }
 
 void Part::Process(
@@ -667,28 +679,47 @@ void Part::Process(
   }
   
   ConfigureResonators();
-  
-  note_filter_.Process(
+  strummed_voices_ = 0;
+
+  if (using_midi_) {
+    // TODO - currently no sound when you first power on, only after you
+    // plug and input IN.
+    while (midi_note_buffer_.readable()) {
+      MidiNoteData note_data = midi_note_buffer_.ImmediateRead();
+      IncrementActiveVoice();
+      // if (active_voice_ == last_cv_voice_) {
+      //   last_cv_voice_ = 255;
+      // }
+      strummed_voices_ |= 1 << active_voice_;
+      note_[active_voice_] = static_cast<float>(note_data.note);
+      // TODO - not currently used - i assume we'll need it but not sure
+      midi_note_data_[active_voice_] = note_data;
+    }
+  } else {
+    note_filter_.Process(
       performance_state.note,
       performance_state.strum);
-
-  // TODO - what if we had like a midi_voices bitmap
-  // so we could tell elsewhere if it had been triggered
-  // or just an active_voices bitmap
-  // TODO - midi_note_buffer_.readable()
-  // TODO - midi_note_buffer_.ImmediateRead()
-  if (performance_state.strum) {
-    note_[active_voice_] = note_filter_.stable_note();
-    if (polyphony_ > 1 && polyphony_ & 1) {  // i.e. polyphony_ == 3
-      active_voice_ = kPingPattern[step_counter_ % 8];
-      step_counter_ = (step_counter_ + 1) % 8;
-    } else {
-      active_voice_ = (active_voice_ + 1) % polyphony_;
+      
+    if (performance_state.strum) {
+      IncrementActiveVoice();
+      acquisition_delay_ = 3;
+      // last_cv_voice_ = active_voice_;
+      strummed_voices_ |= 1 << active_voice_;
+      // TODO - we could write a dummy entry to midi_note_data_
+      // to indicate a CV voice
     }
-    acquisition_delay_ = 3;
+    if (performance_state.strum_gate) {
+      // TODO - if a midi note were played in the interstitial, then
+      // this would be wrong. it should be like last_strummed_cv_voice
+      // TODO - maybe just get rid of it and calculate in the elements method?
+      gated_voices_ |= 1 << active_voice_;
+    }
+    // if (active_voice_ == last_cv_voice_) {
+    //   note_[active_voice_] = note_filter_.note();
+    // }
+    note_[active_voice_] = note_filter_.note();
   }
-  
-  note_[active_voice_] = note_filter_.note();
+
 
   float fm = performance_state.fm;
   if (performance_state.FMInputRepurposed()) {
@@ -720,6 +751,7 @@ void Part::Process(
     float filter_cutoff_range = performance_state.internal_exciter
       ? frequency * SemitonesToRatio((cutoff - 0.5f) * 96.0f)
       : 0.4f * SemitonesToRatio((cutoff - 1.0f) * 108.0f);
+    // TODO - we don't necessarily have to do this right? could process for all active voices
     float filter_cutoff = min(voice == active_voice_
       ? filter_cutoff_range
       : (10.0f / kSampleRate), 0.499f);
@@ -838,9 +870,17 @@ void Part::FillExciterBuffer(
   fill(&exciter_buffer_[0], &exciter_buffer_[size], 0.0f);
 
   uint8_t exciter_flags = 0;
-  if (is_active_voice && performance_state.strum) {
+  // TODO - is there not a cleaner way here?
+  // currently MODE_MINI_ELEMENTS_EXCITER will pass voice=0 so I
+  // think we could have false positives
+  // NOTE: this handles both the case that the active voice was just
+  // strummed and the case that we're in MODE_MINI_ELEMENTS_EXCITER
+  // Was previously:
+  // if (is_active_voice && performance_state.strum) {
+  if (IsStrummedVoice(voice) || (is_active_voice && (strummed_voices_ > 0))) {
     exciter_flags |= EXCITER_FLAG_RISING_EDGE;
   }
+  // TODO - see other note about strum_gate
   if (is_active_voice && performance_state.strum_gate) {
     exciter_flags |= EXCITER_FLAG_GATE;
   }

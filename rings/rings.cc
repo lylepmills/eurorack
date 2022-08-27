@@ -65,14 +65,18 @@ void PendSV_Handler() { }
 
 void SysTick_Handler() {
   static uint8_t counter;
-  if ((++counter & 7) == 0) {
-    ui.Poll();
-  }
-
+  // keep in tandem with system.cc
+  // TODO - go back to 8khz if 32 doesn't help
   if (midi_io.readable()) {
+    ui.BlinkLights();
+    // TODO - the UI always blinks, but then sometimes the note doesn't trigger
     uint8_t message = midi_io.Read();
     midi_handler.PushByte(message);
     midi_io.Write(message);
+  }
+
+  if ((++counter & 7) == 0) {
+    ui.Poll();
   }
 }
 

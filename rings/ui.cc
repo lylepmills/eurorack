@@ -184,7 +184,7 @@ void Ui::Poll() {
       ++blink_timer_;
       leds_.set(0, blink, blink);
       leds_.set(1, blink, blink);
-      if (blink_timer_ >= 1000) {
+      if (blink_timer_ >= 150) {
         blink_timer_ = 0;
         mode_ = UI_MODE_NORMAL;
       }

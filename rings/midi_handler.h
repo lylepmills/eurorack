@@ -41,8 +41,8 @@ namespace rings {
 
 class MidiHandler {
  public:
-  // NOTE: original (from yarns) is 128 but anything over 32 currently makes RAM overflow
-  typedef stmlib::RingBuffer<uint8_t, 32> MidiBuffer;
+  // NOTE: original (from yarns) is 128 but anything over 16 currently makes RAM overflow
+  typedef stmlib::RingBuffer<uint8_t, 16> MidiBuffer;
    
   MidiHandler() { }
   ~MidiHandler() { }
@@ -51,7 +51,7 @@ class MidiHandler {
   
   static void NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
     part_->MidiNoteOn(note, velocity);
-    ui_->BlinkLights();
+    // ui_->BlinkLights();
   }
   
   static void NoteOff(uint8_t channel, uint8_t note, uint8_t velocity) {

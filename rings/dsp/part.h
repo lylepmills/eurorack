@@ -111,8 +111,13 @@ class Part {
 
   void MidiNoteOn(uint8_t note, uint8_t velocity);
 
+  inline bool IsStrummedVoice(uint8_t voice) {
+    return strummed_voices_ & (1 << voice);
+  }
+
  private:
   void ConfigureResonators();
+  void IncrementActiveVoice();
   void RenderModalVoice(
       int32_t voice,
       const PerformanceState& performance_state,
@@ -182,11 +187,15 @@ class Part {
   
   bool bypass_;
   bool dirty_;
+  bool using_midi_;
 
   ResonatorModel model_;
 
   int32_t num_voices_;
-  int32_t active_voice_;
+  uint8_t active_voice_;
+  // uint8_t last_cv_voice_;
+  uint8_t strummed_voices_;
+  uint8_t gated_voices_;
   uint32_t step_counter_;
   int32_t polyphony_;
   int32_t acquisition_delay_;
@@ -209,6 +218,7 @@ class Part {
 
   typedef stmlib::RingBuffer<MidiNoteData, kMaxPolyphony> MidiNoteBuffer;
   MidiNoteBuffer midi_note_buffer_;
+  MidiNoteData midi_note_data_[kMaxPolyphony];
   float note_[kMaxPolyphony];
   float parameter_[kMaxPolyphony];
   NoteFilter note_filter_;
