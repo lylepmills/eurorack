@@ -31,6 +31,8 @@
 
 #include "stmlib/stmlib.h"
 
+#include "stmlib/dsp/hysteresis_quantizer.h"
+
 #include "plaits/drivers/cv_adc.h"
 #include "plaits/drivers/leds.h"
 #include "plaits/drivers/normalization_probe.h"
@@ -52,6 +54,7 @@ enum UiMode {
   UI_MODE_FREQUENCY_LOCK,
   UI_MODE_CHANGE_OPTIONS_PRE_RELEASE,
   UI_MODE_CHANGE_OPTIONS,
+  UI_MODE_DISPLAY_DATA_TRANSFER_PROGRESS,
   UI_MODE_CALIBRATION_C1,
   UI_MODE_CALIBRATION_C3,
   UI_MODE_TEST,
@@ -80,6 +83,14 @@ class Ui {
     active_engine_ = active_engine;
   }
   
+  void DisplayDataTransferProgress(float progress) {
+    mode_ = UI_MODE_DISPLAY_DATA_TRANSFER_PROGRESS;
+    data_transfer_progress_ = progress;
+    // Cut in half the animation time when the transfer is over or to report
+    // an error.
+    pwm_counter_ = progress == 1.0f || progress < 0.0f ? 1500 : 0;
+  }
+  
   inline bool test_mode() const {
     return mode_ == UI_MODE_TEST;
   }
@@ -93,15 +104,19 @@ class Ui {
   void LoadState();
   void SaveState();
   void DetectNormalization();
+
+  void Navigate(int button);
+  uint32_t BankToColor(int bank, bool color_blind, int pwm_counter);
   
   void StartCalibration();
   void CalibrateC1();
   void CalibrateC3();
 
   void RealignPots() {
-    pots_[POTS_ADC_CHANNEL_TIMBRE_POT].Realign();
-    pots_[POTS_ADC_CHANNEL_MORPH_POT].Realign();
-    pots_[POTS_ADC_CHANNEL_HARMONICS_POT].Realign();
+    for (int i = POTS_ADC_CHANNEL_FREQUENCY_POT;
+         i <= POTS_ADC_CHANNEL_MORPH_POT; ++i) {
+      pots_[i].Realign();
+    }
   }
   
   UiMode mode_;
@@ -114,6 +129,7 @@ class Ui {
   int ui_task_;
   int option_index_;
 
+  float data_transfer_progress_;
   float transposition_;
   float octave_;
   Patch* patch_;
@@ -134,9 +150,10 @@ class Ui {
   bool ignore_release_[SWITCH_LAST];
   
   int active_engine_;
+  bool enable_alt_navigation_;
   
-  float cv_c1_;  // For calibraiton
-  
+  float cv_c1_;  // For calibration
+    
   static const CvAdcChannel normalized_channels_[kNumNormalizedChannels];
     
   DISALLOW_COPY_AND_ASSIGN(Ui);

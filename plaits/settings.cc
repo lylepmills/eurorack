@@ -51,17 +51,21 @@ bool Settings::Init() {
     SavePersistentData();
   }
 
-  CONSTRAIN(state_.engine, 0, 15);
+  CONSTRAIN(state_.engine, 0, 23);
 
   return success;
 }
 
 void Settings::InitState() {
-  state_.engine = 0;
+  // base firmware
+  state_.engine = 8;
   state_.lpg_colour = 0;
   state_.decay = 128;
   state_.octave = 255;
   state_.color_blind = 0;
+  state_.enable_alt_navigation = 0;
+
+  // alt firmware
   state_.freqlock_param = 0;
   state_.locked_frequency_pot_option = 0;
   state_.model_cv_option = 0;
