@@ -55,20 +55,20 @@ enum UiMode {
   UI_MODE_CHANGE_OPTIONS_PRE_RELEASE,
   UI_MODE_CHANGE_OPTIONS,
   UI_MODE_DISPLAY_DATA_TRANSFER_PROGRESS,
-  UI_MODE_CALIBRATION_C1,
-  UI_MODE_CALIBRATION_C3,
+  // UI_MODE_CALIBRATION_C1,
+  // UI_MODE_CALIBRATION_C3,
   UI_MODE_TEST,
   UI_MODE_ERROR
 };
 
-enum FactoryTestingCommand {
-  FACTORY_TESTING_READ_POT,
-  FACTORY_TESTING_READ_CV,
-  FACTORY_TESTING_READ_GATE,
-  FACTORY_TESTING_GENERATE_TEST_SIGNAL,
-  FACTORY_TESTING_CALIBRATE,
-  FACTORY_TESTING_READ_NORMALIZATION,
-};
+// enum FactoryTestingCommand {
+//   FACTORY_TESTING_READ_POT,
+//   FACTORY_TESTING_READ_CV,
+//   FACTORY_TESTING_READ_GATE,
+//   FACTORY_TESTING_GENERATE_TEST_SIGNAL,
+//   FACTORY_TESTING_CALIBRATE,
+//   FACTORY_TESTING_READ_NORMALIZATION,
+// };
 
 class Ui {
  public:
@@ -106,11 +106,10 @@ class Ui {
   void DetectNormalization();
 
   void Navigate(int button);
-  uint32_t BankToColor(int bank, bool color_blind, int pwm_counter);
   
-  void StartCalibration();
-  void CalibrateC1();
-  void CalibrateC3();
+  // void StartCalibration();
+  // void CalibrateC1();
+  // void CalibrateC3();
 
   void RealignPots() {
     for (int i = POTS_ADC_CHANNEL_FREQUENCY_POT;
@@ -137,7 +136,7 @@ class Ui {
   NormalizationProbe normalization_probe_;
   PotController pots_[POTS_ADC_CHANNEL_LAST];
   float pitch_lp_;
-  float pitch_lp_calibration_;
+  // float pitch_lp_calibration_;
   
   Settings* settings_;
   
@@ -152,7 +151,7 @@ class Ui {
   int active_engine_;
   bool enable_alt_navigation_;
   
-  float cv_c1_;  // For calibration
+  // float cv_c1_;  // For calibration
     
   static const CvAdcChannel normalized_channels_[kNumNormalizedChannels];
     

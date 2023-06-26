@@ -34,7 +34,7 @@ namespace plaits {
 
 using namespace stmlib;
 
-const float chords[kChordNumChords][kChordNumNotes] = {
+const float chords_[kChordNumChords][kChordNumNotes] = {
   ////// Jon Butler chords
   // Fixed Intervals
   { 0.00f, 0.01f, 11.99f, 12.00f },  // Octave

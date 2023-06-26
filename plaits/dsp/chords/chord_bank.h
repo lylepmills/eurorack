@@ -37,7 +37,7 @@
 
 namespace plaits {
 
-const int kNumChordSetOptions = 3;
+const int kNumChordSetOpts = 3;
 
 const int kChordNumNotes = 4;
 const int kChordNumVoices = kChordNumNotes + 1;
@@ -47,7 +47,7 @@ const int kChordNumOriginalChords = 11;
 const int kChordNumJonChords = 17;
 const int kChordNumJoeChords = 18;
 
-const uint8_t originalChordMapping[kChordNumOriginalChords] = {
+const int originalChordMapping[kChordNumOriginalChords] = {
   0,  // OCT
   1,  // 5
   9,  // sus4
@@ -94,10 +94,12 @@ class ChordBank {
   
   inline int chord_index() const {
     int value = chord_index_quantizer_[chord_set_option_].quantized_value();
-    if chord_set_option_ == 0 {
-      return originalChordMapping[value]
+    if (chord_set_option_ == 0) {
+      return originalChordMapping[value];
+    } else if (chord_set_option_ == 1) {
+      return value;
     }
-    return value;
+    return kChordNumJonChords + value;
   }
   
   inline const float* ratios() const {
@@ -117,7 +119,7 @@ class ChordBank {
   }
 
  private:
-  stmlib::HysteresisQuantizer2 chord_index_quantizer_[kNumChordSetOptions];
+  stmlib::HysteresisQuantizer2 chord_index_quantizer_[kNumChordSetOpts];
 
   uint8_t chord_set_option_;
   
@@ -125,7 +127,7 @@ class ChordBank {
   float* sorted_ratios_;
   int* note_count_;
   
-  static const float chords_[kChordNumChords][kChordNumNotes];
+  // static const float chords_[kChordNumChords][kChordNumNotes];
   
   DISALLOW_COPY_AND_ASSIGN(ChordBank);
 };

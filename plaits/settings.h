@@ -38,7 +38,7 @@ namespace plaits {
 
 // This number should be randomly generated in between releases of this firmware that
 // modify the contents of the PersistentData/State structs in a non-backwards-compatible way.
-const uint32_t kSettingsId = 2366303372;
+const uint32_t kSettingsId = 1166303372;
   
 struct ChannelCalibrationData {
   float offset;
