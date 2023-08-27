@@ -98,18 +98,18 @@ void Settings::InitState() {
   state_.lpg_colour = 0;
   state_.decay = 128;
   state_.octave = 255;
-  state_.unused_one = 0;
-  state_.unused_two = 0;
   state_.fine_tune = 128;
 
-  // alt firmware
-  // state_.freqlock_param = 0;
-  // state_.locked_frequency_pot_option = 0;
-  // state_.model_cv_option = 0;
-  // state_.level_cv_option = 0;
-  // state_.aux_output_option = 0;
-  // state_.chord_set_option = 0;
-  // state_.frequency_pot_main_parameter = 1000.0f;
+  // alt firmware options
+  state_.locked_frequency_pot_option = 0;
+  state_.model_cv_option = 0;
+  state_.level_cv_option = 0;
+  state_.aux_subosc_octave_option = 0;
+  state_.aux_subosc_wave_option = 0;
+  state_.chord_set_option = 0;
+
+  // alt firmware other
+  state_.locked_octave = 4;
 }
 
 void Settings::SavePersistentData() {

@@ -38,7 +38,7 @@ namespace plaits {
 
 // This number should be randomly generated in between releases of this firmware that
 // modify the contents of the PersistentData/State structs in a non-backwards-compatible way.
-const uint32_t kSettingsId = 1256303372;
+const uint32_t kSettingsId = 1256304421;
   
 struct ChannelCalibrationData {
   float offset;
@@ -51,19 +51,32 @@ struct ChannelCalibrationData {
 
 struct PersistentData {
   ChannelCalibrationData channel_calibration_data[CV_ADC_CHANNEL_LAST];
-  uint8_t padding[16];
+  uint32_t settings_id;
+  uint8_t padding[12];
   enum { tag = 0x494C4143 };  // CALI
 };
 
 struct State {
+  // base firmware
   uint8_t engine;
   uint8_t lpg_colour;
   uint8_t decay;
   uint8_t octave;
-  uint8_t unused_one;
   uint8_t fine_tune;
-  uint8_t unused_two;
-  uint8_t padding[1];
+
+  // alt firmware options
+  uint8_t locked_frequency_pot_option;
+  uint8_t model_cv_option;
+  uint8_t level_cv_option;
+  uint8_t aux_subosc_wave_option;
+  uint8_t aux_subosc_octave_option;
+  uint8_t chord_set_option;
+
+  // alt firmware other
+  uint8_t locked_octave;
+
+  uint8_t padding[4];
+
   enum { tag = 0x54415453 };  // STAT
 };
 
@@ -73,6 +86,8 @@ class Settings {
   ~Settings() { }
   
   bool Init();
+  void InitPersistentData();
+  void InitState();
 
   void SavePersistentData();
   void SaveState();

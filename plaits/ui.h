@@ -52,8 +52,6 @@ enum UiMode {
   UI_MODE_DISPLAY_ALTERNATE_PARAMETERS,
   UI_MODE_DISPLAY_OCTAVE,
   UI_MODE_DISPLAY_DATA_TRANSFER_PROGRESS,
-  UI_MODE_CALIBRATION_C1,
-  UI_MODE_CALIBRATION_C3,
   UI_MODE_TEST,
   UI_MODE_ERROR
 };
@@ -104,10 +102,6 @@ class Ui {
 
   void Navigate(int button);
   uint32_t BankToColor(int bank);
-  
-  void StartCalibration();
-  void CalibrateC1();
-  void CalibrateC3();
 
   void RealignPots() {
     for (int i = POTS_ADC_CHANNEL_FREQUENCY_POT;
@@ -134,7 +128,6 @@ class Ui {
   NormalizationProbe normalization_probe_;
   PotController pots_[POTS_ADC_CHANNEL_LAST];
   float pitch_lp_;
-  float pitch_lp_calibration_;
   
   Settings* settings_;
   
@@ -147,9 +140,7 @@ class Ui {
   bool ignore_release_[SWITCH_LAST];
   
   int active_engine_;
-  
-  float cv_c1_;  // For calibration
-  
+    
   stmlib::HysteresisQuantizer2 octave_quantizer_;
   
   static const CvAdcChannel normalized_channels_[kNumNormalizedChannels];

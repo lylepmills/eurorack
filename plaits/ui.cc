@@ -88,9 +88,7 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
   fill(&ignore_release_[0], &ignore_release_[SWITCH_LAST], false);
   
   active_engine_ = 0;
-  cv_c1_ = 0.0f;
   pitch_lp_ = 0.0f;
-  pitch_lp_calibration_ = 0.0f;
   data_transfer_progress_ = 0.0f;
 }
 
@@ -210,18 +208,6 @@ void Ui::UpdateLEDs() {
         }
       }
       break;
-      
-    case UI_MODE_CALIBRATION_C1:
-      if (pwm_counter < triangle) {
-        leds_.set(0, LED_COLOR_GREEN);
-      }
-      break;
-
-    case UI_MODE_CALIBRATION_C3:
-      if (pwm_counter < triangle) {
-        leds_.set(0, LED_COLOR_YELLOW);
-      }
-      break;
     
     case UI_MODE_ERROR:
       if (pwm_counter < triangle) {
@@ -295,14 +281,6 @@ void Ui::ReadSwitches() {
           mode_ = UI_MODE_DISPLAY_OCTAVE;
         }
         
-        // Long, double press: enter calibration mode.
-        if (press_time_[0] >= kLongPressTime &&
-            press_time_[1] >= kLongPressTime) {
-          press_time_[0] = press_time_[1] = 0;
-          RealignPots();
-          StartCalibration();
-        }
-        
         // Long press or actually editing any hidden parameter: display value
         // of hidden parameters.
         if (press_time_[0] >= kLongPressTime && !press_time_[1]) {
@@ -337,28 +315,6 @@ void Ui::ReadSwitches() {
       break;
     
     case UI_MODE_DISPLAY_DATA_TRANSFER_PROGRESS:
-      break;
-    
-    case UI_MODE_CALIBRATION_C1:
-      for (int i = 0; i < SWITCH_LAST; ++i) {
-        if (switches_.just_pressed(Switch(i))) {
-          press_time_[i] = 0;
-          ignore_release_[i] = true;
-          CalibrateC1();
-          break;
-        }
-      }
-      break;
-      
-    case UI_MODE_CALIBRATION_C3:
-      for (int i = 0; i < SWITCH_LAST; ++i) {
-        if (switches_.just_pressed(Switch(i))) {
-          press_time_[i] = 0;
-          ignore_release_[i] = true;
-          CalibrateC3();
-          break;
-        }
-      }
       break;
 
     case UI_MODE_TEST:
@@ -428,9 +384,6 @@ void Ui::Poll() {
   ONE_POLE(pitch_lp_, modulations_->note, 0.7f);
   modulations_->note = pitch_lp_;
   
-  ONE_POLE(
-      pitch_lp_calibration_, cv_adc_.float_value(CV_ADC_CHANNEL_V_OCT), 0.1f);
-  
   ui_task_ = (ui_task_ + 1) % 4;
   switch (ui_task_) {
     case 0:
@@ -465,96 +418,6 @@ void Ui::Poll() {
     const float fine = transposition_ * 7.0f;
     patch_->note = fine + static_cast<float>(octave) * 12.0f;
   }
-}
-
-void Ui::StartCalibration() {
-  mode_ = UI_MODE_CALIBRATION_C1;
-  normalization_probe_.Disable();
-}
-
-void Ui::CalibrateC1() {
-  // Acquire offsets for all channels.
-  for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) {
-    if (i != CV_ADC_CHANNEL_V_OCT) {
-      ChannelCalibrationData* c = settings_->mutable_calibration_data(i);
-      c->offset = -cv_adc_.float_value(CvAdcChannel(i)) * c->scale;
-    }
-  }
-  cv_c1_ = pitch_lp_calibration_;
-  mode_ = UI_MODE_CALIBRATION_C3;
-}
-
-void Ui::CalibrateC3() {
-  // (-33/100.0*1 + -33/140.0 * -10.0) / 3.3 * 2.0 - 1 = 0.228
-  float c1 = cv_c1_;
-
-  // (-33/100.0*1 + -33/140.0 * -10.0) / 3.3 * 2.0 - 1 = -0.171
-  float c3 = pitch_lp_calibration_;
-  float delta = c3 - c1;
-  
-  if (delta > -0.6f && delta < -0.2f) {
-    ChannelCalibrationData* c = settings_->mutable_calibration_data(
-        CV_ADC_CHANNEL_V_OCT);
-    c->scale = 24.0f / delta;
-    c->offset = 12.0f - c->scale * c1;
-    settings_->SavePersistentData();
-    mode_ = UI_MODE_NORMAL;
-  } else {
-    mode_ = UI_MODE_ERROR;
-  }
-  normalization_probe_.Init();
-}
-
-uint8_t Ui::HandleFactoryTestingRequest(uint8_t command) {
-  uint8_t argument = command & 0x1f;
-  command = command >> 5;
-  uint8_t reply = 0;
-  switch (command) {
-    case FACTORY_TESTING_READ_POT:
-      reply = pots_adc_.value(PotsAdcChannel(argument)) >> 8;
-      break;
-      
-    case FACTORY_TESTING_READ_CV:
-      reply = (cv_adc_.value(CvAdcChannel(argument)) + 32768) >> 8;
-      break;
-    
-    case FACTORY_TESTING_READ_NORMALIZATION:
-      reply = (&modulations_->frequency_patched)[argument] ? 0 : 255;
-      break;      
-    
-    case FACTORY_TESTING_READ_GATE:
-      reply = switches_.pressed(Switch(argument));
-      break;
-      
-    case FACTORY_TESTING_GENERATE_TEST_SIGNAL:
-      if (argument) {
-        mode_ = UI_MODE_TEST;
-      } else {
-        mode_ = UI_MODE_NORMAL;
-      }
-      break;
-      
-    case FACTORY_TESTING_CALIBRATE:
-      {
-        switch (argument) {
-          case 0:
-            patch_->engine = 0;
-            StartCalibration();
-            break;
-          
-          case 1:
-            CalibrateC1();
-            break;
-          
-          case 2:
-            CalibrateC3();
-            SaveState();
-            break;
-        }
-      }
-      break;
-  }
-  return reply;
 }
 
 }  // namespace plaits
