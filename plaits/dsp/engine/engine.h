@@ -56,7 +56,6 @@ struct EngineParameters {
   float morph;
   float harmonics;
   float accent;
-  uint8_t custom_options;
 };
 
 struct PostProcessingSettings {

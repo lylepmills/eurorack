@@ -76,12 +76,8 @@ class PotController {
     offset_ = offset;
   }
   
-  inline bool locked() {
-    return state_ == POT_STATE_LOCKING || state_ == POT_STATE_HIDDEN_PARAMETER;
-  }
-
   inline void Lock() {
-    if (locked()) {
+    if (state_ == POT_STATE_LOCKING || state_ == POT_STATE_HIDDEN_PARAMETER) {
       return;
     }
     if (hidden_parameter_) {
@@ -90,27 +86,10 @@ class PotController {
     }
   }
   
-  inline void ToggleLock() {
-    if (locked()) {
-      Unlock();
-    } else {
-      Lock();
-    }
-  }
-
   inline bool editing_hidden_parameter() const {
     return state_ == POT_STATE_HIDDEN_PARAMETER;
   }
   
-  inline void LockMainParameter(float main_parameter) {
-    Lock();
-    *main_parameter_ = main_parameter;
-  }
-
-  inline float main_parameter() {
-    return *main_parameter_;
-  }
-
   inline void Unlock() {
     if (state_ == POT_STATE_HIDDEN_PARAMETER || was_catching_up_) {
       state_ = POT_STATE_CATCHING_UP;

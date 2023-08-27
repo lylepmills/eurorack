@@ -69,10 +69,9 @@ void ChiptuneEngine::Render(
   
   *already_enveloped = clocked;
   
-  uint8_t chord_set_option = parameters.custom_options;
   if (clocked) {
     if (parameters.trigger & TRIGGER_RISING_EDGE) {
-      chords_.set_chord(parameters.harmonics, chord_set_option);
+      chords_.set_chord(parameters.harmonics);
       chords_.Sort();
 
       int pattern = arpeggiator_pattern_selector_.Process(parameters.timbre);
@@ -90,7 +89,7 @@ void ChiptuneEngine::Render(
     float ratios[kChordNumVoices];
     float amplitudes[kChordNumVoices];
 
-    chords_.set_chord(parameters.harmonics, chord_set_option);
+    chords_.set_chord(parameters.harmonics);
     chords_.ComputeChordInversion(parameters.timbre, ratios, amplitudes);
     for (int j = 1; j < kChordNumVoices; j += 2) {
       amplitudes[j] = -amplitudes[j];

@@ -39,7 +39,7 @@ using namespace std;
 bool Settings::Init() {
   InitPersistentData();
   InitState();
-
+  
   bool success = chunk_storage_.Init(&persistent_data_, &state_);
 
   // If the settings id changes, what is stored for state cannot
@@ -50,29 +50,10 @@ bool Settings::Init() {
     persistent_data_.settings_id = kSettingsId;
     SavePersistentData();
   }
-
+  
   CONSTRAIN(state_.engine, 0, 23);
 
   return success;
-}
-
-void Settings::InitState() {
-  // base firmware
-  state_.engine = 8;
-  state_.lpg_colour = 0;
-  state_.decay = 128;
-  state_.octave = 255;
-  state_.color_blind = 0;
-  state_.enable_alt_navigation = 0;
-
-  // alt firmware
-  state_.freqlock_param = 0;
-  state_.locked_frequency_pot_option = 0;
-  state_.model_cv_option = 0;
-  state_.level_cv_option = 0;
-  state_.aux_output_option = 0;
-  state_.chord_set_option = 0;
-  state_.frequency_pot_main_parameter = 1000.0f;
 }
 
 void Settings::InitPersistentData() {
@@ -109,6 +90,26 @@ void Settings::InitPersistentData() {
   c[CV_ADC_CHANNEL_LEVEL].offset = 0.49f;
   c[CV_ADC_CHANNEL_LEVEL].scale = -0.6f;
   c[CV_ADC_CHANNEL_LEVEL].normalization_detection_threshold = 21403;
+}
+
+void Settings::InitState() {
+  // base firmware
+  state_.engine = 8;
+  state_.lpg_colour = 0;
+  state_.decay = 128;
+  state_.octave = 255;
+  state_.unused_one = 0;
+  state_.unused_two = 0;
+  state_.fine_tune = 128;
+
+  // alt firmware
+  // state_.freqlock_param = 0;
+  // state_.locked_frequency_pot_option = 0;
+  // state_.model_cv_option = 0;
+  // state_.level_cv_option = 0;
+  // state_.aux_output_option = 0;
+  // state_.chord_set_option = 0;
+  // state_.frequency_pot_main_parameter = 1000.0f;
 }
 
 void Settings::SavePersistentData() {

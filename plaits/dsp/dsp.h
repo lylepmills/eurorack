@@ -33,7 +33,7 @@
 
 namespace plaits {
   
-static const float kSampleRate = 44100.0f;
+static const float kSampleRate = 48000.0f;
 
 // There is no proper PLL for I2S, only a divider on the system clock to derive
 // the bit clock.
@@ -43,18 +43,12 @@ static const float kSampleRate = 44100.0f;
 // Frame clock = Bit clock / 32 = 47872.34 Hz
 //
 // That's only 4.6 cts of error, but we care!
-//
-// Adjusted to 44.1K ->
-// 47872.34 * (44100 / 48000) = 43982.71
 
-// static const float kCorrectedSampleRate = 47872.34f;
-static const float kCorrectedSampleRate = 43982.71f;
+static const float kCorrectedSampleRate = 47872.34f;
 const float a0 = (440.0f / 8.0f) / kCorrectedSampleRate;
 
 const size_t kMaxBlockSize = 24;
 const size_t kBlockSize = 12;
-
-const float kSineWavetableSize = 512.0f;
 
 }  // namespace plaits
 

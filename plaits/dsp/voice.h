@@ -52,13 +52,13 @@
 #include "plaits/dsp/engine/virtual_analog_engine.h"
 #include "plaits/dsp/engine/waveshaping_engine.h"
 #include "plaits/dsp/engine/wavetable_engine.h"
+
 #include "plaits/dsp/engine2/chiptune_engine.h"
 #include "plaits/dsp/engine2/phase_distortion_engine.h"
 #include "plaits/dsp/engine2/six_op_engine.h"
 #include "plaits/dsp/engine2/string_machine_engine.h"
 #include "plaits/dsp/engine2/virtual_analog_vcf_engine.h"
 #include "plaits/dsp/engine2/wave_terrain_engine.h"
-#include "plaits/dsp/oscillator/square_oscillator.h"
 
 #include "plaits/dsp/envelope.h"
 
@@ -114,7 +114,7 @@ class ChannelPostProcessor {
       }
     }
   }
-
+  
  private:
   stmlib::Limiter limiter_;
   LowPassGate lpg_;
@@ -134,30 +134,6 @@ struct Patch {
   int engine;
   float decay;
   float lpg_colour;
-  float freqlock_param;
-
-  // 0 - manual aux crossfade
-  // 1 - manual octave switching
-  // 2 - manual transposition by fifths
-  uint8_t locked_frequency_pot_option;
-  // 0 - cv control of model (original)
-  // 1 - cv control of aux crossfade
-  // 2 - cv control of lpg colour
-  uint8_t model_cv_option;
-  // 0 - cv control of level (original)
-  // 1 - cv control of decay
-  uint8_t level_cv_option;
-  // 0 - regular aux model
-  // 1 - square wave
-  // 2 - sine wave
-  uint8_t aux_subosc_wave_option;
-  // 0 - no octave shift
-  // 1 - 1 octave down
-  // 2 - 2 octaves down
-  uint8_t aux_subosc_octave_option;
-  // 0 - original chord set
-  // 1 - jon butler chord set
-  uint8_t chord_set_option;
 };
 
 struct Modulations {
@@ -250,9 +226,6 @@ class Voice {
   WaveTerrainEngine wave_terrain_engine_;
   StringMachineEngine string_machine_engine_;
   ChiptuneEngine chiptune_engine_;
-
-  FastSineOscillator sine_oscillator_;
-  SquareOscillator square_oscillator_;
 
   stmlib::HysteresisQuantizer2 engine_quantizer_;
   
