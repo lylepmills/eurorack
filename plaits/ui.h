@@ -144,6 +144,12 @@ class Ui {
   
   int active_engine_;
   bool enable_alt_navigation_;
+
+  // not to be confused with the octave setting (octave_) -
+  // when frequency is locked (by being in octave switch mode)
+  // but using manual aux crossfade, stores the last octave
+  // chosen by manually selection using the frequency pot
+  uint8_t locked_octave_;
     
   stmlib::HysteresisQuantizer2 octave_quantizer_;
   

@@ -135,6 +135,7 @@ struct Patch {
   float decay;
   float lpg_colour;
 
+  float freqlock_param;
   // 0 - manual octave switching
   // 1 - manual aux crossfade
   uint8_t locked_frequency_pot_option;
@@ -157,11 +158,6 @@ struct Patch {
   // 1 - jon butler chord set
   // 2 - joe mcmullen chord set
   uint8_t chord_set_option;
-
-  // when frequency is locked (by being in octave switch mode)
-  // but using manual aux crossfade, stores the last octave
-  // chosen by manually selection using the frequency pot
-  uint8_t locked_octave;
 };
 
 struct Modulations {

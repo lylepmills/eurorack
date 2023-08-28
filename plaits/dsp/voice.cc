@@ -226,6 +226,25 @@ void Voice::Render(
 
   bool already_enveloped = pp_s.already_enveloped;
   e->Render(p, out_buffer_, aux_buffer_, size, &already_enveloped);
+
+  // Crossfade the aux output between main and aux models.
+  bool use_locked_frequency_pot_for_aux_crossfade = patch.locked_frequency_pot_option == 1;
+  // TODO - still need to make this not affect model as well
+  bool use_model_cv_for_aux_crossfade = patch.model_cv_option == 1;
+  if (use_locked_frequency_pot_for_aux_crossfade || use_model_cv_for_aux_crossfade) {
+    float aux_proportion = 0.5f;
+    if (use_locked_frequency_pot_for_aux_crossfade) {
+      aux_proportion = patch.freqlock_param;
+    }
+    if (use_model_cv_for_aux_crossfade) {
+      aux_proportion += modulations.engine;
+    }
+    CONSTRAIN(aux_proportion, 0.0f, 1.0f);
+
+    for (size_t i = 0; i < size; ++i) {
+      aux_buffer_[i] = Crossfade(out_buffer_[i], aux_buffer_[i], aux_proportion);
+    }
+  }
   
   bool lpg_bypass = already_enveloped || \
       (!modulations.level_patched && !modulations.trigger_patched);

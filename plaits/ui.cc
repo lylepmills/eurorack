@@ -100,6 +100,8 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
   active_engine_ = 0;
   pitch_lp_ = 0.0f;
   data_transfer_progress_ = 0.0f;
+
+  locked_octave_ = 4;
 }
 
 void Ui::LoadState() {
@@ -118,7 +120,7 @@ void Ui::LoadState() {
   patch_->aux_subosc_octave_option = state.aux_subosc_octave_option;
   patch_->chord_set_option = state.chord_set_option;
   enable_alt_navigation_ = state.navigation_option == 1;
-  patch_->locked_octave = state.locked_octave;
+  locked_octave_ = state.locked_octave;
 }
 
 void Ui::SaveState() {
@@ -137,7 +139,7 @@ void Ui::SaveState() {
   state->aux_subosc_octave_option = patch_->aux_subosc_octave_option;
   state->chord_set_option = patch_->chord_set_option;
   state->navigation_option = enable_alt_navigation_ ? 1 : 0;
-  state->locked_octave = patch_->locked_octave;
+  state->locked_octave = locked_octave_;
 
   settings_->SaveState();
 }
@@ -428,6 +430,11 @@ void Ui::ReadSwitches() {
 
       if (switches_.released(Switch(1))) {
         if (option_index_ == 0) {
+          if (patch_->locked_frequency_pot_option == 0 && static_cast<int>(octave_ * 11.0f) == 9) {
+            locked_octave_ = static_cast<uint8_t>(octave_quantizer_.Process(0.5f * transposition_ + 0.5f));
+          } else {
+            locked_octave_ = 4;
+          }
           patch_->locked_frequency_pot_option += 1;
           if (patch_->locked_frequency_pot_option >= kNumLockedFrequencyPotOptions) {
             patch_->locked_frequency_pot_option = 0;
@@ -556,8 +563,14 @@ void Ui::Poll() {
   if (octave == 0) {
     patch_->note = -48.37f + transposition_ * 60.0f;
   } else if (octave == 9) {
-    patch_->note = 53.0f + fine_tune_ * 14.0f + 12.0f * static_cast<float>(
-        octave_quantizer_.Process(0.5f * transposition_ + 0.5f) - 4);
+    patch_->note = 53.0f + fine_tune_ * 14.0f;
+    if (patch_->locked_frequency_pot_option == 0) {
+      patch_->note += 12.0f * static_cast<float>(octave_quantizer_.Process(0.5f * transposition_ + 0.5f) - 4);
+      patch_->freqlock_param = 0.0f;
+    } else {
+      patch_->note += 12.0f * static_cast<float>(locked_octave_ - 4);
+      patch_->freqlock_param = 0.5f * transposition_ + 0.5f;
+    }
   } else if (octave == 10) {
     patch_->note = 60.0f + transposition_ * 48.0f;
   } else {
