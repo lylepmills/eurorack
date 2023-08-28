@@ -25,8 +25,6 @@
 #include <stm32f37x_conf.h>
 
 #include "plaits/drivers/audio_dac.h"
-#include "plaits/drivers/debug_pin.h"
-#include "plaits/drivers/debug_port.h"
 
 #include "plaits/dsp/dsp.h"
 #include "plaits/dsp/voice.h"
@@ -44,7 +42,6 @@ using namespace stmlib;
 const bool test_adc_noise = false;
 
 AudioDac audio_dac;
-DebugPort debug_port;
 Modulations modulations;
 Patch patch;
 Settings settings;
@@ -123,12 +120,6 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
     ui.set_active_engine(voice.active_engine());
   }
   
-  if (debug_port.readable()) {
-    uint8_t command = debug_port.Read();
-    uint8_t response = ui.HandleFactoryTestingRequest(command);
-    debug_port.Write(response);
-  }
-  
 #ifdef PROFILE_INTERRUPT
   TOC
 #endif  // PROFILE_INTERRUPT
@@ -147,17 +138,8 @@ void Init() {
   
   volatile size_t counter = 1000000;
   while (counter--);
-  
-#ifdef PROFILE_INTERRUPT
-  settings.Init();
-  DebugPin::Init();
-#else
-  bool freshly_baked = !settings.Init();
-  if (freshly_baked) {
-    debug_port.Init();
-  }
-#endif  // PROFILE_INTERRUPT
 
+  settings.Init();
   ui.Init(&patch, &modulations, &settings);
   
   audio_dac.Init(48000, kBlockSize);

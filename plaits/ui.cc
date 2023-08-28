@@ -40,6 +40,15 @@ using namespace stmlib;
 
 static const int32_t kLongPressTime = 2000;
 
+static const uint8_t kNumOptions = 7;
+static const uint8_t kNumLockedFrequencyPotOptions = 2;
+static const uint8_t kNumModelCVOptions = 3;
+static const uint8_t kNumLevelCVOptions = 2;
+static const uint8_t kNumSuboscWaveOptions = 3;
+static const uint8_t kNumSuboscOctaveOptions = 3;
+static const uint8_t kNumChordSetOptions = 3;
+static const uint8_t kNumNavigationOptions = 2;
+
 void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
   patch_ = patch;
   modulations_ = modulations;
@@ -51,6 +60,7 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
   switches_.Init();
 
   ui_task_ = 0;
+  option_index_ = 0;
   mode_ = UI_MODE_NORMAL;
   
   octave_quantizer_.Init(9, 0.01f, false);
@@ -99,6 +109,16 @@ void Ui::LoadState() {
   patch_->decay = static_cast<float>(state.decay) / 256.0f;
   octave_ = static_cast<float>(state.octave) / 256.0f;
   fine_tune_ = static_cast<float>(state.fine_tune) / 256.0f;
+
+  // alt firmware
+  patch_->locked_frequency_pot_option = state.locked_frequency_pot_option;
+  patch_->model_cv_option = state.model_cv_option;
+  patch_->level_cv_option = state.level_cv_option;
+  patch_->aux_subosc_wave_option = state.aux_subosc_wave_option;
+  patch_->aux_subosc_octave_option = state.aux_subosc_octave_option;
+  patch_->chord_set_option = state.chord_set_option;
+  enable_alt_navigation_ = state.navigation_option == 1;
+  patch_->locked_octave = state.locked_octave;
 }
 
 void Ui::SaveState() {
@@ -108,7 +128,17 @@ void Ui::SaveState() {
   state->decay = static_cast<uint8_t>(patch_->decay * 256.0f);
   state->octave = static_cast<uint8_t>(octave_ * 256.0f);
   state->fine_tune = static_cast<uint8_t>(fine_tune_ * 256.0f);
-  state->unused_one = 0;
+
+  // alt firmware
+  state->locked_frequency_pot_option = patch_->locked_frequency_pot_option;
+  state->model_cv_option = patch_->model_cv_option;
+  state->level_cv_option = patch_->level_cv_option;
+  state->aux_subosc_wave_option = patch_->aux_subosc_wave_option;
+  state->aux_subosc_octave_option = patch_->aux_subosc_octave_option;
+  state->chord_set_option = patch_->chord_set_option;
+  state->navigation_option = enable_alt_navigation_ ? 1 : 0;
+  state->locked_octave = patch_->locked_octave;
+
   settings_->SaveState();
 }
 
@@ -208,6 +238,47 @@ void Ui::UpdateLEDs() {
         }
       }
       break;
+
+    case UI_MODE_CHANGE_OPTIONS_PRE_RELEASE:
+    case UI_MODE_CHANGE_OPTIONS:
+      for (int i = 0; i < kNumOptions; ++i) {
+        int option_value = 0;
+        if (i == 0) {
+          option_value = patch_->locked_frequency_pot_option;
+        } else if (i == 1) {
+          option_value = patch_->model_cv_option;
+        } else if (i == 2) {
+          option_value = patch_->level_cv_option;
+        } else if (i == 3) {
+          option_value = patch_->aux_subosc_wave_option;
+        } else if (i == 4) {
+          option_value = patch_->aux_subosc_octave_option;
+        } else if (i == 5) {
+          option_value = patch_->chord_set_option;
+        } else if (i == 6) {
+          option_value = enable_alt_navigation_ ? 1 : 0;
+        }
+
+        LedColor color = LED_COLOR_OFF;
+        if (option_value == 0 || option_value == 3) {
+          color = LED_COLOR_GREEN;
+        } else if (option_value == 1 || option_value == 4) {
+          color = LED_COLOR_RED;
+        } else if (option_value == 2 || option_value == 5) {
+          color = LED_COLOR_YELLOW;
+        }
+        if ((option_value > 2) && (pwm_counter_ & 128)) {
+          color = LED_COLOR_OFF;
+        }
+
+        // Dim the other lights
+        if ((i != option_index_) && (pwm_counter & 7)) {
+            color = LED_COLOR_OFF;
+        }
+
+        leds_.set(i, color);
+      }
+      break;
     
     case UI_MODE_ERROR:
       if (pwm_counter < triangle) {
@@ -239,6 +310,15 @@ void Ui::Navigate(int button) {
   ignore_release_[0] = ignore_release_[1] = true;
   RealignPots();
   uint8_t increment = button == 0 ? 23 : 1;
+  if (enable_alt_navigation_) {
+    if (button == 1) {
+      // change bank
+      increment = 8;
+    } else {
+      // change preset within bank
+      increment = patch_->engine % 8 != 7 ? 1 : 17;
+    }
+  }
   patch_->engine = (patch_->engine + increment) % 24;
   
   SaveState();
@@ -250,6 +330,13 @@ void Ui::ReadSwitches() {
   switch (mode_) {
     case UI_MODE_NORMAL:
       {
+        // Press both buttons to enter options menu
+        if ((switches_.just_pressed(Switch(0)) && switches_.pressed(Switch(1))) ||
+            (switches_.just_pressed(Switch(1)) && switches_.pressed(Switch(0)))) {
+          mode_ = UI_MODE_CHANGE_OPTIONS_PRE_RELEASE;
+          break;
+        }
+
         for (int i = 0; i < SWITCH_LAST; ++i) {
           if (switches_.just_pressed(Switch(i))) {
             press_time_[i] = 0;
@@ -315,6 +402,65 @@ void Ui::ReadSwitches() {
       break;
     
     case UI_MODE_DISPLAY_DATA_TRANSFER_PROGRESS:
+      break;
+
+    case UI_MODE_CHANGE_OPTIONS_PRE_RELEASE:
+      if ((!switches_.pressed(Switch(0)) && !switches_.pressed(Switch(1))) &&
+          (switches_.released(Switch(0)) || switches_.released(Switch(1)))) {
+        mode_ = UI_MODE_CHANGE_OPTIONS;
+      }
+      break;
+
+    case UI_MODE_CHANGE_OPTIONS:
+      if (switches_.pressed(Switch(0)) && switches_.pressed(Switch(1))) {
+        ignore_release_[0] = ignore_release_[1] = true;
+        SaveState();
+        mode_ = UI_MODE_NORMAL;
+        break;
+      }
+
+      if (switches_.released(Switch(0))) {
+        option_index_ += 1;
+        if (option_index_ >= kNumOptions) {
+          option_index_ = 0;
+        }
+      }
+
+      if (switches_.released(Switch(1))) {
+        if (option_index_ == 0) {
+          patch_->locked_frequency_pot_option += 1;
+          if (patch_->locked_frequency_pot_option >= kNumLockedFrequencyPotOptions) {
+            patch_->locked_frequency_pot_option = 0;
+          }
+        } else if (option_index_ == 1) {
+          patch_->model_cv_option += 1;
+          if (patch_->model_cv_option >= kNumModelCVOptions) {
+            patch_->model_cv_option = 0;
+          }
+        } else if (option_index_ == 2) {
+          patch_->level_cv_option += 1;
+          if (patch_->level_cv_option >= kNumLevelCVOptions) {
+            patch_->level_cv_option = 0;
+          }
+        } else if (option_index_ == 3) {
+          patch_->aux_subosc_wave_option += 1;
+          if (patch_->aux_subosc_wave_option >= kNumSuboscWaveOptions) {
+            patch_->aux_subosc_wave_option = 0;
+          }
+        } else if (option_index_ == 4) {
+          patch_->aux_subosc_octave_option += 1;
+          if (patch_->aux_subosc_octave_option >= kNumSuboscOctaveOptions) {
+            patch_->aux_subosc_octave_option = 0;
+          }
+        } else if (option_index_ == 5) {
+          patch_->chord_set_option += 1;
+          if (patch_->chord_set_option >= kNumChordSetOptions) {
+            patch_->chord_set_option = 0;
+          }
+        } else if (option_index_ == 6) {
+          enable_alt_navigation_ = !enable_alt_navigation_;
+        }
+      }
       break;
 
     case UI_MODE_TEST:

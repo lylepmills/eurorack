@@ -41,23 +41,21 @@ bool Settings::Init() {
   InitState();
   
   bool success = chunk_storage_.Init(&persistent_data_, &state_);
-
-  // If the settings id changes, what is stored for state cannot
-  // necessarily be interpreted, so we reset the state.
-  if (persistent_data_.settings_id != kSettingsId) {
-    InitState();
-    SaveState();
-    persistent_data_.settings_id = kSettingsId;
-    SavePersistentData();
-  }
   
   CONSTRAIN(state_.engine, 0, 23);
+  CONSTRAIN(state_.locked_frequency_pot_option, 0, 1);
+  CONSTRAIN(state_.model_cv_option, 0, 2);
+  CONSTRAIN(state_.level_cv_option, 0, 1);
+  CONSTRAIN(state_.aux_subosc_wave_option, 0, 2);
+  CONSTRAIN(state_.aux_subosc_octave_option, 0, 2);
+  CONSTRAIN(state_.chord_set_option, 0, 2);
+  CONSTRAIN(state_.navigation_option, 0, 1);
+  CONSTRAIN(state_.locked_octave, 0, 8);
 
   return success;
 }
 
 void Settings::InitPersistentData() {
-  persistent_data_.settings_id = kSettingsId;
   ChannelCalibrationData* c = persistent_data_.channel_calibration_data;
   c[CV_ADC_CHANNEL_MODEL].offset = 0.025f;
   c[CV_ADC_CHANNEL_MODEL].scale = -1.03f;
@@ -107,6 +105,7 @@ void Settings::InitState() {
   state_.aux_subosc_octave_option = 0;
   state_.aux_subosc_wave_option = 0;
   state_.chord_set_option = 0;
+  state_.navigation_option = 0;
 
   // alt firmware other
   state_.locked_octave = 4;

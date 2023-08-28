@@ -52,6 +52,8 @@ enum UiMode {
   UI_MODE_DISPLAY_ALTERNATE_PARAMETERS,
   UI_MODE_DISPLAY_OCTAVE,
   UI_MODE_DISPLAY_DATA_TRANSFER_PROGRESS,
+  UI_MODE_CHANGE_OPTIONS_PRE_RELEASE,
+  UI_MODE_CHANGE_OPTIONS,
   UI_MODE_TEST,
   UI_MODE_ERROR
 };
@@ -118,6 +120,7 @@ class Ui {
   Switches switches_;
   
   int ui_task_;
+  int option_index_;
   
   float data_transfer_progress_;
   float fine_tune_;
@@ -140,6 +143,7 @@ class Ui {
   bool ignore_release_[SWITCH_LAST];
   
   int active_engine_;
+  bool enable_alt_navigation_;
     
   stmlib::HysteresisQuantizer2 octave_quantizer_;
   

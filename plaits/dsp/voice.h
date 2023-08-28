@@ -134,6 +134,34 @@ struct Patch {
   int engine;
   float decay;
   float lpg_colour;
+
+  // 0 - manual octave switching
+  // 1 - manual aux crossfade
+  uint8_t locked_frequency_pot_option;
+  // 0 - cv control of model (original)
+  // 1 - cv control of aux crossfade
+  // 2 - cv control of lpg colour
+  uint8_t model_cv_option;
+  // 0 - cv control of level (original)
+  // 1 - cv control of decay
+  uint8_t level_cv_option;
+  // 0 - regular aux model
+  // 1 - square wave
+  // 2 - sine wave
+  uint8_t aux_subosc_wave_option;
+  // 0 - no octave shift
+  // 1 - 1 octave down
+  // 2 - 2 octaves down
+  uint8_t aux_subosc_octave_option;
+  // 0 - original chord set
+  // 1 - jon butler chord set
+  // 2 - joe mcmullen chord set
+  uint8_t chord_set_option;
+
+  // when frequency is locked (by being in octave switch mode)
+  // but using manual aux crossfade, stores the last octave
+  // chosen by manually selection using the frequency pot
+  uint8_t locked_octave;
 };
 
 struct Modulations {
