@@ -110,7 +110,7 @@ void Voice::Render(
   CONSTRAIN(patch_decay, 0.0f, 1.0f);
 
   float patch_lpg_colour = patch.lpg_colour;
-  if (patch.model_cv_option == 2) {
+  if (patch.model_cv_option == 1) {
     patch_lpg_colour += modulations.engine;
   }
   CONSTRAIN(patch_lpg_colour, 0.0f, 1.0f);
@@ -245,7 +245,7 @@ void Voice::Render(
 
   // Crossfade the aux output between main and aux models.
   bool use_locked_frequency_pot_for_aux_crossfade = patch.locked_frequency_pot_option == 1;
-  bool use_model_cv_for_aux_crossfade = patch.model_cv_option == 1;
+  bool use_model_cv_for_aux_crossfade = patch.model_cv_option == 2;
   if (use_locked_frequency_pot_for_aux_crossfade || use_model_cv_for_aux_crossfade) {
     float aux_proportion = 0.5f;
     if (use_locked_frequency_pot_for_aux_crossfade) {

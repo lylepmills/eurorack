@@ -140,11 +140,11 @@ struct Patch {
   // 1 - manual aux crossfade
   uint8_t locked_frequency_pot_option;
   // 0 - cv control of model (original)
-  // 1 - cv control of aux crossfade
-  // 2 - cv control of lpg colour
+  // 1 - cv control of lpg colour
+  // 2 - cv control of aux crossfade
   uint8_t model_cv_option;
   // 0 - cv control of level (original)
-  // 1 - cv control of decay
+  // 1 - cv control of lpg decay
   uint8_t level_cv_option;
   // 0 - regular aux model
   // 1 - square wave
