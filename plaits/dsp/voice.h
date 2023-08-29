@@ -52,13 +52,14 @@
 #include "plaits/dsp/engine/virtual_analog_engine.h"
 #include "plaits/dsp/engine/waveshaping_engine.h"
 #include "plaits/dsp/engine/wavetable_engine.h"
-
 #include "plaits/dsp/engine2/chiptune_engine.h"
 #include "plaits/dsp/engine2/phase_distortion_engine.h"
 #include "plaits/dsp/engine2/six_op_engine.h"
 #include "plaits/dsp/engine2/string_machine_engine.h"
 #include "plaits/dsp/engine2/virtual_analog_vcf_engine.h"
 #include "plaits/dsp/engine2/wave_terrain_engine.h"
+#include "plaits/dsp/oscillator/sine_oscillator.h"
+#include "plaits/dsp/oscillator/square_oscillator.h"
 
 #include "plaits/dsp/envelope.h"
 
@@ -250,6 +251,9 @@ class Voice {
   WaveTerrainEngine wave_terrain_engine_;
   StringMachineEngine string_machine_engine_;
   ChiptuneEngine chiptune_engine_;
+
+  FastSineOscillator sine_oscillator_;
+  SquareOscillator square_oscillator_;
 
   stmlib::HysteresisQuantizer2 engine_quantizer_;
   

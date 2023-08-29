@@ -69,6 +69,9 @@ void Voice::Init(BufferAllocator* allocator) {
     allocator->Free();
     engines_.get(i)->Init(allocator);
   }
+
+  square_oscillator_.Init();
+  sine_oscillator_.Init();
   
   engine_quantizer_.Init(engines_.size(), 0.05f, true);
   previous_engine_index_ = -1;
@@ -242,6 +245,21 @@ void Voice::Render(
 
   bool already_enveloped = pp_s.already_enveloped;
   e->Render(p, out_buffer_, aux_buffer_, size, &already_enveloped);
+
+  if (patch.aux_subosc_wave_option >= 1) {
+    float frequency = NoteToFrequency(p.note);
+    if (patch.aux_subosc_octave_option == 1) {
+      frequency /= 2.0f;
+    } else if (patch.aux_subosc_octave_option == 2) {
+      frequency /= 4.0f;
+    }
+
+    if (patch.aux_subosc_wave_option == 1) {
+      square_oscillator_.Render(frequency, aux_buffer_, size);
+    } else if (patch.aux_subosc_wave_option == 2) {
+      sine_oscillator_.Render(frequency, aux_buffer_, size);
+    }
+  }
 
   // Crossfade the aux output between main and aux models.
   bool use_locked_frequency_pot_for_aux_crossfade = patch.locked_frequency_pot_option == 1;
