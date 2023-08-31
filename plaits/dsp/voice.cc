@@ -105,6 +105,9 @@ void Voice::Render(
   bool level_patched = modulations.level_patched;
   float modulation_level = modulations.level;
   float patch_decay = patch.decay;
+  if (patch.locked_frequency_pot_option == 1) {
+    patch_decay = patch.freqlock_param;
+  }
   if (modulations.trigger_patched && patch.level_cv_option == 1) {
     level_patched = false;
     modulation_level = 0.0f;
@@ -263,7 +266,7 @@ void Voice::Render(
   }
 
   // Crossfade the aux output between main and aux models.
-  bool use_locked_frequency_pot_for_aux_crossfade = patch.locked_frequency_pot_option == 1;
+  bool use_locked_frequency_pot_for_aux_crossfade = patch.locked_frequency_pot_option == 2;
   bool use_model_cv_for_aux_crossfade = patch.model_cv_option == 2;
   if (use_locked_frequency_pot_for_aux_crossfade || use_model_cv_for_aux_crossfade) {
     float aux_proportion = 0.5f;

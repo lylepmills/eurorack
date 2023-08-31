@@ -41,7 +41,7 @@ using namespace stmlib;
 static const int32_t kLongPressTime = 2000;
 
 static const uint8_t kNumOptions = 7;
-static const uint8_t kNumLockedFrequencyPotOptions = 2;
+static const uint8_t kNumLockedFrequencyPotOptions = 3;
 static const uint8_t kNumModelCVOptions = 3;
 static const uint8_t kNumLevelCVOptions = 2;
 static const uint8_t kNumSuboscWaveOptions = 3;
@@ -409,6 +409,10 @@ void Ui::ReadSwitches() {
     case UI_MODE_CHANGE_OPTIONS_PRE_RELEASE:
       if ((!switches_.pressed(Switch(0)) && !switches_.pressed(Switch(1))) &&
           (switches_.released(Switch(0)) || switches_.released(Switch(1)))) {
+        pots_[POTS_ADC_CHANNEL_TIMBRE_POT].Unlock();
+        pots_[POTS_ADC_CHANNEL_MORPH_POT].Unlock();
+        pots_[POTS_ADC_CHANNEL_HARMONICS_POT].Unlock();
+        pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].Unlock();
         mode_ = UI_MODE_CHANGE_OPTIONS;
       }
       break;
@@ -432,7 +436,7 @@ void Ui::ReadSwitches() {
         if (option_index_ == 0) {
           if (patch_->locked_frequency_pot_option == 0 && static_cast<int>(octave_ * 11.0f) == 9) {
             locked_octave_ = static_cast<uint8_t>(octave_quantizer_.Process(0.5f * transposition_ + 0.5f));
-          } else {
+          } else if (patch_->locked_frequency_pot_option == 1) {
             locked_octave_ = 4;
           }
           patch_->locked_frequency_pot_option += 1;
