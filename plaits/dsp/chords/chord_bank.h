@@ -37,16 +37,29 @@
 
 namespace plaits {
 
+const int kNumChordSetOpts = 3;
+
 const int kChordNumNotes = 4;
 const int kChordNumVoices = kChordNumNotes + 1;
 
-// #define JON_CHORDS
+const int kChordNumChords = 35;
+const int kChordNumOriginalChords = 11;
+const int kChordNumJonChords = 17;
+const int kChordNumJoeChords = 18;
 
-#ifdef JON_CHORDS
-const int kChordNumChords = 17;
-#else
-const int kChordNumChords = 11;
-#endif  // JON_CHORDS
+const int originalChordMapping[kChordNumOriginalChords] = {
+  0,  // OCT
+  1,  // 5
+  9,  // sus4
+  2,  // m
+  3,  // m7
+  4,  // m9
+  5,  // m11
+  10, // 69
+  8,  // M9
+  7,  // M7
+  6,  // M
+};
 
 class ChordBank {
  public:
@@ -70,12 +83,23 @@ class ChordBank {
     std::sort(&sorted_ratios_[0], &sorted_ratios_[kChordNumNotes]);
   }
   
-  inline void set_chord(float parameter) {
-    chord_index_quantizer_.Process(parameter * 1.02f);
+  // Options
+  // 1. Original chords
+  // 2. Jon Butler chords
+  // 3. Joe McMullen chords
+  inline void set_chord(float parameter, uint8_t chord_set_option) {
+    chord_set_option_ = chord_set_option;
+    chord_index_quantizer_[chord_set_option_].Process(parameter * 1.02f);
   }
   
   inline int chord_index() const {
-    return chord_index_quantizer_.quantized_value();
+    int value = chord_index_quantizer_[chord_set_option_].quantized_value();
+    if (chord_set_option_ == 0) {
+      return originalChordMapping[value];
+    } else if (chord_set_option_ == 1) {
+      return value;
+    }
+    return kChordNumJonChords + value;
   }
   
   inline const float* ratios() const {
@@ -95,14 +119,14 @@ class ChordBank {
   }
 
  private:
-  stmlib::HysteresisQuantizer2 chord_index_quantizer_;
+  stmlib::HysteresisQuantizer2 chord_index_quantizer_[kNumChordSetOpts];
+
+  uint8_t chord_set_option_;
   
   float* ratios_;
   float* sorted_ratios_;
   int* note_count_;
-  
-  static const float chords_[kChordNumChords][kChordNumNotes];
-  
+    
   DISALLOW_COPY_AND_ASSIGN(ChordBank);
 };
 

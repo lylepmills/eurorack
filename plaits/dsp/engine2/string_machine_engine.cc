@@ -91,7 +91,7 @@ void StringMachineEngine::Render(
   ONE_POLE(morph_lp_, parameters.morph, 0.1f);
   ONE_POLE(timbre_lp_, parameters.timbre, 0.1f);
 
-  chords_.set_chord(parameters.harmonics);
+  chords_.set_chord(parameters.harmonics, parameters.chord_set_option);
 
   float harmonics[kChordNumHarmonics * 2 + 2];
   float registration = max(morph_lp_, 0.0f);

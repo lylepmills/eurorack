@@ -34,11 +34,8 @@ namespace plaits {
 
 using namespace stmlib;
 
-#ifdef JON_CHORDS
-
-// Alternative chord table by Jon Butler jonbutler88@gmail.com
-/* static */
-const float ChordBank::chords_[kChordNumChords][kChordNumNotes] = {
+const float chords_[kChordNumChords][kChordNumNotes] = {
+  ////// Jon Butler chords
   // Fixed Intervals
   { 0.00f, 0.01f, 11.99f, 12.00f },  // Octave
   { 0.00f, 7.00f,  7.01f, 12.00f },  // Fifth
@@ -60,33 +57,36 @@ const float ChordBank::chords_[kChordNumChords][kChordNumNotes] = {
   { 0.00f, 7.00f, 10.00f, 13.00f },  // Dominant 7th (b9)
   { 0.00f, 3.00f,  6.00f, 10.00f },  // Half Diminished
   { 0.00f, 3.00f,  6.00f,  9.00f },  // Fully Diminished
+
+  ////// Joe McMullen chords
+  {  5.00f, 12.00f, 19.00f, 26.00f }, // iv 6/9
+  { 14.00f,  8.00f, 19.00f, 24.00f }, // iio 7sus4
+  { 10.00f, 17.00f, 19.00f, 26.00f }, // VII 6
+  {  7.00f, 14.00f, 22.00f, 24.00f }, // v m11
+  { 15.00f, 10.00f, 19.00f, 20.00f }, // III add4
+  { 12.00f, 19.00f, 20.00f, 27.00f }, // i addb13
+  {  8.00f, 15.00f, 24.00f, 26.00f }, // VI add#11
+  { 17.00f, 12.00f, 20.00f, 26.00f }, // iv m6
+  { 14.00f, 17.00f, 20.00f, 23.00f }, // iio
+  { 11.00f, 14.00f, 17.00f, 20.00f }, // viio
+  {  7.00f, 14.00f, 17.00f, 23.00f }, // V 7
+  {  4.00f,  7.00f, 17.00f, 23.00f }, // iii add b9
+  { 12.00f,  7.00f, 16.00f, 23.00f }, // I maj7
+  {  9.00f, 12.00f, 16.00f, 23.00f }, // vi m9
+  {  5.00f, 12.00f, 19.00f, 21.00f }, // IV maj9
+  { 14.00f,  9.00f, 17.00f, 24.00f }, // ii m7
+  { 11.00f,  5.00f, 19.00f, 24.00f }, // I maj7sus4/vii
+  {  7.00f, 14.00f, 17.00f, 24.00f }, // V 7sus4
 };
-
-#else
-
-/* static */
-const float ChordBank::chords_[kChordNumChords][kChordNumNotes] = {
-  { 0.00f, 0.01f, 11.99f, 12.00f },  // OCT
-  { 0.00f, 7.00f,  7.01f, 12.00f },  // 5
-  { 0.00f, 5.00f,  7.00f, 12.00f },  // sus4
-  { 0.00f, 3.00f,  7.00f, 12.00f },  // m
-  { 0.00f, 3.00f,  7.00f, 10.00f },  // m7
-  { 0.00f, 3.00f, 10.00f, 14.00f },  // m9
-  { 0.00f, 3.00f, 10.00f, 17.00f },  // m11
-  { 0.00f, 2.00f,  9.00f, 16.00f },  // 69
-  { 0.00f, 4.00f, 11.00f, 14.00f },  // M9
-  { 0.00f, 4.00f,  7.00f, 11.00f },  // M7
-  { 0.00f, 4.00f,  7.00f, 12.00f },  // M
-};
-
-#endif  // JON_CHORDS
 
 void ChordBank::Init(BufferAllocator* allocator) {
   ratios_ = allocator->Allocate<float>(kChordNumChords * kChordNumNotes);
   note_count_ = allocator->Allocate<int>(kChordNumChords);
   sorted_ratios_ = allocator->Allocate<float>(kChordNumNotes);
 
-  chord_index_quantizer_.Init(kChordNumChords, 0.075f, false);
+  chord_index_quantizer_[0].Init(kChordNumOriginalChords, 0.075f, false);
+  chord_index_quantizer_[1].Init(kChordNumJonChords, 0.075f, false);
+  chord_index_quantizer_[2].Init(kChordNumJoeChords, 0.075f, false);
 }
 
 void ChordBank::Reset() {
