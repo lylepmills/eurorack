@@ -2,7 +2,7 @@
 
 [discussion](https://forum.mutable-instruments.net/t/unified-plaits-alt-firmware/19530)
 
-[download](https://github.com/lylepmills/eurorack/raw/master/alt_firmwares/plaits_freqlock.wav)
+[download](https://github.com/lylepmills/eurorack/raw/master/alt_firmwares/plaits_20230901.wav)
 
 *update 9/1/23: this is a new version of the alt firmware built on top of version 1.2 of the official firmware, with some new options and a new interaction model for frequency locking*
 
