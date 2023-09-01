@@ -38,7 +38,7 @@ const float chords_[kChordNumChords][kChordNumNotes] = {
   ////// Jon Butler chords
   // Fixed Intervals
   { 0.00f, 0.01f, 11.99f, 12.00f },  // Octave
-  { 0.00f, 7.01f,  7.00f, 12.00f },  // Fifth
+  { 0.00f, 7.00f,  7.01f, 12.00f },  // Fifth
   // Minor
   { 0.00f, 3.00f,  7.00f, 12.00f },  // Minor
   { 0.00f, 3.00f,  7.00f, 10.00f },  // Minor 7th

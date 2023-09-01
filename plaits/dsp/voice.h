@@ -58,6 +58,7 @@
 #include "plaits/dsp/engine2/string_machine_engine.h"
 #include "plaits/dsp/engine2/virtual_analog_vcf_engine.h"
 #include "plaits/dsp/engine2/wave_terrain_engine.h"
+#include "plaits/dsp/oscillator/sine_oscillator.h"
 #include "plaits/dsp/oscillator/square_oscillator.h"
 
 #include "plaits/dsp/envelope.h"
@@ -114,7 +115,7 @@ class ChannelPostProcessor {
       }
     }
   }
-
+  
  private:
   stmlib::Limiter limiter_;
   LowPassGate lpg_;
@@ -134,15 +135,15 @@ struct Patch {
   int engine;
   float decay;
   float lpg_colour;
-  float freqlock_param;
 
-  // 0 - manual aux crossfade
-  // 1 - manual octave switching
-  // 2 - manual transposition by fifths
+  float freqlock_param;
+  // 0 - manual octave switching
+  // 1 - manual control of decay (without button press)
+  // 2 - manual aux crossfade
   uint8_t locked_frequency_pot_option;
   // 0 - cv control of model (original)
-  // 1 - cv control of aux crossfade
-  // 2 - cv control of lpg colour
+  // 1 - cv control of lpg colour
+  // 2 - cv control of aux crossfade
   uint8_t model_cv_option;
   // 0 - cv control of level (original)
   // 1 - cv control of decay
@@ -157,7 +158,12 @@ struct Patch {
   uint8_t aux_subosc_octave_option;
   // 0 - original chord set
   // 1 - jon butler chord set
+  // 2 - joe mcmullen chord set
   uint8_t chord_set_option;
+  // 0 - don't hold params on trigger (original)
+  // 1 - hold timbre, morph, harmo, level, v/oct cv modulations on trigger (not fm)
+  //     (note model is already held on trigger by default)
+  uint8_t hold_on_trigger_option;
 };
 
 struct Modulations {
@@ -262,6 +268,12 @@ class Voice {
   
   float previous_note_;
   bool trigger_state_;
+
+  float held_timbre_;
+  float held_morph_;
+  float held_harmo_;
+  float held_level_;
+  float held_note_;
   
   DecayEnvelope decay_envelope_;
   LPGEnvelope lpg_envelope_;

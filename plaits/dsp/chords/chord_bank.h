@@ -126,9 +126,7 @@ class ChordBank {
   float* ratios_;
   float* sorted_ratios_;
   int* note_count_;
-  
-  // static const float chords_[kChordNumChords][kChordNumNotes];
-  
+
   DISALLOW_COPY_AND_ASSIGN(ChordBank);
 };
 

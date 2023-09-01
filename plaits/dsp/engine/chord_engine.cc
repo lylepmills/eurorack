@@ -53,7 +53,7 @@ void ChordEngine::Reset() {
 }
 
 const float fade_point[kChordNumVoices] = {
-  0.52f, 0.48f, 0.49f, 0.50f, 0.51f
+  0.55f, 0.47f, 0.49f, 0.51f, 0.53f
 };
 
 const int kRegistrationTableSize = 8;
@@ -110,8 +110,7 @@ void ChordEngine::Render(
   ONE_POLE(morph_lp_, parameters.morph, 0.1f);
   ONE_POLE(timbre_lp_, parameters.timbre, 0.1f);
 
-  uint8_t chord_set_option = parameters.custom_options;
-  chords_.set_chord(parameters.harmonics, chord_set_option);
+  chords_.set_chord(parameters.harmonics, parameters.chord_set_option);
 
   float harmonics[kChordNumHarmonics * 2 + 2];
   float note_amplitudes[kChordNumVoices];
@@ -133,12 +132,10 @@ void ChordEngine::Render(
   const float waveform = max((morph_lp_ - 0.535f) * 2.15f, 0.0f);
   
   for (int note = 0; note < kChordNumVoices; ++note) {
-    float wavetable_amount = 100.0f * (morph_lp_ - fade_point[note]);
+    float wavetable_amount = 50.0f * (morph_lp_ - fade_point[note]);
     CONSTRAIN(wavetable_amount, 0.0f, 1.0f);
 
-    float divide_down_amount = 100.0f * (fade_point[note] - morph_lp_);
-    CONSTRAIN(divide_down_amount, 0.0f, 1.0f);
-
+    float divide_down_amount = 1.0f - wavetable_amount;
     float* destination = (1 << note) & aux_note_mask ? aux : out;
     
     const float note_f0 = f0 * ratios[note];
@@ -154,7 +151,9 @@ void ChordEngine::Render(
           wavetable,
           destination,
           size);
-    } else {
+    }
+    
+    if (divide_down_amount) {
       divide_down_voice_[note].Render(
           note_f0,
           harmonics,

@@ -56,7 +56,9 @@ struct EngineParameters {
   float morph;
   float harmonics;
   float accent;
-  uint8_t custom_options;
+
+  // alt firmware
+  uint8_t chord_set_option;
 };
 
 struct PostProcessingSettings {

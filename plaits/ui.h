@@ -51,24 +51,21 @@ enum UiMode {
   UI_MODE_NORMAL,
   UI_MODE_DISPLAY_ALTERNATE_PARAMETERS,
   UI_MODE_DISPLAY_OCTAVE,
-  UI_MODE_FREQUENCY_LOCK,
+  UI_MODE_DISPLAY_DATA_TRANSFER_PROGRESS,
   UI_MODE_CHANGE_OPTIONS_PRE_RELEASE,
   UI_MODE_CHANGE_OPTIONS,
-  UI_MODE_DISPLAY_DATA_TRANSFER_PROGRESS,
-  // UI_MODE_CALIBRATION_C1,
-  // UI_MODE_CALIBRATION_C3,
   UI_MODE_TEST,
   UI_MODE_ERROR
 };
 
-// enum FactoryTestingCommand {
-//   FACTORY_TESTING_READ_POT,
-//   FACTORY_TESTING_READ_CV,
-//   FACTORY_TESTING_READ_GATE,
-//   FACTORY_TESTING_GENERATE_TEST_SIGNAL,
-//   FACTORY_TESTING_CALIBRATE,
-//   FACTORY_TESTING_READ_NORMALIZATION,
-// };
+enum FactoryTestingCommand {
+  FACTORY_TESTING_READ_POT,
+  FACTORY_TESTING_READ_CV,
+  FACTORY_TESTING_READ_GATE,
+  FACTORY_TESTING_GENERATE_TEST_SIGNAL,
+  FACTORY_TESTING_CALIBRATE,
+  FACTORY_TESTING_READ_NORMALIZATION,
+};
 
 class Ui {
  public:
@@ -95,7 +92,7 @@ class Ui {
     return mode_ == UI_MODE_TEST;
   }
 
-  // uint8_t HandleFactoryTestingRequest(uint8_t command);
+  uint8_t HandleFactoryTestingRequest(uint8_t command);
   
  private:
   void UpdateLEDs();
@@ -106,10 +103,7 @@ class Ui {
   void DetectNormalization();
 
   void Navigate(int button);
-  
-  // void StartCalibration();
-  // void CalibrateC1();
-  // void CalibrateC3();
+  uint32_t BankToColor(int bank);
 
   void RealignPots() {
     for (int i = POTS_ADC_CHANNEL_FREQUENCY_POT;
@@ -127,8 +121,9 @@ class Ui {
   
   int ui_task_;
   int option_index_;
-
+  
   float data_transfer_progress_;
+  float fine_tune_;
   float transposition_;
   float octave_;
   Patch* patch_;
@@ -136,7 +131,6 @@ class Ui {
   NormalizationProbe normalization_probe_;
   PotController pots_[POTS_ADC_CHANNEL_LAST];
   float pitch_lp_;
-  // float pitch_lp_calibration_;
   
   Settings* settings_;
   
@@ -150,9 +144,15 @@ class Ui {
   
   int active_engine_;
   bool enable_alt_navigation_;
-  
-  // float cv_c1_;  // For calibration
+
+  // not to be confused with the octave setting (octave_) -
+  // when frequency is locked (by being in octave switch mode)
+  // but using manual aux crossfade, stores the last octave
+  // chosen by manually selection using the frequency pot
+  uint8_t locked_octave_;
     
+  stmlib::HysteresisQuantizer2 octave_quantizer_;
+  
   static const CvAdcChannel normalized_channels_[kNumNormalizedChannels];
     
   DISALLOW_COPY_AND_ASSIGN(Ui);
