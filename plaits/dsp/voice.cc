@@ -176,6 +176,8 @@ void Voice::Render(
     e->Reset();
 
     out_post_processor_.Reset();
+    sine_oscillator_.Init();
+    square_oscillator_.Init();
     previous_engine_index_ = engine_index;
     reload_user_data_ = false;
   }
