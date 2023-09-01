@@ -66,12 +66,13 @@ struct State {
   uint8_t aux_subosc_wave_option;
   uint8_t aux_subosc_octave_option;
   uint8_t chord_set_option;
+  uint8_t hold_on_trigger_option;
   uint8_t navigation_option;
 
   // alt firmware other
   uint8_t locked_octave;
 
-  uint8_t padding[3];
+  uint8_t padding[2];
 
   enum { tag = 0x54415453 };  // STAT
 };

@@ -101,17 +101,36 @@ void Voice::Render(
   // CV out lags behind the GATE out.
   trigger_delay_.Write(modulations.trigger);
   float trigger_value = trigger_delay_.Read(kTriggerDelay);
+  bool trigger_high = trigger_value > 0.3f;
 
+  float modulations_timbre = modulations.timbre;
+  float modulations_morph = modulations.morph;
+  float modulations_harmonics = modulations.harmonics;
+  float modulations_level = modulations.level;
+  float modulations_note = modulations.note;
+  if (modulations.trigger_patched && (patch.hold_on_trigger_option == 1)) {
+    if (!trigger_state_ && trigger_high) {
+      held_timbre_ = modulations.timbre;
+      held_morph_ = modulations.morph;
+      held_harmo_ = modulations.harmonics;
+      held_level_ = modulations.level;
+      held_note_ = modulations.note;
+    }
+    modulations_timbre = held_timbre_;
+    modulations_morph = held_morph_;
+    modulations_harmonics = held_harmo_;
+    modulations_level = held_level_;
+    modulations_note = held_note_;
+  }
   bool level_patched = modulations.level_patched;
-  float modulation_level = modulations.level;
   float patch_decay = patch.decay;
   if (patch.locked_frequency_pot_option == 1) {
     patch_decay = patch.freqlock_param;
   }
   if (modulations.trigger_patched && patch.level_cv_option == 1) {
     level_patched = false;
-    modulation_level = 0.0f;
-    patch_decay += modulations.level;
+    patch_decay += modulations_level;
+    modulations_level = 0.0f;
   }
   CONSTRAIN(patch_decay, 0.0f, 1.0f);
 
@@ -123,7 +142,7 @@ void Voice::Render(
   
   bool previous_trigger_state = trigger_state_;
   if (!previous_trigger_state) {
-    if (trigger_value > 0.3f) {
+    if (trigger_high) {
       trigger_state_ = true;
       if (!level_patched) {
         lpg_envelope_.Trigger();
@@ -164,8 +183,8 @@ void Voice::Render(
   p.chord_set_option = patch.chord_set_option;
 
   bool rising_edge = trigger_state_ && !previous_trigger_state;
-  float note = (modulations.note + previous_note_) * 0.5f;
-  previous_note_ = modulations.note;
+  float note = (modulations_note + previous_note_) * 0.5f;
+  previous_note_ = modulations_note;
   const PostProcessingSettings& pp_s = e->post_processing_settings;
 
   if (modulations.trigger_patched) {
@@ -180,7 +199,7 @@ void Voice::Render(
 
   decay_envelope_.Process(short_decay * 2.0f);
 
-  float compressed_level = 1.3f * modulation_level / (0.3f + fabsf(modulation_level));
+  float compressed_level = 1.3f * modulations_level / (0.3f + fabsf(modulations_level));
   CONSTRAIN(compressed_level, 0.0f, 1.0f);
   p.accent = level_patched ? compressed_level : 0.8f;
 
@@ -188,7 +207,7 @@ void Voice::Render(
 
   // Actual synthesis parameters.
   
-  p.harmonics = patch.harmonics + modulations.harmonics;
+  p.harmonics = patch.harmonics + modulations_harmonics;
   CONSTRAIN(p.harmonics, 0.0f, 1.0f);
 
   float internal_envelope_amplitude = 1.0f;
@@ -229,7 +248,7 @@ void Voice::Render(
       patch.timbre,
       patch.timbre_modulation_amount,
       modulations.timbre_patched,
-      modulations.timbre,
+      modulations_timbre,
       use_internal_envelope,
       internal_envelope_amplitude_timbre * decay_envelope_.value(),
       0.0f,
@@ -240,7 +259,7 @@ void Voice::Render(
       patch.morph,
       patch.morph_modulation_amount,
       modulations.morph_patched,
-      modulations.morph,
+      modulations_morph,
       use_internal_envelope,
       internal_envelope_amplitude * decay_envelope_.value(),
       0.0f,

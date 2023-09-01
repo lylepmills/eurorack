@@ -138,7 +138,7 @@ struct Patch {
 
   float freqlock_param;
   // 0 - manual octave switching
-  // 1 - manual control of lpg decay (without button press)
+  // 1 - manual control of decay (without button press)
   // 2 - manual aux crossfade
   uint8_t locked_frequency_pot_option;
   // 0 - cv control of model (original)
@@ -146,7 +146,7 @@ struct Patch {
   // 2 - cv control of aux crossfade
   uint8_t model_cv_option;
   // 0 - cv control of level (original)
-  // 1 - cv control of lpg decay
+  // 1 - cv control of decay
   uint8_t level_cv_option;
   // 0 - regular aux model
   // 1 - square wave
@@ -160,6 +160,10 @@ struct Patch {
   // 1 - jon butler chord set
   // 2 - joe mcmullen chord set
   uint8_t chord_set_option;
+  // 0 - don't hold params on trigger (original)
+  // 1 - hold timbre, morph, harmo, level, v/oct cv modulations on trigger (not fm)
+  //     (note model is already held on trigger by default)
+  uint8_t hold_on_trigger_option;
 };
 
 struct Modulations {
@@ -264,6 +268,12 @@ class Voice {
   
   float previous_note_;
   bool trigger_state_;
+
+  float held_timbre_;
+  float held_morph_;
+  float held_harmo_;
+  float held_level_;
+  float held_note_;
   
   DecayEnvelope decay_envelope_;
   LPGEnvelope lpg_envelope_;

@@ -49,6 +49,7 @@ bool Settings::Init() {
   CONSTRAIN(state_.aux_subosc_wave_option, 0, 2);
   CONSTRAIN(state_.aux_subosc_octave_option, 0, 2);
   CONSTRAIN(state_.chord_set_option, 0, 2);
+  CONSTRAIN(state_.hold_on_trigger_option, 0, 1);
   CONSTRAIN(state_.navigation_option, 0, 1);
   CONSTRAIN(state_.locked_octave, 0, 8);
 
@@ -105,6 +106,7 @@ void Settings::InitState() {
   state_.aux_subosc_octave_option = 0;
   state_.aux_subosc_wave_option = 0;
   state_.chord_set_option = 0;
+  state_.hold_on_trigger_option = 0;
   state_.navigation_option = 0;
 
   // alt firmware other
