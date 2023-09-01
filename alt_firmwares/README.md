@@ -4,35 +4,35 @@
 
 [download](https://github.com/lylepmills/eurorack/raw/master/alt_firmwares/plaits_freqlock.wav)
 
-*update 3/27/22: versions of this firmware downloaded prior to 3/27/22 are known to have had some issues with hitting CPU limits of the module, producing digital aliasing distortions in certain modes with certain combinations of settings. updating to the latest version of the firmware is recommended to avoid running into those problems.*
+*update 9/1/23: this is a new version of the alt firmware built on top of version 1.2 of the official firmware, with some new options and a new interaction model for frequency locking*
 
-The Plaits alt firmware extends the base firmware with several additional features. Unlike earlier versions of this alt firmware, you can now use any combination of the below features that you want with this single firmware, and you can reconfigure those options with a built-in menu.
+The Plaits alt firmware extends the base firmware with several additional features accessed through a menu. Originally, this alt firmware was created primarily around the idea of allowing frequency locking. However in revision 1.2 of the official firmware, Émelie incorporated the frequency locking idea elegantly into her official firmware with the addition of the octave-switching mode to the frequency range selector. As such it was no longer necessary to use this alt firmware to get frequency locking behavior.
+
+However my alt firmware had several other features that I felt were still worthwhile, so in August 2023 I revised it to use Émelie's approach to frequency locking as well as incorporating the rest of the updates from revision 1.2, while retaining some of the other features I had added, and adding a couple of new ones as well.
 
 ## Features of this alt firmware
 
-- **Frequency locking.** It is now possible to lock the frequency of the oscillator, so you can avoid accidentally detuning it once you've tuned it where you want it. When locked, the main frequency knob will no longer affect the frequency of the oscillator, allowing you to keep the module in tune more easily (the V/Oct and FM inputs still work as normal, as does the FM attenuverter).
-- **Frequency knob alt functionality.** When frequency is locked, the frequency knob can control something else. This alt firmware supports three options for what it controls. It can become either control a crossfade between the main and aux synthesis models on the aux output, or do transposition by octaves, or fifths.
+- **Frequency knob alt functionality.** When frequency is locked (i.e. when the frequency range selector is set to octaves mode), the frequency knob can control something else besides octaves. This alt firmware supports two additional options for what it can control. It can either control the decay of the internal envelope (making it adjustable without having to displace the morph knob), or control a crossfade between the main and aux synthesis models on the aux output.
 - **MODEL input alt functionality.** The MODEL input can be repurposed to control aux crossfade or LPG colour with CV. The aux crossfade option can be used with or without the frequency knob alt functionality controlling aux crossfade.
 - **LEVEL input alt functionality.** The LEVEL input can be repurposed to control the decay of the internal envelope with CV. This will only take effect if TRIG is patched, otherwise LEVEL will control the internal VCA/VCFA as it normally would.
 - **Suboscillator.** The aux model can be replaced by a square or sine wave suboscillator on the aux output. The square wave can be used to sync another oscillator with a sync input (like Tides), an oscilloscope, etc. This is fully compatible with aux crossfading (either via the frequency knob alt functionality, or via the MODEL cv input alt functionality), meaning you can blend the main model with a square or sine wave. There are also options for the suboscillator frequency to be either the same frequency as the main model, -1 octave, or -2 octaves.
 - **Alternate chord table.** For the chord oscillator mode (the 7th green mode), you can switch between the original table of 11 chords, or alternative chord tables by Jon Butler (17 chords) or Joe McMullen (18 chords). See below for more details on each chord table.
-
-## How to toggle frequency locking
-To lock or unlock frequency, briefly hold both buttons at once until all the lights flash up either green or red. Green means that frequency is unlocked, and red means it is locked.
+- **Hold parameters on trigger.** - It is possible to internally sample and hold the CV inputs for Timbre, Morph, Harmonics, Level and V/Oct whenever a trigger is received.
+- **More convenient model switching.** - In revision 1.2 of the official firmware, an alternate mode for switching models was introduced. This mode was the only way of accessing the third bank of models. My assumption is that anyone using this alt firmware wants to be able to freely access all three banks of synthesis models, so in this alternate firmware, that mode is now the default. Additionally there is a new navigation mode (an alternative to the alternative), whereby the left button switches between models within a bank and the right button switches banks.
 
 ## How to access calibration
-The calibration process is the same as the base firmware, except you must long press (about 5 seconds) both buttons *starting with the one on the right* to access the calibration mode.
+Calibration has been removed from the alt firmware to save space. If you need to recalibrate, simply reinstall the official firmware first. Your calibration settings will be preserved if you then switch back to this alt firmware.
 
-## How to change the other options
-To access the menu of options for the various alt functionalities, long press (about 5 seconds) both buttons *starting with the one on the left*. To exit the menu, press both buttons at once.
+## How to access the menu / change options
+To access the menu of options for the various alt functionalities, simply short-press both buttons at once. To exit the menu, again press both buttons at once.
 
 The menu is represented by lights for each option. You can navigate between the menu items by pressing the left button, and you can switch the option for that item by pressing the right button. The current settings are represented by the color of the LED lights. In order, they represent the following
 
-### First light - Frequency knob alt functionality (when frequency is locked)
-Green means aux crossfade, red means transposition by octaves, yellow means transposition by fifths
+### First light - Frequency knob alt functionality (when frequency is locked i.e. in octave-switching mode)
+Green means octaves (as in the stock firmware), red means controlling decay, yellow means controlling aux crossfade
 
 ### Second light - MODEL input alt functionality
-Green means model (as in the stock firmware), red means aux crossfade, yellow means LPG colour (VCFA->VCA)
+Green means model (as in the stock firmware), red means LPG colour (VCFA->VCA), yellow means aux crossfade
 
 ### Third light - LEVEL input alt functionality
 Green means level (as in the stock firmware), red means decay of the internal envelope (if and only if TRIG is patched)
@@ -100,14 +100,14 @@ With this table, instead of Frequency defining the root and Harmonics defining c
 - I maj7sus4/vii
 - V 7sus4
 
+### Seventh light - Hold params on trigger
+Green means don't hold params upon receiving a trigger (as in the stock firmware), red means internally sample and hold the CV inputs for Timbre, Morph, Harmonics, Level and V/Oct whenever a trigger is received.
+
+### Eighth light - Model navigation mode
+Green means the "alternative" navigation mode from the stock firmware, whereby the left button goes backward and the right button goes forward through the set of all models. Red means the "alternative alternative" navigation mode, where the left button cycles through models in a given bank, and the right button switches banks. Note the standard navigation mode from the official firmware is not available, since it doesn't allow access to the third bank and is therefore not very useful in my view.
+
 ## Technical notes
-The original Plaits firmware makes the most of its processor, and runs quite close to that processor's limits in terms of both the amount of code it can store, and the CPU load of that code (at least, in certain modes). As such, to pack in everything this alt firmware can do, several minor adjustments have been made to the behavior of the base firmware for efficiency reasons.
-
-- The size of the sine lookup-table (used in several modes) has been halved (max error 2e-5, see [this comment from Émilie](https://forum.mutable-instruments.net/t/unified-plaits-alt-firmware/19530/7) for more info)
-- The internal sample rate for the audio path has been dropped from 48K to 44.1K
-- The crossfading behavior between the string synth and the wavetable synth in chord mode right around 12 o'clock on the morph knob has been tweaked such that each note fades completely out and then back in again, one note at a time (instead of crossfading between the two synths)
-
-When it comes to CPU usage, various things contribute, e.g. using the suboscillator adds a bit of CPU, using the trig input + internal envelopes adds a bit of CPU, aux crossfading adds a bit of CPU, etc. So far I have been able to make enough performance tweaks to address all combinations of settings which can lead to CPU overload *that I know of*. In other words, at time of writing (3/27/22), any combination of settings *should* work fine without hitting CPU limits, but fair warning: that isn't a guarantee that no more such scenarios will be found in the future.
+The original Plaits firmware makes the most of its processor, and runs quite close to that processor's limits in terms of both the amount of code it can store, and the CPU load of that code (at least, in certain modes). Unlike earlier versions of this firmware, various efficiency improvements have been found that made the compromises I had to use in those earlier versions unnecessary. However it's worth nothing that it's always possible there is some combination of settings I haven't discovered yet that will lead to CPU overload, which can lead to harsh aliasing sounds coming from the module. If you encounter such a situation, please take note of the settings you are using, the model you are using, and where you have all the knobs positioned, and send me a report (ideally with video), and I will try to make adjustments to avoid those kinds of problems going forward.
 
 # Rings
 
