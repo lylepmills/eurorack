@@ -1,6 +1,6 @@
 # Plaits
 
-[discussion](https://forum.mutable-instruments.net/t/unified-plaits-alt-firmware/19530)
+[discussion](https://llllllll.co/t/mutable-instruments-alt-firmwares/63936)
 
 [download](https://github.com/lylepmills/eurorack/raw/master/alt_firmwares/plaits_20230901.wav)
 
@@ -111,7 +111,7 @@ The original Plaits firmware makes the most of its processor, and runs quite clo
 
 # Rings
 
-[discussion](https://forum.mutable-instruments.net/t/mini-elements-alt-firmware-for-rings/19768)
+[discussion](https://llllllll.co/t/mutable-instruments-alt-firmwares/63936)
 
 [download](https://github.com/lylepmills/eurorack/raw/master/alt_firmwares/rings_mini_elements.wav)
 
