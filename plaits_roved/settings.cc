@@ -39,40 +39,24 @@ using namespace std;
 bool Settings::Init() {
   InitPersistentData();
   InitState();
-
+  
   bool success = chunk_storage_.Init(&persistent_data_, &state_);
-
-  // If the settings id changes, what is stored for state cannot
-  // necessarily be interpreted, so we reset the state.
-  if (persistent_data_.settings_id != kSettingsId) {
-    InitState();
-    SaveState();
-    persistent_data_.settings_id = kSettingsId;
-    SavePersistentData();
-  }
-
-  CONSTRAIN(state_.engine, 0, 15);
+  
+  CONSTRAIN(state_.engine, 0, 23);
+  CONSTRAIN(state_.locked_frequency_pot_option, 0, 2);
+  CONSTRAIN(state_.model_cv_option, 0, 2);
+  CONSTRAIN(state_.level_cv_option, 0, 1);
+  CONSTRAIN(state_.aux_subosc_wave_option, 0, 2);
+  CONSTRAIN(state_.aux_subosc_octave_option, 0, 2);
+  CONSTRAIN(state_.chord_set_option, 0, 2);
+  CONSTRAIN(state_.hold_on_trigger_option, 0, 1);
+  CONSTRAIN(state_.navigation_option, 0, 1);
+  CONSTRAIN(state_.locked_octave, 0, 8);
 
   return success;
 }
 
-void Settings::InitState() {
-  state_.engine = 0;
-  state_.lpg_colour = 0;
-  state_.decay = 128;
-  state_.octave = 255;
-  state_.color_blind = 0;
-  state_.freqlock_param = 0;
-  state_.locked_frequency_pot_option = 0;
-  state_.model_cv_option = 0;
-  state_.level_cv_option = 0;
-  state_.aux_output_option = 0;
-  state_.chord_set_option = 0;
-  state_.frequency_pot_main_parameter = 1000.0f;
-}
-
 void Settings::InitPersistentData() {
-  persistent_data_.settings_id = kSettingsId;
   ChannelCalibrationData* c = persistent_data_.channel_calibration_data;
   c[CV_ADC_CHANNEL_MODEL].offset = 0.025f;
   c[CV_ADC_CHANNEL_MODEL].scale = -1.03f;
@@ -105,6 +89,28 @@ void Settings::InitPersistentData() {
   c[CV_ADC_CHANNEL_LEVEL].offset = 0.49f;
   c[CV_ADC_CHANNEL_LEVEL].scale = -0.6f;
   c[CV_ADC_CHANNEL_LEVEL].normalization_detection_threshold = 21403;
+}
+
+void Settings::InitState() {
+  // base firmware
+  state_.engine = 8;
+  state_.lpg_colour = 0;
+  state_.decay = 128;
+  state_.octave = 255;
+  state_.fine_tune = 128;
+
+  // alt firmware options
+  state_.locked_frequency_pot_option = 0;
+  state_.model_cv_option = 0;
+  state_.level_cv_option = 0;
+  state_.aux_subosc_octave_option = 0;
+  state_.aux_subosc_wave_option = 0;
+  state_.chord_set_option = 0;
+  state_.hold_on_trigger_option = 0;
+  state_.navigation_option = 0;
+
+  // alt firmware other
+  state_.locked_octave = 4;
 }
 
 void Settings::SavePersistentData() {

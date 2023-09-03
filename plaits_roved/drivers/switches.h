@@ -38,8 +38,6 @@ namespace plaits {
 enum Switch {
   SWITCH_ROW_1,
   SWITCH_ROW_2,
-  SWITCH_ROW_3,
-  SWITCH_ROW_4,
   SWITCH_LAST
 };
   
@@ -68,15 +66,10 @@ class Switches {
       return !GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_7);
     } else if (s == SWITCH_ROW_2) {
       return !GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_6);
-    } else if (s == SWITCH_ROW_3) {
-      return !GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_5);
-    } else if (s == SWITCH_ROW_4) {
-      return !GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_4);
     } else {
       return false;
     }
   }
-  
   
  private:
   uint8_t switch_state_[SWITCH_LAST];

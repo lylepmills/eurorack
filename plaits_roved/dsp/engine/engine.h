@@ -46,17 +46,19 @@ enum TriggerState {
   TRIGGER_LOW = 0,
   TRIGGER_RISING_EDGE = 1,
   TRIGGER_UNPATCHED = 2,
-  TRIGGER_UNPATCHED_AUTOTRIGGED = 3,
+  TRIGGER_HIGH = 4,
 };
 
 struct EngineParameters {
-  TriggerState trigger;
+  int trigger;
   float note;
   float timbre;
   float morph;
   float harmonics;
   float accent;
-  uint8_t custom_options;
+
+  // alt firmware
+  uint8_t chord_set_option;
 };
 
 struct PostProcessingSettings {
@@ -82,6 +84,7 @@ class Engine {
   ~Engine() { }
   virtual void Init(stmlib::BufferAllocator* allocator) = 0;
   virtual void Reset() = 0;
+  virtual void LoadUserData(const uint8_t* user_data) = 0;
   virtual void Render(
       const EngineParameters& parameters,
       float* out,
