@@ -33,6 +33,7 @@
 #include "stmlib/dsp/parameter_interpolator.h"
 #include "stmlib/utils/dsp.h"
 
+#include "plaits/dsp/oscillator/sine_oscillator.h"
 #include "plaits/resources.h"
 
 namespace plaits {
@@ -123,11 +124,11 @@ void WaveshapingEngine::Render(
     float mix = x + (y - x) * shape_fractional;
     float index = mix * wf_gain_modulation.Next() + 0.5f;
     float fold = InterpolateHermite(
-        lut_fold + 1, index, 256.0f);
+        lut_fold + 1, index, 512.0f);
     float fold_2 = -InterpolateHermite(
-        lut_fold_2 + 1, index, 256.0f);
+        lut_fold_2 + 1, index, 512.0f);
     
-    float sine = InterpolateWrap(lut_sine, aux[i] * 0.25f + 0.5f, kSineWavetableSize);
+    float sine = Sine(aux[i] * 0.25f + 0.5f);
     out[i] = fold;
     aux[i] = sine + (fold_2 - sine) * overtone_gain_modulation.Next();
   }

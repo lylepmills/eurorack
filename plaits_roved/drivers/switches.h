@@ -77,7 +77,6 @@ class Switches {
     }
   }
   
-  
  private:
   uint8_t switch_state_[SWITCH_LAST];
   

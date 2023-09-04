@@ -35,10 +35,6 @@
 #include "plaits/drivers/cv_adc.h"
 
 namespace plaits {
-
-// This number should be randomly generated in between releases of this firmware that
-// modify the contents of the PersistentData/State structs in a non-backwards-compatible way.
-const uint32_t kSettingsId = 414344649;
   
 struct ChannelCalibrationData {
   float offset;
@@ -51,25 +47,33 @@ struct ChannelCalibrationData {
 
 struct PersistentData {
   ChannelCalibrationData channel_calibration_data[CV_ADC_CHANNEL_LAST];
-  uint32_t settings_id;
-  uint8_t padding[12];
+  uint8_t padding[16];
   enum { tag = 0x494C4143 };  // CALI
 };
 
 struct State {
-  float frequency_pot_main_parameter;
+  // base firmware
   uint8_t engine;
   uint8_t lpg_colour;
   uint8_t decay;
   uint8_t octave;
-  uint8_t color_blind;
-  uint8_t freqlock_param;
+  uint8_t fine_tune;
+
+  // alt firmware options
   uint8_t locked_frequency_pot_option;
   uint8_t model_cv_option;
   uint8_t level_cv_option;
-  uint8_t aux_output_option;
+  uint8_t aux_subosc_wave_option;
+  uint8_t aux_subosc_octave_option;
   uint8_t chord_set_option;
-  uint8_t padding[1];
+  uint8_t hold_on_trigger_option;
+  uint8_t navigation_option;
+
+  // alt firmware other
+  uint8_t locked_octave;
+
+  uint8_t padding[2];
+
   enum { tag = 0x54415453 };  // STAT
 };
 
@@ -107,7 +111,7 @@ class Settings {
   
   stmlib::ChunkStorage<
       0x08004000,
-      0x08008000,
+      0x08007000,
       PersistentData,
       State> chunk_storage_;
   

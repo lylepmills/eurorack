@@ -42,9 +42,9 @@ struct SwitchDefinition {
 const SwitchDefinition switch_definitions[] = {
   { GPIOB, GPIO_Pin_7 },
   { GPIOB, GPIO_Pin_6 },
-  { GPIOB, GPIO_Pin_5 },  
+  { GPIOB, GPIO_Pin_5 },
   { GPIOB, GPIO_Pin_4 },
-}; 
+};
 
 void Switches::Init() {
   RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOB, ENABLE);
