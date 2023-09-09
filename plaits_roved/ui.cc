@@ -97,6 +97,7 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
   
   active_engine_ = 0;
   pitch_lp_ = 0.0f;
+  pitch_lp_calibration_ = 0.0f;
   data_transfer_progress_ = 0.0f;
 }
 
@@ -236,12 +237,32 @@ void Ui::UpdateLEDs() {
       }
       break;
 
+    case UI_MODE_CALIBRATION_C1:
+      if (pwm_counter < triangle) {
+        leds_.set(0, LED_COLOR_GREEN);
+      }
+      break;
+
+    case UI_MODE_CALIBRATION_C3:
+      if (pwm_counter < triangle) {
+        leds_.set(0, LED_COLOR_YELLOW);
+      }
+      break;
+
     case UI_MODE_FREQUENCY_LOCK:
       for (int i = 0; i < kNumLEDs; ++i) {
         if (pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].locked()) {
           leds_.set(i, LED_COLOR_RED);
         } else {
           leds_.set(i, LED_COLOR_GREEN);
+        }
+      }
+      break;
+
+    case UI_MODE_ERROR:
+      if (pwm_counter < triangle) {
+        for (int i = 0; i < kNumLEDs; ++i) {
+          leds_.set(i, LED_COLOR_RED);
         }
       }
       break;
@@ -286,29 +307,7 @@ void Ui::UpdateLEDs() {
         leds_.set(i, color);
       }
       break;
-    
-    case UI_MODE_ERROR:
-      if (pwm_counter < triangle) {
-        for (int i = 0; i < kNumLEDs; ++i) {
-          leds_.set(i, LED_COLOR_RED);
-        }
-      }
-      break;
 
-    case UI_MODE_TEST:
-      {
-        int color = (pwm_counter_ >> 10) % 3;
-        for (int i = 0; i < kNumLEDs; ++i) {
-          leds_.set(
-              i, pwm_counter > ((triangle + (i * 2)) & 15)
-                  ? (color == 0
-                     ? LED_COLOR_GREEN
-                      : (color == 1 ? LED_COLOR_YELLOW : LED_COLOR_RED))
-                  : LED_COLOR_OFF);
-        }
-      }
-      break;
-      
   }
   leds_.Write();
 }
@@ -398,6 +397,14 @@ void Ui::ReadSwitches() {
         if (pots_[POTS_ADC_CHANNEL_HARMONICS_POT].editing_hidden_parameter()) {
           mode_ = UI_MODE_DISPLAY_OCTAVE;
         }
+
+        // Long, double press: enter calibration mode.
+        if (press_time_[2] >= kLongPressTime &&
+            press_time_[3] >= kLongPressTime) {
+          press_time_[2] = press_time_[3] = 0;
+          RealignPots();
+          StartCalibration();
+        }
         
         // Long press or actually editing any hidden parameter: display value
         // of hidden parameters.
@@ -434,6 +441,28 @@ void Ui::ReadSwitches() {
         }
       }
       break;
+
+    case UI_MODE_CALIBRATION_C1:
+      for (int i = 0; i < SWITCH_LAST; ++i) {
+        if (switches_.just_pressed(Switch(i))) {
+          press_time_[i] = 0;
+          ignore_release_[i] = true;
+          CalibrateC1();
+          break;
+        }
+      }
+      break;
+
+    case UI_MODE_CALIBRATION_C3:
+      for (int i = 0; i < SWITCH_LAST; ++i) {
+        if (switches_.just_pressed(Switch(i))) {
+          press_time_[i] = 0;
+          ignore_release_[i] = true;
+          CalibrateC3();
+          break;
+        }
+      }
+      break;
     
     case UI_MODE_DISPLAY_DATA_TRANSFER_PROGRESS:
       break;
@@ -447,6 +476,16 @@ void Ui::ReadSwitches() {
         }
       }
 
+      break;
+
+    case UI_MODE_ERROR:
+      for (int i = 0; i < SWITCH_LAST; ++i) {
+        if (switches_.just_pressed(Switch(i))) {
+          press_time_[i] = 0;
+          ignore_release_[i] = true;
+          mode_ = UI_MODE_NORMAL;
+        }
+      }
       break;
 
     case UI_MODE_CHANGE_OPTIONS_PRE_RELEASE:
@@ -496,17 +535,6 @@ void Ui::ReadSwitches() {
         } else if (option_index_ == 6) {
           patch_->hold_on_trigger_option += delta + kNumHoldOnTriggerOptions;
           patch_->hold_on_trigger_option %= kNumHoldOnTriggerOptions;
-        }
-      }
-      break;
-
-    case UI_MODE_TEST:
-    case UI_MODE_ERROR:
-      for (int i = 0; i < SWITCH_LAST; ++i) {
-        if (switches_.just_pressed(Switch(i))) {
-          press_time_[i] = 0;
-          ignore_release_[i] = true;
-          mode_ = UI_MODE_NORMAL;
         }
       }
       break;
@@ -565,6 +593,8 @@ void Ui::Poll() {
   }
   
   ONE_POLE(pitch_lp_, modulations_->note, 0.7f);
+  ONE_POLE(
+      pitch_lp_calibration_, cv_adc_.float_value(CV_ADC_CHANNEL_V_OCT), 0.1f);
   modulations_->note = pitch_lp_;
   
   ui_task_ = (ui_task_ + 1) % 4;
@@ -598,6 +628,44 @@ void Ui::Poll() {
     const float fine = transposition_ * 7.0f;
     patch_->note = fine + static_cast<float>(octave) * 12.0f;
   }
+}
+
+void Ui::StartCalibration() {
+  mode_ = UI_MODE_CALIBRATION_C1;
+  normalization_probe_.Disable();
+}
+
+void Ui::CalibrateC1() {
+  // Acquire offsets for all channels.
+  for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) {
+    if (i != CV_ADC_CHANNEL_V_OCT) {
+      ChannelCalibrationData* c = settings_->mutable_calibration_data(i);
+      c->offset = -cv_adc_.float_value(CvAdcChannel(i)) * c->scale;
+    }
+  }
+  cv_c1_ = pitch_lp_calibration_;
+  mode_ = UI_MODE_CALIBRATION_C3;
+}
+
+void Ui::CalibrateC3() {
+  // (-33/100.0*1 + -33/140.0 * -10.0) / 3.3 * 2.0 - 1 = 0.228
+  float c1 = cv_c1_;
+
+  // (-33/100.0*1 + -33/140.0 * -10.0) / 3.3 * 2.0 - 1 = -0.171
+  float c3 = pitch_lp_calibration_;
+  float delta = c3 - c1;
+
+  if (delta > -0.6f && delta < -0.2f) {
+    ChannelCalibrationData* c = settings_->mutable_calibration_data(
+        CV_ADC_CHANNEL_V_OCT);
+    c->scale = 24.0f / delta;
+    c->offset = 12.0f - c->scale * c1;
+    settings_->SavePersistentData();
+    mode_ = UI_MODE_NORMAL;
+  } else {
+    mode_ = UI_MODE_ERROR;
+  }
+  normalization_probe_.Init();
 }
 
 }  // namespace plaits
