@@ -62,14 +62,10 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
   ui_task_ = 0;
   option_index_ = 0;
   mode_ = UI_MODE_NORMAL;
-  
-  octave_quantizer_.Init(9, 0.01f, false);
-  
-  LoadState();
-  
+
   // Bind pots to parameters.
   pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].Init(
-      &transposition_, &fine_tune_, 0.005f, 2.0f, -1.0f);
+      &transposition_, &patch->freqlock_param, 0.005f, 2.0f, -1.0f);
   pots_[POTS_ADC_CHANNEL_HARMONICS_POT].Init(
       &patch->harmonics, &octave_, 0.005f, 1.0f, 0.0f);
   pots_[POTS_ADC_CHANNEL_TIMBRE_POT].Init(
@@ -82,6 +78,8 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
       &patch->frequency_modulation_amount, NULL, 0.005f, 2.0f, -1.0f);
   pots_[POTS_ADC_CHANNEL_MORPH_ATTENUVERTER].Init(
       &patch->morph_modulation_amount, NULL, 0.005f, 2.0f, -1.0f);
+
+  LoadState();
   
   // Keep track of the agreement between the random sequence sent to the 
   // switch and the value read by the ADC.
@@ -99,9 +97,8 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
   
   active_engine_ = 0;
   pitch_lp_ = 0.0f;
+  pitch_lp_calibration_ = 0.0f;
   data_transfer_progress_ = 0.0f;
-
-  locked_octave_ = 4;
 }
 
 void Ui::LoadState() {
@@ -110,9 +107,12 @@ void Ui::LoadState() {
   patch_->lpg_colour = static_cast<float>(state.lpg_colour) / 256.0f;
   patch_->decay = static_cast<float>(state.decay) / 256.0f;
   octave_ = static_cast<float>(state.octave) / 256.0f;
-  fine_tune_ = static_cast<float>(state.fine_tune) / 256.0f;
 
   // alt firmware
+  if (state.frequency_locked) {
+    pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].LockMainParameter(state.frequency_pot_main_parameter);
+  }
+  patch_->freqlock_param = static_cast<float>(state.freqlock_param) / 256.0f;
   patch_->locked_frequency_pot_option = state.locked_frequency_pot_option;
   patch_->model_cv_option = state.model_cv_option;
   patch_->level_cv_option = state.level_cv_option;
@@ -120,7 +120,6 @@ void Ui::LoadState() {
   patch_->aux_subosc_octave_option = state.aux_subosc_octave_option;
   patch_->chord_set_option = state.chord_set_option;
   patch_->hold_on_trigger_option = state.hold_on_trigger_option;
-  locked_octave_ = state.locked_octave;
 }
 
 void Ui::SaveState() {
@@ -129,9 +128,11 @@ void Ui::SaveState() {
   state->lpg_colour = static_cast<uint8_t>(patch_->lpg_colour * 256.0f);
   state->decay = static_cast<uint8_t>(patch_->decay * 256.0f);
   state->octave = static_cast<uint8_t>(octave_ * 256.0f);
-  state->fine_tune = static_cast<uint8_t>(fine_tune_ * 256.0f);
 
   // alt firmware
+  state->frequency_pot_main_parameter = pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].main_parameter();
+  state->frequency_locked = pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].locked();
+  state->freqlock_param = static_cast<uint8_t>(patch_->freqlock_param * 256.0f);
   state->locked_frequency_pot_option = patch_->locked_frequency_pot_option;
   state->model_cv_option = patch_->model_cv_option;
   state->level_cv_option = patch_->level_cv_option;
@@ -139,9 +140,6 @@ void Ui::SaveState() {
   state->aux_subosc_octave_option = patch_->aux_subosc_octave_option;
   state->chord_set_option = patch_->chord_set_option;
   state->hold_on_trigger_option = patch_->hold_on_trigger_option;
-  // Only one mode in RO'VED
-  state->navigation_option = 0;
-  state->locked_octave = locked_octave_;
 
   settings_->SaveState();
 }
@@ -224,21 +222,47 @@ void Ui::UpdateLEDs() {
     
     case UI_MODE_DISPLAY_OCTAVE:
       {
-        int octave = static_cast<float>(octave_ * 11.0f);
+        int octave = static_cast<float>(octave_ * 10.0f);
         for (int i = 0; i < 8; ++i) {
           LedColor color = LED_COLOR_OFF;
           if (octave == 0) {
             color = i == (triangle >> 1) ? LED_COLOR_OFF : LED_COLOR_YELLOW;
-          } else if (octave == 10) {
-            color = LED_COLOR_YELLOW;
           } else if (octave == 9) {
-            color = (i & 1) == ((triangle >> 3) & 1)
-                ? LED_COLOR_OFF
-                : LED_COLOR_YELLOW;
+            color = LED_COLOR_YELLOW;
           } else {
             color = (octave - 1) == i ? LED_COLOR_YELLOW : LED_COLOR_OFF;
           }
           leds_.set(i, color);
+        }
+      }
+      break;
+
+    case UI_MODE_CALIBRATION_C1:
+      if (pwm_counter < triangle) {
+        leds_.set(0, LED_COLOR_GREEN);
+      }
+      break;
+
+    case UI_MODE_CALIBRATION_C3:
+      if (pwm_counter < triangle) {
+        leds_.set(0, LED_COLOR_YELLOW);
+      }
+      break;
+
+    case UI_MODE_FREQUENCY_LOCK:
+      for (int i = 0; i < kNumLEDs; ++i) {
+        if (pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].locked()) {
+          leds_.set(i, LED_COLOR_RED);
+        } else {
+          leds_.set(i, LED_COLOR_GREEN);
+        }
+      }
+      break;
+
+    case UI_MODE_ERROR:
+      if (pwm_counter < triangle) {
+        for (int i = 0; i < kNumLEDs; ++i) {
+          leds_.set(i, LED_COLOR_RED);
         }
       }
       break;
@@ -283,29 +307,7 @@ void Ui::UpdateLEDs() {
         leds_.set(i, color);
       }
       break;
-    
-    case UI_MODE_ERROR:
-      if (pwm_counter < triangle) {
-        for (int i = 0; i < kNumLEDs; ++i) {
-          leds_.set(i, LED_COLOR_RED);
-        }
-      }
-      break;
 
-    case UI_MODE_TEST:
-      {
-        int color = (pwm_counter_ >> 10) % 3;
-        for (int i = 0; i < kNumLEDs; ++i) {
-          leds_.set(
-              i, pwm_counter > ((triangle + (i * 2)) & 15)
-                  ? (color == 0
-                     ? LED_COLOR_GREEN
-                      : (color == 1 ? LED_COLOR_YELLOW : LED_COLOR_RED))
-                  : LED_COLOR_OFF);
-        }
-      }
-      break;
-      
   }
   leds_.Write();
 }
@@ -345,10 +347,23 @@ void Ui::ReadSwitches() {
   switch (mode_) {
     case UI_MODE_NORMAL:
       {
-        // Press both buttons to enter options menu
+        // Press the first and second buttons to enter options menu
         if ((switches_.just_pressed(Switch(0)) && switches_.pressed(Switch(3))) ||
             (switches_.just_pressed(Switch(3)) && switches_.pressed(Switch(0)))) {
           mode_ = UI_MODE_CHANGE_OPTIONS_PRE_RELEASE;
+          break;
+        }
+
+        // Press the second and third buttons to lock/unlock frequency
+        if ((switches_.just_pressed(Switch(0)) && switches_.pressed(Switch(1))) ||
+            (switches_.just_pressed(Switch(1)) && switches_.pressed(Switch(0)))) {
+          ignore_release_[0] = true;
+          ignore_release_[1] = true;
+          pots_[POTS_ADC_CHANNEL_TIMBRE_POT].Unlock();
+          pots_[POTS_ADC_CHANNEL_MORPH_POT].Unlock();
+          pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].ToggleLock();
+          mode_ = UI_MODE_FREQUENCY_LOCK;
+          SaveState();
           break;
         }
 
@@ -364,9 +379,6 @@ void Ui::ReadSwitches() {
           }
         }
 
-        if (switches_.just_pressed(Switch(3))) {
-          pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].Lock();
-        }
         if (switches_.just_pressed(Switch(0))) {
           pots_[POTS_ADC_CHANNEL_TIMBRE_POT].Lock();
         }
@@ -382,9 +394,16 @@ void Ui::ReadSwitches() {
           mode_ = UI_MODE_DISPLAY_ALTERNATE_PARAMETERS;
         }
         
-        if (pots_[POTS_ADC_CHANNEL_HARMONICS_POT].editing_hidden_parameter() ||
-            pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].editing_hidden_parameter()) {
+        if (pots_[POTS_ADC_CHANNEL_HARMONICS_POT].editing_hidden_parameter()) {
           mode_ = UI_MODE_DISPLAY_OCTAVE;
+        }
+
+        // Long, double press: enter calibration mode.
+        if (press_time_[2] >= kLongPressTime &&
+            press_time_[3] >= kLongPressTime) {
+          press_time_[2] = press_time_[3] = 0;
+          RealignPots();
+          StartCalibration();
         }
         
         // Long press or actually editing any hidden parameter: display value
@@ -393,7 +412,7 @@ void Ui::ReadSwitches() {
           press_time_[3] = press_time_[0] = press_time_[1] = press_time_[2] = 0;
           mode_ = UI_MODE_DISPLAY_ALTERNATE_PARAMETERS;
         }
-        if (press_time_[3] >= kLongPressTime || press_time_[0] >= kLongPressTime) {
+        if (press_time_[2] >= kLongPressTime) {
           press_time_[3] = press_time_[0] = press_time_[1] = press_time_[2] = 0;
           mode_ = UI_MODE_DISPLAY_OCTAVE;
         }
@@ -417,14 +436,56 @@ void Ui::ReadSwitches() {
           pots_[POTS_ADC_CHANNEL_TIMBRE_POT].Unlock();
           pots_[POTS_ADC_CHANNEL_MORPH_POT].Unlock();
           pots_[POTS_ADC_CHANNEL_HARMONICS_POT].Unlock();
-          pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].Unlock();
           press_time_[i] = 0;
           mode_ = UI_MODE_NORMAL;
         }
       }
       break;
+
+    case UI_MODE_CALIBRATION_C1:
+      for (int i = 0; i < SWITCH_LAST; ++i) {
+        if (switches_.just_pressed(Switch(i))) {
+          press_time_[i] = 0;
+          ignore_release_[i] = true;
+          CalibrateC1();
+          break;
+        }
+      }
+      break;
+
+    case UI_MODE_CALIBRATION_C3:
+      for (int i = 0; i < SWITCH_LAST; ++i) {
+        if (switches_.just_pressed(Switch(i))) {
+          press_time_[i] = 0;
+          ignore_release_[i] = true;
+          CalibrateC3();
+          break;
+        }
+      }
+      break;
     
     case UI_MODE_DISPLAY_DATA_TRANSFER_PROGRESS:
+      break;
+
+    case UI_MODE_FREQUENCY_LOCK:
+      for (int i = 0; i < 2; ++i) {
+        if (switches_.released(Switch(i))) {
+          press_time_[0] = press_time_[1] = 0;
+          mode_ = UI_MODE_NORMAL;
+          break;
+        }
+      }
+
+      break;
+
+    case UI_MODE_ERROR:
+      for (int i = 0; i < SWITCH_LAST; ++i) {
+        if (switches_.just_pressed(Switch(i))) {
+          press_time_[i] = 0;
+          ignore_release_[i] = true;
+          mode_ = UI_MODE_NORMAL;
+        }
+      }
       break;
 
     case UI_MODE_CHANGE_OPTIONS_PRE_RELEASE:
@@ -433,7 +494,6 @@ void Ui::ReadSwitches() {
         pots_[POTS_ADC_CHANNEL_TIMBRE_POT].Unlock();
         pots_[POTS_ADC_CHANNEL_MORPH_POT].Unlock();
         pots_[POTS_ADC_CHANNEL_HARMONICS_POT].Unlock();
-        pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].Unlock();
         mode_ = UI_MODE_CHANGE_OPTIONS;
       }
       break;
@@ -455,9 +515,6 @@ void Ui::ReadSwitches() {
       if (switches_.released(Switch(1)) || switches_.released(Switch(2))) {
         int delta = switches_.released(Switch(1)) ? -1 : 1;
         if (option_index_ == 0) {
-          if (patch_->locked_frequency_pot_option == 0 && static_cast<int>(octave_ * 11.0f) == 9) {
-            locked_octave_ = static_cast<uint8_t>(octave_quantizer_.Process(0.5f * transposition_ + 0.5f));
-          }
           patch_->locked_frequency_pot_option += delta + kNumLockedFrequencyPotOptions;
           patch_->locked_frequency_pot_option %= kNumLockedFrequencyPotOptions;
         } else if (option_index_ == 1) {
@@ -478,17 +535,6 @@ void Ui::ReadSwitches() {
         } else if (option_index_ == 6) {
           patch_->hold_on_trigger_option += delta + kNumHoldOnTriggerOptions;
           patch_->hold_on_trigger_option %= kNumHoldOnTriggerOptions;
-        }
-      }
-      break;
-
-    case UI_MODE_TEST:
-    case UI_MODE_ERROR:
-      for (int i = 0; i < SWITCH_LAST; ++i) {
-        if (switches_.just_pressed(Switch(i))) {
-          press_time_[i] = 0;
-          ignore_release_[i] = true;
-          mode_ = UI_MODE_NORMAL;
         }
       }
       break;
@@ -547,6 +593,8 @@ void Ui::Poll() {
   }
   
   ONE_POLE(pitch_lp_, modulations_->note, 0.7f);
+  ONE_POLE(
+      pitch_lp_calibration_, cv_adc_.float_value(CV_ADC_CHANNEL_V_OCT), 0.1f);
   modulations_->note = pitch_lp_;
   
   ui_task_ = (ui_task_ + 1) % 4;
@@ -571,24 +619,53 @@ void Ui::Poll() {
   cv_adc_.Convert();
   pots_adc_.Convert();
 
-  const int octave = static_cast<int>(octave_ * 11.0f);
+  const int octave = static_cast<int>(octave_ * 10.0f);
   if (octave == 0) {
     patch_->note = -48.37f + transposition_ * 60.0f;
   } else if (octave == 9) {
-    patch_->note = 53.0f + fine_tune_ * 14.0f;
-    if (patch_->locked_frequency_pot_option == 0) {
-      patch_->note += 12.0f * static_cast<float>(octave_quantizer_.Process(0.5f * transposition_ + 0.5f) - 4);
-      patch_->freqlock_param = 0.0f;
-    } else {
-      patch_->note += 12.0f * static_cast<float>(locked_octave_ - 4);
-      patch_->freqlock_param = 0.5f * transposition_ + 0.5f;
-    }
-  } else if (octave == 10) {
     patch_->note = 60.0f + transposition_ * 48.0f;
   } else {
     const float fine = transposition_ * 7.0f;
     patch_->note = fine + static_cast<float>(octave) * 12.0f;
   }
+}
+
+void Ui::StartCalibration() {
+  mode_ = UI_MODE_CALIBRATION_C1;
+  normalization_probe_.Disable();
+}
+
+void Ui::CalibrateC1() {
+  // Acquire offsets for all channels.
+  for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) {
+    if (i != CV_ADC_CHANNEL_V_OCT) {
+      ChannelCalibrationData* c = settings_->mutable_calibration_data(i);
+      c->offset = -cv_adc_.float_value(CvAdcChannel(i)) * c->scale;
+    }
+  }
+  cv_c1_ = pitch_lp_calibration_;
+  mode_ = UI_MODE_CALIBRATION_C3;
+}
+
+void Ui::CalibrateC3() {
+  // (-33/100.0*1 + -33/140.0 * -10.0) / 3.3 * 2.0 - 1 = 0.228
+  float c1 = cv_c1_;
+
+  // (-33/100.0*1 + -33/140.0 * -10.0) / 3.3 * 2.0 - 1 = -0.171
+  float c3 = pitch_lp_calibration_;
+  float delta = c3 - c1;
+
+  if (delta > -0.6f && delta < -0.2f) {
+    ChannelCalibrationData* c = settings_->mutable_calibration_data(
+        CV_ADC_CHANNEL_V_OCT);
+    c->scale = 24.0f / delta;
+    c->offset = 12.0f - c->scale * c1;
+    settings_->SavePersistentData();
+    mode_ = UI_MODE_NORMAL;
+  } else {
+    mode_ = UI_MODE_ERROR;
+  }
+  normalization_probe_.Init();
 }
 
 }  // namespace plaits

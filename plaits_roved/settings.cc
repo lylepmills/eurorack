@@ -41,8 +41,10 @@ bool Settings::Init() {
   InitState();
   
   bool success = chunk_storage_.Init(&persistent_data_, &state_);
-  
+
   CONSTRAIN(state_.engine, 0, 23);
+  CONSTRAIN(state_.frequency_locked, 0, 1);
+  CONSTRAIN(state_.frequency_pot_main_parameter, -1.0f, +1.0f);
   CONSTRAIN(state_.locked_frequency_pot_option, 0, 2);
   CONSTRAIN(state_.model_cv_option, 0, 2);
   CONSTRAIN(state_.level_cv_option, 0, 1);
@@ -50,8 +52,6 @@ bool Settings::Init() {
   CONSTRAIN(state_.aux_subosc_octave_option, 0, 2);
   CONSTRAIN(state_.chord_set_option, 0, 2);
   CONSTRAIN(state_.hold_on_trigger_option, 0, 1);
-  CONSTRAIN(state_.navigation_option, 0, 1);
-  CONSTRAIN(state_.locked_octave, 0, 8);
 
   return success;
 }
@@ -97,9 +97,10 @@ void Settings::InitState() {
   state_.lpg_colour = 0;
   state_.decay = 128;
   state_.octave = 255;
-  state_.fine_tune = 128;
 
   // alt firmware options
+  state_.frequency_pot_main_parameter = 0.0f;
+  state_.freqlock_param = 0;
   state_.locked_frequency_pot_option = 0;
   state_.model_cv_option = 0;
   state_.level_cv_option = 0;
@@ -107,10 +108,6 @@ void Settings::InitState() {
   state_.aux_subosc_wave_option = 0;
   state_.chord_set_option = 0;
   state_.hold_on_trigger_option = 0;
-  state_.navigation_option = 0;
-
-  // alt firmware other
-  state_.locked_octave = 4;
 }
 
 void Settings::SavePersistentData() {

@@ -233,6 +233,11 @@ void Voice::Render(
       chiptune_engine_.set_envelope_shape(ChiptuneEngine::NO_ENVELOPE);
     }
   }
+
+  if (patch.locked_frequency_pot_option == 0) {
+    float octave_setting = floor(patch.freqlock_param * 6.999f) - 3.0f;
+    note += octave_setting * 12.0f;
+  }
   
   p.note = ApplyModulations(
       patch.note + note,

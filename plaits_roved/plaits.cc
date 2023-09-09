@@ -87,14 +87,6 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
       output->r = output->l = static_cast<int16_t>(cents * 4040.0f);
       ++output;
     }
-  } else if (ui.test_mode()) {
-    // 100 Hz ascending and descending ramps.
-    while (size--) {
-      output->l = ~test_ramp >> 16;
-      output->r = test_ramp >> 16;
-      test_ramp += 8947848;
-      ++output;
-    }
   } else {
     if (modulations.timbre_patched) {
       PacketDecoderState state = \
