@@ -51,6 +51,7 @@ enum UiMode {
   UI_MODE_NORMAL,
   UI_MODE_DISPLAY_ALTERNATE_PARAMETERS,
   UI_MODE_DISPLAY_OCTAVE,
+  UI_MODE_FREQUENCY_LOCK,
   UI_MODE_DISPLAY_DATA_TRANSFER_PROGRESS,
   UI_MODE_CHANGE_OPTIONS_PRE_RELEASE,
   UI_MODE_CHANGE_OPTIONS,
@@ -123,7 +124,6 @@ class Ui {
   int option_index_;
   
   float data_transfer_progress_;
-  float fine_tune_;
   float transposition_;
   float octave_;
   Patch* patch_;
@@ -143,14 +143,6 @@ class Ui {
   bool ignore_release_[SWITCH_LAST];
   
   int active_engine_;
-
-  // not to be confused with the octave setting (octave_) -
-  // when frequency is locked (by being in octave switch mode)
-  // but using manual aux crossfade, stores the last octave
-  // chosen by manually selection using the frequency pot
-  uint8_t locked_octave_;
-    
-  stmlib::HysteresisQuantizer2 octave_quantizer_;
   
   static const CvAdcChannel normalized_channels_[kNumNormalizedChannels];
     

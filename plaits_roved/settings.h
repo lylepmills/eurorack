@@ -52,14 +52,17 @@ struct PersistentData {
 };
 
 struct State {
+  float frequency_pot_main_parameter;
+
   // base firmware
   uint8_t engine;
   uint8_t lpg_colour;
   uint8_t decay;
   uint8_t octave;
-  uint8_t fine_tune;
 
   // alt firmware options
+  uint8_t frequency_locked;
+  uint8_t freqlock_param;
   uint8_t locked_frequency_pot_option;
   uint8_t model_cv_option;
   uint8_t level_cv_option;
@@ -67,12 +70,8 @@ struct State {
   uint8_t aux_subosc_octave_option;
   uint8_t chord_set_option;
   uint8_t hold_on_trigger_option;
-  uint8_t navigation_option;
 
-  // alt firmware other
-  uint8_t locked_octave;
-
-  uint8_t padding[2];
+  uint8_t padding[3];
 
   enum { tag = 0x54415453 };  // STAT
 };
