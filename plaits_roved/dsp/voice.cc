@@ -124,9 +124,6 @@ void Voice::Render(
   }
   bool level_patched = modulations.level_patched;
   float patch_decay = patch.decay;
-  if (patch.locked_frequency_pot_option == 1) {
-    patch_decay = patch.freqlock_param;
-  }
   if (modulations.trigger_patched && patch.level_cv_option == 1) {
     level_patched = false;
     patch_decay += modulations_level;
@@ -237,6 +234,9 @@ void Voice::Render(
   if (patch.locked_frequency_pot_option == 0) {
     float octave_setting = floor(patch.freqlock_param * 6.999f) - 3.0f;
     note += octave_setting * 12.0f;
+  } else if (patch.locked_frequency_pot_option == 1) {
+    float fifth_setting = floor(patch.freqlock_param * 12.999f) - 6.0f;
+    note += fifth_setting * 7.0f;
   }
   
   p.note = ApplyModulations(
