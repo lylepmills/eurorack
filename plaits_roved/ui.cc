@@ -402,7 +402,7 @@ void Ui::ReadSwitches() {
         if (press_time_[2] >= kLongPressTime &&
             press_time_[3] >= kLongPressTime) {
           press_time_[2] = press_time_[3] = 0;
-          RealignPots();
+          RealignAllPots();
           StartCalibration();
         }
         

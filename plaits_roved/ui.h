@@ -96,8 +96,15 @@ class Ui {
   void Navigate(int button);
   uint32_t BankToColor(int bank);
 
-  void RealignPots() {
+  void RealignAllPots() {
     for (int i = POTS_ADC_CHANNEL_FREQUENCY_POT;
+         i <= POTS_ADC_CHANNEL_MORPH_POT; ++i) {
+      pots_[i].Realign();
+    }
+  }
+
+  void RealignPots() {
+    for (int i = POTS_ADC_CHANNEL_HARMONICS_POT;
          i <= POTS_ADC_CHANNEL_MORPH_POT; ++i) {
       pots_[i].Realign();
     }
