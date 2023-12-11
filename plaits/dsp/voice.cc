@@ -289,7 +289,9 @@ void Voice::Render(
   // Crossfade the aux output between main and aux models.
   bool use_locked_frequency_pot_for_aux_crossfade = patch.locked_frequency_pot_option == 2;
   bool use_model_cv_for_aux_crossfade = patch.model_cv_option == 2;
-  if (use_locked_frequency_pot_for_aux_crossfade || use_model_cv_for_aux_crossfade) {
+  bool use_aux_crossfade = use_locked_frequency_pot_for_aux_crossfade || \
+    use_model_cv_for_aux_crossfade;
+  if (use_aux_crossfade) {
     float aux_proportion = 0.5f;
     if (use_locked_frequency_pot_for_aux_crossfade) {
       aux_proportion = patch.freqlock_param;
@@ -306,6 +308,7 @@ void Voice::Render(
   
   bool lpg_bypass = already_enveloped || \
       (!level_patched && !modulations.trigger_patched);
+  bool aux_lpg_bypass = lpg_bypass || (patch.aux_subosc_wave_option != 0 && !use_aux_crossfade);
   
   // Compute LPG parameters.
   if (!lpg_bypass) {
@@ -336,7 +339,7 @@ void Voice::Render(
 
   aux_post_processor_.Process(
       pp_s.aux_gain,
-      lpg_bypass,
+      aux_lpg_bypass,
       lpg_envelope_.gain(),
       lpg_envelope_.frequency(),
       lpg_envelope_.hf_bleed(),
