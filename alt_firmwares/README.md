@@ -4,6 +4,8 @@
 
 [download](https://github.com/lylepmills/eurorack/raw/master/alt_firmwares/plaits_20230901.wav)
 
+*update 12/11/23: there has been a minor revision to remove the effect of the envelope on the aux output when using it as a suboscillator, to simplify its use as a sync output. if aux crossfade is enabled while the aux output is a suboscillator, then it will once again be enveloped*
+
 *update 9/1/23: this is a new version of the alt firmware built on top of version 1.2 of the official firmware, with some new options and a new interaction model for frequency locking*
 
 The Plaits alt firmware extends the base firmware with several additional features accessed through a menu. Originally, this alt firmware was created primarily around the idea of allowing frequency locking. However in revision 1.2 of the official firmware, Émelie incorporated the frequency locking idea elegantly into her official firmware with the addition of the octave-switching mode to the frequency range selector. As such it was no longer necessary to use this alt firmware to get frequency locking behavior.
