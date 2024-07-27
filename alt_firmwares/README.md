@@ -2,7 +2,7 @@
 
 [discussion](https://llllllll.co/t/mutable-instruments-alt-firmwares/63936)
 
-[download](https://github.com/lylepmills/eurorack/raw/master/alt_firmwares/plaits_20230901.wav)
+[download](https://github.com/lylepmills/eurorack/raw/master/alt_firmwares/plaits_20231210.wav)
 
 *update 12/11/23: there has been a minor revision to remove the effect of the envelope on the aux output when using it as a suboscillator, to simplify its use as a sync output. if aux crossfade is enabled while the aux output is a suboscillator, then it will once again be enveloped*
 
