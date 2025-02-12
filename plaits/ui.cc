@@ -8,10 +8,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-// 
+//
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // -----------------------------------------------------------------------------
@@ -34,7 +34,7 @@
 #include "stmlib/system/system_clock.h"
 
 namespace plaits {
-  
+
 using namespace std;
 using namespace stmlib;
 
@@ -63,11 +63,11 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
   ui_task_ = 0;
   option_index_ = 0;
   mode_ = UI_MODE_NORMAL;
-  
+
   octave_quantizer_.Init(9, 0.01f, false);
-  
+
   LoadState();
-  
+
   // Bind pots to parameters.
   pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].Init(
       &transposition_, &fine_tune_, 0.005f, 2.0f, -1.0f);
@@ -80,11 +80,11 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
   pots_[POTS_ADC_CHANNEL_TIMBRE_ATTENUVERTER].Init(
       &patch->timbre_modulation_amount, NULL, 0.005f, 2.0f, -1.0f);
   pots_[POTS_ADC_CHANNEL_FM_ATTENUVERTER].Init(
-      &patch->frequency_modulation_amount, NULL, 0.005f, 2.0f, -1.0f);
+      &patch->frequency_modulation_amount, &extra_fine_tune_, 0.005f, 2.0f, -1.0f);
   pots_[POTS_ADC_CHANNEL_MORPH_ATTENUVERTER].Init(
       &patch->morph_modulation_amount, NULL, 0.005f, 2.0f, -1.0f);
-  
-  // Keep track of the agreement between the random sequence sent to the 
+
+  // Keep track of the agreement between the random sequence sent to the
   // switch and the value read by the ADC.
   normalization_detection_count_ = 0;
   normalization_probe_state_ = 0;
@@ -93,11 +93,11 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
       &normalization_detection_mismatches_[0],
       &normalization_detection_mismatches_[5],
       0);
-  
+
   pwm_counter_ = 0;
   fill(&press_time_[0], &press_time_[SWITCH_LAST], 0);
   fill(&ignore_release_[0], &ignore_release_[SWITCH_LAST], false);
-  
+
   active_engine_ = 0;
   pitch_lp_ = 0.0f;
   data_transfer_progress_ = 0.0f;
@@ -112,6 +112,7 @@ void Ui::LoadState() {
   patch_->decay = static_cast<float>(state.decay) / 256.0f;
   octave_ = static_cast<float>(state.octave) / 256.0f;
   fine_tune_ = static_cast<float>(state.fine_tune) / 256.0f;
+  extra_fine_tune_ = static_cast<float>(state.extra_fine_tune) / 256.0f;
 
   // alt firmware
   patch_->locked_frequency_pot_option = state.locked_frequency_pot_option;
@@ -132,6 +133,7 @@ void Ui::SaveState() {
   state->decay = static_cast<uint8_t>(patch_->decay * 256.0f);
   state->octave = static_cast<uint8_t>(octave_ * 256.0f);
   state->fine_tune = static_cast<uint8_t>(fine_tune_ * 256.0f);
+  state->extra_fine_tune = static_cast<uint8_t>(extra_fine_tune_ * 256.0f);
 
   // alt firmware
   state->locked_frequency_pot_option = patch_->locked_frequency_pot_option;
@@ -155,7 +157,7 @@ uint32_t Ui::BankToColor(int bank) {
 void Ui::UpdateLEDs() {
   leds_.Clear();
   ++pwm_counter_;
-  
+
   int pwm_counter = pwm_counter_ & 15;
   int triangle = (pwm_counter_ >> 4) & 31;
   triangle = triangle < 16 ? triangle : 31 - triangle;
@@ -179,7 +181,7 @@ void Ui::UpdateLEDs() {
         leds_.mask(selected_row, selected_color);
       }
       break;
-    
+
     case UI_MODE_DISPLAY_ALTERNATE_PARAMETERS:
       {
         for (int parameter = 0; parameter < 2; ++parameter) {
@@ -196,7 +198,7 @@ void Ui::UpdateLEDs() {
         }
       }
       break;
-      
+
     case UI_MODE_DISPLAY_DATA_TRANSFER_PROGRESS:
       {
         if (data_transfer_progress_ == 1.0f) {
@@ -222,7 +224,7 @@ void Ui::UpdateLEDs() {
         mode_ = UI_MODE_NORMAL;
       }
       break;
-    
+
     case UI_MODE_DISPLAY_OCTAVE:
       {
         int octave = static_cast<float>(octave_ * 11.0f);
@@ -286,7 +288,7 @@ void Ui::UpdateLEDs() {
         leds_.set(i, color);
       }
       break;
-    
+
     case UI_MODE_ERROR:
       if (pwm_counter < triangle) {
         for (int i = 0; i < kNumLEDs; ++i) {
@@ -308,7 +310,7 @@ void Ui::UpdateLEDs() {
         }
       }
       break;
-      
+
   }
   leds_.Write();
 }
@@ -327,13 +329,13 @@ void Ui::Navigate(int button) {
     }
   }
   patch_->engine = (patch_->engine + increment) % 24;
-  
+
   SaveState();
 }
 
 void Ui::ReadSwitches() {
   switches_.Debounce();
-  
+
   switch (mode_) {
     case UI_MODE_NORMAL:
       {
@@ -355,7 +357,7 @@ void Ui::ReadSwitches() {
             press_time_[i] = 0;
           }
         }
-        
+
         if (switches_.just_pressed(Switch(0))) {
           pots_[POTS_ADC_CHANNEL_TIMBRE_POT].Lock();
           pots_[POTS_ADC_CHANNEL_MORPH_POT].Lock();
@@ -363,18 +365,20 @@ void Ui::ReadSwitches() {
         if (switches_.just_pressed(Switch(1))) {
           pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].Lock();
           pots_[POTS_ADC_CHANNEL_HARMONICS_POT].Lock();
+          pots_[POTS_ADC_CHANNEL_FM_ATTENUVERTER].Lock();
         }
-        
+
         if (pots_[POTS_ADC_CHANNEL_MORPH_POT].editing_hidden_parameter() ||
             pots_[POTS_ADC_CHANNEL_TIMBRE_POT].editing_hidden_parameter()) {
           mode_ = UI_MODE_DISPLAY_ALTERNATE_PARAMETERS;
         }
-        
+
         if (pots_[POTS_ADC_CHANNEL_HARMONICS_POT].editing_hidden_parameter() ||
-            pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].editing_hidden_parameter()) {
+            pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].editing_hidden_parameter() ||
+            pots_[POTS_ADC_CHANNEL_FM_ATTENUVERTER].editing_hidden_parameter()) {
           mode_ = UI_MODE_DISPLAY_OCTAVE;
         }
-        
+
         // Long press or actually editing any hidden parameter: display value
         // of hidden parameters.
         if (press_time_[0] >= kLongPressTime && !press_time_[1]) {
@@ -385,7 +389,7 @@ void Ui::ReadSwitches() {
           press_time_[0] = press_time_[1] = 0;
           mode_ = UI_MODE_DISPLAY_OCTAVE;
         }
-        
+
         if (switches_.released(Switch(0)) && !ignore_release_[0]) {
           Navigate(0);
         } else if (switches_.released(Switch(1)) && !ignore_release_[1]) {
@@ -393,7 +397,7 @@ void Ui::ReadSwitches() {
         }
       }
       break;
-      
+
     case UI_MODE_DISPLAY_ALTERNATE_PARAMETERS:
     case UI_MODE_DISPLAY_OCTAVE:
       for (int i = 0; i < SWITCH_LAST; ++i) {
@@ -402,12 +406,13 @@ void Ui::ReadSwitches() {
           pots_[POTS_ADC_CHANNEL_MORPH_POT].Unlock();
           pots_[POTS_ADC_CHANNEL_HARMONICS_POT].Unlock();
           pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].Unlock();
+          pots_[POTS_ADC_CHANNEL_FM_ATTENUVERTER].Unlock();
           press_time_[i] = 0;
           mode_ = UI_MODE_NORMAL;
         }
       }
       break;
-    
+
     case UI_MODE_DISPLAY_DATA_TRANSFER_PROGRESS:
       break;
 
@@ -418,6 +423,7 @@ void Ui::ReadSwitches() {
         pots_[POTS_ADC_CHANNEL_MORPH_POT].Unlock();
         pots_[POTS_ADC_CHANNEL_HARMONICS_POT].Unlock();
         pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].Unlock();
+        pots_[POTS_ADC_CHANNEL_FM_ATTENUVERTER].Unlock();
         mode_ = UI_MODE_CHANGE_OPTIONS;
       }
       break;
@@ -522,7 +528,7 @@ void Ui::DetectNormalization() {
       ++normalization_detection_mismatches_[i];
     }
   }
-  
+
   ++normalization_detection_count_;
   if (normalization_detection_count_ == kProbeSequenceDuration) {
     normalization_detection_count_ = 0;
@@ -541,35 +547,35 @@ void Ui::Poll() {
   for (int i = 0; i < POTS_ADC_CHANNEL_LAST; ++i) {
     pots_[i].ProcessControlRate(pots_adc_.float_value(PotsAdcChannel(i)));
   }
-  
+
   float* destination = &modulations_->engine;
   for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) {
     destination[i] = settings_->calibration_data(i).Transform(
         cv_adc_.float_value(CvAdcChannel(i)));
   }
-  
+
   ONE_POLE(pitch_lp_, modulations_->note, 0.7f);
   modulations_->note = pitch_lp_;
-  
+
   ui_task_ = (ui_task_ + 1) % 4;
   switch (ui_task_) {
     case 0:
       UpdateLEDs();
       break;
-    
+
     case 1:
       ReadSwitches();
       break;
-    
+
     case 2:
       ProcessPotsHiddenParameters();
       break;
-      
+
     case 3:
       DetectNormalization();
       break;
   }
-  
+
   cv_adc_.Convert();
   pots_adc_.Convert();
 
@@ -577,7 +583,7 @@ void Ui::Poll() {
   if (octave == 0) {
     patch_->note = -48.37f + transposition_ * 60.0f;
   } else if (octave == 9) {
-    patch_->note = 53.0f + fine_tune_ * 14.0f;
+    patch_->note = 53.0f + fine_tune_ * 14.0f + extra_fine_tune_;
     if (patch_->locked_frequency_pot_option == 0) {
       patch_->note += 12.0f * static_cast<float>(octave_quantizer_.Process(0.5f * transposition_ + 0.5f) - 4);
       patch_->freqlock_param = 0.0f;
