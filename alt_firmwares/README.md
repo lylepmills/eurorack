@@ -82,7 +82,7 @@ Organized (from full-CCW to full-CW) into neutral, minor, major, and colour chor
 - Fully Diminished
 
 #### Alternate chords 2 (by Joe McMullen)
-With this table, instead of Frequency defining the root and Harmonics defining chord type, Frequency defines the key and Harmonics defines the scale position the chord is built from, meaning the root you hear on the aux output shifts around. Note that chord voicings are also more spread out by default with this table. See [this writeup from Joe](https://forum.mutable-instruments.net/t/unified-plaits-alt-firmware/19530/19) for more info. If that doesn't make sense, don't worry, just use your ears!
+With this table, instead of Frequency defining the root and Harmonics defining chord type, Frequency defines the key and Harmonics defines the scale position the chord is built from, meaning the root you hear on the aux output shifts around. Note that chord voicings are also more spread out by default with this table. See [this writeup from Joe](https://github.com/lylepmills/eurorack/edit/master/alt_firmwares/README.md#disastrous-peace) for more info. If that doesn't make sense, don't worry, just use your ears!
 - iv 6/9
 - iio 7sus4
 - VII 6
@@ -166,12 +166,138 @@ In **Rings** and **Mini-Elements** modes (i.e. every mode except the Easter Egg 
 In the **Easter Egg** mode and the [Western Chords](https://synthmodes.com/modules/rings/#western) resonator mode, this option controls the chord table used (“Western Chords” is not a very accurate name for some of these chord tables, but for lack of a better name I’ll continue to refer to it that way below)
 * Solid green: Classic chord table
 * Solid red: Alt chord table based on the one for Plaits by Jon Butler (organized a bit differently with a few more chords, based on these ones): https://github.com/lylepmills/eurorack/blob/8bd0b5e2b8088253e341ec1a50a876850e854c73/plaits/dsp/engine/chord_engine.cc#L42-L62 At higher polyphony levels (3 or 4) in the Western Chords mode, instead of chords this cycles through the first 16 standard intervals (unison to major 10th)
-* Solid yellow: Alt chord tables by Joe McMullen. This mode is jam-packed with not one but five different chord table concepts depending on whether you are in the Easter Egg mode and your polyphony settings. Refer to [Joe's writeup](https://forum.mutable-instruments.net/t/mini-elements-alt-firmware-for-rings/19768/7) for more details.
+* Solid yellow: Alt chord tables by Joe McMullen. This mode is jam-packed with not one but five different chord table concepts depending on whether you are in the Easter Egg mode and your polyphony settings.
     * Easter Egg mode: Same table as Joe’s chord table for Plaits.
     * Western Chords (polyphony 1): Cycles through 15 scales so that Rings can be used like Martenot’s Palme Diffuseur
     * Western Chords (polyphony 2): Cycles through 21 triads, sevenths and some more exotic chords all within a single key
     * Western Chords (polyphony 3): Cycles through the first 16 harmonic intervals from the overtone series
     * Western Chords (polyphony 4): Cycles through 23 justly tempered intervals based on the Shruti of Indian classical music theory
+ 
+For more detail, here is a longer writeup from Joe:
+ 
+> #### Monophonic
+> 
+> This mode is intended to be used like a Palme Diffuseur from an Ondes
+> Martenot or the resonating strings of a sitar. In other words you can
+> run another voice or instrument into the audio input and use Rings
+> like a tuned reverb effect. Set the frequency knob to the tonic of the
+> key you are playing in, and the structure knob will tune the
+> resonating ‘strings’ to these scales:
+> 
+> * Hungarian Minor (CCW)
+> * Lydian Minor
+> * Melodic Minor
+> * Harmonic Minor
+> * Diatonic Minor
+> * Pentatonic Minor
+> * Minor Triad
+> * Perfect Fifths (12 O’Clock)
+> * Major Triad
+> * Pentatonic Major
+> * Diatonic Major
+> * Harmonic Major
+> * Melodic Major
+> * Phrygian Major
+> * Byzantine Major (CW)
+> 
+> #### Duo-Phonic
+> 
+> In this mode the structure knob cycles through chords built on each
+> scale degree of a diatonic key, the tonic being set by the frequency
+> knob. Descending by thirds so that adjacent chords share common tones,
+> the table goes through triads, sevenths, then some more exotic chords.
+> For example, if frequency is set to C, structure will cycle through
+> these chords:
+> 
+> * C
+> * Am
+> * F
+> * Dm
+> * Bo
+> * G
+> * Em
+> * Cmaj7
+> * Am7
+> * Fmaj7
+> * Dm7
+> * Bm7b5
+> * G7
+> * Em7
+> * Cmaj7sus4
+> * Am9
+> * Fmaj7#11
+> * Dm11
+> * Bo7
+> * G7b5
+> * Eaug7
+> 
+> #### Tri-Phonic/Quadraphonic
+> 
+> In these modes the structure knob cycles through justly tempered
+> intervals. These modes combined with the new S&H option (@lylem you’re
+> awesome) allows for the possibility of some fairly complex sequencing.
+> 
+> In the tri-phonic case, they are the first sixteen intervals of the
+> overtone series. In other words, starting at CCW it multiplies the
+> base frequency by whole numbers from 0 to 16. For the quadraphonic
+> mode the structure knob cycles through the following intervals based
+> on the 22 Shrutis of classical Indian music theory:
+> 
+> * Unison 1/1
+> * Pythagorean Limma 256/243
+> * Minor Diatonic Semitone 16/15
+> * Minor Whole Tone 10/9
+> * Major Whole Tone 9/8
+> * Pythagorean Minor Third 32/27
+> * Minor Third 6/5
+> * Major Third 5/4
+> * Pythagorean Major Third 81/64
+> * Perfect Fourth 4/3
+> * Acute Fourth 27/20
+> * Tritone 45/32
+> * Pythagorean Tritone 729/512
+> * Perfect Fifth 3/2
+> * Pythagorean Minor Sixth 128/81
+> * Minor Sixth 8/5
+> * Major Sixth 5/3
+> * Pythagorean Major Sixth 27/16
+> * Pythagorean Minor Seventh 16/9
+> * Minor Seventh 9/5
+> * Major Seventh 15/8
+> * Pythagorean Major Seventh 243/128
+> * Octave 2/1
+> 
+> #### Disastrous Peace
+> 
+> The chord tables in this mode are based off of what I did for the
+> chords mode of Lyle’s Plaits firmware. They have been revoiced by
+> hand/ear for each of the different polyphony modes. Their formulation
+> is a bit esoteric, but roughly, each chord on the CW side is a
+> reflection of it’s CCW counterpart, and the set covers all possible
+> ’white key’ four note chord types with the addition of the fully
+> diminished seventh. Like the duo-phonic set above, the frequency knob
+> is meant to define a key center with the structure knob cycling
+> through chords in that key. For example, if you set the frequency knob
+> to C, the chords will be:
+> 
+> * Fm6/9
+> * Abmaj7#11
+> * Bb6
+> * Gm11
+> * Ebadd4
+> * Cmaddb13
+> * Abadd#11
+> * Fm6
+> * Do7
+> * Bo7
+> * G7
+> * Em/F
+> * Cmaj7
+> * Am9
+> * Fmaj9
+> * Dm7
+> * Cmaj7sus4
+> * G7sus4
 
 ### Page 5: Blinking red - FM CV input destination (2 options)
 In **Mini-Elements** modes only, this option controls whether to use the FM CV input to control exciter Timbre. This option has no effect on other modes.
