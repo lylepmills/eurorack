@@ -82,7 +82,7 @@ Organized (from full-CCW to full-CW) into neutral, minor, major, and colour chor
 - Fully Diminished
 
 #### Alternate chords 2 (by Joe McMullen)
-With this table, instead of Frequency defining the root and Harmonics defining chord type, Frequency defines the key and Harmonics defines the scale position the chord is built from, meaning the root you hear on the aux output shifts around. Note that chord voicings are also more spread out by default with this table. See [this writeup from Joe](https://github.com/lylepmills/eurorack/edit/master/alt_firmwares/README.md#disastrous-peace) for more info. If that doesn't make sense, don't worry, just use your ears!
+With this table, instead of Frequency defining the root and Harmonics defining chord type, Frequency defines the key and Harmonics defines the scale position the chord is built from, meaning the root you hear on the aux output shifts around. Note that chord voicings are also more spread out by default with this table. See [this writeup from Joe](https://github.com/lylepmills/eurorack/blob/master/alt_firmwares/README.md#disastrous-peace) for more info. If that doesn't make sense, don't worry, just use your ears!
 - iv 6/9
 - iio 7sus4
 - VII 6
