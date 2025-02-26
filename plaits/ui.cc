@@ -41,7 +41,7 @@ using namespace stmlib;
 static const int32_t kLongPressTime = 2000;
 
 static const uint8_t kNumOptions = 8;
-static const uint8_t kNumLockedFrequencyPotOptions = 3;
+static const uint8_t kNumLockedFrequencyPotOptions = 4;
 static const uint8_t kNumModelCVOptions = 3;
 static const uint8_t kNumLevelCVOptions = 2;
 static const uint8_t kNumSuboscWaveOptions = 3;
@@ -78,7 +78,7 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
   pots_[POTS_ADC_CHANNEL_MORPH_POT].Init(
       &patch->morph, &patch->decay, 0.01f, 1.0f, 0.0f);
   pots_[POTS_ADC_CHANNEL_TIMBRE_ATTENUVERTER].Init(
-      &patch->timbre_modulation_amount, NULL, 0.005f, 2.0f, -1.0f);
+      &patch->timbre_modulation_amount, &internal_octave_slew_, 0.005f, 2.0f, -1.0f);
   pots_[POTS_ADC_CHANNEL_FM_ATTENUVERTER].Init(
       &patch->frequency_modulation_amount, &extra_fine_tune_, 0.005f, 2.0f, -1.0f);
   pots_[POTS_ADC_CHANNEL_MORPH_ATTENUVERTER].Init(
@@ -113,6 +113,7 @@ void Ui::LoadState() {
   octave_ = static_cast<float>(state.octave) / 256.0f;
   fine_tune_ = static_cast<float>(state.fine_tune) / 256.0f;
   extra_fine_tune_ = static_cast<float>(state.extra_fine_tune) / 256.0f;
+  internal_octave_slew_ = static_cast<float>(state.internal_octave_slew) / 256.0f;
 
   // alt firmware
   patch_->locked_frequency_pot_option = state.locked_frequency_pot_option;
@@ -134,6 +135,7 @@ void Ui::SaveState() {
   state->octave = static_cast<uint8_t>(octave_ * 256.0f);
   state->fine_tune = static_cast<uint8_t>(fine_tune_ * 256.0f);
   state->extra_fine_tune = static_cast<uint8_t>(extra_fine_tune_ * 256.0f);
+  state->internal_octave_slew = static_cast<uint8_t>(internal_octave_slew_ * 256.0f);
 
   // alt firmware
   state->locked_frequency_pot_option = patch_->locked_frequency_pot_option;
@@ -276,7 +278,8 @@ void Ui::UpdateLEDs() {
         } else if (option_value == 2 || option_value == 5) {
           color = LED_COLOR_YELLOW;
         }
-        if ((option_value > 2) && (pwm_counter_ & 128)) {
+        
+        if (option_value > 2 && triangle < pwm_counter) {
           color = LED_COLOR_OFF;
         }
 
@@ -366,6 +369,7 @@ void Ui::ReadSwitches() {
           pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].Lock();
           pots_[POTS_ADC_CHANNEL_HARMONICS_POT].Lock();
           pots_[POTS_ADC_CHANNEL_FM_ATTENUVERTER].Lock();
+          pots_[POTS_ADC_CHANNEL_TIMBRE_ATTENUVERTER].Lock();
         }
 
         if (pots_[POTS_ADC_CHANNEL_MORPH_POT].editing_hidden_parameter() ||
@@ -375,7 +379,8 @@ void Ui::ReadSwitches() {
 
         if (pots_[POTS_ADC_CHANNEL_HARMONICS_POT].editing_hidden_parameter() ||
             pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].editing_hidden_parameter() ||
-            pots_[POTS_ADC_CHANNEL_FM_ATTENUVERTER].editing_hidden_parameter()) {
+            pots_[POTS_ADC_CHANNEL_FM_ATTENUVERTER].editing_hidden_parameter() ||
+            pots_[POTS_ADC_CHANNEL_TIMBRE_ATTENUVERTER].editing_hidden_parameter()) {
           mode_ = UI_MODE_DISPLAY_OCTAVE;
         }
 
@@ -407,6 +412,7 @@ void Ui::ReadSwitches() {
           pots_[POTS_ADC_CHANNEL_HARMONICS_POT].Unlock();
           pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].Unlock();
           pots_[POTS_ADC_CHANNEL_FM_ATTENUVERTER].Unlock();
+          pots_[POTS_ADC_CHANNEL_TIMBRE_ATTENUVERTER].Unlock();
           press_time_[i] = 0;
           mode_ = UI_MODE_NORMAL;
         }
@@ -424,6 +430,7 @@ void Ui::ReadSwitches() {
         pots_[POTS_ADC_CHANNEL_HARMONICS_POT].Unlock();
         pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].Unlock();
         pots_[POTS_ADC_CHANNEL_FM_ATTENUVERTER].Unlock();
+        pots_[POTS_ADC_CHANNEL_TIMBRE_ATTENUVERTER].Unlock();
         mode_ = UI_MODE_CHANGE_OPTIONS;
       }
       break;
@@ -445,7 +452,9 @@ void Ui::ReadSwitches() {
 
       if (switches_.released(Switch(1))) {
         if (option_index_ == 0) {
-          if (patch_->locked_frequency_pot_option == 0 && static_cast<int>(octave_ * 11.0f) == 9) {
+          if (static_cast<int>(octave_ * 11.0f) == 9 && (
+            patch_->locked_frequency_pot_option == 0 ||
+            patch_->locked_frequency_pot_option == 3)) {
             locked_octave_ = static_cast<uint8_t>(octave_quantizer_.Process(0.5f * transposition_ + 0.5f));
           } else if (patch_->locked_frequency_pot_option == 1) {
             locked_octave_ = 4;
@@ -584,12 +593,28 @@ void Ui::Poll() {
     patch_->note = -48.37f + transposition_ * 60.0f;
   } else if (octave == 9) {
     patch_->note = 53.0f + fine_tune_ * 14.0f + extra_fine_tune_;
+    float octave_offset = 0.0f;
     if (patch_->locked_frequency_pot_option == 0) {
-      patch_->note += 12.0f * static_cast<float>(octave_quantizer_.Process(0.5f * transposition_ + 0.5f) - 4);
+      octave_offset = 12.0f * static_cast<float>(octave_quantizer_.Process(0.5f * transposition_ + 0.5f) - 4);
+      patch_->freqlock_param = 0.0f;
+    } else if (patch_->locked_frequency_pot_option == 3) {
+      int octave_setting = octave_quantizer_.Process(0.5f * transposition_ + 0.5f) - 4;
+      if ((octave_setting & 1) == 1) {
+        octave_offset = 7.0f;
+      }
+      octave_offset += 12.0f * static_cast<float>(octave_setting >> 1);
       patch_->freqlock_param = 0.0f;
     } else {
-      patch_->note += 12.0f * static_cast<float>(locked_octave_ - 4);
+      octave_offset = 12.0f * static_cast<float>(locked_octave_ - 4);
       patch_->freqlock_param = 0.5f * transposition_ + 0.5f;
+    }
+    
+    if (internal_octave_slew_ < 0.1f) {
+      patch_->note += octave_offset;
+    } else {
+      // 0.1f-0.01f
+      SLEW(octave_slew_, octave_offset, 0.01f / internal_octave_slew_);
+      patch_->note += octave_slew_;
     }
   } else if (octave == 10) {
     patch_->note = 60.0f + transposition_ * 48.0f;

@@ -125,6 +125,7 @@ class Ui {
   float data_transfer_progress_;
   float fine_tune_;
   float extra_fine_tune_;
+  float internal_octave_slew_;
   float transposition_;
   float octave_;
   Patch* patch_;
@@ -132,6 +133,7 @@ class Ui {
   NormalizationProbe normalization_probe_;
   PotController pots_[POTS_ADC_CHANNEL_LAST];
   float pitch_lp_;
+  float octave_slew_;
 
   Settings* settings_;
 

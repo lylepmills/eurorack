@@ -58,7 +58,6 @@ struct State {
   uint8_t decay;
   uint8_t octave;
   uint8_t fine_tune;
-  uint8_t extra_fine_tune;
 
   // alt firmware options
   uint8_t locked_frequency_pot_option;
@@ -72,8 +71,10 @@ struct State {
 
   // alt firmware other
   uint8_t locked_octave;
+  uint8_t extra_fine_tune;
+  uint8_t internal_octave_slew;
 
-  uint8_t padding[1];
+  // uint8_t padding[0];
 
   enum { tag = 0x54415453 };  // STAT
 };
