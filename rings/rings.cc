@@ -40,16 +40,18 @@
 using namespace rings;
 using namespace stmlib;
 
-uint16_t reverb_buffer[32768] __attribute__ ((section (".ccmdata")));
+uint16_t reverb_buffer[31744] __attribute__ ((section (".ccmdata")));
 
-Codec codec;
-CvScaler cv_scaler;
-DebugPort debug_port;
-Part part;
-Settings settings;
-StringSynthPart string_synth;
-Strummer strummer;
-Ui ui;
+Codec codec;                   //   1680 bytes
+CvScaler cv_scaler;            //    192 bytes
+DebugPort debug_port;          //     16 bytes
+Part part;                     // 123360 bytes
+Settings settings;             //     80 bytes
+StringSynthPart string_synth;  //   2400 bytes
+Ui ui;                         //    192 bytes
+// 528 bytes
+// Pulled into CCM to save normal RAM, which is maxed out
+Strummer strummer __attribute__ ((section (".ccmdata")));
 
 // Default interrupt handlers.
 extern "C" {

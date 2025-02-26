@@ -164,7 +164,7 @@ class Reverb {
   }
   
  private:
-  typedef FxEngine<32768, FORMAT_16_BIT> E;
+  typedef FxEngine<31744, FORMAT_16_BIT> E;
   E engine_;
   
   float amount_;
