@@ -43,7 +43,7 @@ bool Settings::Init() {
   bool success = chunk_storage_.Init(&persistent_data_, &state_);
   
   CONSTRAIN(state_.engine, 0, 23);
-  CONSTRAIN(state_.locked_frequency_pot_option, 0, 2);
+  CONSTRAIN(state_.locked_frequency_pot_option, 0, 3);
   CONSTRAIN(state_.model_cv_option, 0, 2);
   CONSTRAIN(state_.level_cv_option, 0, 1);
   CONSTRAIN(state_.aux_subosc_wave_option, 0, 2);
@@ -111,6 +111,8 @@ void Settings::InitState() {
 
   // alt firmware other
   state_.locked_octave = 4;
+  state_.extra_fine_tune = 0;
+  state_.internal_octave_slew = 0;
 }
 
 void Settings::SavePersistentData() {

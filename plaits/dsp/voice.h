@@ -140,6 +140,7 @@ struct Patch {
   // 0 - manual octave switching
   // 1 - manual control of decay (without button press)
   // 2 - manual aux crossfade
+  // 3 - manual octave/fifth switching (CS70 style)
   uint8_t locked_frequency_pot_option;
   // 0 - cv control of model (original)
   // 1 - cv control of lpg colour
