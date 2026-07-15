@@ -18,7 +18,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#if defined(__SSE2__)
 #include <xmmintrin.h>
+#endif
 
 #include "plaits/dsp/dsp.h"
 
@@ -40,7 +42,10 @@
 #include "plaits/dsp/engine/wavetable_engine.h"
 
 #include "plaits/dsp/engine2/chiptune_engine.h"
+#include "plaits/dsp/engine2/gendy_engine.h"
+#include "plaits/dsp/engine2/glisson_engine.h"
 #include "plaits/dsp/engine2/phase_distortion_engine.h"
+#include "plaits/dsp/engine2/scanned_engine.h"
 #include "plaits/dsp/engine2/string_machine_engine.h"
 #include "plaits/dsp/engine2/virtual_analog_vcf_engine.h"
 #include "plaits/dsp/engine2/wave_terrain_engine.h"
@@ -1254,43 +1259,56 @@ void TestLimiterGlitch() {
   }
 }
 
-void TestSixOpEngine() {
-  WavWriter wav_writer(2, kSampleRate, 80);
-  wav_writer.Open("plaits_six_op_engine.wav");
-  
+template<typename T>
+void RenderExperimentalEngine(const char* name) {
+  WavWriter wav_writer(2, kSampleRate, 12);
+  wav_writer.Open(name);
+
   BufferAllocator allocator(ram_block, 16384);
-  SixOpEngine e;
+  T e;
   e.Init(&allocator);
   e.Reset();
-  e.LoadUserData(fm_patches_table[0]);
-  
+
   EngineParameters p;
   p.note = 48.0f;
   p.accent = 0.8f;
+  p.chord_set_option = 0;
 
-  for (size_t i = 0; i < kSampleRate * 80; i += kAudioBlockSize) {
+  for (size_t i = 0; i < kSampleRate * 12; i += kAudioBlockSize) {
     float out[kAudioBlockSize];
     float aux[kAudioBlockSize];
-    p.trigger = TRIGGER_UNPATCHED;
-    p.trigger = (i % size_t(kSampleRate)) <= 3 * kSampleRate / 4
-        ? TRIGGER_HIGH : TRIGGER_LOW;
-    p.trigger |= (i % size_t(kSampleRate)) == 0
-        ? TRIGGER_RISING_EDGE : TRIGGER_LOW;
-    if (p.trigger & TRIGGER_RISING_EDGE) {
-      p.note = 84.0f - p.note;
+    p.trigger = i < kSampleRate * 6 ? TRIGGER_UNPATCHED : TRIGGER_LOW;
+    if (i >= kSampleRate * 6 &&
+        i % static_cast<size_t>(kSampleRate * 2) == 0) {
+      p.trigger = TRIGGER_RISING_EDGE | TRIGGER_HIGH;
     }
-    p.harmonics = wav_writer.triangle(61);
-    p.timbre = 0.5f; //wav_writer.triangle(23);
-    p.morph = 0.5f; //wav_writer.triangle(9);
-    
+    p.harmonics = wav_writer.triangle(11);
+    p.timbre = wav_writer.triangle(7);
+    p.morph = wav_writer.triangle(5);
+    p.macro = wav_writer.triangle(9);
+
     bool already_enveloped;
     e.Render(p, out, aux, kAudioBlockSize, &already_enveloped);
+    for (size_t j = 0; j < kAudioBlockSize; ++j) {
+      if (!isfinite(out[j]) || !isfinite(aux[j]) ||
+          fabsf(out[j]) > 4.0f || fabsf(aux[j]) > 4.0f) {
+        abort();
+      }
+    }
     wav_writer.Write(out, aux, kAudioBlockSize);
   }
 }
 
+void TestExperimentalEngines() {
+  RenderExperimentalEngine<GlissonEngine>("plaits_glisson_engine.wav");
+  RenderExperimentalEngine<GendyEngine>("plaits_gendy_engine.wav");
+  RenderExperimentalEngine<ScannedEngine>("plaits_scanned_engine.wav");
+}
+
 int main(void) {
+#if defined(__SSE2__)
   _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+#endif
   // TestFormantOscillator();
   // TestGrainletOscillator();
   // TestOscillator();
@@ -1335,5 +1353,5 @@ int main(void) {
   // EnumerateWavetables();
   
   // TestLPGAttackDecay();
-  TestSixOpEngine();
+  TestExperimentalEngines();
 }

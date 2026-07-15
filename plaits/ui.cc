@@ -41,7 +41,7 @@ using namespace stmlib;
 static const int32_t kLongPressTime = 2000;
 
 static const uint8_t kNumOptions = 8;
-static const uint8_t kNumLockedFrequencyPotOptions = 3;
+static const uint8_t kNumLockedFrequencyPotOptions = 4;
 static const uint8_t kNumModelCVOptions = 3;
 static const uint8_t kNumLevelCVOptions = 2;
 static const uint8_t kNumSuboscWaveOptions = 3;

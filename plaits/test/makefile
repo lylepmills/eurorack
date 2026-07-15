@@ -5,6 +5,10 @@ VPATH          = $(PACKAGES)
 TARGET         = plaits_test
 BUILD_ROOT     = build/
 BUILD_DIR      = $(BUILD_ROOT)$(TARGET)/
+HOST_ARCH      = $(shell uname -m)
+ifeq ($(HOST_ARCH),x86_64)
+HOST_ARCH_FLAGS = -msse2
+endif
 CC_FILES       = algorithms.cc \
 		additive_engine.cc \
 		bass_drum_engine.cc \
@@ -13,7 +17,9 @@ CC_FILES       = algorithms.cc \
 		chord_engine.cc \
 		dx_units.cc \
 		fm_engine.cc \
+		gendy_engine.cc \
 		grain_engine.cc \
+		glisson_engine.cc \
 		hi_hat_engine.cc \
 		lpc_speech_synth.cc \
 		lpc_speech_synth_controller.cc \
@@ -31,7 +37,7 @@ CC_FILES       = algorithms.cc \
 		resonator.cc \
 		resources.cc \
 		sam_speech_synth.cc \
-		six_op_engine.cc \
+		scanned_engine.cc \
 		snare_drum_engine.cc \
 		speech_engine.cc \
 		string.cc \
@@ -58,7 +64,7 @@ $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
 $(BUILD_DIR)%.o: %.cc
-	g++ -c -DTEST -g -Wall -Werror -msse2 -Wno-unused-variable -Wno-unused-local-typedef -O2 -I. $< -o $@
+	g++ -c -DTEST -g -Wall -Werror $(HOST_ARCH_FLAGS) -Wno-unused-variable -Wno-unused-local-typedef -Wno-deprecated-declarations -O2 -I. $< -o $@
 
 $(BUILD_DIR)%.d: %.cc
 	g++ -MM -DTEST -I. $< -MF $@ -MT $(@:.d=.o)

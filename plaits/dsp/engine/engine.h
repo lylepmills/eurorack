@@ -57,6 +57,10 @@ struct EngineParameters {
   float harmonics;
   float accent;
 
+  // Optional fourth synthesis macro. In the alt firmware this is controlled
+  // by the frequency knob while pitch is locked and option 3 is selected.
+  float macro;
+
   // alt firmware
   uint8_t chord_set_option;
 };

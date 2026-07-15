@@ -53,8 +53,10 @@
 #include "plaits/dsp/engine/waveshaping_engine.h"
 #include "plaits/dsp/engine/wavetable_engine.h"
 #include "plaits/dsp/engine2/chiptune_engine.h"
+#include "plaits/dsp/engine2/gendy_engine.h"
+#include "plaits/dsp/engine2/glisson_engine.h"
 #include "plaits/dsp/engine2/phase_distortion_engine.h"
-#include "plaits/dsp/engine2/six_op_engine.h"
+#include "plaits/dsp/engine2/scanned_engine.h"
 #include "plaits/dsp/engine2/string_machine_engine.h"
 #include "plaits/dsp/engine2/virtual_analog_vcf_engine.h"
 #include "plaits/dsp/engine2/wave_terrain_engine.h"
@@ -140,6 +142,7 @@ struct Patch {
   // 0 - manual octave switching
   // 1 - manual control of decay (without button press)
   // 2 - manual aux crossfade
+  // 3 - fourth synthesis macro
   uint8_t locked_frequency_pot_option;
   // 0 - cv control of model (original)
   // 1 - cv control of lpg colour
@@ -252,7 +255,9 @@ class Voice {
   
   VirtualAnalogVCFEngine virtual_analog_vcf_engine_;
   PhaseDistortionEngine phase_distortion_engine_;
-  SixOpEngine six_op_engine_;
+  GlissonEngine glisson_engine_;
+  GendyEngine gendy_engine_;
+  ScannedEngine scanned_engine_;
   WaveTerrainEngine wave_terrain_engine_;
   StringMachineEngine string_machine_engine_;
   ChiptuneEngine chiptune_engine_;

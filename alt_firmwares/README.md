@@ -22,6 +22,41 @@ However my alt firmware had several other features that I felt were still worthw
 - **Easier manual control over decay.** - The frequency knob can be repurposed to more easily control the decay of the internal LPG, without having to hold down a button.
 - **More convenient model switching.** - In revision 1.2 of the official firmware, an alternate mode for switching models was introduced. This mode was the only way of accessing the third bank of models. My assumption is that anyone using this alt firmware wants to be able to freely access all three banks of synthesis models, so in this alternate firmware, that mode is now the default. Additionally there is a new navigation mode (an alternative to the alternative), whereby the left button switches between models within a bank and the right button switches banks.
 
+## Experimental synthesis models
+
+This development version replaces the three DX7 bank positions (the third,
+fourth, and fifth yellow models) with three experimental engines. All three use
+the normal pitch, HARMONICS, TIMBRE, and MORPH controls. They also use an
+optional fourth macro when the frequency knob is locked and set to its blinking
+green menu option.
+
+### Glisson
+
+- HARMONICS: pitch scatter
+- TIMBRE: number of overlapping grains
+- MORPH: downward chirps through static grains to upward chirps
+- Fourth macro: grain duration and trajectory curvature
+- OUT: selected chirp direction; AUX: counter-moving chirps
+- TRIG: restarts and re-randomizes the grain cloud
+
+### GENDY
+
+- HARMONICS: number of stochastic breakpoints (3 to 12)
+- TIMBRE: amplitude random-walk depth
+- MORPH: segment-duration random-walk depth
+- Fourth macro: stepped through linear to smooth interpolation
+- OUT: interpolated waveform; AUX: raw stepped waveform
+- TRIG: creates a new stochastic waveform
+
+### Scanned synthesis
+
+- HARMONICS: stiffness and alternating-mass inharmonicity
+- TIMBRE: strike or drive position
+- MORPH: damping
+- Fourth macro: speed of the slowly evolving physical system
+- OUT: scan of the mass positions; AUX: spatial derivative of that scan
+- TRIG: strikes the virtual system; with TRIG unpatched it is gently driven
+
 ## How to access calibration
 Calibration has been removed from the alt firmware to save space. If you need to recalibrate, simply reinstall the official firmware first. Your calibration settings will be preserved if you then switch back to this alt firmware.
 
@@ -31,7 +66,10 @@ To access the menu of options for the various alt functionalities, simply short-
 The menu is represented by lights for each option. You can navigate between the menu items by pressing the left button, and you can switch the option for that item by pressing the right button. The current settings are represented by the color of the LED lights. In order, they represent the following
 
 ### First light - Frequency knob alt functionality (when frequency is locked i.e. in octave-switching mode)
-Green means octaves (as in the stock firmware), red means controlling decay, yellow means controlling aux crossfade
+Green means octaves (as in the stock firmware), red means controlling decay,
+yellow means controlling aux crossfade, and blinking green means controlling
+the experimental engines' fourth macro. The fourth macro rests at its midpoint
+when another frequency-knob option is selected.
 
 ### Second light - MODEL input alt functionality
 Green means model (as in the stock firmware), red means LPG colour (VCFA->VCA), yellow means aux crossfade
