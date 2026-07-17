@@ -58,6 +58,7 @@ void StringVoice::Render(
     float structure,
     float brightness,
     float damping,
+    float exciter_size,
     float* temp,
     float* out,
     float* aux,
@@ -75,7 +76,7 @@ void StringVoice::Render(
         f * SemitonesToRatio((brightness * (2.0f - brightness) - 0.5f) * range),
         0.499f);
     const float q = sustain ? 1.0f : 0.5f;
-    remaining_noise_samples_ = static_cast<size_t>(1.0f / f0);
+    remaining_noise_samples_ = static_cast<size_t>(exciter_size / f0);
     excitation_filter_.set_f_q<FREQUENCY_DIRTY>(cutoff, q);
   }
 

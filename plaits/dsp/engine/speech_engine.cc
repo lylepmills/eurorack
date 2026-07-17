@@ -50,10 +50,12 @@ void SpeechEngine::Init(BufferAllocator* allocator) {
   
   prosody_amount_ = 0.0f;
   speed_ = 0.0f;
+  post_filter_ = 0.0f;
 }
 
 void SpeechEngine::Reset() {
   lpc_speech_synth_word_bank_.Reset();
+  post_filter_ = 0.0f;
 }
 
 void SpeechEngine::Render(
@@ -136,6 +138,18 @@ void SpeechEngine::Render(
         aux,
         out,
         size);
+  }
+
+  const float voice_amount = parameters.macro * 2.0f;
+  const float spectral_sharpening = (parameters.macro - 0.5f) * 5.0f;
+  for (size_t i = 0; i < size; ++i) {
+    const float voice = out[i];
+    ONE_POLE(post_filter_, voice, 0.12f);
+    if (parameters.macro < 0.5f) {
+      out[i] = aux[i] + (out[i] - aux[i]) * voice_amount;
+    } else {
+      out[i] = voice + (voice - post_filter_) * spectral_sharpening;
+    }
   }
 }
 

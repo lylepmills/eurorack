@@ -9,7 +9,9 @@
 
 namespace plaits {
 
-const int kNumGlissonGrains = 6;
+// Five grains keep the densest setting inside a safer real-time CPU budget on
+// the STM32F3 while still producing a continuous cloud.
+const int kNumGlissonGrains = 5;
 
 class GlissonEngine : public Engine {
  public:

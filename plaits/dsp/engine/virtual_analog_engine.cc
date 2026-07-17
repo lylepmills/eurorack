@@ -222,15 +222,16 @@ void VirtualAnalogEngine::Render(
   variable_saw_.Render(auxiliary_f, saw_pw, saw_shape, out, size);
   
   float norm = 1.0f / (std::max(square_gain, saw_gain));
+  const float oscillator_balance = parameters.macro;
   
   ParameterInterpolator square_gain_modulation(
       &auxiliary_amount_,
-      square_gain * 0.3f * norm,
+      square_gain * 0.6f * oscillator_balance * norm,
       size);
 
   ParameterInterpolator saw_gain_modulation(
       &xmod_amount_,
-      saw_gain * 0.5f * norm,
+      saw_gain * (1.0f - oscillator_balance) * norm,
       size);
   
   for (size_t i = 0; i < size; ++i) {

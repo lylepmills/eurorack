@@ -1,0 +1,24 @@
+{
+  "name": "Mutable Instruments firmware",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "runArgs": [
+    "--platform=linux/amd64"
+  ],
+  "workspaceFolder": "/workspaces/eurorack",
+  "postCreateCommand": "git submodule update --init --recursive",
+  "remoteEnv": {
+    "TOOLCHAIN_PATH": "/usr/local/arm-4.8.3/"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  }
+}

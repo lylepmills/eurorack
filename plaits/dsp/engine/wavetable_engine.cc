@@ -30,6 +30,7 @@
 
 #include <algorithm>
 
+#include "plaits/dsp/oscillator/sine_oscillator.h"
 #include "plaits/resources.h"
 
 namespace plaits {
@@ -127,6 +128,7 @@ void WavetableEngine::Render(
   const float z = z_pre_lp_;
   
   const float quantization = min(max(z - 3.0f, 0.0f), 1.0f);
+  const float phase_warp = 0.14f * (2.0f * parameters.macro - 1.0f);
   const float lp_coefficient = min(
       max(2.0f * f0 * (4.0f - 3.0f * quantization), 0.01f), 0.1f);
   
@@ -170,7 +172,8 @@ void WavetableEngine::Render(
       phase_ -= 1.0f;
     }
     
-    const float p = phase_ * kTableSizeF;
+    const float warped_phase = phase_ + phase_warp * Sine(phase_);
+    const float p = warped_phase * kTableSizeF;
     MAKE_INTEGRAL_FRACTIONAL(p);
     
     {

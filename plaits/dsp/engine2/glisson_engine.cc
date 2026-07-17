@@ -15,6 +15,16 @@ namespace plaits {
 using namespace std;
 using namespace stmlib;
 
+namespace {
+
+// Keep chirps below the least useful top octave. This intentionally uses a
+// cheap clamp: the engine calls it twice per grain per sample on a 72 MHz MCU.
+float LimitFrequency(float frequency) {
+  return min(0.22f, frequency);
+}
+
+}  // namespace
+
 void GlissonEngine::Init(BufferAllocator* allocator) {
   Reset();
 }
@@ -84,7 +94,7 @@ void GlissonEngine::Render(
   }
   num_grains_ = num_grains;
 
-  const float gain = 0.8f / static_cast<float>(num_grains);
+  const float gain = 0.72f / static_cast<float>(num_grains);
   for (int i = 0; i < num_grains; ++i) {
     Grain* g = &grain_[i];
     for (size_t j = 0; j < size; ++j) {
@@ -106,15 +116,18 @@ void GlissonEngine::Render(
       const float reverse_ratio = g->end_ratio + \
           (g->start_ratio - g->end_ratio) * t;
 
-      g->phase += min(0.24f, f0 * ratio);
+      g->phase += LimitFrequency(f0 * ratio);
       g->phase -= static_cast<int>(g->phase);
-      g->aux_phase += min(0.24f, f0 * reverse_ratio);
+      g->aux_phase += LimitFrequency(f0 * reverse_ratio);
       g->aux_phase -= static_cast<int>(g->aux_phase);
 
-      const float envelope = 0.5f - 0.5f * Sine(
-          g->envelope_phase + 0.25f);
-      out[j] += Sine(g->phase) * envelope * gain;
-      aux[j] += Sine(g->aux_phase) * envelope * gain;
+      // A parabolic grain window avoids a third interpolated sine lookup for
+      // every grain and sample. The remaining oscillator phases are already
+      // wrapped, so the cheaper no-wrap lookup is safe.
+      const float envelope = 4.0f * g->envelope_phase * \
+          (1.0f - g->envelope_phase);
+      out[j] += SineNoWrap(g->phase) * envelope * gain;
+      aux[j] += SineNoWrap(g->aux_phase) * envelope * gain;
     }
   }
 }

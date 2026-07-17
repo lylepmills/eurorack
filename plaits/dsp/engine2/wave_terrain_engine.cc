@@ -41,6 +41,7 @@ using namespace stmlib;
 void WaveTerrainEngine::Init(BufferAllocator* allocator) {
   path_.Init();
   offset_ = 0.0f;
+  y_offset_ = 0.0f;
   terrain_ = 0.0f;
   temp_buffer_ = allocator->Allocate<float>(kMaxBlockSize * 4);
   user_terrain_ = NULL;
@@ -200,6 +201,8 @@ void WaveTerrainEngine::Render(
       f0 * kScale, radius, path_x, path_y, size * kOversampling);
   
   ParameterInterpolator offset(&offset_, 1.9f * parameters.morph - 1.0f, size);
+  ParameterInterpolator y_offset(
+      &y_offset_, 1.9f * parameters.macro - 0.95f, size);
   int num_terrains = user_terrain_ ? 9 : 8;
   ParameterInterpolator terrain(
       &terrain_,
@@ -209,6 +212,7 @@ void WaveTerrainEngine::Render(
   size_t ij = 0;
   for (size_t i = 0; i < size; ++i) {
     const float x_offset = offset.Next();
+    const float current_y_offset = y_offset.Next();
     
     const float z = terrain.Next();
     MAKE_INTEGRAL_FRACTIONAL(z);
@@ -218,7 +222,8 @@ void WaveTerrainEngine::Render(
     
     for (size_t j = 0; j < kOversampling; ++j) {
       const float x = path_x[ij] * (1.0f - fabsf(x_offset)) + x_offset;
-      const float y = path_y[ij];
+      const float y = path_y[ij] * (1.0f - fabsf(current_y_offset)) + \
+          current_y_offset;
       ++ij;
       
       const float z0 = Terrain(x, y, z_integral);

@@ -6,8 +6,14 @@ TARGET         = plaits_test
 BUILD_ROOT     = build/
 BUILD_DIR      = $(BUILD_ROOT)$(TARGET)/
 HOST_ARCH      = $(shell uname -m)
+HOST_OS        = $(shell uname -s)
 ifeq ($(HOST_ARCH),x86_64)
 HOST_ARCH_FLAGS = -msse2
+endif
+ifeq ($(HOST_OS),Darwin)
+HOST_LINK_FLAGS = -Wl,-no_pie -L/opt/local/lib
+else
+HOST_LINK_FLAGS = -no-pie
 endif
 CC_FILES       = algorithms.cc \
 		additive_engine.cc \
@@ -33,11 +39,13 @@ CC_FILES       = algorithms.cc \
 		particle_engine.cc \
 		phase_distortion_engine.cc \
 		plaits_test.cc \
+		pulsar_engine.cc \
 		random.cc \
 		resonator.cc \
 		resources.cc \
 		sam_speech_synth.cc \
 		scanned_engine.cc \
+		six_op_engine.cc \
 		snare_drum_engine.cc \
 		speech_engine.cc \
 		string.cc \
@@ -64,13 +72,13 @@ $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
 $(BUILD_DIR)%.o: %.cc
-	g++ -c -DTEST -g -Wall -Werror $(HOST_ARCH_FLAGS) -Wno-unused-variable -Wno-unused-local-typedef -Wno-deprecated-declarations -O2 -I. $< -o $@
+	g++ -c -DTEST -g -Wall -Werror $(HOST_ARCH_FLAGS) -Wno-unused-variable -Wno-unused-local-typedefs -Wno-deprecated-declarations -O2 $(CXXFLAGS) -I. $< -o $@
 
 $(BUILD_DIR)%.d: %.cc
 	g++ -MM -DTEST -I. $< -MF $@ -MT $(@:.d=.o)
 
 plaits_test:  $(OBJS)
-	g++ -g -o $(TARGET) $(OBJS) -Wl,-no_pie -lm -L/opt/local/lib
+	g++ -g -o $(TARGET) $(OBJS) $(HOST_LINK_FLAGS) $(CXXFLAGS) -lm
 
 depends:  $(DEPS)
 	cat $(DEPS) > $(DEP_FILE)

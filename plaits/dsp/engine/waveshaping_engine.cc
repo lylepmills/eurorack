@@ -97,6 +97,8 @@ void WaveshapingEngine::Render(
       0.03f + 0.46f * wavefolder_gain * wavefolder_gain_attenuation,
       size);
   const float overtone_gain = parameters.timbre * (2.0f - parameters.timbre);
+  const float symmetry = ApplyMacro(
+      0.0f, -0.22f, 0.22f, parameters.macro);
   ParameterInterpolator overtone_gain_modulation(
       &previous_overtone_gain_,
       overtone_gain * (2.0f - overtone_gain),
@@ -122,7 +124,8 @@ void WaveshapingEngine::Render(
     float y = y0 + (y1 - y0) * ws_index_fractional;
     
     float mix = x + (y - x) * shape_fractional;
-    float index = mix * wf_gain_modulation.Next() + 0.5f;
+    float index = (mix + symmetry) * wf_gain_modulation.Next() + 0.5f;
+    CONSTRAIN(index, 0.0f, 1.0f);
     float fold = InterpolateHermite(
         lut_fold + 1, index, 512.0f);
     float fold_2 = -InterpolateHermite(

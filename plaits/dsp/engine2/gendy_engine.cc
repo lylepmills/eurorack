@@ -83,18 +83,24 @@ void GendyEngine::Render(
     float* aux,
     size_t size,
     bool* already_enveloped) {
+  // Nine breakpoints retain a broad range of stochastic shapes without the
+  // noise-like upper extreme of the original twelve-breakpoint mapping.
   const int num_breakpoints = 3 + static_cast<int>(
-      parameters.harmonics * static_cast<float>(kMaxGendyBreakpoints - 3));
+      parameters.harmonics * 6.999f);
   if (num_breakpoints != num_breakpoints_ ||
       (parameters.trigger & TRIGGER_RISING_EDGE)) {
     Randomize(num_breakpoints);
   }
 
   const float frequency = min(0.24f, NoteToFrequency(parameters.note));
-  const float amplitude_step = 0.005f + \
-      0.3f * parameters.timbre * parameters.timbre;
-  const float duration_step = 0.005f + \
-      0.75f * parameters.morph * parameters.morph;
+  const float complexity_compensation = 1.0f - 0.035f * \
+      static_cast<float>(num_breakpoints - 3);
+  const float amplitude_step = (0.005f + \
+      0.3f * parameters.timbre * parameters.timbre) * \
+      complexity_compensation;
+  const float duration_step = (0.005f + \
+      0.75f * parameters.morph * parameters.morph) * \
+      complexity_compensation;
 
   for (size_t i = 0; i < size; ++i) {
     phase_ += frequency;

@@ -66,6 +66,7 @@ class ChiptuneEngine : public Engine {
   ChordBank chords_;
   Arpeggiator arpeggiator_;
   stmlib::HysteresisQuantizer2 arpeggiator_pattern_selector_;
+  stmlib::HysteresisQuantizer2 register_spread_selector_;
   
   float envelope_shape_;
   float envelope_state_;

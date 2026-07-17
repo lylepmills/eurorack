@@ -65,6 +65,8 @@ void VirtualAnalogVCFEngine::Render(
     bool* already_enveloped) {
   // VA Oscillator (saw or PW square) + sub
   const float f0 = NoteToFrequency(parameters.note);
+  const float drive = ApplyMacro(1.0f, 0.5f, 2.0f, parameters.macro);
+  const float inverse_drive = 1.0f / drive;
 
   float shape = (parameters.morph - 0.25f) * 2.0f + 0.5f;
   CONSTRAIN(shape, 0.5f, 1.0f);
@@ -113,7 +115,8 @@ void VirtualAnalogVCFEngine::Render(
     
     const float gain = gain_modulation.Next();
     const float input = SoftClip(
-        (out[i] + aux[i] * sub_gain_modulation.Next()) * gain);
+        (out[i] + aux[i] * sub_gain_modulation.Next()) * gain * drive) * \
+        inverse_drive;
     
     float lp, hp;
     svf_[0].Process<FILTER_MODE_LOW_PASS, FILTER_MODE_HIGH_PASS>(

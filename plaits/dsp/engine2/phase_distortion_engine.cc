@@ -58,10 +58,14 @@ void PhaseDistortionEngine::Render(
     size_t size,
     bool* already_enveloped) {
   const float f0 = 0.5f * NoteToFrequency(parameters.note);
-  const float modulator_f = min(0.25f, f0 * SemitonesToRatio(Interpolate(
-      lut_fm_frequency_quantizer,
-      parameters.harmonics,
-      128.0f)));
+  const float modulator_octave = ApplyMacro(
+      1.0f, 0.5f, 2.0f, parameters.macro);
+  const float modulator_f = min(
+      0.25f,
+      f0 * modulator_octave * SemitonesToRatio(Interpolate(
+          lut_fm_frequency_quantizer,
+          parameters.harmonics,
+          128.0f)));
   const float pw = 0.5f + parameters.morph * 0.49f;
   const float amount = 8.0f * parameters.timbre * parameters.timbre * \
       (1.0f - modulator_f * 3.8f);

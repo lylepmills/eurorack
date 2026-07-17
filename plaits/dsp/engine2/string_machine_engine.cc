@@ -128,7 +128,9 @@ void StringMachineEngine::Render(
   }
 
   // Ensemble FX.
-  const float amount = fabsf(parameters.timbre - 0.5f) * 2.0f;
+  const float stock_amount = fabsf(parameters.timbre - 0.5f) * 2.0f;
+  const float amount = ApplyMacro(
+      stock_amount, 0.0f, 1.0f, parameters.macro);
   const float depth = 0.35f + 0.65f * parameters.timbre;
   ensemble_.set_amount(amount);
   ensemble_.set_depth(depth);

@@ -39,10 +39,17 @@ void Voice::Init(BufferAllocator* allocator) {
 
   engines_.RegisterInstance(&virtual_analog_vcf_engine_, false, 1.0f, 1.0f);
   engines_.RegisterInstance(&phase_distortion_engine_, false, 0.7f, 0.7f);
+#if defined(PLAITS_STOCK_ENGINE_LAYOUT)
+  engines_.RegisterInstance(&six_op_engine_, true, 1.0f, 1.0f);
+  engines_.RegisterInstance(&six_op_engine_, true, 1.0f, 1.0f);
+  engines_.RegisterInstance(&six_op_engine_, true, 1.0f, 1.0f);
+  engines_.RegisterInstance(&wave_terrain_engine_, false, 0.7f, 0.7f);
+#else
   engines_.RegisterInstance(&glisson_engine_, false, 0.9f, 0.9f);
   engines_.RegisterInstance(&gendy_engine_, false, 0.8f, 0.8f);
   engines_.RegisterInstance(&scanned_engine_, false, -1.0f, -1.0f);
-  engines_.RegisterInstance(&wave_terrain_engine_, false, 0.7f, 0.7f);
+  engines_.RegisterInstance(&pulsar_engine_, false, 0.9f, 0.9f);
+#endif
   engines_.RegisterInstance(&string_machine_engine_, false, 0.8f, 0.8f);
   engines_.RegisterInstance(&chiptune_engine_, false, 0.5f, 0.5f);
   
@@ -169,6 +176,11 @@ void Voice::Render(
   if (engine_index != previous_engine_index_ || reload_user_data_) {
     UserData user_data;
     const uint8_t* data = user_data.ptr(engine_index);
+#if defined(PLAITS_STOCK_ENGINE_LAYOUT)
+    if (!data && engine_index >= 2 && engine_index <= 4) {
+      data = fm_patches_table[engine_index - 2];
+    }
+#endif
     e->LoadUserData(data);
     e->Reset();
 

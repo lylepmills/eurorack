@@ -35,6 +35,18 @@ namespace plaits {
 using namespace std;
 using namespace stmlib;
 
+const uint8_t kRegisterVoicings[9][kChordNumVoices] = {
+  { 0, 0, 0, 0, 0 },
+  { 1, 0, 0, 0, 0 },
+  { 0, 1, 0, 0, 0 },
+  { 0, 0, 0, 0, 1 },
+  { 0, 0, 0, 0, 0 },  // Stock voicing is handled separately.
+  { 0, 0, 0, 1, 1 },
+  { 0, 0, 1, 1, 2 },
+  { 0, 1, 1, 2, 2 },
+  { 0, 1, 2, 3, 4 },
+};
+
 void ChiptuneEngine::Init(BufferAllocator* allocator) {
   bass_.Init();
   for (int i = 0; i < kChordNumNotes; ++i) {
@@ -46,6 +58,7 @@ void ChiptuneEngine::Init(BufferAllocator* allocator) {
   arpeggiator_.Init();
   
   arpeggiator_pattern_selector_.Init(12, 0.075f, false);
+  register_spread_selector_.Init(9, 0.075f, false);
   
   envelope_shape_ = NO_ENVELOPE;
   envelope_state_ = 0.0f;
@@ -65,6 +78,8 @@ void ChiptuneEngine::Render(
   const float f0 = NoteToFrequency(parameters.note);
   const float shape = parameters.morph * 0.995f;
   const bool clocked = !(parameters.trigger & TRIGGER_UNPATCHED);
+  const int register_mode = register_spread_selector_.Process(
+      parameters.macro);
   float root_transposition = 1.0f;
   
   *already_enveloped = clocked;
@@ -81,8 +96,12 @@ void ChiptuneEngine::Render(
       envelope_state_ = 1.0f;
     }
     const float octave = float(1 << arpeggiator_.octave());
+    const int arpeggiator_note = arpeggiator_.note();
+    const float register_transposition = register_mode == 4
+        ? octave
+        : float(1 << kRegisterVoicings[register_mode][arpeggiator_note]);
     const float note_f0 = f0 * chords_.sorted_ratio(
-        arpeggiator_.note()) * octave;
+        arpeggiator_note) * register_transposition;
     root_transposition = octave;
     voice_[0].Render(note_f0, shape, out, size);
   } else {
@@ -91,6 +110,34 @@ void ChiptuneEngine::Render(
 
     chords_.set_chord(parameters.harmonics, parameters.chord_set_option);
     chords_.ComputeChordInversion(parameters.timbre, ratios, amplitudes);
+
+    if (register_mode != 4) {
+      float compact_ratios[kChordNumVoices];
+      for (int voice = 0; voice < kChordNumVoices; ++voice) {
+        float ratio = ratios[voice];
+        while (ratio < 0.5f) {
+          ratio *= 2.0f;
+        }
+        while (ratio >= 1.0f) {
+          ratio *= 0.5f;
+        }
+        compact_ratios[voice] = ratio;
+      }
+
+      for (int voice = 0; voice < kChordNumVoices; ++voice) {
+        int rank = 0;
+        for (int other = 0; other < kChordNumVoices; ++other) {
+          if (compact_ratios[other] < compact_ratios[voice] || \
+              (compact_ratios[other] == compact_ratios[voice] && \
+                  other < voice)) {
+            ++rank;
+          }
+        }
+        ratios[voice] = compact_ratios[voice] * float(
+            1 << kRegisterVoicings[register_mode][rank]);
+      }
+    }
+
     for (int j = 1; j < kChordNumVoices; j += 2) {
       amplitudes[j] = -amplitudes[j];
     }

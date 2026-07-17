@@ -63,10 +63,15 @@ void FMEngine::Render(
   // 4x oversampling
   const float note = parameters.note - 24.0f;
   
-  const float ratio = Interpolate(
+  const float stock_ratio = Interpolate(
       lut_fm_frequency_quantizer,
       parameters.harmonics,
       128.0f);
+  const float ratio = ApplyMacro(
+      stock_ratio,
+      stock_ratio - 12.0f,
+      stock_ratio + 12.0f,
+      parameters.macro);
   
   float modulator_note = note + ratio;
   float target_modulator_frequency = NoteToFrequency(modulator_note);
@@ -87,7 +92,6 @@ void FMEngine::Render(
       size);
   ParameterInterpolator feedback_modulation(
       &previous_feedback_, 2.0f * parameters.morph - 1.0f, size);
-  
   Downsampler carrier_downsampler(&carrier_fir_);
   Downsampler sub_downsampler(&sub_fir_);
   

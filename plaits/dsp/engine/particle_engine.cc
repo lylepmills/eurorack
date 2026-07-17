@@ -65,9 +65,11 @@ void ParticleEngine::Render(
   const float spread = 48.0f * parameters.harmonics * parameters.harmonics;
   const float raw_diffusion_sqrt = 2.0f * fabsf(parameters.morph - 0.5f);
   const float raw_diffusion = raw_diffusion_sqrt * raw_diffusion_sqrt;
-  const float diffusion = parameters.morph < 0.5f
+  const float stock_diffusion = parameters.morph < 0.5f
       ? raw_diffusion
       : 0.0f;
+  const float diffusion = ApplyMacro(
+      stock_diffusion, 0.0f, 1.0f, parameters.macro);
   const bool sync = parameters.trigger & TRIGGER_RISING_EDGE;
   
   fill(&out[0], &out[size], 0.0f);

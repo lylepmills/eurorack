@@ -54,7 +54,13 @@ class SquareNoise {
     std::fill(&phase_[0], &phase_[6], 0);
   }
     
-  void Render(float f0, float* temp_1, float* temp_2, float* out, size_t size) {
+  void Render(
+      float f0,
+      float spread,
+      float* temp_1,
+      float* temp_2,
+      float* out,
+      size_t size) {
     const float ratios[6] = {
         // Nominal f0: 414 Hz
         1.0f, 1.304f, 1.466f, 1.787f, 1.932f, 2.536f
@@ -63,7 +69,7 @@ class SquareNoise {
     uint32_t increment[6];
     uint32_t phase[6];
     for (int i = 0; i < 6; ++i) {
-      float f = f0 * ratios[i];
+      float f = f0 * (1.0f + (ratios[i] - 1.0f) * spread);
       if (f >= 0.499f) f = 0.499f;
       increment[i] = static_cast<uint32_t>(f * 4294967296.0f);
       phase[i] = phase_[i];
@@ -108,14 +114,23 @@ class RingModNoise {
     }
   }
   
-  void Render(float f0, float* temp_1, float* temp_2, float* out, size_t size) {
+  void Render(
+      float f0,
+      float spread,
+      float* temp_1,
+      float* temp_2,
+      float* out,
+      size_t size) {
     const float ratio = f0 / (0.01f + f0);
     const float f1a = 200.0f / kSampleRate * ratio;
-    const float f1b = 7530.0f / kSampleRate * ratio;
+    const float f1b_stock = 7530.0f / kSampleRate * ratio;
     const float f2a = 510.0f / kSampleRate * ratio;
-    const float f2b = 8075.0f / kSampleRate * ratio;
+    const float f2b_stock = 8075.0f / kSampleRate * ratio;
     const float f3a = 730.0f / kSampleRate * ratio;
-    const float f3b = 10500.0f / kSampleRate * ratio;
+    const float f3b_stock = 10500.0f / kSampleRate * ratio;
+    const float f1b = f1a + (f1b_stock - f1a) * spread;
+    const float f2b = f2a + (f2b_stock - f2a) * spread;
+    const float f3b = f3a + (f3b_stock - f3a) * spread;
     const float f[3][2] = { { f1a, f1b }, { f2a, f2b }, { f3a, f3b } };
     
     std::fill(&out[0], &out[size], 0.0f);
@@ -189,6 +204,7 @@ class HiHat {
       float tone,
       float decay,
       float noisiness,
+      float metallic_spread,
       float* temp_1,
       float* temp_2,
       float* out,
@@ -203,7 +219,8 @@ class HiHat {
     }
 
     // Render the metallic noise.
-    metallic_noise_.Render(2.0f * f0, temp_1, temp_2, out, size);
+    metallic_noise_.Render(
+        2.0f * f0, metallic_spread, temp_1, temp_2, out, size);
 
     // Apply BPF on the metallic noise.
     float cutoff = 150.0f / kSampleRate * stmlib::SemitonesToRatio(

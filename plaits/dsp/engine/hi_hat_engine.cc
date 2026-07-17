@@ -50,6 +50,8 @@ void HiHatEngine::Render(
     size_t size,
     bool* already_enveloped) {
   const float f0 = NoteToFrequency(parameters.note);
+  const float metallic_spread = ApplyMacro(
+      1.0f, 0.55f, 1.6f, parameters.macro);
   
   hi_hat_1_.Render(
       parameters.trigger & TRIGGER_UNPATCHED,
@@ -59,6 +61,7 @@ void HiHatEngine::Render(
       parameters.timbre,
       parameters.morph,
       parameters.harmonics,
+      metallic_spread,
       temp_buffer_,
       temp_buffer_ + size,
       out,
@@ -72,6 +75,7 @@ void HiHatEngine::Render(
       parameters.timbre,
       parameters.morph,
       parameters.harmonics,
+      metallic_spread,
       temp_buffer_,
       temp_buffer_ + size,
       aux,

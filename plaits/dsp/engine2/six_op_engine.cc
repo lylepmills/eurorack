@@ -50,6 +50,7 @@ void FMVoice::Init(fm::Algorithms<6>* algorithms, float sample_rate) {
   parameters_.envelope_control = 0.5f;
   parameters_.pitch_mod = 0.0f;
   parameters_.amp_mod = 0.0f;
+  parameters_.modulator_detune = 0.0f;
   
   patch_ = NULL;
 }
@@ -83,12 +84,13 @@ void SixOpEngine::Init(BufferAllocator* allocator) {
   acc_buffer_ = allocator->Allocate<float>(kMaxBlockSize * kNumSixOpVoices);
   patches_ = allocator->Allocate<fm::Patch>(kNumPatchesPerBank);
   
+  post_filter_ = 0.0f;
   active_voice_ = kNumSixOpVoices - 1;
   rendered_voice_ = 0;
 }
 
 void SixOpEngine::Reset() {
-  
+  post_filter_ = 0.0f;
 }
 
 void SixOpEngine::LoadUserData(const uint8_t* user_data) {
@@ -108,6 +110,7 @@ void SixOpEngine::Render(
     bool* already_enveloped) {
   int patch_index = patch_index_quantizer_.Process(
       parameters.harmonics * 1.02f);
+  const float modulator_detune = 24.0f * (parameters.macro - 0.5f);
   
   if (parameters.trigger & TRIGGER_UNPATCHED) {
     const float t = parameters.morph;
@@ -122,6 +125,7 @@ void SixOpEngine::Render(
       p->velocity = parameters.accent;
       p->brightness = parameters.timbre;
       p->envelope_control = t;
+      p->modulator_detune = modulator_detune;
       voice_[i].set_modulations(voice_[0].lfo());
     }
   } else {
@@ -139,6 +143,7 @@ void SixOpEngine::Render(
     for (int i = 0; i < kNumSixOpVoices; ++i) {
       Voice<6>::Parameters* p = voice_[i].mutable_parameters();
       p->brightness = parameters.timbre;
+      p->modulator_detune = modulator_detune;
       p->sustain = false;
       p->gate = (parameters.trigger & TRIGGER_HIGH) && (i == active_voice_);
       if (voice_[i].patch() != voice_[active_voice_].patch()) {
@@ -169,7 +174,19 @@ void SixOpEngine::Render(
   voice_[rendered_voice_].Render(temp_buffer_, size * kNumSixOpVoices);
 
   for (size_t i = 0; i < size; ++i) {
-    aux[i] = out[i] = SoftClip(temp_buffer_[i] * 0.25f);
+    float sample = SoftClip(temp_buffer_[i] * 0.25f);
+    if (parameters.macro < 0.5f) {
+      const float darkness = (0.5f - parameters.macro) * 2.0f;
+      const float coefficient = 1.0f - darkness * 0.92f;
+      ONE_POLE(post_filter_, sample, coefficient);
+      sample = post_filter_;
+    } else {
+      post_filter_ = sample;
+      const float saturation = (parameters.macro - 0.5f) * 2.0f;
+      const float saturated = SoftClip(sample * 3.0f);
+      sample += (saturated - sample) * saturation;
+    }
+    aux[i] = out[i] = sample;
   }
   copy(
       &temp_buffer_[size],

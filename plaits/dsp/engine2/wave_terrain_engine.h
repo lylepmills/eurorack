@@ -62,6 +62,7 @@ class WaveTerrainEngine : public Engine {
   
   FastSineOscillator path_;
   float offset_;
+  float y_offset_;
   float terrain_;
   
   float* temp_buffer_;

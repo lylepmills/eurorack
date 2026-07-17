@@ -53,7 +53,8 @@ void BassDrumEngine::Render(
     bool* already_enveloped) {
   const float f0 = NoteToFrequency(parameters.note);
   
-  const float attack_fm_amount = min(parameters.harmonics * 4.0f, 1.0f);
+  const float punch = ApplyMacro(1.0f, 0.25f, 1.75f, parameters.macro);
+  const float attack_fm_amount = min(parameters.harmonics * 4.0f, 1.0f) * punch;
   const float self_fm_amount = max(min(parameters.harmonics * 4.0f - 1.0f, 1.0f), 0.0f);
   const float drive = max(parameters.harmonics * 2.0f - 1.0f, 0.0f) * \
       max(1.0f - 16.0f * f0, 0.0f);
@@ -87,7 +88,7 @@ void BassDrumEngine::Render(
       sustain
           ? parameters.harmonics
           : 0.4f - 0.25f * parameters.morph * parameters.morph,
-      min(parameters.harmonics * 2.0f, 1.0f),
+      min(parameters.harmonics * 2.0f, 1.0f) * punch,
       max(parameters.harmonics * 2.0f - 1.0f, 0.0f),
       aux,
       size);

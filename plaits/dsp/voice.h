@@ -53,10 +53,17 @@
 #include "plaits/dsp/engine/waveshaping_engine.h"
 #include "plaits/dsp/engine/wavetable_engine.h"
 #include "plaits/dsp/engine2/chiptune_engine.h"
+#if !defined(PLAITS_STOCK_ENGINE_LAYOUT)
 #include "plaits/dsp/engine2/gendy_engine.h"
 #include "plaits/dsp/engine2/glisson_engine.h"
+#endif
 #include "plaits/dsp/engine2/phase_distortion_engine.h"
+#if !defined(PLAITS_STOCK_ENGINE_LAYOUT)
+#include "plaits/dsp/engine2/pulsar_engine.h"
 #include "plaits/dsp/engine2/scanned_engine.h"
+#else
+#include "plaits/dsp/engine2/six_op_engine.h"
+#endif
 #include "plaits/dsp/engine2/string_machine_engine.h"
 #include "plaits/dsp/engine2/virtual_analog_vcf_engine.h"
 #include "plaits/dsp/engine2/wave_terrain_engine.h"
@@ -255,10 +262,15 @@ class Voice {
   
   VirtualAnalogVCFEngine virtual_analog_vcf_engine_;
   PhaseDistortionEngine phase_distortion_engine_;
+#if defined(PLAITS_STOCK_ENGINE_LAYOUT)
+  SixOpEngine six_op_engine_;
+  WaveTerrainEngine wave_terrain_engine_;
+#else
   GlissonEngine glisson_engine_;
   GendyEngine gendy_engine_;
   ScannedEngine scanned_engine_;
-  WaveTerrainEngine wave_terrain_engine_;
+  PulsarEngine pulsar_engine_;
+#endif
   StringMachineEngine string_machine_engine_;
   ChiptuneEngine chiptune_engine_;
 

@@ -134,6 +134,13 @@ void AdditiveEngine::Render(
       &amplitudes_[0],
       integer_harmonics,
       24);
+  const float odd_gain = ApplyMacro(
+      1.0f, 1.5f, 0.5f, parameters.macro);
+  const float even_gain = ApplyMacro(
+      1.0f, 0.5f, 1.5f, parameters.macro);
+  for (int i = 0; i < 24; ++i) {
+    amplitudes_[i] *= (i & 1) ? even_gain : odd_gain;
+  }
   harmonic_oscillator_[0].Render<1>(f0, &amplitudes_[0], out, size);
   harmonic_oscillator_[1].Render<13>(f0, &amplitudes_[12], out, size);
 

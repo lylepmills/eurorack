@@ -49,7 +49,9 @@ void ScannedEngine::Excite(float position, float width, float amount) {
 
 void ScannedEngine::Step(
     float inharmonicity,
+    float structure,
     float damping,
+    float nonlinearity,
     bool driven,
     int drive_index) {
   float acceleration[kScannedMasses];
@@ -62,13 +64,20 @@ void ScannedEngine::Step(
         2.0f * position_[i];
     const float biharmonic = position_[l2] - 4.0f * position_[l1] + \
         6.0f * position_[i] - 4.0f * position_[r1] + position_[r2];
-    const float mass = 1.0f + inharmonicity * 0.6f * (i & 1);
+    // A uniform circular network is translationally symmetric, so moving the
+    // excitation point only changes phase. This fixed irregular mass profile
+    // breaks that symmetry and gives TIMBRE a meaningful spectral effect.
+    const float mass_profile = static_cast<float>((i * 13) & 31) / 31.0f;
+    const float mass = 1.0f + inharmonicity * 0.45f * (i & 1) + \
+        structure * (0.25f + 1.35f * mass_profile);
     acceleration[i] = (0.22f * laplacian - \
         0.018f * inharmonicity * biharmonic) / mass;
+    acceleration[i] -= nonlinearity * 0.12f * position_[i] * \
+        fabsf(position_[i]);
   }
   if (driven) {
     acceleration[drive_index] += \
-        (Random::GetFloat() - 0.5f) * 0.002f;
+        (Random::GetFloat() - 0.5f) * (0.002f + 0.004f * nonlinearity);
   }
   float acceleration_mean = 0.0f;
   for (int i = 0; i < kScannedMasses; ++i) {
@@ -117,6 +126,10 @@ void ScannedEngine::Render(
     float* aux,
     size_t size,
     bool* already_enveloped) {
+  const float structure = parameters.timbre * parameters.timbre;
+  // HARMONICS originally derived much of its audible range from moving the
+  // excitation between a broad strike and a narrow, bright impulse. Keep that
+  // role separate from TIMBRE's mass profile and scan-path transformations.
   const float strike_width = 1.25f + 5.0f * (1.0f - parameters.harmonics);
   if (reset_pending_ || (parameters.trigger & TRIGGER_RISING_EDGE)) {
     Excite(parameters.timbre, strike_width, 0.3f + 0.5f * parameters.accent);
@@ -126,8 +139,9 @@ void ScannedEngine::Render(
   const float frequency = min(0.24f, NoteToFrequency(parameters.note));
   const float physics_rate = 20.0f * SemitonesToRatio(parameters.macro * 72.0f) / \
       kCorrectedSampleRate;
-  const float damping = 0.9997f - 0.018f * parameters.morph * \
+  const float damping = 0.99985f - 0.065f * parameters.morph * \
       parameters.morph;
+  const float nonlinearity = parameters.morph * parameters.morph;
   const bool driven = parameters.trigger & TRIGGER_UNPATCHED;
   int drive_index = static_cast<int>(
       parameters.timbre * static_cast<float>(kScannedMasses));
@@ -139,20 +153,53 @@ void ScannedEngine::Render(
     physics_phase_ += physics_rate;
     while (physics_phase_ >= 1.0f) {
       physics_phase_ -= 1.0f;
-      Step(parameters.harmonics, damping, driven, drive_index);
+      Step(
+          parameters.harmonics,
+          structure,
+          damping,
+          nonlinearity,
+          driven,
+          drive_index);
     }
 
     scan_phase_ += frequency;
     scan_phase_ -= static_cast<int>(scan_phase_);
-    const float sample = Scan(position_, scan_phase_);
-    float derivative_phase = scan_phase_ + \
+    // Phase distortion of the scan path makes TIMBRE audible even between
+    // excitations, while remaining continuous at the waveform boundary.
+    float warped_phase = scan_phase_ + 0.22f * structure * Sine(scan_phase_);
+    if (warped_phase < 0.0f) {
+      warped_phase += 1.0f;
+    } else if (warped_phase >= 1.0f) {
+      warped_phase -= 1.0f;
+    }
+    const float sample = Scan(position_, warped_phase);
+    float left_phase = warped_phase - \
+        1.0f / static_cast<float>(kScannedMasses);
+    if (left_phase < 0.0f) {
+      left_phase += 1.0f;
+    }
+    float derivative_phase = warped_phase + \
         1.0f / static_cast<float>(kScannedMasses);
     if (derivative_phase >= 1.0f) {
       derivative_phase -= 1.0f;
     }
-    const float derivative = Scan(position_, derivative_phase) - sample;
-    out[i] = sample * 0.8f;
-    aux[i] = derivative * 2.4f;
+    const float left = Scan(position_, left_phase);
+    const float right = Scan(position_, derivative_phase);
+    const float derivative = right - left;
+    const float gradient = derivative * 2.25f;
+    const float scanned = sample + (gradient - sample) * parameters.timbre;
+
+    // MORPH now travels from the raw scan into a clearly audible nonlinear
+    // regime. The squared mapping leaves the lower half useful for traditional
+    // damping changes, then introduces up to 1.5 cycles of sine wavefolding.
+    const float fold_amount = parameters.morph * parameters.morph;
+    // Sine() requires a non-negative phase. The offset is safely larger than
+    // the maximum negative excursion of the normalized scanned waveform.
+    const float folded = Sine(
+        16.0f + scanned * (0.25f + 1.25f * fold_amount));
+    const float shaped = scanned + (folded - scanned) * fold_amount;
+    out[i] = shaped * 0.8f;
+    aux[i] = derivative * 2.0f;
   }
 }
 

@@ -46,6 +46,7 @@
 #include "plaits/dsp/engine2/glisson_engine.h"
 #include "plaits/dsp/engine2/phase_distortion_engine.h"
 #include "plaits/dsp/engine2/scanned_engine.h"
+#include "plaits/dsp/engine2/six_op_engine.h"
 #include "plaits/dsp/engine2/string_machine_engine.h"
 #include "plaits/dsp/engine2/virtual_analog_vcf_engine.h"
 #include "plaits/dsp/engine2/wave_terrain_engine.h"
@@ -1292,6 +1293,17 @@ void RenderExperimentalEngine(const char* name) {
     for (size_t j = 0; j < kAudioBlockSize; ++j) {
       if (!isfinite(out[j]) || !isfinite(aux[j]) ||
           fabsf(out[j]) > 4.0f || fabsf(aux[j]) > 4.0f) {
+        fprintf(
+            stderr,
+            "%s failed at sample %zu: h=%f t=%f m=%f macro=%f out=%f aux=%f\n",
+            name,
+            i + j,
+            p.harmonics,
+            p.timbre,
+            p.morph,
+            p.macro,
+            out[j],
+            aux[j]);
         abort();
       }
     }
@@ -1299,10 +1311,359 @@ void RenderExperimentalEngine(const char* name) {
   }
 }
 
+template<typename T>
+void ValidateExperimentalEngineExtremes(float maximum = 4.0f) {
+  BufferAllocator allocator(ram_block, 16384);
+  // Static storage mirrors the firmware's zero-initialized Voice instance.
+  // Several original engines rely on that initialization before Init().
+  static T e;
+  e.Init(&allocator);
+  e.LoadUserData(NULL);
+
+  const float values[] = { 0.0f, 0.5f, 1.0f };
+  for (size_t h = 0; h < 3; ++h) {
+    for (size_t t = 0; t < 3; ++t) {
+      for (size_t m = 0; m < 3; ++m) {
+        for (size_t x = 0; x < 3; ++x) {
+          e.Reset();
+          EngineParameters p;
+          p.note = 60.0f;
+          p.accent = 1.0f;
+          p.chord_set_option = 0;
+          p.harmonics = values[h];
+          p.timbre = values[t];
+          p.morph = values[m];
+          p.macro = values[x];
+          for (size_t block = 0; block < 64; ++block) {
+            float out[kAudioBlockSize];
+            float aux[kAudioBlockSize];
+            p.trigger = block == 0
+                ? TRIGGER_RISING_EDGE | TRIGGER_HIGH
+                : TRIGGER_UNPATCHED;
+            bool already_enveloped;
+            e.Render(p, out, aux, kAudioBlockSize, &already_enveloped);
+            for (size_t i = 0; i < kAudioBlockSize; ++i) {
+              if (!isfinite(out[i]) || !isfinite(aux[i]) ||
+                  fabsf(out[i]) > maximum || fabsf(aux[i]) > maximum) {
+                fprintf(
+                    stderr,
+                    "Extreme failed: h=%f t=%f m=%f macro=%f block=%zu "
+                    "sample=%zu out=%f aux=%f\n",
+                    p.harmonics,
+                    p.timbre,
+                    p.morph,
+                    p.macro,
+                    block,
+                    i,
+                    out[i],
+                    aux[i]);
+                abort();
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+template<typename T>
+double StockMacroSignature(float macro) {
+  BufferAllocator allocator(ram_block, 16384);
+  Random::Seed(0x21);
+  static T e;
+  e.Init(&allocator);
+  e.LoadUserData(NULL);
+  e.Reset();
+
+  EngineParameters p;
+  p.note = 48.0f;
+  p.accent = 0.8f;
+  p.chord_set_option = 0;
+  p.harmonics = 0.57f;
+  p.timbre = 0.73f;
+  p.morph = 0.41f;
+  p.macro = macro;
+
+  double signature = 0.0;
+  for (size_t block = 0; block < 512; ++block) {
+    float out[kAudioBlockSize];
+    float aux[kAudioBlockSize];
+    p.trigger = block == 0
+        ? TRIGGER_RISING_EDGE | TRIGGER_HIGH
+        : TRIGGER_LOW;
+    bool already_enveloped;
+    e.Render(p, out, aux, kAudioBlockSize, &already_enveloped);
+    for (size_t i = 0; i < kAudioBlockSize; ++i) {
+      if (!isfinite(out[i]) || !isfinite(aux[i])) {
+        abort();
+      }
+      signature += fabsf(out[i]) + 0.61803398875f * fabsf(aux[i]);
+    }
+  }
+  return signature;
+}
+
+template<typename T>
+void ValidateStockMacroResponse(const char* name) {
+  const double low = StockMacroSignature<T>(0.0f);
+  const double stock = StockMacroSignature<T>(0.5f);
+  const double high = StockMacroSignature<T>(1.0f);
+  const double threshold = max(1.0, stock * 0.0001);
+  if (fabs(low - stock) < threshold && fabs(high - stock) < threshold) {
+    fprintf(
+        stderr,
+        "%s fourth macro is inaudible: low=%f stock=%f high=%f\n",
+        name,
+        low,
+        stock,
+        high);
+    abort();
+  }
+}
+
+void ValidateStockMacroMidpoint() {
+  const float stock_values[] = { 0.0f, 0.17f, 0.5f, 0.83f, 1.0f };
+  for (size_t i = 0; i < 5; ++i) {
+    const float stock = stock_values[i];
+    if (ApplyMacro(stock, 0.0f, 1.0f, 0.5f) != stock) {
+      fprintf(stderr, "Fourth macro midpoint changed stock value %f\n", stock);
+      abort();
+    }
+  }
+}
+
+void PrepareSixOpTestBank(uint8_t* bank) {
+  memset(bank, 0, UserData::SIZE);
+  for (int patch = 0; patch < 32; ++patch) {
+    uint8_t* data = bank + patch * fm::Patch::SYX_SIZE;
+    for (int op = 0; op < 6; ++op) {
+      uint8_t* op_data = data + op * 17;
+      for (int i = 0; i < 8; ++i) {
+        op_data[i] = 99;
+      }
+      op_data[12] = 7 << 3;
+      op_data[14] = 99;
+      op_data[15] = 1 << 1;
+    }
+    for (int i = 0; i < 4; ++i) {
+      data[102 + i] = 99;
+      data[106 + i] = 50;
+    }
+    data[110] = 0;
+    data[111] = 3 | (1 << 3);
+    data[117] = 24;
+  }
+}
+
+double SixOpMacroSignature(
+    const uint8_t* bank,
+    float macro,
+    float harmonics,
+    size_t num_blocks = 512) {
+  memset(ram_block, 0, sizeof(ram_block));
+  BufferAllocator allocator(ram_block, sizeof(ram_block));
+  static SixOpEngine e;
+  e.Init(&allocator);
+  e.LoadUserData(bank);
+
+  EngineParameters p;
+  p.note = 48.0f;
+  p.accent = 0.8f;
+  p.chord_set_option = 0;
+  p.harmonics = harmonics;
+  p.timbre = 0.5f;
+  p.morph = 0.5f;
+  p.macro = macro;
+
+  double signature = 0.0;
+  for (size_t block = 0; block < num_blocks; ++block) {
+    float out[kAudioBlockSize];
+    float aux[kAudioBlockSize];
+    p.trigger = TRIGGER_UNPATCHED;
+    bool already_enveloped;
+    e.Render(p, out, aux, kAudioBlockSize, &already_enveloped);
+    for (size_t i = 0; i < kAudioBlockSize; ++i) {
+      if (!isfinite(out[i]) || !isfinite(aux[i]) ||
+          fabsf(out[i]) > 16.0f || fabsf(aux[i]) > 16.0f) {
+        abort();
+      }
+      signature += fabsf(out[i]);
+    }
+  }
+  return signature;
+}
+
+void ValidateSixOpMacroResponse() {
+  static uint8_t bank[UserData::SIZE];
+  PrepareSixOpTestBank(bank);
+  const double low = SixOpMacroSignature(bank, 0.0f, 0.0f);
+  const double stock = SixOpMacroSignature(bank, 0.5f, 0.0f);
+  const double high = SixOpMacroSignature(bank, 1.0f, 0.0f);
+  const double threshold = max(1.0, stock * 0.0001);
+  if (fabs(low - stock) < threshold && fabs(high - stock) < threshold) {
+    fprintf(
+        stderr,
+        "Six-op FM fourth macro is inaudible: low=%f stock=%f high=%f\n",
+        low,
+        stock,
+        high);
+    abort();
+  }
+
+  double factory_signatures[3];
+  for (int bank_index = 0; bank_index < 3; ++bank_index) {
+    double bank_stock = 0.0;
+    for (int patch = 0; patch < 32; ++patch) {
+      const float harmonics = (
+          static_cast<float>(patch) + 0.5f) / (32.0f * 1.02f);
+      const double patch_low = SixOpMacroSignature(
+          fm_patches_table[bank_index], 0.0f, harmonics, 128);
+      const double patch_stock = SixOpMacroSignature(
+          fm_patches_table[bank_index], 0.5f, harmonics, 128);
+      const double patch_high = SixOpMacroSignature(
+          fm_patches_table[bank_index], 1.0f, harmonics, 128);
+      const double patch_threshold = max(1.0, patch_stock * 0.001);
+      if (fabs(patch_low - patch_stock) < patch_threshold && \
+          fabs(patch_high - patch_stock) < patch_threshold) {
+        fprintf(
+            stderr,
+            "Factory DX bank %d patch %d ignores the fourth macro: "
+            "low=%f stock=%f high=%f\n",
+            bank_index,
+            patch,
+            patch_low,
+            patch_stock,
+            patch_high);
+        abort();
+      }
+      bank_stock += patch_stock;
+    }
+    factory_signatures[bank_index] = bank_stock;
+  }
+
+  for (int a = 0; a < 3; ++a) {
+    for (int b = a + 1; b < 3; ++b) {
+      const double difference = fabs(
+          factory_signatures[a] - factory_signatures[b]);
+      const double threshold = max(
+          1.0, min(factory_signatures[a], factory_signatures[b]) * 0.001);
+      if (difference < threshold) {
+        fprintf(stderr, "Factory DX banks %d and %d are indistinguishable\n", a, b);
+        abort();
+      }
+    }
+  }
+}
+
 void TestExperimentalEngines() {
+  printf("Rendering Glisson sweep...\n");
+  fflush(stdout);
   RenderExperimentalEngine<GlissonEngine>("plaits_glisson_engine.wav");
+  printf("Rendering GENDY sweep...\n");
+  fflush(stdout);
   RenderExperimentalEngine<GendyEngine>("plaits_gendy_engine.wav");
+  printf("Rendering Scanned sweep...\n");
+  fflush(stdout);
   RenderExperimentalEngine<ScannedEngine>("plaits_scanned_engine.wav");
+  printf("Rendering Pulsar sweep...\n");
+  fflush(stdout);
+  RenderExperimentalEngine<PulsarEngine>("plaits_pulsar_engine.wav");
+  printf("Validating Glisson extremes...\n");
+  fflush(stdout);
+  ValidateExperimentalEngineExtremes<GlissonEngine>();
+  printf("Validating GENDY extremes...\n");
+  fflush(stdout);
+  ValidateExperimentalEngineExtremes<GendyEngine>();
+  printf("Validating Scanned extremes...\n");
+  fflush(stdout);
+  ValidateExperimentalEngineExtremes<ScannedEngine>();
+  printf("Validating Pulsar extremes...\n");
+  fflush(stdout);
+  ValidateExperimentalEngineExtremes<PulsarEngine>();
+  printf("Validating stock fourth-macro midpoint...\n");
+  fflush(stdout);
+  ValidateStockMacroMidpoint();
+  printf("Validating stock fourth-macro responses...\n");
+  fflush(stdout);
+  printf("  VA + VCF\n");
+  fflush(stdout);
+  ValidateStockMacroResponse<VirtualAnalogVCFEngine>("VA + VCF");
+  printf("  String Machine\n");
+  fflush(stdout);
+  ValidateStockMacroResponse<StringMachineEngine>("String Machine");
+  printf("  Chords\n");
+  fflush(stdout);
+  ValidateStockMacroResponse<ChordEngine>("Chords");
+  printf("  Filtered Noise\n");
+  fflush(stdout);
+  ValidateStockMacroResponse<NoiseEngine>("Filtered Noise");
+  printf("  Particle Noise\n");
+  fflush(stdout);
+  ValidateStockMacroResponse<ParticleEngine>("Particle Noise");
+  printf("  Analog Bass Drum\n");
+  fflush(stdout);
+  ValidateStockMacroResponse<BassDrumEngine>("Analog Bass Drum");
+  printf("  Phase Distortion\n");
+  ValidateStockMacroResponse<PhaseDistortionEngine>("Phase Distortion");
+  printf("  Six-op FM\n");
+  ValidateSixOpMacroResponse();
+  printf("  Wave Terrain\n");
+  ValidateStockMacroResponse<WaveTerrainEngine>("Wave Terrain");
+  printf("  Chiptune\n");
+  ValidateStockMacroResponse<ChiptuneEngine>("Chiptune");
+  printf("  Virtual Analog\n");
+  ValidateStockMacroResponse<VirtualAnalogEngine>("Virtual Analog");
+  printf("  Waveshaping\n");
+  ValidateStockMacroResponse<WaveshapingEngine>("Waveshaping");
+  printf("  Two-op FM\n");
+  ValidateStockMacroResponse<FMEngine>("Two-op FM");
+  printf("  Granular Formant\n");
+  ValidateStockMacroResponse<GrainEngine>("Granular Formant");
+  printf("  Harmonic Oscillator\n");
+  ValidateStockMacroResponse<AdditiveEngine>("Harmonic Oscillator");
+  printf("  Wavetable\n");
+  ValidateStockMacroResponse<WavetableEngine>("Wavetable");
+  printf("  Speech\n");
+  ValidateStockMacroResponse<SpeechEngine>("Speech");
+  printf("  Swarm\n");
+  ValidateStockMacroResponse<SwarmEngine>("Swarm");
+  printf("  Inharmonic String\n");
+  ValidateStockMacroResponse<StringEngine>("Inharmonic String");
+  printf("  Modal Resonator\n");
+  ValidateStockMacroResponse<ModalEngine>("Modal Resonator");
+  printf("  Analog Snare\n");
+  ValidateStockMacroResponse<SnareDrumEngine>("Analog Snare");
+  printf("  Analog Hi-hat\n");
+  ValidateStockMacroResponse<HiHatEngine>("Analog Hi-hat");
+  fflush(stdout);
+  printf("Validating stock fourth-macro extremes...\n");
+  fflush(stdout);
+  // Stock engines are normally followed by their registered gain/limiter.
+  // Use a wider raw-output ceiling here while still catching instability.
+  // Voice applies each engine's registered gain and limiter after this stage.
+  ValidateExperimentalEngineExtremes<VirtualAnalogVCFEngine>(32.0f);
+  ValidateExperimentalEngineExtremes<StringMachineEngine>(32.0f);
+  ValidateExperimentalEngineExtremes<ChordEngine>(32.0f);
+  ValidateExperimentalEngineExtremes<NoiseEngine>(32.0f);
+  ValidateExperimentalEngineExtremes<ParticleEngine>(32.0f);
+  ValidateExperimentalEngineExtremes<BassDrumEngine>(32.0f);
+  ValidateExperimentalEngineExtremes<PhaseDistortionEngine>(32.0f);
+  ValidateExperimentalEngineExtremes<WaveTerrainEngine>(32.0f);
+  ValidateExperimentalEngineExtremes<ChiptuneEngine>(32.0f);
+  ValidateExperimentalEngineExtremes<VirtualAnalogEngine>(32.0f);
+  ValidateExperimentalEngineExtremes<WaveshapingEngine>(32.0f);
+  ValidateExperimentalEngineExtremes<FMEngine>(32.0f);
+  ValidateExperimentalEngineExtremes<GrainEngine>(32.0f);
+  ValidateExperimentalEngineExtremes<AdditiveEngine>(32.0f);
+  ValidateExperimentalEngineExtremes<WavetableEngine>(32.0f);
+  ValidateExperimentalEngineExtremes<SpeechEngine>(32.0f);
+  ValidateExperimentalEngineExtremes<SwarmEngine>(32.0f);
+  ValidateExperimentalEngineExtremes<StringEngine>(32.0f);
+  ValidateExperimentalEngineExtremes<ModalEngine>(32.0f);
+  ValidateExperimentalEngineExtremes<SnareDrumEngine>(32.0f);
+  ValidateExperimentalEngineExtremes<HiHatEngine>(32.0f);
+  printf("Synthesis engine tests passed.\n");
 }
 
 int main(void) {

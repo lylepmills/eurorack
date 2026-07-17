@@ -163,8 +163,10 @@ void ChordEngine::Render(
     }
   }
   
+  const float voice_balance = ApplyMacro(
+      1.0f, 0.0f, 2.0f, parameters.macro);
   for (size_t i = 0; i < size; ++i) {
-    out[i] += aux[i];
+    out[i] += aux[i] * voice_balance;
     aux[i] *= 3.0f;
   }
 }

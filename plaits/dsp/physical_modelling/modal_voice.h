@@ -51,6 +51,7 @@ class ModalVoice {
       float structure,
       float brightness,
       float damping,
+      float exciter_q,
       float* temp,
       float* out,
       float* aux,

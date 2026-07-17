@@ -42,6 +42,19 @@ inline float NoteToFrequency(float midi_note) {
   return a0 * 0.25f * stmlib::SemitonesToRatio(midi_note);
 }
 
+// Expands a fourth macro around an engine's stock value. The midpoint is
+// exactly neutral, while the two halves interpolate toward useful extremes.
+inline float ApplyMacro(
+    float stock_value,
+    float minimum_value,
+    float maximum_value,
+    float macro) {
+  const float amount = macro * 2.0f;
+  return macro < 0.5f
+      ? minimum_value + (stock_value - minimum_value) * amount
+      : stock_value + (maximum_value - stock_value) * (amount - 1.0f);
+}
+
 enum TriggerState {
   TRIGGER_LOW = 0,
   TRIGGER_RISING_EDGE = 1,

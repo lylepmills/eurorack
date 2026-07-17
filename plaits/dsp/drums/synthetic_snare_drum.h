@@ -75,6 +75,7 @@ class SyntheticSnareDrum {
       float fm_amount,
       float decay,
       float snappy,
+      float mode_spread,
       float* out,
       size_t size) {
     const float decay_xt = decay * (1.0f + decay * (decay - 1.0f));
@@ -146,7 +147,7 @@ class SyntheticSnareDrum {
 
       float f = f0 * (1.0f + fm_amount * (4.0f * fm_));
       phase_[0] += f;
-      phase_[1] += f * 1.47f;
+      phase_[1] += f * (1.0f + 0.47f * mode_spread);
       if (reset_noise_amount > 0.1f) {
         if (phase_[0] >= 1.0f + reset_noise) {
           phase_[0] = 1.0f - phase_[0];

@@ -77,7 +77,8 @@ void NoiseEngine::Render(
   ParameterInterpolator f1_modulation(&previous_f1_, f1, size);
   ParameterInterpolator q_modulation(&previous_q_, q, size);
   ParameterInterpolator mode_modulation(
-      &previous_mode_, parameters.harmonics, size);
+      &previous_mode_, ApplyMacro(
+          parameters.harmonics, 0.0f, 1.0f, parameters.macro), size);
   
   const float* in_1 = aux;
   const float* in_2 = temp_buffer_;

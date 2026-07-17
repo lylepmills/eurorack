@@ -51,6 +51,8 @@ void SnareDrumEngine::Render(
     size_t size,
     bool* already_enveloped) {
   const float f0 = NoteToFrequency(parameters.note);
+  const float mode_spread = ApplyMacro(
+      1.0f, 0.5f, 1.75f, parameters.macro);
   
   analog_snare_drum_.Render(
       parameters.trigger & TRIGGER_UNPATCHED,
@@ -60,6 +62,7 @@ void SnareDrumEngine::Render(
       parameters.timbre,
       parameters.morph,
       parameters.harmonics,
+      mode_spread,
       out,
       size);
   
@@ -71,6 +74,7 @@ void SnareDrumEngine::Render(
       parameters.timbre,
       parameters.morph,
       parameters.harmonics,
+      mode_spread,
       aux,
       size);
 }

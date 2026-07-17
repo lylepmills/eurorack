@@ -39,6 +39,10 @@
 
 # Build directory
 build
+build-stock*
+bank_*.raw
+plaits_test
+plaits_*_engine.wav
 
 # BETA Layout variants
 *_beta.sch

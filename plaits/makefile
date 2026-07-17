@@ -58,6 +58,12 @@ TOOLCHAIN_PATH ?= /usr/local/arm-4.8.3/
 
 include stmlib/makefile.inc
 
+# These paths do not run in the audio callback. Optimizing them for size leaves
+# the synthesis code at -O2 while recovering flash for alternate engine banks.
+$(BUILD_DIR)ui.o \
+$(BUILD_DIR)settings.o \
+$(BUILD_DIR)user_data_receiver.o: CCFLAGS += -Os
+
 # Rule for building the firmware update file
 wav:  $(TARGET_BIN)
 	python stm_audio_bootloader/qpsk/encoder.py \

@@ -33,6 +33,8 @@
 
 #ifdef TEST
 
+#include <cstdio>
+
 // Mock flash saving functions for debugging purposes.
 #define PAGE_SIZE 0x800
 

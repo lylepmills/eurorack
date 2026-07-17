@@ -61,6 +61,8 @@ void SwarmEngine::Render(
       parameters.harmonics;
   float size_ratio = 0.25f * SemitonesToRatio(
       (1.0f - parameters.morph) * 84.0f);
+  const float size_dispersion = ApplyMacro(
+      0.97f, 0.86f, 1.04f, parameters.macro);
   
   const bool burst_mode = !(parameters.trigger & TRIGGER_UNPATCHED);
   const bool start_burst = parameters.trigger & TRIGGER_RISING_EDGE;
@@ -79,7 +81,7 @@ void SwarmEngine::Render(
         out,
         aux,
         size);
-    size_ratio *= 0.97f;
+    size_ratio *= size_dispersion;
   }
 }
 

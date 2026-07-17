@@ -51,6 +51,7 @@ class StringVoice {
       float structure,
       float brightness,
       float damping,
+      float exciter_size,
       float* temp,
       float* out,
       float* aux,

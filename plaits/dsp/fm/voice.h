@@ -60,6 +60,7 @@ class Voice {
     float envelope_control;
     float pitch_mod;
     float amp_mod;
+    float modulator_detune;
   };
   
   inline void Init(
@@ -200,10 +201,15 @@ class Voice {
     // Compute frequencies and amplitudes.
     float f[num_operators];
     float a[num_operators];
+    const float modulator_ratio = stmlib::SemitonesToRatioSafe(
+        parameters.modulator_detune);
     for (int i = 0; i < num_operators; ++i) {
       const Patch::Operator& op = patch_->op[i];
       
       f[i] = ratios_[i] * (ratios_[i] < 0.0f ? -one_hz_ : f0);
+      if (algorithms_->is_modulator(patch_->algorithm, i)) {
+        f[i] *= modulator_ratio;
+      }
 
       const float rate_scaling = RateScaling(note_, op.rate_scaling);
       float level = parameters.sustain

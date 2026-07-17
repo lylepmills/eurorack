@@ -24,9 +24,9 @@ However my alt firmware had several other features that I felt were still worthw
 
 ## Experimental synthesis models
 
-This development version replaces the three DX7 bank positions (the third,
-fourth, and fifth yellow models) with three experimental engines. All three use
-the normal pitch, HARMONICS, TIMBRE, and MORPH controls. They also use an
+This development version replaces the three DX7 bank positions and Wave
+Terrain (the third through sixth yellow models) with four experimental engines.
+All four use the normal pitch, HARMONICS, TIMBRE, and MORPH controls. They also use an
 optional fourth macro when the frequency knob is locked and set to its blinking
 green menu option.
 
@@ -41,7 +41,7 @@ green menu option.
 
 ### GENDY
 
-- HARMONICS: number of stochastic breakpoints (3 to 12)
+- HARMONICS: number of stochastic breakpoints (3 to 9)
 - TIMBRE: amplitude random-walk depth
 - MORPH: segment-duration random-walk depth
 - Fourth macro: stepped through linear to smooth interpolation
@@ -50,12 +50,61 @@ green menu option.
 
 ### Scanned synthesis
 
-- HARMONICS: stiffness and alternating-mass inharmonicity
-- TIMBRE: strike or drive position
-- MORPH: damping
+- HARMONICS: excitation width, stiffness, and alternating-mass inharmonicity
+- TIMBRE: excitation width, mass irregularity, and a warped gradient scan
+- MORPH: damping through increasingly strong nonlinear wavefolding
 - Fourth macro: speed of the slowly evolving physical system
 - OUT: scan of the mass positions; AUX: spatial derivative of that scan
 - TRIG: strikes the virtual system; with TRIG unpatched it is gently driven
+
+### Pulsar synthesis
+
+- HARMONICS: carrier formant, from the fundamental into tightly packed upper partials
+- TIMBRE: pulse width, from brief impulses to nearly continuous tone
+- MORPH: crossfades from one to four interleaved pulse clusters per cycle
+- Fourth macro: moves the pulse peak from an early pluck through symmetry to a late swell
+- OUT: primary pulse train; AUX: complementary, phase-offset pulse train
+- TRIG: restarts the pulsar cycle
+
+## Fourth dimensions for stock models
+
+The optional fourth macro now extends every stock model. Its midpoint is exactly
+neutral, so these models retain their original sound unless the locked frequency
+knob is moved away from noon. The controls are:
+
+### Yellow/orange bank
+
+- VA + VCF: oscillator/filter drive, from cleaner to more saturated
+- Phase Distortion: modulator ratio, from one octave down through unison to one octave up
+- Six-op FM (all three DX patch slots): modulator-network detuning, with universal darkening below noon and saturation above noon
+- Wave Terrain: Y-axis path offset, complementary to MORPH's X-axis path offset
+- String Machine: ensemble amount, from dry through the stock setting to fully wet
+- Chiptune: nine stepped register and inversion presets, with the center step stock
+
+### Green bank
+
+- Virtual Analog: oscillator balance, from saw toward square
+- Waveshaping: wavefolder symmetry, from negative through centered to positive bias
+- Two-op FM: continuous modulator detuning around the HARMONICS-selected ratio
+- Granular Formant: carrier bleed, from fully suppressed to fully exposed
+- Harmonic Oscillator: odd/even partial balance
+- Wavetable: smooth phase warping, creating new phase-distorted versions of each table
+- Chords: balance between the two internally grouped sets of chord voices
+- Speech: raw excitation through the stock voice to increasingly sharp spectral emphasis
+
+### Red bank
+
+- Swarm: particle-size dispersion, from tightly clustered to widely spread
+- Filtered Noise: independent multimode filter position, from low-pass to high-pass
+- Particle Noise: diffusion, from dry through the stock setting to a dense cloud
+- Inharmonic String: excitation duration, from short strike to long scrape
+- Modal Resonator: exciter resonance, from broad/noisy to sharply pitched
+- Analog Bass Drum: pitch-envelope punch, from restrained to exaggerated
+- Snare Drum: shell-mode inharmonicity, from compact to widely spread
+- Hi-hat: metallic oscillator spacing, from compact to widely spread
+
+There are 22 distinct DSP implementations for the 24 stock slots because the
+three DX patch positions share the same Six-op FM engine and fourth control.
 
 ## How to access calibration
 Calibration has been removed from the alt firmware to save space. If you need to recalibrate, simply reinstall the official firmware first. Your calibration settings will be preserved if you then switch back to this alt firmware.

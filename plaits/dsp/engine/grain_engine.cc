@@ -59,9 +59,11 @@ void GrainEngine::Render(
   
   const float f1 = NoteToFrequency(24.0f + 84.0f * parameters.timbre);
   const float ratio = SemitonesToRatio(-24.0f + 48.0f * parameters.harmonics);
-  const float carrier_bleed = parameters.harmonics < 0.5f
+  const float stock_carrier_bleed = parameters.harmonics < 0.5f
       ? 1.0f - 2.0f * parameters.harmonics
       : 0.0f;
+  const float carrier_bleed = ApplyMacro(
+      stock_carrier_bleed, 0.0f, 1.0f, parameters.macro);
   const float carrier_bleed_fixed = carrier_bleed * (2.0f - carrier_bleed);
   const float carrier_shape = 0.33f + (parameters.morph - 0.33f) * \
       max(1.0f - f0 * 24.0f, 0.0f);

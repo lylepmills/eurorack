@@ -107,6 +107,7 @@ class SixOpEngine : public Engine {
   FMVoice voice_[kNumSixOpVoices];
   float* temp_buffer_;
   float* acc_buffer_;
+  float post_filter_;
   int active_voice_;
   int rendered_voice_;
   

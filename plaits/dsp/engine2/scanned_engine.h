@@ -27,7 +27,13 @@ class ScannedEngine : public Engine {
 
  private:
   void Excite(float position, float width, float amount);
-  void Step(float inharmonicity, float damping, bool driven, int drive_index);
+  void Step(
+      float inharmonicity,
+      float structure,
+      float damping,
+      float nonlinearity,
+      bool driven,
+      int drive_index);
   float Scan(const float* data, float phase) const;
 
   float position_[kScannedMasses];

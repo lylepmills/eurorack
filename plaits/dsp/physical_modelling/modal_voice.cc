@@ -57,6 +57,7 @@ void ModalVoice::Render(
     float structure,
     float brightness,
     float damping,
+    float exciter_q,
     float* temp,
     float* out,
     float* aux,
@@ -71,7 +72,7 @@ void ModalVoice::Render(
   const float cutoff = min(
       f * SemitonesToRatio((brightness * (2.0f - brightness) - 0.5f) * range),
       0.499f);
-  const float q = sustain ? 0.7f : 1.5f;
+  const float q = exciter_q;
   
   // Synthesize excitation signal.
   if (sustain) {

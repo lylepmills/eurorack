@@ -71,6 +71,8 @@ void StringEngine::Render(
   
   fill(&out[0], &out[size], 0.0f);
   fill(&aux[0], &aux[size], 0.0f);
+  const float exciter_size = ApplyMacro(
+      1.0f, 0.25f, 4.0f, parameters.macro);
   
   for (int i = 0; i < kNumStrings; ++i) {
     voice_[i].Render(
@@ -81,6 +83,7 @@ void StringEngine::Render(
         parameters.harmonics,
         parameters.timbre * parameters.timbre,
         parameters.morph,
+        exciter_size,
         temp_buffer_,
         out,
         aux,

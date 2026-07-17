@@ -72,6 +72,7 @@ class SpeechEngine : public Engine {
   float* temp_buffer_[2];
   float prosody_amount_;
   float speed_;
+  float post_filter_;
   
   DISALLOW_COPY_AND_ASSIGN(SpeechEngine);
 };
