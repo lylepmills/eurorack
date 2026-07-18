@@ -1,0 +1,101 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "plaits-lab-build-service",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-17",
+  "compatibility_flags": ["nodejs_compat"],
+  "routes": [
+    {
+      "pattern": "plaits-api.rubato.audio",
+      "custom_domain": true
+    }
+  ],
+  "limits": {
+    "cpu_ms": 300000
+  },
+  "vars": {
+    "PUBLIC_ORIGIN": "https://rubato.audio",
+    "PLAITS_SOURCE_REVISION": "a7f437964326+55b8da14febf",
+    "PLAITS_TOOLCHAIN_ID": "gcc-arm-none-eabi-4.8-2013q4",
+    "PLAITS_BUILD_CONTRACT": "2"
+  },
+  "containers": [
+    {
+      "class_name": "FirmwareBuilder",
+      "image": "registry.cloudflare.com/256bac4d555b969399df16f575c5f464/plaits-lab-build-service-firmwarebuilder:schema5-20260717",
+      "instance_type": "standard-1",
+      "max_instances": 1
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "FIRMWARE_BUILDER",
+        "class_name": "FirmwareBuilder"
+      },
+      {
+        "name": "BUILD_JOBS",
+        "class_name": "BuildJob"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["FirmwareBuilder", "BuildJob"]
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["CustomerGate"]
+    },
+    {
+      "tag": "v3",
+      "deleted_classes": ["CustomerGate"]
+    }
+  ],
+  "ratelimits": [
+    {
+      "name": "BUILD_RATE_LIMITER",
+      "namespace_id": "7241701",
+      "simple": {
+        "limit": 5,
+        "period": 60
+      }
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "ARTIFACTS",
+      "bucket_name": "plaits-lab-firmwares",
+      "preview_bucket_name": "plaits-lab-firmwares-preview"
+    }
+  ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "BUILD_QUEUE",
+        "queue": "plaits-lab-builds"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "plaits-lab-builds",
+        "max_batch_size": 1,
+        "max_batch_timeout": 1,
+        "max_retries": 5,
+        "dead_letter_queue": "plaits-lab-builds-dead-letter"
+      }
+    ]
+  },
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 0.1
+    }
+  }
+}

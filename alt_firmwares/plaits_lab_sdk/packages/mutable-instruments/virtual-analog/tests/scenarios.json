@@ -1,0 +1,28 @@
+[
+  {
+    "id": "hero",
+    "name": "Oscillator balance sweep",
+    "durationSeconds": 4,
+    "note": 48,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.35, 0.7],
+      "timbre": [0.2, 0.8],
+      "morph": [0.15, 0.85],
+      "macro": [0.0, 1.0]
+    }
+  },
+  {
+    "id": "extremes",
+    "name": "Full control sweep",
+    "durationSeconds": 3,
+    "note": 72,
+    "triggerHz": 4,
+    "controls": {
+      "harmonics": [0.0, 1.0],
+      "timbre": [0.0, 1.0],
+      "morph": [0.0, 1.0],
+      "macro": [0.0, 1.0]
+    }
+  }
+]

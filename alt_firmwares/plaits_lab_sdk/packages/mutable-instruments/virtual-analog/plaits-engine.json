@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/virtual-analog",
+  "catalogId": "virtual-analog",
+  "version": "1.0.0",
+  "name": "Virtual Analog",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "Continuously variable analog waveforms with detuning, oscillator sync, and a Plaits Lab balance macro.",
+  "family": "Subtractive",
+  "tags": ["analog", "oscillator", "sync"],
+  "controls": [
+    { "id": "harmonics", "label": "Detune", "description": "Detunes the paired oscillator across musical intervals." },
+    { "id": "timbre", "label": "Pulse and sync", "description": "Changes pulse width and introduces oscillator sync." },
+    { "id": "morph", "label": "Saw shape", "description": "Changes the secondary oscillator saw shape." },
+    { "id": "macro", "label": "Oscillator balance", "description": "Crossfades the square and variable-saw components." }
+  ],
+  "outputs": {
+    "main": "Balanced square and variable-saw oscillator mixture.",
+    "aux": "Detuned dual-oscillator sync difference."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine/virtual_analog_engine.h",
+    "files": ["plaits/dsp/engine/virtual_analog_engine.cc"],
+    "className": "VirtualAnalogEngine"
+  },
+  "postProcessing": { "alreadyEnveloped": false, "outGain": 0.8, "auxGain": 0.8 },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Mutable Instruments eurorack Plaits source with the Rubato Plaits Lab fourth macro"
+}

@@ -7,14 +7,16 @@ Before changing Plaits, read:
   validation commands, hardware-test status, and next milestones.
 - `alt_firmwares/README.md` for firmware behavior and control mappings.
 
-The related web editor is a separate repository at `../plaits-editor`. Its
-production URL is <https://rubato-plaits-lab.lyle522969.chatgpt.site/>.
+The production editor is an unlisted page in the sibling `../rubato-audio`
+repository at <https://rubato.audio/plaits-lab>. The sibling `../plaits-editor`
+repository is the legacy prototype and schema-development source; do not deploy
+it to Sites or treat its authenticated proxy as the production architecture.
 
 ## Project invariants
 
 - User-facing bank order is always green, red, amber. Plaits' legacy internal
-  engine registry is amber, green, red, so the future build service must
-  translate between the manifest order and the firmware registry.
+  engine registry is amber, green, red, so the build service must translate
+  between the manifest order and the firmware registry.
 - The fourth synthesis macro is neutral at its midpoint for stock models. It is
   controlled by the locked-frequency menu's blinking-green option.
 - Keep generated binaries, WAV files, test renders, and build directories out
@@ -55,4 +57,3 @@ docker run --rm --platform linux/amd64 \
   bash -lc 'make -f plaits/makefile BUILD_ROOT=build/stock/ \
     PROJECT_CONFIGURATION=-DPLAITS_STOCK_ENGINE_LAYOUT -j2 wav'
 ```
-

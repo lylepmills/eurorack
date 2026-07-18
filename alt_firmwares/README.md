@@ -66,6 +66,18 @@ green menu option.
 - OUT: primary pulse train; AUX: complementary, phase-offset pulse train
 - TRIG: restarts the pulsar cycle
 
+### Rounds 1 and 2 audition build
+
+A separate audition recipe contains eleven additional Rubato Lab prototypes:
+Loopback, Lockstep, Tapfield, Phase Weave, Sideband Bank, Attractor, Undertow,
+Reed Pipe, Phase Flock, Rulefield, and Spectral Spiral. The eight tonal models
+occupy the green bank and Tapfield, Attractor, and Rulefield begin the red bank;
+the rest of red and all of amber provide familiar comparison voices.
+
+The updater, complete bank order, control map, listening-render format, and
+known audition risks are documented in `alt_firmwares/PLAITS_LAB_AUDITION.md`.
+This does not change the default experimental layout described above.
+
 ## Fourth dimensions for stock models
 
 The optional fourth macro now extends every stock model. Its midpoint is exactly
@@ -112,7 +124,10 @@ Calibration has been removed from the alt firmware to save space. If you need to
 ## How to access the menu / change options
 To access the menu of options for the various alt functionalities, simply short-press both buttons at once. To exit the menu, again press both buttons at once.
 
-The menu is represented by lights for each option. You can navigate between the menu items by pressing the left button, and you can switch the option for that item by pressing the right button. The current settings are represented by the color of the LED lights. In order, they represent the following
+The menu is represented by the first seven lights. You can navigate between the
+menu items by pressing the left button, and you can switch the option for that
+item by pressing the right button. The current settings are represented by the
+color of the LED lights. In order, they represent the following.
 
 ### First light - Frequency knob alt functionality (when frequency is locked i.e. in octave-switching mode)
 Green means octaves (as in the stock firmware), red means controlling decay,
@@ -192,8 +207,19 @@ With this table, instead of Frequency defining the root and Harmonics defining c
 ### Seventh light - Hold params on trigger
 Green means don't hold params upon receiving a trigger (as in the stock firmware), red means internally sample and hold the CV inputs for Timbre, Morph, Harmonics, Level and V/Oct whenever a trigger is received.
 
-### Eighth light - Model navigation mode
-Green means the "alternative" navigation mode from the stock firmware, whereby the left button goes backward and the right button goes forward through the set of all models. Red means the "alternative alternative" navigation mode, where the left button cycles through models in a given bank, and the right button switches banks. Note the standard navigation mode from the official firmware is not available, since it doesn't allow access to the third bank and is therefore not very useful in my view.
+### Firmware profile - Model navigation mode
+
+Model navigation is selected when creating a Plaits Lab firmware build and is
+not part of the module options menu. The linear mode uses the left button to go
+backward and the right button to go forward through all models. The banked mode
+uses the left button to cycle within a bank and the right button to switch
+banks.
+
+Plaits Lab builds can also include starting values for the seven menu options.
+Those values are applied once when a new option profile is installed. They
+remain editable from the module and persist normally after that first boot.
+Changing profiles preserves calibration, the selected model, tuning, and the
+other live module state.
 
 ## Technical notes
 The original Plaits firmware makes the most of its processor, and runs quite close to that processor's limits in terms of both the amount of code it can store, and the CPU load of that code (at least, in certain modes). Unlike earlier versions of this firmware, various efficiency improvements have been found that made the compromises I had to use in those earlier versions unnecessary. However it's worth noting that it's always possible there is some combination of settings I haven't discovered yet that will lead to CPU overload, which can lead to harsh aliasing sounds coming from the module. If you encounter such a situation, please take note of the settings you are using, the model you are using, and where you have all the knobs positioned, and send me a report (ideally with video), and I will try to make adjustments to avoid those kinds of problems going forward.

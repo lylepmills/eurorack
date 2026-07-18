@@ -1,0 +1,357 @@
+#!/usr/bin/env python3
+"""Generate the compile-time Plaits engine registry for an approved recipe.
+
+The input recipe is always expressed in the public green/red/amber order.  The
+generated registry is deliberately emitted in Plaits' internal amber/green/red
+order.  Only identifiers in this file's catalog can influence C++ output.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+
+CATALOG_PATH = Path(__file__).resolve().parents[1] / "plaits_lab_catalog/catalog.json"
+PUBLIC_CATALOG_PATH = Path(__file__).resolve().parents[1] / "plaits_lab_catalog/public_catalog.json"
+CHORD_CATALOG_PATH = Path(__file__).resolve().parents[1] / "plaits_lab_chord_tables/catalog.json"
+
+
+@dataclass(frozen=True)
+class Engine:
+    header: str
+    class_name: str
+    member: str
+    already_enveloped: bool
+    out_gain: float
+    aux_gain: float
+    user_data_bank: int = -1
+    behavior: str = "standard"
+
+
+@dataclass(frozen=True)
+class BuildRecipe:
+    public_slots: list[str]
+    chord_tables: list[dict[str, Any]]
+    navigation_mode: int
+    locked_frequency_pot_option: int
+    model_cv_option: int
+    level_cv_option: int
+    aux_subosc_wave_option: int
+    aux_subosc_octave_option: int
+    chord_set_option: int
+    hold_on_trigger_option: int
+    options_profile_id: int
+
+
+def load_catalog() -> dict[str, Engine]:
+    value = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
+    if value.get("schemaVersion") != 1:
+        raise ValueError("unsupported engine catalog schema")
+    result: dict[str, Engine] = {}
+    for item in value["engines"]:
+        source = item["source"]
+        post = item["postProcessing"]
+        result[item["id"]] = Engine(
+            header=source["header"],
+            class_name=source["className"],
+            member=source["member"],
+            already_enveloped=post["alreadyEnveloped"],
+            out_gain=post["outGain"],
+            aux_gain=post["auxGain"],
+            user_data_bank=source.get("userDataBank", -1),
+            behavior=source.get("behavior", "standard"),
+        )
+    return result
+
+
+CATALOG = load_catalog()
+PUBLIC_ENGINES = {
+    item["id"]: item
+    for item in json.loads(PUBLIC_CATALOG_PATH.read_text(encoding="utf-8"))["engines"]
+}
+APPROVED_CHORD_TABLES = {
+    item["id"]: item
+    for item in json.loads(CHORD_CATALOG_PATH.read_text(encoding="utf-8"))["tables"]
+}
+
+
+DEFAULT_CONFIGURATION = {
+    "preferences": {"navigationMode": "linear"},
+    "initialOptions": {
+        "lockedFrequencyKnob": "octaves",
+        "modelInput": "model",
+        "levelInput": "level",
+        "auxOutput": "alternate-model",
+        "suboscillatorOctave": 0,
+        "chordTable": "original",
+        "holdOnTrigger": False,
+    },
+}
+DEFAULT_CHORD_TABLES = list(APPROVED_CHORD_TABLES.values())
+
+
+def validate_chord_tables(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list) or not 1 <= len(value) <= 6:
+        raise ValueError("recipe must contain between one and six chord tables")
+    result: list[dict[str, Any]] = []
+    table_ids: set[str] = set()
+    for table in value:
+        if not isinstance(table, dict) or set(table) != {
+            "id", "packageId", "version", "digest", "name", "author",
+            "license", "origin", "description", "chords",
+        }:
+            raise ValueError("recipe contains invalid chord-table metadata")
+        table_id = table.get("id")
+        if not isinstance(table_id, str) or not table_id or len(table_id) > 80 or table_id in table_ids:
+            raise ValueError("recipe contains an invalid or duplicate chord-table ID")
+        if not all(character.islower() or character.isdigit() or character == "-" for character in table_id):
+            raise ValueError("recipe contains an invalid chord-table ID")
+        if any(not isinstance(table.get(key), str) or not table[key] for key in (
+            "packageId", "version", "name", "author", "license", "origin", "description",
+        )):
+            raise ValueError("recipe contains invalid chord-table metadata")
+        chords = table.get("chords")
+        if not isinstance(chords, list) or not 1 <= len(chords) <= 24:
+            raise ValueError("a chord table must contain between one and 24 positions")
+        chord_ids: set[str] = set()
+        for chord in chords:
+            if not isinstance(chord, dict) or set(chord) != {"id", "name", "voices", "arpLength"}:
+                raise ValueError("recipe contains an invalid chord position")
+            chord_id = chord.get("id")
+            voices = chord.get("voices")
+            if not isinstance(chord_id, str) or not chord_id or chord_id in chord_ids \
+                    or not isinstance(chord.get("name"), str) or not chord["name"] \
+                    or not isinstance(voices, list) or len(voices) != 4 \
+                    or any(type(voice) is not int or voice < -4800 or voice > 7200 for voice in voices) \
+                    or chord.get("arpLength") not in (1, 2, 3, 4):
+                raise ValueError("a chord position must contain four bounded cent offsets")
+            chord_ids.add(chord_id)
+        digest = table.get("digest")
+        if digest is not None:
+            if APPROVED_CHORD_TABLES.get(table_id) != table:
+                raise ValueError("recipe contains an unavailable published chord table")
+        elif table.get("origin") != "Local" or not table["packageId"].startswith("local/"):
+            raise ValueError("editable chord tables must be device-local drafts")
+        table_ids.add(table_id)
+        result.append(table)
+    return result
+
+
+def normalize_slots(slots: list[Any], schema_version: int) -> list[str]:
+    if schema_version in (2, 4, 5) and all(isinstance(engine_id, str) for engine_id in slots):
+        if any(engine_id not in CATALOG for engine_id in slots):
+            raise ValueError("recipe contains an unapproved engine ID")
+        return slots
+
+    normalized: list[str] = []
+    for reference in slots:
+        if not isinstance(reference, dict) or not isinstance(reference.get("engine"), str):
+            raise ValueError("recipe contains an invalid package reference")
+        approved = PUBLIC_ENGINES.get(reference["engine"])
+        if not approved or any(
+            reference.get(key) != approved[approved_key]
+            for key, approved_key in (
+                ("package", "packageId"),
+                ("version", "version"),
+                ("digest", "digest"),
+            )
+        ):
+            raise ValueError("recipe contains an unavailable package version")
+        normalized.append(reference["engine"])
+    return normalized
+
+
+def validate_recipe(value: Any) -> BuildRecipe:
+    if not isinstance(value, dict):
+        raise ValueError("recipe must be a JSON object")
+    schema_version = value.get("schemaVersion")
+    if schema_version not in (2, 3, 4, 5):
+        raise ValueError("recipe schemaVersion must be 2, 3, 4, or 5")
+    if value.get("target") != "mutable-instruments-plaits":
+        raise ValueError("unsupported firmware target")
+    if value.get("firmware") != "rubato-plaits":
+        raise ValueError("unsupported firmware family")
+    if value.get("output") != "audio-wav":
+        raise ValueError("unsupported output format")
+    slots = value.get("slots")
+    if not isinstance(slots, list) or len(slots) != 24:
+        raise ValueError("recipe must contain exactly 24 slots")
+    public_slots = normalize_slots(slots, schema_version)
+    if schema_version == 5:
+        resources = value.get("resources")
+        if not isinstance(resources, dict) or set(resources) != {"chordTables"}:
+            raise ValueError("recipe must contain only supported firmware resources")
+        chord_tables = validate_chord_tables(resources.get("chordTables"))
+    else:
+        chord_tables = validate_chord_tables(DEFAULT_CHORD_TABLES)
+    configuration = value if schema_version in (4, 5) else DEFAULT_CONFIGURATION
+    preferences = configuration.get("preferences")
+    options = configuration.get("initialOptions")
+    if not isinstance(preferences, dict) or not isinstance(options, dict):
+        raise ValueError("recipe must contain firmware preferences and starting options")
+    if set(preferences) != {"navigationMode"} or set(options) != {
+        "lockedFrequencyKnob", "modelInput", "levelInput", "auxOutput",
+        "suboscillatorOctave", "chordTable", "holdOnTrigger",
+    }:
+        raise ValueError("recipe contains an unsupported firmware option")
+
+    mappings = {
+        "navigation_mode": (preferences.get("navigationMode"), {"linear": 0, "banked": 1}),
+        "locked_frequency_pot_option": (options.get("lockedFrequencyKnob"), {"octaves": 0, "decay": 1, "aux-crossfade": 2, "macro-4": 3}),
+        "model_cv_option": (options.get("modelInput"), {"model": 0, "lpg-colour": 1, "aux-crossfade": 2}),
+        "level_cv_option": (options.get("levelInput"), {"level": 0, "decay": 1}),
+        "aux_subosc_wave_option": (options.get("auxOutput"), {"alternate-model": 0, "square-subosc": 1, "sine-subosc": 2}),
+        "aux_subosc_octave_option": (options.get("suboscillatorOctave"), {0: 0, -1: 1, -2: 2}),
+        "chord_set_option": (options.get("chordTable"), {
+            table["id"]: index for index, table in enumerate(chord_tables)
+        }),
+        "hold_on_trigger_option": (options.get("holdOnTrigger"), {False: 0, True: 1}),
+    }
+    normalized_options: dict[str, int] = {}
+    for name, (selected, allowed) in mappings.items():
+        if selected not in allowed or (name == "hold_on_trigger_option" and not isinstance(selected, bool)):
+            raise ValueError("recipe contains an unsupported firmware option")
+        normalized_options[name] = allowed[selected]
+
+    profile_code = normalized_options["locked_frequency_pot_option"]
+    for name, radix in (
+        ("model_cv_option", 3),
+        ("level_cv_option", 2),
+        ("aux_subosc_wave_option", 3),
+        ("aux_subosc_octave_option", 3),
+        ("chord_set_option", 6),
+        ("hold_on_trigger_option", 2),
+    ):
+        profile_code = profile_code * radix + normalized_options[name]
+    # There are 2,592 possible combinations at the six-table target cap. This
+    # reversible encoding fits in the
+    # legacy navigation and padding bytes, while reserving low bytes 0 and 1 so
+    # saved states from the old navigation setting can never look initialized.
+    profile_id = ((profile_code // 254) << 8) | (2 + profile_code % 254)
+    return BuildRecipe(
+        public_slots=public_slots,
+        chord_tables=chord_tables,
+        options_profile_id=profile_id,
+        **normalized_options,
+    )
+
+
+def cpp_float(value: float) -> str:
+    return f"{value:.1f}f"
+
+
+def cpp_bool(value: bool) -> str:
+    return "true" if value else "false"
+
+
+def render_config(recipe: BuildRecipe) -> str:
+    public_slots = recipe.public_slots
+    internal_slots = public_slots[16:24] + public_slots[0:16]
+    selected = [CATALOG[engine_id] for engine_id in internal_slots]
+
+    unique: list[Engine] = []
+    seen_members: set[str] = set()
+    for selected_engine in selected:
+        if selected_engine.member not in seen_members:
+            seen_members.add(selected_engine.member)
+            unique.append(selected_engine)
+
+    includes = "\n".join(f'#include "{item.header}"' for item in unique)
+    continuation = " " + "\\" + "\n  "
+    members = continuation.join(f"{item.class_name} {item.member};" for item in unique)
+    registrations = continuation.join(
+        "(registry).RegisterInstance(&{member}, {enveloped}, {out_gain}, {aux_gain});".format(
+            member=item.member,
+            enveloped=cpp_bool(item.already_enveloped),
+            out_gain=cpp_float(item.out_gain),
+            aux_gain=cpp_float(item.aux_gain),
+        )
+        for item in selected
+    )
+    user_data_banks = ", ".join(str(item.user_data_bank) for item in selected)
+    speech_mask = sum(1 << index for index, item in enumerate(selected) if item.behavior == "speech")
+    chiptune_mask = sum(1 << index for index, item in enumerate(selected) if item.behavior == "chiptune")
+    chord_offsets: list[int] = []
+    chord_sizes: list[int] = []
+    chord_cents: list[str] = []
+    chord_arp_lengths: list[str] = []
+    chord_offset = 0
+    for table in recipe.chord_tables:
+        chord_offsets.append(chord_offset)
+        chord_sizes.append(len(table["chords"]))
+        for chord in table["chords"]:
+            chord_cents.append("{ " + ", ".join(str(value) for value in chord["voices"]) + " }")
+            chord_arp_lengths.append(str(chord["arpLength"]))
+            chord_offset += 1
+
+    return f"""// Generated by alt_firmwares/plaits_lab_builder/generate_engine_config.py.
+// Public recipe order: green, red, amber. Registry order: amber, green, red.
+#ifndef PLAITS_DSP_ENGINE_CONFIG_H_
+#define PLAITS_DSP_ENGINE_CONFIG_H_
+
+{includes}
+
+#define PLAITS_HAS_SPEECH_ENGINE {1 if any(item.behavior == 'speech' for item in selected) else 0}
+#define PLAITS_HAS_CHIPTUNE_ENGINE {1 if any(item.behavior == 'chiptune' for item in selected) else 0}
+#define PLAITS_HAS_USER_DATA_BANK {1 if any(item.user_data_bank >= 0 for item in selected) else 0}
+
+#define PLAITS_CHORD_TABLE_COUNT {len(recipe.chord_tables)}
+#define PLAITS_CHORD_COUNT {chord_offset}
+#define PLAITS_CHORD_TABLE_OFFSETS {{ {", ".join(str(value) for value in chord_offsets)} }}
+#define PLAITS_CHORD_TABLE_SIZES {{ {", ".join(str(value) for value in chord_sizes)} }}
+#define PLAITS_CHORD_CENTS {{ {", ".join(chord_cents)} }}
+#define PLAITS_CHORD_ARP_LENGTHS {{ {", ".join(chord_arp_lengths)} }}
+
+#define PLAITS_BUILD_NAVIGATION_MODE {recipe.navigation_mode}
+#define PLAITS_BUILD_LOCKED_FREQUENCY_POT_OPTION {recipe.locked_frequency_pot_option}
+#define PLAITS_BUILD_MODEL_CV_OPTION {recipe.model_cv_option}
+#define PLAITS_BUILD_LEVEL_CV_OPTION {recipe.level_cv_option}
+#define PLAITS_BUILD_AUX_SUBOSC_WAVE_OPTION {recipe.aux_subosc_wave_option}
+#define PLAITS_BUILD_AUX_SUBOSC_OCTAVE_OPTION {recipe.aux_subosc_octave_option}
+#define PLAITS_BUILD_CHORD_SET_OPTION {recipe.chord_set_option}
+#define PLAITS_BUILD_HOLD_ON_TRIGGER_OPTION {recipe.hold_on_trigger_option}
+#define PLAITS_BUILD_OPTIONS_PROFILE_ID 0x{recipe.options_profile_id:04x}u
+
+#define PLAITS_ENGINE_MEMBERS \\
+  {members}
+
+#define PLAITS_REGISTER_ENGINES(registry) do {{ \\
+  {registrations} \\
+}} while (0)
+
+namespace plaits {{
+
+#if PLAITS_HAS_USER_DATA_BANK
+static const int8_t kEngineUserDataBank[24] = {{ {user_data_banks} }};
+#endif
+#if PLAITS_HAS_SPEECH_ENGINE
+static const uint32_t kSpeechEngineMask = 0x{speech_mask:08x};
+#endif
+#if PLAITS_HAS_CHIPTUNE_ENGINE
+static const uint32_t kChiptuneEngineMask = 0x{chiptune_mask:08x};
+#endif
+
+}}  // namespace plaits
+
+#endif  // PLAITS_DSP_ENGINE_CONFIG_H_
+"""
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("recipe", type=Path)
+    parser.add_argument("output", type=Path)
+    args = parser.parse_args()
+
+    recipe = json.loads(args.recipe.read_text(encoding="utf-8"))
+    validated_recipe = validate_recipe(recipe)
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(render_config(validated_recipe), encoding="utf-8")
+
+
+if __name__ == "__main__":
+    main()

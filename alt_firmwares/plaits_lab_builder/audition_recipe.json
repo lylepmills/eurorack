@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 2,
+  "target": "mutable-instruments-plaits",
+  "firmware": "rubato-plaits",
+  "slots": [
+    "loopback",
+    "lockstep",
+    "phase-weave",
+    "sideband-bank",
+    "undertow",
+    "reed-pipe",
+    "phase-flock",
+    "spectral-spiral",
+    "tapfield",
+    "attractor",
+    "rulefield",
+    "glisson",
+    "gendy",
+    "scanned",
+    "pulsar",
+    "particle-noise",
+    "virtual-analog-vcf",
+    "phase-distortion",
+    "virtual-analog",
+    "waveshaping",
+    "two-op-fm",
+    "wavetable",
+    "string-machine",
+    "chiptune"
+  ],
+  "output": "audio-wav"
+}

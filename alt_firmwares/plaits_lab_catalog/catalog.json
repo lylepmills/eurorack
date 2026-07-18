@@ -1,0 +1,662 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageVersion": "1.0.0",
+  "engines": [
+    {
+      "id": "virtual-analog", "packageId": "mutable-instruments/virtual-analog", "name": "Virtual Analog", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Subtractive",
+      "description": "Continuously variable analog waveforms with detuning and sync.", "tags": ["analog", "oscillator", "sync"],
+      "controls": ["Detune", "Waveform", "Sync", "Oscillator balance"], "outputs": ["Mixed variable oscillators", "Synchronized oscillator pair"],
+      "artwork": { "icon": "/model-icons/virtual-analog.png", "kind": "official", "tone": "green" },
+      "source": { "header": "plaits/dsp/engine/virtual_analog_engine.h", "className": "VirtualAnalogEngine", "member": "virtual_analog_engine_", "files": ["plaits/dsp/engine/virtual_analog_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.8, "auxGain": 0.8 }
+    },
+    {
+      "id": "waveshaping", "packageId": "mutable-instruments/waveshaping", "name": "Waveshaping", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Digital",
+      "description": "A variable waveshaper for clean sines, folded tones, and hard edges.", "tags": ["wavefolder", "digital", "harmonic"],
+      "controls": ["Harmonics", "Fold", "Shape", "Wavefolder symmetry"], "outputs": ["Waveshaped oscillator", "Alternate waveshaping response"],
+      "artwork": { "icon": "/model-icons/waveshaping.png", "kind": "official", "tone": "green" },
+      "source": { "header": "plaits/dsp/engine/waveshaping_engine.h", "className": "WaveshapingEngine", "member": "waveshaping_engine_", "files": ["plaits/dsp/engine/waveshaping_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.7, "auxGain": 0.6 }
+    },
+    {
+      "id": "two-op-fm", "packageId": "mutable-instruments/two-op-fm", "name": "Two-op FM", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "FM",
+      "description": "A focused two-operator FM voice spanning pure bells to metallic noise.", "tags": ["fm", "bell", "metallic"],
+      "controls": ["Ratio", "Index", "Feedback", "Modulator detune"], "outputs": ["FM voice", "Alternate FM topology"],
+      "artwork": { "icon": "/model-icons/two-op-fm.png", "kind": "official", "tone": "green" },
+      "source": { "header": "plaits/dsp/engine/fm_engine.h", "className": "FMEngine", "member": "fm_engine_", "files": ["plaits/dsp/engine/fm_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.6, "auxGain": 0.6 }
+    },
+    {
+      "id": "granular-formant", "packageId": "mutable-instruments/granular-formant", "name": "Granular Formant", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Granular",
+      "description": "Granular formants and filtered noise animated around the fundamental.", "tags": ["granular", "formant", "vocal"],
+      "controls": ["Frequency", "Formant", "Shape", "Carrier bleed"], "outputs": ["Granular formant voice", "Filtered-noise variant"],
+      "artwork": { "icon": "/model-icons/granular-formant.png", "kind": "official", "tone": "green" },
+      "source": { "header": "plaits/dsp/engine/grain_engine.h", "className": "GrainEngine", "member": "grain_engine_", "files": ["plaits/dsp/engine/grain_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.7, "auxGain": 0.6 }
+    },
+    {
+      "id": "harmonic", "packageId": "mutable-instruments/harmonic", "name": "Harmonic Oscillator", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Additive",
+      "description": "A bank of additive partials with spectral balance and timbral motion.", "tags": ["additive", "partials", "organ"],
+      "controls": ["Partials", "Balance", "Spectral tilt", "Odd/even balance"], "outputs": ["Additive partial bank", "Complementary partial mixture"],
+      "artwork": { "icon": "/model-icons/harmonic.png", "kind": "official", "tone": "green" },
+      "source": { "header": "plaits/dsp/engine/additive_engine.h", "className": "AdditiveEngine", "member": "additive_engine_", "files": ["plaits/dsp/engine/additive_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.8, "auxGain": 0.8 }
+    },
+    {
+      "id": "wavetable", "packageId": "mutable-instruments/wavetable", "name": "Wavetable", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Digital",
+      "description": "Smooth travel through an extensive collection of integrated waves.", "tags": ["wavetable", "digital", "morphing"],
+      "controls": ["Bank", "Row", "Column", "Phase warp"], "outputs": ["Interpolated wavetable", "Related table position"],
+      "artwork": { "icon": "/model-icons/wavetable.png", "kind": "official", "tone": "green" },
+      "source": { "header": "plaits/dsp/engine/wavetable_engine.h", "className": "WavetableEngine", "member": "wavetable_engine_", "files": ["plaits/dsp/engine/wavetable_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.6, "auxGain": 0.6 }
+    },
+    {
+      "id": "chords", "packageId": "mutable-instruments/chords", "name": "Chords", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Polyphonic",
+      "description": "Four-voice chord voicings with selectable waveforms and inversions.", "tags": ["chord", "polyphonic", "harmony"],
+      "controls": ["Chord", "Waveform", "Voicing", "Voice-group balance"], "outputs": ["Four-voice chord", "Root or alternate voice group"],
+      "artwork": { "icon": "/model-icons/chords.png", "kind": "official", "tone": "green" },
+      "source": { "header": "plaits/dsp/engine/chord_engine.h", "className": "ChordEngine", "member": "chord_engine_", "files": ["plaits/dsp/engine/chord_engine.cc", "plaits/dsp/chords/chord_bank.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.8, "auxGain": 0.8 }
+    },
+    {
+      "id": "speech", "packageId": "mutable-instruments/speech", "name": "Speech", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Vocal",
+      "description": "Vowels, phonemes, speech synthesis, and word banks in one voice.", "tags": ["speech", "vocal", "phoneme"],
+      "controls": ["Model", "Vowel", "Prosody", "Spectral emphasis"], "outputs": ["Speech synthesizer", "Raw excitation or alternate voice"],
+      "artwork": { "icon": "/model-icons/speech.png", "kind": "official", "tone": "green" },
+      "source": { "header": "plaits/dsp/engine/speech_engine.h", "className": "SpeechEngine", "member": "speech_engine_", "behavior": "speech", "files": ["plaits/dsp/engine/speech_engine.cc", "plaits/dsp/speech/lpc_speech_synth.cc", "plaits/dsp/speech/lpc_speech_synth_controller.cc", "plaits/dsp/speech/lpc_speech_synth_phonemes.cc", "plaits/dsp/speech/lpc_speech_synth_words.cc", "plaits/dsp/speech/naive_speech_synth.cc", "plaits/dsp/speech/sam_speech_synth.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": -0.7, "auxGain": 0.8 }
+    },
+    {
+      "id": "swarm", "packageId": "mutable-instruments/swarm", "name": "Swarm", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Texture",
+      "description": "A cloud of detuned sawtooth oscillators for supersaws and drones.", "tags": ["swarm", "supersaw", "drone"],
+      "controls": ["Spread", "Density", "Shape", "Particle dispersion"], "outputs": ["Sawtooth swarm", "Sine swarm"],
+      "artwork": { "icon": "/model-icons/swarm.png", "kind": "official", "tone": "red" },
+      "source": { "header": "plaits/dsp/engine/swarm_engine.h", "className": "SwarmEngine", "member": "swarm_engine_", "files": ["plaits/dsp/engine/swarm_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": -3.0, "auxGain": 1.0 }
+    },
+    {
+      "id": "filtered-noise", "packageId": "mutable-instruments/filtered-noise", "name": "Filtered Noise", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Noise",
+      "description": "Clocked noise and multimode filtering for pitched or diffuse spectra.", "tags": ["noise", "filter", "clocked"],
+      "controls": ["Clock", "Filter", "Resonance", "Filter position"], "outputs": ["Filtered noise", "Complementary filter mode"],
+      "artwork": { "icon": "/model-icons/filtered-noise.png", "kind": "official", "tone": "red" },
+      "source": { "header": "plaits/dsp/engine/noise_engine.h", "className": "NoiseEngine", "member": "noise_engine_", "files": ["plaits/dsp/engine/noise_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": -1.0, "auxGain": -1.0 }
+    },
+    {
+      "id": "particle-noise", "packageId": "mutable-instruments/particle-noise", "name": "Particle Noise", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Noise",
+      "description": "Random particles excite a resonant network from sparse ticks to clouds.", "tags": ["particle", "noise", "texture"],
+      "controls": ["Density", "Filter", "Spread", "Diffusion"], "outputs": ["Resonant particles", "Raw particle impulses"],
+      "artwork": { "icon": "/model-icons/particle-noise.png", "kind": "official", "tone": "red" },
+      "source": { "header": "plaits/dsp/engine/particle_engine.h", "className": "ParticleEngine", "member": "particle_engine_", "files": ["plaits/dsp/engine/particle_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": -2.0, "auxGain": 1.0 }
+    },
+    {
+      "id": "inharmonic-string", "packageId": "mutable-instruments/inharmonic-string", "name": "Inharmonic String", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Physical",
+      "description": "A physical string model moving from clean plucks to inharmonic material.", "tags": ["string", "physical", "pluck"],
+      "controls": ["Inharmonicity", "Brightness", "Damping", "Excitation duration"], "outputs": ["Physical string", "Raw exciter"],
+      "artwork": { "icon": "/model-icons/inharmonic-string.png", "kind": "official", "tone": "red" },
+      "source": { "header": "plaits/dsp/engine/string_engine.h", "className": "StringEngine", "member": "string_engine_", "files": ["plaits/dsp/engine/string_engine.cc", "plaits/dsp/physical_modelling/string.cc", "plaits/dsp/physical_modelling/string_voice.cc"] },
+      "postProcessing": { "alreadyEnveloped": true, "outGain": -1.0, "auxGain": 0.8 }
+    },
+    {
+      "id": "modal-resonator", "packageId": "mutable-instruments/modal-resonator", "name": "Modal Resonator", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Physical",
+      "description": "Modal synthesis for strings, plates, tubes, bells, and struck objects.", "tags": ["modal", "physical", "resonator"],
+      "controls": ["Material", "Brightness", "Damping", "Exciter resonance"], "outputs": ["Modal resonator", "Raw exciter"],
+      "artwork": { "icon": "/model-icons/modal-resonator.png", "kind": "official", "tone": "red" },
+      "source": { "header": "plaits/dsp/engine/modal_engine.h", "className": "ModalEngine", "member": "modal_engine_", "files": ["plaits/dsp/engine/modal_engine.cc", "plaits/dsp/physical_modelling/modal_voice.cc", "plaits/dsp/physical_modelling/resonator.cc"] },
+      "postProcessing": { "alreadyEnveloped": true, "outGain": -1.0, "auxGain": 0.8 }
+    },
+    {
+      "id": "analog-bass-drum", "packageId": "mutable-instruments/analog-bass-drum", "name": "Analog Bass Drum", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Drums",
+      "description": "A punchy synthesized kick with controllable tone, decay, and drive.", "tags": ["drum", "kick", "percussion"],
+      "controls": ["Tone", "Decay", "Drive", "Pitch-envelope punch"], "outputs": ["Analog-modelled bass drum", "Synthetic bass drum"],
+      "artwork": { "icon": "/model-icons/analog-bass-drum.png", "kind": "official", "tone": "red" },
+      "source": { "header": "plaits/dsp/engine/bass_drum_engine.h", "className": "BassDrumEngine", "member": "bass_drum_engine_", "files": ["plaits/dsp/engine/bass_drum_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": true, "outGain": 0.8, "auxGain": 0.8 }
+    },
+    {
+      "id": "analog-snare", "packageId": "mutable-instruments/analog-snare", "name": "Analog Snare", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Drums",
+      "description": "A modeled snare combining tuned oscillators and filtered noise.", "tags": ["drum", "snare", "percussion"],
+      "controls": ["Tone", "Decay", "Noise", "Shell inharmonicity"], "outputs": ["Analog-modelled snare", "Synthetic snare"],
+      "artwork": { "icon": "/model-icons/analog-snare.png", "kind": "official", "tone": "red" },
+      "source": { "header": "plaits/dsp/engine/snare_drum_engine.h", "className": "SnareDrumEngine", "member": "snare_drum_engine_", "files": ["plaits/dsp/engine/snare_drum_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": true, "outGain": 0.8, "auxGain": 0.8 }
+    },
+    {
+      "id": "analog-hi-hat", "packageId": "mutable-instruments/analog-hi-hat", "name": "Analog Hi-hat", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Drums",
+      "description": "Metallic cymbal oscillators and noise shaped into crisp hi-hats.", "tags": ["drum", "hat", "cymbal", "percussion"],
+      "controls": ["Metal", "Decay", "Noise", "Oscillator spacing"], "outputs": ["Analog-modelled hi-hat", "Synthetic hi-hat"],
+      "artwork": { "icon": "/model-icons/analog-hi-hat.png", "kind": "official", "tone": "red" },
+      "source": { "header": "plaits/dsp/engine/hi_hat_engine.h", "className": "HiHatEngine", "member": "hi_hat_engine_", "files": ["plaits/dsp/engine/hi_hat_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": true, "outGain": 0.8, "auxGain": 0.8 }
+    },
+    {
+      "id": "virtual-analog-vcf", "packageId": "mutable-instruments/virtual-analog-vcf", "name": "VA + VCF", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Subtractive",
+      "description": "Classic oscillator shapes through a resonant virtual-analog filter.", "tags": ["analog", "filter", "lead", "bass"],
+      "controls": ["Waveform", "Filter", "Resonance", "Drive"], "outputs": ["Filtered virtual analog oscillator", "Alternate filter output"],
+      "artwork": { "icon": "/model-icons/virtual-analog-vcf.png", "kind": "custom", "tone": "amber" },
+      "source": { "header": "plaits/dsp/engine2/virtual_analog_vcf_engine.h", "className": "VirtualAnalogVCFEngine", "member": "virtual_analog_vcf_engine_", "files": ["plaits/dsp/engine2/virtual_analog_vcf_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 1.0, "auxGain": 1.0 }
+    },
+    {
+      "id": "phase-distortion", "packageId": "mutable-instruments/phase-distortion", "name": "Phase Distortion", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Digital",
+      "description": "Casio-inspired phase distortion with animated harmonic contours.", "tags": ["digital", "phase", "bright"],
+      "controls": ["Shape", "Distortion", "Modulation", "Modulator ratio"], "outputs": ["Phase-distortion voice", "Alternate phase curve"],
+      "artwork": { "icon": "/model-icons/phase-distortion.png", "kind": "custom", "tone": "amber" },
+      "source": { "header": "plaits/dsp/engine2/phase_distortion_engine.h", "className": "PhaseDistortionEngine", "member": "phase_distortion_engine_", "files": ["plaits/dsp/engine2/phase_distortion_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.7, "auxGain": 0.7 }
+    },
+    {
+      "id": "dx7-bank-a", "packageId": "mutable-instruments/dx7-bank-a", "name": "DX7 Bank A", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "FM",
+      "description": "The first bank of classic six-operator FM patches stored in Plaits user data.", "tags": ["fm", "dx7", "six operator", "preset"],
+      "controls": ["Patch", "Brightness", "Envelope", "Network detune"], "outputs": ["Six-operator FM voice", "Alternate operator output"],
+      "artwork": { "icon": "/model-icons/dx7-bank-a.png", "kind": "custom", "tone": "amber" },
+      "source": { "header": "plaits/dsp/engine2/six_op_engine.h", "className": "SixOpEngine", "member": "six_op_engine_", "userDataBank": 0, "files": ["plaits/dsp/engine2/six_op_engine.cc", "plaits/dsp/fm/algorithms.cc", "plaits/dsp/fm/dx_units.cc"] },
+      "postProcessing": { "alreadyEnveloped": true, "outGain": 1.0, "auxGain": 1.0 }
+    },
+    {
+      "id": "dx7-bank-b", "packageId": "mutable-instruments/dx7-bank-b", "name": "DX7 Bank B", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "FM",
+      "description": "The second bank of classic six-operator FM patches stored in Plaits user data.", "tags": ["fm", "dx7", "six operator", "preset"],
+      "controls": ["Patch", "Brightness", "Envelope", "Network detune"], "outputs": ["Six-operator FM voice", "Alternate operator output"],
+      "artwork": { "icon": "/model-icons/dx7-bank-b.png", "kind": "custom", "tone": "amber" },
+      "source": { "header": "plaits/dsp/engine2/six_op_engine.h", "className": "SixOpEngine", "member": "six_op_engine_", "userDataBank": 1, "files": ["plaits/dsp/engine2/six_op_engine.cc", "plaits/dsp/fm/algorithms.cc", "plaits/dsp/fm/dx_units.cc"] },
+      "postProcessing": { "alreadyEnveloped": true, "outGain": 1.0, "auxGain": 1.0 }
+    },
+    {
+      "id": "dx7-bank-c", "packageId": "mutable-instruments/dx7-bank-c", "name": "DX7 Bank C", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "FM",
+      "description": "The third bank of classic six-operator FM patches stored in Plaits user data.", "tags": ["fm", "dx7", "six operator", "preset"],
+      "controls": ["Patch", "Brightness", "Envelope", "Network detune"], "outputs": ["Six-operator FM voice", "Alternate operator output"],
+      "artwork": { "icon": "/model-icons/dx7-bank-c.png", "kind": "custom", "tone": "amber" },
+      "source": { "header": "plaits/dsp/engine2/six_op_engine.h", "className": "SixOpEngine", "member": "six_op_engine_", "userDataBank": 2, "files": ["plaits/dsp/engine2/six_op_engine.cc", "plaits/dsp/fm/algorithms.cc", "plaits/dsp/fm/dx_units.cc"] },
+      "postProcessing": { "alreadyEnveloped": true, "outGain": 1.0, "auxGain": 1.0 }
+    },
+    {
+      "id": "wave-terrain", "packageId": "mutable-instruments/wave-terrain", "name": "Wave Terrain", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Digital",
+      "description": "Two-dimensional navigation across a continuously changing terrain.", "tags": ["terrain", "digital", "evolving"],
+      "controls": ["Terrain", "X axis", "Y axis", "Y offset"], "outputs": ["Wave-terrain scan", "Orthogonal terrain scan"],
+      "artwork": { "icon": "/model-icons/wave-terrain.png", "kind": "custom", "tone": "amber" },
+      "source": { "header": "plaits/dsp/engine2/wave_terrain_engine.h", "className": "WaveTerrainEngine", "member": "wave_terrain_engine_", "files": ["plaits/dsp/engine2/wave_terrain_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.7, "auxGain": 0.7 }
+    },
+    {
+      "id": "string-machine", "packageId": "mutable-instruments/string-machine", "name": "String Machine", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Polyphonic",
+      "description": "Divide-down ensemble strings with chord voicings and lush animation.", "tags": ["strings", "ensemble", "chord", "polyphonic"],
+      "controls": ["Chord", "Registration", "Ensemble", "Ensemble amount"], "outputs": ["String ensemble", "Alternate registration"],
+      "artwork": { "icon": "/model-icons/string-machine.png", "kind": "custom", "tone": "amber" },
+      "source": { "header": "plaits/dsp/engine2/string_machine_engine.h", "className": "StringMachineEngine", "member": "string_machine_engine_", "files": ["plaits/dsp/engine2/string_machine_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.8, "auxGain": 0.8 }
+    },
+    {
+      "id": "chiptune", "packageId": "mutable-instruments/chiptune", "name": "Chiptune", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Digital",
+      "description": "Three square-wave voices with arpeggiation and game-console grit.", "tags": ["chip", "square", "arp", "game"],
+      "controls": ["Chord", "Arpeggio", "Shape", "Register preset"], "outputs": ["Chiptune chord or arpeggio", "Bass voice"],
+      "artwork": { "icon": "/model-icons/chiptune.png", "kind": "custom", "tone": "amber" },
+      "source": { "header": "plaits/dsp/engine2/chiptune_engine.h", "className": "ChiptuneEngine", "member": "chiptune_engine_", "behavior": "chiptune", "files": ["plaits/dsp/engine2/chiptune_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.5, "auxGain": 0.5 }
+    },
+    {
+      "id": "glisson", "packageId": "rubato/glisson", "name": "Glisson", "author": "Lyle Mills", "origin": "Rubato Lab", "family": "Granular",
+      "description": "Overlapping grains trace randomized upward and downward pitch glides.", "tags": ["experimental", "grain", "glissando", "chirp"],
+      "controls": ["Scatter", "Grains", "Direction", "Trajectory"], "outputs": ["Selected chirp direction", "Counter-moving chirps"],
+      "source": { "header": "plaits/dsp/engine2/glisson_engine.h", "className": "GlissonEngine", "member": "glisson_engine_", "files": ["plaits/dsp/engine2/glisson_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.9, "auxGain": 0.9 }
+    },
+    {
+      "id": "gendy", "packageId": "rubato/gendy", "name": "GENDY", "author": "Lyle Mills", "origin": "Rubato Lab", "family": "Stochastic",
+      "description": "A waveform continuously rewritten by amplitude and duration random walks.", "tags": ["experimental", "stochastic", "xenakis", "random"],
+      "controls": ["Breakpoints", "Amplitude walk", "Duration walk", "Interpolation"], "outputs": ["Interpolated stochastic waveform", "Raw stepped waveform"],
+      "source": { "header": "plaits/dsp/engine2/gendy_engine.h", "className": "GendyEngine", "member": "gendy_engine_", "files": ["plaits/dsp/engine2/gendy_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.8, "auxGain": 0.8 }
+    },
+    {
+      "id": "scanned", "packageId": "rubato/scanned", "name": "Scanned", "author": "Lyle Mills", "origin": "Rubato Lab", "family": "Physical",
+      "description": "Scan across a slowly evolving network of coupled virtual masses.", "tags": ["experimental", "scanned", "physical", "evolving"],
+      "controls": ["Structure", "Scan path", "Wavefold", "Evolution speed"], "outputs": ["Mass-position scan", "Spatial derivative"],
+      "source": { "header": "plaits/dsp/engine2/scanned_engine.h", "className": "ScannedEngine", "member": "scanned_engine_", "files": ["plaits/dsp/engine2/scanned_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": -1.0, "auxGain": -1.0 }
+    },
+    {
+      "id": "pulsar", "packageId": "rubato/pulsar", "name": "Pulsar", "author": "Lyle Mills", "origin": "Rubato Lab", "family": "Microsound",
+      "description": "Windowed tone bursts move from sparse impulses to clustered formant rhythms.", "tags": ["experimental", "pulsar", "microsound", "formant", "burst"],
+      "controls": ["Formant", "Pulse width", "Clusters", "Skew"], "outputs": ["Primary pulse train", "Complementary phase-offset train"],
+      "source": { "header": "plaits/dsp/engine2/pulsar_engine.h", "className": "PulsarEngine", "member": "pulsar_engine_", "files": ["plaits/dsp/engine2/pulsar_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.9, "auxGain": 0.9 }
+    },
+    {
+      "id": "loopback", "packageId": "rubato/loopback", "name": "Loopback", "author": "Lyle Mills", "origin": "Rubato Lab", "family": "Feedback",
+      "description": "A normalized feedback-AM loop creates recursive sidebands without running away.", "tags": ["experimental", "feedback", "am", "sideband"],
+      "controls": ["Feedback ratio", "Recursion depth", "Delay topology", "Feedback symmetry"], "outputs": ["Feedback-AM voice", "Isolated sidebands"],
+      "source": { "header": "plaits/dsp/engine2/loopback_engine.h", "className": "LoopbackEngine", "member": "loopback_engine_", "files": ["plaits/dsp/engine2/loopback_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.8, "auxGain": 0.8 }
+    },
+    {
+      "id": "lockstep", "packageId": "rubato/lockstep", "name": "Lockstep", "author": "Lyle Mills", "origin": "Rubato Lab", "family": "PLL",
+      "description": "An audible internal phase-locked loop hunts, slips, and captures harmonic ratios.", "tags": ["experimental", "pll", "sync", "ratio"],
+      "controls": ["Lock ratio", "Loop bandwidth", "Detector character", "Capture and damping"], "outputs": ["PLL follower", "Acquisition and phase error"],
+      "source": { "header": "plaits/dsp/engine2/lockstep_engine.h", "className": "LockstepEngine", "member": "lockstep_engine_", "files": ["plaits/dsp/engine2/lockstep_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.8, "auxGain": 0.8 }
+    },
+    {
+      "id": "tapfield", "packageId": "rubato/tapfield", "name": "Tapfield", "author": "Lyle Mills", "origin": "Rubato Lab", "family": "Bitwise",
+      "description": "Pitch-clocked Galois feedback registers become repeating binary wavefields.", "tags": ["experimental", "lfsr", "binary", "digital"],
+      "controls": ["Register topology", "Bit decoding", "Bit corruption", "Slew"], "outputs": ["Decoded register field", "Raw carry stream"],
+      "source": { "header": "plaits/dsp/engine2/tapfield_engine.h", "className": "TapfieldEngine", "member": "tapfield_engine_", "files": ["plaits/dsp/engine2/tapfield_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.8, "auxGain": 0.8 }
+    },
+    {
+      "id": "phase-weave", "packageId": "rubato/phase-weave", "name": "Phase Weave", "author": "Lyle Mills", "origin": "Rubato Lab", "family": "Phase",
+      "description": "Four asymmetric harmonic voices weave through moving cancellation geometries.", "tags": ["experimental", "phase", "cancellation", "harmonic"],
+      "controls": ["Constellation", "Phase spread", "Cancellation", "Rotation and drive"], "outputs": ["Weighted cancellation field", "Orthogonal pair differences"],
+      "source": { "header": "plaits/dsp/engine2/phase_weave_engine.h", "className": "PhaseWeaveEngine", "member": "phase_weave_engine_", "files": ["plaits/dsp/engine2/phase_weave_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.7, "auxGain": 0.7 }
+    },
+    {
+      "id": "sideband-bank", "packageId": "rubato/sideband-bank", "name": "Sideband Bank", "author": "Lyle Mills", "origin": "Rubato Lab", "family": "Additive",
+      "description": "Finite discrete-summation banks build compact geometric ladders above and below a carrier.", "tags": ["experimental", "dsf", "sideband", "additive"],
+      "controls": ["Partial spacing", "Geometric rolloff", "Partial count", "Upper/lower bias"], "outputs": ["Upper sideband bank", "Lower sideband bank"],
+      "source": { "header": "plaits/dsp/engine2/sideband_engine.h", "className": "SidebandEngine", "member": "sideband_engine_", "files": ["plaits/dsp/engine2/sideband_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.7, "auxGain": 0.7 }
+    },
+    {
+      "id": "attractor", "packageId": "rubato/attractor", "name": "Attractor", "author": "Lyle Mills", "origin": "Rubato Lab", "family": "Chaos",
+      "description": "A bounded three-state cyclic flow turns deterministic attractor motion into audio.", "tags": ["experimental", "chaos", "attractor", "nonlinear"],
+      "controls": ["Lobe density", "Damping and chaos", "Coordinate scan", "Rate skew"], "outputs": ["Selected attractor coordinate", "Lagging attractor coordinate"],
+      "source": { "header": "plaits/dsp/engine2/attractor_engine.h", "className": "AttractorEngine", "member": "attractor_engine_", "files": ["plaits/dsp/engine2/attractor_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.8, "auxGain": 0.8 }
+    },
+    {
+      "id": "undertow", "packageId": "rubato/undertow", "name": "Undertow", "author": "Lyle Mills", "origin": "Rubato Lab", "family": "Subharmonic",
+      "description": "Six integer undertones blend through original registrations and a warped divider lattice.", "tags": ["experimental", "subharmonic", "undertone", "divider"],
+      "controls": ["Registration", "Wave colour", "Anchor balance", "Lattice stretch"], "outputs": ["Registered undertone mixture", "Hollow alternating lattice"],
+      "source": { "header": "plaits/dsp/engine2/undertow_engine.h", "className": "UndertowEngine", "member": "undertow_engine_", "files": ["plaits/dsp/engine2/undertow_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.7, "auxGain": 0.7 }
+    },
+    {
+      "id": "reed-pipe", "packageId": "rubato/reed-pipe", "name": "Reed Pipe", "author": "Lyle Mills", "origin": "Rubato Lab", "family": "Physical",
+      "description": "A nonlinear reed excites a fractional-delay bore with a movable pressure pickup.", "tags": ["experimental", "reed", "waveguide", "physical"],
+      "controls": ["Bore pickup", "Breath pressure", "Reed stiffness", "Bore reflection"], "outputs": ["Bore pressure", "Reed flow"],
+      "source": { "header": "plaits/dsp/engine2/reed_pipe_engine.h", "className": "ReedPipeEngine", "member": "reed_pipe_engine_", "files": ["plaits/dsp/engine2/reed_pipe_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.8, "auxGain": 0.8 }
+    },
+    {
+      "id": "phase-flock", "packageId": "rubato/phase-flock", "name": "Phase Flock", "author": "Lyle Mills", "origin": "Rubato Lab", "family": "Coupled",
+      "description": "Seven mean-field phase oscillators disperse, synchronize, and split into antipodal clusters.", "tags": ["experimental", "kuramoto", "coupled", "synchronization"],
+      "controls": ["Frequency spread", "Coupling", "Cluster order", "Phase lag"], "outputs": ["First circular moment", "Second circular moment"],
+      "source": { "header": "plaits/dsp/engine2/phase_flock_engine.h", "className": "PhaseFlockEngine", "member": "phase_flock_engine_", "files": ["plaits/dsp/engine2/phase_flock_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.7, "auxGain": 0.7 }
+    },
+    {
+      "id": "rulefield", "packageId": "rubato/rulefield", "name": "Rulefield", "author": "Lyle Mills", "origin": "Rubato Lab", "family": "Cellular",
+      "description": "Elementary cellular-automaton generations become evolving 32-cell wavecycles.", "tags": ["experimental", "cellular automaton", "wavetable", "digital"],
+      "controls": ["CA rule", "Cells to edges", "Evolution rate", "Interpolation"], "outputs": ["Cell and edge wavecycle", "Inter-generation activity"],
+      "source": { "header": "plaits/dsp/engine2/rulefield_engine.h", "className": "RulefieldEngine", "member": "rulefield_engine_", "files": ["plaits/dsp/engine2/rulefield_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.7, "auxGain": 0.7 }
+    },
+    {
+      "id": "spectral-spiral", "packageId": "rubato/spectral-spiral", "name": "Spectral Spiral", "author": "Lyle Mills", "origin": "Rubato Lab", "family": "Feedback",
+      "description": "A complex delay loop repeatedly frequency-shifts an analytic harmonic source.", "tags": ["experimental", "frequency shifter", "feedback", "spectral"],
+      "controls": ["Source richness", "Shift spacing", "Feedback", "Shift direction"], "outputs": ["Forward spectral spiral", "Counter-shift projection"],
+      "source": { "header": "plaits/dsp/engine2/spectral_spiral_engine.h", "className": "SpectralSpiralEngine", "member": "spectral_spiral_engine_", "files": ["plaits/dsp/engine2/spectral_spiral_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.7, "auxGain": 0.7 }
+    }
+  ],
+  "manuals": {
+    "virtual-analog": {
+      "controls": {
+        "harmonics": "Detunes the paired oscillators through closely spaced and musical intervals.",
+        "timbre": "Moves through pulse-width changes and introduces oscillator synchronization.",
+        "morph": "Changes the shape of the variable sawtooth component.",
+        "macro": "Crossfades the square and variable-saw components around the stock midpoint."
+      },
+      "trigger": "Restarts the internal envelope when TRIG is patched."
+    },
+    "waveshaping": {
+      "controls": {
+        "harmonics": "Selects the harmonic relationship between the oscillator components.",
+        "timbre": "Increases wavefolding from a clean tone to dense folded spectra.",
+        "morph": "Changes the underlying waveform sent into the wavefolder.",
+        "macro": "Offsets the wavefolder symmetry from negative through centered to positive bias."
+      },
+      "trigger": "Restarts the internal envelope when TRIG is patched."
+    },
+    "two-op-fm": {
+      "controls": {
+        "harmonics": "Selects the carrier-to-modulator frequency ratio.",
+        "timbre": "Raises the FM index from a pure carrier to bright sidebands.",
+        "morph": "Feeds the modulator back into itself for increasingly complex spectra.",
+        "macro": "Detunes the modulator continuously around the selected ratio."
+      },
+      "trigger": "Restarts the internal envelope when TRIG is patched."
+    },
+    "granular-formant": {
+      "controls": {
+        "harmonics": "Sets the relationship between the fundamental and the grain clock.",
+        "timbre": "Moves the resonant formant above and around the fundamental.",
+        "morph": "Changes grain shape and the balance of tonal and noisy material.",
+        "macro": "Brings the carrier through the stock suppressed-carrier texture."
+      },
+      "trigger": "Restarts the internal envelope and grain articulation when TRIG is patched."
+    },
+    "harmonic": {
+      "controls": {
+        "harmonics": "Changes the number and distribution of active additive partials.",
+        "timbre": "Moves energy between low and high partial groups.",
+        "morph": "Tilts and animates the spectrum across the partial bank.",
+        "macro": "Rebalances odd and even partials around the stock midpoint."
+      },
+      "trigger": "Restarts the internal envelope when TRIG is patched."
+    },
+    "wavetable": {
+      "controls": {
+        "harmonics": "Selects a family within the integrated wavetable collection.",
+        "timbre": "Moves across one dimension of the selected table.",
+        "morph": "Moves across the second dimension with smooth interpolation.",
+        "macro": "Warps oscillator phase to create new variants of the selected wave."
+      },
+      "trigger": "Restarts the internal envelope when TRIG is patched."
+    },
+    "chords": {
+      "controls": {
+        "harmonics": "Selects the chord voicing from the active chord table.",
+        "timbre": "Changes the waveform shared by the four chord voices.",
+        "morph": "Changes inversion and spacing across the chord voices.",
+        "macro": "Balances the two internally grouped sets of chord voices."
+      },
+      "trigger": "Restarts the internal envelope and rearticulates the chord when TRIG is patched."
+    },
+    "speech": {
+      "controls": {
+        "harmonics": "Selects the speech synthesis model or word-bank behavior.",
+        "timbre": "Moves through vowels, phonemes, or words for the selected model.",
+        "morph": "Changes prosody, inflection, and transitions between speech elements.",
+        "macro": "Moves from raw excitation through the stock voice to sharper spectral emphasis."
+      },
+      "trigger": "Advances or restarts speech material according to the selected model."
+    },
+    "swarm": {
+      "controls": {
+        "harmonics": "Spreads the oscillator pitches from a tight unison to a wide swarm.",
+        "timbre": "Changes the number and density of active swarm particles.",
+        "morph": "Changes the individual oscillator shape and animation.",
+        "macro": "Widens the distribution of particle sizes around the stock midpoint."
+      },
+      "trigger": "Restarts the internal envelope and rearticulates the swarm when TRIG is patched."
+    },
+    "filtered-noise": {
+      "controls": {
+        "harmonics": "Changes the clock rate and pitch character of the noise source.",
+        "timbre": "Sweeps the primary multimode filter response.",
+        "morph": "Raises resonance from broad noise to sharply pitched bands.",
+        "macro": "Moves an independent filter position from low-pass toward high-pass."
+      },
+      "trigger": "Restarts the internal envelope when TRIG is patched."
+    },
+    "particle-noise": {
+      "controls": {
+        "harmonics": "Changes particle density from isolated ticks to a continuous cloud.",
+        "timbre": "Moves the resonant filter excited by each particle.",
+        "morph": "Spreads particle frequencies and timing across the texture.",
+        "macro": "Adds diffusion from a dry particle stream to a dense cloud."
+      },
+      "trigger": "Restarts the internal envelope and particle articulation when TRIG is patched."
+    },
+    "inharmonic-string": {
+      "controls": {
+        "harmonics": "Changes string dispersion from harmonic plucks to inharmonic material.",
+        "timbre": "Brightens the excitation and resonating string.",
+        "morph": "Changes damping from short, muted plucks to long resonances.",
+        "macro": "Lengthens the excitation from a short strike toward a scrape."
+      },
+      "trigger": "Strikes the modeled string; unpatched TRIG allows continuous internal excitation."
+    },
+    "modal-resonator": {
+      "controls": {
+        "harmonics": "Changes modal structure across strings, plates, tubes, and bells.",
+        "timbre": "Brightens the exciter and upper resonant modes.",
+        "morph": "Changes damping and the decay time of the resonator.",
+        "macro": "Focuses the exciter from broad noise toward a pitched impulse."
+      },
+      "trigger": "Strikes the modeled resonator; unpatched TRIG allows continuous internal excitation."
+    },
+    "analog-bass-drum": {
+      "controls": {
+        "harmonics": "Changes the drum tone and oscillator character.",
+        "timbre": "Sets the decay from a short knock to a sustained kick.",
+        "morph": "Raises drive and nonlinear body in the synthesized drum.",
+        "macro": "Changes pitch-envelope punch from restrained to exaggerated."
+      },
+      "trigger": "Fires a new bass-drum hit with velocity taken from LEVEL."
+    },
+    "analog-snare": {
+      "controls": {
+        "harmonics": "Changes the tuning of the modeled shell oscillators.",
+        "timbre": "Sets the decay of the shell and noise components.",
+        "morph": "Balances the tuned shell against the filtered noise component.",
+        "macro": "Spreads the shell modes from compact to strongly inharmonic."
+      },
+      "trigger": "Fires a new snare hit with velocity taken from LEVEL."
+    },
+    "analog-hi-hat": {
+      "controls": {
+        "harmonics": "Changes the metallic oscillator mixture and cymbal tone.",
+        "timbre": "Sets the decay from a tight closed hat to a longer open sound.",
+        "morph": "Balances the metallic oscillators against the noise component.",
+        "macro": "Spreads metallic oscillator frequencies from compact to widely separated."
+      },
+      "trigger": "Fires a new hi-hat hit with velocity taken from LEVEL."
+    },
+    "virtual-analog-vcf": {
+      "controls": {
+        "harmonics": "Moves through classic oscillator shapes before the filter.",
+        "timbre": "Sweeps the virtual-analog filter cutoff.",
+        "morph": "Raises filter resonance toward self-oscillating emphasis.",
+        "macro": "Increases oscillator and filter drive from clean to saturated."
+      },
+      "trigger": "Restarts the internal envelope when TRIG is patched."
+    },
+    "phase-distortion": {
+      "controls": {
+        "harmonics": "Selects the phase-distortion waveform and contour.",
+        "timbre": "Raises the amount of phase distortion and harmonic brightness.",
+        "morph": "Changes modulation depth and motion within the phase curve.",
+        "macro": "Moves the modulator ratio from an octave down through unison to an octave up."
+      },
+      "trigger": "Restarts the internal envelope when TRIG is patched."
+    },
+    "dx7-bank-a": {
+      "controls": {
+        "harmonics": "Selects a patch from the first built-in six-operator FM bank.",
+        "timbre": "Changes patch brightness by scaling operator levels.",
+        "morph": "Changes envelope timing and articulation across the operator network.",
+        "macro": "Detunes the modulator network, darkening below noon and saturating above it."
+      },
+      "trigger": "Restarts the selected patch envelopes."
+    },
+    "dx7-bank-b": {
+      "controls": {
+        "harmonics": "Selects a patch from the second built-in six-operator FM bank.",
+        "timbre": "Changes patch brightness by scaling operator levels.",
+        "morph": "Changes envelope timing and articulation across the operator network.",
+        "macro": "Detunes the modulator network, darkening below noon and saturating above it."
+      },
+      "trigger": "Restarts the selected patch envelopes."
+    },
+    "dx7-bank-c": {
+      "controls": {
+        "harmonics": "Selects a patch from the third built-in six-operator FM bank.",
+        "timbre": "Changes patch brightness by scaling operator levels.",
+        "morph": "Changes envelope timing and articulation across the operator network.",
+        "macro": "Detunes the modulator network, darkening below noon and saturating above it."
+      },
+      "trigger": "Restarts the selected patch envelopes."
+    },
+    "wave-terrain": {
+      "controls": {
+        "harmonics": "Selects the terrain or waveform family used by the two-dimensional scan.",
+        "timbre": "Moves the scan along the terrain's first axis.",
+        "morph": "Moves the scan along the terrain's second axis.",
+        "macro": "Offsets the Y-axis path to reveal complementary terrain contours."
+      },
+      "trigger": "Restarts the internal envelope when TRIG is patched."
+    },
+    "string-machine": {
+      "controls": {
+        "harmonics": "Selects chord voicing and harmonic registration.",
+        "timbre": "Changes the divide-down string registration and octave mixture.",
+        "morph": "Changes ensemble animation and timbral movement.",
+        "macro": "Moves ensemble depth from dry through the stock setting to fully wet."
+      },
+      "trigger": "Restarts the internal envelope and rearticulates the string chord."
+    },
+    "chiptune": {
+      "controls": {
+        "harmonics": "Selects the chord or interval pattern of the square-wave voices.",
+        "timbre": "Changes arpeggiation rate and ordering.",
+        "morph": "Changes pulse shape and the balance of the chip voices.",
+        "macro": "Selects stepped register and inversion presets around the stock center step."
+      },
+      "trigger": "Restarts the arpeggio and internal envelope when TRIG is patched."
+    },
+    "glisson": {
+      "controls": {
+        "harmonics": "Spreads grain starting pitches around the played note.",
+        "timbre": "Changes the number of overlapping grains in the cloud.",
+        "morph": "Moves grain motion from downward chirps through static grains to upward chirps.",
+        "macro": "Changes grain duration and bends each pitch trajectory."
+      },
+      "trigger": "Restarts and re-randomizes the grain cloud."
+    },
+    "gendy": {
+      "controls": {
+        "harmonics": "Changes the stochastic waveform from three to nine breakpoints.",
+        "timbre": "Changes the depth of the breakpoint amplitude random walk.",
+        "morph": "Changes the depth of the segment-duration random walk.",
+        "macro": "Moves interpolation from stepped through linear to smooth."
+      },
+      "trigger": "Creates a new deterministic stochastic waveform."
+    },
+    "scanned": {
+      "controls": {
+        "harmonics": "Changes excitation width, stiffness, and alternating-mass inharmonicity.",
+        "timbre": "Changes mass irregularity and warps the spatial scan path.",
+        "morph": "Moves from damping into increasingly strong nonlinear wavefolding.",
+        "macro": "Changes the speed of the slowly evolving physical system."
+      },
+      "trigger": "Strikes the virtual system; unpatched TRIG gently drives it continuously."
+    },
+    "pulsar": {
+      "controls": {
+        "harmonics": "Raises the carrier formant from the fundamental into tightly packed upper partials.",
+        "timbre": "Changes each pulsar window from a short impulse to a broad burst.",
+        "morph": "Increases the number of interleaved pulse clusters within each cycle.",
+        "macro": "Moves MAIN and AUX pulse peaks in opposite directions from early pluck to late swell."
+      },
+      "trigger": "Restarts the pulsar cycle."
+    },
+    "loopback": {
+      "controls": {
+        "harmonics": "Selects the feedback modulation ratio.",
+        "timbre": "Raises recursion depth while the loop remains amplitude-normalized.",
+        "morph": "Changes the delay and feedback topology of the recursive loop.",
+        "macro": "Moves feedback symmetry from negative through bipolar to positive."
+      },
+      "trigger": "Clears and rephases the feedback loop."
+    },
+    "lockstep": {
+      "controls": {
+        "harmonics": "Selects the stepped ratio pursued by the internal phase-locked loop.",
+        "timbre": "Changes loop bandwidth from slow hunting to tight tracking.",
+        "morph": "Moves the phase detector from sinusoidal to increasingly wrapped behavior.",
+        "macro": "Changes capture range and damping around the selected lock ratio."
+      },
+      "trigger": "Knocks the follower out of lock so it must reacquire the input ratio."
+    },
+    "tapfield": {
+      "controls": {
+        "harmonics": "Selects a pitch-clocked feedback-register topology from 9 to 24 bits.",
+        "timbre": "Moves between equal, binary-weighted, and Gray-decoded bit fields.",
+        "morph": "Introduces deterministic corruption into the evolving register.",
+        "macro": "Smooths the decoded field from hard bit steps toward a slewed waveform."
+      },
+      "trigger": "Restores a repeatable feedback-register seed."
+    },
+    "phase-weave": {
+      "controls": {
+        "harmonics": "Changes the asymmetric voice constellation and even/odd balance.",
+        "timbre": "Spreads relative phase among the four harmonic voices.",
+        "morph": "Moves the summed field from positive through bipolar cancellation.",
+        "macro": "Rotates the voice pairs and increases drive into the cancellation geometry."
+      },
+      "trigger": "Rephases the harmonic voice bank."
+    },
+    "sideband-bank": {
+      "controls": {
+        "harmonics": "Changes spacing between the finite sideband partials.",
+        "timbre": "Changes the geometric amplitude rolloff across each sideband ladder.",
+        "morph": "Selects how many partials are retained in the finite sum.",
+        "macro": "Biases energy between the upper and lower sideband banks."
+      },
+      "trigger": "Rephases both finite sideband banks."
+    },
+    "attractor": {
+      "controls": {
+        "harmonics": "Changes the density and spacing of the attractor lobes.",
+        "timbre": "Moves the flow from damped motion into a more chaotic regime.",
+        "morph": "Scans the audible projection among the X, Y, and Z coordinates.",
+        "macro": "Skews coordinate integration rates to reshape the cyclic motion."
+      },
+      "trigger": "Deterministically reseeds the three-state flow."
+    },
+    "undertow": {
+      "controls": {
+        "harmonics": "Moves through five interpolated undertone registrations.",
+        "timbre": "Changes the divider voices from triangle through BLEP saw to pulse.",
+        "morph": "Balances the pitch anchor against the undertone lattice.",
+        "macro": "Contracts or expands the deepest divider relationships."
+      },
+      "trigger": "Phase-aligns all divider voices."
+    },
+    "reed-pipe": {
+      "controls": {
+        "harmonics": "Moves the pressure pickup through the bore and changes its contribution.",
+        "timbre": "Raises breath pressure from soft excitation into nonlinear reed motion.",
+        "morph": "Changes reed stiffness and introduces breath noise.",
+        "macro": "Changes bore reflection loss and high-frequency brightness."
+      },
+      "trigger": "Adds a brief pressure tongue to articulate the modeled pipe."
+    },
+    "phase-flock": {
+      "controls": {
+        "harmonics": "Spreads the seven oscillators' natural frequencies.",
+        "timbre": "Raises mean-field coupling from dispersion toward synchronization.",
+        "morph": "Moves attraction from a single cluster toward antipodal two-cluster order.",
+        "macro": "Adds phase lag and frustration to the coupling field."
+      },
+      "trigger": "Scatters the oscillator phases."
+    },
+    "rulefield": {
+      "controls": {
+        "harmonics": "Selects the elementary cellular-automaton rule.",
+        "timbre": "Moves the wavecycle readout from cell states toward spatial edges.",
+        "morph": "Changes how quickly new cellular generations replace the current field.",
+        "macro": "Moves table lookup from stepped through linear to smooth interpolation."
+      },
+      "trigger": "Restores the repeatable seed for the selected rule."
+    },
+    "spectral-spiral": {
+      "controls": {
+        "harmonics": "Changes the richness of the analytic harmonic source.",
+        "timbre": "Changes frequency-shift spacing on every trip around the complex loop.",
+        "morph": "Raises feedback to extend the spectral spiral through more rotations.",
+        "macro": "Moves the shift direction from downward through stationary to upward."
+      },
+      "trigger": "Clears and rephases the complex feedback loop."
+    }
+  },
+  "presets": {
+    "experimental": ["virtual-analog", "waveshaping", "two-op-fm", "granular-formant", "harmonic", "wavetable", "chords", "speech", "swarm", "filtered-noise", "particle-noise", "inharmonic-string", "modal-resonator", "analog-bass-drum", "analog-snare", "analog-hi-hat", "virtual-analog-vcf", "phase-distortion", "glisson", "gendy", "scanned", "pulsar", "string-machine", "chiptune"],
+    "stock": ["virtual-analog", "waveshaping", "two-op-fm", "granular-formant", "harmonic", "wavetable", "chords", "speech", "swarm", "filtered-noise", "particle-noise", "inharmonic-string", "modal-resonator", "analog-bass-drum", "analog-snare", "analog-hi-hat", "virtual-analog-vcf", "phase-distortion", "dx7-bank-a", "dx7-bank-b", "dx7-bank-c", "wave-terrain", "string-machine", "chiptune"],
+    "audition": ["loopback", "lockstep", "phase-weave", "sideband-bank", "undertow", "reed-pipe", "phase-flock", "spectral-spiral", "tapfield", "attractor", "rulefield", "glisson", "gendy", "scanned", "pulsar", "particle-noise", "virtual-analog-vcf", "phase-distortion", "virtual-analog", "waveshaping", "two-op-fm", "wavetable", "string-machine", "chiptune"]
+  }
+}

@@ -31,27 +31,51 @@
 #include <algorithm>
 
 #include "stmlib/system/storage.h"
+#include "plaits/build_config.h"
 
 namespace plaits {
 
 using namespace std;
+
+static void ApplyBuildOptionDefaults(State* state) {
+  state->locked_frequency_pot_option = PLAITS_BUILD_LOCKED_FREQUENCY_POT_OPTION;
+  state->model_cv_option = PLAITS_BUILD_MODEL_CV_OPTION;
+  state->level_cv_option = PLAITS_BUILD_LEVEL_CV_OPTION;
+  state->aux_subosc_wave_option = PLAITS_BUILD_AUX_SUBOSC_WAVE_OPTION;
+  state->aux_subosc_octave_option = PLAITS_BUILD_AUX_SUBOSC_OCTAVE_OPTION;
+  state->chord_set_option = PLAITS_BUILD_CHORD_SET_OPTION;
+  state->hold_on_trigger_option = PLAITS_BUILD_HOLD_ON_TRIGGER_OPTION;
+  state->options_profile_id_low = PLAITS_BUILD_OPTIONS_PROFILE_ID & 0xff;
+  state->options_profile_id_high = PLAITS_BUILD_OPTIONS_PROFILE_ID >> 8;
+}
 
 bool Settings::Init() {
   InitPersistentData();
   InitState();
   
   bool success = chunk_storage_.Init(&persistent_data_, &state_);
-  
+
+  uint16_t saved_options_profile_id = state_.options_profile_id_low |
+      (state_.options_profile_id_high << 8);
+  bool apply_build_options = success &&
+      saved_options_profile_id != PLAITS_BUILD_OPTIONS_PROFILE_ID;
+  if (apply_build_options) {
+    ApplyBuildOptionDefaults(&state_);
+  }
+
   CONSTRAIN(state_.engine, 0, 23);
   CONSTRAIN(state_.locked_frequency_pot_option, 0, 3);
   CONSTRAIN(state_.model_cv_option, 0, 2);
   CONSTRAIN(state_.level_cv_option, 0, 1);
   CONSTRAIN(state_.aux_subosc_wave_option, 0, 2);
   CONSTRAIN(state_.aux_subosc_octave_option, 0, 2);
-  CONSTRAIN(state_.chord_set_option, 0, 2);
+  CONSTRAIN(state_.chord_set_option, 0, PLAITS_CHORD_TABLE_COUNT - 1);
   CONSTRAIN(state_.hold_on_trigger_option, 0, 1);
-  CONSTRAIN(state_.navigation_option, 0, 1);
   CONSTRAIN(state_.locked_octave, 0, 8);
+
+  if (apply_build_options) {
+    SaveState();
+  }
 
   return success;
 }
@@ -101,14 +125,7 @@ void Settings::InitState() {
   state_.extra_fine_tune = 128;
 
   // alt firmware options
-  state_.locked_frequency_pot_option = 0;
-  state_.model_cv_option = 0;
-  state_.level_cv_option = 0;
-  state_.aux_subosc_octave_option = 0;
-  state_.aux_subosc_wave_option = 0;
-  state_.chord_set_option = 0;
-  state_.hold_on_trigger_option = 0;
-  state_.navigation_option = 0;
+  ApplyBuildOptionDefaults(&state_);
 
   // alt firmware other
   state_.locked_octave = 4;

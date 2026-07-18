@@ -32,6 +32,7 @@
 
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/system/system_clock.h"
+#include "plaits/build_config.h"
 
 namespace plaits {
 
@@ -40,15 +41,14 @@ using namespace stmlib;
 
 static const int32_t kLongPressTime = 2000;
 
-static const uint8_t kNumOptions = 8;
+static const uint8_t kNumOptions = 7;
 static const uint8_t kNumLockedFrequencyPotOptions = 4;
 static const uint8_t kNumModelCVOptions = 3;
 static const uint8_t kNumLevelCVOptions = 2;
 static const uint8_t kNumSuboscWaveOptions = 3;
 static const uint8_t kNumSuboscOctaveOptions = 3;
-static const uint8_t kNumChordSetOptions = 3;
+static const uint8_t kNumChordSetOptions = PLAITS_CHORD_TABLE_COUNT;
 static const uint8_t kNumHoldOnTriggerOptions = 2;
-static const uint8_t kNumNavigationOptions = 2;
 
 void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
   patch_ = patch;
@@ -122,7 +122,6 @@ void Ui::LoadState() {
   patch_->aux_subosc_octave_option = state.aux_subosc_octave_option;
   patch_->chord_set_option = state.chord_set_option;
   patch_->hold_on_trigger_option = state.hold_on_trigger_option;
-  enable_alt_navigation_ = state.navigation_option == 1;
   locked_octave_ = state.locked_octave;
 }
 
@@ -143,7 +142,6 @@ void Ui::SaveState() {
   state->aux_subosc_octave_option = patch_->aux_subosc_octave_option;
   state->chord_set_option = patch_->chord_set_option;
   state->hold_on_trigger_option = patch_->hold_on_trigger_option;
-  state->navigation_option = enable_alt_navigation_ ? 1 : 0;
   state->locked_octave = locked_octave_;
 
   settings_->SaveState();
@@ -264,8 +262,6 @@ void Ui::UpdateLEDs() {
           option_value = patch_->chord_set_option;
         } else if (i == 6) {
           option_value = patch_->hold_on_trigger_option;
-        } else if (i == 7) {
-          option_value = enable_alt_navigation_ ? 1 : 0;
         }
 
         LedColor color = LED_COLOR_OFF;
@@ -319,7 +315,7 @@ void Ui::Navigate(int button) {
   ignore_release_[0] = ignore_release_[1] = true;
   RealignPots();
   uint8_t increment = button == 0 ? 23 : 1;
-  if (enable_alt_navigation_) {
+  if (PLAITS_BUILD_NAVIGATION_MODE == 1) {
     if (button == 1) {
       // change bank
       increment = 8;
@@ -484,8 +480,6 @@ void Ui::ReadSwitches() {
           if (patch_->hold_on_trigger_option >= kNumHoldOnTriggerOptions) {
             patch_->hold_on_trigger_option = 0;
           }
-        } else if (option_index_ == 7) {
-          enable_alt_navigation_ = !enable_alt_navigation_;
         }
       }
       break;

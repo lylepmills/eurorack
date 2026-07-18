@@ -1,0 +1,35 @@
+{
+  "buildKey": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "recipe": {
+    "schemaVersion": 2,
+    "target": "mutable-instruments-plaits",
+    "firmware": "rubato-plaits",
+    "slots": [
+      "virtual-analog",
+      "waveshaping",
+      "two-op-fm",
+      "harmonic",
+      "virtual-analog-vcf",
+      "phase-distortion",
+      "string-machine",
+      "chiptune",
+      "analog-bass-drum",
+      "analog-snare",
+      "analog-hi-hat",
+      "filtered-noise",
+      "particle-noise",
+      "modal-resonator",
+      "inharmonic-string",
+      "swarm",
+      "dx7-bank-a",
+      "glisson",
+      "dx7-bank-b",
+      "gendy",
+      "dx7-bank-c",
+      "scanned",
+      "pulsar",
+      "wave-terrain"
+    ],
+    "output": "audio-wav"
+  }
+}

@@ -23,6 +23,9 @@
 #endif
 
 #include "plaits/dsp/dsp.h"
+#include "plaits/build_config.h"
+
+#include "plaits/dsp/chords/chord_bank.h"
 
 #include "plaits/dsp/engine/additive_engine.h"
 #include "plaits/dsp/engine/bass_drum_engine.h"
@@ -42,12 +45,23 @@
 #include "plaits/dsp/engine/wavetable_engine.h"
 
 #include "plaits/dsp/engine2/chiptune_engine.h"
+#include "plaits/dsp/engine2/attractor_engine.h"
 #include "plaits/dsp/engine2/gendy_engine.h"
 #include "plaits/dsp/engine2/glisson_engine.h"
+#include "plaits/dsp/engine2/lockstep_engine.h"
+#include "plaits/dsp/engine2/loopback_engine.h"
+#include "plaits/dsp/engine2/phase_flock_engine.h"
 #include "plaits/dsp/engine2/phase_distortion_engine.h"
+#include "plaits/dsp/engine2/phase_weave_engine.h"
+#include "plaits/dsp/engine2/reed_pipe_engine.h"
+#include "plaits/dsp/engine2/rulefield_engine.h"
 #include "plaits/dsp/engine2/scanned_engine.h"
+#include "plaits/dsp/engine2/sideband_engine.h"
 #include "plaits/dsp/engine2/six_op_engine.h"
+#include "plaits/dsp/engine2/spectral_spiral_engine.h"
 #include "plaits/dsp/engine2/string_machine_engine.h"
+#include "plaits/dsp/engine2/tapfield_engine.h"
+#include "plaits/dsp/engine2/undertow_engine.h"
 #include "plaits/dsp/engine2/virtual_analog_vcf_engine.h"
 #include "plaits/dsp/engine2/wave_terrain_engine.h"
 
@@ -1311,6 +1325,159 @@ void RenderExperimentalEngine(const char* name) {
   }
 }
 
+// A listening render with one clearly isolated control sweep per four-second
+// segment. MAIN is the left channel and AUX is the right channel.
+template<typename T>
+void RenderAuditionEngine(const char* name) {
+  const size_t kSegmentFrames = static_cast<size_t>(kSampleRate * 4.0f);
+  const size_t kTotalFrames = kSegmentFrames * 4;
+  WavWriter wav_writer(2, kSampleRate, 16);
+  wav_writer.Open(name);
+
+  BufferAllocator allocator(ram_block, sizeof(ram_block));
+  T e;
+  e.Init(&allocator);
+  e.LoadUserData(NULL);
+  e.Reset();
+
+  EngineParameters p;
+  p.note = 48.0f;
+  p.accent = 0.8f;
+  p.chord_set_option = 0;
+
+  for (size_t frame = 0; frame < kTotalFrames; frame += kAudioBlockSize) {
+    const size_t segment = frame / kSegmentFrames;
+    const size_t segment_frame = frame % kSegmentFrames;
+    const float sweep = 0.02f + 0.96f * static_cast<float>(segment_frame) / \
+        static_cast<float>(kSegmentFrames - 1);
+    p.harmonics = 0.5f;
+    p.timbre = 0.5f;
+    p.morph = 0.5f;
+    p.macro = 0.5f;
+    if (segment == 0) {
+      p.harmonics = sweep;
+    } else if (segment == 1) {
+      p.timbre = sweep;
+    } else if (segment == 2) {
+      p.morph = sweep;
+    } else {
+      p.macro = sweep;
+    }
+    p.trigger = segment_frame < kAudioBlockSize
+        ? TRIGGER_RISING_EDGE | TRIGGER_HIGH
+        : TRIGGER_UNPATCHED;
+
+    float out[kAudioBlockSize];
+    float aux[kAudioBlockSize];
+    bool already_enveloped = false;
+    e.Render(p, out, aux, kAudioBlockSize, &already_enveloped);
+    for (size_t i = 0; i < kAudioBlockSize; ++i) {
+      if (!isfinite(out[i]) || !isfinite(aux[i]) ||
+          fabsf(out[i]) > 4.0f || fabsf(aux[i]) > 4.0f) {
+        fprintf(
+            stderr,
+            "%s audition failed at frame %zu: segment=%zu "
+            "h=%f t=%f m=%f macro=%f out=%f aux=%f\n",
+            name,
+            frame + i,
+            segment,
+            p.harmonics,
+            p.timbre,
+            p.morph,
+            p.macro,
+            out[i],
+            aux[i]);
+        abort();
+      }
+    }
+    wav_writer.Write(out, aux, kAudioBlockSize);
+  }
+}
+
+template<typename T>
+void ValidateExperimentalControlResponse(const char* name) {
+  static char allocator_memory_a[16 * 1024];
+  static char allocator_memory_b[16 * 1024];
+  const char* control_names[] = { "HARMONICS", "TIMBRE", "MORPH", "macro" };
+
+  for (int control = 0; control < 4; ++control) {
+    memset(allocator_memory_a, 0, sizeof(allocator_memory_a));
+    memset(allocator_memory_b, 0, sizeof(allocator_memory_b));
+    BufferAllocator allocator_a(allocator_memory_a, sizeof(allocator_memory_a));
+    BufferAllocator allocator_b(allocator_memory_b, sizeof(allocator_memory_b));
+    T low;
+    T high;
+    low.Init(&allocator_a);
+    high.Init(&allocator_b);
+    low.LoadUserData(NULL);
+    high.LoadUserData(NULL);
+    low.Reset();
+    high.Reset();
+
+    EngineParameters low_parameters;
+    low_parameters.note = 48.0f;
+    low_parameters.accent = 0.8f;
+    low_parameters.chord_set_option = 0;
+    low_parameters.harmonics = 0.43f;
+    low_parameters.timbre = 0.57f;
+    low_parameters.morph = 0.39f;
+    low_parameters.macro = 0.61f;
+    EngineParameters high_parameters = low_parameters;
+    float* low_control = control == 0 ? &low_parameters.harmonics
+        : control == 1 ? &low_parameters.timbre
+        : control == 2 ? &low_parameters.morph
+        : &low_parameters.macro;
+    float* high_control = control == 0 ? &high_parameters.harmonics
+        : control == 1 ? &high_parameters.timbre
+        : control == 2 ? &high_parameters.morph
+        : &high_parameters.macro;
+    *low_control = 0.12f;
+    *high_control = 0.88f;
+
+    double difference = 0.0;
+    double reference = 0.0;
+    for (size_t block = 0; block < 1024; ++block) {
+      low_parameters.trigger = high_parameters.trigger = block == 0
+          ? TRIGGER_RISING_EDGE | TRIGGER_HIGH
+          : TRIGGER_UNPATCHED;
+      float low_out[kAudioBlockSize];
+      float low_aux[kAudioBlockSize];
+      float high_out[kAudioBlockSize];
+      float high_aux[kAudioBlockSize];
+      bool already_enveloped = false;
+      low.Render(
+          low_parameters,
+          low_out,
+          low_aux,
+          kAudioBlockSize,
+          &already_enveloped);
+      high.Render(
+          high_parameters,
+          high_out,
+          high_aux,
+          kAudioBlockSize,
+          &already_enveloped);
+      for (size_t i = 0; i < kAudioBlockSize; ++i) {
+        difference += fabsf(low_out[i] - high_out[i]);
+        difference += 0.61803398875f * fabsf(low_aux[i] - high_aux[i]);
+        reference += fabsf(low_out[i]) + fabsf(high_out[i]);
+        reference += 0.61803398875f * (fabsf(low_aux[i]) + fabsf(high_aux[i]));
+      }
+    }
+    const double threshold = max(0.01, reference * 0.0001);
+    if (difference < threshold) {
+      fprintf(
+          stderr,
+          "%s does not respond to %s: difference=%f threshold=%f\n",
+          name,
+          control_names[control],
+          difference,
+          threshold);
+      abort();
+    }
+  }
+}
+
 template<typename T>
 void ValidateExperimentalEngineExtremes(float maximum = 4.0f) {
   BufferAllocator allocator(ram_block, 16384);
@@ -1557,6 +1724,42 @@ void ValidateSixOpMacroResponse() {
 }
 
 void TestExperimentalEngines() {
+  printf("Validating selectable chord tables...\n");
+  fflush(stdout);
+  BufferAllocator chord_allocator(ram_block, sizeof(ram_block));
+  ChordBank chord_bank;
+  chord_bank.Init(&chord_allocator);
+  int previous_table_start = -1;
+  for (int table = 0; table < PLAITS_CHORD_TABLE_COUNT; ++table) {
+    chord_bank.set_chord(0.0f, table);
+    const int table_start = chord_bank.chord_index();
+    if (table_start <= previous_table_start) {
+      fprintf(stderr, "Chord table %d has an invalid start index\n", table);
+      abort();
+    }
+    previous_table_start = table_start;
+    for (int position = 0; position <= 16; ++position) {
+      chord_bank.set_chord(static_cast<float>(position) / 16.0f, table);
+      if (chord_bank.num_notes() < 1 || chord_bank.num_notes() > kChordNumNotes) {
+        fprintf(stderr, "Chord table %d has an invalid arpeggio length\n", table);
+        abort();
+      }
+      for (int note = 0; note < kChordNumNotes; ++note) {
+        if (!isfinite(chord_bank.ratio(note)) || chord_bank.ratio(note) <= 0.0f) {
+          fprintf(stderr, "Chord table %d has an invalid pitch ratio\n", table);
+          abort();
+        }
+      }
+    }
+  }
+  chord_bank.set_chord(0.0f, 0);
+  const int first_chord = chord_bank.chord_index();
+  chord_bank.set_chord(0.0f, 0xff);
+  if (chord_bank.chord_index() != first_chord) {
+    fprintf(stderr, "Invalid chord table selection did not fall back to table 0\n");
+    abort();
+  }
+
   printf("Rendering Glisson sweep...\n");
   fflush(stdout);
   RenderExperimentalEngine<GlissonEngine>("plaits_glisson_engine.wav");
@@ -1569,6 +1772,19 @@ void TestExperimentalEngines() {
   printf("Rendering Pulsar sweep...\n");
   fflush(stdout);
   RenderExperimentalEngine<PulsarEngine>("plaits_pulsar_engine.wav");
+  printf("Rendering Plaits Lab audition files...\n");
+  fflush(stdout);
+  RenderAuditionEngine<LoopbackEngine>("01-loopback.wav");
+  RenderAuditionEngine<LockstepEngine>("02-lockstep.wav");
+  RenderAuditionEngine<TapfieldEngine>("03-tapfield.wav");
+  RenderAuditionEngine<PhaseWeaveEngine>("04-phase-weave.wav");
+  RenderAuditionEngine<SidebandEngine>("05-sideband-bank.wav");
+  RenderAuditionEngine<AttractorEngine>("06-attractor.wav");
+  RenderAuditionEngine<UndertowEngine>("07-undertow.wav");
+  RenderAuditionEngine<ReedPipeEngine>("08-reed-pipe.wav");
+  RenderAuditionEngine<PhaseFlockEngine>("09-phase-flock.wav");
+  RenderAuditionEngine<RulefieldEngine>("10-rulefield.wav");
+  RenderAuditionEngine<SpectralSpiralEngine>("11-spectral-spiral.wav");
   printf("Validating Glisson extremes...\n");
   fflush(stdout);
   ValidateExperimentalEngineExtremes<GlissonEngine>();
@@ -1581,6 +1797,30 @@ void TestExperimentalEngines() {
   printf("Validating Pulsar extremes...\n");
   fflush(stdout);
   ValidateExperimentalEngineExtremes<PulsarEngine>();
+  printf("Validating new Plaits Lab engines...\n");
+  fflush(stdout);
+  ValidateExperimentalEngineExtremes<LoopbackEngine>();
+  ValidateExperimentalEngineExtremes<LockstepEngine>();
+  ValidateExperimentalEngineExtremes<TapfieldEngine>();
+  ValidateExperimentalEngineExtremes<PhaseWeaveEngine>();
+  ValidateExperimentalEngineExtremes<SidebandEngine>();
+  ValidateExperimentalEngineExtremes<AttractorEngine>();
+  ValidateExperimentalEngineExtremes<UndertowEngine>();
+  ValidateExperimentalEngineExtremes<ReedPipeEngine>();
+  ValidateExperimentalEngineExtremes<PhaseFlockEngine>();
+  ValidateExperimentalEngineExtremes<RulefieldEngine>();
+  ValidateExperimentalEngineExtremes<SpectralSpiralEngine>();
+  ValidateExperimentalControlResponse<LoopbackEngine>("Loopback");
+  ValidateExperimentalControlResponse<LockstepEngine>("Lockstep");
+  ValidateExperimentalControlResponse<TapfieldEngine>("Tapfield");
+  ValidateExperimentalControlResponse<PhaseWeaveEngine>("Phase Weave");
+  ValidateExperimentalControlResponse<SidebandEngine>("Sideband Bank");
+  ValidateExperimentalControlResponse<AttractorEngine>("Attractor");
+  ValidateExperimentalControlResponse<UndertowEngine>("Undertow");
+  ValidateExperimentalControlResponse<ReedPipeEngine>("Reed Pipe");
+  ValidateExperimentalControlResponse<PhaseFlockEngine>("Phase Flock");
+  ValidateExperimentalControlResponse<RulefieldEngine>("Rulefield");
+  ValidateExperimentalControlResponse<SpectralSpiralEngine>("Spectral Spiral");
   printf("Validating stock fourth-macro midpoint...\n");
   fflush(stdout);
   ValidateStockMacroMidpoint();

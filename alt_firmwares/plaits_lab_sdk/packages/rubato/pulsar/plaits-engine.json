@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "rubato/pulsar",
+  "catalogId": "pulsar",
+  "version": "1.0.0",
+  "name": "Pulsar",
+  "author": "Lyle Mills",
+  "origin": "Rubato Lab",
+  "license": "MIT",
+  "description": "Windowed tone bursts move from sparse impulses to clustered formant rhythms with independently shaped outputs.",
+  "family": "Microsound",
+  "tags": ["experimental", "pulsar", "microsound", "formant", "burst"],
+  "controls": [
+    { "id": "harmonics", "label": "Formant", "description": "Raises the carrier ratio while respecting the audio-rate ceiling." },
+    { "id": "timbre", "label": "Pulse width", "description": "Changes each pulsar window from a short impulse to a broad burst." },
+    { "id": "morph", "label": "Clusters", "description": "Increases the number of windows within each fundamental cycle." },
+    { "id": "macro", "label": "Skew", "description": "Moves the MAIN and AUX window peaks in opposite directions." }
+  ],
+  "outputs": {
+    "main": "Clustered sinusoidal pulsars with the declared forward skew.",
+    "aux": "Offset pulsars with inverse skew and a related formant."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/pulsar_engine.h",
+    "files": ["plaits/dsp/engine2/pulsar_engine.cc"],
+    "className": "PulsarEngine"
+  },
+  "postProcessing": { "alreadyEnveloped": false, "outGain": 0.9, "auxGain": 0.9 },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Rubato Plaits Lab experimental engine"
+}

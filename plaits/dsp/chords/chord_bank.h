@@ -37,29 +37,8 @@
 
 namespace plaits {
 
-const int kNumChordSetOpts = 3;
-
 const int kChordNumNotes = 4;
 const int kChordNumVoices = kChordNumNotes + 1;
-
-const int kChordNumChords = 35;
-const int kChordNumOriginalChords = 11;
-const int kChordNumJonChords = 17;
-const int kChordNumJoeChords = 18;
-
-const int originalChordMapping[kChordNumOriginalChords] = {
-  0,  // OCT
-  1,  // 5
-  9,  // sus4
-  2,  // m
-  3,  // m7
-  4,  // m9
-  5,  // m11
-  10, // 69
-  8,  // M9
-  7,  // M7
-  6,  // M
-};
 
 class ChordBank {
  public:
@@ -74,7 +53,7 @@ class ChordBank {
   
   inline void Sort() {
     for (int i = 0; i < kChordNumNotes; ++i) {
-      float r = ratio(i);
+      float r = ratios_[i];
       while (r > 2.0f) {
         r *= 0.5f;
       }
@@ -83,31 +62,18 @@ class ChordBank {
     std::sort(&sorted_ratios_[0], &sorted_ratios_[kChordNumNotes]);
   }
   
-  // Options
-  // 1. Original chords
-  // 2. Jon Butler chords
-  // 3. Joe McMullen chords
-  inline void set_chord(float parameter, uint8_t chord_set_option) {
-    chord_set_option_ = chord_set_option;
-    chord_index_quantizer_[chord_set_option_].Process(parameter * 1.02f);
-  }
+  void set_chord(float parameter, uint8_t chord_set_option);
   
   inline int chord_index() const {
-    int value = chord_index_quantizer_[chord_set_option_].quantized_value();
-    if (chord_set_option_ == 0) {
-      return originalChordMapping[value];
-    } else if (chord_set_option_ == 1) {
-      return value;
-    }
-    return kChordNumJonChords + value;
+    return chord_index_;
   }
   
   inline const float* ratios() const {
-    return &ratios_[chord_index() * kChordNumNotes];
+    return ratios_;
   }
 
   inline float ratio(int note) const {
-    return ratios_[chord_index() * kChordNumNotes + note];
+    return ratios_[note];
   }
 
   inline float sorted_ratio(int note) const {
@@ -115,17 +81,18 @@ class ChordBank {
   }
   
   inline int num_notes() const {
-    return note_count_[chord_index()];
+    return num_notes_;
   }
 
  private:
-  stmlib::HysteresisQuantizer2 chord_index_quantizer_[kNumChordSetOpts];
+  void UpdateRatios(int chord_index);
 
+  stmlib::HysteresisQuantizer2 chord_index_quantizer_;
   uint8_t chord_set_option_;
-  
-  float* ratios_;
-  float* sorted_ratios_;
-  int* note_count_;
+  int chord_index_;
+  int num_notes_;
+  float ratios_[kChordNumNotes];
+  float sorted_ratios_[kChordNumNotes];
 
   DISALLOW_COPY_AND_ASSIGN(ChordBank);
 };

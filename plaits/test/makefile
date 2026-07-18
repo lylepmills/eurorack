@@ -17,6 +17,7 @@ HOST_LINK_FLAGS = -no-pie
 endif
 CC_FILES       = algorithms.cc \
 		additive_engine.cc \
+		attractor_engine.cc \
 		bass_drum_engine.cc \
 		chiptune_engine.cc \
 		chord_bank.cc \
@@ -27,6 +28,8 @@ CC_FILES       = algorithms.cc \
 		grain_engine.cc \
 		glisson_engine.cc \
 		hi_hat_engine.cc \
+		lockstep_engine.cc \
+		loopback_engine.cc \
 		lpc_speech_synth.cc \
 		lpc_speech_synth_controller.cc \
 		lpc_speech_synth_phonemes.cc \
@@ -37,22 +40,30 @@ CC_FILES       = algorithms.cc \
 		noise_engine.cc \
 		packet_decoder.cc \
 		particle_engine.cc \
+		phase_flock_engine.cc \
 		phase_distortion_engine.cc \
+		phase_weave_engine.cc \
 		plaits_test.cc \
 		pulsar_engine.cc \
 		random.cc \
+		reed_pipe_engine.cc \
 		resonator.cc \
 		resources.cc \
+		rulefield_engine.cc \
 		sam_speech_synth.cc \
 		scanned_engine.cc \
+		sideband_engine.cc \
 		six_op_engine.cc \
 		snare_drum_engine.cc \
+		spectral_spiral_engine.cc \
 		speech_engine.cc \
 		string.cc \
 		string_engine.cc \
 		string_machine_engine.cc \
 		string_voice.cc \
 		swarm_engine.cc \
+		tapfield_engine.cc \
+		undertow_engine.cc \
 		units.cc \
 		user_data_receiver.cc \
 		virtual_analog_engine.cc \

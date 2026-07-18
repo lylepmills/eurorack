@@ -1,13 +1,19 @@
 # Plaits Lab project checkpoint
 
-This document is the durable handoff for the Plaits alternate-firmware and
-custom-firmware-editor work. It describes the state committed on July 17, 2026.
+This document is the durable handoff for the Plaits alternate-firmware,
+custom-firmware editor, and hosted build service. It describes the production
+checkpoint landed on July 17, 2026.
 
 ## Repositories
 
 - Firmware: this repository, branch `codex/plaits-experimental-engines`
-- Web editor: sibling repository `../plaits-editor`, branch `main`
-- Live editor: <https://rubato-plaits-lab.lyle522969.chatgpt.site/>
+- Production website/editor: sibling repository `../rubato-audio`, branch
+  `main`, commit `d2295a83`
+- Live unlisted editor: <https://rubato.audio/plaits-lab>
+- Public build API: <https://plaits-api.rubato.audio>
+- Legacy editor prototype: sibling repository `../plaits-editor`, branch
+  `main`; retain it for schema history, contributor-center work, and generated
+  catalog tooling, but do not deploy it to Sites
 - Reference build environment: sibling checkout `../mutable-devcontainer`
 
 The unrelated `../crowmancy-firmware` repository is not part of this project.
@@ -32,6 +38,9 @@ alternate-firmware options.
 Implemented in this checkpoint:
 
 - Glisson, GENDY, Scanned, and Pulsar experimental engines
+- Eleven rounds 1 and 2 audition engines: Loopback, Lockstep, Tapfield, Phase
+  Weave, Sideband Bank, Attractor, Undertow, Reed Pipe, Phase Flock, Rulefield,
+  and Spectral Spiral
 - A fourth macro for every stock synthesis implementation
 - A locked-frequency menu option that routes the frequency knob to that macro
 - Stock and experimental compile-time layouts
@@ -40,6 +49,13 @@ Implemented in this checkpoint:
   audible macro response, and distinct/responding DX banks
 - An AMD64 Docker/devcontainer toolchain that works on Apple Silicon
 - Flash-size recovery by size-optimizing non-audio UI/settings objects
+- A Plaits Lab SDK v0 with blank/fork scaffolding for all 39 catalog models,
+  sanitizer/audio validation, hot-reloading browser previews, deterministic
+  submissions, and unreviewed local ARM builds
+- One authoritative content-addressed package catalog generating the editor
+  library and both firmware build allowlists
+- Recipe-specific PDF field-guide generation with a 24-position bank map and
+  detailed control, output, and trigger references for all selected models
 
 Detailed engine controls are in `alt_firmwares/README.md`.
 
@@ -53,6 +69,9 @@ Detailed engine controls are in `alt_firmwares/README.md`.
   accepted.
 - Pulsar passes host and ARM builds but has not received the same focused
   hardware listening pass. Treat that as the first outstanding sound-design QA.
+- The eleven rounds 1 and 2 engines pass combined host tests and a generated
+  24-slot ARM build. They remain prototypes until the hardware audition in
+  `alt_firmwares/PLAITS_LAB_AUDITION.md` is complete.
 - The latest retained local listening artifacts are the ignored `v9` WAV files
   under `build/plaits/`. They are not source artifacts and can be regenerated.
 
@@ -120,31 +139,150 @@ At this checkpoint, clean ARM builds report:
 
 - Experimental layout: 203,088 bytes text, 48 bytes data, 24,064 bytes BSS
 - Stock layout: 227,296 bytes text, 48 bytes data, 27,776 bytes BSS
+- Rounds 1 and 2 audition layout: 148,832 bytes text, 48 bytes data, 22,416
+  bytes BSS
 
 ## Web editor state
 
-The editor currently provides a complete engine catalog, three draggable banks,
-search/filtering, device-local autosave, recipe import/export, stock and
-experimental presets, Mutable Instruments artwork for stock models, and a
-versioned manifest. It is deployed, but the firmware build button is
-intentionally disabled.
+The production Rubato editor provides a complete engine catalog, three
+draggable banks, search/filtering, device-local autosave, recipe import/export,
+stock and experimental presets, Mutable Instruments artwork for stock models,
+and a versioned manifest. It also exposes a fixed model-navigation preference
+and seven apply-once starting options. Its firmware build and direct WAV
+download are enabled without an account, login, email address, cookie, or
+customer identity.
 
-Manifest schema version 2 stores slots in green/red/amber order. The editor
-migrates version 1 amber/green/red recipes when they are opened.
+Manifest schema version 5 stores immutable package ID/version/digest references
+in green/red/amber order plus firmware preferences, starting options, and one
+to six portable chord-table documents. Published tables are immutable catalog
+snapshots; a user can fork one into a bounded device-local draft, edit its four
+cent offsets per position, and order loaded tables into the module's solid and
+blinking green/red/yellow selector states. The editor migrates versions 1
+through 4 when they are opened.
 
-The planned backend is documented in `../plaits-editor/docs/build-service.md`.
-It should accept only approved engine IDs, translate bank ordering, compile in
-an isolated container, reject over-budget builds, cache successful WAVs, and
-return audio update files.
+The builder validates table and chord counts, metadata length, integer pitch
+bounds, arpeggio length, published catalog identity, and local-draft provenance.
+It emits only numeric cent arrays. `ChordBank` now shares those flash-resident
+arrays, converts only the selected chord to ratios, and no longer allocates a
+complete ratio copy for every chord-aware engine instance.
 
-## Next milestones
+The legacy prototype's `/contribute` route exposes the complete generated
+catalog, fork commands, the local SDK audition bridge (controls, MIDI,
+scope/spectrum, and A/B), private bundle upload, and
+draft/review/hardware-beta/publication state. D1 holds submission state and R2
+holds private bundles. That route has not been migrated to `rubato.audio` and
+is not part of the production Plaits Lab page.
 
-1. Give Pulsar a focused hardware listening pass and tune it if needed.
-2. Define the generated engine-registry format that maps manifest slots into
-   Plaits' internal registry without allowing arbitrary source or flags.
-3. Implement the first build-service endpoint for approved catalog engines.
-4. Compare a service-produced binary and WAV with the same local container
-   build before enabling the editor's build button.
-5. Design the constrained SDK, validation pipeline, and review flow for
-   community engines only after approved-engine builds are reliable.
+The implemented backend accepts only approved engine IDs and bounded chord
+tables, translates bank ordering, compiles in an isolated container, rejects
+over-budget builds, caches successful WAVs, and returns audio update files.
+The authoritative implementation and deployment notes are in
+`alt_firmwares/plaits_lab_builder/README.md`; the legacy editor's
+`docs/build-service.md` is historical context only.
 
+## Production build-service checkpoint
+
+Production was deployed to Cloudflare on July 17, 2026:
+
+- Worker/custom domain: `plaits-lab-build-service` at
+  `https://plaits-api.rubato.audio`
+- Compiler image:
+  `plaits-lab-build-service-firmwarebuilder:schema5-20260717`
+- Queue: `plaits-lab-builds`; dead-letter queue:
+  `plaits-lab-builds-dead-letter`
+- R2 bucket: `plaits-lab-firmwares`
+- Durable Objects: `FirmwareBuilder` and content-addressed `BuildJob`
+- Admission policy: five new cache-miss compilations per source IP per minute;
+  cache hits, status polling, and downloads bypass the limiter
+- CORS origin: `https://rubato.audio`
+
+The former email/HMAC customer identity, internal bearer token, account route,
+per-customer quotas, and `CustomerGate` Durable Object were removed. Build IDs
+are the deterministic artifact keys, so identical normalized recipes share one
+immutable WAV.
+
+The live smoke test compiled schema 5 build
+`76e8c1c9dde6b238be377994dc27d62116acaa67f585547d6823afa1b40447cb`,
+then returned the repeat request as an R2 cache hit. The artifact was 15,703,532
+bytes with 202,208 bytes text, 48 bytes data, 24,032 bytes BSS, binary SHA-256
+`d9dd225d27925feb417454aced5106bc946ab934b0046aac2b1fbea6c84bb062`,
+and WAV SHA-256
+`cf654a346d052e77c5195d1b19ff1694c637dfaade63c2469b36d47076ea4c16`.
+
+## Loose ends and next milestones
+
+1. Audition the eleven rounds 1 and 2 prototypes on hardware, rank the keepers,
+   and tune or discard them; include Pulsar in the same focused pass.
+2. Add a production CPU-budget test plus ARM allocator/stack reports. The
+   current boundary enforces recipe shape, catalog identity, flash, RAM, output
+   size, and checksums, but it does not yet measure worst-case DSP CPU.
+3. Add operational alerts, queue/dead-letter monitoring, container cost
+   dashboards, and a documented incident/rollback procedure.
+4. Treat the IP limiter only as a lightweight abuse guard. Cloudflare's
+   per-location rate-limit binding is intentionally permissive, and NAT users
+   share an IP. Do not use it for billing, strict quotas, or identity.
+5. Automate catalog/schema synchronization from this repository into
+   `rubato-audio`. The production page currently contains a reviewed generated
+   snapshot copied from the legacy editor rather than a CI-enforced generation
+   step.
+6. Migrate or redesign the contributor center for `rubato.audio`; the current
+   D1/R2 contributor flow exists only in the legacy `plaits-editor` prototype.
+7. Add the personalized field guide to the artifact API/R2 path and expose its
+   download in the production editor if that feature is still desired.
+8. Decide whether preview deployments should call production builds. CORS and
+   the website CSP currently allow only `https://rubato.audio`, deliberately
+   excluding Pages preview origins and localhost.
+9. Replace the date-based compiler image tag with an immutable commit/digest
+   convention on the next firmware rollout, bump `PLAITS_SOURCE_REVISION`, and
+   verify the remote artifact against a local build before deployment.
+10. Remove or archive the obsolete HMAC/account proxy from `plaits-editor`
+    after its remaining contributor/schema tooling has moved; it is not used by
+    the production page.
+11. Add queued server-side revalidation, reviewer audit history, catalog
+    signing, and moderation controls before opening community submissions
+    publicly.
+12. Run a structured hardware-beta cohort through the implemented submission
+    lifecycle, then publish the first community package version.
+
+## Historical build-service checkpoint
+
+`alt_firmwares/plaits_lab_builder` contains the generated-registry contract,
+isolated compiler HTTP server, Cloudflare Queue/Container/R2/Durable Object
+Worker, fixtures, and contract tests. The old editor Worker still contains a
+closed-by-default same-origin proxy at `/api/firmware/*`; it is superseded by
+the direct public API used from `rubato.audio`.
+
+The mixed fixture proves the build path can combine all three factory DX banks
+with Glisson, GENDY, Scanned, and Pulsar in one custom firmware. Its verified
+ARM size is 199,952 bytes text, 48 bytes data, and 27,392 bytes BSS.
+
+## Personalized manual prototype
+
+The authoritative package catalog now includes manual prose for all 39 models.
+It receives a documentation digest independent of the executable package
+digest, so editing user-facing text does not invalidate saved firmware recipes.
+
+`alt_firmwares/plaits_lab_builder/render_manual.py` deterministically renders a
+Letter-sized PDF in public green/red/amber order. Its first page is a complete
+bank map; subsequent pages deduplicate repeated engines and document the four
+controls, MAIN/AUX behavior, trigger behavior, and every occupied position.
+Layout IDs and per-model attributions are deliberately omitted because they do
+not help firmware users. The audition fixture produces a visually verified
+nine-page sample at `output/pdf/plaits-lab-audition-field-guide.pdf`; generated
+PDFs remain ignored and should be reproduced from their recipe rather than
+committed.
+
+The renderer and compiler image are ready. The production integration still
+needs to:
+
+1. Render the PDF in the Queue/Container path and store it in R2 alongside the
+   WAV, using a documentation-specific key/digest so prose-only edits do not
+   invalidate firmware artifacts.
+2. Add a `GET /v1/builds/:buildKey/manual` route and report manual readiness and
+   download URLs in job status without changing the existing firmware route.
+3. Handle existing cached firmware whose manual is absent by generating only
+   the missing documentation artifact rather than recompiling the firmware.
+4. Add production `rubato.audio` controls for downloading the manual and define
+   whether firmware plus guide should also be offered as a ZIP.
+5. Give all 39 model descriptions a final editorial/listening review and
+   re-check the rendered Letter pages after any catalog wording change.

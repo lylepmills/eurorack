@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 2,
+  "target": "mutable-instruments-plaits",
+  "firmware": "rubato-plaits",
+  "slots": [
+    "virtual-analog",
+    "waveshaping",
+    "two-op-fm",
+    "granular-formant",
+    "harmonic",
+    "wavetable",
+    "chords",
+    "speech",
+    "swarm",
+    "filtered-noise",
+    "particle-noise",
+    "inharmonic-string",
+    "modal-resonator",
+    "analog-bass-drum",
+    "analog-snare",
+    "analog-hi-hat",
+    "virtual-analog-vcf",
+    "phase-distortion",
+    "glisson",
+    "gendy",
+    "scanned",
+    "pulsar",
+    "string-machine",
+    "chiptune"
+  ],
+  "output": "audio-wav"
+}

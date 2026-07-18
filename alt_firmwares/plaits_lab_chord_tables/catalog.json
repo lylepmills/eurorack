@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "tables": [
+    {
+      "id": "original",
+      "packageId": "mutable-instruments/original-chords",
+      "version": "1.0.0",
+      "digest": "sha256:042e540f57efed394b7e034c64217cf0d73e06eb04c135e51e935bf94d2419ca",
+      "name": "Original",
+      "author": "Mutable Instruments",
+      "license": "MIT",
+      "origin": "Mutable Instruments",
+      "description": "The classic eleven Plaits chord positions in their original knob order.",
+      "chords": [
+        { "id": "octave", "name": "Octave", "voices": [0, 1, 1199, 1200], "arpLength": 1 },
+        { "id": "fifth", "name": "Fifth", "voices": [0, 700, 701, 1200], "arpLength": 2 },
+        { "id": "sus4", "name": "Sus4", "voices": [0, 500, 700, 1200], "arpLength": 3 },
+        { "id": "minor", "name": "Minor", "voices": [0, 300, 700, 1200], "arpLength": 3 },
+        { "id": "minor-7", "name": "Minor 7th", "voices": [0, 300, 700, 1000], "arpLength": 4 },
+        { "id": "minor-9", "name": "Minor 9th", "voices": [0, 300, 1000, 1400], "arpLength": 4 },
+        { "id": "minor-11", "name": "Minor 11th", "voices": [0, 300, 1000, 1700], "arpLength": 4 },
+        { "id": "six-nine", "name": "6/9", "voices": [0, 200, 900, 1600], "arpLength": 4 },
+        { "id": "major-9", "name": "Major 9th", "voices": [0, 400, 1100, 1400], "arpLength": 4 },
+        { "id": "major-7", "name": "Major 7th", "voices": [0, 400, 700, 1100], "arpLength": 4 },
+        { "id": "major", "name": "Major", "voices": [0, 400, 700, 1200], "arpLength": 3 }
+      ]
+    },
+    {
+      "id": "jon-butler",
+      "packageId": "jon-butler/colour-chords",
+      "version": "1.0.0",
+      "digest": "sha256:b6b60ce8e82142f05945e83576c1904e6fbf94e09cb1eca916bc7f18969ec2eb",
+      "name": "Colour Chords",
+      "author": "Jon Butler",
+      "license": "MIT",
+      "origin": "Community",
+      "description": "Seventeen positions grouped into fixed intervals, minor, major, and colour chords.",
+      "chords": [
+        { "id": "octave", "name": "Octave", "voices": [0, 1, 1199, 1200], "arpLength": 1 },
+        { "id": "fifth", "name": "Fifth", "voices": [0, 700, 701, 1200], "arpLength": 2 },
+        { "id": "minor", "name": "Minor", "voices": [0, 300, 700, 1200], "arpLength": 3 },
+        { "id": "minor-7", "name": "Minor 7th", "voices": [0, 300, 700, 1000], "arpLength": 4 },
+        { "id": "minor-9", "name": "Minor 9th", "voices": [0, 300, 1000, 1400], "arpLength": 4 },
+        { "id": "minor-11", "name": "Minor 11th", "voices": [0, 300, 1000, 1700], "arpLength": 4 },
+        { "id": "major", "name": "Major", "voices": [0, 400, 700, 1200], "arpLength": 3 },
+        { "id": "major-7", "name": "Major 7th", "voices": [0, 400, 700, 1100], "arpLength": 4 },
+        { "id": "major-9", "name": "Major 9th", "voices": [0, 400, 1100, 1400], "arpLength": 4 },
+        { "id": "sus4", "name": "Sus4", "voices": [0, 500, 700, 1200], "arpLength": 3 },
+        { "id": "six-nine", "name": "6/9", "voices": [0, 200, 900, 1600], "arpLength": 4 },
+        { "id": "sixth", "name": "6th", "voices": [0, 400, 700, 900], "arpLength": 4 },
+        { "id": "spread-major-7", "name": "Spread major 7th", "voices": [0, 700, 1600, 2300], "arpLength": 4 },
+        { "id": "dominant-7", "name": "Dominant 7th", "voices": [0, 400, 700, 1000], "arpLength": 4 },
+        { "id": "dominant-flat-9", "name": "Dominant 7th flat 9", "voices": [0, 700, 1000, 1300], "arpLength": 4 },
+        { "id": "half-diminished", "name": "Half diminished", "voices": [0, 300, 600, 1000], "arpLength": 4 },
+        { "id": "fully-diminished", "name": "Fully diminished", "voices": [0, 300, 600, 900], "arpLength": 4 }
+      ]
+    },
+    {
+      "id": "joe-mcmullen",
+      "packageId": "joe-mcmullen/disastrous-peace",
+      "version": "1.0.0",
+      "digest": "sha256:7452fa73ced2405b29d16c283e626301578335d48cb3c13138df7b851c9e8a2f",
+      "name": "Disastrous Peace",
+      "author": "Joe McMullen",
+      "license": "MIT",
+      "origin": "Community",
+      "description": "Eighteen key-relative voicings descending by thirds with strong voice leading.",
+      "chords": [
+        { "id": "iv-six-nine", "name": "iv 6/9", "voices": [500, 1200, 1900, 2600], "arpLength": 3 },
+        { "id": "ii-dim-7-sus4", "name": "iiø 7sus4", "voices": [1400, 800, 1900, 2400], "arpLength": 4 },
+        { "id": "vii-six", "name": "VII 6", "voices": [1000, 1700, 1900, 2600], "arpLength": 4 },
+        { "id": "v-minor-11", "name": "v m11", "voices": [700, 1400, 2200, 2400], "arpLength": 4 },
+        { "id": "iii-add4", "name": "III add4", "voices": [1500, 1000, 1900, 2000], "arpLength": 4 },
+        { "id": "i-add-flat-13", "name": "i add♭13", "voices": [1200, 1900, 2000, 2700], "arpLength": 3 },
+        { "id": "vi-add-sharp-11", "name": "VI add♯11", "voices": [800, 1500, 2400, 2600], "arpLength": 4 },
+        { "id": "iv-minor-6", "name": "iv m6", "voices": [1700, 1200, 2000, 2600], "arpLength": 3 },
+        { "id": "ii-diminished", "name": "ii°", "voices": [1400, 1700, 2000, 2300], "arpLength": 4 },
+        { "id": "vii-diminished", "name": "vii°", "voices": [1100, 1400, 1700, 2000], "arpLength": 4 },
+        { "id": "v-dominant-7", "name": "V7", "voices": [700, 1400, 1700, 2300], "arpLength": 4 },
+        { "id": "iii-add-flat-9", "name": "iii add♭9", "voices": [400, 700, 1700, 2300], "arpLength": 4 },
+        { "id": "i-major-7", "name": "I maj7", "voices": [1200, 700, 1600, 2300], "arpLength": 4 },
+        { "id": "vi-minor-9", "name": "vi m9", "voices": [900, 1200, 1600, 2300], "arpLength": 3 },
+        { "id": "iv-major-9", "name": "IV maj9", "voices": [500, 1200, 1900, 2100], "arpLength": 3 },
+        { "id": "ii-minor-7", "name": "ii m7", "voices": [1400, 900, 1700, 2400], "arpLength": 4 },
+        { "id": "i-major-7-sus4", "name": "I maj7sus4/vii", "voices": [1100, 500, 1900, 2400], "arpLength": 4 },
+        { "id": "v-dominant-7-sus4", "name": "V 7sus4", "voices": [700, 1400, 1700, 2400], "arpLength": 4 }
+      ]
+    }
+  ]
+}

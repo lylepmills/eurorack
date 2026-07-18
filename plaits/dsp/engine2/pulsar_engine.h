@@ -1,4 +1,5 @@
 // Copyright 2026 Lyle Mills.
+// SPDX-License-Identifier: MIT
 //
 // Pulsar synthesis engine.
 

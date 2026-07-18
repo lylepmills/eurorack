@@ -52,6 +52,7 @@ PACKAGES       = plaits \
 		stmlib/dsp \
 		stmlib/utils \
 		stmlib/system
+PACKAGES       += $(PLAITS_EXTRA_PACKAGES)
 RESOURCES      = plaits/resources
 
 TOOLCHAIN_PATH ?= /usr/local/arm-4.8.3/

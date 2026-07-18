@@ -68,12 +68,14 @@ struct State {
   uint8_t aux_subosc_octave_option;
   uint8_t chord_set_option;
   uint8_t hold_on_trigger_option;
-  uint8_t navigation_option;
+  // Reuses the legacy navigation byte. Generated profile IDs always have a
+  // low byte greater than 1, so every state written by the previous firmware
+  // is guaranteed to receive its first apply-once option profile.
+  uint8_t options_profile_id_low;
 
   // alt firmware other
   uint8_t locked_octave;
-
-  uint8_t padding[1];
+  uint8_t options_profile_id_high;
 
   enum { tag = 0x54415453 };  // STAT
 };

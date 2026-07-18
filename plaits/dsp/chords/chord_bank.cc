@@ -29,78 +29,95 @@
 #include "plaits/dsp/chords/chord_bank.h"
 
 #include "stmlib/dsp/units.h"
+#include "plaits/build_config.h"
 
 namespace plaits {
 
 using namespace stmlib;
 
-const float chords_[kChordNumChords][kChordNumNotes] = {
-  ////// Jon Butler chords
-  // Fixed Intervals
-  { 0.00f, 0.01f, 11.99f, 12.00f },  // Octave
-  { 0.00f, 7.00f,  7.01f, 12.00f },  // Fifth
-  // Minor
-  { 0.00f, 3.00f,  7.00f, 12.00f },  // Minor
-  { 0.00f, 3.00f,  7.00f, 10.00f },  // Minor 7th
-  { 0.00f, 3.00f, 10.00f, 14.00f },  // Minor 9th
-  { 0.00f, 3.00f, 10.00f, 17.00f },  // Minor 11th
-  // Major
-  { 0.00f, 4.00f,  7.00f, 12.00f },  // Major
-  { 0.00f, 4.00f,  7.00f, 11.00f },  // Major 7th
-  { 0.00f, 4.00f, 11.00f, 14.00f },  // Major 9th
-  // Colour Chords
-  { 0.00f, 5.00f,  7.00f, 12.00f },  // Sus4
-  { 0.00f, 2.00f,  9.00f, 16.00f },  // 69
-  { 0.00f, 4.00f,  7.00f,  9.00f },  // 6th
-  { 0.00f, 7.00f, 16.00f, 23.00f },  // 10th (Spread maj7)
-  { 0.00f, 4.00f,  7.00f, 10.00f },  // Dominant 7th
-  { 0.00f, 7.00f, 10.00f, 13.00f },  // Dominant 7th (b9)
-  { 0.00f, 3.00f,  6.00f, 10.00f },  // Half Diminished
-  { 0.00f, 3.00f,  6.00f,  9.00f },  // Fully Diminished
+#ifndef PLAITS_CHORD_CENTS
+#define PLAITS_CHORD_COUNT 46
+#define PLAITS_CHORD_TABLE_OFFSETS { 0, 11, 28 }
+#define PLAITS_CHORD_TABLE_SIZES { 11, 17, 18 }
+#define PLAITS_CHORD_CENTS { \
+  { 0, 1, 1199, 1200 }, { 0, 700, 701, 1200 }, \
+  { 0, 500, 700, 1200 }, { 0, 300, 700, 1200 }, \
+  { 0, 300, 700, 1000 }, { 0, 300, 1000, 1400 }, \
+  { 0, 300, 1000, 1700 }, { 0, 200, 900, 1600 }, \
+  { 0, 400, 1100, 1400 }, { 0, 400, 700, 1100 }, \
+  { 0, 400, 700, 1200 }, \
+  { 0, 1, 1199, 1200 }, { 0, 700, 701, 1200 }, \
+  { 0, 300, 700, 1200 }, { 0, 300, 700, 1000 }, \
+  { 0, 300, 1000, 1400 }, { 0, 300, 1000, 1700 }, \
+  { 0, 400, 700, 1200 }, { 0, 400, 700, 1100 }, \
+  { 0, 400, 1100, 1400 }, { 0, 500, 700, 1200 }, \
+  { 0, 200, 900, 1600 }, { 0, 400, 700, 900 }, \
+  { 0, 700, 1600, 2300 }, { 0, 400, 700, 1000 }, \
+  { 0, 700, 1000, 1300 }, { 0, 300, 600, 1000 }, \
+  { 0, 300, 600, 900 }, \
+  { 500, 1200, 1900, 2600 }, { 1400, 800, 1900, 2400 }, \
+  { 1000, 1700, 1900, 2600 }, { 700, 1400, 2200, 2400 }, \
+  { 1500, 1000, 1900, 2000 }, { 1200, 1900, 2000, 2700 }, \
+  { 800, 1500, 2400, 2600 }, { 1700, 1200, 2000, 2600 }, \
+  { 1400, 1700, 2000, 2300 }, { 1100, 1400, 1700, 2000 }, \
+  { 700, 1400, 1700, 2300 }, { 400, 700, 1700, 2300 }, \
+  { 1200, 700, 1600, 2300 }, { 900, 1200, 1600, 2300 }, \
+  { 500, 1200, 1900, 2100 }, { 1400, 900, 1700, 2400 }, \
+  { 1100, 500, 1900, 2400 }, { 700, 1400, 1700, 2400 } \
+}
+#define PLAITS_CHORD_ARP_LENGTHS { \
+  1, 2, 3, 3, 4, 4, 4, 4, 4, 4, 3, \
+  1, 2, 3, 4, 4, 4, 3, 4, 4, 3, 4, 4, 4, 4, 4, 4, 4, \
+  3, 4, 4, 4, 4, 3, 4, 3, 4, 4, 4, 4, 3, 3, 3, 4, 4, 4 \
+}
+#endif
 
-  ////// Joe McMullen chords
-  {  5.00f, 12.00f, 19.00f, 26.00f }, // iv 6/9
-  { 14.00f,  8.00f, 19.00f, 24.00f }, // iio 7sus4
-  { 10.00f, 17.00f, 19.00f, 26.00f }, // VII 6
-  {  7.00f, 14.00f, 22.00f, 24.00f }, // v m11
-  { 15.00f, 10.00f, 19.00f, 20.00f }, // III add4
-  { 12.00f, 19.00f, 20.00f, 27.00f }, // i addb13
-  {  8.00f, 15.00f, 24.00f, 26.00f }, // VI add#11
-  { 17.00f, 12.00f, 20.00f, 26.00f }, // iv m6
-  { 14.00f, 17.00f, 20.00f, 23.00f }, // iio
-  { 11.00f, 14.00f, 17.00f, 20.00f }, // viio
-  {  7.00f, 14.00f, 17.00f, 23.00f }, // V 7
-  {  4.00f,  7.00f, 17.00f, 23.00f }, // iii add b9
-  { 12.00f,  7.00f, 16.00f, 23.00f }, // I maj7
-  {  9.00f, 12.00f, 16.00f, 23.00f }, // vi m9
-  {  5.00f, 12.00f, 19.00f, 21.00f }, // IV maj9
-  { 14.00f,  9.00f, 17.00f, 24.00f }, // ii m7
-  { 11.00f,  5.00f, 19.00f, 24.00f }, // I maj7sus4/vii
-  {  7.00f, 14.00f, 17.00f, 24.00f }, // V 7sus4
-};
+static const uint8_t chord_table_offsets_[PLAITS_CHORD_TABLE_COUNT] =
+    PLAITS_CHORD_TABLE_OFFSETS;
+static const uint8_t chord_table_sizes_[PLAITS_CHORD_TABLE_COUNT] =
+    PLAITS_CHORD_TABLE_SIZES;
+static const int16_t chord_cents_[PLAITS_CHORD_COUNT][kChordNumNotes] =
+    PLAITS_CHORD_CENTS;
+static const uint8_t chord_arp_lengths_[PLAITS_CHORD_COUNT] =
+    PLAITS_CHORD_ARP_LENGTHS;
 
 void ChordBank::Init(BufferAllocator* allocator) {
-  ratios_ = allocator->Allocate<float>(kChordNumChords * kChordNumNotes);
-  note_count_ = allocator->Allocate<int>(kChordNumChords);
-  sorted_ratios_ = allocator->Allocate<float>(kChordNumNotes);
+  (void) allocator;
+  chord_set_option_ = 0xff;
+  chord_index_ = -1;
+  num_notes_ = 0;
+}
 
-  chord_index_quantizer_[0].Init(kChordNumOriginalChords, 0.075f, false);
-  chord_index_quantizer_[1].Init(kChordNumJonChords, 0.075f, false);
-  chord_index_quantizer_[2].Init(kChordNumJoeChords, 0.075f, false);
+void ChordBank::UpdateRatios(int chord_index) {
+  chord_index_ = chord_index;
+  for (int i = 0; i < kChordNumNotes; ++i) {
+    ratios_[i] = SemitonesToRatio(
+        static_cast<float>(chord_cents_[chord_index][i]) * 0.01f);
+  }
+  num_notes_ = chord_arp_lengths_[chord_index];
+}
+
+void ChordBank::set_chord(float parameter, uint8_t chord_set_option) {
+  if (chord_set_option >= PLAITS_CHORD_TABLE_COUNT) {
+    chord_set_option = 0;
+  }
+  if (chord_set_option_ != chord_set_option) {
+    chord_set_option_ = chord_set_option;
+    chord_index_quantizer_.Init(
+        chord_table_sizes_[chord_set_option_], 0.075f, false);
+  }
+  chord_index_quantizer_.Process(parameter * 1.02f);
+  int chord_index = chord_table_offsets_[chord_set_option_] +
+      chord_index_quantizer_.quantized_value();
+  if (chord_index_ != chord_index) {
+    UpdateRatios(chord_index);
+  }
 }
 
 void ChordBank::Reset() {
-  for (int i = 0; i < kChordNumChords; ++i) {
-    int count = 0;
-    for (int j = 0; j < kChordNumNotes; ++j) {
-      ratios_[i * kChordNumNotes + j] = SemitonesToRatio(chords_[i][j]);
-      if (chords_[i][j] !=  0.01f && chords_[i][j] !=  7.01f && \
-          chords_[i][j] != 11.99f && chords_[i][j] != 12.00f) {
-        ++count;
-      }
-    }
-    note_count_[i] = count;
-  }
+  chord_set_option_ = 0xff;
+  chord_index_ = -1;
+  set_chord(0.0f, 0);
   Sort();
 }
 

@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rubato.audio/plaits-lab/schemas/engine-package-v1.json",
+  "title": "Plaits Lab engine package",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "sdk",
+    "packageType",
+    "id",
+    "catalogId",
+    "version",
+    "name",
+    "author",
+    "origin",
+    "license",
+    "description",
+    "family",
+    "tags",
+    "controls",
+    "outputs",
+    "source",
+    "postProcessing",
+    "scenarios"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "sdk": { "const": "plaits-engine-cpp-v1" },
+    "packageType": { "enum": ["builtin-reference", "community"] },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*$" },
+    "catalogId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 48 },
+    "author": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "origin": { "enum": ["Mutable Instruments", "Rubato Lab", "Community"] },
+    "license": { "enum": ["MIT", "BSD-2-Clause", "BSD-3-Clause", "ISC"] },
+    "description": { "type": "string", "minLength": 20, "maxLength": 240 },
+    "family": { "type": "string", "minLength": 1, "maxLength": 32 },
+    "tags": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 12,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9 -]*$" }
+    },
+    "controls": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "prefixItems": [
+        { "$ref": "#/$defs/controlHarmonics" },
+        { "$ref": "#/$defs/controlTimbre" },
+        { "$ref": "#/$defs/controlMorph" },
+        { "$ref": "#/$defs/controlMacro" }
+      ]
+    },
+    "outputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["main", "aux"],
+      "properties": {
+        "main": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "aux": { "type": "string", "minLength": 1, "maxLength": 120 }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root", "header", "files", "className"],
+      "properties": {
+        "root": { "type": "string", "minLength": 1 },
+        "header": { "type": "string", "pattern": "^[A-Za-z0-9_./-]+\\.h$" },
+        "files": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[A-Za-z0-9_./-]+\\.cc$" }
+        },
+        "className": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }
+      }
+    },
+    "postProcessing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["alreadyEnveloped", "outGain", "auxGain"],
+      "properties": {
+        "alreadyEnveloped": { "type": "boolean" },
+        "outGain": { "type": "number", "minimum": -4, "maximum": 4 },
+        "auxGain": { "type": "number", "minimum": -4, "maximum": 4 }
+      }
+    },
+    "scenarios": { "type": "string", "pattern": "^[A-Za-z0-9_./-]+\\.json$" },
+    "upstream": { "type": "string", "maxLength": 240 },
+    "forkedFrom": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" }
+  },
+  "$defs": {
+    "control": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "description"],
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string", "minLength": 1, "maxLength": 32 },
+        "description": { "type": "string", "minLength": 1, "maxLength": 120 }
+      }
+    },
+    "controlHarmonics": { "allOf": [{ "$ref": "#/$defs/control" }], "properties": { "id": { "const": "harmonics" } } },
+    "controlTimbre": { "allOf": [{ "$ref": "#/$defs/control" }], "properties": { "id": { "const": "timbre" } } },
+    "controlMorph": { "allOf": [{ "$ref": "#/$defs/control" }], "properties": { "id": { "const": "morph" } } },
+    "controlMacro": { "allOf": [{ "$ref": "#/$defs/control" }], "properties": { "id": { "const": "macro" } } }
+  }
+}
