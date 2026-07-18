@@ -12,8 +12,8 @@ checkpoint landed on July 17, 2026.
 - Live unlisted editor: <https://rubato.audio/plaits-lab>
 - Unlisted contributor center: <https://rubato.audio/plaits-lab/contribute>
 - Public build API: <https://plaits-api.rubato.audio>
-- Legacy editor prototype: its disconnected history is preserved as the
-  `archive/plaits-editor` branch in the `rubato-audio` upstream. It is not a
+- Legacy editor prototype: its disconnected history is preserved by the
+  immutable `archive/plaits-editor` tag in the `rubato-audio` upstream. It is not a
   source of truth and must not receive its own upstream or deployment.
 - Reference build environment: sibling checkout `../mutable-devcontainer`
 
@@ -255,7 +255,7 @@ and WAV SHA-256
    convention on the next firmware rollout, bump `PLAITS_SOURCE_REVISION`, and
    verify the remote artifact against a local build before deployment.
 10. Treat `rubato-audio/main` as the only website/contributor source of truth.
-    The `archive/plaits-editor` branch is history only; do not revive its Sites
+    The `archive/plaits-editor` tag is history only; do not revive its Sites
     shell, HMAC/account proxy, or framework wrapper.
 11. Reconcile the upstream CS70-style octave/fifth switch and internal octave
     slew with Plaits Lab's apply-once option profiles before porting that
