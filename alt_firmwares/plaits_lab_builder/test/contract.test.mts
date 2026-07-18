@@ -156,6 +156,65 @@ test("version 5 accepts bounded local chord-table edits and hashes their musical
   assert.throws(() => normalizeRecipe(recipe), /bounded cent offsets/);
 });
 
+test("version 6 carries a validated custom FM bank and hashes its packed bytes", async () => {
+  const publicCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const chordCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_chord_tables/catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const byId = new Map(publicCatalog.engines.map((engine: { id: string }) => [engine.id, engine]));
+  const publishedTable = structuredClone(chordCatalog.tables[0]);
+  const makeBank = () => ({
+    id: "warm-keys", packageId: "anon/warm-keys", version: "1.0.0", digest: null,
+    name: "Warm Keys", author: "You", license: "CC0-1.0", origin: "Community",
+    description: "Custom keys.",
+    voices: Array.from({ length: 32 }, (_unused, i) => ({ name: `V${i}`, algorithm: 1, packed: Array(128).fill(0) })),
+  });
+  const makeRecipe = (userDataBanks: unknown[]) => ({
+    ...fixture,
+    schemaVersion: 6,
+    slots: fixture.slots.map((engineId: string) => {
+      const engine = byId.get(engineId) as { packageId: string; version: string; digest: string };
+      return { engine: engineId, package: engine.packageId, version: engine.version, digest: engine.digest };
+    }),
+    preferences: { navigationMode: "linear" },
+    initialOptions: {
+      lockedFrequencyKnob: "octaves", modelInput: "model", levelInput: "level",
+      auxOutput: "alternate-model", suboscillatorOctave: 0, chordTable: publishedTable.id, holdOnTrigger: false,
+    },
+    resources: { chordTables: [publishedTable], userDataBanks },
+  });
+
+  const bank = makeBank();
+  const normalized = normalizeRecipe(makeRecipe([{ index: 0, bank }]));
+  assert.equal(normalized.schemaVersion, 6);
+  assert.equal(normalized.resources.userDataBanks!.length, 1);
+  assert.equal(normalized.resources.userDataBanks![0].index, 0);
+  assert.equal(normalized.resources.userDataBanks![0].bank.voices.length, 32);
+
+  // The packed bytes are part of the build identity: change one → different build.
+  const identity = { sourceRevision: "source", toolchain: "toolchain", contract: "6" };
+  const first = await computeBuildKey(normalized, identity);
+  const changed = makeBank();
+  changed.voices[5].packed[10] = 77;
+  assert.notEqual(first, await computeBuildKey(normalizeRecipe(makeRecipe([{ index: 0, bank: changed }])), identity));
+
+  // Rejections: out-of-range byte, wrong voice count, duplicate index.
+  const badByte = makeBank();
+  badByte.voices[0].packed[0] = 200;
+  assert.throws(() => normalizeRecipe(makeRecipe([{ index: 0, bank: badByte }])), /7-bit/);
+  const short = makeBank();
+  short.voices = short.voices.slice(0, 31);
+  assert.throws(() => normalizeRecipe(makeRecipe([{ index: 0, bank: short }])), /32 voices/);
+  assert.throws(
+    () => normalizeRecipe(makeRecipe([{ index: 0, bank: makeBank() }, { index: 0, bank: makeBank() }])),
+    /distinct/,
+  );
+});
+
 test("manual keys derive from documentation identity, not build identity", async () => {
   const { computeManualKey } = await import("../src/contract.ts");
   const recipe = normalizeRecipe(fixture);

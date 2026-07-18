@@ -31,6 +31,7 @@
 #define PLAITS_HAS_SPEECH_ENGINE 1
 #define PLAITS_HAS_CHIPTUNE_ENGINE 1
 #define PLAITS_HAS_USER_DATA_BANK 0
+#define PLAITS_HAS_USER_DATA_BANK_OVERRIDE 0
 
 #define PLAITS_ENGINE_MEMBERS \
   VirtualAnalogVCFEngine virtual_analog_vcf_engine_; \

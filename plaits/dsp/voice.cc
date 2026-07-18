@@ -145,9 +145,18 @@ void Voice::Render(
     const uint8_t* data = user_data.ptr(engine_index);
 #if PLAITS_HAS_USER_DATA_BANK
     if (!data && kEngineUserDataBank[engine_index] >= 0) {
-      data = fm_patches_table[kEngineUserDataBank[engine_index]];
+      const int bank = kEngineUserDataBank[engine_index];
+#if PLAITS_HAS_USER_DATA_BANK_OVERRIDE
+      // A recipe-baked custom bank replaces the built-in default for this bank;
+      // a runtime TIMBRE-loaded user bank (above) still takes precedence.
+      data = kUserDataBankOverride[bank]
+          ? kUserDataBankOverride[bank]
+          : fm_patches_table[bank];
+#else
+      data = fm_patches_table[bank];
+#endif  // PLAITS_HAS_USER_DATA_BANK_OVERRIDE
     }
-#endif
+#endif  // PLAITS_HAS_USER_DATA_BANK
     e->LoadUserData(data);
     e->Reset();
 

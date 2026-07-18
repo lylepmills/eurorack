@@ -27,8 +27,34 @@ export type NormalizedChordTable = {
   chords: NormalizedChord[];
 };
 
+export const maxUserDataBanks = 3;
+export const patchesPerBank = 32;
+export const packedPatchSize = 128;
+
+export type NormalizedBankVoice = {
+  name: string;
+  algorithm: number;
+  packed: number[];
+};
+
+export type NormalizedUserDataBank = {
+  index: number;
+  bank: {
+    id: string;
+    packageId: string;
+    version: string;
+    digest: string | null;
+    name: string;
+    author: string;
+    license: string;
+    origin: "Mutable Instruments" | "Community" | "Local";
+    description: string;
+    voices: NormalizedBankVoice[];
+  };
+};
+
 export type NormalizedRecipe = {
-  schemaVersion: 5;
+  schemaVersion: 5 | 6;
   target: "mutable-instruments-plaits";
   firmware: "rubato-plaits";
   slots: string[];
@@ -46,6 +72,8 @@ export type NormalizedRecipe = {
   };
   resources: {
     chordTables: NormalizedChordTable[];
+    // Present only on a v6 recipe (at least one custom bank).
+    userDataBanks?: NormalizedUserDataBank[];
   };
   output: "audio-wav";
 };
@@ -137,6 +165,61 @@ function normalizeChordTables(value: unknown): NormalizedChordTable[] {
   });
 }
 
+function normalizeUserDataBanks(value: unknown): NormalizedUserDataBank[] {
+  if (!Array.isArray(value) || value.length < 1 || value.length > maxUserDataBanks) {
+    throw new ContractError("invalid_user_data_banks", `A firmware may override between one and ${maxUserDataBanks} FM banks.`);
+  }
+  const indices = new Set<number>();
+  return value.map((item) => {
+    if (!item || typeof item !== "object") {
+      throw new ContractError("invalid_user_data_bank", "The recipe contains an invalid custom bank.");
+    }
+    const entry = item as Record<string, unknown>;
+    if (!hasExactKeys(entry, ["index", "bank"])
+        || !Number.isInteger(entry.index) || Number(entry.index) < 0 || Number(entry.index) >= maxUserDataBanks
+        || indices.has(Number(entry.index))) {
+      throw new ContractError("invalid_user_data_bank", "A custom bank must target a distinct built-in FM bank (0–2).");
+    }
+    indices.add(Number(entry.index));
+    const bank = entry.bank as Record<string, unknown>;
+    // License is intentionally NOT constrained to a share-safe set: baking a bank
+    // into one's OWN firmware is a private act; the share-license gate lives in the
+    // contributor pipeline, not the builder.
+    if (!bank || typeof bank !== "object"
+        || !shortText(bank.id, 80) || !idPattern.test(bank.id)
+        || !shortText(bank.packageId, 120) || !shortText(bank.version, 32)
+        || !(bank.digest === null || (typeof bank.digest === "string" && digestPattern.test(bank.digest)))
+        || !shortText(bank.name, 80) || !shortText(bank.author, 80) || !shortText(bank.license, 32)
+        || !["Mutable Instruments", "Community", "Local"].includes(String(bank.origin))
+        || !shortText(bank.description, 240)
+        || !Array.isArray(bank.voices) || bank.voices.length !== patchesPerBank) {
+      throw new ContractError("invalid_user_data_bank", "A custom bank contains unsupported metadata or is not 32 voices.");
+    }
+    const voices: NormalizedBankVoice[] = bank.voices.map((raw) => {
+      if (!raw || typeof raw !== "object") {
+        throw new ContractError("invalid_user_data_bank", "A custom-bank voice is invalid.");
+      }
+      const voice = raw as Record<string, unknown>;
+      if (typeof voice.name !== "string" || voice.name.length > 16
+          || !Number.isInteger(voice.algorithm) || Number(voice.algorithm) < 1 || Number(voice.algorithm) > 32
+          || !Array.isArray(voice.packed) || voice.packed.length !== packedPatchSize
+          || voice.packed.some((byte) => !Number.isInteger(byte) || Number(byte) < 0 || Number(byte) > 127)) {
+        throw new ContractError("invalid_user_data_bank", "A custom-bank voice must have 128 packed 7-bit bytes.");
+      }
+      return { name: voice.name, algorithm: Number(voice.algorithm), packed: [...(voice.packed as number[])] };
+    });
+    return {
+      index: Number(entry.index),
+      bank: {
+        id: bank.id as string, packageId: bank.packageId as string, version: bank.version as string,
+        digest: bank.digest as string | null, name: bank.name as string, author: bank.author as string,
+        license: bank.license as string, origin: bank.origin as NormalizedUserDataBank["bank"]["origin"],
+        description: bank.description as string, voices,
+      },
+    };
+  });
+}
+
 export class ContractError extends Error {
   readonly code: string;
 
@@ -203,8 +286,8 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     throw new ContractError("invalid_recipe", "The build recipe must be a JSON object.");
   }
   const candidate = value as Record<string, unknown>;
-  if (![2, 3, 4, 5].includes(Number(candidate.schemaVersion))) {
-    throw new ContractError("unsupported_schema", "Only Plaits Lab recipe schema versions 2 through 5 can be built.");
+  if (![2, 3, 4, 5, 6].includes(Number(candidate.schemaVersion))) {
+    throw new ContractError("unsupported_schema", "Only Plaits Lab recipe schema versions 2 through 6 can be built.");
   }
   if (candidate.target !== "mutable-instruments-plaits" || candidate.firmware !== "rubato-plaits") {
     throw new ContractError("unsupported_target", "That recipe targets a different firmware family.");
@@ -237,27 +320,32 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
         return approved.id;
       });
   let chordTables: NormalizedChordTable[];
-  if (candidate.schemaVersion === 5) {
+  let userDataBanks: NormalizedUserDataBank[] | undefined;
+  if (candidate.schemaVersion === 5 || candidate.schemaVersion === 6) {
     const resources = candidate.resources;
+    const expectedKeys = candidate.schemaVersion === 6 ? ["chordTables", "userDataBanks"] : ["chordTables"];
     if (!resources || typeof resources !== "object"
-        || !hasExactKeys(resources as Record<string, unknown>, ["chordTables"])) {
+        || !hasExactKeys(resources as Record<string, unknown>, expectedKeys)) {
       throw new ContractError("invalid_resources", "The recipe must contain only supported firmware resources.");
     }
     chordTables = normalizeChordTables((resources as Record<string, unknown>).chordTables);
+    if (candidate.schemaVersion === 6) {
+      userDataBanks = normalizeUserDataBanks((resources as Record<string, unknown>).userDataBanks);
+    }
   } else {
     chordTables = normalizeChordTables(structuredClone(chordCatalog.tables));
   }
-  const configuration = candidate.schemaVersion === 4 || candidate.schemaVersion === 5
+  const configuration = candidate.schemaVersion === 4 || candidate.schemaVersion === 5 || candidate.schemaVersion === 6
     ? normalizeConfiguration(candidate, chordTables)
     : defaultConfiguration;
   return {
-    schemaVersion: 5,
+    schemaVersion: userDataBanks ? 6 : 5,
     target: "mutable-instruments-plaits",
     firmware: "rubato-plaits",
     slots,
     preferences: { ...configuration.preferences },
     initialOptions: { ...configuration.initialOptions },
-    resources: { chordTables },
+    resources: userDataBanks ? { chordTables, userDataBanks } : { chordTables },
     output: "audio-wav",
   };
 }

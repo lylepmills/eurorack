@@ -5,7 +5,13 @@ import unittest
 from itertools import product
 from pathlib import Path
 
-from generate_engine_config import CATALOG, render_config, validate_recipe
+from generate_engine_config import (
+    CATALOG,
+    DEFAULT_CHORD_TABLES,
+    DEFAULT_CONFIGURATION,
+    render_config,
+    validate_recipe,
+)
 
 
 FIXTURES = Path(__file__).parent
@@ -59,6 +65,61 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertIn("PulsarEngine pulsar_engine_;", config)
         self.assertEqual(config.count("SixOpEngine six_op_engine_;"), 1)
         self.assertEqual(config.count("RegisterInstance(&six_op_engine_"), 3)
+
+    def bank_document(self, first_byte: int = 0) -> dict:
+        voices = [{"name": f"V{i}", "algorithm": 1, "packed": [0] * 128} for i in range(32)]
+        voices[0]["packed"][0] = first_byte
+        return {
+            "id": "warm-keys", "packageId": "anon/warm-keys", "version": "1.0.0",
+            "digest": None, "name": "Warm Keys", "author": "T", "license": "CC0-1.0",
+            "origin": "Community", "description": "Custom keys.", "voices": voices,
+        }
+
+    def v6_recipe(self, slots: list[str], user_data_banks: list[dict]) -> dict:
+        return {
+            "schemaVersion": 6,
+            "target": "mutable-instruments-plaits",
+            "firmware": "rubato-plaits",
+            "output": "audio-wav",
+            "slots": slots,
+            "preferences": dict(DEFAULT_CONFIGURATION["preferences"]),
+            "initialOptions": dict(DEFAULT_CONFIGURATION["initialOptions"]),
+            "resources": {
+                "chordTables": [dict(table) for table in DEFAULT_CHORD_TABLES],
+                "userDataBanks": user_data_banks,
+            },
+        }
+
+    def test_custom_bank_is_baked_as_an_override(self) -> None:
+        # mixed_recipe.json places six-op banks 0, 1, and 2.
+        slots = self.load("mixed_recipe.json")["slots"]
+        recipe = self.v6_recipe(slots, [{"index": 0, "bank": self.bank_document(first_byte=42)}])
+        config = render_config(validate_recipe(recipe))
+        self.assertIn("#define PLAITS_HAS_USER_DATA_BANK_OVERRIDE 1", config)
+        self.assertIn("static const uint8_t kUserDataBankOverride_0[4096] = { 42, 0,", config)
+        self.assertIn("static const uint8_t* const kUserDataBankOverride[3] = { kUserDataBankOverride_0, NULL, NULL };", config)
+
+    def test_override_for_a_bank_no_engine_uses_is_pruned(self) -> None:
+        # No six-op engine placed -> the override is accepted but not baked.
+        recipe = self.v6_recipe(["virtual-analog"] * 24, [{"index": 0, "bank": self.bank_document()}])
+        config = render_config(validate_recipe(recipe))
+        self.assertIn("#define PLAITS_HAS_USER_DATA_BANK_OVERRIDE 0", config)
+        self.assertNotIn("kUserDataBankOverride_0", config)
+
+    def test_malformed_custom_bank_is_rejected(self) -> None:
+        slots = self.load("mixed_recipe.json")["slots"]
+        short = self.bank_document()
+        short["voices"] = short["voices"][:31]
+        with self.assertRaises(ValueError):
+            validate_recipe(self.v6_recipe(slots, [{"index": 0, "bank": short}]))
+        out_of_range = self.bank_document(first_byte=200)  # >127
+        with self.assertRaises(ValueError):
+            validate_recipe(self.v6_recipe(slots, [{"index": 0, "bank": out_of_range}]))
+        with self.assertRaises(ValueError):  # duplicate index
+            validate_recipe(self.v6_recipe(slots, [
+                {"index": 0, "bank": self.bank_document()},
+                {"index": 0, "bank": self.bank_document()},
+            ]))
 
     def test_audition_recipe_registers_every_new_lab_engine(self) -> None:
         config = render_config(validate_recipe(self.load("audition_recipe.json")))

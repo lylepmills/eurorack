@@ -32,6 +32,14 @@ class Engine:
     behavior: str = "standard"
 
 
+# The module has three built-in six-operator FM banks; a recipe may override any
+# of them with a custom 32-patch bank (128 packed bytes/patch = 4096 bytes/bank).
+MAX_USER_DATA_BANKS = 3
+PATCHES_PER_BANK = 32
+PACKED_PATCH_SIZE = 128
+PACKED_BANK_SIZE = PATCHES_PER_BANK * PACKED_PATCH_SIZE  # 4096
+
+
 @dataclass(frozen=True)
 class BuildRecipe:
     public_slots: list[str]
@@ -45,6 +53,8 @@ class BuildRecipe:
     chord_set_option: int
     hold_on_trigger_option: int
     options_profile_id: int
+    # index (0..2) -> 4096 packed bytes for a custom bank overriding a built-in one.
+    user_data_bank_overrides: tuple[tuple[int, bytes], ...] = ()
 
 
 def load_catalog() -> dict[str, Engine]:
@@ -141,8 +151,45 @@ def validate_chord_tables(value: Any) -> list[dict[str, Any]]:
     return result
 
 
+def validate_user_data_banks(value: Any) -> list[tuple[int, bytes]]:
+    """Validate a v6 recipe's custom FM banks into (index, 4096 packed bytes).
+
+    The packed bytes are baked verbatim into the firmware, so they are checked
+    exactly: 32 patches x 128 bytes, every byte a 7-bit value. Metadata is
+    validated for shape only (it never reaches the ARM build).
+    """
+    if not isinstance(value, list) or not 1 <= len(value) <= MAX_USER_DATA_BANKS:
+        raise ValueError("recipe must contain between one and three custom banks")
+    result: list[tuple[int, bytes]] = []
+    seen: set[int] = set()
+    for entry in value:
+        if not isinstance(entry, dict) or set(entry) != {"index", "bank"}:
+            raise ValueError("recipe contains an invalid custom-bank assignment")
+        index = entry["index"]
+        if type(index) is not int or not 0 <= index < MAX_USER_DATA_BANKS or index in seen:
+            raise ValueError("a custom bank must target a distinct built-in FM bank (0-2)")
+        seen.add(index)
+        bank = entry["bank"]
+        if not isinstance(bank, dict):
+            raise ValueError("recipe contains an invalid custom bank")
+        voices = bank.get("voices")
+        if not isinstance(voices, list) or len(voices) != PATCHES_PER_BANK:
+            raise ValueError("a custom bank must contain exactly 32 voices")
+        packed = bytearray()
+        for voice in voices:
+            if not isinstance(voice, dict):
+                raise ValueError("a custom-bank voice is invalid")
+            data = voice.get("packed")
+            if not isinstance(data, list) or len(data) != PACKED_PATCH_SIZE \
+                    or any(type(byte) is not int or byte < 0 or byte > 127 for byte in data):
+                raise ValueError("a custom-bank voice must have 128 packed 7-bit bytes")
+            packed.extend(data)
+        result.append((index, bytes(packed)))
+    return result
+
+
 def normalize_slots(slots: list[Any], schema_version: int) -> list[str]:
-    if schema_version in (2, 4, 5) and all(isinstance(engine_id, str) for engine_id in slots):
+    if schema_version in (2, 4, 5, 6) and all(isinstance(engine_id, str) for engine_id in slots):
         if any(engine_id not in CATALOG for engine_id in slots):
             raise ValueError("recipe contains an unapproved engine ID")
         return slots
@@ -169,8 +216,8 @@ def validate_recipe(value: Any) -> BuildRecipe:
     if not isinstance(value, dict):
         raise ValueError("recipe must be a JSON object")
     schema_version = value.get("schemaVersion")
-    if schema_version not in (2, 3, 4, 5):
-        raise ValueError("recipe schemaVersion must be 2, 3, 4, or 5")
+    if schema_version not in (2, 3, 4, 5, 6):
+        raise ValueError("recipe schemaVersion must be 2, 3, 4, 5, or 6")
     if value.get("target") != "mutable-instruments-plaits":
         raise ValueError("unsupported firmware target")
     if value.get("firmware") != "rubato-plaits":
@@ -181,14 +228,18 @@ def validate_recipe(value: Any) -> BuildRecipe:
     if not isinstance(slots, list) or len(slots) != 24:
         raise ValueError("recipe must contain exactly 24 slots")
     public_slots = normalize_slots(slots, schema_version)
-    if schema_version == 5:
+    user_data_banks: list[tuple[int, bytes]] = []
+    if schema_version in (5, 6):
         resources = value.get("resources")
-        if not isinstance(resources, dict) or set(resources) != {"chordTables"}:
+        expected_resource_keys = {"chordTables", "userDataBanks"} if schema_version == 6 else {"chordTables"}
+        if not isinstance(resources, dict) or set(resources) != expected_resource_keys:
             raise ValueError("recipe must contain only supported firmware resources")
         chord_tables = validate_chord_tables(resources.get("chordTables"))
+        if schema_version == 6:
+            user_data_banks = validate_user_data_banks(resources.get("userDataBanks"))
     else:
         chord_tables = validate_chord_tables(DEFAULT_CHORD_TABLES)
-    configuration = value if schema_version in (4, 5) else DEFAULT_CONFIGURATION
+    configuration = value if schema_version in (4, 5, 6) else DEFAULT_CONFIGURATION
     preferences = configuration.get("preferences")
     options = configuration.get("initialOptions")
     if not isinstance(preferences, dict) or not isinstance(options, dict):
@@ -236,6 +287,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
         public_slots=public_slots,
         chord_tables=chord_tables,
         options_profile_id=profile_id,
+        user_data_bank_overrides=tuple(user_data_banks),
         **normalized_options,
     )
 
@@ -288,6 +340,33 @@ def render_config(recipe: BuildRecipe) -> str:
             chord_arp_lengths.append(str(chord["arpLength"]))
             chord_offset += 1
 
+    # Custom-bank overrides: bake only banks a placed engine actually uses, so an
+    # orphaned assignment (its engine removed) never bloats the firmware. Each
+    # override replaces the built-in fm_patches_table[index] default; a runtime
+    # TIMBRE-loaded user bank still takes precedence in voice.cc.
+    used_banks = {item.user_data_bank for item in selected if item.user_data_bank >= 0}
+    active_overrides = [
+        (index, data) for index, data in recipe.user_data_bank_overrides if index in used_banks
+    ]
+    override_index = {index for index, _ in active_overrides}
+    override_arrays = "\n".join(
+        "static const uint8_t kUserDataBankOverride_{index}[{size}] = {{ {body} }};".format(
+            index=index, size=PACKED_BANK_SIZE, body=", ".join(str(byte) for byte in data)
+        )
+        for index, data in active_overrides
+    )
+    override_table = "static const uint8_t* const kUserDataBankOverride[{count}] = {{ {pointers} }};".format(
+        count=MAX_USER_DATA_BANKS,
+        pointers=", ".join(
+            f"kUserDataBankOverride_{i}" if i in override_index else "NULL"
+            for i in range(MAX_USER_DATA_BANKS)
+        ),
+    ) if active_overrides else ""
+    user_data_bank_override_block = (
+        f"\n#if PLAITS_HAS_USER_DATA_BANK_OVERRIDE\n{override_arrays}\n{override_table}\n#endif\n"
+        if active_overrides else ""
+    )
+
     return f"""// Generated by alt_firmwares/plaits_lab_builder/generate_engine_config.py.
 // Public recipe order: green, red, amber. Registry order: amber, green, red.
 #ifndef PLAITS_DSP_ENGINE_CONFIG_H_
@@ -298,6 +377,7 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_HAS_SPEECH_ENGINE {1 if any(item.behavior == 'speech' for item in selected) else 0}
 #define PLAITS_HAS_CHIPTUNE_ENGINE {1 if any(item.behavior == 'chiptune' for item in selected) else 0}
 #define PLAITS_HAS_USER_DATA_BANK {1 if any(item.user_data_bank >= 0 for item in selected) else 0}
+#define PLAITS_HAS_USER_DATA_BANK_OVERRIDE {1 if active_overrides else 0}
 
 #define PLAITS_CHORD_TABLE_COUNT {len(recipe.chord_tables)}
 #define PLAITS_CHORD_COUNT {chord_offset}
@@ -328,6 +408,7 @@ namespace plaits {{
 #if PLAITS_HAS_USER_DATA_BANK
 static const int8_t kEngineUserDataBank[24] = {{ {user_data_banks} }};
 #endif
+{user_data_bank_override_block}
 #if PLAITS_HAS_SPEECH_ENGINE
 static const uint32_t kSpeechEngineMask = 0x{speech_mask:08x};
 #endif
