@@ -166,6 +166,12 @@ It emits only numeric cent arrays. `ChordBank` now shares those flash-resident
 arrays, converts only the selected chord to ratios, and no longer allocates a
 complete ratio copy for every chord-aware engine instance.
 
+The chord-table checkpoint passed the editor build/lint/render/API tests, seven
+builder contract tests, eleven generator tests, the host synthesis suite, a
+generated-config host compile, and a full pinned ARM link. The default
+three-table recipe linked at 202,208 bytes text, 48 bytes data, and 24,032 bytes
+BSS.
+
 The legacy prototype's `/contribute` route exposes the complete generated
 catalog, fork commands, the local SDK audition bridge (controls, MIDI,
 scope/spectrum, and A/B), private bundle upload, and
@@ -243,6 +249,19 @@ and WAV SHA-256
     publicly.
 12. Run a structured hardware-beta cohort through the implemented submission
     lifecycle, then publish the first community package version.
+13. Flash and audition a four-to-six-table build on physical hardware. Verify
+    all six solid/blinking selector states, persisted table selection, knob
+    traversal, and arpeggiator behavior; current proof is host plus ARM builds.
+14. Expand chord-table authoring beyond the first local-fork slice. The editor
+    edits four cent offsets and arpeggio length, but cannot rename tables or
+    positions, add/remove/reorder positions, or import/export one table alone.
+15. Design the chord-table contribution path. The three published tables are a
+    curated static catalog; discovery, submission, license review, immutable
+    version publication, moderation, and catalog signing are not implemented.
+16. Add website CI coverage for manifest migration, chord-table validation, and
+    published digest parity with the live builder. Firmware and builder tests
+    cover the server/compiler boundary, but the Astro frontend does not yet
+    exercise these contracts in its test gate.
 
 ## Historical build-service checkpoint
 
