@@ -304,17 +304,22 @@ nine-page sample at `output/pdf/plaits-lab-audition-field-guide.pdf`; generated
 PDFs remain ignored and should be reproduced from their recipe rather than
 committed.
 
-The renderer and compiler image are ready. The production integration still
-needs to:
+The production integration was implemented in source on 2026-07-18 (desktop
+session): the Queue/Container path renders and stores the PDF in R2 under a
+documentation-specific manual key, `GET /v1/builds/:buildKey/manual` and
+job-status manual readiness are served, cached firmware without a manual is
+backfilled via manual-only queue messages (never recompiled), and the
+production editor shows a "Download the matching field guide (PDF)" control
+once the manual is ready. Firmware and guide are offered as two separate
+downloads — no combined ZIP. Details in
+`alt_firmwares/plaits_lab_builder/README.md`.
 
-1. Render the PDF in the Queue/Container path and store it in R2 alongside the
-   WAV, using a documentation-specific key/digest so prose-only edits do not
-   invalidate firmware artifacts.
-2. Add a `GET /v1/builds/:buildKey/manual` route and report manual readiness and
-   download URLs in job status without changing the existing firmware route.
-3. Handle existing cached firmware whose manual is absent by generating only
-   the missing documentation artifact rather than recompiling the firmware.
-4. Add production `rubato.audio` controls for downloading the manual and define
-   whether firmware plus guide should also be offered as a ZIP.
-5. Give all 39 model descriptions a final editorial/listening review and
+Still open:
+
+1. Deploy the checkpoint: new immutable container image + Worker deploy,
+   bumping `PLAITS_SOURCE_REVISION` (the chord-table `ChordBank` rework moved
+   the `chords` engine digest since `schema5-20260717`), in the same window as
+   the website catalog re-sync
+   (`rubato-audio/website/scripts/sync-plaits-catalog.mjs`).
+2. Give all 39 model descriptions a final editorial/listening review and
    re-check the rendered Letter pages after any catalog wording change.

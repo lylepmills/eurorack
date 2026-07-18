@@ -5,12 +5,19 @@ import {
   approvedChordTables,
   approvedEngineIds,
   computeBuildKey,
+  computeManualKey,
   isBuildKey,
   normalizeRecipe,
   type NormalizedRecipe,
 } from "./contract";
 
 type JobStatus = "queued" | "building" | "succeeded" | "failed";
+
+type ManualState = {
+  status: "pending" | "ready" | "unavailable";
+  manualKey: string;
+  sha256?: string;
+};
 
 type JobState = {
   buildId: string;
@@ -26,12 +33,16 @@ type JobState = {
     dataBytes: number;
     bssBytes: number;
   };
+  manual?: ManualState;
   error?: { code: string; message: string };
 };
 
 type BuildMessage = {
   buildId: string;
   recipe: NormalizedRecipe;
+  // Regenerate only the missing field-guide PDF for an already-cached
+  // firmware artifact; the compiler is never invoked for these messages.
+  manualOnly?: boolean;
 };
 
 export class FirmwareBuilder extends Container<Env> {
@@ -73,6 +84,13 @@ function artifactKey(buildId: string): string {
   return `firmware/${buildId}.wav`;
 }
 
+// Manuals are keyed by DOCUMENTATION identity, not build identity — many
+// builds (same layout, different options/chord tables/source revisions)
+// share one immutable PDF.
+function manualArtifactKey(manualKey: string): string {
+  return `manuals/${manualKey}.pdf`;
+}
+
 function artifactSummary(artifact: R2Object): NonNullable<JobState["artifact"]> {
   return {
     bytes: artifact.size,
@@ -93,6 +111,12 @@ function jobResponse(state: JobState): Record<string, unknown> {
     updatedAt: state.updatedAt,
     cacheHit: state.cacheHit,
     artifact: state.artifact,
+    manual: state.manual
+      ? {
+          status: state.manual.status,
+          downloadUrl: state.manual.status === "ready" ? `/v1/builds/${state.buildId}/manual` : undefined,
+        }
+      : undefined,
     error: state.error,
     statusUrl: `/v1/builds/${state.buildId}`,
     downloadUrl: state.status === "succeeded" ? `/v1/builds/${state.buildId}/firmware` : undefined,
@@ -114,14 +138,32 @@ async function createBuild(request: Request, env: Env): Promise<Response> {
       toolchain: env.PLAITS_TOOLCHAIN_ID,
       contract: env.PLAITS_BUILD_CONTRACT,
     });
+    const manualKey = await computeManualKey(recipe, env.PLAITS_MANUAL_CONTRACT);
     const job = env.BUILD_JOBS.getByName(buildId);
-    const [existingArtifact, previousState] = await Promise.all([
+    const [existingArtifact, existingManual, previousState] = await Promise.all([
       env.ARTIFACTS.head(artifactKey(buildId)),
+      env.ARTIFACTS.head(manualArtifactKey(manualKey)),
       job.getState(),
     ]);
     const now = new Date().toISOString();
 
     if (existingArtifact) {
+      let manual: ManualState;
+      if (existingManual) {
+        manual = { status: "ready", manualKey, sha256: existingManual.customMetadata?.manualSha256 };
+      } else if (previousState?.manual?.status === "pending" && previousState.manual.manualKey === manualKey) {
+        // A backfill for this exact manual is already queued.
+        manual = previousState.manual;
+      } else {
+        // Cached firmware predating the field guide: backfill only the PDF.
+        manual = { status: "pending", manualKey };
+        try {
+          await env.BUILD_QUEUE.send({ buildId, recipe, manualOnly: true }, { contentType: "json" });
+        } catch (error) {
+          console.error(JSON.stringify({ message: "manual backfill queue send failed", buildId, error: String(error) }));
+          manual = { status: "unavailable", manualKey };
+        }
+      }
       const state: JobState = {
         buildId,
         status: "succeeded",
@@ -129,6 +171,7 @@ async function createBuild(request: Request, env: Env): Promise<Response> {
         updatedAt: now,
         cacheHit: true,
         artifact: artifactSummary(existingArtifact),
+        manual,
       };
       await job.setState(state);
       return json(jobResponse(state), { status: 200 });
@@ -158,6 +201,7 @@ async function createBuild(request: Request, env: Env): Promise<Response> {
       createdAt: previousState?.createdAt ?? now,
       updatedAt: now,
       cacheHit: false,
+      manual: { status: "pending", manualKey },
     };
     await job.setState(state);
     try {
@@ -217,6 +261,69 @@ async function downloadFirmware(buildId: string, env: Env): Promise<Response> {
   return new Response(artifact.body, { headers });
 }
 
+async function downloadManual(buildId: string, env: Env): Promise<Response> {
+  if (!isBuildKey(buildId)) {
+    return json({ error: { code: "invalid_build_key", message: "The build key is invalid." } }, { status: 400 });
+  }
+  const state = await getStoredBuild(buildId, env);
+  if (!state || state.status !== "succeeded" || state.manual?.status !== "ready") {
+    return json({ error: { code: "manual_not_found", message: "That field guide is not available." } }, { status: 404 });
+  }
+  const manual = await env.ARTIFACTS.get(manualArtifactKey(state.manual.manualKey));
+  if (!manual) {
+    return json({ error: { code: "manual_not_found", message: "That field guide is not available." } }, { status: 404 });
+  }
+  const headers = new Headers();
+  manual.writeHttpMetadata(headers);
+  headers.set("ETag", manual.httpEtag);
+  headers.set("Content-Length", String(manual.size));
+  headers.set("Content-Disposition", 'attachment; filename="plaits-lab-field-guide.pdf"');
+  headers.set("Cache-Control", "public, max-age=3600, immutable");
+  return new Response(manual.body, { headers });
+}
+
+async function renderManualInContainer(
+  container: ReturnType<typeof getContainer<FirmwareBuilder>>,
+  manualKey: string,
+  recipe: NormalizedRecipe,
+): Promise<{ bytes: ArrayBuffer; sha256: string }> {
+  const response = await container.fetch("http://container/manual", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ manualKey, recipe }),
+  });
+  if (!response.ok || response.headers.get("Content-Type") !== "application/pdf") {
+    const failure = await response.text().catch(() => "");
+    throw new Error(`Manual renderer failed (${response.status}): ${failure.slice(0, 400)}`);
+  }
+  const bytes = await response.arrayBuffer();
+  if (bytes.byteLength === 0 || bytes.byteLength > 8 * 1024 * 1024) {
+    throw new Error("Manual renderer returned an invalid PDF size");
+  }
+  return { bytes, sha256: response.headers.get("X-Plaits-Manual-Sha256") ?? "" };
+}
+
+// Render + store the field guide, reusing a cached PDF when the manual key
+// already exists. Never throws into the firmware path: the caller decides
+// whether a failure retries (manual-only messages) or degrades (post-build).
+async function completeManual(
+  env: Env,
+  container: ReturnType<typeof getContainer<FirmwareBuilder>>,
+  manualKey: string,
+  recipe: NormalizedRecipe,
+): Promise<ManualState> {
+  const existing = await env.ARTIFACTS.head(manualArtifactKey(manualKey));
+  if (existing) {
+    return { status: "ready", manualKey, sha256: existing.customMetadata?.manualSha256 };
+  }
+  const { bytes, sha256 } = await renderManualInContainer(container, manualKey, recipe);
+  await env.ARTIFACTS.put(manualArtifactKey(manualKey), bytes, {
+    httpMetadata: { contentType: "application/pdf" },
+    customMetadata: { manualSha256: sha256, manualContract: env.PLAITS_MANUAL_CONTRACT },
+  });
+  return { status: "ready", manualKey, sha256 };
+}
+
 async function processBuild(message: Message<BuildMessage>, env: Env): Promise<void> {
   const { buildId, recipe } = message.body;
   const job = env.BUILD_JOBS.getByName(buildId);
@@ -242,16 +349,46 @@ async function processBuild(message: Message<BuildMessage>, env: Env): Promise<v
     message.ack();
     return;
   }
+  const manualKey = await computeManualKey(recipe, env.PLAITS_MANUAL_CONTRACT);
   const existingArtifact = await env.ARTIFACTS.head(artifactKey(buildId));
-  if (existingArtifact) {
+
+  if (message.body.manualOnly && !existingArtifact) {
+    // A manual backfill for firmware that no longer exists documents nothing.
     await job.setState({
-      ...baseState,
-      status: "succeeded",
-      updatedAt: now,
-      cacheHit: true,
-      artifact: artifactSummary(existingArtifact),
+      ...(prior ?? { ...baseState, status: "failed" as const, error: { code: "build_not_found", message: "That firmware build does not exist." } }),
+      manual: { status: "unavailable", manualKey },
+      updatedAt: new Date().toISOString(),
     });
     message.ack();
+    return;
+  }
+
+  if (existingArtifact) {
+    // Firmware is cached — only the field guide may be missing.
+    const container = getContainer(env.FIRMWARE_BUILDER, buildId);
+    const succeeded: JobState = {
+      ...baseState,
+      status: "succeeded",
+      updatedAt: new Date().toISOString(),
+      cacheHit: prior?.cacheHit ?? true,
+      artifact: artifactSummary(existingArtifact),
+    };
+    try {
+      const manual = await completeManual(env, container, manualKey, recipe);
+      await job.setState({ ...succeeded, manual });
+      message.ack();
+    } catch (error) {
+      console.error(JSON.stringify({ message: "manual render will retry", buildId, manualKey, error: String(error) }));
+      if (message.attempts >= 5) {
+        await job.setState({ ...succeeded, manual: { status: "unavailable", manualKey } });
+        message.ack();
+      } else {
+        await job.setState({ ...succeeded, manual: { status: "pending", manualKey } });
+        message.retry({ delaySeconds: Math.min(300, 60 * message.attempts) });
+      }
+    } finally {
+      await container.destroy().catch(() => undefined);
+    }
     return;
   }
 
@@ -259,6 +396,7 @@ async function processBuild(message: Message<BuildMessage>, env: Env): Promise<v
     ...baseState,
     status: "building",
     updatedAt: now,
+    manual: { status: "pending", manualKey },
   });
 
   const container = getContainer(env.FIRMWARE_BUILDER, buildId);
@@ -326,6 +464,16 @@ async function processBuild(message: Message<BuildMessage>, env: Env): Promise<v
       JSON.stringify({ buildKey: buildId, recipe, metadata }, null, 2) + "\n",
       { httpMetadata: { contentType: "application/json" } },
     );
+    // The manual is a bonus artifact: its failure never fails the firmware
+    // build. A pending manual retries this message, which then takes the
+    // cached-firmware manual-only path above.
+    let manual: ManualState;
+    try {
+      manual = await completeManual(env, container, manualKey, recipe);
+    } catch (manualError) {
+      console.error(JSON.stringify({ message: "manual render failed after build", buildId, manualKey, error: String(manualError) }));
+      manual = { status: message.attempts >= 5 ? "unavailable" : "pending", manualKey };
+    }
     await job.setState({
       ...baseState,
       status: "succeeded",
@@ -338,7 +486,12 @@ async function processBuild(message: Message<BuildMessage>, env: Env): Promise<v
         dataBytes: Number(metadata.dataBytes),
         bssBytes: Number(metadata.bssBytes),
       },
+      manual,
     });
+    if (manual.status === "pending") {
+      message.retry({ delaySeconds: 60 });
+      return;
+    }
     message.ack();
   } catch (error) {
     if (message.attempts >= 5) {
@@ -355,6 +508,7 @@ async function processBuild(message: Message<BuildMessage>, env: Env): Promise<v
       ...baseState,
       status: "queued",
       updatedAt: new Date().toISOString(),
+      manual: { status: "pending", manualKey },
       error: { code: "retrying", message: "The compiler is retrying this build." },
     });
     console.error(JSON.stringify({ message: "firmware build will retry", buildId, error: String(error) }));
@@ -384,8 +538,9 @@ export default {
       } else if (request.method === "POST" && url.pathname === "/v1/builds") {
         response = await createBuild(request, env);
       } else {
-        const match = url.pathname.match(/^\/v1\/builds\/([0-9a-f]+)(\/firmware)?$/);
-        if (request.method === "GET" && match?.[2]) response = await downloadFirmware(match[1], env);
+        const match = url.pathname.match(/^\/v1\/builds\/([0-9a-f]+)(\/firmware|\/manual)?$/);
+        if (request.method === "GET" && match?.[2] === "/firmware") response = await downloadFirmware(match[1], env);
+        else if (request.method === "GET" && match?.[2] === "/manual") response = await downloadManual(match[1], env);
         else if (request.method === "GET" && match) response = await getBuild(match[1], env);
         else response = json({ error: { code: "not_found", message: "Route not found." } }, { status: 404 });
       }

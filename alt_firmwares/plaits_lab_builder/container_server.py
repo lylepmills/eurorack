@@ -17,12 +17,14 @@ from pathlib import Path
 from typing import Any
 
 from generate_engine_config import render_config, validate_recipe
+from render_manual import manual_document, render_pdf
 
 
 WORKSPACE = Path(os.environ.get("PLAITS_WORKSPACE", "/workspace")).resolve()
 BUILD_ROOT = Path(os.environ.get("PLAITS_BUILD_ROOT", "/tmp/plaits-builds")).resolve()
 SOURCE_REVISION = os.environ.get("PLAITS_SOURCE_REVISION", "development")
 BUILD_CONTRACT_VERSION = os.environ.get("PLAITS_BUILD_CONTRACT", "2")
+MANUAL_CONTRACT_VERSION = os.environ.get("PLAITS_MANUAL_CONTRACT", "1")
 TOOLCHAIN_ID = "gcc-arm-none-eabi-4.8-2013q4"
 MAX_REQUEST_BYTES = 32 * 1024
 MAX_BUILD_SECONDS = 12 * 60
@@ -152,6 +154,20 @@ def build_firmware(payload: Any) -> tuple[Path, dict[str, str]]:
     return wav_path, metadata
 
 
+def render_manual_bytes(manual_key: str, recipe: Any) -> bytes:
+    """Render the recipe's field-guide PDF and return its bytes.
+
+    Deterministic for a given (renderer, catalog, recipe) — the Worker caches
+    the result in R2 under the manual key, so a re-render must be byte-stable.
+    """
+    manual_dir = BUILD_ROOT / "manuals"
+    manual_dir.mkdir(parents=True, exist_ok=True)
+    output = manual_dir / f"{manual_key}.pdf"
+    document = manual_document(recipe, manual_key)
+    render_pdf(document, output)
+    return output.read_bytes()
+
+
 def run_build(build_key: str, payload: Any) -> None:
     try:
         wav_path, metadata = build_firmware(payload)
@@ -196,6 +212,9 @@ class Handler(BaseHTTPRequestHandler):
         self.send_artifact(record.wav_path, record.metadata)
 
     def do_POST(self) -> None:  # noqa: N802
+        if self.path == "/manual":
+            self.handle_manual()
+            return
         if self.path != "/build":
             self.send_error(HTTPStatus.NOT_FOUND)
             return
@@ -220,6 +239,46 @@ class Handler(BaseHTTPRequestHandler):
                 BUILD_RECORDS[build_key] = BuildRecord()
                 threading.Thread(target=run_build, args=(build_key, payload), daemon=True).start()
         self.send_json({"status": "building"}, HTTPStatus.ACCEPTED)
+
+    def handle_manual(self) -> None:
+        # Rendering takes a couple of seconds, so unlike /build this endpoint
+        # answers synchronously with the finished PDF.
+        try:
+            content_length = int(self.headers.get("Content-Length", "0"))
+            if content_length <= 0 or content_length > MAX_REQUEST_BYTES:
+                raise BuildError("invalid_request", "The manual request size is invalid.")
+            payload = json.loads(self.rfile.read(content_length))
+            manual_key = payload.get("manualKey") if isinstance(payload, dict) else None
+            if not isinstance(manual_key, str) or not BUILD_KEY_PATTERN.fullmatch(manual_key):
+                raise BuildError("invalid_request", "The manual key is invalid.")
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            self.send_json_error(BuildError("invalid_request", "The manual request is not valid JSON."), HTTPStatus.BAD_REQUEST)
+            return
+        except BuildError as error:
+            self.send_json_error(error, HTTPStatus.BAD_REQUEST)
+            return
+
+        try:
+            pdf = render_manual_bytes(manual_key, payload.get("recipe"))
+        except ValueError as error:
+            self.send_json_error(BuildError("invalid_recipe", str(error)), HTTPStatus.BAD_REQUEST)
+            return
+        except Exception as error:  # noqa: BLE001 — surface renderer faults as JSON, not a dropped socket
+            print(f"builder: manual render failed: {redact_log(str(error))}", flush=True)
+            self.send_json_error(
+                BuildError("manual_render_failed", "The field guide could not be rendered."),
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+            return
+
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "application/pdf")
+        self.send_header("Content-Length", str(len(pdf)))
+        self.send_header("Content-Disposition", 'attachment; filename="plaits-lab-field-guide.pdf"')
+        self.send_header("X-Plaits-Manual-Sha256", hashlib.sha256(pdf).hexdigest())
+        self.send_header("X-Plaits-Manual-Contract", MANUAL_CONTRACT_VERSION)
+        self.end_headers()
+        self.wfile.write(pdf)
 
     def send_artifact(self, wav_path: Path, metadata: dict[str, str]) -> None:
         self.send_response(HTTPStatus.OK)

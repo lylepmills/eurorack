@@ -44,11 +44,23 @@ deterministic and runs with ReportLab inside the compiler image. It deliberately
 omits internal layout IDs and per-model attributions. Generated PDFs are ignored
 build products and should be reproduced from the recipe.
 
-Firmware WAVs are already stored in R2. Manual generation in the queued build,
-a documentation-specific artifact key, cache backfill for builds that already
-have a WAV, `GET /v1/builds/:buildKey/manual`, job-status metadata, and the
-production editor download control remain open. Keep the documentation digest
-separate from the firmware build key so prose changes do not force a recompile.
+Manual generation is integrated into the service (2026-07-18): the queue
+consumer renders the PDF through the container's synchronous `POST /manual`
+endpoint after a successful compile (a manual failure never fails the
+firmware build), stores it in R2 under `manuals/<manualKey>.pdf`, reports
+`manual.status` / `manual.downloadUrl` in job status, serves
+`GET /v1/builds/:buildKey/manual`, and backfills the PDF for already-cached
+firmware via `manualOnly` queue messages. `computeManualKey` hashes the slot
+layout + each engine's DOCUMENTATION digest + `PLAITS_MANUAL_CONTRACT` —
+deliberately not the firmware source revision or toolchain — so prose-only
+edits never invalidate firmware and firmware rollouts keep reusing cached
+manuals. Bump `PLAITS_MANUAL_CONTRACT` when the renderer's layout changes.
+This checkpoint is NOT yet deployed: it needs a new container image AND
+Worker deploy. Because the firmware source also changed since the deployed
+`schema5-20260717` image (the chord-table `ChordBank` rework moved the
+`chords` engine digest), that rollout must bump `PLAITS_SOURCE_REVISION`,
+use a new immutable image tag, and land together with the website catalog
+re-sync (`rubato-audio/website/scripts/sync-plaits-catalog.mjs`).
 
 The build key covers the normalized slots, preferences, starting options,
 ordered chord-table data (without `createdAt`), source revision, toolchain

@@ -155,3 +155,26 @@ test("version 5 accepts bounded local chord-table edits and hashes their musical
   recipe.resources.chordTables[0].chords[0].voices[1] = 9000;
   assert.throws(() => normalizeRecipe(recipe), /bounded cent offsets/);
 });
+
+test("manual keys derive from documentation identity, not build identity", async () => {
+  const { computeManualKey } = await import("../src/contract.ts");
+  const recipe = normalizeRecipe(fixture);
+  const first = await computeManualKey(recipe, "1");
+  const second = await computeManualKey(recipe, "1");
+  assert.equal(first, second);
+  assert.match(first, /^[0-9a-f]{64}$/);
+
+  // Prose/renderer identity changes the manual…
+  assert.notEqual(first, await computeManualKey(recipe, "2"));
+
+  // …and so does the layout…
+  const reordered = normalizeRecipe(fixture);
+  [reordered.slots[0], reordered.slots[1]] = [reordered.slots[1], reordered.slots[0]];
+  assert.notEqual(first, await computeManualKey(reordered, "1"));
+
+  // …but firmware options and chord-table edits share the same field guide.
+  const optionsChanged = normalizeRecipe(fixture);
+  optionsChanged.preferences = { ...optionsChanged.preferences, navigationMode: "banked" };
+  optionsChanged.initialOptions = { ...optionsChanged.initialOptions, holdOnTrigger: true };
+  assert.equal(first, await computeManualKey(optionsChanged, "1"));
+});

@@ -59,3 +59,22 @@ class RenderManualTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ContainerManualEndpointTest(unittest.TestCase):
+    @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
+    def test_render_manual_bytes_is_deterministic_and_pdf(self) -> None:
+        import container_server
+
+        recipe = json.loads((FIXTURES / "audition_recipe.json").read_text(encoding="utf-8"))
+        key = "ab" * 32
+        first = container_server.render_manual_bytes(key, recipe)
+        second = container_server.render_manual_bytes(key, recipe)
+        self.assertEqual(first, second)
+        self.assertTrue(first.startswith(b"%PDF-"))
+
+    def test_render_manual_bytes_rejects_invalid_recipes(self) -> None:
+        import container_server
+
+        with self.assertRaises(ValueError):
+            container_server.render_manual_bytes("ab" * 32, {"slots": []})

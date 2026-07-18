@@ -262,6 +262,28 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
   };
 }
 
+// A manual's identity is the slot layout plus each selected engine's
+// DOCUMENTATION digest (and the renderer contract) — deliberately NOT the
+// firmware source revision or toolchain, so firmware-only rollouts keep
+// reusing cached manuals and prose-only edits never invalidate firmware.
+export async function computeManualKey(
+  recipe: NormalizedRecipe,
+  manualContract: string,
+): Promise<string> {
+  const documentation = [...new Set(recipe.slots)].sort().map((engineId) => {
+    const engine = approvedEngines.get(engineId);
+    if (!engine) throw new ContractError("unapproved_engine", "The recipe contains an engine that is not approved for builds.");
+    return [engineId, engine.documentationDigest];
+  });
+  const canonical = JSON.stringify({
+    manualContract,
+    slots: recipe.slots,
+    documentation,
+  });
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical));
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 export async function computeBuildKey(
   recipe: NormalizedRecipe,
   buildIdentity: { sourceRevision: string; toolchain: string; contract: string },
