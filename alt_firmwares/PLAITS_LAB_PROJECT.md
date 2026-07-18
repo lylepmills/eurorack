@@ -137,9 +137,9 @@ The WAV files are written to `build/experimental/plaits/plaits.wav` and
 
 At this checkpoint, clean ARM builds report:
 
-- Experimental layout: 203,088 bytes text, 48 bytes data, 24,064 bytes BSS
-- Stock layout: 227,296 bytes text, 48 bytes data, 27,776 bytes BSS
-- Rounds 1 and 2 audition layout: 148,832 bytes text, 48 bytes data, 22,416
+- Experimental layout: 202,208 bytes text, 48 bytes data, 24,032 bytes BSS
+- Stock layout: 226,464 bytes text, 48 bytes data, 27,744 bytes BSS
+- Rounds 1 and 2 audition layout: 148,000 bytes text, 48 bytes data, 22,400
   bytes BSS
 
 ## Web editor state
@@ -201,6 +201,13 @@ Production was deployed to Cloudflare on July 17, 2026:
 - Admission policy: five new cache-miss compilations per source IP per minute;
   cache hits, status polling, and downloads bypass the limiter
 - CORS origin: `https://rubato.audio`
+
+That deployment still identifies source revision
+`a7f437964326+55b8da14febf` and image tag `schema5-20260717`. Publishing this
+Git branch does not rebuild or redeploy either artifact, and the deployed image
+must not be described as byte-identical to the landed checkpoint. A new source
+identity, immutable image, rollout, and local/remote hash comparison remain
+required.
 
 The former email/HMAC customer identity, internal bearer token, account route,
 per-customer quotas, and `CustomerGate` Durable Object were removed. Build IDs

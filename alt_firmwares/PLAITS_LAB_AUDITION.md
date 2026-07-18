@@ -13,14 +13,49 @@ option is selected.
 
 - Audio updater: `build/plaits-lab-audition/plaits/plaits.wav`
 - Recipe: `alt_firmwares/plaits_lab_builder/audition_recipe.json`
-- ARM text/data: 148,832 / 48 bytes
-- ARM BSS: 22,416 bytes
+- ARM text/data: 148,000 / 48 bytes
+- ARM BSS: 22,400 bytes
 - Updater SHA-256:
-  `a2fc008066f4fb76ecbf35357886bb5e35143f67c4503d02fe025e6b233180ac`
+  `8928f73b576ecda3a1dd0e7dd2e9f0358c1f2be5071ee88ae010d78b697e04e0`
 
 Install the WAV with the normal Plaits audio-update procedure. This image has
 passed host and ARM builds, finite-output corner sweeps, and four-control
 response checks, but it has not yet had a complete hardware listening pass.
+
+## Rebuild from a fresh checkout
+
+Initialize submodules and build the pinned AMD64 toolchain image as described
+in `PLAITS_LAB_PROJECT.md`, then generate the audition registry and updater:
+
+```sh
+mkdir -p build/plaits-lab-audition
+python3 alt_firmwares/plaits_lab_builder/generate_engine_config.py \
+  alt_firmwares/plaits_lab_builder/audition_recipe.json \
+  build/plaits-lab-audition/engine_config.h
+
+docker run --rm --platform linux/amd64 \
+  -v "$PWD":/workspace -w /workspace \
+  mutable-eurorack-dev:local \
+  bash -lc 'make -f plaits/makefile \
+    BUILD_ROOT=build/plaits-lab-audition/ \
+    CPPFLAGS="-fno-exceptions -fno-rtti -include /workspace/build/plaits-lab-audition/engine_config.h" \
+    -j2 wav'
+```
+
+Regenerate the eleven listening files and rerun the complete host regression:
+
+```sh
+docker run --rm --platform linux/amd64 \
+  -v "$PWD":/workspace -w /workspace \
+  mutable-eurorack-dev:local \
+  bash -lc 'make -f plaits/test/makefile \
+    BUILD_ROOT=build/plaits-lab-host/ -j2 && \
+    mkdir -p build/plaits-lab-auditions && \
+    cd build/plaits-lab-auditions && /workspace/plaits_test'
+```
+
+Firmware, ELF files, listening WAVs, and test renders are intentionally ignored;
+Git contains their recipes, generators, sources, tests, sizes, and checksums.
 
 ## Bank order
 

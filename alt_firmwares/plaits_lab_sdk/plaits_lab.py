@@ -35,7 +35,7 @@ CATALOG_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 VERSION_PATTERN = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 CLASS_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 ALLOWED_COMMUNITY_SYSTEM_HEADERS = {
-    "algorithm", "cmath", "cstddef", "cstdint", "limits",
+    "algorithm", "cmath", "cstddef", "cstdint", "limits", "stdint.h",
 }
 FORBIDDEN_SOURCE_PATTERNS = {
     "inline assembly": re.compile(r"\b(?:asm|__asm__)\b"),
@@ -48,6 +48,53 @@ FORBIDDEN_SOURCE_PATTERNS = {
 
 class PackageError(Exception):
     pass
+
+
+def strip_cpp_comments(source: str) -> str:
+    """Remove C++ comments while preserving strings and line positions."""
+    result: list[str] = []
+    index = 0
+    state = "code"
+    quote = ""
+    while index < len(source):
+        character = source[index]
+        following = source[index + 1] if index + 1 < len(source) else ""
+        if state == "code":
+            if character == "/" and following == "/":
+                result.extend((" ", " "))
+                index += 2
+                state = "line-comment"
+                continue
+            if character == "/" and following == "*":
+                result.extend((" ", " "))
+                index += 2
+                state = "block-comment"
+                continue
+            result.append(character)
+            if character in {'"', "'"}:
+                state = "literal"
+                quote = character
+        elif state == "line-comment":
+            result.append("\n" if character == "\n" else " ")
+            if character == "\n":
+                state = "code"
+        elif state == "block-comment":
+            if character == "*" and following == "/":
+                result.extend((" ", " "))
+                index += 2
+                state = "code"
+                continue
+            result.append("\n" if character == "\n" else " ")
+        else:
+            result.append(character)
+            if character == "\\" and following:
+                result.append(following)
+                index += 2
+                continue
+            if character == quote:
+                state = "code"
+        index += 1
+    return "".join(result)
 
 
 def load_builtin_catalog() -> tuple[dict[str, Any], dict[str, Any]]:
@@ -156,8 +203,9 @@ def validate_scenario(value: Any, index: int) -> None:
 def validate_community_source(paths: list[Path]) -> None:
     for path in paths:
         source = path.read_text(encoding="utf-8")
+        policy_source = strip_cpp_comments(source)
         for description, pattern in FORBIDDEN_SOURCE_PATTERNS.items():
-            require(pattern.search(source) is None, f"{path.name} uses forbidden {description}")
+            require(pattern.search(policy_source) is None, f"{path.name} uses forbidden {description}")
         for match in re.finditer(r'^\s*#\s*include\s*([<"])([^>"]+)[>"]', source, re.MULTILINE):
             delimiter, include = match.groups()
             require(".." not in Path(include).parts, f"{path.name} include escapes the package: {include}")
@@ -165,7 +213,8 @@ def validate_community_source(paths: list[Path]) -> None:
                 require(include in ALLOWED_COMMUNITY_SYSTEM_HEADERS,
                         f"{path.name} uses non-SDK system header <{include}>")
             else:
-                allowed = include.startswith(("plaits/dsp/", "stmlib/")) or "/" not in include
+                allowed = include.startswith(("plaits/dsp/", "stmlib/")) \
+                    or include == "plaits/resources.h" or "/" not in include
                 require(allowed, f"{path.name} uses non-SDK include \"{include}\"")
 
 

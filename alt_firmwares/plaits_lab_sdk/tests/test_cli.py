@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
 import shutil
 import tempfile
 import unittest
 import zipfile
+from contextlib import redirect_stdout
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -65,6 +67,34 @@ class PackageTests(unittest.TestCase):
         self.assertEqual(len(catalog), 39)
         self.assertEqual(set(catalog), set(public))
         self.assertTrue(all(item["digest"].startswith("sha256:") for item in public.values()))
+
+    def test_every_catalog_model_can_be_forked(self) -> None:
+        catalog, _ = plaits_lab.load_builtin_catalog()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            for engine_id in catalog:
+                with self.subTest(engine=engine_id):
+                    slug = f"{engine_id}-fork"
+                    output = Path(temp_dir) / slug
+                    with redirect_stdout(io.StringIO()):
+                        plaits_lab.init_command(SimpleNamespace(
+                            output=str(output), from_engine=engine_id,
+                            author="Test Author", package_id=f"test-author/{slug}",
+                            slug=slug, name=None,
+                        ))
+                    loaded = plaits_lab.load_package(str(output))
+                    self.assertEqual(loaded["manifest"]["forkedFrom"], engine_id)
+
+    def test_source_policy_ignores_comments_but_not_code(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source = Path(temp_dir) / "comments.cc"
+            source.write_text(
+                "// a new capture window\n/* delete old notes */\nvoid Render() {}\n",
+                encoding="utf-8",
+            )
+            plaits_lab.validate_community_source([source])
+            source.write_text("void Render() { delete pointer; }\n", encoding="utf-8")
+            with self.assertRaises(plaits_lab.PackageError):
+                plaits_lab.validate_community_source([source])
 
     @unittest.skipUnless(shutil.which("c++") or shutil.which("g++"), "host C++ compiler required")
     def test_blank_package_can_be_validated_and_bundled(self) -> None:

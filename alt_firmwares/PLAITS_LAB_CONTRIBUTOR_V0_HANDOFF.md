@@ -16,10 +16,11 @@ community-model SDK, catalog, contributor center, and submission lifecycle.
 - `plaits_lab_sdk/plaits_lab.py` implements `catalog`, blank and built-in
   `init --from`, `check --full`, `render`, hot-reloading `dev`, deterministic
   `submit`, and explicitly unreviewed local `build --hardware` workflows.
-- Full local validation enforces package/license/source policy, compiles and
-  runs address/undefined-behavior sanitizers, executes every declared scenario,
-  and records duration, peak, RMS, DC offset, silence fraction, and host
-  realtime cost.
+- Full local validation applies the current package/license/source policy,
+  compiles and runs address/undefined-behavior sanitizers, executes every
+  declared scenario, and records duration, peak, RMS, DC offset, silence
+  fraction, and host realtime cost. The package-boundary gaps below are why
+  this remains a local contributor aid rather than a production trust boundary.
 - The local browser bridge supports the four model controls, pitch, trigger,
   MIDI, scope/spectrum, and A/B rendering against every built-in model. It binds
   only to localhost by default and restricts browser origins to `--editor`.
@@ -40,8 +41,9 @@ community-model SDK, catalog, contributor center, and submission lifecycle.
 ## Proven verification
 
 - Catalog validation and generated-file byte comparison: 39 packages.
-- SDK unit/integration suite: blank package creation, policy checks, sanitized
-  previews, deterministic bundle contents, and built-in provenance.
+- SDK unit/integration suite: blank package creation, policy checks, all 39
+  catalog models successfully scaffold through `init --from`, deterministic
+  bundle contents, and built-in provenance.
 - Python and TypeScript builder contract suites through schema 5, including
   digest rejection, firmware-profile policy, chord edits, and
   green/red/amber to amber/green/red registry translation.
@@ -66,40 +68,52 @@ These are deliberate production gates, not hidden completed work.
    ZIP signature, but trusts the contributor-reported content digest and audio
    report. Extract bundles with path/size limits and rerun the exact SDK checks
    in a networkless, resource-limited queue/container.
-3. **ARM budgets.** Add worst-case cycle measurement, allocator high-water
+3. **Self-contained fork closure.** `init --from` now scaffolds every catalog
+   model, but models with multiple implementation/support files copy only the
+   primary engine pair. Local preview and hardware builds silently link the
+   remaining canonical files from this checkout, so those submitted ZIPs are
+   not standalone. Copy and rewrite the complete dependency closure, then test
+   each fork in a clean SDK-only environment.
+4. **SDK contract and file boundary.** The handwritten CLI validator is not
+   generated from `engine-package.schema.json`, and its bounds can drift from
+   the schema. It also needs an exact package-file/symlink allowlist so extra
+   binaries or custom blobs cannot enter a submission bundle. Make one contract
+   authoritative and add parity, traversal, symlink, file-type, and byte-for-byte
+   deterministic-bundle tests.
+5. **ARM budgets.** Add worst-case cycle measurement, allocator high-water
    mark, stack measurement, and enforceable per-model flash/RAM budgets. Host
    realtime ratio is diagnostic only.
-4. **Catalog promotion.** A D1 transition to `published` only exposes public
+6. **Catalog promotion.** A D1 transition to `published` only exposes public
    metadata. It does not copy C++ into this repository or widen the hosted
    firmware allowlist. Maintainer promotion must verify provenance, merge the
    exact digest's source, add it to `catalog.json`, regenerate both public
    catalogs, review the diff, and redeploy the builder/editor. Automate this
    only after catalog signing and audit history exist.
-5. **Reviewer operations.** Provision `PLAITS_REVIEW_TOKEN` as a secret, add an
+7. **Reviewer operations.** Provision `PLAITS_REVIEW_TOKEN` as a secret, add an
    authenticated maintainer queue/checklist, preserve every transition in an
    append-only audit log, and distinguish automated evidence from human signoff.
-6. **Contributor identity and recovery.** The public firmware builder requires
+8. **Contributor identity and recovery.** The public firmware builder requires
    no identity. The separate contributor prototype gives draft ownership to a
    random device-local bearer token; there is no account recovery, cross-device
    continuation, contributor profile, ownership transfer, or
    list-all-my-submissions endpoint. Choose an identity design only if those
    contributor features need it; do not add identity to ordinary builds.
-7. **Moderation and abuse.** Before opening source submissions, add upload
+9. **Moderation and abuse.** Before opening source submissions, add upload
    quotas, malware scanning, license/provenance evidence, takedown/reporting,
    delete/export/retention controls, and operational alerts. The production
    firmware endpoint already has a permissive five-new-builds-per-IP-per-minute
    guard; it is not a substitute for submission moderation.
-8. **Hardware beta.** Pulsar and the eleven audition engines still need focused
+10. **Hardware beta.** Pulsar and the eleven audition engines still need focused
    hardware listening. Define beta cohort size, test matrix, issue template,
    rollback/deprecation policy, and the threshold for publication.
-9. **SDK distribution.** The v0 CLI is invoked from this checkout. Package a
+11. **SDK distribution.** The v0 CLI is invoked from this checkout. Package a
    versioned installer, pin supported compilers/OSes, publish upgrade policy,
    and add Windows/Linux/macOS CI before recruiting non-repository contributors.
-10. **Preview limits.** Built-in A/B models compile on first use. Models that
+12. **Preview limits.** Built-in A/B models compile on first use. Models that
    depend on user-data banks need explicit preview fixtures. Add deterministic
    reset/repeatability, denormal, stuck-output, fuzzed-control, and long-run
    tests beyond the two default scenarios.
-11. **Database migrations.** The Worker creates its v0 D1 schema idempotently at
+13. **Database migrations.** The Worker creates its v0 D1 schema idempotently at
     request time. Replace this with checked, versioned migrations before schema
     evolution or multi-region public use.
 
