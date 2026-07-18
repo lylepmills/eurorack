@@ -249,16 +249,22 @@ and WAV SHA-256
     publicly.
 12. Run a structured hardware-beta cohort through the implemented submission
     lifecycle, then publish the first community package version.
-13. Flash and audition a four-to-six-table build on physical hardware. Verify
+13. Reconcile the upstream CS70-style octave/fifth switch and internal octave
+    slew with Plaits Lab's apply-once option profiles before porting that
+    feature. Both currently claim bytes in the fixed 16-byte persisted `State`
+    layout, and locked-frequency option 3 has different meanings. The July 17
+    merge keeps Plaits Lab's fourth-macro/profile behavior rather than silently
+    changing saved-state semantics.
+14. Flash and audition a four-to-six-table build on physical hardware. Verify
     all six solid/blinking selector states, persisted table selection, knob
     traversal, and arpeggiator behavior; current proof is host plus ARM builds.
-14. Expand chord-table authoring beyond the first local-fork slice. The editor
+15. Expand chord-table authoring beyond the first local-fork slice. The editor
     edits four cent offsets and arpeggio length, but cannot rename tables or
     positions, add/remove/reorder positions, or import/export one table alone.
-15. Design the chord-table contribution path. The three published tables are a
+16. Design the chord-table contribution path. The three published tables are a
     curated static catalog; discovery, submission, license review, immutable
     version publication, moderation, and catalog signing are not implemented.
-16. Add website CI coverage for manifest migration, chord-table validation, and
+17. Add website CI coverage for manifest migration, chord-table validation, and
     published digest parity with the live builder. Firmware and builder tests
     cover the server/compiler boundary, but the Astro frontend does not yet
     exercise these contracts in its test gate.
