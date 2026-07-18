@@ -148,24 +148,24 @@
       "postProcessing": { "alreadyEnveloped": false, "outGain": 0.7, "auxGain": 0.7 }
     },
     {
-      "id": "dx7-bank-a", "packageId": "mutable-instruments/dx7-bank-a", "name": "DX7 Bank A", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "FM",
-      "description": "The first bank of classic six-operator FM patches stored in Plaits user data.", "tags": ["fm", "dx7", "six operator", "preset"],
+      "id": "dx7-bank-a", "packageId": "mutable-instruments/dx7-bank-a", "name": "6-Op FM Bank A", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "FM",
+      "description": "The first bank of classic DX7-compatible six-operator FM patches stored in Plaits user data.", "tags": ["fm", "dx7", "six operator", "preset"],
       "controls": ["Patch", "Brightness", "Envelope", "Network detune"], "outputs": ["Six-operator FM voice", "Alternate operator output"],
       "artwork": { "icon": "/model-icons/dx7-bank-a.png", "kind": "custom", "tone": "amber" },
       "source": { "header": "plaits/dsp/engine2/six_op_engine.h", "className": "SixOpEngine", "member": "six_op_engine_", "userDataBank": 0, "files": ["plaits/dsp/engine2/six_op_engine.cc", "plaits/dsp/fm/algorithms.cc", "plaits/dsp/fm/dx_units.cc"] },
       "postProcessing": { "alreadyEnveloped": true, "outGain": 1.0, "auxGain": 1.0 }
     },
     {
-      "id": "dx7-bank-b", "packageId": "mutable-instruments/dx7-bank-b", "name": "DX7 Bank B", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "FM",
-      "description": "The second bank of classic six-operator FM patches stored in Plaits user data.", "tags": ["fm", "dx7", "six operator", "preset"],
+      "id": "dx7-bank-b", "packageId": "mutable-instruments/dx7-bank-b", "name": "6-Op FM Bank B", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "FM",
+      "description": "The second bank of classic DX7-compatible six-operator FM patches stored in Plaits user data.", "tags": ["fm", "dx7", "six operator", "preset"],
       "controls": ["Patch", "Brightness", "Envelope", "Network detune"], "outputs": ["Six-operator FM voice", "Alternate operator output"],
       "artwork": { "icon": "/model-icons/dx7-bank-b.png", "kind": "custom", "tone": "amber" },
       "source": { "header": "plaits/dsp/engine2/six_op_engine.h", "className": "SixOpEngine", "member": "six_op_engine_", "userDataBank": 1, "files": ["plaits/dsp/engine2/six_op_engine.cc", "plaits/dsp/fm/algorithms.cc", "plaits/dsp/fm/dx_units.cc"] },
       "postProcessing": { "alreadyEnveloped": true, "outGain": 1.0, "auxGain": 1.0 }
     },
     {
-      "id": "dx7-bank-c", "packageId": "mutable-instruments/dx7-bank-c", "name": "DX7 Bank C", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "FM",
-      "description": "The third bank of classic six-operator FM patches stored in Plaits user data.", "tags": ["fm", "dx7", "six operator", "preset"],
+      "id": "dx7-bank-c", "packageId": "mutable-instruments/dx7-bank-c", "name": "6-Op FM Bank C", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "FM",
+      "description": "The third bank of classic DX7-compatible six-operator FM patches stored in Plaits user data.", "tags": ["fm", "dx7", "six operator", "preset"],
       "controls": ["Patch", "Brightness", "Envelope", "Network detune"], "outputs": ["Six-operator FM voice", "Alternate operator output"],
       "artwork": { "icon": "/model-icons/dx7-bank-c.png", "kind": "custom", "tone": "amber" },
       "source": { "header": "plaits/dsp/engine2/six_op_engine.h", "className": "SixOpEngine", "member": "six_op_engine_", "userDataBank": 2, "files": ["plaits/dsp/engine2/six_op_engine.cc", "plaits/dsp/fm/algorithms.cc", "plaits/dsp/fm/dx_units.cc"] },
