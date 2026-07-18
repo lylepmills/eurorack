@@ -7,13 +7,14 @@ checkpoint landed on July 17, 2026.
 ## Repositories
 
 - Firmware: this repository, branch `codex/plaits-experimental-engines`
-- Production website/editor: sibling repository `../rubato-audio`, branch
-  `main`, commit `d2295a83`
+- Production website/editor and contributor center: sibling repository
+  `../rubato-audio`, branch `main`
 - Live unlisted editor: <https://rubato.audio/plaits-lab>
+- Unlisted contributor center: <https://rubato.audio/plaits-lab/contribute>
 - Public build API: <https://plaits-api.rubato.audio>
-- Legacy editor prototype: sibling repository `../plaits-editor`, branch
-  `main`; retain it for schema history, contributor-center work, and generated
-  catalog tooling, but do not deploy it to Sites
+- Legacy editor prototype: its disconnected history is preserved as the
+  `archive/plaits-editor` branch in the `rubato-audio` upstream. It is not a
+  source of truth and must not receive its own upstream or deployment.
 - Reference build environment: sibling checkout `../mutable-devcontainer`
 
 The unrelated `../crowmancy-firmware` repository is not part of this project.
@@ -172,12 +173,15 @@ generated-config host compile, and a full pinned ARM link. The default
 three-table recipe linked at 202,208 bytes text, 48 bytes data, and 24,032 bytes
 BSS.
 
-The legacy prototype's `/contribute` route exposes the complete generated
+Rubato's unlisted `/plaits-lab/contribute` route exposes the complete generated
 catalog, fork commands, the local SDK audition bridge (controls, MIDI,
 scope/spectrum, and A/B), private bundle upload, and
-draft/review/hardware-beta/publication state. D1 holds submission state and R2
-holds private bundles. That route has not been migrated to `rubato.audio` and
-is not part of the production Plaits Lab page.
+draft/review/hardware-beta/publication state. Pages Functions live beside the
+website; D1 holds submission state and private R2 buckets hold source bundles.
+Anonymous draft ownership uses a random device-local bearer token and stores
+only its SHA-256 hash—no account or email is required. Source intake is closed
+by default until server-side source revalidation, reviewer audit history,
+moderation, and signing are implemented.
 
 The implemented backend accepts only approved engine IDs and bounded chord
 tables, translates bank ordering, compiles in an isolated container, rejects
@@ -238,8 +242,10 @@ and WAV SHA-256
    `rubato-audio`. The production page currently contains a reviewed generated
    snapshot copied from the legacy editor rather than a CI-enforced generation
    step.
-6. Migrate or redesign the contributor center for `rubato.audio`; the current
-   D1/R2 contributor flow exists only in the legacy `plaits-editor` prototype.
+6. Keep contributor source intake closed while adding queued server-side source
+   revalidation, reviewer audit history, moderation controls, catalog signing,
+   and an explicit reviewer secret. Then run a small hardware-beta cohort
+   before publishing the first community package.
 7. Add the personalized field guide to the artifact API/R2 path and expose its
    download in the production editor if that feature is still desired.
 8. Decide whether preview deployments should call production builds. CORS and
@@ -248,30 +254,25 @@ and WAV SHA-256
 9. Replace the date-based compiler image tag with an immutable commit/digest
    convention on the next firmware rollout, bump `PLAITS_SOURCE_REVISION`, and
    verify the remote artifact against a local build before deployment.
-10. Remove or archive the obsolete HMAC/account proxy from `plaits-editor`
-    after its remaining contributor/schema tooling has moved; it is not used by
-    the production page.
-11. Add queued server-side revalidation, reviewer audit history, catalog
-    signing, and moderation controls before opening community submissions
-    publicly.
-12. Run a structured hardware-beta cohort through the implemented submission
-    lifecycle, then publish the first community package version.
-13. Reconcile the upstream CS70-style octave/fifth switch and internal octave
+10. Treat `rubato-audio/main` as the only website/contributor source of truth.
+    The `archive/plaits-editor` branch is history only; do not revive its Sites
+    shell, HMAC/account proxy, or framework wrapper.
+11. Reconcile the upstream CS70-style octave/fifth switch and internal octave
     slew with Plaits Lab's apply-once option profiles before porting that
     feature. Both currently claim bytes in the fixed 16-byte persisted `State`
     layout, and locked-frequency option 3 has different meanings. The July 17
     merge keeps Plaits Lab's fourth-macro/profile behavior rather than silently
     changing saved-state semantics.
-14. Flash and audition a four-to-six-table build on physical hardware. Verify
+12. Flash and audition a four-to-six-table build on physical hardware. Verify
     all six solid/blinking selector states, persisted table selection, knob
     traversal, and arpeggiator behavior; current proof is host plus ARM builds.
-15. Expand chord-table authoring beyond the first local-fork slice. The editor
+13. Expand chord-table authoring beyond the first local-fork slice. The editor
     edits four cent offsets and arpeggio length, but cannot rename tables or
     positions, add/remove/reorder positions, or import/export one table alone.
-16. Design the chord-table contribution path. The three published tables are a
+14. Design the chord-table contribution path. The three published tables are a
     curated static catalog; discovery, submission, license review, immutable
     version publication, moderation, and catalog signing are not implemented.
-17. Add website CI coverage for manifest migration, chord-table validation, and
+15. Add website CI coverage for manifest migration, chord-table validation, and
     published digest parity with the live builder. Firmware and builder tests
     cover the server/compiler boundary, but the Astro frontend does not yet
     exercise these contracts in its test gate.
