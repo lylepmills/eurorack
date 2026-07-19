@@ -32,6 +32,7 @@
 #include "stmlib/stmlib.h"
 
 #include "stmlib/dsp/filter.h"
+#include "stmlib/dsp/hysteresis_quantizer.h"
 #include "stmlib/dsp/limiter.h"
 #include "stmlib/utils/buffer_allocator.h"
 
@@ -47,6 +48,8 @@
 #include "plaits/dsp/envelope.h"
 
 #include "plaits/dsp/fx/low_pass_gate.h"
+
+#include "plaits/dsp/physical_modelling/delay_line.h"
 
 namespace plaits {
 
