@@ -42,6 +42,9 @@
 #else
 #include "plaits/dsp/engine_config.h"
 #endif
+// After the engine config: a generated config may define PLAITS_ENGINE_COUNT,
+// and build_config.h defaults it to 24 otherwise.
+#include "plaits/build_config.h"
 #include "plaits/dsp/oscillator/sine_oscillator.h"
 #include "plaits/dsp/oscillator/square_oscillator.h"
 
@@ -53,7 +56,7 @@
 
 namespace plaits {
 
-const int kMaxEngines = 24;
+const int kMaxEngines = PLAITS_ENGINE_COUNT;
 const int kMaxTriggerDelay = 8;
 const int kTriggerDelay = 5;
 

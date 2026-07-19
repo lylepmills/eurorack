@@ -145,11 +145,48 @@ class GenerateEngineConfigTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unapproved"):
             validate_recipe(recipe)
 
-    def test_recipe_must_have_exactly_24_slots(self) -> None:
+    def test_recipe_slot_count_must_be_24_or_32(self) -> None:
         recipe = self.load("default_recipe.json")
         recipe["slots"].pop()
-        with self.assertRaisesRegex(ValueError, "exactly 24"):
+        with self.assertRaisesRegex(ValueError, "24 slots, or 32"):
             validate_recipe(recipe)
+
+    def test_32_slot_recipes_require_schema_v6(self) -> None:
+        recipe = self.load("default_recipe.json")
+        recipe["slots"] = recipe["slots"] + ["loopback"] * 8
+        with self.assertRaisesRegex(ValueError, "schemaVersion 6"):
+            validate_recipe(recipe)
+
+    def fourth_bank_slots(self) -> list[str]:
+        return self.load("default_recipe.json")["slots"] + [
+            "loopback", "lockstep", "tapfield", "phase-weave",
+            "sideband-bank", "attractor", "undertow", "reed-pipe",
+        ]
+
+    def test_fourth_bank_recipe_renders_a_32_engine_registry(self) -> None:
+        config = render_config(validate_recipe(self.v6_recipe(self.fourth_bank_slots(), [])))
+        self.assertIn("#define PLAITS_ENGINE_COUNT 32", config)
+        self.assertIn("kEngineUserDataBank[32]", config)
+        registrations = config.split("#define PLAITS_REGISTER_ENGINES", 1)[1]
+        self.assertEqual(registrations.count("RegisterInstance("), 32)
+        # The fourth (orange) bank stays last in the internal
+        # amber/green/red/orange registry order.
+        self.assertLess(
+            registrations.index("&virtual_analog_vcf_engine_"),  # amber bank, internal first
+            registrations.index("&loopback_engine_"))
+        self.assertLess(
+            registrations.index("&loopback_engine_"),
+            registrations.index("&reed_pipe_engine_"))
+
+    def test_24_slot_recipes_emit_the_default_engine_count(self) -> None:
+        config = render_config(validate_recipe(self.load("default_recipe.json")))
+        self.assertIn("#define PLAITS_ENGINE_COUNT 24", config)
+        self.assertIn("kEngineUserDataBank[24]", config)
+
+    def test_v6_custom_banks_are_optional(self) -> None:
+        slots = self.load("default_recipe.json")["slots"]
+        config = render_config(validate_recipe(self.v6_recipe(slots, [])))
+        self.assertIn("#define PLAITS_HAS_USER_DATA_BANK_OVERRIDE 0", config)
 
     def test_versioned_package_references_are_normalized(self) -> None:
         public = self.load("../plaits_lab_catalog/public_catalog.json")

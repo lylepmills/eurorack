@@ -7,6 +7,18 @@
 #ifndef PLAITS_BUILD_CONFIG_H_
 #define PLAITS_BUILD_CONFIG_H_
 
+// Number of engine slots. 24 (three banks of eight) is the default; a
+// generated recipe may opt in to 32 (a fourth bank, shown orange on the
+// LEDs). 32 is a hard ceiling: the speech/chiptune behavior masks are
+// uint32_t bitfields indexed by slot.
+#ifndef PLAITS_ENGINE_COUNT
+#define PLAITS_ENGINE_COUNT 24
+#endif
+
+#if PLAITS_ENGINE_COUNT != 24 && PLAITS_ENGINE_COUNT != 32
+#error "PLAITS_ENGINE_COUNT must be 24 or 32"
+#endif
+
 #ifndef PLAITS_BUILD_NAVIGATION_MODE
 #define PLAITS_BUILD_NAVIGATION_MODE 0
 #endif

@@ -63,7 +63,7 @@ bool Settings::Init() {
     ApplyBuildOptionDefaults(&state_);
   }
 
-  CONSTRAIN(state_.engine, 0, 23);
+  CONSTRAIN(state_.engine, 0, PLAITS_ENGINE_COUNT - 1);
   CONSTRAIN(state_.locked_frequency_pot_option, 0, 3);
   CONSTRAIN(state_.model_cv_option, 0, 2);
   CONSTRAIN(state_.level_cv_option, 0, 1);

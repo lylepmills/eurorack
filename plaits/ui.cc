@@ -148,6 +148,15 @@ void Ui::SaveState() {
 }
 
 uint32_t Ui::BankToColor(int bank) {
+#if PLAITS_ENGINE_COUNT > 24
+  if (bank == 3) {
+    // Fourth bank: orange. The LED channels are 1-bit (drivers/leds.cc), so
+    // blend red with quarter-duty green by dithering at the poll rate — far
+    // above flicker fusion, it reads as a steady color between red and the
+    // full-duty yellow of the amber bank.
+    return (pwm_counter_ & 3) ? LED_COLOR_RED : LED_COLOR_YELLOW;
+  }
+#endif
   uint32_t colors[3] = { LED_COLOR_YELLOW, LED_COLOR_GREEN, LED_COLOR_RED };
   return colors[bank];
 }
@@ -314,17 +323,17 @@ void Ui::UpdateLEDs() {
 void Ui::Navigate(int button) {
   ignore_release_[0] = ignore_release_[1] = true;
   RealignPots();
-  uint8_t increment = button == 0 ? 23 : 1;
+  uint8_t increment = button == 0 ? PLAITS_ENGINE_COUNT - 1 : 1;
   if (PLAITS_BUILD_NAVIGATION_MODE == 1) {
     if (button == 1) {
       // change bank
       increment = 8;
     } else {
-      // change preset within bank
-      increment = patch_->engine % 8 != 7 ? 1 : 17;
+      // change preset within bank (wrap from position 8 back to position 1)
+      increment = patch_->engine % 8 != 7 ? 1 : PLAITS_ENGINE_COUNT - 7;
     }
   }
-  patch_->engine = (patch_->engine + increment) % 24;
+  patch_->engine = (patch_->engine + increment) % PLAITS_ENGINE_COUNT;
 
   SaveState();
 }

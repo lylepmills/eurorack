@@ -222,6 +222,32 @@ bytes with 202,208 bytes text, 48 bytes data, 24,032 bytes BSS, binary SHA-256
 and WAV SHA-256
 `cf654a346d052e77c5195d1b19ff1694c637dfaade63c2469b36d47076ea4c16`.
 
+## Fourth engine bank (32 slots) — firmware prototype
+
+The firmware side of an OPT-IN fourth bank is implemented on branch
+`claude/plaits-fourth-bank` (2026-07-19). Default builds are unchanged by
+construction: the generated config defines `PLAITS_ENGINE_COUNT` (24 or 32),
+`plaits/build_config.h` defaults it to 24, and every 24-count expansion
+constant-folds to the previous literals (`kMaxEngines`, the settings clamp,
+`Ui::Navigate`'s wrap arithmetic). A 32-slot build adds a fourth bank shown
+ORANGE on the LEDs — the channels are 1-bit, so `Ui::BankToColor` dithers red
+with quarter-duty green at the poll rate (`pwm_counter_ & 3`); how distinct
+this reads from the amber bank's full yellow needs an on-hardware check
+before shipping. 32 is a hard ceiling (the speech/chiptune masks are uint32
+slot bitfields; `build_config.h` `#error`s on any other count). Recipe side:
+32-slot recipes require schema v6, whose custom FM banks are now optional
+(zero to three) so the two v6 features compose independently; the generated
+registry keeps bank 4 last in the internal amber/green/red/orange order.
+Verified so far: generator unit tests (18, including fourth-bank rendering),
+full dsp-tree syntax pass under both counts, and the host validation suite
+(`plaits/test`) builds, links, and passes with both a 24- and a 32-slot
+generated config. Still needed before merge/rollout: a real ARM cross-build
+(ui.cc/settings.cc need the STM32 headers — Docker toolchain), the
+binary-identity spot-check of a default recipe across the revision bump, the
+Worker contract (`slots.length` 24|32) + editor fourth-bank column behind an
+off-by-default toggle, manual bank-map page, and flash-meter re-measurement
+at the new source revision.
+
 ## Loose ends and next milestones
 
 1. Audition the eleven rounds 1 and 2 prototypes on hardware, rank the keepers,

@@ -158,8 +158,8 @@ def validate_user_data_banks(value: Any) -> list[tuple[int, bytes]]:
     exactly: 32 patches x 128 bytes, every byte a 7-bit value. Metadata is
     validated for shape only (it never reaches the ARM build).
     """
-    if not isinstance(value, list) or not 1 <= len(value) <= MAX_USER_DATA_BANKS:
-        raise ValueError("recipe must contain between one and three custom banks")
+    if not isinstance(value, list) or len(value) > MAX_USER_DATA_BANKS:
+        raise ValueError("recipe must contain between zero and three custom banks")
     result: list[tuple[int, bytes]] = []
     seen: set[int] = set()
     for entry in value:
@@ -225,8 +225,10 @@ def validate_recipe(value: Any) -> BuildRecipe:
     if value.get("output") != "audio-wav":
         raise ValueError("unsupported output format")
     slots = value.get("slots")
-    if not isinstance(slots, list) or len(slots) != 24:
-        raise ValueError("recipe must contain exactly 24 slots")
+    if not isinstance(slots, list) or len(slots) not in (24, 32):
+        raise ValueError("recipe must contain 24 slots, or 32 for a four-bank build")
+    if len(slots) == 32 and schema_version != 6:
+        raise ValueError("32-slot recipes require schemaVersion 6")
     public_slots = normalize_slots(slots, schema_version)
     user_data_banks: list[tuple[int, bytes]] = []
     if schema_version in (5, 6):
@@ -302,7 +304,9 @@ def cpp_bool(value: bool) -> str:
 
 def render_config(recipe: BuildRecipe) -> str:
     public_slots = recipe.public_slots
-    internal_slots = public_slots[16:24] + public_slots[0:16]
+    # Registry order is amber, green, red; an optional fourth (orange) bank
+    # stays last in both orders.
+    internal_slots = public_slots[16:24] + public_slots[0:16] + public_slots[24:]
     selected = [CATALOG[engine_id] for engine_id in internal_slots]
 
     unique: list[Engine] = []
@@ -374,6 +378,7 @@ def render_config(recipe: BuildRecipe) -> str:
 
 {includes}
 
+#define PLAITS_ENGINE_COUNT {len(selected)}
 #define PLAITS_HAS_SPEECH_ENGINE {1 if any(item.behavior == 'speech' for item in selected) else 0}
 #define PLAITS_HAS_CHIPTUNE_ENGINE {1 if any(item.behavior == 'chiptune' for item in selected) else 0}
 #define PLAITS_HAS_USER_DATA_BANK {1 if any(item.user_data_bank >= 0 for item in selected) else 0}
@@ -406,7 +411,7 @@ def render_config(recipe: BuildRecipe) -> str:
 namespace plaits {{
 
 #if PLAITS_HAS_USER_DATA_BANK
-static const int8_t kEngineUserDataBank[24] = {{ {user_data_banks} }};
+static const int8_t kEngineUserDataBank[{len(selected)}] = {{ {user_data_banks} }};
 #endif
 {user_data_bank_override_block}
 #if PLAITS_HAS_SPEECH_ENGINE
