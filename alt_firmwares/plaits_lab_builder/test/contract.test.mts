@@ -215,6 +215,56 @@ test("version 6 carries a validated custom FM bank and hashes its packed bytes",
   );
 });
 
+test("version 6 accepts a 32-slot fourth-bank recipe with no custom banks", async () => {
+  const publicCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const chordCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_chord_tables/catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const byId = new Map(publicCatalog.engines.map((engine: { id: string }) => [engine.id, engine]));
+  const publishedTable = structuredClone(chordCatalog.tables[0]);
+  const reference = (engineId: string) => {
+    const engine = byId.get(engineId) as { packageId: string; version: string; digest: string };
+    return { engine: engineId, package: engine.packageId, version: engine.version, digest: engine.digest };
+  };
+  const fourthBank = [
+    "loopback", "lockstep", "tapfield", "phase-weave",
+    "sideband-bank", "attractor", "undertow", "reed-pipe",
+  ];
+  const makeRecipe = (slotIds: string[], schemaVersion = 6) => ({
+    ...fixture,
+    schemaVersion,
+    slots: slotIds.map(reference),
+    preferences: { navigationMode: "linear" },
+    initialOptions: {
+      lockedFrequencyKnob: "octaves", modelInput: "model", levelInput: "level",
+      auxOutput: "alternate-model", suboscillatorOctave: 0, chordTable: publishedTable.id, holdOnTrigger: false,
+    },
+    resources: { chordTables: [publishedTable], userDataBanks: [] },
+  });
+
+  const normalized = normalizeRecipe(makeRecipe([...fixture.slots, ...fourthBank]));
+  assert.equal(normalized.schemaVersion, 6);
+  assert.equal(normalized.slots.length, 32);
+  assert.equal(normalized.resources.userDataBanks!.length, 0);
+
+  // Slot count is part of the build identity.
+  const identity = { sourceRevision: "source", toolchain: "toolchain", contract: "6" };
+  assert.notEqual(
+    await computeBuildKey(normalized, identity),
+    await computeBuildKey(normalizeRecipe(makeRecipe(fixture.slots)), identity),
+  );
+
+  // 32 slots demand schema v6; 24 or 32 are the only counts.
+  const v5 = makeRecipe([...fixture.slots, ...fourthBank], 5) as Record<string, unknown>;
+  (v5 as { resources: Record<string, unknown> }).resources = { chordTables: [publishedTable] };
+  assert.throws(() => normalizeRecipe(v5), /schema version 6/);
+  assert.throws(() => normalizeRecipe(makeRecipe([...fixture.slots, "loopback"])), /24 engine slots, or 32/);
+});
+
 test("manual keys derive from documentation identity, not build identity", async () => {
   const { computeManualKey } = await import("../src/contract.ts");
   const recipe = normalizeRecipe(fixture);

@@ -166,8 +166,8 @@ function normalizeChordTables(value: unknown): NormalizedChordTable[] {
 }
 
 function normalizeUserDataBanks(value: unknown): NormalizedUserDataBank[] {
-  if (!Array.isArray(value) || value.length < 1 || value.length > maxUserDataBanks) {
-    throw new ContractError("invalid_user_data_banks", `A firmware may override between one and ${maxUserDataBanks} FM banks.`);
+  if (!Array.isArray(value) || value.length > maxUserDataBanks) {
+    throw new ContractError("invalid_user_data_banks", `A firmware may override between zero and ${maxUserDataBanks} FM banks.`);
   }
   const indices = new Set<number>();
   return value.map((item) => {
@@ -295,8 +295,11 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
   if (candidate.output !== "audio-wav") {
     throw new ContractError("unsupported_output", "Only audio-installable WAV firmware is supported.");
   }
-  if (!Array.isArray(candidate.slots) || candidate.slots.length !== 24) {
-    throw new ContractError("invalid_slots", "A firmware recipe must contain exactly 24 engine slots.");
+  if (!Array.isArray(candidate.slots) || (candidate.slots.length !== 24 && candidate.slots.length !== 32)) {
+    throw new ContractError("invalid_slots", "A firmware recipe must contain 24 engine slots, or 32 for a four-bank build.");
+  }
+  if (candidate.slots.length === 32 && Number(candidate.schemaVersion) !== 6) {
+    throw new ContractError("invalid_slots", "32-slot recipes require recipe schema version 6.");
   }
   const slots = candidate.schemaVersion === 2
     ? candidate.slots.map((id) => {
@@ -339,7 +342,9 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     ? normalizeConfiguration(candidate, chordTables)
     : defaultConfiguration;
   return {
-    schemaVersion: userDataBanks ? 6 : 5,
+    // A candidate that carried v6 resources (even an empty custom-bank list,
+    // e.g. a 32-slot recipe) stays v6 so the compiler applies v6 rules.
+    schemaVersion: userDataBanks !== undefined ? 6 : 5,
     target: "mutable-instruments-plaits",
     firmware: "rubato-plaits",
     slots,
