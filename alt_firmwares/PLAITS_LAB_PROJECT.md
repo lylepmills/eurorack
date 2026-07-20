@@ -188,26 +188,40 @@ The authoritative implementation and deployment notes are in
 
 ## Production build-service checkpoint
 
-Production was deployed to Cloudflare on July 17, 2026:
+Production was redeployed to Cloudflare on July 19, 2026 (the schema v6
+rollout — manuals, optional custom FM banks, opt-in fourth bank):
 
 - Worker/custom domain: `plaits-lab-build-service` at
   `https://plaits-api.rubato.audio`
 - Compiler image:
-  `plaits-lab-build-service-firmwarebuilder:schema5-20260717`
-- Queue: `plaits-lab-builds`; dead-letter queue:
-  `plaits-lab-builds-dead-letter`
+  `plaits-lab-build-service-firmwarebuilder:rev-303a9afad9f1` — the immutable
+  commit-derived tag convention that replaced the date-based tags
+- Source revision: `303a9afad9f1` (deployed from the fast-forwarded
+  `claude/plaits-fourth-bank` / `claude/plaits-lab-integration` head
+  `63fa57a`)
+- Queue: `plaits-lab-builds` (consumer serialized: `max_batch_size` 1,
+  `max_concurrency` 1 against the single-instance container); dead-letter
+  queue: `plaits-lab-builds-dead-letter`
 - R2 bucket: `plaits-lab-firmwares`
 - Durable Objects: `FirmwareBuilder` and content-addressed `BuildJob`
 - Admission policy: five new cache-miss compilations per source IP per minute;
   cache hits, status polling, and downloads bypass the limiter
 - CORS origin: `https://rubato.audio`
 
-That deployment still identifies source revision
-`a7f437964326+55b8da14febf` and image tag `schema5-20260717`. Publishing this
-Git branch does not rebuild or redeploy either artifact, and the deployed image
-must not be described as byte-identical to the landed checkpoint. A new source
-identity, immutable image, rollout, and local/remote hash comparison remain
-required.
+The July 19 rollout was verified end-to-end against the live API: the
+catalog advertises `recipeSchemaVersion` 6; a default 24-slot schema-2
+recipe compiled to an artifact byte-identical to BOTH the local Docker build
+at the same revision AND the July-17 production artifact (binary SHA-256
+`d9dd225d27925feb417454aced5106bc946ab934b0046aac2b1fbea6c84bb062`, WAV
+`cf654a346d052e77c5195d1b19ff1694c637dfaade63c2469b36d47076ea4c16`) and
+returned an R2 cache hit on resubmission; a 32-slot v6 recipe (default 24 +
+eight Lab engines) compiled at 216,560 text / 48 data / 24,768 bytes BSS,
+byte-identical to the local build, with its field-guide PDF served from
+`GET /v1/builds/:key/manual`; and the voice.h regression palette (neither
+Inharmonic String nor Reed Pipe — `compiler_failed` before the fix) builds.
+The website catalog snapshot was re-synced in the same window
+(`rubato-audio` main `1c513ffb`; first pinned `plaits-pins.json`, sourceRef
+`303a9afad9f1`).
 
 The former email/HMAC customer identity, internal bearer token, account route,
 per-customer quotas, and `CustomerGate` Durable Object were removed. Build IDs
@@ -238,15 +252,21 @@ slot bitfields; `build_config.h` `#error`s on any other count). Recipe side:
 32-slot recipes require schema v6, whose custom FM banks are now optional
 (zero to three) so the two v6 features compose independently; the generated
 registry keeps bank 4 last in the internal amber/green/red/orange order.
-Verified so far: generator unit tests (18, including fourth-bank rendering),
-full dsp-tree syntax pass under both counts, and the host validation suite
-(`plaits/test`) builds, links, and passes with both a 24- and a 32-slot
-generated config. Still needed before merge/rollout: a real ARM cross-build
-(ui.cc/settings.cc need the STM32 headers — Docker toolchain), the
-binary-identity spot-check of a default recipe across the revision bump, the
-Worker contract (`slots.length` 24|32) + editor fourth-bank column behind an
-off-by-default toggle, manual bank-map page, and flash-meter re-measurement
-at the new source revision.
+DEPLOYED July 19, 2026 (revision `303a9afad9f1`, see the production
+checkpoint above). Everything on the pre-rollout list closed except the
+hardware LED check: real ARM cross-builds of both counts (a 24-slot default
+build is byte-identical with the fourth-bank code compiled in — and
+byte-identical to the July-17 production artifact, so the constant-folding
+claim is proven at the binary level; the 32-slot reference build with the
+eight light Lab engines links at 216,560 text / 48 data / 24,768 bss, 94.4%
+of flash), the Worker contract (slots 24|32) live, the editor toggle live,
+and the field-guide bank map renders 32-slot recipes as a 2x2
+green/red/amber/ORANGE grid (`303a9af`; 24-slot manuals byte-identical, so
+`PLAITS_MANUAL_CONTRACT` stayed at 1). The flash-meter constants were
+verified unchanged at the new revision (byte-identical builds; the website
+test suite's pinned reference builds pass). Remaining: the on-hardware
+orange-vs-amber LED legibility check — the audition WAV for that pass is a
+live-API 32-slot/6-table build.
 
 ## Loose ends and next milestones
 
@@ -261,19 +281,23 @@ at the new source revision.
    per-location rate-limit binding is intentionally permissive, and NAT users
    share an IP. Do not use it for billing, strict quotas, or identity.
 5. Automate catalog/schema synchronization from this repository into
-   `rubato-audio`. The production page currently contains a reviewed generated
-   snapshot copied from the legacy editor rather than a CI-enforced generation
-   step.
+   `rubato-audio`. The website now regenerates its snapshot with
+   `website/scripts/sync-plaits-catalog.mjs` and pins provenance in
+   `plaits-pins.json` (first pinned sync: `303a9afad9f1`, July 19), but the
+   sync is still a deliberate manual step per rollout rather than CI-enforced
+   generation.
 6. Migrate or redesign the contributor center for `rubato.audio`; the current
    D1/R2 contributor flow exists only in the legacy `plaits-editor` prototype.
-7. Add the personalized field guide to the artifact API/R2 path and expose its
-   download in the production editor if that feature is still desired.
+7. DONE (July 19 rollout): the personalized field guide is generated in the
+   container, stored in R2, served at `GET /v1/builds/:key/manual`, and the
+   production editor's download control is live.
 8. Decide whether preview deployments should call production builds. CORS and
    the website CSP currently allow only `https://rubato.audio`, deliberately
    excluding Pages preview origins and localhost.
-9. Replace the date-based compiler image tag with an immutable commit/digest
-   convention on the next firmware rollout, bump `PLAITS_SOURCE_REVISION`, and
-   verify the remote artifact against a local build before deployment.
+9. DONE (July 19 rollout): immutable `rev-<commit>` image tags, a
+   `PLAITS_SOURCE_REVISION` bump, and remote-vs-local artifact verification
+   (byte-identical) are now the standing convention — keep all three on every
+   future rollout.
 10. Remove or archive the obsolete HMAC/account proxy from `plaits-editor`
     after its remaining contributor/schema tooling has moved; it is not used by
     the production page.
@@ -342,10 +366,8 @@ downloads — no combined ZIP. Details in
 
 Still open:
 
-1. Deploy the checkpoint: new immutable container image + Worker deploy,
-   bumping `PLAITS_SOURCE_REVISION` (the chord-table `ChordBank` rework moved
-   the `chords` engine digest since `schema5-20260717`), in the same window as
-   the website catalog re-sync
-   (`rubato-audio/website/scripts/sync-plaits-catalog.mjs`).
+1. DONE July 19, 2026: deployed as image `rev-303a9afad9f1` + Worker deploy
+   with the website catalog re-sync landing in the same window (details in
+   the production checkpoint above).
 2. Give all 39 model descriptions a final editorial/listening review and
    re-check the rendered Letter pages after any catalog wording change.
