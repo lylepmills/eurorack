@@ -115,7 +115,8 @@ system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:schema5-20260717`. After deploying a
+`plaits-lab-build-service-firmwarebuilder:rev-303a9afad9f1` (immutable
+commit-derived tags replaced the date-based convention). After deploying a
 new image, wait for `wrangler containers list` to report `ready` before smoke
 testing; requests made while the application was still `provisioning` reached
 the previous live instance during the schema-5 rollout.

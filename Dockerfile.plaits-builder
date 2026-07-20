@@ -34,7 +34,7 @@ RUN useradd --create-home --uid 10001 builder
 COPY --chown=builder:builder . /workspace
 RUN chmod -R a-w /workspace
 
-ARG PLAITS_SOURCE_REVISION=a7f437964326+55b8da14febf
+ARG PLAITS_SOURCE_REVISION=303a9afad9f1
 ARG PLAITS_BUILD_CONTRACT=2
 ENV PATH="/usr/local/arm-4.8.3/bin:${PATH}" \
     PYTHONPATH="/workspace" \
