@@ -17,6 +17,8 @@ BANKS = (
     {"id": "green", "name": "GREEN", "start": 0, "color": "#4F9868"},
     {"id": "red", "name": "RED", "start": 8, "color": "#C6534B"},
     {"id": "amber", "name": "AMBER", "start": 16, "color": "#D59635"},
+    # The opt-in fourth bank; matches the editor's orange (plaits-palette.css).
+    {"id": "orange", "name": "ORANGE", "start": 24, "color": "#D96F35"},
 )
 CONTROL_IDS = ("harmonics", "timbre", "morph", "macro")
 PANEL_LABELS = ("HARMONICS", "TIMBRE", "MORPH", "FOURTH")
@@ -196,11 +198,17 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         canvas.drawRightString(page_width - margin, 0.25 * inch, str(doc.page))
         canvas.restoreState()
 
+    bank_count = len(document["slots"]) // 8
+    bank_phrase = (
+        "green, red, and amber"
+        if bank_count == 3
+        else "green, red, amber, and orange"
+    )
     story: list[Any] = [
         Paragraph("RUBATO AUDIO  /  PLAITS LAB", kicker_style),
         Paragraph("Your Plaits Field Guide", title_style),
         Paragraph(
-            "A rack-side reference generated from the exact green, red, and amber layout in this firmware recipe. "
+            f"A rack-side reference generated from the exact {bank_phrase} layout in this firmware recipe. "
             f"This guide contains {len(document['models'])} unique synthesis models.",
             intro_style,
         ),
@@ -208,7 +216,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
     ]
 
     bank_tables = []
-    for bank_index, bank in enumerate(BANKS):
+    for bank_index, bank in enumerate(BANKS[:bank_count]):
         rows: list[list[Any]] = [[Paragraph(bank["name"], bank_name_style)]]
         for bank_slot in range(8):
             entry = document["slots"][bank_index * 8 + bank_slot]
@@ -239,14 +247,22 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
             ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
         ]))
         bank_tables.append(bank_table)
-    bank_map = Table([bank_tables], colWidths=[2.12 * inch] * 3, hAlign="LEFT")
-    bank_map.setStyle(TableStyle([
+    # Three banks sit in one row; a fourth-bank recipe wraps to a 2x2 grid so
+    # the columns keep their legible width on the Letter page.
+    per_row = 3 if len(bank_tables) <= 3 else 2
+    bank_map_rows = [bank_tables[i : i + per_row] for i in range(0, len(bank_tables), per_row)]
+    bank_map_rows[-1] += [""] * (per_row - len(bank_map_rows[-1]))
+    bank_map = Table(bank_map_rows, colWidths=[2.12 * inch] * per_row, hAlign="LEFT")
+    bank_map_style = [
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ("LEFTPADDING", (0, 0), (-1, -1), 0),
         ("RIGHTPADDING", (0, 0), (-1, -1), 5),
         ("TOPPADDING", (0, 0), (-1, -1), 0),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-    ]))
+    ]
+    if len(bank_map_rows) > 1:
+        bank_map_style.append(("BOTTOMPADDING", (0, 0), (-1, -2), 8))
+    bank_map.setStyle(TableStyle(bank_map_style))
     story.extend([
         bank_map,
         Spacer(1, 0.18 * inch),

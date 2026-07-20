@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from generate_engine_config import DEFAULT_CHORD_TABLES, DEFAULT_CONFIGURATION
 from render_manual import CONTROL_IDS, manual_document, render_pdf
 
 
@@ -16,6 +17,24 @@ HAS_REPORTLAB = importlib.util.find_spec("reportlab") is not None
 class RenderManualTest(unittest.TestCase):
     def load(self, name: str) -> dict:
         return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
+
+    def fourth_bank_recipe(self) -> dict:
+        return {
+            "schemaVersion": 6,
+            "target": "mutable-instruments-plaits",
+            "firmware": "rubato-plaits",
+            "output": "audio-wav",
+            "slots": self.load("default_recipe.json")["slots"] + [
+                "loopback", "lockstep", "tapfield", "phase-weave",
+                "sideband-bank", "attractor", "undertow", "reed-pipe",
+            ],
+            "preferences": dict(DEFAULT_CONFIGURATION["preferences"]),
+            "initialOptions": dict(DEFAULT_CONFIGURATION["initialOptions"]),
+            "resources": {
+                "chordTables": [dict(table) for table in DEFAULT_CHORD_TABLES],
+                "userDataBanks": [],
+            },
+        }
 
     def test_bank_positions_use_public_green_red_amber_order(self) -> None:
         document = manual_document(self.load("audition_recipe.json"))
@@ -44,6 +63,23 @@ class RenderManualTest(unittest.TestCase):
             self.assertEqual(tuple(model["manual"]["controls"]), CONTROL_IDS)
             self.assertTrue(model["manual"]["trigger"])
             self.assertTrue(model["documentationDigest"].startswith("sha256:"))
+
+    def test_fourth_bank_positions_land_in_the_orange_bank(self) -> None:
+        document = manual_document(self.fourth_bank_recipe())
+        self.assertEqual(len(document["slots"]), 32)
+        self.assertEqual(document["slots"][24]["position"], {
+            "bank": "orange", "bankName": "ORANGE", "color": "#D96F35", "number": 1,
+        })
+        self.assertEqual(document["slots"][31]["position"]["number"], 8)
+        self.assertEqual(document["slots"][23]["position"]["bank"], "amber")
+
+    @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
+    def test_fourth_bank_pdf_renders(self) -> None:
+        document = manual_document(self.fourth_bank_recipe())
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "fourth-bank.pdf"
+            render_pdf(document, output)
+            self.assertTrue(output.read_bytes().startswith(b"%PDF-"))
 
     @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
     def test_pdf_render_is_deterministic(self) -> None:
