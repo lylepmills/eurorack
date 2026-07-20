@@ -15,6 +15,7 @@ However my alt firmware had several other features that I felt were still worthw
 ## Features of this alt firmware
 
 - **Aux crossfading.** - It's possible with this firmware to crossfade between the regular and aux models on the aux output, essentially giving you a fourth timbral dimension for each model. The crossfade can be controlled either manually by repurposing the frequency knob, or under CV control (or both).
+- **Fourth macro.** - Every model gains an optional fourth synthesis parameter, distinct from aux crossfading. It can be controlled either manually by repurposing the frequency knob, or under CV control by repurposing the LEVEL input (or both). Its midpoint is neutral, so models sound unchanged until it is assigned and moved. See below for what it controls on each model.
 - **CV control of LPG parameters.** - The MODEL and LEVEL CV inputs can be repurposed (either both or individually) to put the colour and decay of the internal LPG under CV control.
 - **Suboscillator.** The aux model can be replaced by a square or sine wave suboscillator on the aux output. The square wave can be used to sync another oscillator with a sync input (like Tides), an oscilloscope, etc. This is fully compatible with aux crossfading, meaning you can blend the main model with a square or sine wave. There are also options for the suboscillator frequency to be either the same frequency as the main model, -1 octave, or -2 octaves.
 - **Alternate chord tables.** For the chord-based modes (the 7th green mode, and the 7th and 8th yellow modes), you can switch between the original table of 11 chords, or alternative chord tables by Jon Butler (17 chords) or Joe McMullen (18 chords). See below for more details on each chord table.
@@ -27,8 +28,8 @@ However my alt firmware had several other features that I felt were still worthw
 This development version replaces the three DX7 bank positions and Wave
 Terrain (the third through sixth yellow models) with four experimental engines.
 All four use the normal pitch, HARMONICS, TIMBRE, and MORPH controls. They also use an
-optional fourth macro when the frequency knob is locked and set to its blinking
-green menu option.
+optional fourth macro, controlled either manually by repurposing the frequency
+knob, or under CV control by repurposing the LEVEL input (or both).
 
 ### Glisson
 
@@ -81,8 +82,8 @@ This does not change the default experimental layout described above.
 ## Fourth dimensions for stock models
 
 The optional fourth macro now extends every stock model. Its midpoint is exactly
-neutral, so these models retain their original sound unless the locked frequency
-knob is moved away from noon. The controls are:
+neutral, so these models retain their original sound unless the macro is
+assigned and moved away from noon. The controls are:
 
 ### Yellow/orange bank
 
@@ -132,14 +133,16 @@ color of the LED lights. In order, they represent the following.
 ### First light - Frequency knob alt functionality (when frequency is locked i.e. in octave-switching mode)
 Green means octaves (as in the stock firmware), red means controlling decay,
 yellow means controlling aux crossfade, and blinking green means controlling
-the experimental engines' fourth macro. The fourth macro rests at its midpoint
-when another frequency-knob option is selected.
+the fourth macro. When neither this nor the LEVEL input is assigned to the
+fourth macro, it rests at its neutral midpoint.
 
 ### Second light - MODEL input alt functionality
 Green means model (as in the stock firmware), red means LPG colour (VCFA->VCA), yellow means aux crossfade
 
 ### Third light - LEVEL input alt functionality
-Green means level (as in the stock firmware), red means decay of the internal envelope (if and only if TRIG is patched)
+Green means level (as in the stock firmware), red means decay of the internal
+envelope, and yellow means the fourth macro. The red and yellow options apply if
+and only if TRIG is patched.
 
 ### Fourth light - Aux suboscillator wave option
 Green means the regular aux model, red means a square wave subosc, yellow means a sine wave subosc
@@ -212,8 +215,8 @@ Green means don't hold params upon receiving a trigger (as in the stock firmware
 Model navigation is selected when creating a Plaits Lab firmware build and is
 not part of the module options menu. The linear mode uses the left button to go
 backward and the right button to go forward through all models. The banked mode
-uses the left button to cycle within a bank and the right button to switch
-banks.
+uses the left button to switch banks and the right button to cycle within a
+bank.
 
 Plaits Lab builds can also include starting values for the seven menu options.
 Those values are applied once when a new option profile is installed. They
