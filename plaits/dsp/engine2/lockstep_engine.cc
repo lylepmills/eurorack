@@ -110,6 +110,7 @@ void LockstepEngine::Render(
   // MACRO simultaneously changes the range over which the loop is allowed to
   // hunt and its damping. Low values give long, fragile acquisition gestures;
   // high values pull decisively across almost two octaves.
+  const float feedthrough_index = kLockstepFeedthrough * parameters.macro;
   const float capture_octaves = 0.10f + 1.85f * parameters.macro;
   const float capture_min = target_frequency * SemitonesToRatio(
       -12.0f * capture_octaves);
@@ -149,11 +150,19 @@ void LockstepEngine::Render(
         : (phase_error < -deadband ? -1.0f : 0.0f);
     detector_lp_ += detector_smoothing * (charge - detector_lp_);
 
-    const float carrier = SineNoWrap(follower_phase_);
+    // MACRO leaks reference ripple onto the follower's output phase. Unlike
+    // the loop error, this ripple persists at clean integer locks, so MACRO
+    // stays audible on a held note instead of only colouring the capture
+    // transient through its damping and capture-window terms.
+    const float ripple = SineNoWrap(reference_compare);
+    const float carrier = SineNoWrap(
+        Wrap(follower_phase_ + feedthrough_index * ripple));
     const float soft_square = carrier / \
         (0.22f + 0.78f * fabsf(carrier));
+    // MORPH sweeps the held tone from sine to soft square directly; loop error
+    // still adds transient grit on top during acquisition.
     const float error_shape = min(
-        1.0f, 0.18f * parameters.morph + 4.0f * fabsf(phase_error));
+        1.0f, parameters.morph + 4.0f * fabsf(phase_error));
     out[i] = (carrier + (soft_square - carrier) * error_shape) * 0.78f;
 
     // AUX exposes the charge-pump acquisition signal plus the audible
