@@ -69,9 +69,13 @@ Detailed engine controls are in `alt_firmwares/README.md`.
   accepted.
 - Pulsar passes host and ARM builds but has not received the same focused
   hardware listening pass. Treat that as the first outstanding sound-design QA.
-- The eleven rounds 1 and 2 engines pass combined host tests and a generated
-  24-slot ARM build. They remain prototypes until the hardware audition in
-  `alt_firmwares/PLAITS_LAB_AUDITION.md` is complete.
+- The eleven rounds 1 and 2 engines have been reviewed on hardware and accepted.
+  Five (Tapfield, Phase Weave, Sideband Bank, Attractor, Undertow) passed as-is.
+  The other six (Loopback, Lockstep, Reed Pipe, Phase Flock, Rulefield, Spectral
+  Spiral) were iterated and re-flashed from `review_recipe.json` before
+  acceptance: Reed Pipe's reflection filter now tracks pitch, Loopback's MORPH
+  drives real phase feedback, and Lockstep's MACRO/MORPH gained a steady-state
+  voice via reference feedthrough.
 - The latest retained local listening artifacts are the ignored `v9` WAV files
   under `build/plaits/`. They are not source artifacts and can be regenerated.
 

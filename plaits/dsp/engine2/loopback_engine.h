@@ -14,10 +14,7 @@ namespace plaits {
 // index. This is the classic feedback-operator sweep (sine -> bright buzz) and
 // is a far stronger timbral lever than the spectral tilt it replaced, which
 // barely perturbed the AM depth.
-#ifndef PLAITS_LOOPBACK_FEEDBACK_DEPTH
-#define PLAITS_LOOPBACK_FEEDBACK_DEPTH 0.5f
-#endif
-const float kLoopbackFeedbackDepth = PLAITS_LOOPBACK_FEEDBACK_DEPTH;
+const float kLoopbackFeedbackDepth = 0.5f;
 
 class LoopbackEngine : public Engine {
  public:

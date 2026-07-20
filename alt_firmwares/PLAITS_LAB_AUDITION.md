@@ -20,7 +20,9 @@ option is selected.
 
 Install the WAV with the normal Plaits audio-update procedure. This image has
 passed host and ARM builds, finite-output corner sweeps, and four-control
-response checks, but it has not yet had a complete hardware listening pass.
+response checks. All eleven engines have since completed their hardware
+listening pass and were accepted; see the hardware-test status in
+`alt_firmwares/PLAITS_LAB_PROJECT.md` for the per-engine outcome.
 
 ## Rebuild from a fresh checkout
 

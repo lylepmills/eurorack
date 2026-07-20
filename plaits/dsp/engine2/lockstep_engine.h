@@ -15,10 +15,7 @@ namespace plaits {
 // so the VCO is continuously FM'd. Turning MACRO up loosens the loop and lets
 // more feedthrough survive, which is audible while a note is held -- not just
 // during the capture transient the damping/capture terms already shape.
-#ifndef PLAITS_LOCKSTEP_FEEDTHROUGH
-#define PLAITS_LOCKSTEP_FEEDTHROUGH 0.35f
-#endif
-const float kLockstepFeedthrough = PLAITS_LOCKSTEP_FEEDTHROUGH;
+const float kLockstepFeedthrough = 0.35f;
 
 class LockstepEngine : public Engine {
  public:
