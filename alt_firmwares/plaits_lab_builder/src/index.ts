@@ -10,6 +10,9 @@ import {
   normalizeRecipe,
   type NormalizedRecipe,
 } from "./contract";
+import { deadLetterAction } from "./dead_letter";
+
+const DEAD_LETTER_QUEUE = "plaits-lab-builds-dead-letter";
 
 type JobStatus = "queued" | "building" | "succeeded" | "failed";
 
@@ -518,6 +521,43 @@ async function processBuild(message: Message<BuildMessage>, env: Env): Promise<v
   }
 }
 
+// Drains the dead-letter queue. Without a consumer these messages expire
+// unseen inside the retention window, which is the one failure mode nobody
+// would otherwise hear about: the compiler's own failures ack themselves with
+// a recorded cause, so arriving here means the delivery broke.
+async function recordDeadLetter(message: Message<BuildMessage>, env: Env): Promise<void> {
+  const { buildId } = message.body;
+  console.error(JSON.stringify({
+    message: "build message dead-lettered",
+    buildId,
+    manualOnly: message.body.manualOnly ?? false,
+    attempts: message.attempts,
+  }));
+  try {
+    const job = env.BUILD_JOBS.getByName(buildId);
+    const prior = await job.getState();
+    const action = deadLetterAction(prior);
+    const now = new Date().toISOString();
+    if (action.kind === "fail") {
+      await job.setState({
+        buildId,
+        status: "failed",
+        createdAt: prior?.createdAt ?? now,
+        updatedAt: now,
+        cacheHit: prior?.cacheHit ?? false,
+        error: { code: "build_unavailable", message: "The compiler could not complete this build after several attempts." },
+      });
+    } else if (action.kind === "manual-unavailable" && prior?.manual) {
+      await job.setState({ ...prior, manual: { ...prior.manual, status: "unavailable" }, updatedAt: now });
+    }
+  } catch (error) {
+    // The job state is a courtesy to a polling client; the log above is the
+    // signal that matters, so never fail the batch over it.
+    console.error(JSON.stringify({ message: "dead-letter state write failed", buildId, error: String(error) }));
+  }
+  message.ack();
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -557,6 +597,10 @@ export default {
   },
 
   async queue(batch: MessageBatch<BuildMessage>, env: Env): Promise<void> {
+    if (batch.queue === DEAD_LETTER_QUEUE) {
+      await Promise.all(batch.messages.map((message) => recordDeadLetter(message, env)));
+      return;
+    }
     await Promise.all(batch.messages.map((message) => processBuild(message, env)));
   },
 } satisfies ExportedHandler<Env, BuildMessage>;

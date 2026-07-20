@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "check": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test test/contract.test.mts",
+    "test": "node --experimental-strip-types --test test/*.test.mts",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy"
   },

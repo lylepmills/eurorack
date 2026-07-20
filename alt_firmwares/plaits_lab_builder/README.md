@@ -132,6 +132,38 @@ new image, wait for `wrangler containers list` to report `ready` before smoke
 testing; requests made while the application was still `provisioning` reached
 the previous live instance during the schema-5 rollout.
 
+### Rolling back
+
+Immutable `rev-<commit>` tags make a rollback a configuration change rather
+than a rebuild: set `PLAITS_SOURCE_REVISION` and the container `image` in
+`wrangler.jsonc` back to a previously deployed pair, `pnpm run deploy`, and wait
+for `wrangler containers list` to report `ready` before smoke testing. Never
+delete a previously deployed image from the registry — it is the rollback
+target.
+
+| Deployed | Source revision | Image tag |
+| --- | --- | --- |
+| July 17, 2026 (schema 5) | `a7f437964326+55b8da14febf` | `schema5-20260717` |
+| July 19, 2026 (schema 6) | `303a9afad9f1` | `rev-303a9afad9f1` |
+
+Three consequences a rollback has that a forward deploy does not:
+
+- **Queued builds fail fast, by design.** The build key hashes the source
+  revision, so messages queued against the rolled-back-from revision no longer
+  match and `processBuild` ends them with `stale_build`, asking the client to
+  resubmit. That is correct behavior, not a second incident.
+- **Cached artifacts are orphaned, not lost.** R2 objects stay under the build
+  key they were compiled for; a rollback simply stops producing that key, and
+  redeploying the newer revision makes them cache hits again.
+- **The website catalog pin has to move with it.** `rubato-audio` pins
+  `sourceRef` in `plaits-pins.json`. Rolling back across a schema change
+  without re-syncing leaves the editor advertising recipes the builder will
+  reject — going from schema 6 to schema 5, for instance, makes the 32-slot
+  fourth bank unbuildable while the UI still offers it.
+
+Field guides survive a rollback: manual keys hash documentation identity and
+`PLAITS_MANUAL_CONTRACT`, deliberately not the source revision.
+
 The July 17 production smoke test completed build
 `76e8c1c9dde6b238be377994dc27d62116acaa67f585547d6823afa1b40447cb`
 and confirmed an immediate R2 cache hit on repeat submission. The complete

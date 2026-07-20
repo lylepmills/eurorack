@@ -89,6 +89,15 @@
         // through their retries against the busy container and dead-letter.
         "max_concurrency": 1,
         "dead_letter_queue": "plaits-lab-builds-dead-letter"
+      },
+      {
+        // Drained only to log it and give the stranded job a terminal state.
+        // Nothing else consumes this queue, so without a consumer a broken
+        // delivery would expire unseen inside the retention window.
+        "queue": "plaits-lab-builds-dead-letter",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 1
       }
     ]
   },
