@@ -59,8 +59,16 @@ void ReedPipeEngine::Render(
       0.24f, max(0.000001f, NoteToFrequency(parameters.note)));
   const float target_reflection_coefficient = \
       0.88f + 0.108f * parameters.macro;
-  const float target_reflection_brightness = \
-      0.08f + 0.66f * parameters.macro * parameters.macro;
+  // The reflection filter's corner is expressed in harmonics of the note so
+  // the bore loses the same *relative* part of its spectrum at every pitch.
+  // With a fixed coefficient the corner sat ~19 harmonics up at the bottom of
+  // the keyboard, leaving the filter nearly transparent there -- which is why
+  // MACRO, MORPH and TIMBRE all collapsed on low notes.
+  const float brightness_harmonic = kReedPipeBrightnessMin + \
+      kReedPipeBrightnessRange * parameters.macro * parameters.macro;
+  float target_reflection_brightness = \
+      6.2832f * brightness_harmonic * frequency;
+  CONSTRAIN(target_reflection_brightness, 0.02f, 0.90f);
   // A negative bell reflection needs a half-period round trip. Compensating
   // the one-pole reflection filter keeps the perceived fundamental close to
   // the pitch anchor over the macro range.
@@ -76,8 +84,8 @@ void ReedPipeEngine::Render(
   const float breath_pressure = 0.52f + \
       0.46f * parameters.timbre * parameters.timbre;
   const float target_breath = blowing ? breath_pressure : 0.0f;
-  const float target_reed_stiffness = 1.0f + \
-      0.8f * parameters.morph * parameters.morph;
+  const float target_reed_stiffness = kReedPipeStiffnessMin + \
+      kReedPipeStiffnessRange * parameters.morph * parameters.morph;
   const float target_breath_noise = 0.003f + \
       0.010f * (1.0f - parameters.morph);
 
@@ -127,7 +135,14 @@ void ReedPipeEngine::Render(
 
     const float bore_pressure = outgoing_ + returning;
     const float pressure_difference = mouth_pressure - bore_pressure;
-    float opening = 1.0f - reed_stiffness * pressure_difference;
+    // Only the oscillating part of the pressure difference moves the reed.
+    // Letting the static breath term set the operating point too drove the
+    // reed against its closed stop under hard blowing at high stiffness,
+    // where it has no slope left and the note stopped dead. Anchoring the
+    // rest position instead keeps the reed on the sloped part of its curve
+    // at every setting, and lets stiffness span a much wider range.
+    const float reed_drive = pressure_difference - breath_envelope_;
+    float opening = kReedPipeRestOpening - reed_stiffness * reed_drive;
     CONSTRAIN(opening, 0.0f, 1.0f);
     const float curvature = 1.0f - 0.18f * \
         min(1.5f, fabsf(pressure_difference));

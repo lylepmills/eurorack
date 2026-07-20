@@ -13,6 +13,21 @@ namespace plaits {
 
 const size_t kReedPipeDelaySize = 2048;
 
+// Rest opening of the reed, held clear of both stops so that the static
+// breath pressure can never park the reed shut.
+const float kReedPipeRestOpening = 0.40f;
+
+// Stiffness acts on the oscillating part of the pressure difference only, so
+// it can span a wide range without moving the reed's operating point.
+const float kReedPipeStiffnessMin = 2.0f;
+const float kReedPipeStiffnessRange = 12.0f;
+
+// Reflection-filter corner, in harmonics of the played note. Tracking pitch
+// keeps MACRO, MORPH and TIMBRE responsive across the whole keyboard; with a
+// fixed coefficient they collapsed on low notes.
+const float kReedPipeBrightnessMin = 1.0f;
+const float kReedPipeBrightnessRange = 12.0f;
+
 class ReedPipeEngine : public Engine {
  public:
   ReedPipeEngine() { }
