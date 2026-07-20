@@ -35,7 +35,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
         option_values = (
             ("lockedFrequencyKnob", ["octaves", "decay", "aux-crossfade", "macro-4"]),
             ("modelInput", ["model", "lpg-colour", "aux-crossfade"]),
-            ("levelInput", ["level", "decay"]),
+            ("levelInput", ["level", "decay", "macro-4"]),
             ("auxOutput", ["alternate-model", "square-subosc", "sine-subosc"]),
             ("suboscillatorOctave", [0, -1, -2]),
             ("chordTable", ["original", "jon-butler", "joe-mcmullen"]),
@@ -49,7 +49,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
             marker = validate_recipe(recipe).options_profile_id
             self.assertGreater(marker & 0xff, 1)
             markers.add(marker)
-        self.assertEqual(len(markers), 1296)
+        self.assertEqual(len(markers), 1944)
 
     def test_registry_translates_green_red_amber_to_amber_green_red(self) -> None:
         recipe = self.load("mixed_recipe.json")

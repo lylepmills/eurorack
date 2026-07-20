@@ -44,7 +44,7 @@ static const int32_t kLongPressTime = 2000;
 static const uint8_t kNumOptions = 7;
 static const uint8_t kNumLockedFrequencyPotOptions = 4;
 static const uint8_t kNumModelCVOptions = 3;
-static const uint8_t kNumLevelCVOptions = 2;
+static const uint8_t kNumLevelCVOptions = 3;
 static const uint8_t kNumSuboscWaveOptions = 3;
 static const uint8_t kNumSuboscOctaveOptions = 3;
 static const uint8_t kNumChordSetOptions = PLAITS_CHORD_TABLE_COUNT;
@@ -325,7 +325,7 @@ void Ui::Navigate(int button) {
   RealignPots();
   uint8_t increment = button == 0 ? PLAITS_ENGINE_COUNT - 1 : 1;
   if (PLAITS_BUILD_NAVIGATION_MODE == 1) {
-    if (button == 1) {
+    if (button == 0) {
       // change bank
       increment = 8;
     } else {

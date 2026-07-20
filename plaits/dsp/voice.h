@@ -137,6 +137,7 @@ struct Patch {
   uint8_t model_cv_option;
   // 0 - cv control of level (original)
   // 1 - cv control of decay
+  // 2 - cv control of the fourth synthesis macro
   uint8_t level_cv_option;
   // 0 - regular aux model
   // 1 - square wave

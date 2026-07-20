@@ -64,7 +64,7 @@ export type NormalizedRecipe = {
   initialOptions: {
     lockedFrequencyKnob: "octaves" | "decay" | "aux-crossfade" | "macro-4";
     modelInput: "model" | "lpg-colour" | "aux-crossfade";
-    levelInput: "level" | "decay";
+    levelInput: "level" | "decay" | "macro-4";
     auxOutput: "alternate-model" | "square-subosc" | "sine-subosc";
     suboscillatorOctave: 0 | -1 | -2;
     chordTable: string;
@@ -259,7 +259,7 @@ function normalizeConfiguration(
       || !isOneOf(preferenceValues.navigationMode, ["linear", "banked"] as const)
       || !isOneOf(optionValues.lockedFrequencyKnob, ["octaves", "decay", "aux-crossfade", "macro-4"] as const)
       || !isOneOf(optionValues.modelInput, ["model", "lpg-colour", "aux-crossfade"] as const)
-      || !isOneOf(optionValues.levelInput, ["level", "decay"] as const)
+      || !isOneOf(optionValues.levelInput, ["level", "decay", "macro-4"] as const)
       || !isOneOf(optionValues.auxOutput, ["alternate-model", "square-subosc", "sine-subosc"] as const)
       || !isOneOf(optionValues.suboscillatorOctave, [0, -1, -2] as const)
       || typeof optionValues.chordTable !== "string"

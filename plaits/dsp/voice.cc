@@ -101,9 +101,14 @@ void Voice::Render(
   if (patch.locked_frequency_pot_option == 1) {
     patch_decay = patch.freqlock_param;
   }
+  float macro_cv = 0.0f;
   if (modulations.trigger_patched && patch.level_cv_option == 1) {
     level_patched = false;
     patch_decay += modulations_level;
+    modulations_level = 0.0f;
+  } else if (modulations.trigger_patched && patch.level_cv_option == 2) {
+    level_patched = false;
+    macro_cv = modulations_level;
     modulations_level = 0.0f;
   }
   CONSTRAIN(patch_decay, 0.0f, 1.0f);
@@ -171,6 +176,8 @@ void Voice::Render(
   p.macro = patch.locked_frequency_pot_option == 3
       ? patch.freqlock_param
       : 0.5f;
+  p.macro += macro_cv;
+  CONSTRAIN(p.macro, 0.0f, 1.0f);
 
   bool rising_edge = trigger_state_ && !previous_trigger_state;
   float note = (modulations_note + previous_note_) * 0.5f;
