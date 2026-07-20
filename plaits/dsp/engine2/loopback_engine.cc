@@ -20,34 +20,15 @@ void LoopbackEngine::Init(BufferAllocator* allocator) {
   Reset();
 }
 
-void LoopbackEngine::ClearDelay() {
-  fill(&delay_line_[0], &delay_line_[kDelaySize], 0.0f);
-  write_index_ = 0;
-}
-
 void LoopbackEngine::Reset() {
-  ClearDelay();
   carrier_phase_ = 0.0f;
   feedback_phase_ = 0.0f;
+  feedback_state_ = 0.0f;
+  fb_osc_ = 0.0f;
   ratio_ = 1.0f;
   depth_ = 0.0f;
-  delay_ = 0.0f;
+  morph_ = 0.0f;
   polarity_ = 0.0f;
-}
-
-float LoopbackEngine::ReadDelay(float delay) const {
-  const int integral = static_cast<int>(delay);
-  const float fractional = delay - static_cast<float>(integral);
-  int index_a = write_index_ - integral - 1;
-  if (index_a < 0) {
-    index_a += kDelaySize;
-  }
-  int index_b = index_a - 1;
-  if (index_b < 0) {
-    index_b += kDelaySize;
-  }
-  const float a = delay_line_[index_a];
-  return a + (delay_line_[index_b] - a) * fractional;
 }
 
 void LoopbackEngine::Render(
@@ -57,7 +38,8 @@ void LoopbackEngine::Render(
     size_t size,
     bool* already_enveloped) {
   if (parameters.trigger & TRIGGER_RISING_EDGE) {
-    ClearDelay();
+    feedback_state_ = 0.0f;
+    fb_osc_ = 0.0f;
     carrier_phase_ = 0.0f;
     feedback_phase_ = 0.0f;
   }
@@ -66,19 +48,20 @@ void LoopbackEngine::Render(
   const float ratio = 0.5f + 7.5f * \
       parameters.harmonics * parameters.harmonics;
   const float depth = 0.98f * parameters.timbre * parameters.timbre;
-  const float delay = static_cast<float>(kDelaySize - 2) * \
-      parameters.morph * parameters.morph;
   const float polarity = 2.0f * parameters.macro - 1.0f;
+
+  // MORPH sets the phase-feedback index of the feedback oscillator.
+  const float morph = kLoopbackFeedbackDepth * parameters.morph;
 
   ParameterInterpolator ratio_modulation(&ratio_, ratio, size);
   ParameterInterpolator depth_modulation(&depth_, depth, size);
-  ParameterInterpolator delay_modulation(&delay_, delay, size);
+  ParameterInterpolator morph_modulation(&morph_, morph, size);
   ParameterInterpolator polarity_modulation(&polarity_, polarity, size);
 
   for (size_t i = 0; i < size; ++i) {
     const float current_ratio = ratio_modulation.Next();
     const float current_depth = depth_modulation.Next();
-    const float current_delay = delay_modulation.Next();
+    const float current_morph = morph_modulation.Next();
     const float current_polarity = polarity_modulation.Next();
 
     carrier_phase_ += frequency;
@@ -87,15 +70,22 @@ void LoopbackEngine::Render(
     feedback_phase_ -= static_cast<int>(feedback_phase_);
 
     const float carrier = SineNoWrap(carrier_phase_);
-    const float feedback_carrier = SineNoWrap(feedback_phase_);
-    const float delayed = ReadDelay(current_delay);
-    const float magnitude = fabsf(delayed);
+    // The feedback oscillator phase-modulates itself: as MORPH raises the
+    // index, its sine progressively gains harmonics, so the signal that
+    // regenerates through the loop carries real spectral variety instead of
+    // the single partial the tilt filter had to work with.
+    float modulated_phase = feedback_phase_ + current_morph * fb_osc_;
+    modulated_phase -= floorf(modulated_phase);
+    const float feedback_carrier = SineNoWrap(modulated_phase);
+    fb_osc_ = feedback_carrier;
+
+    const float magnitude = fabsf(feedback_state_);
     float shaped_feedback;
     if (current_polarity < 0.0f) {
-      shaped_feedback = delayed + (-magnitude - delayed) * \
+      shaped_feedback = feedback_state_ + (-magnitude - feedback_state_) * \
           -current_polarity;
     } else {
-      shaped_feedback = delayed + (magnitude - delayed) * \
+      shaped_feedback = feedback_state_ + (magnitude - feedback_state_) * \
           current_polarity;
     }
 
@@ -106,8 +96,7 @@ void LoopbackEngine::Render(
         current_depth * shaped_feedback) * normalization;
     float recursive = feedback_carrier * envelope;
     CONSTRAIN(recursive, -1.0f, 1.0f);
-    delay_line_[write_index_] = recursive;
-    write_index_ = (write_index_ + 1) & (kDelaySize - 1);
+    feedback_state_ = recursive;
 
     const float main = carrier * envelope;
     const float sidebands = carrier * current_depth * \

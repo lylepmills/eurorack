@@ -10,6 +10,15 @@
 
 namespace plaits {
 
+// MORPH drives phase feedback into the feedback oscillator, in cycles at full
+// index. This is the classic feedback-operator sweep (sine -> bright buzz) and
+// is a far stronger timbral lever than the spectral tilt it replaced, which
+// barely perturbed the AM depth.
+#ifndef PLAITS_LOOPBACK_FEEDBACK_DEPTH
+#define PLAITS_LOOPBACK_FEEDBACK_DEPTH 0.5f
+#endif
+const float kLoopbackFeedbackDepth = PLAITS_LOOPBACK_FEEDBACK_DEPTH;
+
 class LoopbackEngine : public Engine {
  public:
   LoopbackEngine() { }
@@ -25,20 +34,13 @@ class LoopbackEngine : public Engine {
       bool* already_enveloped);
 
  private:
-  enum {
-    kDelaySize = 64
-  };
-
-  void ClearDelay();
-  float ReadDelay(float delay) const;
-
-  float delay_line_[kDelaySize];
-  int write_index_;
   float carrier_phase_;
   float feedback_phase_;
+  float feedback_state_;
+  float fb_osc_;
   float ratio_;
   float depth_;
-  float delay_;
+  float morph_;
   float polarity_;
 
   DISALLOW_COPY_AND_ASSIGN(LoopbackEngine);
