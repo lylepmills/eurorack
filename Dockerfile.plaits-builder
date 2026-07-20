@@ -32,6 +32,12 @@ RUN wget -q https://bootstrap.pypa.io/pip/2.7/get-pip.py -O /tmp/get-pip.py \
 RUN useradd --create-home --uid 10001 builder
 
 COPY --chown=builder:builder . /workspace
+# Submodules copy in as ordinary directories, so an uninitialized checkout would
+# produce an image that builds cleanly here and then fails every compile at
+# request time. Fail the build instead.
+RUN test -f /workspace/stmlib/dsp/dsp.h \
+    && test -f /workspace/stm_audio_bootloader/fsk/packet_decoder.h \
+    || { echo "Submodule content missing. Run 'git submodule update --init stmlib stm_audio_bootloader' before docker build." >&2; exit 1; }
 RUN chmod -R a-w /workspace
 
 ARG PLAITS_SOURCE_REVISION=303a9afad9f1

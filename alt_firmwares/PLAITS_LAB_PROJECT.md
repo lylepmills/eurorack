@@ -335,8 +335,11 @@ closed-by-default same-origin proxy at `/api/firmware/*`; it is superseded by
 the direct public API used from `rubato.audio`.
 
 The mixed fixture proves the build path can combine all three factory DX banks
-with Glisson, GENDY, Scanned, and Pulsar in one custom firmware. Its verified
-ARM size is 199,952 bytes text, 48 bytes data, and 27,392 bytes BSS.
+with Glisson, GENDY, Scanned, and Pulsar in one custom firmware. Its ARM size
+was 199,952 bytes text, 48 bytes data, and 27,392 bytes BSS at source revision
+`a7f437964326+55b8da14febf`, and is 199,152 / 48 / 27,360 at `303a9afad9f1`.
+Fixture sizes are revision-specific: re-measure against the revision under test
+rather than treating any figure here as an expected value.
 
 ## Personalized manual prototype
 

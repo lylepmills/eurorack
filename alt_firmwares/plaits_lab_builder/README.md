@@ -77,9 +77,15 @@ pnpm test
 pnpm check
 ```
 
-Build the production-shaped image from the firmware repository root:
+Build the production-shaped image from the firmware repository root. The image
+copies the working tree, so the `stmlib` and `stm_audio_bootloader` submodules
+must be checked out first; an uninitialized submodule copies in as an empty
+directory, and without the Dockerfile's guard the image would build cleanly and
+then fail every compile at request time on a missing
+`stm_audio_bootloader/fsk/packet_decoder.h`:
 
 ```sh
+git submodule update --init stmlib stm_audio_bootloader
 docker build --platform linux/amd64 \
   -t plaits-lab-builder:local \
   -f Dockerfile.plaits-builder .
@@ -90,13 +96,18 @@ the useful proof case because it combines all three built-in DX banks with all
 four Rubato engines, which the former stock/experimental compile switch could
 not express.
 
-Verified mixed-recipe output at this checkpoint:
+Verified mixed-recipe output at source revision `303a9afad9f1`:
 
-- ARM text: 199,952 bytes
+- ARM text: 199,152 bytes
 - ARM data: 48 bytes
-- BSS: 27,392 bytes
-- Binary SHA-256: `564c23226f6bc501ce8d1f2d55bc9f8a505ec7d5cb8e0fae6b263a42a4db78cb`
-- WAV SHA-256: `2e9a93cb88efe9b449a6a93cb8c8f07551ffe4afaec7a750af3f9e511dfd7312`
+- BSS: 27,360 bytes
+- Binary SHA-256: `1e56ba075dcb914e1b137b931d199f2164b8dae8f1c8493ae7446de73fdce521`
+- WAV SHA-256: `b0a6949509a6a84951e7c29e7ef19136a890706b2737d803c1d6f0f751e18bbb`
+
+These are revision-specific. The July 17 schema-5 figures (199,952 / 48 / 27,392,
+binary `564c2322…`, WAV `2e9a93cb…`) held at revision
+`a7f437964326+55b8da14febf` and no longer reproduce, so re-measure against the
+revision under test rather than treating either set as an expected value.
 
 ## Cloud deployment
 
