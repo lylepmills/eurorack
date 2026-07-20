@@ -264,9 +264,9 @@ and the field-guide bank map renders 32-slot recipes as a 2x2
 green/red/amber/ORANGE grid (`303a9af`; 24-slot manuals byte-identical, so
 `PLAITS_MANUAL_CONTRACT` stayed at 1). The flash-meter constants were
 verified unchanged at the new revision (byte-identical builds; the website
-test suite's pinned reference builds pass). Remaining: the on-hardware
-orange-vs-amber LED legibility check — the audition WAV for that pass is a
-live-API 32-slot/6-table build.
+test suite's pinned reference builds pass). The on-hardware check PASSED
+July 20, 2026: Lyle flashed the live-API 32-slot/6-table audition build and
+confirmed the orange fourth bank reads clearly against amber.
 
 ## Loose ends and next milestones
 
