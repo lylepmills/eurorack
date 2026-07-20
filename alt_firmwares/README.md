@@ -79,6 +79,17 @@ The updater, complete bank order, control map, listening-render format, and
 known audition risks are documented in `alt_firmwares/PLAITS_LAB_AUDITION.md`.
 This does not change the default experimental layout described above.
 
+### Review build
+
+`alt_firmwares/plaits_lab_builder/review_recipe.json` is a focused re-review
+layout, distinct from the audition recipe above and with a different bank
+order. It front-loads the six engines under active review as the first six
+green-bank models, in order: Loopback, Lockstep, Reed Pipe, Phase Flock,
+Rulefield, and Spectral Spiral (Tapfield and Phase Weave fill out the green
+bank). Red holds the remaining experimental engines and amber holds stock
+comparison voices. Build it with the same `make wav` path as any other recipe;
+the six review models are green positions 1-6.
+
 ## Fourth dimensions for stock models
 
 The optional fourth macro now extends every stock model. Its midpoint is exactly
