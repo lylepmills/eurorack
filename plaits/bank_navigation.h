@@ -66,19 +66,21 @@ inline int StepWithinBank(
   return base + next_row;
 }
 
-// Change to the next non-empty bank, landing on the row last selected there
-// (per-bank memory). `bank_last_row[b]` is the caller's remembered row for bank
-// b; it is clamped to the destination's real size for safety (e.g. after a
-// rebuild changed a bank's length). Empty banks (size 0) are skipped; if no
-// other bank is non-empty the current bank's remembered row is used, so the
-// result is always a valid engine.
+// Change to the next or previous non-empty bank, landing on the row last
+// selected there (per-bank memory). `bank_last_row[b]` is the caller's
+// remembered row for bank b; it is clamped to the destination's real size for
+// safety (e.g. after a rebuild changed a bank's length). Empty banks (size 0)
+// are skipped; if no other bank is non-empty the current bank's remembered row
+// is used, so the result is always a valid engine. `direction` is +1 or -1;
+// stock Plaits uses the default forward direction, while Ro'Ved's four
+// clickable knobs expose both.
 inline int ChangeBank(
     const uint8_t* bank_sizes, int num_banks, int engine,
-    const uint8_t* bank_last_row) {
+    const uint8_t* bank_last_row, int direction = 1) {
   const int bank = BankOfEngine(bank_sizes, num_banks, engine);
   int next = bank;
   for (int i = 0; i < num_banks; ++i) {
-    next = (next + 1) % num_banks;
+    next = (next + direction + num_banks) % num_banks;
     if (bank_sizes[next] > 0) {
       break;
     }

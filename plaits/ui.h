@@ -124,7 +124,7 @@ class Ui {
   void CalibrateC3();
 
   bool OptionInert(int index) const;
-  void AdvanceOptionIndex();
+  void StepOptionIndex(int delta);
 
   void RealignPots() {
     for (int i = POTS_ADC_CHANNEL_FREQUENCY_POT;

@@ -35,9 +35,16 @@
 
 namespace plaits {
 
+// The Ro'Ved panel (Plum Audio) replaces Plaits' two buttons with four
+// clickable knobs. Rows 1 and 2 keep the stock button pins; rows 3 and 4 are
+// the two additional clicks.
 enum Switch {
   SWITCH_ROW_1,
   SWITCH_ROW_2,
+#ifdef PLAITS_ROVED_PANEL
+  SWITCH_ROW_3,
+  SWITCH_ROW_4,
+#endif  // PLAITS_ROVED_PANEL
   SWITCH_LAST
 };
   
@@ -66,6 +73,12 @@ class Switches {
       return !GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_7);
     } else if (s == SWITCH_ROW_2) {
       return !GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_6);
+#ifdef PLAITS_ROVED_PANEL
+    } else if (s == SWITCH_ROW_3) {
+      return !GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_5);
+    } else if (s == SWITCH_ROW_4) {
+      return !GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_4);
+#endif  // PLAITS_ROVED_PANEL
     } else {
       return false;
     }

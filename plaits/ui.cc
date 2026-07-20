@@ -94,6 +94,18 @@ static const uint8_t kNumSuboscOptions = 6;
 static const uint8_t kNumChordSetOptions = PLAITS_CHORD_TABLE_COUNT;
 static const uint8_t kNumHoldOnTriggerOptions = 2;
 
+// Steps an option by delta, wrapping at either end. delta is +/-1; the Ro'Ved
+// panel is the only caller that passes -1.
+static int CycleOption(int value, int num_values, int delta) {
+  int result = value + delta;
+  if (result < 0) {
+    result = num_values - 1;
+  } else if (result >= num_values) {
+    result = 0;
+  }
+  return result;
+}
+
 void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
   patch_ = patch;
   modulations_ = modulations;
@@ -178,15 +190,13 @@ bool Ui::OptionInert(int index) const {
   return index == OPTION_LIGHT_SUBOSC && !patch_->aux_is_subosc();
 }
 
-// Step to the next light the player can actually use. The loop is bounded so
-// that a future second inert option can never spin here; light 1 is never
-// inert, so it always terminates well before the bound.
-void Ui::AdvanceOptionIndex() {
+// Step to the next light the player can actually use in either direction. The
+// loop is bounded so that a future second inert option can never spin here;
+// the chord light is never inert, so it always terminates well before the
+// bound. Stock Plaits only passes +1; Ro'Ved exposes both directions.
+void Ui::StepOptionIndex(int delta) {
   for (int n = 0; n < kNumOptions; ++n) {
-    option_index_ += 1;
-    if (option_index_ >= kNumOptions) {
-      option_index_ = 0;
-    }
+    option_index_ = CycleOption(option_index_, kNumOptions, delta);
     if (!OptionInert(option_index_)) {
       break;
     }
@@ -512,9 +522,27 @@ void Ui::UpdateLEDs() {
 }
 
 void Ui::Navigate(int button) {
-  ignore_release_[0] = ignore_release_[1] = true;
+  for (int i = 0; i < SWITCH_LAST; ++i) {
+    ignore_release_[i] = true;
+  }
   RealignPots();
 
+#ifdef PLAITS_ROVED_PANEL
+  // Four clickable knobs give both traversals at once, so the build-time
+  // navigation mode is not consulted. TIMBRE/FREQUENCY step one engine
+  // globally; HARMONICS/MORPH change bank with the same per-bank memory used
+  // by stock Plaits. This works with short, empty, sparse, and fourth banks.
+  if (button == 0 || button == 3) {
+    const uint8_t increment =
+        button == 0 ? 1 : PLAITS_ENGINE_COUNT - 1;
+    patch_->engine =
+        (patch_->engine + increment) % PLAITS_ENGINE_COUNT;
+  } else {
+    const int direction = button == 2 ? 1 : -1;
+    patch_->engine = ChangeBank(
+        kBankSizes, kNumBanks, patch_->engine, bank_last_row_, direction);
+  }
+#else  // PLAITS_ROVED_PANEL
   if (PLAITS_BUILD_NAVIGATION_MODE == 1) {
     // Banked: button 0 changes bank (landing on that bank's remembered row —
     // per-bank memory), button 1 steps within the current bank, wrapping after
@@ -527,6 +555,7 @@ void Ui::Navigate(int button) {
     const uint8_t increment = button == 0 ? PLAITS_ENGINE_COUNT - 1 : 1;
     patch_->engine = (patch_->engine + increment) % PLAITS_ENGINE_COUNT;
   }
+#endif  // PLAITS_ROVED_PANEL
 
   // Remember the row within the bank we're now in, so a later change-bank can
   // restore it.
@@ -573,17 +602,29 @@ void Ui::ReadSwitches() {
   switch (mode_) {
     case UI_MODE_NORMAL:
       {
+#ifdef PLAITS_ROVED_PANEL
+        // TIMBRE + FREQUENCY enters the options menu.
+        if ((switches_.just_pressed(Switch(0)) && switches_.pressed(Switch(3))) ||
+            (switches_.just_pressed(Switch(3)) && switches_.pressed(Switch(0)))) {
+          if (OptionInert(option_index_)) {
+            StepOptionIndex(1);
+          }
+          mode_ = UI_MODE_CHANGE_OPTIONS_PRE_RELEASE;
+          break;
+        }
+#else  // PLAITS_ROVED_PANEL
         // Press both buttons to enter options menu
         if ((switches_.just_pressed(Switch(0)) && switches_.pressed(Switch(1))) ||
             (switches_.just_pressed(Switch(1)) && switches_.pressed(Switch(0)))) {
           // option_index_ survives between menu visits, so it can be parked on
           // a light that has since gone inert. Land on a usable one.
           if (OptionInert(option_index_)) {
-            AdvanceOptionIndex();
+            StepOptionIndex(1);
           }
           mode_ = UI_MODE_CHANGE_OPTIONS_PRE_RELEASE;
           break;
         }
+#endif  // PLAITS_ROVED_PANEL
 
         for (int i = 0; i < SWITCH_LAST; ++i) {
           if (switches_.just_pressed(Switch(i))) {
@@ -597,6 +638,48 @@ void Ui::ReadSwitches() {
           }
         }
 
+#ifdef PLAITS_ROVED_PANEL
+        // Each click locks its own knob; FREQUENCY is not locked on press
+        // because its click is the backward-navigation control.
+        if (switches_.just_pressed(Switch(0))) {
+          pots_[POTS_ADC_CHANNEL_TIMBRE_POT].Lock();
+        }
+        if (switches_.just_pressed(Switch(1))) {
+          pots_[POTS_ADC_CHANNEL_MORPH_POT].Lock();
+        }
+        if (switches_.just_pressed(Switch(2))) {
+          pots_[POTS_ADC_CHANNEL_HARMONICS_POT].Lock();
+        }
+
+        if (pots_[POTS_ADC_CHANNEL_MORPH_POT].editing_hidden_parameter() ||
+            pots_[POTS_ADC_CHANNEL_TIMBRE_POT].editing_hidden_parameter()) {
+          mode_ = UI_MODE_DISPLAY_ALTERNATE_PARAMETERS;
+        }
+
+        if (pots_[POTS_ADC_CHANNEL_HARMONICS_POT].editing_hidden_parameter()) {
+          mode_ = UI_MODE_DISPLAY_OCTAVE;
+        }
+
+        // Long press: display the value of the hidden parameters.
+        if (press_time_[0] >= kLongPressTime || press_time_[1] >= kLongPressTime) {
+          fill(&press_time_[0], &press_time_[SWITCH_LAST], 0);
+          mode_ = UI_MODE_DISPLAY_ALTERNATE_PARAMETERS;
+        }
+        if (press_time_[2] >= kLongPressTime) {
+          fill(&press_time_[0], &press_time_[SWITCH_LAST], 0);
+          mode_ = UI_MODE_DISPLAY_OCTAVE;
+        }
+
+        if (switches_.released(Switch(3)) && !ignore_release_[3]) {
+          Navigate(3);
+        } else if (switches_.released(Switch(0)) && !ignore_release_[0]) {
+          Navigate(0);
+        } else if (switches_.released(Switch(1)) && !ignore_release_[1]) {
+          Navigate(1);
+        } else if (switches_.released(Switch(2)) && !ignore_release_[2]) {
+          Navigate(2);
+        }
+#else  // PLAITS_ROVED_PANEL
         if (switches_.just_pressed(Switch(0))) {
           pots_[POTS_ADC_CHANNEL_TIMBRE_POT].Lock();
           pots_[POTS_ADC_CHANNEL_MORPH_POT].Lock();
@@ -634,6 +717,7 @@ void Ui::ReadSwitches() {
         } else if (switches_.released(Switch(1)) && !ignore_release_[1]) {
           Navigate(1);
         }
+#endif  // PLAITS_ROVED_PANEL
       }
       break;
 
@@ -656,8 +740,13 @@ void Ui::ReadSwitches() {
       break;
 
     case UI_MODE_CHANGE_OPTIONS_PRE_RELEASE:
+#ifdef PLAITS_ROVED_PANEL
+      if ((!switches_.pressed(Switch(0)) && !switches_.pressed(Switch(3))) &&
+          (switches_.released(Switch(0)) || switches_.released(Switch(3)))) {
+#else  // PLAITS_ROVED_PANEL
       if ((!switches_.pressed(Switch(0)) && !switches_.pressed(Switch(1))) &&
           (switches_.released(Switch(0)) || switches_.released(Switch(1)))) {
+#endif  // PLAITS_ROVED_PANEL
         pots_[POTS_ADC_CHANNEL_TIMBRE_POT].Unlock();
         pots_[POTS_ADC_CHANNEL_MORPH_POT].Unlock();
         pots_[POTS_ADC_CHANNEL_HARMONICS_POT].Unlock();
@@ -668,61 +757,99 @@ void Ui::ReadSwitches() {
       break;
 
     case UI_MODE_CHANGE_OPTIONS:
-      if (switches_.pressed(Switch(0)) && switches_.pressed(Switch(1))) {
-        ignore_release_[0] = ignore_release_[1] = true;
-        SaveState();
-        mode_ = UI_MODE_NORMAL;
-        break;
-      }
+      {
+#ifdef PLAITS_ROVED_PANEL
+        // TIMBRE + FREQUENCY leaves the menu, matching the gesture that opens
+        // it. MORPH/HARMONICS step the value of the selected option.
+        if (switches_.pressed(Switch(3)) && switches_.pressed(Switch(0))) {
+          ignore_release_[0] = ignore_release_[3] = true;
+          SaveState();
+          mode_ = UI_MODE_NORMAL;
+          break;
+        }
 
-      if (switches_.released(Switch(0))) {
-        AdvanceOptionIndex();
-      }
+        int index_delta = 0;
+        if (switches_.released(Switch(3))) {
+          index_delta = -1;
+        } else if (switches_.released(Switch(0))) {
+          index_delta = 1;
+        }
 
-      if (switches_.released(Switch(1))) {
-        if (option_index_ == OPTION_LIGHT_CHORD_SET) {
-          patch_->chord_set_option += 1;
-          if (patch_->chord_set_option >= kNumChordSetOptions) {
-            patch_->chord_set_option = 0;
+        int value_delta = 0;
+        if (switches_.released(Switch(1))) {
+          value_delta = -1;
+        } else if (switches_.released(Switch(2))) {
+          value_delta = 1;
+        }
+#else  // PLAITS_ROVED_PANEL
+        if (switches_.pressed(Switch(0)) && switches_.pressed(Switch(1))) {
+          ignore_release_[0] = ignore_release_[1] = true;
+          SaveState();
+          mode_ = UI_MODE_NORMAL;
+          break;
+        }
+
+        // Two buttons can only step forward, so both deltas wrap upward.
+        const int index_delta = switches_.released(Switch(0)) ? 1 : 0;
+        const int value_delta = switches_.released(Switch(1)) ? 1 : 0;
+#endif  // PLAITS_ROVED_PANEL
+
+        if (index_delta) {
+          StepOptionIndex(index_delta);
+        }
+
+        if (value_delta) {
+          uint8_t* value = NULL;
+          int num_values = 0;
+          switch (option_index_) {
+            case OPTION_LIGHT_CHORD_SET:
+              value = &patch_->chord_set_option;
+              num_values = kNumChordSetOptions;
+              break;
+            case OPTION_LIGHT_AUX_OUTPUT:
+              value = &patch_->aux_output_option;
+              num_values = kNumAuxOutputOptions;
+              break;
+            case OPTION_LIGHT_SUBOSC:
+              value = &patch_->aux_subosc_option;
+              num_values = kNumSuboscOptions;
+              break;
+            case OPTION_LIGHT_FREQUENCY_POT:
+              value = &patch_->locked_frequency_pot_option;
+              num_values = kNumLockedFrequencyPotOptions;
+              break;
+            case OPTION_LIGHT_MODEL_CV:
+              value = &patch_->model_cv_option;
+              num_values = kNumModelCVOptions;
+              break;
+            case OPTION_LIGHT_LEVEL_CV:
+              value = &patch_->level_cv_option;
+              num_values = kNumLevelCVOptions;
+              break;
+            case OPTION_LIGHT_HOLD_ON_TRIGGER:
+              value = &patch_->hold_on_trigger_option;
+              num_values = kNumHoldOnTriggerOptions;
+              break;
           }
-        } else if (option_index_ == OPTION_LIGHT_AUX_OUTPUT) {
-          patch_->aux_output_option += 1;
-          if (patch_->aux_output_option >= kNumAuxOutputOptions) {
-            patch_->aux_output_option = 0;
-          }
-        } else if (option_index_ == OPTION_LIGHT_SUBOSC) {
-          patch_->aux_subosc_option += 1;
-          if (patch_->aux_subosc_option >= kNumSuboscOptions) {
-            patch_->aux_subosc_option = 0;
-          }
-        } else if (option_index_ == OPTION_LIGHT_FREQUENCY_POT) {
-          // Leaving octave-switching mode while the knob is in the locked
-          // position: freeze the octave it is currently showing, so handing the
-          // knob over to a macro does not move the pitch. Coming back around
-          // from the last value, restore the neutral octave.
-          if (patch_->locked_frequency_pot_option == 0 && static_cast<int>(octave_ * 11.0f) == 9) {
-            locked_octave_ = static_cast<uint8_t>(octave_quantizer_.Process(0.5f * transposition_ + 0.5f));
-          } else if (patch_->locked_frequency_pot_option == kNumLockedFrequencyPotOptions - 1) {
-            locked_octave_ = 4;
-          }
-          patch_->locked_frequency_pot_option += 1;
-          if (patch_->locked_frequency_pot_option >= kNumLockedFrequencyPotOptions) {
-            patch_->locked_frequency_pot_option = 0;
-          }
-        } else if (option_index_ == OPTION_LIGHT_MODEL_CV) {
-          patch_->model_cv_option += 1;
-          if (patch_->model_cv_option >= kNumModelCVOptions) {
-            patch_->model_cv_option = 0;
-          }
-        } else if (option_index_ == OPTION_LIGHT_LEVEL_CV) {
-          patch_->level_cv_option += 1;
-          if (patch_->level_cv_option >= kNumLevelCVOptions) {
-            patch_->level_cv_option = 0;
-          }
-        } else if (option_index_ == OPTION_LIGHT_HOLD_ON_TRIGGER) {
-          patch_->hold_on_trigger_option += 1;
-          if (patch_->hold_on_trigger_option >= kNumHoldOnTriggerOptions) {
-            patch_->hold_on_trigger_option = 0;
+          if (value) {
+            const int old_value = *value;
+            const int new_value = CycleOption(
+                old_value, num_values, value_delta);
+            if (option_index_ == OPTION_LIGHT_FREQUENCY_POT) {
+              // Leaving octave switching while the knob is in the locked
+              // position freezes its current octave. Returning to it restores
+              // the neutral octave. This is keyed on the transition so it
+              // behaves the same in either menu direction.
+              if (old_value == 0 && new_value != 0 &&
+                  static_cast<int>(octave_ * 11.0f) == 9) {
+                locked_octave_ = static_cast<uint8_t>(
+                    octave_quantizer_.Process(
+                        0.5f * transposition_ + 0.5f));
+              } else if (old_value != 0 && new_value == 0) {
+                locked_octave_ = 4;
+              }
+            }
+            *value = static_cast<uint8_t>(new_value);
           }
         }
       }

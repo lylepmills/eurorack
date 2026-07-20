@@ -34,6 +34,10 @@ struct NavSim {
     engine = ChangeBank(sizes, num_banks, engine, last_row);
     RememberRow();
   }
+  void ChangeBack() {
+    engine = ChangeBank(sizes, num_banks, engine, last_row, -1);
+    RememberRow();
+  }
 };
 
 static NavSim MakeSim(const uint8_t* sizes, int num_banks, int engine) {
@@ -124,6 +128,9 @@ int main() {
     s.Change();
     CHECK(s.bank() == 0);             // wraps back to green, skipping red again
     CHECK(s.engine == 3);            // green remembered row 3
+    s.ChangeBack();
+    CHECK(s.bank() == 2);             // reverse also skips empty red
+    CHECK(s.engine == 8);             // amber remembered row 0
   }
 
   // --- Four banks incl. a short orange: {8,8,8,2}. Change wraps orange->green.
@@ -134,6 +141,7 @@ int main() {
     s.StepWithin(); CHECK(s.engine == 25);  // orange row 1
     s.StepWithin(); CHECK(s.engine == 24);  // wraps after 2
     s.Change(); CHECK(s.bank() == 0); CHECK(s.engine == 0);  // -> green
+    s.ChangeBack(); CHECK(s.bank() == 3); CHECK(s.engine == 24);  // -> orange
   }
 
   // --- Clamp guard: a remembered row past a (shrunk) bank's size is clamped.

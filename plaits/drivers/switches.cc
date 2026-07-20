@@ -42,6 +42,10 @@ struct SwitchDefinition {
 const SwitchDefinition switch_definitions[] = {
   { GPIOB, GPIO_Pin_7 },
   { GPIOB, GPIO_Pin_6 },
+#ifdef PLAITS_ROVED_PANEL
+  { GPIOB, GPIO_Pin_5 },
+  { GPIOB, GPIO_Pin_4 },
+#endif  // PLAITS_ROVED_PANEL
 };
 
 void Switches::Init() {
