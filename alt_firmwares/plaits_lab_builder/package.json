@@ -7,7 +7,9 @@
     "check": "tsc --noEmit",
     "test": "node --experimental-strip-types --test test/*.test.mts",
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "catalog:check": "../plaits_lab_catalog/sync_public_catalog.sh --check",
+    "catalog:regen": "../plaits_lab_catalog/sync_public_catalog.sh",
+    "deploy": "pnpm run catalog:check && wrangler deploy"
   },
   "dependencies": {
     "@cloudflare/containers": "0.3.7"

@@ -800,11 +800,11 @@
     {
       "id": "dx7-bank-a",
       "packageId": "mutable-instruments/dx7-bank-a",
-      "name": "DX7 Bank A",
+      "name": "6-Op FM Bank A",
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "FM",
-      "description": "The first bank of classic six-operator FM patches stored in Plaits user data.",
+      "description": "The first bank of classic DX7-compatible six-operator FM patches stored in Plaits user data.",
       "tags": [
         "fm",
         "dx7",
@@ -827,8 +827,8 @@
         "tone": "amber"
       },
       "version": "1.0.0",
-      "digest": "sha256:dba89a427695f327ab74bba9bb85eedf4b1382357bb4ad86d7ebf945a13acf4d",
-      "documentationDigest": "sha256:dbae5f5cef106bf44213f37db4ec53e7de4aec13d39ea003eb9cc0fecc97c83f",
+      "digest": "sha256:a2f7bf22ed2cdff044ef3e65b3a8a9b934693376a0c256eb8e8cb2c5bd72be69",
+      "documentationDigest": "sha256:a937f0488fec1506b5bd75478fde42953241e123c072d2acc6eaade157ee7bec",
       "manual": {
         "controls": {
           "harmonics": "Selects a patch from the first built-in six-operator FM bank.",
@@ -846,11 +846,11 @@
     {
       "id": "dx7-bank-b",
       "packageId": "mutable-instruments/dx7-bank-b",
-      "name": "DX7 Bank B",
+      "name": "6-Op FM Bank B",
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "FM",
-      "description": "The second bank of classic six-operator FM patches stored in Plaits user data.",
+      "description": "The second bank of classic DX7-compatible six-operator FM patches stored in Plaits user data.",
       "tags": [
         "fm",
         "dx7",
@@ -873,8 +873,8 @@
         "tone": "amber"
       },
       "version": "1.0.0",
-      "digest": "sha256:467820ec76fc5e0a034ebe887fd246d0a740a9668f10c04be240697376952e9b",
-      "documentationDigest": "sha256:5315ae95c583436b6d4a3175717831e982082ef5971e4f841b4e42888e95f3b3",
+      "digest": "sha256:1981afef7c1d16a7b3132930843d175c8433c7c348eb804228f981253d0b0b8d",
+      "documentationDigest": "sha256:70b2bc0f9d3da9b44f75ea11d190a4af6c3ad8fbcd97a1090dbcc8694e88af14",
       "manual": {
         "controls": {
           "harmonics": "Selects a patch from the second built-in six-operator FM bank.",
@@ -892,11 +892,11 @@
     {
       "id": "dx7-bank-c",
       "packageId": "mutable-instruments/dx7-bank-c",
-      "name": "DX7 Bank C",
+      "name": "6-Op FM Bank C",
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "FM",
-      "description": "The third bank of classic six-operator FM patches stored in Plaits user data.",
+      "description": "The third bank of classic DX7-compatible six-operator FM patches stored in Plaits user data.",
       "tags": [
         "fm",
         "dx7",
@@ -919,8 +919,8 @@
         "tone": "amber"
       },
       "version": "1.0.0",
-      "digest": "sha256:dea69c46bffa00e46e68a7f07029f49f97308cf3aff9106a1fe025073ed26439",
-      "documentationDigest": "sha256:800a079192844f7be0e5a818be0be594f597cefb6b899e346dfbba7253a48a9e",
+      "digest": "sha256:47560766e8cd4792a85f8c90645912c5abce88871b0e2b1845fe7ab5fda6d2f5",
+      "documentationDigest": "sha256:0e7f87fa4e1c085ffe59b6e51132107d24db5f65ecdabe4bdbcf0e89ba327095",
       "manual": {
         "controls": {
           "harmonics": "Selects a patch from the third built-in six-operator FM bank.",
@@ -1255,7 +1255,7 @@
         "Isolated sidebands"
       ],
       "version": "1.0.0",
-      "digest": "sha256:9d70313d7128638de71cd8b8ba7cea5561a85068db64fe717f68c184f743f974",
+      "digest": "sha256:575887b9e82e9a85828e6ac91149616d576438ad7a3bc440d7e92f1f7008ce67",
       "documentationDigest": "sha256:6617480462a58381787496d9e23b998678168abd5ffb3481ab0181ea0843592c",
       "manual": {
         "controls": {
@@ -1295,7 +1295,7 @@
         "Acquisition and phase error"
       ],
       "version": "1.0.0",
-      "digest": "sha256:69d5628f5afc6cdd1927ceed6323924e7f4349f8305dcd8f545a4c67e3e816a3",
+      "digest": "sha256:9567f7bd611a3d35f01f3c3545cf212b08e8f92fed1005f834149b422b3a7b7e",
       "documentationDigest": "sha256:7483de973d5ad4ff5ff444b6cfff6ba2eea6ed75ab1e2300e3920c71e7153c1b",
       "manual": {
         "controls": {
@@ -1535,7 +1535,7 @@
         "Reed flow"
       ],
       "version": "1.0.0",
-      "digest": "sha256:ad43c51c77fd04edd8858eae7f4f03a796702f4958c861f8065b8909abd33652",
+      "digest": "sha256:144b0e0b98f4866591f22bbb75a15c4383aa3524657ccea958f08eeabb80a37c",
       "documentationDigest": "sha256:5235345bc520390cc0b3b00a683bf860b3330b3ae873007adcd9a26ec17ecf07",
       "manual": {
         "controls": {

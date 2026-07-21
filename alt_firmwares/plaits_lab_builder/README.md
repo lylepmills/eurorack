@@ -116,8 +116,21 @@ Container are managed by `wrangler.jsonc`. Before each firmware-source rollout:
 
 1. Compute and set a new immutable `PLAITS_SOURCE_REVISION`.
 2. Build and push the matching container image tag.
-3. Run the contract, generator, type, and dry-run deployment checks.
-4. Deploy with `pnpm deploy` and wait for the Container image rollout.
+3. Regenerate the engine allowlist: `pnpm run catalog:regen` (rewrites
+   `../plaits_lab_catalog/public_catalog.json` from the exporter at the
+   checked-out commit), then commit any change. Each engine digest hashes its
+   catalog metadata *and* source bytes, so even a display-name edit invalidates
+   it — a stale `public_catalog.json` makes the Worker reject every recipe the
+   website emits with "unavailable package version". `pnpm run deploy` runs
+   `catalog:check` as a hard gate and refuses to ship a stale allowlist.
+4. Re-sync the website catalog to the SAME commit
+   (`website/scripts/sync-plaits-catalog.mjs`) so its per-engine digests match
+   the builder's — otherwise engines whose source moved since the old pin start
+   rejecting. The builder allowlist and the website snapshot must always be
+   generated from one commit.
+5. Run the contract, generator, type, and dry-run deployment checks.
+6. Deploy with `pnpm run deploy` (not `pnpm deploy`, which is pnpm's built-in
+   workspace-deploy command) and wait for the Container image rollout.
 
 Cloudflare's rate-limit binding allows five new compilation requests per source
 IP per minute. Cache hits and repeated polls for an already queued build bypass
