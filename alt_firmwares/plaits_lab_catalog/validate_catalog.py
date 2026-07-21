@@ -13,6 +13,7 @@ from typing import Any
 CATALOG_DIR = Path(__file__).resolve().parent
 REPO_ROOT = CATALOG_DIR.parents[1]
 CATALOG_PATH = CATALOG_DIR / "catalog.json"
+SHARED_MODULES_PATH = CATALOG_DIR / "shared_modules.json"
 ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 PACKAGE_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*$")
 CONTROL_IDS = ("harmonics", "timbre", "morph", "macro")
@@ -47,10 +48,29 @@ def documentation_digest(engine: dict[str, Any], manual: dict[str, Any]) -> str:
     return "sha256:" + hashlib.sha256(payload).hexdigest()
 
 
+def load_shared_modules() -> dict[str, Any]:
+    value = json.loads(SHARED_MODULES_PATH.read_text(encoding="utf-8"))
+    modules = value.get("modules")
+    if not isinstance(modules, dict):
+        raise ValueError("shared_modules.json must contain a modules object")
+    for module_id, module in modules.items():
+        if not ID_PATTERN.fullmatch(module_id):
+            raise ValueError(f"invalid shared module ID: {module_id}")
+        if not module.get("sources"):
+            raise ValueError(f"shared module {module_id} must declare at least one source")
+        for relative in [*module.get("headers", []), *module["sources"]]:
+            path = (REPO_ROOT / relative).resolve()
+            path.relative_to(REPO_ROOT)
+            if not path.is_file():
+                raise ValueError(f"shared module {module_id} file does not exist: {relative}")
+    return modules
+
+
 def validate_catalog(catalog: dict[str, Any]) -> None:
     engines = catalog.get("engines")
     if not isinstance(engines, list) or not engines:
         raise ValueError("catalog engines must be a non-empty array")
+    known_modules = set(load_shared_modules())
     ids: set[str] = set()
     packages: set[str] = set()
     for engine in engines:
@@ -80,6 +100,12 @@ def validate_catalog(catalog: dict[str, Any]) -> None:
         post = engine.get("postProcessing", {})
         if set(post) != {"alreadyEnveloped", "outGain", "auxGain"}:
             raise ValueError(f"{engine_id} has invalid post-processing metadata")
+        modules = engine.get("sharedModules")
+        if modules is not None:
+            if (not isinstance(modules, list)
+                    or len(modules) != len(set(modules))
+                    or any(module_id not in known_modules for module_id in modules)):
+                raise ValueError(f"{engine_id} references an unknown or duplicate shared module")
 
     for name, slots in catalog.get("presets", {}).items():
         if len(slots) not in (24, 32) or any(engine_id not in ids for engine_id in slots):

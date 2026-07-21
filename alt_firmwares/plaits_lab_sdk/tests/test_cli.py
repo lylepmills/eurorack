@@ -19,6 +19,63 @@ plaits_lab = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(plaits_lab)
 
 
+CHORD_PROBE_HEADER = """\
+#ifndef PLAITS_LAB_CHORD_PROBE_ENGINE_H_
+#define PLAITS_LAB_CHORD_PROBE_ENGINE_H_
+
+#include "plaits/dsp/engine/engine.h"
+#include "plaits/dsp/chords/chord_bank.h"
+
+namespace plaits {
+
+class ChordProbeEngine : public Engine {
+ public:
+  ChordProbeEngine() { }
+  ~ChordProbeEngine() { }
+  virtual void Init(stmlib::BufferAllocator* allocator);
+  virtual void Reset();
+  virtual void LoadUserData(const uint8_t* user_data) { }
+  virtual void Render(const EngineParameters& parameters,
+      float* out, float* aux, size_t size, bool* already_enveloped);
+
+ private:
+  ChordBank chords_;
+  DISALLOW_COPY_AND_ASSIGN(ChordProbeEngine);
+};
+
+}  // namespace plaits
+
+#endif  // PLAITS_LAB_CHORD_PROBE_ENGINE_H_
+"""
+
+CHORD_PROBE_IMPL = """\
+#include "chord-probe_engine.h"
+
+namespace plaits {
+
+void ChordProbeEngine::Init(stmlib::BufferAllocator* allocator) {
+  chords_.Init(allocator);
+  Reset();
+}
+
+void ChordProbeEngine::Reset() {
+  chords_.Reset();
+}
+
+void ChordProbeEngine::Render(const EngineParameters& parameters,
+    float* out, float* aux, size_t size, bool* already_enveloped) {
+  chords_.set_chord(parameters.harmonics, 0);
+  for (size_t i = 0; i < size; ++i) {
+    out[i] = 0.0f;
+    aux[i] = 0.0f;
+  }
+  *already_enveloped = false;
+}
+
+}  // namespace plaits
+"""
+
+
 class PackageTests(unittest.TestCase):
     def test_reference_packages_validate(self) -> None:
         packages = [
@@ -116,6 +173,85 @@ class PackageTests(unittest.TestCase):
                 self.assertEqual(submission["state"], "draft")
                 self.assertEqual(set(submission["audioAnalysis"]), {"hero", "triggered"})
                 self.assertIn("package/src/bright-wave_engine.cc", archive.namelist())
+
+    def test_shared_module_include_requires_declaration(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source = Path(temp_dir) / "chordy.cc"
+            source.write_text(
+                '#include "plaits/dsp/chords/chord_bank.h"\nvoid Render() {}\n',
+                encoding="utf-8",
+            )
+            with self.assertRaises(plaits_lab.PackageError) as context:
+                plaits_lab.validate_community_source([source])
+            self.assertIn("sharedModules", str(context.exception))
+            # Declaring the owning module makes the identical source pass.
+            plaits_lab.validate_community_source([source], frozenset({"chord-bank"}))
+
+    def test_forking_chord_engine_declares_shared_module(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "chords-fork"
+            with redirect_stdout(io.StringIO()):
+                plaits_lab.init_command(SimpleNamespace(
+                    output=str(output), from_engine="chords",
+                    author="Test Author", package_id="test-author/chords-fork",
+                    slug="chords-fork", name=None,
+                ))
+            loaded = plaits_lab.load_package(str(output))
+            self.assertEqual(loaded["manifest"]["sharedModules"], ["chord-bank"])
+            # The fork vendors only its own engine file; chord_bank is a module.
+            self.assertEqual(
+                [path.name for path in loaded["source_files"]], ["chords-fork_engine.cc"],
+            )
+
+    def test_unknown_shared_module_is_rejected(self) -> None:
+        with self.assertRaises(plaits_lab.PackageError):
+            plaits_lab.validate_shared_modules(["not-a-real-module"])
+
+    @unittest.skipUnless(shutil.which("c++") or shutil.which("g++"), "host C++ compiler required")
+    def test_from_scratch_engine_can_link_shared_chord_bank(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            package_dir = Path(temp_dir) / "chord-probe"
+            with redirect_stdout(io.StringIO()):
+                plaits_lab.init_command(SimpleNamespace(
+                    output=str(package_dir), from_engine="blank",
+                    author="Test Author", package_id="test-author/chord-probe",
+                    slug="chord-probe", name="Chord Probe",
+                ))
+            (package_dir / "src" / "chord-probe_engine.h").write_text(
+                CHORD_PROBE_HEADER, encoding="utf-8")
+            (package_dir / "src" / "chord-probe_engine.cc").write_text(
+                CHORD_PROBE_IMPL, encoding="utf-8")
+            manifest_path = package_dir / "plaits-engine.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["sharedModules"] = ["chord-bank"]
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+            package = plaits_lab.load_package(str(package_dir))
+            renderer = Path(temp_dir) / "render-model"
+            plaits_lab.compile_renderer(package, renderer, None)
+            self.assertTrue(renderer.exists())
+
+    @unittest.skipUnless(shutil.which("c++") or shutil.which("g++"), "host C++ compiler required")
+    def test_reference_chord_consumers_link(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            for engine_id in ("chords", "chiptune", "string-machine"):
+                with self.subTest(engine=engine_id):
+                    package = plaits_lab.builtin_package(engine_id)
+                    renderer = Path(temp_dir) / f"reference-{engine_id}"
+                    plaits_lab.compile_renderer(package, renderer, None)
+                    self.assertTrue(renderer.exists())
+
+    @unittest.skipUnless(shutil.which("c++") or shutil.which("g++"), "host C++ compiler required")
+    def test_six_op_reference_survives_null_user_data(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            package = plaits_lab.builtin_package("dx7-bank-a")
+            renderer = Path(temp_dir) / "reference-dx7"
+            plaits_lab.compile_renderer(package, renderer, None)
+            scenario = package["scenarios"][0]
+            output = Path(temp_dir) / "dx7.wav"
+            # Before the LoadUserData null-guard this render SIGSEGVs.
+            plaits_lab.run_scenario(package, renderer, scenario, output)
+            self.assertTrue(output.exists())
 
 
 if __name__ == "__main__":

@@ -295,9 +295,12 @@
         "kind": "official",
         "tone": "green"
       },
+      "sharedModules": [
+        "chord-bank"
+      ],
       "version": "1.0.0",
-      "digest": "sha256:f8145ec26c1bb7f84482a611c251c49c21de7e0576cc839b438b5b019b439b3e",
-      "documentationDigest": "sha256:dd35efd053846c7416dd02679feae6ead8f562ee89b173f6c819c9492ae7c67c",
+      "digest": "sha256:b3c771ef1e7d4c2dc360111c821ee72c272e5a32e31f2f033f9d4c61a3804127",
+      "documentationDigest": "sha256:4c84392a2ec269bd370cddd079c90911bf09ef76757b80bd2e48b0a9fb4eace7",
       "manual": {
         "controls": {
           "harmonics": "Selects the chord voicing from the active chord table.",
@@ -827,7 +830,7 @@
         "tone": "amber"
       },
       "version": "1.0.0",
-      "digest": "sha256:a2f7bf22ed2cdff044ef3e65b3a8a9b934693376a0c256eb8e8cb2c5bd72be69",
+      "digest": "sha256:df569fa34107b8bb88596454af32db72909888db29f994e98cd0f557e642765d",
       "documentationDigest": "sha256:a937f0488fec1506b5bd75478fde42953241e123c072d2acc6eaade157ee7bec",
       "manual": {
         "controls": {
@@ -873,7 +876,7 @@
         "tone": "amber"
       },
       "version": "1.0.0",
-      "digest": "sha256:1981afef7c1d16a7b3132930843d175c8433c7c348eb804228f981253d0b0b8d",
+      "digest": "sha256:5d833d1fa48dc21fcc80b18e131efa73c6b4bd53b0724091bdce83a71e6a7847",
       "documentationDigest": "sha256:70b2bc0f9d3da9b44f75ea11d190a4af6c3ad8fbcd97a1090dbcc8694e88af14",
       "manual": {
         "controls": {
@@ -919,7 +922,7 @@
         "tone": "amber"
       },
       "version": "1.0.0",
-      "digest": "sha256:47560766e8cd4792a85f8c90645912c5abce88871b0e2b1845fe7ab5fda6d2f5",
+      "digest": "sha256:3a85ea76ec6f2d680ec01ad85511d74327f134a30001404938389f152105b508",
       "documentationDigest": "sha256:0e7f87fa4e1c085ffe59b6e51132107d24db5f65ecdabe4bdbcf0e89ba327095",
       "manual": {
         "controls": {
@@ -1008,9 +1011,12 @@
         "kind": "custom",
         "tone": "amber"
       },
+      "sharedModules": [
+        "chord-bank"
+      ],
       "version": "1.0.0",
-      "digest": "sha256:d6c3eab4a81de10ba2f37fc67d156e3960e07ad7f997fc77e50336c9d97d7719",
-      "documentationDigest": "sha256:7202e1d754f1f4dd345e085be20072b9ae544f9cbb448f97ee730dbe7da0899c",
+      "digest": "sha256:78506697aefc2d3cfa4157ba60ec2eb3433a7436dd716b6f60998939a1cf5a9a",
+      "documentationDigest": "sha256:7c844ae5f3392225be851856a3a85f138a60067002b2940b008079842a962214",
       "manual": {
         "controls": {
           "harmonics": "Selects chord voicing and harmonic registration.",
@@ -1053,9 +1059,12 @@
         "kind": "custom",
         "tone": "amber"
       },
+      "sharedModules": [
+        "chord-bank"
+      ],
       "version": "1.0.0",
-      "digest": "sha256:90a24a548e4851339da1e57a4374caf9ef0e0ae0e07a49994f4db2470bca8bef",
-      "documentationDigest": "sha256:5cc1ff079113cf9050d88357bd950087c4ed72825a7c575ecf478682f74a95b6",
+      "digest": "sha256:bad99d4965f2e73165798e7d3ae49449d29ba13fc7a92cd815db814f6f5170ba",
+      "documentationDigest": "sha256:86c171eb509b4ae69fa7a142e0ff85ea13c9b5e1eda41e373772c1badc77feb7",
       "manual": {
         "controls": {
           "harmonics": "Selects the chord or interval pattern of the square-wave voices.",

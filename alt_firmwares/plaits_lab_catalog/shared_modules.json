@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "modules": {
+    "chord-bank": {
+      "name": "Chord bank",
+      "description": "Mutable Instruments' ChordBank — the interval/chord table plus voicing, inversion, and ratio helpers reused by chord-based engines. Linked from the pinned firmware source; a package that declares it may include \"plaits/dsp/chords/chord_bank.h\" and reuse ChordBank without vendoring a copy.",
+      "license": "MIT",
+      "headers": ["plaits/dsp/chords/chord_bank.h"],
+      "sources": ["plaits/dsp/chords/chord_bank.cc"]
+    }
+  }
+}

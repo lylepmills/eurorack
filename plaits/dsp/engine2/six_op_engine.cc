@@ -94,8 +94,14 @@ void SixOpEngine::Reset() {
 }
 
 void SixOpEngine::LoadUserData(const uint8_t* user_data) {
-  for (int i = 0; i < kNumPatchesPerBank; ++i) {
-    patches_[i].Unpack(user_data + i * fm::Patch::SYX_SIZE);
+  // The shipped firmware always supplies a real patch bank, but the SDK preview
+  // and the reference-render path call LoadUserData(NULL) for engines with no
+  // bank; unpacking a null pointer dereferences it. Guard the unpack and still
+  // reset the voices so a null load leaves a well-defined (default) patch set.
+  if (user_data) {
+    for (int i = 0; i < kNumPatchesPerBank; ++i) {
+      patches_[i].Unpack(user_data + i * fm::Patch::SYX_SIZE);
+    }
   }
   for (int i = 0; i < kNumSixOpVoices; ++i) {
     voice_[i].UnloadPatch();

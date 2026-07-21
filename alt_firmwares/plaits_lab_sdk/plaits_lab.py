@@ -28,6 +28,7 @@ SDK_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SDK_DIR.parents[1]
 CATALOG_PATH = SDK_DIR.parent / "plaits_lab_catalog/catalog.json"
 PUBLIC_CATALOG_PATH = SDK_DIR.parent / "plaits_lab_catalog/public_catalog.json"
+SHARED_MODULES_PATH = SDK_DIR.parent / "plaits_lab_catalog/shared_modules.json"
 ALLOWED_LICENSES = {"MIT", "BSD-2-Clause", "BSD-3-Clause", "ISC"}
 CONTROL_IDS = ["harmonics", "timbre", "morph", "macro"]
 ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*$")
@@ -124,6 +125,7 @@ def builtin_package(identifier: str) -> dict[str, Any]:
             "packageType": "builtin-reference",
             "source": {"className": source["className"]},
             "postProcessing": engine["postProcessing"],
+            "sharedModules": list(engine.get("sharedModules", [])),
         },
         "repo_root": REPO_ROOT,
         "source_root": REPO_ROOT,
@@ -131,6 +133,46 @@ def builtin_package(identifier: str) -> dict[str, Any]:
         "source_files": [REPO_ROOT / path for path in source["files"]],
         "scenarios": default_scenarios(),
     }
+
+
+def load_shared_modules() -> dict[str, Any]:
+    """Return the shared-module registry (module id -> {headers, sources, ...})."""
+    data = read_json(SHARED_MODULES_PATH)
+    require(isinstance(data, dict) and isinstance(data.get("modules"), dict),
+            "shared_modules.json must contain a modules object")
+    return data["modules"]
+
+
+def shared_module_header_owners() -> dict[str, str]:
+    """Map each shared-module header (e.g. plaits/dsp/chords/chord_bank.h) to its module id."""
+    return {
+        header: module_id
+        for module_id, module in load_shared_modules().items()
+        for header in module.get("headers", [])
+    }
+
+
+def validate_shared_modules(module_ids: Any) -> list[str]:
+    """Validate a declared sharedModules list against the registry; return it."""
+    registry = load_shared_modules()
+    require(isinstance(module_ids, list), "sharedModules must be an array")
+    require(all(isinstance(item, str) for item in module_ids),
+            "sharedModules entries must be strings")
+    require(len(module_ids) == len(set(module_ids)), "sharedModules must be unique")
+    for module_id in module_ids:
+        require(module_id in registry,
+                f"unknown shared module {module_id!r}; run `plaits-lab modules`")
+    return module_ids
+
+
+def shared_module_sources(module_ids: list[str], repo_root: Path) -> list[Path]:
+    """Resolve declared shared modules to the repo .cc files that must be linked."""
+    registry = load_shared_modules()
+    sources: list[Path] = []
+    for module_id in module_ids:
+        for relative in registry[module_id].get("sources", []):
+            sources.append(repo_root / relative)
+    return sources
 
 
 def read_json(path: Path) -> Any:
@@ -200,7 +242,10 @@ def validate_scenario(value: Any, index: int) -> None:
                 f"scenarios[{index}].controls.{control_id} values must be between 0 and 1")
 
 
-def validate_community_source(paths: list[Path]) -> None:
+def validate_community_source(
+    paths: list[Path], declared_modules: frozenset[str] = frozenset(),
+) -> None:
+    module_owners = shared_module_header_owners()
     for path in paths:
         source = path.read_text(encoding="utf-8")
         policy_source = strip_cpp_comments(source)
@@ -216,6 +261,13 @@ def validate_community_source(paths: list[Path]) -> None:
                 allowed = include.startswith(("plaits/dsp/", "stmlib/")) \
                     or include == "plaits/resources.h" or "/" not in include
                 require(allowed, f"{path.name} uses non-SDK include \"{include}\"")
+                # A header backed by a shared module carries out-of-line symbols
+                # that only link when its module is declared; catch it here with
+                # an actionable message instead of a raw linker error.
+                owner = module_owners.get(include)
+                require(owner is None or owner in declared_modules,
+                        f'{path.name} includes "{include}" — add "{owner}" to '
+                        f'sharedModules in plaits-engine.json to link it')
 
 
 def load_package(package_arg: str) -> dict[str, Any]:
@@ -229,7 +281,7 @@ def load_package(package_arg: str) -> dict[str, Any]:
         "name", "author", "origin", "license", "description", "family", "tags",
         "controls", "outputs", "source", "postProcessing", "scenarios",
     }
-    optional = {"upstream", "forkedFrom"}
+    optional = {"upstream", "forkedFrom", "sharedModules"}
     require(required <= set(manifest), f"manifest is missing {sorted(required - set(manifest))}")
     require(set(manifest) <= required | optional,
             f"manifest has unsupported fields {sorted(set(manifest) - required - optional)}")
@@ -272,6 +324,8 @@ def load_package(package_arg: str) -> dict[str, Any]:
                 and CATALOG_ID_PATTERN.fullmatch(manifest["forkedFrom"]) is not None,
                 "forkedFrom must be a built-in catalog ID")
         builtin_engine(manifest["forkedFrom"])
+    if "sharedModules" in manifest:
+        validate_shared_modules(manifest["sharedModules"])
     require((package_dir / "LICENSE").is_file(), "package must contain LICENSE")
     require((package_dir / "README.md").is_file(), "package must contain README.md")
 
@@ -316,7 +370,10 @@ def load_package(package_arg: str) -> dict[str, Any]:
         require(source_file.is_file(), f"source file does not exist: {source_file}")
         source_files.append(source_file)
     if manifest["packageType"] == "community":
-        validate_community_source([header, *source_files])
+        validate_community_source(
+            [header, *source_files],
+            frozenset(manifest.get("sharedModules", [])),
+        )
 
     post = manifest["postProcessing"]
     require(isinstance(post, dict) and set(post) == {"alreadyEnveloped", "outGain", "auxGain"},
@@ -375,6 +432,28 @@ def compile_renderer(
             for item in upstream["source"]["files"]
             if Path(item).stem != primary_stem
         ]
+    shared_sources = shared_module_sources(
+        manifest.get("sharedModules", []), package["repo_root"]
+    )
+    # Every translation unit linked into the renderer, de-duplicated by resolved
+    # path so a shared module already reachable as a fork support file (or in the
+    # always-linked base set) is never handed to the compiler twice.
+    translation_units = [
+        Path(__file__).with_name("render_model.cc"),
+        *package["source_files"],
+        *support_files,
+        *shared_sources,
+        package["repo_root"] / "plaits/resources.cc",
+        package["repo_root"] / "stmlib/dsp/units.cc",
+        package["repo_root"] / "stmlib/utils/random.cc",
+    ]
+    seen_units: set[str] = set()
+    compiled: list[str] = []
+    for unit in translation_units:
+        key = str(unit.resolve())
+        if key not in seen_units:
+            seen_units.add(key)
+            compiled.append(str(unit))
     command = [
         compiler_path(requested_compiler),
         "-std=c++11",
@@ -392,12 +471,7 @@ def compile_renderer(
         str(package["repo_root"]),
         "-I",
         str(package["source_root"]),
-        str(Path(__file__).with_name("render_model.cc")),
-        *[str(item) for item in package["source_files"]],
-        *[str(item) for item in support_files],
-        str(package["repo_root"] / "plaits/resources.cc"),
-        str(package["repo_root"] / "stmlib/dsp/units.cc"),
-        str(package["repo_root"] / "stmlib/utils/random.cc"),
+        *compiled,
         "-o",
         str(output),
     ]
@@ -551,6 +625,7 @@ def init_command(args: argparse.Namespace) -> int:
         post = {"alreadyEnveloped": False, "outGain": 0.8, "auxGain": 0.8}
         header, implementation = blank_source(slug, class_name)
         forked_from = None
+        forked_shared: list[str] = []
     else:
         upstream, public = builtin_engine(args.from_engine)
         name = args.name or f"{upstream['name']} Fork"
@@ -575,6 +650,7 @@ def init_command(args: argparse.Namespace) -> int:
         implementation = primary.read_text(encoding="utf-8").replace(original_class, class_name)
         implementation = implementation.replace(upstream["source"]["header"], f"{slug}_engine.h")
         forked_from = upstream["id"]
+        forked_shared = list(upstream.get("sharedModules", []))
         upstream_reference = f"{upstream['packageId']}@{public['version']} ({public['digest']})"
 
     header_name = f"{slug}_engine.h"
@@ -607,6 +683,8 @@ def init_command(args: argparse.Namespace) -> int:
     if forked_from:
         manifest["forkedFrom"] = forked_from
         manifest["upstream"] = upstream_reference
+        if forked_shared:
+            manifest["sharedModules"] = forked_shared
     (output / "plaits-engine.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     (tests_dir / "scenarios.json").write_text(json.dumps(default_scenarios(), indent=2) + "\n", encoding="utf-8")
     (output / "LICENSE").write_text(mit_license(args.author), encoding="utf-8")
@@ -625,6 +703,22 @@ def catalog_command(args: argparse.Namespace) -> int:
     for engine_id, engine in catalog.items():
         item = public[engine_id]
         print(f"{engine_id:24} {engine['name']:24} {item['version']}  {engine['origin']}")
+    return 0
+
+
+def modules_command(args: argparse.Namespace) -> int:
+    modules = load_shared_modules()
+    if not modules:
+        print("no shared modules are available")
+        return 0
+    for module_id, module in modules.items():
+        print(f"{module_id:20} {module.get('name', module_id)}")
+        headers = ", ".join(module.get("headers", []))
+        if headers:
+            print(f"  include: {headers}")
+        description = module.get("description")
+        if description:
+            print(f"  {description}")
     return 0
 
 
@@ -1122,6 +1216,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     catalog_parser = subparsers.add_parser("catalog", help="list forkable built-in packages")
     catalog_parser.set_defaults(handler=catalog_command)
+
+    modules_parser = subparsers.add_parser("modules", help="list shared library modules a package may declare")
+    modules_parser.set_defaults(handler=modules_command)
 
     init_parser = subparsers.add_parser("init", help="create a blank package or fork a built-in model")
     init_parser.add_argument("output")

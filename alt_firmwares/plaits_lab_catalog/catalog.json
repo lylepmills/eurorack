@@ -56,7 +56,8 @@
       "description": "Four-voice chord voicings with selectable waveforms and inversions.", "tags": ["chord", "polyphonic", "harmony"],
       "controls": ["Chord", "Waveform", "Voicing", "Voice-group balance"], "outputs": ["Four-voice chord", "Root or alternate voice group"],
       "artwork": { "icon": "/model-icons/chords.png", "kind": "official", "tone": "green" },
-      "source": { "header": "plaits/dsp/engine/chord_engine.h", "className": "ChordEngine", "member": "chord_engine_", "files": ["plaits/dsp/engine/chord_engine.cc", "plaits/dsp/chords/chord_bank.cc"] },
+      "source": { "header": "plaits/dsp/engine/chord_engine.h", "className": "ChordEngine", "member": "chord_engine_", "files": ["plaits/dsp/engine/chord_engine.cc"] },
+      "sharedModules": ["chord-bank"],
       "postProcessing": { "alreadyEnveloped": false, "outGain": 0.8, "auxGain": 0.8 }
     },
     {
@@ -185,6 +186,7 @@
       "controls": ["Chord", "Registration", "Ensemble", "Ensemble amount"], "outputs": ["String ensemble", "Alternate registration"],
       "artwork": { "icon": "/model-icons/string-machine.png", "kind": "custom", "tone": "amber" },
       "source": { "header": "plaits/dsp/engine2/string_machine_engine.h", "className": "StringMachineEngine", "member": "string_machine_engine_", "files": ["plaits/dsp/engine2/string_machine_engine.cc"] },
+      "sharedModules": ["chord-bank"],
       "postProcessing": { "alreadyEnveloped": false, "outGain": 0.8, "auxGain": 0.8 }
     },
     {
@@ -193,6 +195,7 @@
       "controls": ["Chord", "Arpeggio", "Shape", "Register preset"], "outputs": ["Chiptune chord or arpeggio", "Bass voice"],
       "artwork": { "icon": "/model-icons/chiptune.png", "kind": "custom", "tone": "amber" },
       "source": { "header": "plaits/dsp/engine2/chiptune_engine.h", "className": "ChiptuneEngine", "member": "chiptune_engine_", "behavior": "chiptune", "files": ["plaits/dsp/engine2/chiptune_engine.cc"] },
+      "sharedModules": ["chord-bank"],
       "postProcessing": { "alreadyEnveloped": false, "outGain": 0.5, "auxGain": 0.5 }
     },
     {

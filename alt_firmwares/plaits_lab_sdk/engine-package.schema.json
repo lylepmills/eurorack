@@ -92,7 +92,12 @@
     },
     "scenarios": { "type": "string", "pattern": "^[A-Za-z0-9_./-]+\\.json$" },
     "upstream": { "type": "string", "maxLength": 240 },
-    "forkedFrom": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" }
+    "forkedFrom": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "sharedModules": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" }
+    }
   },
   "$defs": {
     "control": {
