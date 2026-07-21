@@ -303,7 +303,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", "application/pdf")
         self.send_header("Content-Length", str(len(pdf)))
-        self.send_header("Content-Disposition", 'attachment; filename="plaits-lab-field-guide.pdf"')
+        self.send_header("Content-Disposition", 'attachment; filename="plaits-palette-field-guide.pdf"')
         self.send_header("X-Plaits-Manual-Sha256", hashlib.sha256(pdf).hexdigest())
         self.send_header("X-Plaits-Manual-Contract", MANUAL_CONTRACT_VERSION)
         self.end_headers()

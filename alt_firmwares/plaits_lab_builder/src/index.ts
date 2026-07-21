@@ -280,7 +280,7 @@ async function downloadManual(buildId: string, env: Env): Promise<Response> {
   manual.writeHttpMetadata(headers);
   headers.set("ETag", manual.httpEtag);
   headers.set("Content-Length", String(manual.size));
-  headers.set("Content-Disposition", 'attachment; filename="plaits-lab-field-guide.pdf"');
+  headers.set("Content-Disposition", 'attachment; filename="plaits-palette-field-guide.pdf"');
   headers.set("Cache-Control", "public, max-age=3600, immutable");
   return new Response(manual.body, { headers });
 }

@@ -287,7 +287,7 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
   }
   const candidate = value as Record<string, unknown>;
   if (![2, 3, 4, 5, 6].includes(Number(candidate.schemaVersion))) {
-    throw new ContractError("unsupported_schema", "Only Plaits Lab recipe schema versions 2 through 6 can be built.");
+    throw new ContractError("unsupported_schema", "Only Plaits Palette recipe schema versions 2 through 6 can be built.");
   }
   if (candidate.target !== "mutable-instruments-plaits" || candidate.firmware !== "rubato-plaits") {
     throw new ContractError("unsupported_target", "That recipe targets a different firmware family.");

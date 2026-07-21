@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render a recipe-specific Plaits Lab field guide as a deterministic PDF."""
+"""Render a recipe-specific Plaits Palette field guide as a deterministic PDF."""
 
 from __future__ import annotations
 
@@ -23,6 +23,33 @@ BANKS = (
 CONTROL_IDS = ("harmonics", "timbre", "morph", "macro")
 PANEL_LABELS = ("HARMONICS", "TIMBRE", "MORPH", "FOURTH")
 
+# The options menu is seven "lights". Each light cycles through an ordered list
+# of settings, and the module shows the current one as an LED color (plaits
+# ui.cc): value 0 green, 1 red, 2 yellow, then 3-5 the SAME colors blinking — so
+# a light can hold more than three settings. Light 1 has four, light 7 has two.
+# Light 6 (the chord table) lists whichever tables THIS build loaded, so that row
+# is recipe-specific. A meanings value of None is filled from the recipe.
+MENU_LIGHTS = (
+    ("FREQUENCY knob", ("Octaves", "LPG decay", "Aux crossfade", "Fourth macro")),
+    ("MODEL input", ("Model select", "LPG colour (VCFA->VCA)", "Aux crossfade")),
+    ("LEVEL input", ("Level", "LPG decay", "Fourth macro")),
+    ("Aux suboscillator", ("Regular aux model", "Square wave", "Sine wave")),
+    ("Subosc octave", ("Same pitch", "-1 octave", "-2 octaves")),
+    ("Chord table", None),
+    ("Hold on trigger", ("Off (live CV)", "Sample & hold")),
+)
+
+# LED appearance for option values 0..5 (plaits ui.cc): the first three are
+# solid, the next three are the same colors blinking. (label, hex, blinking).
+LED_STATES = (
+    ("Green", BANKS[0]["color"], False),
+    ("Red", BANKS[1]["color"], False),
+    ("Yellow", BANKS[2]["color"], False),
+    ("Green", BANKS[0]["color"], True),
+    ("Red", BANKS[1]["color"], True),
+    ("Yellow", BANKS[2]["color"], True),
+)
+
 
 def load_catalog() -> dict[str, Any]:
     return json.loads(PUBLIC_CATALOG_PATH.read_text(encoding="utf-8"))
@@ -34,7 +61,8 @@ def position(slot: int) -> dict[str, Any]:
 
 
 def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]:
-    slots = validate_recipe(recipe).public_slots
+    build = validate_recipe(recipe)
+    slots = build.public_slots
     catalog = load_catalog()
     by_id = {engine["id"]: engine for engine in catalog["engines"]}
     models: list[dict[str, Any]] = []
@@ -53,6 +81,7 @@ def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]
             for slot, engine_id in enumerate(slots)
         ],
         "models": models,
+        "chordTables": [table["name"] for table in build.chord_tables],
     }
 
 
@@ -194,7 +223,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         canvas.line(margin, 0.41 * inch, page_width - margin, 0.41 * inch)
         canvas.setFillColor(muted)
         canvas.setFont("Helvetica", 6.8)
-        canvas.drawString(margin, 0.25 * inch, "PLAITS LAB")
+        canvas.drawString(margin, 0.25 * inch, "PLAITS PALETTE")
         canvas.drawRightString(page_width - margin, 0.25 * inch, str(doc.page))
         canvas.restoreState()
 
@@ -205,7 +234,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         else "green, red, amber, and orange"
     )
     story: list[Any] = [
-        Paragraph("RUBATO AUDIO  /  PLAITS LAB", kicker_style),
+        Paragraph("RUBATO AUDIO  /  PLAITS PALETTE", kicker_style),
         Paragraph("Your Plaits Field Guide", title_style),
         Paragraph(
             f"A rack-side reference generated from the exact {bank_phrase} layout in this firmware recipe. "
@@ -263,6 +292,45 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
     if len(bank_map_rows) > 1:
         bank_map_style.append(("BOTTOMPADDING", (0, 0), (-1, -2), 8))
     bank_map.setStyle(TableStyle(bank_map_style))
+
+    # Options menu — the seven-light reference. Lights 1-5 and 7 are the same on
+    # every build; light 6 lists this recipe's chord tables, so the page is
+    # partly recipe-specific. Each light's settings are shown in LED order, with
+    # the color word tinted to the LED and "(blink)" for the blinking values.
+    def led_setting(index: int, meaning: str) -> str:
+        label, hex_color, blinking = LED_STATES[index]
+        state = f"{label} (blink)" if blinking else label
+        return f'<font color="{hex_color}"><b>{state}</b></font>: {_escape(meaning)}'
+
+    menu_rows: list[list[Any]] = [[
+        Paragraph("LIGHT", table_header_style),
+        Paragraph("ASSIGNS", table_header_style),
+        Paragraph("SETTINGS (BY LED)", table_header_style),
+    ]]
+    for light_index, (assigns, meanings) in enumerate(MENU_LIGHTS):
+        if meanings is None:
+            meanings = document["chordTables"]
+        lines = [led_setting(k, meaning) for k, meaning in enumerate(meanings)]
+        menu_rows.append([
+            Paragraph(str(light_index + 1), small_muted_style),
+            Paragraph(_escape(assigns), small_style),
+            Paragraph("<br/>".join(lines), small_style),
+        ])
+    menu_table = Table(
+        menu_rows,
+        colWidths=[0.45 * inch, 1.5 * inch, 4.35 * inch],
+        repeatRows=1,
+    )
+    menu_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#EFECE3")),
+        ("GRID", (0, 0), (-1, -1), 0.35, line),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 5),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+    ]))
+
     story.extend([
         bank_map,
         Spacer(1, 0.18 * inch),
@@ -286,6 +354,22 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
                 ("TOPPADDING", (0, 0), (-1, -1), 7),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
             ]),
+        ),
+        PageBreak(),
+        Paragraph("Options menu", section_style),
+        Paragraph(
+            "Short-press both buttons at once to enter or exit the options menu. The first seven lights are the menu: "
+            "the left button moves between them, the right button steps through a light's settings, and the light's color shows the current one — "
+            "green, red, and yellow, then the same three colors blinking for any fourth, fifth, or sixth setting.",
+            intro_style,
+        ),
+        menu_table,
+        Spacer(1, 0.1 * inch),
+        Paragraph(
+            "LIGHT 1 applies in octave-switching (frequency-locked) mode. LIGHT 3's LPG-decay and fourth-macro settings apply only when TRIG is patched. "
+            "LIGHT 6 applies to chord-capable models and lists the chord tables loaded in this build. "
+            "Model navigation (linear or banked) is chosen when you build the firmware, not from this menu.",
+            small_muted_style,
         ),
         PageBreak(),
         Paragraph("Model reference", section_style),
@@ -375,7 +459,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         bottomMargin=0.52 * inch,
         title="Your Plaits Field Guide",
         author="Rubato Audio",
-        subject="Recipe-specific Plaits Lab synthesis-model reference",
+        subject="Recipe-specific Plaits Palette synthesis-model reference",
     )
     pdf.build(story, onFirstPage=footer, onLaterPages=footer, canvasmaker=InvariantCanvas)
 
