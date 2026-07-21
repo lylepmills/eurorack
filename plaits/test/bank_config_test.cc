@@ -1,9 +1,10 @@
 // Copyright 2026 Rubato Audio.
 //
-// Host compile+run check for the compile-time bank layout: build_config.h's
-// PLAITS_BANK_SIZES / guard and the constexpr validators mirrored from ui.cc.
-// This is what the ARM build would enforce at compile time; here it also lets us
-// confirm the derivation on a normal host toolchain.
+// Host check for a generated bank layout: build_config.h's PLAITS_BANK_SIZES and
+// the 1..32 guard, plus the sum/max/count invariants the config generator
+// guarantees (alt_firmwares/plaits_lab_builder). The firmware itself builds as
+// C++98 and trusts the generated table, so this host-only check (using constexpr
+// on a modern toolchain) stands in for a firmware-side static_assert.
 //
 //   g++ -std=c++11 -I<repo-root> plaits/test/bank_config_test.cc -o /tmp/bct && /tmp/bct
 

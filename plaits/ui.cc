@@ -43,25 +43,17 @@ using namespace stmlib;
 static const int32_t kLongPressTime = 2000;
 
 // The build's bank layout, baked in by the generated config (build_config.h).
-// bank_navigation.h operates on this table; the LED display and Navigate() read
-// bank/row from it instead of assuming eight-wide banks.
-static constexpr uint8_t kBankSizes[] = PLAITS_BANK_SIZES;
-static constexpr int kNumBanks = sizeof(kBankSizes) / sizeof(kBankSizes[0]);
-
-static constexpr int SumBankSizes(int n) {
-  return n == 0 ? 0 : kBankSizes[n - 1] + SumBankSizes(n - 1);
-}
-static constexpr uint8_t MaxBankSize(int n) {
-  return n == 0 ? 0
-      : (kBankSizes[n - 1] > MaxBankSize(n - 1) ? kBankSizes[n - 1]
-                                                : MaxBankSize(n - 1));
-}
-static_assert(kNumBanks >= 1 && kNumBanks <= 4,
-    "PLAITS_BANK_SIZES must list one to four banks");
-static_assert(SumBankSizes(kNumBanks) == PLAITS_ENGINE_COUNT,
-    "PLAITS_BANK_SIZES must sum to PLAITS_ENGINE_COUNT");
-static_assert(MaxBankSize(kNumBanks) <= 8,
-    "each Plaits bank holds at most eight engines");
+// bank_navigation.h reads bank/row from this table; the LED display and
+// Navigate() use it instead of assuming eight-wide banks. The firmware is built
+// as C++98 (arm-none-eabi 4.8), so this is a plain const table — no
+// constexpr/static_assert. The invariants (the banks sum to PLAITS_ENGINE_COUNT,
+// each holds at most eight, one to four banks) are enforced by the config
+// generator and its tests (alt_firmwares/plaits_lab_builder), and build_config.h
+// #errors on a bad PLAITS_ENGINE_COUNT. kNumBanks is an integral constant
+// expression, so BankToColor's `kNumBanks > 3` still folds away for 3-bank
+// builds.
+static const uint8_t kBankSizes[] = PLAITS_BANK_SIZES;
+static const int kNumBanks = sizeof(kBankSizes) / sizeof(kBankSizes[0]);
 
 static const uint8_t kNumOptions = 7;
 static const uint8_t kNumLockedFrequencyPotOptions = 4;
