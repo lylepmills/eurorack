@@ -159,6 +159,7 @@ target.
 | July 17, 2026 (schema 5) | `a7f437964326+55b8da14febf` | `schema5-20260717` |
 | July 19, 2026 (schema 6) | `303a9afad9f1` | `rev-303a9afad9f1` |
 | July 21, 2026 (schema 6) | `8cf101fe28af` | `rev-8cf101fe28af` |
+| July 21, 2026 (schema 7) | `7b62cbd851d4` | `rev-7b62cbd851d4` |
 
 Three consequences a rollback has that a forward deploy does not:
 
