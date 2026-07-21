@@ -106,16 +106,17 @@ void Voice::Render(
     level_patched = false;
     patch_decay += modulations_level;
     modulations_level = 0.0f;
-  } else if (modulations.trigger_patched && patch.level_cv_option == 2) {
-    level_patched = false;
-    macro_cv = modulations_level;
-    modulations_level = 0.0f;
   }
   CONSTRAIN(patch_decay, 0.0f, 1.0f);
 
   float patch_lpg_colour = patch.lpg_colour;
   if (patch.model_cv_option == 1) {
     patch_lpg_colour += modulations.engine;
+  } else if (patch.model_cv_option == 3) {
+    // Repurpose the MODEL CV input as the fourth synthesis macro. Unlike the
+    // LEVEL macro option this does not require TRIG to be patched, since the
+    // MODEL input never drives the internal VCA.
+    macro_cv = modulations.engine;
   }
   CONSTRAIN(patch_lpg_colour, 0.0f, 1.0f);
   

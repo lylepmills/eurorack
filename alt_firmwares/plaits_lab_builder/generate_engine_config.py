@@ -255,8 +255,8 @@ def validate_recipe(value: Any) -> BuildRecipe:
     mappings = {
         "navigation_mode": (preferences.get("navigationMode"), {"linear": 0, "banked": 1}),
         "locked_frequency_pot_option": (options.get("lockedFrequencyKnob"), {"octaves": 0, "decay": 1, "aux-crossfade": 2, "macro-4": 3}),
-        "model_cv_option": (options.get("modelInput"), {"model": 0, "lpg-colour": 1, "aux-crossfade": 2}),
-        "level_cv_option": (options.get("levelInput"), {"level": 0, "decay": 1, "macro-4": 2}),
+        "model_cv_option": (options.get("modelInput"), {"model": 0, "lpg-colour": 1, "aux-crossfade": 2, "macro-4": 3}),
+        "level_cv_option": (options.get("levelInput"), {"level": 0, "decay": 1}),
         "aux_subosc_wave_option": (options.get("auxOutput"), {"alternate-model": 0, "square-subosc": 1, "sine-subosc": 2}),
         "aux_subosc_octave_option": (options.get("suboscillatorOctave"), {0: 0, -1: 1, -2: 2}),
         "chord_set_option": (options.get("chordTable"), {
@@ -272,8 +272,8 @@ def validate_recipe(value: Any) -> BuildRecipe:
 
     profile_code = normalized_options["locked_frequency_pot_option"]
     for name, radix in (
-        ("model_cv_option", 3),
-        ("level_cv_option", 3),
+        ("model_cv_option", 4),
+        ("level_cv_option", 2),
         ("aux_subosc_wave_option", 3),
         ("aux_subosc_octave_option", 3),
         ("chord_set_option", 6),

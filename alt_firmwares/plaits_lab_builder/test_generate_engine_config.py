@@ -34,8 +34,8 @@ class GenerateEngineConfigTest(unittest.TestCase):
         recipe["preferences"] = {"navigationMode": "linear"}
         option_values = (
             ("lockedFrequencyKnob", ["octaves", "decay", "aux-crossfade", "macro-4"]),
-            ("modelInput", ["model", "lpg-colour", "aux-crossfade"]),
-            ("levelInput", ["level", "decay", "macro-4"]),
+            ("modelInput", ["model", "lpg-colour", "aux-crossfade", "macro-4"]),
+            ("levelInput", ["level", "decay"]),
             ("auxOutput", ["alternate-model", "square-subosc", "sine-subosc"]),
             ("suboscillatorOctave", [0, -1, -2]),
             ("chordTable", ["original", "jon-butler", "joe-mcmullen"]),
@@ -49,7 +49,9 @@ class GenerateEngineConfigTest(unittest.TestCase):
             marker = validate_recipe(recipe).options_profile_id
             self.assertGreater(marker & 0xff, 1)
             markers.add(marker)
-        self.assertEqual(len(markers), 1944)
+        # Every option combination must map to a distinct profile marker.
+        # Product of the option cardinalities: 4 * 4 * 2 * 3 * 3 * 3 * 2.
+        self.assertEqual(len(markers), 1728)
 
     def test_registry_translates_green_red_amber_to_amber_green_red(self) -> None:
         recipe = self.load("mixed_recipe.json")
@@ -242,6 +244,43 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertRegex(config, r"#define PLAITS_BUILD_OPTIONS_PROFILE_ID 0x[0-9a-f]{4}u")
 
         recipe["initialOptions"]["compilerFlag"] = "-DUNTRUSTED"
+        with self.assertRaisesRegex(ValueError, "unsupported firmware option"):
+            validate_recipe(recipe)
+
+    def test_fourth_macro_lives_on_model_input_not_level(self) -> None:
+        public = self.load("../plaits_lab_catalog/public_catalog.json")
+        by_id = {engine["id"]: engine for engine in public["engines"]}
+        recipe = self.load("default_recipe.json")
+        recipe.update({
+            "schemaVersion": 4,
+            "slots": [
+                {
+                    "engine": engine_id,
+                    "package": by_id[engine_id]["packageId"],
+                    "version": by_id[engine_id]["version"],
+                    "digest": by_id[engine_id]["digest"],
+                }
+                for engine_id in recipe["slots"]
+            ],
+            "preferences": {"navigationMode": "banked"},
+            "initialOptions": {
+                "lockedFrequencyKnob": "octaves",
+                "modelInput": "macro-4",
+                "levelInput": "level",
+                "auxOutput": "alternate-model",
+                "suboscillatorOctave": 0,
+                "chordTable": "original",
+                "holdOnTrigger": False,
+            },
+        })
+        config = render_config(validate_recipe(recipe))
+        self.assertIn("#define PLAITS_BUILD_MODEL_CV_OPTION 3", config)
+        self.assertIn("#define PLAITS_BUILD_LEVEL_CV_OPTION 0", config)
+
+        # The fourth macro moved off the LEVEL input, so requesting it there
+        # is no longer a supported firmware option.
+        recipe["initialOptions"]["modelInput"] = "model"
+        recipe["initialOptions"]["levelInput"] = "macro-4"
         with self.assertRaisesRegex(ValueError, "unsupported firmware option"):
             validate_recipe(recipe)
 

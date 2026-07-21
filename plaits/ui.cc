@@ -43,8 +43,8 @@ static const int32_t kLongPressTime = 2000;
 
 static const uint8_t kNumOptions = 7;
 static const uint8_t kNumLockedFrequencyPotOptions = 4;
-static const uint8_t kNumModelCVOptions = 3;
-static const uint8_t kNumLevelCVOptions = 3;
+static const uint8_t kNumModelCVOptions = 4;
+static const uint8_t kNumLevelCVOptions = 2;
 static const uint8_t kNumSuboscWaveOptions = 3;
 static const uint8_t kNumSuboscOctaveOptions = 3;
 static const uint8_t kNumChordSetOptions = PLAITS_CHORD_TABLE_COUNT;

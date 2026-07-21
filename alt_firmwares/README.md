@@ -15,7 +15,7 @@ However my alt firmware had several other features that I felt were still worthw
 ## Features of this alt firmware
 
 - **Aux crossfading.** - It's possible with this firmware to crossfade between the regular and aux models on the aux output, essentially giving you a fourth timbral dimension for each model. The crossfade can be controlled either manually by repurposing the frequency knob, or under CV control (or both).
-- **Fourth macro.** - Every model gains an optional fourth synthesis parameter, distinct from aux crossfading. It can be controlled either manually by repurposing the frequency knob, or under CV control by repurposing the LEVEL input (or both). Its midpoint is neutral, so models sound unchanged until it is assigned and moved. See below for what it controls on each model.
+- **Fourth macro.** - Every model gains an optional fourth synthesis parameter, distinct from aux crossfading. It can be controlled either manually by repurposing the frequency knob, or under CV control by repurposing the MODEL input (or both). Its midpoint is neutral, so models sound unchanged until it is assigned and moved. See below for what it controls on each model.
 - **CV control of LPG parameters.** - The MODEL and LEVEL CV inputs can be repurposed (either both or individually) to put the colour and decay of the internal LPG under CV control.
 - **Suboscillator.** The aux model can be replaced by a square or sine wave suboscillator on the aux output. The square wave can be used to sync another oscillator with a sync input (like Tides), an oscilloscope, etc. This is fully compatible with aux crossfading, meaning you can blend the main model with a square or sine wave. There are also options for the suboscillator frequency to be either the same frequency as the main model, -1 octave, or -2 octaves.
 - **Alternate chord tables.** For the chord-based modes (the 7th green mode, and the 7th and 8th yellow modes), you can switch between the original table of 11 chords, or alternative chord tables by Jon Butler (17 chords) or Joe McMullen (18 chords). See below for more details on each chord table.
@@ -29,7 +29,7 @@ This development version replaces the three DX7 bank positions and Wave
 Terrain (the third through sixth yellow models) with four experimental engines.
 All four use the normal pitch, HARMONICS, TIMBRE, and MORPH controls. They also use an
 optional fourth macro, controlled either manually by repurposing the frequency
-knob, or under CV control by repurposing the LEVEL input (or both).
+knob, or under CV control by repurposing the MODEL input (or both).
 
 ### Glisson
 
@@ -144,16 +144,15 @@ color of the LED lights. In order, they represent the following.
 ### First light - Frequency knob alt functionality (when frequency is locked i.e. in octave-switching mode)
 Green means octaves (as in the stock firmware), red means controlling decay,
 yellow means controlling aux crossfade, and blinking green means controlling
-the fourth macro. When neither this nor the LEVEL input is assigned to the
+the fourth macro. When neither this nor the MODEL input is assigned to the
 fourth macro, it rests at its neutral midpoint.
 
 ### Second light - MODEL input alt functionality
-Green means model (as in the stock firmware), red means LPG colour (VCFA->VCA), yellow means aux crossfade
+Green means model (as in the stock firmware), red means LPG colour (VCFA->VCA), yellow means aux crossfade, and blinking green means the fourth macro. The fourth macro option does not require TRIG to be patched.
 
 ### Third light - LEVEL input alt functionality
-Green means level (as in the stock firmware), red means decay of the internal
-envelope, and yellow means the fourth macro. The red and yellow options apply if
-and only if TRIG is patched.
+Green means level (as in the stock firmware) and red means decay of the internal
+envelope. The red option applies if and only if TRIG is patched.
 
 ### Fourth light - Aux suboscillator wave option
 Green means the regular aux model, red means a square wave subosc, yellow means a sine wave subosc
