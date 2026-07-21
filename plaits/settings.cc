@@ -129,6 +129,11 @@ void Settings::InitState() {
 
   // alt firmware other
   state_.locked_octave = 4;
+
+  // Per-bank navigation memory starts at the first engine of every bank.
+  for (int i = 0; i < 4; ++i) {
+    state_.bank_last_row[i] = 0;
+  }
 }
 
 void Settings::SavePersistentData() {

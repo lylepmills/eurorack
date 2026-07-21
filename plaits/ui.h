@@ -144,6 +144,10 @@ class Ui {
   bool ignore_release_[SWITCH_LAST];
 
   int active_engine_;
+  // Per-bank memory for banked navigation: the row last selected in each bank,
+  // so changing bank restores it (design "B"). Persisted across power cycles via
+  // the saved State. Indexed by bank; up to four banks.
+  uint8_t bank_last_row_[4];
   // not to be confused with the octave setting (octave_) -
   // when frequency is locked (by being in octave switch mode)
   // but using manual aux crossfade, stores the last octave

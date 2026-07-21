@@ -77,6 +77,12 @@ struct State {
   uint8_t locked_octave;
   uint8_t options_profile_id_high;
 
+  // Per-bank navigation memory (design "B"): the row last selected in each of up
+  // to four banks, so changing bank restores it — persisted across power cycles.
+  // Growing State by these bytes changes sizeof(State); ChunkStorage rejects the
+  // old-size chunk and reinitializes State once (calibration is unaffected).
+  uint8_t bank_last_row[4];
+
   enum { tag = 0x54415453 };  // STAT
 };
 

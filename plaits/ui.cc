@@ -33,6 +33,7 @@
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/system/system_clock.h"
 #include "plaits/build_config.h"
+#include "plaits/bank_navigation.h"
 
 namespace plaits {
 
@@ -40,6 +41,27 @@ using namespace std;
 using namespace stmlib;
 
 static const int32_t kLongPressTime = 2000;
+
+// The build's bank layout, baked in by the generated config (build_config.h).
+// bank_navigation.h operates on this table; the LED display and Navigate() read
+// bank/row from it instead of assuming eight-wide banks.
+static constexpr uint8_t kBankSizes[] = PLAITS_BANK_SIZES;
+static constexpr int kNumBanks = sizeof(kBankSizes) / sizeof(kBankSizes[0]);
+
+static constexpr int SumBankSizes(int n) {
+  return n == 0 ? 0 : kBankSizes[n - 1] + SumBankSizes(n - 1);
+}
+static constexpr uint8_t MaxBankSize(int n) {
+  return n == 0 ? 0
+      : (kBankSizes[n - 1] > MaxBankSize(n - 1) ? kBankSizes[n - 1]
+                                                : MaxBankSize(n - 1));
+}
+static_assert(kNumBanks >= 1 && kNumBanks <= 4,
+    "PLAITS_BANK_SIZES must list one to four banks");
+static_assert(SumBankSizes(kNumBanks) == PLAITS_ENGINE_COUNT,
+    "PLAITS_BANK_SIZES must sum to PLAITS_ENGINE_COUNT");
+static_assert(MaxBankSize(kNumBanks) <= 8,
+    "each Plaits bank holds at most eight engines");
 
 static const uint8_t kNumOptions = 7;
 static const uint8_t kNumLockedFrequencyPotOptions = 4;
@@ -123,6 +145,14 @@ void Ui::LoadState() {
   patch_->chord_set_option = state.chord_set_option;
   patch_->hold_on_trigger_option = state.hold_on_trigger_option;
   locked_octave_ = state.locked_octave;
+
+  for (int i = 0; i < 4; ++i) {
+    bank_last_row_[i] = state.bank_last_row[i];
+  }
+  // Keep the current bank's remembered row consistent with the restored engine
+  // (e.g. if the engine was clamped after a rebuild changed the bank sizes).
+  bank_last_row_[BankOfEngine(kBankSizes, kNumBanks, patch_->engine)] =
+      static_cast<uint8_t>(RowOfEngine(kBankSizes, kNumBanks, patch_->engine));
 }
 
 void Ui::SaveState() {
@@ -144,19 +174,23 @@ void Ui::SaveState() {
   state->hold_on_trigger_option = patch_->hold_on_trigger_option;
   state->locked_octave = locked_octave_;
 
+  for (int i = 0; i < 4; ++i) {
+    state->bank_last_row[i] = bank_last_row_[i];
+  }
+
   settings_->SaveState();
 }
 
 uint32_t Ui::BankToColor(int bank) {
-#if PLAITS_ENGINE_COUNT > 24
-  if (bank == 3) {
+  // kNumBanks is a compile-time constant, so for three-bank builds this branch
+  // folds away (equivalent to the previous #if PLAITS_ENGINE_COUNT > 24).
+  if (kNumBanks > 3 && bank == 3) {
     // Fourth bank: orange. The LED channels are 1-bit (drivers/leds.cc), so
     // blend red with quarter-duty green by dithering at the poll rate — far
     // above flicker fusion, it reads as a steady color between red and the
     // full-duty yellow of the amber bank.
     return (pwm_counter_ & 3) ? LED_COLOR_RED : LED_COLOR_YELLOW;
   }
-#endif
   uint32_t colors[3] = { LED_COLOR_YELLOW, LED_COLOR_GREEN, LED_COLOR_RED };
   return colors[bank];
 }
@@ -173,15 +207,19 @@ void Ui::UpdateLEDs() {
     case UI_MODE_NORMAL:
       {
         // Selected with the buttons
-        const int selected_row = patch_->engine % 8;
-        const int selected_bank = patch_->engine / 8;
+        const int selected_bank =
+            BankOfEngine(kBankSizes, kNumBanks, patch_->engine);
+        const int selected_row =
+            RowOfEngine(kBankSizes, kNumBanks, patch_->engine);
         uint32_t selected_color = pwm_counter < triangle
             ? BankToColor(selected_bank)
             : LED_COLOR_OFF;
 
         // With the CV modulation applied
-        const int active_row = active_engine_ % 8;
-        const int active_bank = active_engine_ / 8;
+        const int active_bank =
+            BankOfEngine(kBankSizes, kNumBanks, active_engine_);
+        const int active_row =
+            RowOfEngine(kBankSizes, kNumBanks, active_engine_);
         uint32_t active_color = BankToColor(active_bank);
 
         leds_.set(active_row, active_color);
@@ -323,17 +361,24 @@ void Ui::UpdateLEDs() {
 void Ui::Navigate(int button) {
   ignore_release_[0] = ignore_release_[1] = true;
   RealignPots();
-  uint8_t increment = button == 0 ? PLAITS_ENGINE_COUNT - 1 : 1;
+
   if (PLAITS_BUILD_NAVIGATION_MODE == 1) {
-    if (button == 0) {
-      // change bank
-      increment = 8;
-    } else {
-      // change preset within bank (wrap from position 8 back to position 1)
-      increment = patch_->engine % 8 != 7 ? 1 : PLAITS_ENGINE_COUNT - 7;
-    }
+    // Banked: button 0 changes bank (landing on that bank's remembered row —
+    // per-bank memory), button 1 steps within the current bank, wrapping after
+    // its real last engine so a short bank cycles only its engines.
+    patch_->engine = button == 0
+        ? ChangeBank(kBankSizes, kNumBanks, patch_->engine, bank_last_row_)
+        : StepWithinBank(kBankSizes, kNumBanks, patch_->engine);
+  } else {
+    // Linear: step through every engine, wrapping at the total count.
+    const uint8_t increment = button == 0 ? PLAITS_ENGINE_COUNT - 1 : 1;
+    patch_->engine = (patch_->engine + increment) % PLAITS_ENGINE_COUNT;
   }
-  patch_->engine = (patch_->engine + increment) % PLAITS_ENGINE_COUNT;
+
+  // Remember the row within the bank we're now in, so a later change-bank can
+  // restore it.
+  bank_last_row_[BankOfEngine(kBankSizes, kNumBanks, patch_->engine)] =
+      static_cast<uint8_t>(RowOfEngine(kBankSizes, kNumBanks, patch_->engine));
 
   SaveState();
 }
