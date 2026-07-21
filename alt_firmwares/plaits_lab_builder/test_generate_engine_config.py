@@ -190,6 +190,100 @@ class GenerateEngineConfigTest(unittest.TestCase):
         config = render_config(validate_recipe(self.v6_recipe(slots, [])))
         self.assertIn("#define PLAITS_HAS_USER_DATA_BANK_OVERRIDE 0", config)
 
+    # --- v7: short banks (empty slots) --------------------------------------
+
+    def refs(self, engine_ids: list) -> list:
+        """Build v7 slot references (or None for empties) as the editor emits them."""
+        public = self.load("../plaits_lab_catalog/public_catalog.json")
+        by_id = {engine["id"]: engine for engine in public["engines"]}
+        return [
+            None if engine_id is None else {
+                "engine": engine_id,
+                "package": by_id[engine_id]["packageId"],
+                "version": by_id[engine_id]["version"],
+                "digest": by_id[engine_id]["digest"],
+            }
+            for engine_id in engine_ids
+        ]
+
+    def v7_recipe(self, engine_ids: list) -> dict:
+        resources: dict = {"chordTables": [dict(table) for table in DEFAULT_CHORD_TABLES]}
+        if len(engine_ids) == 32:
+            resources["userDataBanks"] = []
+        return {
+            "schemaVersion": 7,
+            "target": "mutable-instruments-plaits",
+            "firmware": "rubato-plaits",
+            "output": "audio-wav",
+            "slots": self.refs(engine_ids),
+            "preferences": dict(DEFAULT_CONFIGURATION["preferences"]),
+            "initialOptions": dict(DEFAULT_CONFIGURATION["initialOptions"]),
+            "resources": resources,
+        }
+
+    def test_full_palettes_emit_full_bank_sizes(self) -> None:
+        self.assertIn(
+            "#define PLAITS_BANK_SIZES { 8, 8, 8 }",
+            render_config(validate_recipe(self.load("default_recipe.json"))))
+        self.assertIn(
+            "#define PLAITS_BANK_SIZES { 8, 8, 8, 8 }",
+            render_config(validate_recipe(self.v6_recipe(self.fourth_bank_slots(), []))))
+
+    def test_v7_short_bank_emits_its_real_size(self) -> None:
+        # Public green(8), red(3 + 5 empty), amber(8); internal amber,green,red.
+        engine_ids = ["virtual-analog"] * 8 + ["virtual-analog"] * 3 + [None] * 5 + ["virtual-analog"] * 8
+        config = render_config(validate_recipe(self.v7_recipe(engine_ids)))
+        self.assertIn("#define PLAITS_ENGINE_COUNT 19", config)
+        self.assertIn("#define PLAITS_BANK_SIZES { 8, 8, 3 }", config)
+        self.assertIn("kEngineUserDataBank[19]", config)
+
+    def test_v7_trailing_empty_bank_is_dropped(self) -> None:
+        # Red empty -> internal amber,green,red = 8,8,0 -> drop the trailing 0.
+        engine_ids = ["virtual-analog"] * 8 + [None] * 8 + ["virtual-analog"] * 8
+        config = render_config(validate_recipe(self.v7_recipe(engine_ids)))
+        self.assertIn("#define PLAITS_ENGINE_COUNT 16", config)
+        self.assertIn("#define PLAITS_BANK_SIZES { 8, 8 }", config)
+
+    def test_v7_interior_empty_bank_kept_as_zero(self) -> None:
+        # Green empty -> internal amber,green,red = 8,0,8; the 0 stays so the red
+        # bank keeps its LED color (bank index -> color must not shift).
+        engine_ids = [None] * 8 + ["virtual-analog"] * 8 + ["virtual-analog"] * 8
+        config = render_config(validate_recipe(self.v7_recipe(engine_ids)))
+        self.assertIn("#define PLAITS_ENGINE_COUNT 16", config)
+        self.assertIn("#define PLAITS_BANK_SIZES { 8, 0, 8 }", config)
+
+    def test_v7_32_slot_short_orange_bank(self) -> None:
+        engine_ids = ["virtual-analog"] * 24 + ["loopback", "lockstep"] + [None] * 6
+        config = render_config(validate_recipe(self.v7_recipe(engine_ids)))
+        self.assertIn("#define PLAITS_ENGINE_COUNT 26", config)
+        self.assertIn("#define PLAITS_BANK_SIZES { 8, 8, 8, 2 }", config)
+
+    def test_v7_hole_in_a_bank_is_rejected(self) -> None:
+        engine_ids = ["virtual-analog", None, "virtual-analog"] + [None] * 5 \
+            + ["virtual-analog"] * 8 + ["virtual-analog"] * 8
+        with self.assertRaisesRegex(ValueError, "contiguous"):
+            validate_recipe(self.v7_recipe(engine_ids))
+
+    def test_v7_all_empty_is_rejected(self) -> None:
+        with self.assertRaisesRegex(ValueError, "at least one engine"):
+            validate_recipe(self.v7_recipe([None] * 24))
+
+    def test_empty_slot_requires_v7(self) -> None:
+        recipe = self.v7_recipe(["virtual-analog"] * 8 + ["virtual-analog"] * 4 + [None] * 4 + ["virtual-analog"] * 8)
+        recipe["schemaVersion"] = 6
+        with self.assertRaisesRegex(ValueError, "schemaVersion 7"):
+            validate_recipe(recipe)
+
+    def test_v7_normalized_bare_string_slots(self) -> None:
+        # The Worker contract normalizes filled slots to bare engine IDs, so the
+        # generator's production input is strings interleaved with None.
+        engine_ids = ["virtual-analog"] * 8 + ["virtual-analog"] * 3 + [None] * 5 + ["virtual-analog"] * 8
+        recipe = self.v7_recipe(engine_ids)
+        recipe["slots"] = engine_ids  # bare strings + None, as normalizeRecipe emits
+        config = render_config(validate_recipe(recipe))
+        self.assertIn("#define PLAITS_ENGINE_COUNT 19", config)
+        self.assertIn("#define PLAITS_BANK_SIZES { 8, 8, 3 }", config)
+
     def test_versioned_package_references_are_normalized(self) -> None:
         public = self.load("../plaits_lab_catalog/public_catalog.json")
         by_id = {engine["id"]: engine for engine in public["engines"]}

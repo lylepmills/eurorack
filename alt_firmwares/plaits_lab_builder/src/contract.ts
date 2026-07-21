@@ -54,10 +54,11 @@ export type NormalizedUserDataBank = {
 };
 
 export type NormalizedRecipe = {
-  schemaVersion: 5 | 6;
+  schemaVersion: 5 | 6 | 7;
   target: "mutable-instruments-plaits";
   firmware: "rubato-plaits";
-  slots: string[];
+  // A null entry is an empty slot (v7 short banks); filled slots are engine ids.
+  slots: (string | null)[];
   preferences: {
     navigationMode: "linear" | "banked";
   };
@@ -239,6 +240,24 @@ function hasExactKeys(value: Record<string, unknown>, keys: string[]): boolean {
   return actual.length === expected.length && actual.every((key, index) => key === expected[index]);
 }
 
+function validateBankShape(slots: (string | null)[]): void {
+  if (slots.every((slot) => slot === null)) {
+    throw new ContractError("invalid_slots", "A firmware recipe must contain at least one engine.");
+  }
+  // Each 8-slot bank's engines must be contiguous at its front (empty slots only
+  // trail), the shape the module's per-bank navigation and the editor maintain.
+  for (let start = 0; start < slots.length; start += 8) {
+    let seenEmpty = false;
+    for (const slot of slots.slice(start, start + 8)) {
+      if (slot === null) {
+        seenEmpty = true;
+      } else if (seenEmpty) {
+        throw new ContractError("invalid_slots", "A bank's engines must be contiguous, with empty slots only at the end.");
+      }
+    }
+  }
+}
+
 function normalizeConfiguration(
   candidate: Record<string, unknown>,
   chordTables: NormalizedChordTable[],
@@ -286,8 +305,8 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     throw new ContractError("invalid_recipe", "The build recipe must be a JSON object.");
   }
   const candidate = value as Record<string, unknown>;
-  if (![2, 3, 4, 5, 6].includes(Number(candidate.schemaVersion))) {
-    throw new ContractError("unsupported_schema", "Only Plaits Palette recipe schema versions 2 through 6 can be built.");
+  if (![2, 3, 4, 5, 6, 7].includes(Number(candidate.schemaVersion))) {
+    throw new ContractError("unsupported_schema", "Only Plaits Palette recipe schema versions 2 through 7 can be built.");
   }
   if (candidate.target !== "mutable-instruments-plaits" || candidate.firmware !== "rubato-plaits") {
     throw new ContractError("unsupported_target", "That recipe targets a different firmware family.");
@@ -298,10 +317,10 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
   if (!Array.isArray(candidate.slots) || (candidate.slots.length !== 24 && candidate.slots.length !== 32)) {
     throw new ContractError("invalid_slots", "A firmware recipe must contain 24 engine slots, or 32 for a four-bank build.");
   }
-  if (candidate.slots.length === 32 && Number(candidate.schemaVersion) !== 6) {
-    throw new ContractError("invalid_slots", "32-slot recipes require recipe schema version 6.");
+  if (candidate.slots.length === 32 && Number(candidate.schemaVersion) !== 6 && Number(candidate.schemaVersion) !== 7) {
+    throw new ContractError("invalid_slots", "32-slot recipes require recipe schema version 6 or 7.");
   }
-  const slots = candidate.schemaVersion === 2
+  const slots: (string | null)[] = candidate.schemaVersion === 2
     ? candidate.slots.map((id) => {
         if (typeof id !== "string" || !approvedEngineIdSet.has(id)) {
           throw new ContractError("unapproved_engine", "The recipe contains an engine that is not approved for builds.");
@@ -309,6 +328,13 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
         return id;
       })
     : candidate.slots.map((value) => {
+        if (value === null) {
+          // An empty slot — only short-bank (v7) recipes may carry them.
+          if (Number(candidate.schemaVersion) !== 7) {
+            throw new ContractError("invalid_slots", "Empty slots require recipe schema version 7.");
+          }
+          return null;
+        }
         if (!value || typeof value !== "object") {
           throw new ContractError("invalid_package", "The recipe contains an invalid package reference.");
         }
@@ -322,29 +348,37 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
         }
         return approved.id;
       });
+  validateBankShape(slots);
   let chordTables: NormalizedChordTable[];
   let userDataBanks: NormalizedUserDataBank[] | undefined;
-  if (candidate.schemaVersion === 5 || candidate.schemaVersion === 6) {
+  if (candidate.schemaVersion === 5 || candidate.schemaVersion === 6 || candidate.schemaVersion === 7) {
     const resources = candidate.resources;
-    const expectedKeys = candidate.schemaVersion === 6 ? ["chordTables", "userDataBanks"] : ["chordTables"];
+    // v6 always carries the custom-FM-banks resource (its defining feature). v7
+    // mirrors the editor: userDataBanks only for a 32-slot (fourth-bank) recipe;
+    // a 24-slot v7 carries chord tables only, like v5.
+    const expectsUserDataBanks = candidate.schemaVersion === 6
+      || (candidate.schemaVersion === 7 && candidate.slots.length === 32);
+    const expectedKeys = expectsUserDataBanks ? ["chordTables", "userDataBanks"] : ["chordTables"];
     if (!resources || typeof resources !== "object"
         || !hasExactKeys(resources as Record<string, unknown>, expectedKeys)) {
       throw new ContractError("invalid_resources", "The recipe must contain only supported firmware resources.");
     }
     chordTables = normalizeChordTables((resources as Record<string, unknown>).chordTables);
-    if (candidate.schemaVersion === 6) {
+    if (expectsUserDataBanks) {
       userDataBanks = normalizeUserDataBanks((resources as Record<string, unknown>).userDataBanks);
     }
   } else {
     chordTables = normalizeChordTables(structuredClone(chordCatalog.tables));
   }
-  const configuration = candidate.schemaVersion === 4 || candidate.schemaVersion === 5 || candidate.schemaVersion === 6
+  const configuration = candidate.schemaVersion === 4 || candidate.schemaVersion === 5
+      || candidate.schemaVersion === 6 || candidate.schemaVersion === 7
     ? normalizeConfiguration(candidate, chordTables)
     : defaultConfiguration;
   return {
-    // A candidate that carried v6 resources (even an empty custom-bank list,
-    // e.g. a 32-slot recipe) stays v6 so the compiler applies v6 rules.
-    schemaVersion: userDataBanks !== undefined ? 6 : 5,
+    // A short-bank recipe (an empty slot) stays v7 so the compiler applies
+    // short-bank rules. Otherwise a candidate that carried v6 resources (even an
+    // empty custom-bank list, e.g. a 32-slot recipe) stays v6; else v5.
+    schemaVersion: slots.some((slot) => slot === null) ? 7 : (userDataBanks !== undefined ? 6 : 5),
     target: "mutable-instruments-plaits",
     firmware: "rubato-plaits",
     slots,
@@ -363,11 +397,14 @@ export async function computeManualKey(
   recipe: NormalizedRecipe,
   manualContract: string,
 ): Promise<string> {
-  const documentation = [...new Set(recipe.slots)].sort().map((engineId) => {
-    const engine = approvedEngines.get(engineId);
-    if (!engine) throw new ContractError("unapproved_engine", "The recipe contains an engine that is not approved for builds.");
-    return [engineId, engine.documentationDigest];
-  });
+  const documentation = [...new Set(recipe.slots)]
+    .filter((engineId): engineId is string => engineId !== null)
+    .sort()
+    .map((engineId) => {
+      const engine = approvedEngines.get(engineId);
+      if (!engine) throw new ContractError("unapproved_engine", "The recipe contains an engine that is not approved for builds.");
+      return [engineId, engine.documentationDigest];
+    });
   const canonical = JSON.stringify({
     manualContract,
     slots: recipe.slots,

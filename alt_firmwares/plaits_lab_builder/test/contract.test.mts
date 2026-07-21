@@ -265,6 +265,61 @@ test("version 6 accepts a 32-slot fourth-bank recipe with no custom banks", asyn
   assert.throws(() => normalizeRecipe(makeRecipe([...fixture.slots, "loopback"])), /24 engine slots, or 32/);
 });
 
+test("version 7 accepts short banks (empty slots) and stays v7", async () => {
+  const publicCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url), "utf8"));
+  const chordCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_chord_tables/catalog.json", import.meta.url), "utf8"));
+  const byId = new Map(publicCatalog.engines.map((engine: { id: string }) => [engine.id, engine]));
+  const publishedTable = structuredClone(chordCatalog.tables[0]);
+  const reference = (engineId: string) => {
+    const engine = byId.get(engineId) as { packageId: string; version: string; digest: string };
+    return { engine: engineId, package: engine.packageId, version: engine.version, digest: engine.digest };
+  };
+  const slot = (id: string | null) => (id === null ? null : reference(id));
+  const makeRecipe = (slotIds: (string | null)[], schemaVersion = 7) => ({
+    ...fixture,
+    schemaVersion,
+    slots: slotIds.map(slot),
+    preferences: { navigationMode: "banked" },
+    initialOptions: {
+      lockedFrequencyKnob: "octaves", modelInput: "model", levelInput: "level",
+      auxOutput: "alternate-model", suboscillatorOctave: 0, chordTable: publishedTable.id, holdOnTrigger: false,
+    },
+    resources: { chordTables: [publishedTable] },
+  });
+
+  // Public layout green (0-7), red (8-15), amber (16-23); shorten red to three
+  // engines by emptying its last five slots.
+  const ids: (string | null)[] = [
+    ...fixture.slots.slice(0, 8),
+    fixture.slots[8], fixture.slots[9], fixture.slots[10], null, null, null, null, null,
+    ...fixture.slots.slice(16, 24),
+  ];
+  const normalized = normalizeRecipe(makeRecipe(ids));
+  assert.equal(normalized.schemaVersion, 7);  // stays v7 so the compiler shortens the bank
+  assert.equal(normalized.slots.length, 24);
+  assert.deepEqual(normalized.slots.slice(11, 16), [null, null, null, null, null]);
+  assert.equal(normalized.slots.filter((s) => s === null).length, 5);
+  assert.equal(normalized.resources.userDataBanks, undefined);
+
+  // Emptying a slot in the middle of a bank (a hole) is rejected.
+  const holed = [...ids];
+  holed[1] = null;  // green: filled, empty, filled -> not contiguous
+  assert.throws(() => normalizeRecipe(makeRecipe(holed)), /contiguous/);
+
+  // An all-empty palette is rejected.
+  assert.throws(() => normalizeRecipe(makeRecipe(new Array(24).fill(null))), /at least one engine/);
+
+  // Empty slots require v7; the same slots under v6 are refused.
+  assert.throws(() => normalizeRecipe(makeRecipe(ids, 6)), /schema version 7/);
+
+  // Short banks change the build identity vs. the same layout fully filled.
+  const identity = { sourceRevision: "source", toolchain: "toolchain", contract: "7" };
+  const full = normalizeRecipe(makeRecipe(fixture.slots));
+  assert.notEqual(await computeBuildKey(normalized, identity), await computeBuildKey(full, identity));
+});
+
 test("manual keys derive from documentation identity, not build identity", async () => {
   const { computeManualKey } = await import("../src/contract.ts");
   const recipe = normalizeRecipe(fixture);
