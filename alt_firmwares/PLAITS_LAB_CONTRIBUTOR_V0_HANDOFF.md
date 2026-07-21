@@ -125,7 +125,7 @@ These are deliberate production gates, not hidden completed work.
   preserved in `lylepmills/rubato-audio` on `main`; the remaining contributor
   center exists only in the local legacy checkout until it is migrated or a
   standalone upstream is deliberately chosen.
-- Firmware work belongs on `codex/plaits-experimental-engines` in
+- Firmware work belongs on `claude/plaits-lab-integration` in
   `lylepmills/eurorack`. This checkpoint intentionally combines the engine,
   catalog, schema-5 chord-table, firmware-profile, SDK, personalized-manual,
   and hosted-builder sources required to reproduce the deployed product.
