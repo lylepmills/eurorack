@@ -82,8 +82,8 @@ def validate_catalog(catalog: dict[str, Any]) -> None:
             raise ValueError(f"{engine_id} has invalid post-processing metadata")
 
     for name, slots in catalog.get("presets", {}).items():
-        if len(slots) != 24 or any(engine_id not in ids for engine_id in slots):
-            raise ValueError(f"preset {name} must contain 24 approved engine IDs")
+        if len(slots) not in (24, 32) or any(engine_id not in ids for engine_id in slots):
+            raise ValueError(f"preset {name} must contain 24 or 32 approved engine IDs")
 
     manuals = catalog.get("manuals")
     if not isinstance(manuals, dict) or set(manuals) != ids:
