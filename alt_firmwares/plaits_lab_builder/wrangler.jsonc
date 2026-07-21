@@ -24,7 +24,7 @@
     {
       "class_name": "FirmwareBuilder",
       "image": "registry.cloudflare.com/256bac4d555b969399df16f575c5f464/plaits-lab-build-service-firmwarebuilder:rev-303a9afad9f1",
-      "instance_type": "standard-1",
+      "instance_type": "standard-4",
       "max_instances": 1
     }
   ],

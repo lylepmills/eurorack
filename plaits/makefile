@@ -65,6 +65,24 @@ $(BUILD_DIR)ui.o \
 $(BUILD_DIR)settings.o \
 $(BUILD_DIR)user_data_receiver.o: CCFLAGS += -Os
 
+# The hosted builder generates engine_config.h with the recipe's engine registry
+# (PLAITS_ENGINE_MEMBERS, reached through voice.h) and its compile-time option
+# macros (the PLAITS_BUILD_* / PLAITS_ENGINE_COUNT values that build_config.h
+# otherwise defaults). Only the objects below read those macros — directly via
+# build_config.h (settings, chord_bank, ui) or through voice.h (voice, plaits) —
+# so force-including the generated config into just these keeps every other
+# object recipe-independent and reusable from ccache across recipes.
+#
+# This list MUST cover every built .cc that reaches engine_config.h or
+# build_config.h; a missing one would silently compile with default options
+# instead of the recipe's. check_config_scope.py enforces that at build time.
+# ENGINE_CONFIG is empty for ordinary firmware builds, which fall back to the
+# checked-in default headers via each unit's own #include.
+RECIPE_CONFIG_OBJS = voice.o plaits.o ui.o settings.o chord_bank.o
+ifneq ($(ENGINE_CONFIG),)
+$(patsubst %,$(BUILD_DIR)%,$(RECIPE_CONFIG_OBJS)): CPPFLAGS += -include $(ENGINE_CONFIG)
+endif
+
 # Rule for building the firmware update file
 wav:  $(TARGET_BIN)
 	python stm_audio_bootloader/qpsk/encoder.py \

@@ -8,6 +8,7 @@ RUN dpkg --add-architecture i386 \
         build-essential \
         bzip2 \
         ca-certificates \
+        ccache \
         libc6:i386 \
         libstdc++6:i386 \
         python2.7 \
@@ -38,6 +39,16 @@ COPY --chown=builder:builder . /workspace
 RUN test -f /workspace/stmlib/dsp/dsp.h \
     && test -f /workspace/stm_audio_bootloader/fsk/packet_decoder.h \
     || { echo "Submodule content missing. Run 'git submodule update --init stmlib stm_audio_bootloader' before docker build." >&2; exit 1; }
+# Fail the image build if a source unit started reading the recipe config
+# (engine_config.h / build_config.h) without being added to RECIPE_CONFIG_OBJS —
+# otherwise it would silently compile with default options instead of the recipe's.
+RUN cd /workspace && python3 alt_firmwares/plaits_lab_builder/check_config_scope.py
+
+# resources.cc is checked in, but its make rule regenerates it whenever a
+# resources/*.py prerequisite is newer. COPY does not preserve the committed
+# ordering, and the read-only workspace cannot be rewritten at build or request
+# time, so stamp the generated file as newest to keep make from touching it.
+RUN touch /workspace/plaits/resources.cc
 RUN chmod -R a-w /workspace
 
 ARG PLAITS_SOURCE_REVISION=303a9afad9f1
@@ -46,9 +57,32 @@ ENV PATH="/usr/local/arm-4.8.3/bin:${PATH}" \
     PYTHONPATH="/workspace" \
     PYTHONDONTWRITEBYTECODE="1" \
     PLAITS_SOURCE_REVISION="${PLAITS_SOURCE_REVISION}" \
-    PLAITS_BUILD_CONTRACT="${PLAITS_BUILD_CONTRACT}"
+    PLAITS_BUILD_CONTRACT="${PLAITS_BUILD_CONTRACT}" \
+    CCACHE_DIR="/opt/ccache" \
+    CCACHE_COMPILERCHECK="content" \
+    CCACHE_MAXSIZE="2G"
+
+# Only voice/plaits/ui see the recipe's engine_config.h, so every other object
+# is recipe-independent. Warm ccache with one default build at image time; each
+# fresh container then starts with those ~91 objects cached and a novel recipe
+# recompiles only the three that changed. The cache is baked into the image and
+# owned by the build user so it is readable when the server runs unprivileged.
+RUN mkdir -p /opt/ccache && chown -R builder:builder /opt/ccache
+USER builder
+# The locale must match container_server.py's build environment exactly: ccache
+# folds LC_ALL/LANG into its hash, so a warm entry built under a different locale
+# never matches a request-time compile and every object would miss.
+RUN cd /workspace \
+    && python3 alt_firmwares/plaits_lab_builder/generate_engine_config.py \
+        alt_firmwares/plaits_lab_builder/default_recipe.json /tmp/warm_config.h \
+    && env LC_ALL=C LANG=C LC_CTYPE=C make -s -f plaits/makefile BUILD_ROOT=/tmp/warm_build/ \
+        ENGINE_CONFIG=/tmp/warm_config.h \
+        "CC=ccache /usr/local/arm-4.8.3/bin/arm-none-eabi-gcc" \
+        "CXX=ccache /usr/local/arm-4.8.3/bin/arm-none-eabi-g++" \
+        DEPS= -j4 wav < /dev/null \
+    && rm -rf /tmp/warm_build /tmp/warm_config.h \
+    && ccache -s
 
 WORKDIR /workspace
-USER builder
 EXPOSE 8080
 ENTRYPOINT ["python3", "alt_firmwares/plaits_lab_builder/container_server.py"]

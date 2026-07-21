@@ -26,9 +26,21 @@ SOURCE_REVISION = os.environ.get("PLAITS_SOURCE_REVISION", "development")
 BUILD_CONTRACT_VERSION = os.environ.get("PLAITS_BUILD_CONTRACT", "2")
 MANUAL_CONTRACT_VERSION = os.environ.get("PLAITS_MANUAL_CONTRACT", "1")
 TOOLCHAIN_ID = "gcc-arm-none-eabi-4.8-2013q4"
+TOOLCHAIN_BIN = os.environ.get("PLAITS_TOOLCHAIN_BIN", "/usr/local/arm-4.8.3/bin")
 MAX_REQUEST_BYTES = 32 * 1024
 MAX_BUILD_SECONDS = 12 * 60
 BUILD_KEY_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+
+# Route the ARM compiler through ccache when it is installed. Only the three
+# recipe-dependent translation units (voice/plaits/ui) see the generated
+# engine_config.h, so every other object hits the image-baked warm cache and a
+# novel recipe recompiles just those three plus the link and WAV encode.
+_CCACHE = shutil.which("ccache")
+
+
+def _compiler(binary: str) -> str:
+    path = f"{TOOLCHAIN_BIN}/{binary}"
+    return f"{_CCACHE} {path}" if _CCACHE else path
 
 
 class BuildError(Exception):
@@ -100,22 +112,39 @@ def build_firmware(payload: Any) -> tuple[Path, dict[str, str]]:
     config_path.write_text(render_config(validated_recipe), encoding="utf-8")
     recipe_path.write_text(json.dumps(recipe, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
 
-    cppflags = f"-fno-exceptions -fno-rtti -include {config_path}"
     command = [
         "make",
         "-f",
         "plaits/makefile",
         f"BUILD_ROOT={build_dir}/",
-        f"CPPFLAGS={cppflags}",
-        "-j2",
+        f"ENGINE_CONFIG={config_path}",
+        f"CC={_compiler('arm-none-eabi-gcc')}",
+        f"CXX={_compiler('arm-none-eabi-g++')}",
+        # Every build gets a fresh BUILD_ROOT, so the per-object .d files are
+        # never consulted for an incremental rebuild — suppress them to skip a
+        # full-tree preprocessor pass. Empty DEPS makes the depends.mk recipe a
+        # bare `cat`, which reads the closed stdin below and writes nothing.
+        "DEPS=",
+        "-j4",
         "wav",
     ]
-    environment = {**os.environ, "LC_ALL": "C", "LANG": "C", "HOME": str(build_dir)}
+    # Pin the full locale, including LC_CTYPE: ccache folds these into its hash,
+    # and Python's PEP 538 C-locale coercion otherwise injects LC_CTYPE=C.UTF-8
+    # here, which would never match the image's shell-built warm cache (LC_CTYPE=C)
+    # and would miss every cached object.
+    environment = {
+        **os.environ,
+        "LC_ALL": "C",
+        "LANG": "C",
+        "LC_CTYPE": "C",
+        "HOME": str(build_dir),
+    }
     try:
         result = subprocess.run(
             command,
             cwd=WORKSPACE,
             env=environment,
+            stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
             timeout=MAX_BUILD_SECONDS,
