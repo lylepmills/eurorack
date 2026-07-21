@@ -196,6 +196,13 @@ The authoritative implementation and deployment notes are in
 
 ## Production build-service checkpoint
 
+> SUPERSEDED 2026-07-21: production now runs source revision
+> `8cf101fe28af` / image `rev-8cf101fe28af`, deployed from
+> `claude/plaits-lab-integration` (the DX7 allowlist-freshness fix + the
+> reviewed Lockstep/Loopback/Reed-Pipe DSP + LEVEL-CV changes). The deploy
+> ledger in `plaits_lab_builder/README.md` is the authoritative record; the
+> July 19 figures below are retained as the schema-v6 rollout checkpoint.
+
 Production was redeployed to Cloudflare on July 19, 2026 (the schema v6
 rollout — manuals, optional custom FM banks, opt-in fourth bank):
 
@@ -204,9 +211,8 @@ rollout — manuals, optional custom FM banks, opt-in fourth bank):
 - Compiler image:
   `plaits-lab-build-service-firmwarebuilder:rev-303a9afad9f1` — the immutable
   commit-derived tag convention that replaced the date-based tags
-- Source revision: `303a9afad9f1` (deployed from the fast-forwarded
-  `claude/plaits-fourth-bank` / `claude/plaits-lab-integration` head
-  `63fa57a`)
+- Source revision: `303a9afad9f1` (deployed from the then-fast-forwarded
+  `claude/plaits-lab-integration` head `63fa57a`)
 - Queue: `plaits-lab-builds` (consumer serialized: `max_batch_size` 1,
   `max_concurrency` 1 against the single-instance container); dead-letter
   queue: `plaits-lab-builds-dead-letter`
@@ -246,8 +252,8 @@ and WAV SHA-256
 
 ## Fourth engine bank (32 slots) — firmware prototype
 
-The firmware side of an OPT-IN fourth bank is implemented on branch
-`claude/plaits-fourth-bank` (2026-07-19). Default builds are unchanged by
+The firmware side of an OPT-IN fourth bank is implemented (2026-07-19; merged
+into `claude/plaits-lab-integration`). Default builds are unchanged by
 construction: the generated config defines `PLAITS_ENGINE_COUNT` (24 or 32),
 `plaits/build_config.h` defaults it to 24, and every 24-count expansion
 constant-folds to the previous literals (`kMaxEngines`, the settings clamp,
