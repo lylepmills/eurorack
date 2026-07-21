@@ -35,7 +35,7 @@ Generate the current audition-layout field guide with:
 
 ```sh
 python3 render_manual.py audition_recipe.json \
-  ../../output/pdf/plaits-lab-audition-field-guide.pdf
+  ../../output/pdf/plaits-palette-audition-field-guide.pdf
 ```
 
 The PDF uses the public green/red/amber order, shows all 24 positions, and then
