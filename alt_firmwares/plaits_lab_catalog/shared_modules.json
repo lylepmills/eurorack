@@ -8,6 +8,50 @@
       "license": "MIT",
       "headers": ["plaits/dsp/chords/chord_bank.h"],
       "sources": ["plaits/dsp/chords/chord_bank.cc"]
+    },
+    "physical-string": {
+      "name": "Physical string",
+      "description": "Karplus-Strong plucked/bowed string primitives — String (a comb-filtered waveguide) and StringVoice (an excited string with dispersion). Declare it and include \"plaits/dsp/physical_modelling/string_voice.h\" (or string.h) to build a plucked-string engine without vendoring a copy. delay_line.h is header-only and needs no module.",
+      "license": "MIT",
+      "headers": [
+        "plaits/dsp/physical_modelling/string.h",
+        "plaits/dsp/physical_modelling/string_voice.h"
+      ],
+      "sources": [
+        "plaits/dsp/physical_modelling/string.cc",
+        "plaits/dsp/physical_modelling/string_voice.cc"
+      ]
+    },
+    "physical-modal": {
+      "name": "Modal resonator",
+      "description": "Modal-synthesis primitives — Resonator (a bank of tuned modal filters) and ModalVoice (a mallet-excited resonator). Declare it and include \"plaits/dsp/physical_modelling/modal_voice.h\" (or resonator.h) to build a struck/modal engine without vendoring a copy.",
+      "license": "MIT",
+      "headers": [
+        "plaits/dsp/physical_modelling/modal_voice.h",
+        "plaits/dsp/physical_modelling/resonator.h"
+      ],
+      "sources": [
+        "plaits/dsp/physical_modelling/modal_voice.cc",
+        "plaits/dsp/physical_modelling/resonator.cc"
+      ]
+    },
+    "fm-core": {
+      "name": "FM operator framework",
+      "description": "The 6-operator FM framework — Algorithms (operator-routing opcode tables) and dx_units (DX7 parameter LUTs and conversions), plus the header-only Voice/Patch/Operator/Lfo/Envelope classes. Declare it to build an FM engine that supplies its own patches in code. Note: loading DX7 SYX banks via LoadUserData is not reproducible in community v1 (LoadUserData is a no-op), so build patches programmatically rather than from user data.",
+      "license": "MIT",
+      "headers": [
+        "plaits/dsp/fm/algorithms.h",
+        "plaits/dsp/fm/dx_units.h",
+        "plaits/dsp/fm/voice.h",
+        "plaits/dsp/fm/patch.h",
+        "plaits/dsp/fm/operator.h",
+        "plaits/dsp/fm/lfo.h",
+        "plaits/dsp/fm/envelope.h"
+      ],
+      "sources": [
+        "plaits/dsp/fm/algorithms.cc",
+        "plaits/dsp/fm/dx_units.cc"
+      ]
     }
   }
 }

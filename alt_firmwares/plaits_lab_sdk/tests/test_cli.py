@@ -232,11 +232,17 @@ class PackageTests(unittest.TestCase):
             self.assertTrue(renderer.exists())
 
     @unittest.skipUnless(shutil.which("c++") or shutil.which("g++"), "host C++ compiler required")
-    def test_reference_chord_consumers_link(self) -> None:
+    def test_reference_shared_module_consumers_link(self) -> None:
+        # Every built-in that declares a shared module must still link when its
+        # module .cc are resolved from the registry instead of source.files.
         with tempfile.TemporaryDirectory() as temp_dir:
-            for engine_id in ("chords", "chiptune", "string-machine"):
+            for engine_id in (
+                "chords", "chiptune", "string-machine",
+                "inharmonic-string", "modal-resonator", "dx7-bank-a",
+            ):
                 with self.subTest(engine=engine_id):
                     package = plaits_lab.builtin_package(engine_id)
+                    self.assertTrue(package["manifest"]["sharedModules"])
                     renderer = Path(temp_dir) / f"reference-{engine_id}"
                     plaits_lab.compile_renderer(package, renderer, None)
                     self.assertTrue(renderer.exists())

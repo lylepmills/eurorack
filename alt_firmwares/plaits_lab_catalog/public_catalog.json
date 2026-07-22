@@ -518,9 +518,12 @@
         "kind": "official",
         "tone": "red"
       },
+      "sharedModules": [
+        "physical-string"
+      ],
       "version": "1.0.0",
-      "digest": "sha256:442b6653e452c5b6382ccbad67a9c22faa82c1b3f764ac6aa5573cab459f38ae",
-      "documentationDigest": "sha256:1a37eb30b302b6d5f70b7da18c19883ea8cf7a21c7053bbbdc84aa168c944cca",
+      "digest": "sha256:defe4143de5b98b960764528020335b9c98d26133aebe32a1273e19f2166dd75",
+      "documentationDigest": "sha256:271fe6e2c7c55e915e66ec3415472b0992cbb5cb3e2af981759f9327d5d5c068",
       "manual": {
         "controls": {
           "harmonics": "Changes string dispersion from harmonic plucks to inharmonic material.",
@@ -562,9 +565,12 @@
         "kind": "official",
         "tone": "red"
       },
+      "sharedModules": [
+        "physical-modal"
+      ],
       "version": "1.0.0",
-      "digest": "sha256:cf5222f00a26c1298def430471a87a0622890057b8fe6a196b85480db492b681",
-      "documentationDigest": "sha256:5905a8fba531e5880366d9d3271f596e152c0df6869bca9c5156787f1edd87fc",
+      "digest": "sha256:526ab282516e1854a6e9441bd02b81b6ee221e06fc8f860177a67c00fe90a16c",
+      "documentationDigest": "sha256:ed0f242effc18f10c87c91dee52ab4802a1e8a0dfa0545a420430354f3487b3e",
       "manual": {
         "controls": {
           "harmonics": "Changes modal structure across strings, plates, tubes, and bells.",
@@ -829,9 +835,12 @@
         "kind": "custom",
         "tone": "amber"
       },
+      "sharedModules": [
+        "fm-core"
+      ],
       "version": "1.0.0",
-      "digest": "sha256:df569fa34107b8bb88596454af32db72909888db29f994e98cd0f557e642765d",
-      "documentationDigest": "sha256:a937f0488fec1506b5bd75478fde42953241e123c072d2acc6eaade157ee7bec",
+      "digest": "sha256:e47214880eec813c2610872c8777bd1825ad9d0fb7df5c1b646f252bfa27e8ea",
+      "documentationDigest": "sha256:59fd9a343077f364f88ac65959f595ad9c57f418edb2b265cc9676fc3b8e0dad",
       "manual": {
         "controls": {
           "harmonics": "Selects a patch from the first built-in six-operator FM bank.",
@@ -875,9 +884,12 @@
         "kind": "custom",
         "tone": "amber"
       },
+      "sharedModules": [
+        "fm-core"
+      ],
       "version": "1.0.0",
-      "digest": "sha256:5d833d1fa48dc21fcc80b18e131efa73c6b4bd53b0724091bdce83a71e6a7847",
-      "documentationDigest": "sha256:70b2bc0f9d3da9b44f75ea11d190a4af6c3ad8fbcd97a1090dbcc8694e88af14",
+      "digest": "sha256:bd4c6dc13447d11ee437daa83540c623e3f5dd4c0dcac4dd591a12f413513a1e",
+      "documentationDigest": "sha256:cf8dae750bb35368b51e57811004b4b6843bc4d3276baebaf0de5b7509710288",
       "manual": {
         "controls": {
           "harmonics": "Selects a patch from the second built-in six-operator FM bank.",
@@ -921,9 +933,12 @@
         "kind": "custom",
         "tone": "amber"
       },
+      "sharedModules": [
+        "fm-core"
+      ],
       "version": "1.0.0",
-      "digest": "sha256:3a85ea76ec6f2d680ec01ad85511d74327f134a30001404938389f152105b508",
-      "documentationDigest": "sha256:0e7f87fa4e1c085ffe59b6e51132107d24db5f65ecdabe4bdbcf0e89ba327095",
+      "digest": "sha256:9c867cb571e8f3f644a6049aa29f01d30ab6dda96eee8ba4b999c2414af5b0e6",
+      "documentationDigest": "sha256:7e48d31c9fcf5160428213fc57cb1bf9c0c7f90ea56166816b856377eb6bc2a5",
       "manual": {
         "controls": {
           "harmonics": "Selects a patch from the third built-in six-operator FM bank.",
