@@ -427,6 +427,36 @@ class GenerateEngineConfigTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "bounded cent offsets"):
             validate_recipe(recipe)
 
+    def _local_chord_tables(self, count: int) -> list:
+        base = DEFAULT_CHORD_TABLES[0]
+        tables = []
+        for n in range(count):
+            table = json.loads(json.dumps(base))
+            table["id"] = f"filler-{n}"
+            table["packageId"] = f"local/filler-{n}"
+            table["version"] = "draft"
+            table["digest"] = None
+            table["name"] = f"Filler {n}"
+            table["origin"] = "Local"
+            tables.append(table)
+        return tables
+
+    def test_v8_accepts_nine_chord_tables_and_emits_the_count(self) -> None:
+        recipe = self.v7_recipe(["virtual-analog"] * 24)
+        recipe["schemaVersion"] = 8
+        recipe["initialOptions"] = {**recipe["initialOptions"], "chordTable": "filler-0"}
+        recipe["resources"] = {"chordTables": self._local_chord_tables(9)}
+        config = render_config(validate_recipe(recipe))
+        self.assertIn("#define PLAITS_CHORD_TABLE_COUNT 9", config)
+
+    def test_v8_rejects_ten_chord_tables(self) -> None:
+        recipe = self.v7_recipe(["virtual-analog"] * 24)
+        recipe["schemaVersion"] = 8
+        recipe["initialOptions"] = {**recipe["initialOptions"], "chordTable": "filler-0"}
+        recipe["resources"] = {"chordTables": self._local_chord_tables(10)}
+        with self.assertRaisesRegex(ValueError, "between one and nine"):
+            validate_recipe(recipe)
+
 
 if __name__ == "__main__":
     unittest.main()

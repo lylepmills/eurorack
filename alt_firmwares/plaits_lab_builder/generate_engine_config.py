@@ -105,8 +105,8 @@ DEFAULT_CHORD_TABLES = list(APPROVED_CHORD_TABLES.values())
 
 
 def validate_chord_tables(value: Any) -> list[dict[str, Any]]:
-    if not isinstance(value, list) or not 1 <= len(value) <= 6:
-        raise ValueError("recipe must contain between one and six chord tables")
+    if not isinstance(value, list) or not 1 <= len(value) <= 9:
+        raise ValueError("recipe must contain between one and nine chord tables")
     result: list[dict[str, Any]] = []
     table_ids: set[str] = set()
     for table in value:
@@ -199,8 +199,8 @@ def normalize_slots(slots: list[Any], schema_version: int) -> list[str | None]:
     normalized: list[str | None] = []
     for reference in slots:
         if reference is None:
-            if schema_version != 7:
-                raise ValueError("empty slots require schemaVersion 7")
+            if schema_version not in (7, 8):
+                raise ValueError("empty slots require schemaVersion 7 or 8")
             normalized.append(None)
             continue
         if isinstance(reference, str):
@@ -246,8 +246,8 @@ def validate_recipe(value: Any) -> BuildRecipe:
     if not isinstance(value, dict):
         raise ValueError("recipe must be a JSON object")
     schema_version = value.get("schemaVersion")
-    if schema_version not in (2, 3, 4, 5, 6, 7):
-        raise ValueError("recipe schemaVersion must be 2, 3, 4, 5, 6, or 7")
+    if schema_version not in (2, 3, 4, 5, 6, 7, 8):
+        raise ValueError("recipe schemaVersion must be 2, 3, 4, 5, 6, 7, or 8")
     if value.get("target") != "mutable-instruments-plaits":
         raise ValueError("unsupported firmware target")
     if value.get("firmware") != "rubato-plaits":
@@ -257,17 +257,17 @@ def validate_recipe(value: Any) -> BuildRecipe:
     slots = value.get("slots")
     if not isinstance(slots, list) or len(slots) not in (24, 32):
         raise ValueError("recipe must contain 24 slots, or 32 for a four-bank build")
-    if len(slots) == 32 and schema_version not in (6, 7):
-        raise ValueError("32-slot recipes require schemaVersion 6 or 7")
+    if len(slots) == 32 and schema_version not in (6, 7, 8):
+        raise ValueError("32-slot recipes require schemaVersion 6, 7, or 8")
     public_slots = normalize_slots(slots, schema_version)
     validate_bank_shape(public_slots)
     user_data_banks: list[tuple[int, bytes]] = []
-    if schema_version in (5, 6, 7):
+    if schema_version in (5, 6, 7, 8):
         resources = value.get("resources")
         # v6 always carries the custom-FM-banks resource (its defining feature).
-        # v7 mirrors the editor: userDataBanks only for a 32-slot (fourth-bank)
-        # recipe; a 24-slot v7 carries chord tables only, like v5.
-        expect_user_data_banks = schema_version == 6 or (schema_version == 7 and len(slots) == 32)
+        # v7/v8 mirror the editor: userDataBanks only for a 32-slot (fourth-bank)
+        # recipe; a 24-slot v7/v8 carries chord tables only, like v5.
+        expect_user_data_banks = schema_version == 6 or (schema_version in (7, 8) and len(slots) == 32)
         expected_resource_keys = {"chordTables", "userDataBanks"} if expect_user_data_banks else {"chordTables"}
         if not isinstance(resources, dict) or set(resources) != expected_resource_keys:
             raise ValueError("recipe must contain only supported firmware resources")
@@ -276,7 +276,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
             user_data_banks = validate_user_data_banks(resources.get("userDataBanks"))
     else:
         chord_tables = validate_chord_tables(DEFAULT_CHORD_TABLES)
-    configuration = value if schema_version in (4, 5, 6, 7) else DEFAULT_CONFIGURATION
+    configuration = value if schema_version in (4, 5, 6, 7, 8) else DEFAULT_CONFIGURATION
     preferences = configuration.get("preferences")
     options = configuration.get("initialOptions")
     if not isinstance(preferences, dict) or not isinstance(options, dict):

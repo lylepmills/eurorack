@@ -342,3 +342,58 @@ test("manual keys derive from documentation identity, not build identity", async
   optionsChanged.initialOptions = { ...optionsChanged.initialOptions, holdOnTrigger: true };
   assert.equal(first, await computeManualKey(optionsChanged, "1"));
 });
+
+test("version 8 accepts up to nine chord tables and normalizes to v8", async () => {
+  const publicCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const chordCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_chord_tables/catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const byId = new Map(publicCatalog.engines.map((engine: { id: string }) => [engine.id, engine]));
+  const localTable = (n: number) => ({
+    ...structuredClone(chordCatalog.tables[0]),
+    id: `filler-${n}`,
+    packageId: `local/filler-${n}`,
+    version: "draft",
+    digest: null,
+    name: `Filler ${n}`,
+    author: "You",
+    origin: "Local",
+    description: "A local table.",
+  });
+  const nineTables = Array.from({ length: 9 }, (_, i) => localTable(i + 1));
+  const recipe = {
+    ...fixture,
+    schemaVersion: 8,
+    slots: fixture.slots.map((engineId: string) => {
+      const engine = byId.get(engineId) as { packageId: string; version: string; digest: string };
+      return { engine: engineId, package: engine.packageId, version: engine.version, digest: engine.digest };
+    }),
+    preferences: { navigationMode: "linear" },
+    initialOptions: {
+      lockedFrequencyKnob: "octaves",
+      modelInput: "model",
+      levelInput: "level",
+      auxOutput: "alternate-model",
+      suboscillatorOctave: 0,
+      chordTable: "filler-1",
+      holdOnTrigger: false,
+    },
+    resources: { chordTables: nineTables },
+  };
+  const normalized = normalizeRecipe(recipe);
+  assert.equal(normalized.schemaVersion, 8);
+  assert.equal(normalized.resources.chordTables.length, 9);
+
+  // A tenth table is rejected.
+  recipe.resources.chordTables = [...nineTables, localTable(10)];
+  assert.throws(() => normalizeRecipe(recipe), /between one and 9 chord tables/);
+
+  // Boundary: six tables need no fast-blink tier, so they stay slot-derived (v5).
+  recipe.schemaVersion = 5;
+  recipe.resources.chordTables = nineTables.slice(0, 6);
+  assert.equal(normalizeRecipe(recipe).schemaVersion, 5);
+});

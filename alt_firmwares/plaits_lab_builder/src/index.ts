@@ -569,10 +569,10 @@ export default {
       if (request.method === "GET" && url.pathname === "/v1/catalog") {
         response = json({
           schemaVersion: 2,
-          recipeSchemaVersion: 7,
+          recipeSchemaVersion: 8,
           approvedEngineIds,
           chordTables: approvedChordTables,
-          limits: { chordTables: 6, chordsPerTable: 24, userDataBanks: 3 },
+          limits: { chordTables: 9, chordsPerTable: 24, userDataBanks: 3 },
           buildContract: env.PLAITS_BUILD_CONTRACT,
         });
       } else if (request.method === "POST" && url.pathname === "/v1/builds") {
