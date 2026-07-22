@@ -303,16 +303,21 @@ void Ui::UpdateLEDs() {
           option_value = patch_->hold_on_trigger_option;
         }
 
+        // Each option value encodes as a hue (green/red/yellow) crossed with a
+        // blink tier: solid (0-2), slow blink (3-5), fast blink (6-8). Only
+        // chord_set_option ranges past 5, so every other option stays within
+        // the solid+slow-blink range and renders exactly as before.
         LedColor color = LED_COLOR_OFF;
-        if (option_value == 0 || option_value == 3) {
-          color = LED_COLOR_GREEN;
-        } else if (option_value == 1 || option_value == 4) {
-          color = LED_COLOR_RED;
-        } else if (option_value == 2 || option_value == 5) {
-          color = LED_COLOR_YELLOW;
+        switch (option_value % 3) {
+          case 0: color = LED_COLOR_GREEN; break;
+          case 1: color = LED_COLOR_RED; break;
+          case 2: color = LED_COLOR_YELLOW; break;
         }
-        if ((option_value > 2) && (pwm_counter_ & 128)) {
-          color = LED_COLOR_OFF;
+        const int blink_tier = option_value / 3;  // 0 solid, 1 slow, 2 fast
+        if (blink_tier == 1 && (pwm_counter_ & 128)) {
+          color = LED_COLOR_OFF;  // slow blink (values 3-5)
+        } else if (blink_tier == 2 && (pwm_counter_ & 64)) {
+          color = LED_COLOR_OFF;  // fast blink (values 6-8), 2x the slow rate
         }
 
         // Dim the other lights
