@@ -68,7 +68,9 @@ def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]
     models: list[dict[str, Any]] = []
     seen: set[str] = set()
     for slot, engine_id in enumerate(slots):
-        if engine_id in seen:
+        # v7 short-bank recipes leave empty slots as None — they have no model
+        # reference, so they must not be dereferenced (KeyError) or listed.
+        if engine_id is None or engine_id in seen:
             continue
         seen.add(engine_id)
         engine = by_id[engine_id]
@@ -77,7 +79,7 @@ def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]
     return {
         "buildKey": build_key,
         "slots": [
-            {"engine": by_id[engine_id], "position": position(slot)}
+            {"engine": by_id[engine_id] if engine_id is not None else None, "position": position(slot)}
             for slot, engine_id in enumerate(slots)
         ],
         "models": models,
@@ -250,9 +252,15 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         for bank_slot in range(8):
             entry = document["slots"][bank_index * 8 + bank_slot]
             engine = entry["engine"]
+            # Empty slots (v7 short banks) have no engine — show a muted dash.
+            name_para = (
+                Paragraph(_escape(engine["name"]), bank_model_style)
+                if engine is not None
+                else Paragraph("—", small_muted_style)
+            )
             rows.append([
                 Table(
-                    [[Paragraph(f"{bank_slot + 1:02d}", small_muted_style), Paragraph(_escape(engine["name"]), bank_model_style)]],
+                    [[Paragraph(f"{bank_slot + 1:02d}", small_muted_style), name_para]],
                     colWidths=[0.25 * inch, 1.72 * inch],
                     style=TableStyle([
                         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),

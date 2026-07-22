@@ -36,6 +36,41 @@ class RenderManualTest(unittest.TestCase):
             },
         }
 
+    def short_bank_recipe(self) -> dict:
+        # v7 short bank: green full (8), red partly empty (3 + 5 empty), amber
+        # full (8). The Worker normalizes filled slots to bare IDs interleaved
+        # with None, which is what the container renderer receives.
+        full = self.load("default_recipe.json")["slots"]
+        slots = full[:8] + full[8:11] + [None] * 5 + full[16:24]
+        return {
+            "schemaVersion": 7,
+            "target": "mutable-instruments-plaits",
+            "firmware": "rubato-plaits",
+            "output": "audio-wav",
+            "slots": slots,
+            "preferences": dict(DEFAULT_CONFIGURATION["preferences"]),
+            "initialOptions": dict(DEFAULT_CONFIGURATION["initialOptions"]),
+            "resources": {"chordTables": [dict(table) for table in DEFAULT_CHORD_TABLES]},
+        }
+
+    def test_v7_short_bank_skips_empty_slots(self) -> None:
+        # Empty slots must not crash the manual (was KeyError: None, which failed
+        # the whole render and hid the field-guide download link).
+        document = manual_document(self.short_bank_recipe())
+        self.assertEqual(len(document["slots"]), 24)
+        self.assertIsNone(document["slots"][11]["engine"])  # first empty red slot
+        self.assertEqual(sum(1 for s in document["slots"] if s["engine"] is None), 5)
+        # Empty slots never become model references.
+        self.assertTrue(all(model["id"] for model in document["models"]))
+
+    @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
+    def test_v7_short_bank_pdf_renders(self) -> None:
+        document = manual_document(self.short_bank_recipe())
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "short-bank.pdf"
+            render_pdf(document, output)
+            self.assertTrue(output.read_bytes().startswith(b"%PDF-"))
+
     def test_bank_positions_use_public_green_red_amber_order(self) -> None:
         document = manual_document(self.load("audition_recipe.json"))
         self.assertEqual(document["slots"][0]["position"], {
