@@ -127,6 +127,39 @@ class RenderManualTest(unittest.TestCase):
             self.assertEqual(first.read_bytes(), second.read_bytes())
             self.assertTrue(first.read_bytes().startswith(b"%PDF-"))
 
+    def nine_table_recipe(self) -> dict:
+        base = DEFAULT_CHORD_TABLES[0]
+        tables = [dict(t) for t in DEFAULT_CHORD_TABLES]
+        for n in range(9 - len(tables)):
+            table = json.loads(json.dumps(base))
+            table.update(
+                id=f"filler-{n}", packageId=f"local/filler-{n}", version="draft",
+                digest=None, name=f"Filler {n}", origin="Local",
+            )
+            tables.append(table)
+        recipe = self.load("default_recipe.json")
+        recipe.update(
+            schemaVersion=8,
+            preferences=dict(DEFAULT_CONFIGURATION["preferences"]),
+            initialOptions=dict(DEFAULT_CONFIGURATION["initialOptions"]),
+            resources={"chordTables": tables},
+        )
+        return recipe
+
+    def test_nine_chord_tables_list_in_the_document(self) -> None:
+        document = manual_document(self.nine_table_recipe())
+        self.assertEqual(len(document["chordTables"]), 9)
+
+    @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
+    def test_nine_chord_tables_pdf_renders(self) -> None:
+        # The options-menu table indexes LED_STATES by chord-table position, so
+        # the 7th-9th tables must reach the fast-blink tier without an IndexError.
+        document = manual_document(self.nine_table_recipe())
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "nine-tables.pdf"
+            render_pdf(document, output)
+            self.assertTrue(output.read_bytes().startswith(b"%PDF-"))
+
 
 if __name__ == "__main__":
     unittest.main()

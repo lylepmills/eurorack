@@ -39,15 +39,19 @@ MENU_LIGHTS = (
     ("Hold on trigger", ("Off (live CV)", "Sample & hold")),
 )
 
-# LED appearance for option values 0..5 (plaits ui.cc): the first three are
-# solid, the next three are the same colors blinking. (label, hex, blinking).
+# LED appearance for option values 0..8 (plaits ui.cc): green/red/yellow solid
+# (0-2), the same three blinking (3-5), then the same three blinking fast (6-8).
+# Only LIGHT 6 (chord tables) reaches the fast-blink tier. (label, hex, blink).
 LED_STATES = (
-    ("Green", BANKS[0]["color"], False),
-    ("Red", BANKS[1]["color"], False),
-    ("Yellow", BANKS[2]["color"], False),
-    ("Green", BANKS[0]["color"], True),
-    ("Red", BANKS[1]["color"], True),
-    ("Yellow", BANKS[2]["color"], True),
+    ("Green", BANKS[0]["color"], None),
+    ("Red", BANKS[1]["color"], None),
+    ("Yellow", BANKS[2]["color"], None),
+    ("Green", BANKS[0]["color"], "blink"),
+    ("Red", BANKS[1]["color"], "blink"),
+    ("Yellow", BANKS[2]["color"], "blink"),
+    ("Green", BANKS[0]["color"], "fast blink"),
+    ("Red", BANKS[1]["color"], "fast blink"),
+    ("Yellow", BANKS[2]["color"], "fast blink"),
 )
 
 
@@ -304,10 +308,11 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
     # Options menu — the seven-light reference. Lights 1-5 and 7 are the same on
     # every build; light 6 lists this recipe's chord tables, so the page is
     # partly recipe-specific. Each light's settings are shown in LED order, with
-    # the color word tinted to the LED and "(blink)" for the blinking values.
+    # the color word tinted to the LED and "(blink)"/"(fast blink)" for the
+    # blinking values.
     def led_setting(index: int, meaning: str) -> str:
-        label, hex_color, blinking = LED_STATES[index]
-        state = f"{label} (blink)" if blinking else label
+        label, hex_color, blink = LED_STATES[index]
+        state = f"{label} ({blink})" if blink else label
         return f'<font color="{hex_color}"><b>{state}</b></font>: {_escape(meaning)}'
 
     menu_rows: list[list[Any]] = [[
@@ -368,14 +373,15 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         Paragraph(
             "Short-press both buttons at once to enter or exit the options menu. The first seven lights are the menu: "
             "the left button moves between them, the right button steps through a light's settings, and the light's color shows the current one — "
-            "green, red, and yellow, then the same three colors blinking for any fourth, fifth, or sixth setting.",
+            "green, red, and yellow, then the same three colors blinking for a fourth, fifth, or sixth setting — "
+            "and, on LIGHT 6, blinking fast for a seventh, eighth, or ninth.",
             intro_style,
         ),
         menu_table,
         Spacer(1, 0.1 * inch),
         Paragraph(
             "LIGHT 1 applies in octave-switching (frequency-locked) mode. LIGHT 3's LPG-decay and fourth-macro settings apply only when TRIG is patched. "
-            "LIGHT 6 applies to chord-capable models and lists the chord tables loaded in this build. "
+            "LIGHT 6 applies to chord-capable models and lists the chord tables loaded in this build (up to nine). "
             "Model navigation (linear or banked) is chosen when you build the firmware, not from this menu.",
             small_muted_style,
         ),
