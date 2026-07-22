@@ -362,9 +362,11 @@ A bank may hold FEWER than eight engines. Shipped end-to-end and DEPLOYED
     layout, and locked-frequency option 3 has different meanings. The July 17
     merge keeps Plaits Lab's fourth-macro/profile behavior rather than silently
     changing saved-state semantics.
-12. Flash and audition a four-to-six-table build on physical hardware. Verify
-    all six solid/blinking selector states, persisted table selection, knob
-    traversal, and arpeggiator behavior; current proof is host plus ARM builds.
+12. DONE (2026-07-22): chord tables went 6→9 with a fast-blink LED tier, shipped
+    as builder rev f3474e7470b1 / schema v8. Flashed + auditioned a nine-table
+    build on hardware — all nine selector states (three colors × solid/slow/fast
+    blink; fast = `pwm_counter_ & 64`, 2× the slow rate), persisted table
+    selection, knob traversal, and arpeggiator behavior all verified.
 13. Expand chord-table authoring beyond the first local-fork slice. The editor
     edits four cent offsets and arpeggio length, but cannot rename tables or
     positions, add/remove/reorder positions, or import/export one table alone.
