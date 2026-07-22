@@ -196,12 +196,18 @@ The authoritative implementation and deployment notes are in
 
 ## Production build-service checkpoint
 
-> SUPERSEDED 2026-07-21: production now runs source revision
-> `8cf101fe28af` / image `rev-8cf101fe28af`, deployed from
-> `claude/plaits-lab-integration` (the DX7 allowlist-freshness fix + the
-> reviewed Lockstep/Loopback/Reed-Pipe DSP + LEVEL-CV changes). The deploy
-> ledger in `plaits_lab_builder/README.md` is the authoritative record; the
-> July 19 figures below are retained as the schema-v6 rollout checkpoint.
+> SUPERSEDED 2026-07-21 (schema v7): production now runs source revision
+> `7b62cbd851d4` / image `rev-7b62cbd851d4`, deployed from
+> `claude/plaits-lab-integration`. This rollout ships SHORT BANKS (empty slots)
+> — recipe schema v7, per-bank-memory navigation ("design B", persisted across
+> power cycles; see the Short banks section below) — plus the field-guide
+> Options-menu page (which is why `PLAITS_MANUAL_CONTRACT` bumped 1->2).
+> `/v1/catalog` now advertises `recipeSchemaVersion` 7; a live short-bank build
+> was byte-identical to the local build (172624 text). The prior live pair was
+> `8cf101fe28af` / `rev-8cf101fe28af` (DX7 allowlist-freshness + reviewed
+> Lockstep/Loopback/Reed-Pipe DSP + the LEVEL->MODEL fourth-macro CV move). The
+> deploy ledger in `plaits_lab_builder/README.md` is the authoritative record;
+> the July 19 figures below are retained as the schema-v6 rollout checkpoint.
 
 Production was redeployed to Cloudflare on July 19, 2026 (the schema v6
 rollout — manuals, optional custom FM banks, opt-in fourth bank):
@@ -281,6 +287,39 @@ verified unchanged at the new revision (byte-identical builds; the website
 test suite's pinned reference builds pass). The on-hardware check PASSED
 July 20, 2026: Lyle flashed the live-API 32-slot/6-table audition build and
 confirmed the orange fourth bank reads clearly against amber.
+
+## Short banks (empty slots)
+
+A bank may hold FEWER than eight engines. Shipped end-to-end and DEPLOYED
+2026-07-21 (source `7b62cbd851d4` / image `rev-7b62cbd851d4`).
+
+- **Recipe: schema v7.** Empty slots are `null` entries; `slots` stays 24 or 32
+  physically, with each bank's engines contiguous at the front (empties trail).
+  Full 24/32 palettes still emit v5/v6, byte-identical. The Worker contract
+  accepts v7 (keeps `schemaVersion: 7` when empties are present so the compiler
+  applies short-bank rules) and validates bank shape; the generator emits
+  `PLAITS_BANK_SIZES` in the internal amber/green/red(/orange) order — dropping
+  trailing empty banks, keeping interior/leading empties as `0` so bank->LED
+  color stays aligned — and `PLAITS_ENGINE_COUNT` is the post-compaction total.
+- **Firmware: per-bank-memory navigation ("design B").** `plaits/bank_navigation.h`
+  (pure, host-tested in `plaits/test/`) — within-bank stepping wraps at the
+  bank's real size; change-bank lands on the destination bank's LAST-SELECTED row
+  (skipping empty banks), so the "changed into a shorter bank than the row I was
+  on" phantom-row case cannot arise. That row (`bank_last_row_[]`) is PERSISTED
+  across power cycles in the saved `State`. `build_config.h` gains
+  `PLAITS_BANK_SIZES` (default `{8,8,8}`, generator-baked); `ui.cc` Navigate + LED
+  derive bank/row from the size table instead of `/8 %8`.
+- **GOTCHA — the firmware compiles as C++98, not C++11.** `arm-none-eabi-g++ 4.8`
+  is invoked with no `-std=`, so `constexpr` / `static_assert` are hard errors
+  (a modern host g++ accepts them silently). Keep firmware code C++98: plain
+  `static const` tables + `static const int n = sizeof(a)/sizeof(a[0])` (still an
+  ICE, so `n > 3` folds). Put compile-time invariant checks in the config
+  GENERATOR (Python, tested), not the firmware. The ARM cross-build
+  (`make -f plaits/makefile … wav` in the builder image) is the only thing that
+  catches this — host tests don't.
+- **Remaining:** the on-hardware listening/feel check (per-bank memory,
+  short-bank button-cycling, LED colors on a real Plaits) — the same
+  deploy-then-hardware step the fourth bank followed.
 
 ## Loose ends and next milestones
 
