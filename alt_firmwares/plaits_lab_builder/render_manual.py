@@ -31,8 +31,8 @@ PANEL_LABELS = ("HARMONICS", "TIMBRE", "MORPH", "FOURTH")
 # is recipe-specific. A meanings value of None is filled from the recipe.
 MENU_LIGHTS = (
     ("FREQUENCY knob", ("Octaves", "LPG decay", "Aux crossfade", "Fourth macro")),
-    ("MODEL input", ("Model select", "LPG colour (VCFA->VCA)", "Aux crossfade")),
-    ("LEVEL input", ("Level", "LPG decay", "Fourth macro")),
+    ("MODEL input", ("Model select", "LPG colour (VCFA->VCA)", "Aux crossfade", "Fourth macro")),
+    ("LEVEL input", ("Level", "LPG decay")),
     ("Aux suboscillator", ("Regular aux model", "Square wave", "Sine wave")),
     ("Subosc octave", ("Same pitch", "-1 octave", "-2 octaves")),
     ("Chord table", None),
