@@ -128,6 +128,19 @@ def build_firmware(payload: Any) -> tuple[Path, dict[str, str]]:
         "-j4",
         "wav",
     ]
+    # The per-engine stereo render path (OUT/AUX as an L/R pair) costs ~26 KB of
+    # flash across the engine registry — enough to push a full 24-engine palette
+    # over the 224 KB budget. It is only reachable when the aux option selects
+    # stereo (value 3), so a recipe that does NOT select stereo is compiled with
+    # PLAITS_ENABLE_STEREO=0, which folds every engine's stereo branch away and
+    # restores the pre-stereo firmware size. PROJECT_CONFIGURATION is a global
+    # define, so it reaches the shared engine objects (unlike -include
+    # ENGINE_CONFIG, which the makefile applies only to the recipe-config
+    # objects); ccache keeps a warm variant for each of the two states. Stereo
+    # recipes pass nothing here (engine.h defaults the flag to 1), so their
+    # build stays byte-identical to the always-stereo firmware.
+    if validated_recipe.aux_subosc_wave_option != 3:
+        command.append("PROJECT_CONFIGURATION=-DPLAITS_ENABLE_STEREO=0")
     # Pin the full locale, including LC_CTYPE: ccache folds these into its hash,
     # and Python's PEP 538 C-locale coercion otherwise injects LC_CTYPE=C.UTF-8
     # here, which would never match the image's shell-built warm cache (LC_CTYPE=C)

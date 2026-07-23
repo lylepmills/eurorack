@@ -176,10 +176,16 @@ void Voice::Render(
   p.chord_set_option = patch.chord_set_option;
   // Aux output mode 3 requests a true stereo render (OUT = left,
   // AUX = right) from engines that support it; the others fall back to
-  // their regular aux output.
+  // their regular aux output. On the non-stereo build variant this is a
+  // compile-time constant, so the symmetric-gain branch below and every
+  // engine's stereo path fold away.
+#if PLAITS_ENABLE_STEREO
   const bool stereo_render = patch.aux_subosc_wave_option == 3 &&
       e->stereo_capable();
   p.stereo = stereo_render;
+#else
+  const bool stereo_render = false;
+#endif
   p.macro = patch.locked_frequency_pot_option == 3
       ? patch.freqlock_param
       : 0.5f;
