@@ -33,7 +33,7 @@ MENU_LIGHTS = (
     ("FREQUENCY knob", ("Octaves", "LPG decay", "Aux crossfade", "Fourth macro")),
     ("MODEL input", ("Model select", "LPG colour (VCFA->VCA)", "Aux crossfade", "Fourth macro")),
     ("LEVEL input", ("Level", "LPG decay")),
-    ("Aux suboscillator", ("Regular aux model", "Square wave", "Sine wave")),
+    ("Aux suboscillator", ("Regular aux model", "Square wave", "Sine wave", "Stereo (OUT/AUX = L/R)")),
     ("Subosc octave", ("Same pitch", "-1 octave", "-2 octaves")),
     ("Chord table", None),
     ("Hold on trigger", ("Off (live CV)", "Sample & hold")),

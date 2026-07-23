@@ -397,3 +397,50 @@ test("version 8 accepts up to nine chord tables and normalizes to v8", async () 
   recipe.resources.chordTables = nineTables.slice(0, 6);
   assert.equal(normalizeRecipe(recipe).schemaVersion, 5);
 });
+
+test("the stereo aux-output mode requires and normalizes to v9", async () => {
+  const publicCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const chordCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_chord_tables/catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const byId = new Map(publicCatalog.engines.map((engine: { id: string }) => [engine.id, engine]));
+  const table = structuredClone(chordCatalog.tables[0]);
+  const recipe = {
+    ...fixture,
+    schemaVersion: 9,
+    slots: fixture.slots.map((engineId: string) => {
+      const engine = byId.get(engineId) as { packageId: string; version: string; digest: string };
+      return { engine: engineId, package: engine.packageId, version: engine.version, digest: engine.digest };
+    }),
+    preferences: { navigationMode: "linear" },
+    initialOptions: {
+      lockedFrequencyKnob: "octaves",
+      modelInput: "model",
+      levelInput: "level",
+      auxOutput: "stereo",
+      suboscillatorOctave: 0,
+      chordTable: table.id,
+      holdOnTrigger: false,
+    },
+    resources: { chordTables: [table] },
+  };
+  const normalized = normalizeRecipe(recipe);
+  assert.equal(normalized.initialOptions.auxOutput, "stereo");
+  assert.equal(normalized.schemaVersion, 9);
+
+  // Stereo dominates lower feature versions: even a plain 24-slot recipe with a
+  // single chord table lifts to v9 the moment stereo is selected.
+  assert.equal(normalized.slots.length, 24);
+
+  // Switching aux back off drops the recipe to its slot-derived version.
+  recipe.initialOptions.auxOutput = "alternate-model";
+  assert.equal(normalizeRecipe(recipe).schemaVersion, 5);
+
+  // An unknown aux value is still rejected.
+  recipe.initialOptions.auxOutput = "quadraphonic";
+  assert.throws(() => normalizeRecipe(recipe), /unsupported firmware option/);
+});

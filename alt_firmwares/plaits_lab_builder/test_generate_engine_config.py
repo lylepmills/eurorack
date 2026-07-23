@@ -36,7 +36,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
             ("lockedFrequencyKnob", ["octaves", "decay", "aux-crossfade", "macro-4"]),
             ("modelInput", ["model", "lpg-colour", "aux-crossfade", "macro-4"]),
             ("levelInput", ["level", "decay"]),
-            ("auxOutput", ["alternate-model", "square-subosc", "sine-subosc"]),
+            ("auxOutput", ["alternate-model", "square-subosc", "sine-subosc", "stereo"]),
             ("suboscillatorOctave", [0, -1, -2]),
             ("chordTable", ["original", "jon-butler", "joe-mcmullen"]),
             ("holdOnTrigger", [False, True]),
@@ -50,8 +50,8 @@ class GenerateEngineConfigTest(unittest.TestCase):
             self.assertGreater(marker & 0xff, 1)
             markers.add(marker)
         # Every option combination must map to a distinct profile marker.
-        # Product of the option cardinalities: 4 * 4 * 2 * 3 * 3 * 3 * 2.
-        self.assertEqual(len(markers), 1728)
+        # Product of the option cardinalities: 4 * 4 * 2 * 4 * 3 * 3 * 2.
+        self.assertEqual(len(markers), 2304)
 
     def test_registry_translates_green_red_amber_to_amber_green_red(self) -> None:
         recipe = self.load("mixed_recipe.json")
@@ -377,6 +377,38 @@ class GenerateEngineConfigTest(unittest.TestCase):
         recipe["initialOptions"]["levelInput"] = "macro-4"
         with self.assertRaisesRegex(ValueError, "unsupported firmware option"):
             validate_recipe(recipe)
+
+    def test_stereo_aux_output_emits_wave_option_three_under_v9(self) -> None:
+        public = self.load("../plaits_lab_catalog/public_catalog.json")
+        by_id = {engine["id"]: engine for engine in public["engines"]}
+        recipe = self.load("default_recipe.json")
+        recipe.update({
+            "schemaVersion": 9,
+            "slots": [
+                {
+                    "engine": engine_id,
+                    "package": by_id[engine_id]["packageId"],
+                    "version": by_id[engine_id]["version"],
+                    "digest": by_id[engine_id]["digest"],
+                }
+                for engine_id in recipe["slots"]
+            ],
+            "preferences": {"navigationMode": "linear"},
+            "initialOptions": {
+                "lockedFrequencyKnob": "octaves",
+                "modelInput": "model",
+                "levelInput": "level",
+                "auxOutput": "stereo",
+                "suboscillatorOctave": 0,
+                "chordTable": DEFAULT_CHORD_TABLES[0]["id"],
+                "holdOnTrigger": False,
+            },
+            "resources": {"chordTables": DEFAULT_CHORD_TABLES},
+        })
+        config = render_config(validate_recipe(recipe))
+        # Stereo is the fourth aux value (OUT/AUX as a true L/R pair), and only a
+        # v9 builder accepts it.
+        self.assertIn("#define PLAITS_BUILD_AUX_SUBOSC_WAVE_OPTION 3", config)
 
     def test_local_chord_tables_are_rendered_as_bounded_numeric_data(self) -> None:
         public = self.load("../plaits_lab_catalog/public_catalog.json")
