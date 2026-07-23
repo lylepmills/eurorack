@@ -271,7 +271,26 @@ def validate_community_source(
                         f'sharedModules in plaits-engine.json to link it')
 
 
-def load_package(package_arg: str) -> dict[str, Any]:
+def autodeclare_shared_modules(paths: list[Path], declared: list[str]) -> list[str]:
+    """Add any shared module whose header is #included but not yet in `declared`.
+    Mutates `declared` in place; returns the module ids that were added. This lets
+    a contributor simply #include a module header — check/dev/render write the
+    matching sharedModules entry for them instead of erroring."""
+    owners = shared_module_header_owners()
+    seen = set(declared)
+    added: list[str] = []
+    for path in paths:
+        for match in re.finditer(r'^\s*#\s*include\s*"([^"]+)"',
+                                 path.read_text(encoding="utf-8"), re.MULTILINE):
+            module_id = owners.get(match.group(1))
+            if module_id and module_id not in seen:
+                seen.add(module_id)
+                declared.append(module_id)
+                added.append(module_id)
+    return added
+
+
+def load_package(package_arg: str, autodeclare: bool = False) -> dict[str, Any]:
     package_dir = Path(package_arg).resolve()
     manifest_path = package_dir / "plaits-engine.json"
     manifest = read_json(manifest_path)
@@ -370,11 +389,15 @@ def load_package(package_arg: str) -> dict[str, Any]:
         source_file = resolve_within(source_root, item, "source.files entry")
         require(source_file.is_file(), f"source file does not exist: {source_file}")
         source_files.append(source_file)
+    autodeclared: list[str] = []
     if manifest["packageType"] == "community":
-        validate_community_source(
-            [header, *source_files],
-            frozenset(manifest.get("sharedModules", [])),
-        )
+        declared = list(manifest.get("sharedModules", []))
+        if autodeclare:
+            autodeclared = autodeclare_shared_modules([header, *source_files], declared)
+            if autodeclared:
+                manifest["sharedModules"] = declared
+                manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+        validate_community_source([header, *source_files], frozenset(declared))
 
     post = manifest["postProcessing"]
     require(isinstance(post, dict) and set(post) == {"alreadyEnveloped", "outGain", "auxGain"},
@@ -400,6 +423,7 @@ def load_package(package_arg: str) -> dict[str, Any]:
         "header": header,
         "source_files": source_files,
         "scenarios": scenarios,
+        "autodeclared": autodeclared,
     }
 
 
@@ -723,8 +747,15 @@ def modules_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def report_autodeclared(package: dict[str, Any]) -> None:
+    for module_id in package["autodeclared"]:
+        print(f"linked shared module '{module_id}' "
+              "(added to sharedModules in plaits-engine.json)")
+
+
 def check_command(args: argparse.Namespace) -> int:
-    package = load_package(args.package)
+    package = load_package(args.package, autodeclare=True)
+    report_autodeclared(package)
     print(f"✓ package {package['manifest']['id']}@{package['manifest']['version']}")
     print("✓ metadata, license, source policy, and scenarios")
     if not args.no_compile:
@@ -812,7 +843,8 @@ def analyze_wav(path: Path, expected_seconds: float, render_seconds: float) -> d
 
 
 def render_command(args: argparse.Namespace) -> int:
-    package = load_package(args.package)
+    package = load_package(args.package, autodeclare=True)
+    report_autodeclared(package)
     scenario = scenario_by_id(package, args.scenario)
     output = Path(args.output).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -1051,7 +1083,9 @@ class DevSession:
         self.temp_dir.cleanup()
 
     def package(self) -> dict[str, Any]:
-        return load_package(self.package_arg)
+        package = load_package(self.package_arg, autodeclare=True)
+        report_autodeclared(package)
+        return package
 
     def source_fingerprint(self, package: dict[str, Any]) -> str:
         import hashlib

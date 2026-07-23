@@ -187,6 +187,28 @@ class PackageTests(unittest.TestCase):
             # Declaring the owning module makes the identical source pass.
             plaits_lab.validate_community_source([source], frozenset({"chord-bank"}))
 
+    def test_autodeclare_writes_missing_shared_module(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            package_dir = Path(temp_dir) / "chord-probe"
+            with redirect_stdout(io.StringIO()):
+                plaits_lab.init_command(SimpleNamespace(
+                    output=str(package_dir), from_engine="blank", author="Test Author",
+                    package_id="test-author/chord-probe", slug="chord-probe", name="Chord Probe",
+                ))
+            (package_dir / "src" / "chord-probe_engine.h").write_text(CHORD_PROBE_HEADER, encoding="utf-8")
+            (package_dir / "src" / "chord-probe_engine.cc").write_text(CHORD_PROBE_IMPL, encoding="utf-8")
+            # By default, including the header without declaring still errors.
+            with self.assertRaises(plaits_lab.PackageError):
+                plaits_lab.load_package(str(package_dir))
+            # autodeclare=True adds the module and rewrites the manifest on disk.
+            package = plaits_lab.load_package(str(package_dir), autodeclare=True)
+            self.assertEqual(package["autodeclared"], ["chord-bank"])
+            manifest = json.loads((package_dir / "plaits-engine.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["sharedModules"], ["chord-bank"])
+            # Idempotent — a second pass finds nothing new to declare.
+            again = plaits_lab.load_package(str(package_dir), autodeclare=True)
+            self.assertEqual(again["autodeclared"], [])
+
     def test_forking_chord_engine_declares_shared_module(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "chords-fork"
