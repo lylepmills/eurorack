@@ -52,16 +52,19 @@ author suggestions until approved by validation and review.
 ## Local workflow
 
 ```sh
-python3 alt_firmwares/plaits_lab_sdk/plaits_lab.py init my-model --from pulsar
-python3 alt_firmwares/plaits_lab_sdk/plaits_lab.py check my-model --full
-python3 alt_firmwares/plaits_lab_sdk/plaits_lab.py dev my-model
-python3 alt_firmwares/plaits_lab_sdk/plaits_lab.py submit my-model --output my-model.zip
+SDK="python3 alt_firmwares/plaits_lab_sdk/plaits_lab.py"
+PKG="alt_firmwares/plaits_lab_sdk/packages/community"   # id-namespaced package home
+
+$SDK init $PKG/my-model --from pulsar
+$SDK check $PKG/my-model --full
+$SDK dev $PKG/my-model
+$SDK submit $PKG/my-model --output my-model.zip
 ```
 
 `check` validates metadata, licensing, source boundaries, scenarios, and a
 host compilation. `check --full` and `submit` also run sanitizer-backed preview
-scenarios and audio-health analysis. `dev` feeds the same renderer into a local
-Plaits Lab session for hot reload, MIDI, scope, spectrum, and A/B listening.
+scenarios and audio-health analysis. `dev` serves a same-origin audition page
+(hot reload, scope, spectrum, and A/B listening) at the address it prints.
 
 Local tooling can produce an explicitly unreviewed hardware WAV for the
 contributor's own module, using the pinned ARM toolchain locally or through the

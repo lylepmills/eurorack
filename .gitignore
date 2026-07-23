@@ -55,3 +55,8 @@ __pycache__/
 *_BETA.sch
 *_beta.brd
 *_BETA.brd
+
+# Plaits Lab contributor WIP packages (submitted as a zip via `plaits-lab
+# submit`, not committed here). The reference packages under packages/ stay
+# tracked; only the community namespace is ignored.
+alt_firmwares/plaits_lab_sdk/packages/community/

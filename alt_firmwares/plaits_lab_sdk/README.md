@@ -10,12 +10,15 @@ Run commands from the eurorack repository root:
 
 ```sh
 SDK="python3 alt_firmwares/plaits_lab_sdk/plaits_lab.py"
+# contributor packages live here, namespaced like their id (community/<slug>) —
+# next to the reference packages, out of the firmware source tree
+PKG="alt_firmwares/plaits_lab_sdk/packages/community"
 
 $SDK catalog
-$SDK init my-engine --author "Your name"
-$SDK init pulsar-fork --from pulsar --author "Your name"
-$SDK check ./my-engine --full
-$SDK render ./my-engine --scenario hero --output /tmp/my-engine.wav
+$SDK init $PKG/my-engine --author "Your name"
+$SDK init $PKG/pulsar-fork --from pulsar --author "Your name"
+$SDK check ./$PKG/my-engine --full
+$SDK render ./$PKG/my-engine --scenario hero --output /tmp/my-engine.wav
 ```
 
 `init --from` accepts any catalog ID printed by `catalog`. A fork copies and
@@ -24,22 +27,24 @@ pins the source package's immutable digest as provenance.
 
 ## Browser audition
 
-Start the editor separately, then connect the exact local C++ package:
+`dev` serves its own audition page — nothing else to run:
 
 ```sh
-$SDK dev ./my-engine --editor http://localhost:3000
+$SDK dev ./$PKG/my-engine
 ```
 
-The command prints a contributor-center URL. The page provides the four Plaits
-controls, pitch, trigger, Web MIDI, scope/spectrum views, audio playback, and
-A/B rendering against any built-in model. The local server recompiles after a
-source change; source never has to be uploaded just to listen.
+Open the `http://127.0.0.1:4179/` link it prints. Page and API are the same
+origin, so there is no connecting, no CORS/CSP, and no browser local-network
+permission: four Plaits controls, pitch, trigger, scope/spectrum, audio
+playback, and A/B rendering against any built-in model. The local server
+recompiles after a source change; source never leaves your machine. Pass
+`--editor <page-url>` to drive the full hosted contributor site instead.
 
 ## Validation and submission
 
 ```sh
-$SDK check ./my-engine --full
-$SDK submit ./my-engine --output ./my-engine.plaits-package.zip
+$SDK check ./$PKG/my-engine --full
+$SDK submit ./$PKG/my-engine --output ./my-engine.plaits-package.zip
 ```
 
 Full checks enforce the manifest, license, source boundary and allowlist,
@@ -56,7 +61,7 @@ versions are unique, and published versions are immutable.
 ## Local hardware beta
 
 ```sh
-$SDK build ./my-engine --hardware --output /tmp/my-engine-firmware.wav
+$SDK build ./$PKG/my-engine --hardware --output /tmp/my-engine-firmware.wav
 ```
 
 This produces an **UNREVIEWED** audio updater for hardware the contributor
