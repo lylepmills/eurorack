@@ -1129,6 +1129,11 @@ def dev_command(args: argparse.Namespace) -> int:
             self.send_header("Vary", "Origin")
             self.send_header("Access-Control-Allow-Headers", "Content-Type")
             self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            # Opt into Private Network Access: a public HTTPS contributor page
+            # (e.g. rubato.audio) reaching this loopback dev server is a
+            # public->private request that Chrome blocks at the preflight unless
+            # the server returns this header. Harmless for a localhost editor.
+            self.send_header("Access-Control-Allow-Private-Network", "true")
             self.send_header("Cache-Control", "no-store")
 
         def origin_allowed(self) -> bool:
