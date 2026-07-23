@@ -19,7 +19,7 @@ class PlaitsAuditionProcessor extends AudioWorkletProcessor {
     this.exports = null;
     this.mainPtr = 0;
     this.auxPtr = 0;
-    this.monitor = 2; // 0 main only, 1 aux only, 2 stereo (main L / aux R)
+    this.monitor = 0; // 0 main only (default), 1 aux only, 2 stereo (main L / aux R)
 
     const module = options && options.processorOptions && options.processorOptions.wasmModule;
     if (module) {
