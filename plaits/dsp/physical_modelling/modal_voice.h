@@ -56,7 +56,22 @@ class ModalVoice {
       float* out,
       float* aux,
       size_t size);
-  
+  // alt firmware: stereo variant - the resonator modes are spread over a
+  // left/right pair and the raw exciter is not sent anywhere.
+  void RenderStereo(
+      bool sustain,
+      bool trigger,
+      float accent,
+      float f0,
+      float structure,
+      float brightness,
+      float damping,
+      float exciter_q,
+      float* temp,
+      float* left,
+      float* right,
+      size_t size);
+
  private:
   ResonatorSvf<1> excitation_filter_;
   Resonator resonator_;

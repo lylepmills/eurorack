@@ -25,6 +25,12 @@
 // -----------------------------------------------------------------------------
 //
 // One voice of modal synthesis.
+//
+// OUT: modal resonator excited by a mallet or by dust noise. AUX: raw
+// exciter signal.
+// alt firmware, stereo mode: even-numbered modes lean left and odd-numbered
+// modes lean right - equal-power, every mode audible on both sides - and the
+// raw exciter is not sent to AUX.
 
 #ifndef PLAITS_DSP_ENGINE_MODAL_ENGINE_H_
 #define PLAITS_DSP_ENGINE_MODAL_ENGINE_H_
@@ -47,7 +53,8 @@ class ModalEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-  
+  virtual bool stereo_capable() const { return true; }
+
  private:
   ModalVoice voice_;
   float* temp_buffer_;

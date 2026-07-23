@@ -97,7 +97,66 @@ class ResonatorSvf {
       state_2_[i] = state_2[i];
     }
   }
-  
+
+  // Same filter bank, but each mode is multiply-accumulated into two output
+  // buffers with its own pair of gains.
+  template<stmlib::FilterMode mode, bool add>
+  void ProcessStereo(
+      const float* f,
+      const float* q,
+      const float* left_gain,
+      const float* right_gain,
+      const float* in,
+      float* left,
+      float* right,
+      size_t size) {
+    float g[batch_size];
+    float r[batch_size];
+    float r_plus_g[batch_size];
+    float h[batch_size];
+    float state_1[batch_size];
+    float state_2[batch_size];
+    float left_gains[batch_size];
+    float right_gains[batch_size];
+    for (int i = 0; i < batch_size; ++i) {
+      g[i] = stmlib::OnePole::tan<stmlib::FREQUENCY_FAST>(f[i]);
+      r[i] = 1.0f / q[i];
+      h[i] = 1.0f / (1.0f + r[i] * g[i] + g[i] * g[i]);
+      r_plus_g[i] = r[i] + g[i];
+      state_1[i] = state_1_[i];
+      state_2[i] = state_2_[i];
+      left_gains[i] = left_gain[i];
+      right_gains[i] = right_gain[i];
+    }
+
+    while (size--) {
+      float s_in = *in++;
+      float s_left = 0.0f;
+      float s_right = 0.0f;
+      for (int i = 0; i < batch_size; ++i) {
+        const float hp = (s_in - r_plus_g[i] * state_1[i] - state_2[i]) * h[i];
+        const float bp = g[i] * hp + state_1[i];
+        state_1[i] = g[i] * hp + bp;
+        const float lp = g[i] * bp + state_2[i];
+        state_2[i] = g[i] * bp + lp;
+        const float s = (mode == stmlib::FILTER_MODE_LOW_PASS) ? lp : bp;
+        s_left += left_gains[i] * s;
+        s_right += right_gains[i] * s;
+      }
+      if (add) {
+        *left++ += s_left;
+        *right++ += s_right;
+      } else {
+        *left++ = s_left;
+        *right++ = s_right;
+      }
+    }
+    for (int i = 0; i < batch_size; ++i) {
+      state_1_[i] = state_1[i];
+      state_2_[i] = state_2[i];
+    }
+  }
+
  private:
   float state_1_[batch_size];
   float state_2_[batch_size];
@@ -119,7 +178,19 @@ class Resonator {
       const float* in,
       float* out,
       size_t size);
-  
+  // alt firmware: stereo variant - even-numbered modes lean left and
+  // odd-numbered modes lean right, with equal-power gains, so that every
+  // mode remains audible on both channels.
+  void ProcessStereo(
+      float f0,
+      float structure,
+      float brightness,
+      float damping,
+      const float* in,
+      float* left,
+      float* right,
+      size_t size);
+
  private:
   int resolution_;
   

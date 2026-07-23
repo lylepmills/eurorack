@@ -32,6 +32,14 @@ const float kUndertowRegistration[kNumUndertowRegistrations]
   { 0.28f, 0.24f, 0.34f, 0.62f, 0.54f, 0.86f }
 };
 
+// Fixed stereo positions, indexed like the voices: the anchor first, then
+// divisors 2 through 6. The anchor — often the loudest component — and the
+// deepest undertone hold the centre so the image cannot lean with the
+// registration; the midrange undertones alternate sides and carry the width.
+const float kUndertowVoicePan[kNumUndertowVoices] = {
+  0.5f, 0.12f, 0.88f, 0.22f, 0.78f, 0.42f
+};
+
 inline float WrapPhase(float phase) {
   if (phase >= 1.0f) {
     phase -= 1.0f;
@@ -165,12 +173,24 @@ void UndertowEngine::Render(
         distance * distance / static_cast<float>(kNumUndertowVoices - 1);
     const float target_frequency = anchor_frequency / warped_divisor;
 
+    float out_channel_target = main_target[voice] * main_gain;
+    float aux_channel_target = aux_target[voice] * aux_gain;
+    if (parameters.stereo) {
+      // OUT/AUX become L/R: the voice keeps its registration level, split by
+      // equal-power pan gains. The alternating-polarity lattice is skipped so
+      // that both channels stay mono-compatible.
+      float pan_left;
+      float pan_right;
+      StereoPanGains(kUndertowVoicePan[voice], &pan_left, &pan_right);
+      aux_channel_target = out_channel_target * pan_right;
+      out_channel_target *= pan_left;
+    }
     ParameterInterpolator frequency_modulation(
         &frequency_[voice], target_frequency, size);
     ParameterInterpolator main_modulation(
-        &main_amplitude_[voice], main_target[voice] * main_gain, size);
+        &main_amplitude_[voice], out_channel_target, size);
     ParameterInterpolator aux_modulation(
-        &aux_amplitude_[voice], aux_target[voice] * aux_gain, size);
+        &aux_amplitude_[voice], aux_channel_target, size);
 
     for (size_t i = 0; i < size; ++i) {
       const float frequency = frequency_modulation.Next();

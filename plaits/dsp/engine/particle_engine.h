@@ -25,6 +25,13 @@
 // -----------------------------------------------------------------------------
 //
 // Filtered random pulses.
+//
+// OUT: particles through resonant band-pass filters, low-pass colored and
+// diffused. AUX: raw random pulses.
+// alt firmware, stereo mode: each particle is panned to a fixed position
+// spread across the stereo field, both channels get the OUT treatment, the
+// diffuser processes the mono sum and its wet signal is added equally to
+// both sides, and the raw pulses are not sent to AUX.
 
 #ifndef PLAITS_DSP_ENGINE_PARTICLE_ENGINE_H_
 #define PLAITS_DSP_ENGINE_PARTICLE_ENGINE_H_
@@ -50,12 +57,14 @@ class ParticleEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
+  virtual bool stereo_capable() const { return true; }
 
  private:
   Particle particle_[kNumParticles];
   Diffuser diffuser_;
   stmlib::Svf post_filter_;
-  
+  stmlib::Svf right_post_filter_;
+
   DISALLOW_COPY_AND_ASSIGN(ParticleEngine);
 };
 

@@ -85,12 +85,14 @@ void SixOpEngine::Init(BufferAllocator* allocator) {
   patches_ = allocator->Allocate<fm::Patch>(kNumPatchesPerBank);
   
   post_filter_ = 0.0f;
+  post_filter_right_ = 0.0f;
   active_voice_ = kNumSixOpVoices - 1;
   rendered_voice_ = 0;
 }
 
 void SixOpEngine::Reset() {
   post_filter_ = 0.0f;
+  post_filter_right_ = 0.0f;
 }
 
 void SixOpEngine::LoadUserData(const uint8_t* user_data) {
@@ -167,37 +169,92 @@ void SixOpEngine::Render(
   //   voice_[i].Render(temp_buffer_, size);
   // }
 
-  // Staggered rendering.
-  copy(
-      &acc_buffer_[0],
-      &acc_buffer_[(kNumSixOpVoices - 1) * size],
-      &temp_buffer_[0]);
-  fill(
-      &temp_buffer_[(kNumSixOpVoices - 1) * size],
-      &temp_buffer_[kNumSixOpVoices * size],
-      0.0f);
-  rendered_voice_ = (rendered_voice_ + 1) % kNumSixOpVoices;
-  voice_[rendered_voice_].Render(temp_buffer_, size * kNumSixOpVoices);
+  if (parameters.stereo) {
+    // Staggered rendering, split by voice: the accumulation buffer always
+    // holds the tail of the single voice rendered on the previous block, so
+    // per-voice pan gains can be applied when the two halves are combined.
+    const int previous_voice = rendered_voice_;
+    fill(&temp_buffer_[0], &temp_buffer_[kNumSixOpVoices * size], 0.0f);
+    rendered_voice_ = (rendered_voice_ + 1) % kNumSixOpVoices;
+    voice_[rendered_voice_].Render(temp_buffer_, size * kNumSixOpVoices);
 
-  for (size_t i = 0; i < size; ++i) {
-    float sample = SoftClip(temp_buffer_[i] * 0.25f);
-    if (parameters.macro < 0.5f) {
-      const float darkness = (0.5f - parameters.macro) * 2.0f;
-      const float coefficient = 1.0f - darkness * 0.92f;
-      ONE_POLE(post_filter_, sample, coefficient);
-      sample = post_filter_;
-    } else {
-      post_filter_ = sample;
-      const float saturation = (parameters.macro - 0.5f) * 2.0f;
-      const float saturated = SoftClip(sample * 3.0f);
-      sample += (saturated - sample) * saturation;
+    float pan_left[kNumSixOpVoices];
+    float pan_right[kNumSixOpVoices];
+    // A free-running drone sustains a single voice: keep it centred rather
+    // than parked on one side. With a trigger patched, the round-robin voice
+    // allocation makes successive notes alternate between the two sides.
+    const bool unpatched = parameters.trigger & TRIGGER_UNPATCHED;
+    for (int i = 0; i < kNumSixOpVoices; ++i) {
+      const float position = unpatched
+          ? 0.5f
+          : 0.2f + 0.6f * static_cast<float>(i) / \
+              static_cast<float>(kNumSixOpVoices - 1);
+      StereoPanGains(position, &pan_left[i], &pan_right[i]);
     }
-    aux[i] = out[i] = sample;
+
+    for (size_t i = 0; i < size; ++i) {
+      const float previous = acc_buffer_[i] * 0.25f;
+      const float current = temp_buffer_[i] * 0.25f;
+      float left = SoftClip(
+          previous * pan_left[previous_voice] + \
+          current * pan_left[rendered_voice_]);
+      float right = SoftClip(
+          previous * pan_right[previous_voice] + \
+          current * pan_right[rendered_voice_]);
+      if (parameters.macro < 0.5f) {
+        const float darkness = (0.5f - parameters.macro) * 2.0f;
+        const float coefficient = 1.0f - darkness * 0.92f;
+        ONE_POLE(post_filter_, left, coefficient);
+        left = post_filter_;
+        ONE_POLE(post_filter_right_, right, coefficient);
+        right = post_filter_right_;
+      } else {
+        post_filter_ = left;
+        post_filter_right_ = right;
+        const float saturation = (parameters.macro - 0.5f) * 2.0f;
+        left += (SoftClip(left * 3.0f) - left) * saturation;
+        right += (SoftClip(right * 3.0f) - right) * saturation;
+      }
+      out[i] = left;
+      aux[i] = right;
+    }
+    copy(
+        &temp_buffer_[size],
+        &temp_buffer_[kNumSixOpVoices * size],
+        &acc_buffer_[0]);
+  } else {
+    // Staggered rendering.
+    copy(
+        &acc_buffer_[0],
+        &acc_buffer_[(kNumSixOpVoices - 1) * size],
+        &temp_buffer_[0]);
+    fill(
+        &temp_buffer_[(kNumSixOpVoices - 1) * size],
+        &temp_buffer_[kNumSixOpVoices * size],
+        0.0f);
+    rendered_voice_ = (rendered_voice_ + 1) % kNumSixOpVoices;
+    voice_[rendered_voice_].Render(temp_buffer_, size * kNumSixOpVoices);
+
+    for (size_t i = 0; i < size; ++i) {
+      float sample = SoftClip(temp_buffer_[i] * 0.25f);
+      if (parameters.macro < 0.5f) {
+        const float darkness = (0.5f - parameters.macro) * 2.0f;
+        const float coefficient = 1.0f - darkness * 0.92f;
+        ONE_POLE(post_filter_, sample, coefficient);
+        sample = post_filter_;
+      } else {
+        post_filter_ = sample;
+        const float saturation = (parameters.macro - 0.5f) * 2.0f;
+        const float saturated = SoftClip(sample * 3.0f);
+        sample += (saturated - sample) * saturation;
+      }
+      aux[i] = out[i] = sample;
+    }
+    copy(
+        &temp_buffer_[size],
+        &temp_buffer_[kNumSixOpVoices * size],
+        &acc_buffer_[0]);
   }
-  copy(
-      &temp_buffer_[size],
-      &temp_buffer_[kNumSixOpVoices * size],
-      &acc_buffer_[0]);
 }
 
 }  // namespace plaits

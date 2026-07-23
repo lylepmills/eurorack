@@ -25,6 +25,12 @@
 // -----------------------------------------------------------------------------
 //
 // Chiptune waveforms with arpeggiator.
+//
+// OUT: single arpeggiated square voice when clocked, five-voice square
+// chord otherwise. AUX: NES triangle bass. In stereo mode, OUT/AUX become
+// left/right: the chord voices spread across the field (root centered,
+// outer voices widest), the arpeggiated voice ping-pongs between sides on
+// every step, and the bass stays centered.
 
 #ifndef PLAITS_DSP_ENGINE_CHIPTUNE_ENGINE_H_
 #define PLAITS_DSP_ENGINE_CHIPTUNE_ENGINE_H_
@@ -54,7 +60,8 @@ class ChiptuneEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-  
+  virtual bool stereo_capable() const { return true; }
+
   inline void set_envelope_shape(float envelope_shape) {
     envelope_shape_ = envelope_shape;
   }
@@ -71,7 +78,11 @@ class ChiptuneEngine : public Engine {
   float envelope_shape_;
   float envelope_state_;
   float aux_envelope_amount_;
-  
+
+  bool arp_pan_flip_;
+  float arp_pan_left_;
+  float arp_pan_right_;
+
   DISALLOW_COPY_AND_ASSIGN(ChiptuneEngine);
 };
 

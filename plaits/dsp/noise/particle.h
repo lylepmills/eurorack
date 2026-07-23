@@ -80,7 +80,50 @@ class Particle {
       u = stmlib::Random::GetFloat();
     }
   }
- 
+
+  // alt firmware: stereo variant - the band-pass filtered particle is
+  // multiply-accumulated into both channels with a pair of pan gains, and
+  // the raw pulses are not sent anywhere.
+  inline void RenderStereo(
+      bool sync,
+      float density,
+      float gain,
+      float frequency,
+      float spread,
+      float q,
+      float left_gain,
+      float right_gain,
+      float* left,
+      float* right,
+      size_t size) {
+    float u = stmlib::Random::GetFloat();
+    if (sync) {
+      u = density;
+    }
+    bool can_radomize_frequency = true;
+    while (size--) {
+      float s = 0.0f;
+      if (u <= density) {
+        s = u * gain;
+        if (can_radomize_frequency) {
+          const float u = 2.0f * stmlib::Random::GetFloat() - 1.0f;
+          const float f = std::min(
+              stmlib::SemitonesToRatio(spread * u) * frequency,
+              0.25f);
+          pre_gain_ = 0.5f / stmlib::Sqrt(q * f * stmlib::Sqrt(density));
+          filter_.set_f_q<stmlib::FREQUENCY_DIRTY>(f, q);
+          // Keep the cutoff constant for this whole block.
+          can_radomize_frequency = false;
+        }
+      }
+      const float bp = filter_.Process<stmlib::FILTER_MODE_BAND_PASS>(
+          pre_gain_ * s);
+      *left++ += left_gain * bp;
+      *right++ += right_gain * bp;
+      u = stmlib::Random::GetFloat();
+    }
+  }
+
  private:
   float pre_gain_;
   stmlib::Svf filter_;

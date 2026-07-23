@@ -1,6 +1,12 @@
 // Copyright 2026 Lyle Mills.
 //
 // Scanned synthesis engine.
+//
+// OUT: interpolated scan of a 32-mass circular spring string, blended toward
+// its own spatial derivative by TIMBRE and then sine-wavefolded by MORPH.
+// AUX: the raw spatial derivative. In stereo mode, OUT/AUX become L/R: two
+// pickups a quarter of the scan span apart read the same string through the
+// identical readout and wavefolder, and the derivative output is skipped.
 
 #ifndef PLAITS_DSP_ENGINE2_SCANNED_ENGINE_H_
 #define PLAITS_DSP_ENGINE2_SCANNED_ENGINE_H_
@@ -24,6 +30,7 @@ class ScannedEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
+  virtual bool stereo_capable() const { return true; }
 
  private:
   void Excite(float position, float width, float amount);
@@ -35,6 +42,11 @@ class ScannedEngine : public Engine {
       bool driven,
       int drive_index);
   float Scan(const float* data, float phase) const;
+  float ReadPickup(
+      float phase,
+      float timbre,
+      float fold_amount,
+      float* derivative) const;
 
   float position_[kScannedMasses];
   float velocity_[kScannedMasses];

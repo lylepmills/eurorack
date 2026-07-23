@@ -25,6 +25,11 @@
 // -----------------------------------------------------------------------------
 //
 // Swarm of sawtooths and sines.
+//
+// OUT: swarm of sawtooths. AUX: swarm of sine waves.
+// alt firmware, stereo mode: the sawtooths are spread across the stereo
+// field - the least detuned voices at the center, the most detuned at the
+// edges - and the sine waves are not rendered.
 
 #ifndef PLAITS_DSP_ENGINE_SWARM_ENGINE_H_
 #define PLAITS_DSP_ENGINE_SWARM_ENGINE_H_
@@ -208,22 +213,50 @@ class SwarmVoice {
       float* saw,
       float* sine,
       size_t size) {
+    const float amplitude = Step(
+        density, burst_mode, start_burst, spread, size_ratio, &f0);
+    saw_.Render(f0, amplitude, saw, size);
+    sine_.Render(f0, amplitude, sine, size);
+  };
+
+  // alt firmware: stereo render - the sawtooth only, the sine bank is
+  // skipped. The grain envelope advances exactly as in Render.
+  void RenderSaw(
+      float f0,
+      float density,
+      bool burst_mode,
+      bool start_burst,
+      float spread,
+      float size_ratio,
+      float* saw,
+      size_t size) {
+    const float amplitude = Step(
+        density, burst_mode, start_burst, spread, size_ratio, &f0);
+    saw_.Render(f0, amplitude, saw, size);
+  };
+
+ private:
+  inline float Step(
+      float density,
+      bool burst_mode,
+      bool start_burst,
+      float spread,
+      float size_ratio,
+      float* f0) {
     envelope_.Step(density, burst_mode, start_burst);
-    
+
     const float scale = 1.0f / kNumSwarmVoices;
     const float amplitude = envelope_.amplitude(size_ratio) * scale;
 
     const float expo_amount = envelope_.frequency(size_ratio);
-    f0 *= stmlib::SemitonesToRatio(48.0f * expo_amount * spread * rank_);
-    
-    const float linear_amount = rank_ * (rank_ + 0.01f) * spread * 0.25f;
-    f0 *= 1.0f + linear_amount;
+    *f0 *= stmlib::SemitonesToRatio(48.0f * expo_amount * spread * rank_);
 
-    saw_.Render(f0, amplitude, saw, size);
-    sine_.Render(f0, amplitude, sine, size);
-  };
-  
- private:
+    const float linear_amount = rank_ * (rank_ + 0.01f) * spread * 0.25f;
+    *f0 *= 1.0f + linear_amount;
+
+    return amplitude;
+  }
+
   float rank_;
 
   GrainEnvelope envelope_;
@@ -244,7 +277,8 @@ class SwarmEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-  
+  virtual bool stereo_capable() const { return true; }
+
  private:
   SwarmVoice* swarm_voice_;
   

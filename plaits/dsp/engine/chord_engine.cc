@@ -25,6 +25,11 @@
 // -----------------------------------------------------------------------------
 //
 // Chords: wavetable and divide-down organ/string machine.
+//
+// OUT: all notes. AUX: the notes selected by the chord inversion, boosted.
+// alt firmware, stereo mode: each note keeps the mix it contributes to OUT
+// (including the macro's voice balance), panned to a fixed per-note
+// position - root at the center, outer voices widest - with no AUX boost.
 
 #include "plaits/dsp/engine/chord_engine.h"
 
@@ -54,6 +59,10 @@ void ChordEngine::Reset() {
 
 const float fade_point[kChordNumVoices] = {
   0.55f, 0.47f, 0.49f, 0.51f, 0.53f
+};
+
+const float chord_pan[kChordNumVoices] = {
+  0.5f, 0.2f, 0.8f, 0.05f, 0.95f
 };
 
 const int kRegistrationTableSize = 8;
@@ -130,19 +139,72 @@ void ChordEngine::Render(
   
   const float f0 = NoteToFrequency(parameters.note) * 0.998f;
   const float waveform = max((morph_lp_ - 0.535f) * 2.15f, 0.0f);
-  
+
+  if (parameters.stereo) {
+    const float voice_balance = ApplyMacro(
+        1.0f, 0.0f, 2.0f, parameters.macro);
+    for (int note = 0; note < kChordNumVoices; ++note) {
+      float wavetable_amount = 50.0f * (morph_lp_ - fade_point[note]);
+      CONSTRAIN(wavetable_amount, 0.0f, 1.0f);
+
+      float divide_down_amount = 1.0f - wavetable_amount;
+
+      const float note_f0 = f0 * ratios[note];
+      float divide_down_gain = 4.0f - note_f0 * 32.0f;
+      CONSTRAIN(divide_down_gain, 0.0f, 1.0f);
+      divide_down_amount *= divide_down_gain;
+
+      float note_samples[kMaxBlockSize];
+      fill(&note_samples[0], &note_samples[size], 0.0f);
+
+      if (wavetable_amount) {
+        wavetable_voice_[note].Render(
+            note_f0 * 1.004f,
+            note_amplitudes[note] * wavetable_amount,
+            waveform,
+            wavetable,
+            note_samples,
+            size);
+      }
+
+      if (divide_down_amount) {
+        divide_down_voice_[note].Render(
+            note_f0,
+            harmonics,
+            note_amplitudes[note] * divide_down_amount,
+            note_samples,
+            size);
+      }
+
+      float left_gain, right_gain;
+      StereoPanGains(chord_pan[note], &left_gain, &right_gain);
+      // A note the mask would have sent to AUX reaches OUT scaled by the
+      // macro's voice balance: keep that level in the stereo mix.
+      const float note_gain = (1 << note) & aux_note_mask
+          ? voice_balance
+          : 1.0f;
+      left_gain *= note_gain;
+      right_gain *= note_gain;
+      for (size_t i = 0; i < size; ++i) {
+        out[i] += note_samples[i] * left_gain;
+        aux[i] += note_samples[i] * right_gain;
+      }
+    }
+    return;
+  }
+
   for (int note = 0; note < kChordNumVoices; ++note) {
     float wavetable_amount = 50.0f * (morph_lp_ - fade_point[note]);
     CONSTRAIN(wavetable_amount, 0.0f, 1.0f);
 
     float divide_down_amount = 1.0f - wavetable_amount;
     float* destination = (1 << note) & aux_note_mask ? aux : out;
-    
+
     const float note_f0 = f0 * ratios[note];
     float divide_down_gain = 4.0f - note_f0 * 32.0f;
     CONSTRAIN(divide_down_gain, 0.0f, 1.0f);
     divide_down_amount *= divide_down_gain;
-    
+
     if (wavetable_amount) {
       wavetable_voice_[note].Render(
           note_f0 * 1.004f,
@@ -152,7 +214,7 @@ void ChordEngine::Render(
           destination,
           size);
     }
-    
+
     if (divide_down_amount) {
       divide_down_voice_[note].Render(
           note_f0,
@@ -162,7 +224,7 @@ void ChordEngine::Render(
           size);
     }
   }
-  
+
   const float voice_balance = ApplyMacro(
       1.0f, 0.0f, 2.0f, parameters.macro);
   for (size_t i = 0; i < size; ++i) {

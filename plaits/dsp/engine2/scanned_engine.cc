@@ -120,6 +120,37 @@ float ScannedEngine::Scan(const float* data, float phase) const {
   return data[integral] + (data[next] - data[integral]) * fractional;
 }
 
+// One virtual pickup: the interpolated readout blended toward its own spatial
+// derivative by TIMBRE, then sine-wavefolded by MORPH. Stereo mode reads a
+// second pickup on the same string, a quarter of the scan span away.
+float ScannedEngine::ReadPickup(
+    float phase,
+    float timbre,
+    float fold_amount,
+    float* derivative) const {
+  const float sample = Scan(position_, phase);
+  float left_phase = phase - \
+      1.0f / static_cast<float>(kScannedMasses);
+  if (left_phase < 0.0f) {
+    left_phase += 1.0f;
+  }
+  float derivative_phase = phase + \
+      1.0f / static_cast<float>(kScannedMasses);
+  if (derivative_phase >= 1.0f) {
+    derivative_phase -= 1.0f;
+  }
+  const float left = Scan(position_, left_phase);
+  const float right = Scan(position_, derivative_phase);
+  *derivative = right - left;
+  const float gradient = *derivative * 2.25f;
+  const float scanned = sample + (gradient - sample) * timbre;
+  // Sine() requires a non-negative phase. The offset is safely larger than
+  // the maximum negative excursion of the normalized scanned waveform.
+  const float folded = Sine(
+      16.0f + scanned * (0.25f + 1.25f * fold_amount));
+  return scanned + (folded - scanned) * fold_amount;
+}
+
 void ScannedEngine::Render(
     const EngineParameters& parameters,
     float* out,
@@ -172,34 +203,28 @@ void ScannedEngine::Render(
     } else if (warped_phase >= 1.0f) {
       warped_phase -= 1.0f;
     }
-    const float sample = Scan(position_, warped_phase);
-    float left_phase = warped_phase - \
-        1.0f / static_cast<float>(kScannedMasses);
-    if (left_phase < 0.0f) {
-      left_phase += 1.0f;
-    }
-    float derivative_phase = warped_phase + \
-        1.0f / static_cast<float>(kScannedMasses);
-    if (derivative_phase >= 1.0f) {
-      derivative_phase -= 1.0f;
-    }
-    const float left = Scan(position_, left_phase);
-    const float right = Scan(position_, derivative_phase);
-    const float derivative = right - left;
-    const float gradient = derivative * 2.25f;
-    const float scanned = sample + (gradient - sample) * parameters.timbre;
-
     // MORPH now travels from the raw scan into a clearly audible nonlinear
     // regime. The squared mapping leaves the lower half useful for traditional
     // damping changes, then introduces up to 1.5 cycles of sine wavefolding.
     const float fold_amount = parameters.morph * parameters.morph;
-    // Sine() requires a non-negative phase. The offset is safely larger than
-    // the maximum negative excursion of the normalized scanned waveform.
-    const float folded = Sine(
-        16.0f + scanned * (0.25f + 1.25f * fold_amount));
-    const float shaped = scanned + (folded - scanned) * fold_amount;
+    float derivative;
+    const float shaped = ReadPickup(
+        warped_phase, parameters.timbre, fold_amount, &derivative);
     out[i] = shaped * 0.8f;
-    aux[i] = derivative * 2.0f;
+    if (parameters.stereo) {
+      // OUT/AUX become L/R: a second pickup a quarter of the scan span away
+      // reads the same string through the identical readout and wavefolder.
+      // The physics is shared; only this readout is extra.
+      float pickup_phase = warped_phase + 0.25f;
+      if (pickup_phase >= 1.0f) {
+        pickup_phase -= 1.0f;
+      }
+      float unused_derivative;
+      aux[i] = 0.8f * ReadPickup(
+          pickup_phase, parameters.timbre, fold_amount, &unused_derivative);
+    } else {
+      aux[i] = derivative * 2.0f;
+    }
   }
 }
 

@@ -165,6 +165,19 @@ void SidebandEngine::Render(
         lower_parameters,
         -1.0f);
   }
+
+  if (parameters.stereo) {
+    // OUT/AUX become L/R: both channels carry the full spectrum, with a
+    // complementary 85/15 power split between the upper and lower banks.
+    const float a = Sqrt(0.85f);
+    const float b = Sqrt(0.15f);
+    for (size_t i = 0; i < size; ++i) {
+      const float upper = out[i];
+      const float lower = aux[i];
+      out[i] = a * upper + b * lower;
+      aux[i] = b * upper + a * lower;
+    }
+  }
 }
 
 }  // namespace plaits

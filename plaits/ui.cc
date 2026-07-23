@@ -59,7 +59,9 @@ static const uint8_t kNumOptions = 7;
 static const uint8_t kNumLockedFrequencyPotOptions = 4;
 static const uint8_t kNumModelCVOptions = 4;
 static const uint8_t kNumLevelCVOptions = 2;
-static const uint8_t kNumSuboscWaveOptions = 3;
+// Wave options: regular aux, square subosc, sine subosc, stereo (true L/R
+// pair on stereo-capable engines).
+static const uint8_t kNumSuboscWaveOptions = 4;
 static const uint8_t kNumSuboscOctaveOptions = 3;
 static const uint8_t kNumChordSetOptions = PLAITS_CHORD_TABLE_COUNT;
 static const uint8_t kNumHoldOnTriggerOptions = 2;

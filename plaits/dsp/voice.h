@@ -142,6 +142,8 @@ struct Patch {
   // 0 - regular aux model
   // 1 - square wave
   // 2 - sine wave
+  // 3 - stereo: OUT/AUX become a true L/R pair on stereo-capable engines
+  //     (the other engines keep their regular aux output)
   uint8_t aux_subosc_wave_option;
   // 0 - no octave shift
   // 1 - 1 octave down

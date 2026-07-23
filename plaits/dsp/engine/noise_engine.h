@@ -25,6 +25,12 @@
 // -----------------------------------------------------------------------------
 //
 // Clocked noise processed by a multimode filter.
+//
+// OUT: first noise source through the LP/BP/HP multimode filter. AUX: sum of
+// the two noise sources through band-pass filters.
+// alt firmware, stereo mode: the second noise source goes through an
+// identically configured multimode filter - same timbre on both sides,
+// decorrelated sources.
 
 #ifndef PLAITS_DSP_ENGINE_NOISE_ENGINE_H_
 #define PLAITS_DSP_ENGINE_NOISE_ENGINE_H_
@@ -49,7 +55,8 @@ class NoiseEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-  
+  virtual bool stereo_capable() const { return true; }
+
  private:
   ClockedNoise clocked_noise_[2];
   stmlib::Svf lp_hp_filter_;

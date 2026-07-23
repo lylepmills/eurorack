@@ -25,6 +25,13 @@
 // -----------------------------------------------------------------------------
 //
 // String machine emulation with filter and chorus.
+//
+// alt firmware: OUT and AUX already form a true L/R pair — the four
+// divide-down chord voices are split alternately between the two buffers,
+// mixed down 0.66/0.33 through a pair of SVFs, then processed by a
+// true-stereo ensemble whose decorrelated, cross-fed chorus taps feed both
+// channels. Stereo mode therefore just relabels OUT/AUX as left/right; the
+// audio path is unchanged and Render() may ignore EngineParameters::stereo.
 
 #ifndef PLAITS_DSP_ENGINE_STRING_MACHINE_ENGINE_H_
 #define PLAITS_DSP_ENGINE_STRING_MACHINE_ENGINE_H_
@@ -49,6 +56,9 @@ class StringMachineEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
+  // The audio path is inherently stereo (see header comment): stereo mode
+  // just relabels the existing OUT/AUX pair as left/right.
+  virtual bool stereo_capable() const { return true; }
 
  private:
   void ComputeRegistration(float registration, float* amplitudes);

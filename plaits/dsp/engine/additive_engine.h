@@ -25,6 +25,11 @@
 // -----------------------------------------------------------------------------
 //
 // Additive synthesis with 24+8 partials.
+//
+// OUT: 24 integer harmonics. AUX: 8 harmonics of the organ subset.
+// alt firmware, stereo mode: the 24 integer harmonics are spread across the
+// stereo field - fundamental at the center, width increasing with the
+// harmonic index, sides alternating - and the organ subset is not rendered.
 
 #ifndef PLAITS_DSP_ENGINE_ADDITIVE_ENGINE_H_
 #define PLAITS_DSP_ENGINE_ADDITIVE_ENGINE_H_
@@ -33,10 +38,11 @@
 #include "plaits/dsp/oscillator/harmonic_oscillator.h"
 
 namespace plaits {
-  
+
 const int kHarmonicBatchSize = 12;
 const int kNumHarmonics = 36;
 const int kNumHarmonicOscillators = kNumHarmonics / kHarmonicBatchSize;
+const int kNumIntegerHarmonics = 24;
 
 class AdditiveEngine : public Engine {
  public:
@@ -51,7 +57,8 @@ class AdditiveEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
- 
+  virtual bool stereo_capable() const { return true; }
+
  private:
   void UpdateAmplitudes(
       float centroid,
@@ -60,11 +67,14 @@ class AdditiveEngine : public Engine {
       float* amplitudes,
       const int* harmonic_indices,
       size_t num_harmonics);
-      
+
   HarmonicOscillator<kHarmonicBatchSize> harmonic_oscillator_[kNumHarmonicOscillators];
-  
+
   float* amplitudes_;
-  
+
+  float pan_gain_left_[kNumIntegerHarmonics];
+  float pan_gain_right_[kNumIntegerHarmonics];
+
   DISALLOW_COPY_AND_ASSIGN(AdditiveEngine);
 };
 

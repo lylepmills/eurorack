@@ -25,6 +25,11 @@
 // -----------------------------------------------------------------------------
 //
 // Three voices of string synthesis.
+//
+// OUT: sum of the three strings. AUX: raw exciter signals.
+// alt firmware, stereo mode: each string is panned to a fixed position -
+// left, center, right in round-robin order - and the exciter bus is not
+// rendered.
 
 #include "plaits/dsp/engine/string_engine.h"
 
@@ -52,6 +57,8 @@ void StringEngine::Reset() {
   }
 }
 
+const float string_pan[kNumStrings] = { 0.15f, 0.5f, 0.85f };
+
 void StringEngine::Render(
     const EngineParameters& parameters,
     float* out,
@@ -73,7 +80,36 @@ void StringEngine::Render(
   fill(&aux[0], &aux[size], 0.0f);
   const float exciter_size = ApplyMacro(
       1.0f, 0.25f, 4.0f, parameters.macro);
-  
+
+  if (parameters.stereo) {
+    for (int i = 0; i < kNumStrings; ++i) {
+      float string_out[kMaxBlockSize];
+      float exciter[kMaxBlockSize];
+      fill(&string_out[0], &string_out[size], 0.0f);
+      fill(&exciter[0], &exciter[size], 0.0f);
+      voice_[i].Render(
+          parameters.trigger & TRIGGER_UNPATCHED && i == active_string_,
+          parameters.trigger & TRIGGER_RISING_EDGE && i == active_string_,
+          parameters.accent,
+          f0_[i],
+          parameters.harmonics,
+          parameters.timbre * parameters.timbre,
+          parameters.morph,
+          exciter_size,
+          temp_buffer_,
+          string_out,
+          exciter,
+          size);
+      float left_gain, right_gain;
+      StereoPanGains(string_pan[i], &left_gain, &right_gain);
+      for (size_t j = 0; j < size; ++j) {
+        out[j] += string_out[j] * left_gain;
+        aux[j] += string_out[j] * right_gain;
+      }
+    }
+    return;
+  }
+
   for (int i = 0; i < kNumStrings; ++i) {
     voice_[i].Render(
         parameters.trigger & TRIGGER_UNPATCHED && i == active_string_,

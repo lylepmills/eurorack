@@ -25,6 +25,12 @@
 // -----------------------------------------------------------------------------
 //
 // Clocked noise processed by a multimode filter.
+//
+// OUT: first noise source through the LP/BP/HP multimode filter. AUX: sum of
+// the two noise sources through band-pass filters.
+// alt firmware, stereo mode: the second noise source goes through an
+// identically configured multimode filter - same timbre on both sides,
+// decorrelated sources.
 
 #include "plaits/dsp/engine/noise_engine.h"
 
@@ -71,17 +77,42 @@ void NoiseEngine::Render(
   const float q = 0.5f * SemitonesToRatio(parameters.morph * 120.0f);
   const bool sync = parameters.trigger & TRIGGER_RISING_EDGE;
   clocked_noise_[0].Render(sync, clock_f, aux, size);
-  clocked_noise_[1].Render(sync, clock_f * f1 / f0, temp_buffer_, size);
-  
+  clocked_noise_[1].Render(
+      sync,
+      parameters.stereo ? clock_f : clock_f * f1 / f0,
+      temp_buffer_,
+      size);
+
   ParameterInterpolator f0_modulation(&previous_f0_, f0, size);
   ParameterInterpolator f1_modulation(&previous_f1_, f1, size);
   ParameterInterpolator q_modulation(&previous_q_, q, size);
   ParameterInterpolator mode_modulation(
       &previous_mode_, ApplyMacro(
           parameters.harmonics, 0.0f, 1.0f, parameters.macro), size);
-  
+
   const float* in_1 = aux;
   const float* in_2 = temp_buffer_;
+
+  if (parameters.stereo) {
+    // The BP filter normally feeding AUX is reconfigured as the right
+    // channel's multimode filter. Its state is reused as-is: a click can be
+    // heard when the mode is toggled.
+    while (size--) {
+      const float f0 = f0_modulation.Next();
+      const float q = q_modulation.Next();
+      const float mode = mode_modulation.Next();
+      const float gain = 1.0f / Sqrt((0.5f + q) * 40.0f * f0);
+      lp_hp_filter_.set_f_q<FREQUENCY_ACCURATE>(f0, q);
+      bp_filter_[0].set_f_q<FREQUENCY_ACCURATE>(f0, q);
+
+      float input_1 = *in_1++ * gain;
+      float input_2 = *in_2++ * gain;
+      lp_hp_filter_.ProcessMultimodeLPtoHP(&input_1, out++, 1, mode);
+      bp_filter_[0].ProcessMultimodeLPtoHP(&input_2, aux++, 1, mode);
+    }
+    return;
+  }
+
   while (size--) {
     const float f0 = f0_modulation.Next();
     const float f1 = f1_modulation.Next();

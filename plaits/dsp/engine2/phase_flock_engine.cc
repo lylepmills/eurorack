@@ -26,6 +26,13 @@ const float kFlockInitialPhase[kNumPhaseFlockOscillators] = {
   0.031f, 0.647f, 0.287f, 0.903f, 0.491f, 0.154f, 0.778f
 };
 
+// Fixed stereo positions, spread evenly in detune order so that the
+// oscillator with near-zero detuning — the one tracking the played pitch
+// most closely — sits exactly at the centre of the field.
+const float kFlockPan[kNumPhaseFlockOscillators] = {
+  0.10f, 0.2333f, 0.3667f, 0.50f, 0.6333f, 0.7667f, 0.90f
+};
+
 inline float Wrap(float phase) {
   phase -= static_cast<int>(phase);
   if (phase < 0.0f) {
@@ -97,6 +104,15 @@ void PhaseFlockEngine::Render(
   const float normalization = 1.0f / \
       static_cast<float>(kNumPhaseFlockOscillators);
 
+  const bool stereo = parameters.stereo;
+  float pan_left[kNumPhaseFlockOscillators];
+  float pan_right[kNumPhaseFlockOscillators];
+  if (stereo) {
+    for (int i = 0; i < kNumPhaseFlockOscillators; ++i) {
+      StereoPanGains(kFlockPan[i], &pan_left[i], &pan_right[i]);
+    }
+  }
+
   for (size_t sample = 0; sample < size; ++sample) {
     float sine[kNumPhaseFlockOscillators];
     float cosine[kNumPhaseFlockOscillators];
@@ -106,6 +122,8 @@ void PhaseFlockEngine::Render(
     float mean_cosine = 0.0f;
     float mean_sine_2 = 0.0f;
     float mean_cosine_2 = 0.0f;
+    float left_sum = 0.0f;
+    float right_sum = 0.0f;
 
     for (int i = 0; i < kNumPhaseFlockOscillators; ++i) {
       const float s = SineNoWrap(phase_[i]);
@@ -118,6 +136,10 @@ void PhaseFlockEngine::Render(
       mean_cosine += c;
       mean_sine_2 += sine_2[i];
       mean_cosine_2 += cosine_2[i];
+      if (stereo) {
+        left_sum += pan_left[i] * s;
+        right_sum += pan_right[i] * s;
+      }
     }
     mean_sine *= normalization;
     mean_cosine *= normalization;
@@ -146,10 +168,19 @@ void PhaseFlockEngine::Render(
       phase_[i] = Wrap(phase_[i] + increment);
     }
 
-    out[sample] = LimitAudio(mean_sine * 1.55f);
-    // Two-cluster states can cancel at OUT while remaining loud in the second
-    // circular moment, making AUX a genuinely complementary octave projection.
-    aux[sample] = LimitAudio(mean_sine_2 * 1.35f);
+    if (stereo) {
+      // OUT/AUX become L/R: the same normalization and drive as the mono
+      // mean, so per-channel loudness tracks the mono render. The second
+      // circular moment still steers the coupling, but its output is skipped.
+      out[sample] = LimitAudio(left_sum * normalization * 1.55f);
+      aux[sample] = LimitAudio(right_sum * normalization * 1.55f);
+    } else {
+      out[sample] = LimitAudio(mean_sine * 1.55f);
+      // Two-cluster states can cancel at OUT while remaining loud in the
+      // second circular moment, making AUX a genuinely complementary octave
+      // projection.
+      aux[sample] = LimitAudio(mean_sine_2 * 1.35f);
+    }
   }
 }
 

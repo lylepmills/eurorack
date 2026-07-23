@@ -25,6 +25,12 @@
 // -----------------------------------------------------------------------------
 //
 // One voice of modal synthesis.
+//
+// OUT: modal resonator excited by a mallet or by dust noise. AUX: raw
+// exciter signal.
+// alt firmware, stereo mode: even-numbered modes lean left and odd-numbered
+// modes lean right - equal-power, every mode audible on both sides - and the
+// raw exciter is not sent to AUX.
 
 #include "plaits/dsp/engine/modal_engine.h"
 
@@ -60,6 +66,24 @@ void ModalEngine::Render(
   const float stock_exciter_q = sustain ? 0.7f : 1.5f;
   const float exciter_q = ApplyMacro(
       stock_exciter_q, 0.5f, 6.0f, parameters.macro);
+
+  if (parameters.stereo) {
+    voice_.RenderStereo(
+        sustain,
+        parameters.trigger & TRIGGER_RISING_EDGE,
+        parameters.accent,
+        NoteToFrequency(parameters.note),
+        harmonics_lp_,
+        parameters.timbre,
+        parameters.morph,
+        exciter_q,
+        temp_buffer_,
+        out,
+        aux,
+        size);
+    return;
+  }
+
   voice_.Render(
       sustain,
       parameters.trigger & TRIGGER_RISING_EDGE,

@@ -67,7 +67,7 @@ bool Settings::Init() {
   CONSTRAIN(state_.locked_frequency_pot_option, 0, 3);
   CONSTRAIN(state_.model_cv_option, 0, 3);
   CONSTRAIN(state_.level_cv_option, 0, 1);
-  CONSTRAIN(state_.aux_subosc_wave_option, 0, 2);
+  CONSTRAIN(state_.aux_subosc_wave_option, 0, 3);
   CONSTRAIN(state_.aux_subosc_octave_option, 0, 2);
   CONSTRAIN(state_.chord_set_option, 0, PLAITS_CHORD_TABLE_COUNT - 1);
   CONSTRAIN(state_.hold_on_trigger_option, 0, 1);

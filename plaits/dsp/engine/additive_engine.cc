@@ -24,7 +24,12 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Additive synthesis with 32 partials.
+// Additive synthesis with 24+8 partials.
+//
+// OUT: 24 integer harmonics. AUX: 8 harmonics of the organ subset.
+// alt firmware, stereo mode: the 24 integer harmonics are spread across the
+// stereo field - fundamental at the center, width increasing with the
+// harmonic index, sides alternating - and the organ subset is not rendered.
 
 #include "plaits/dsp/engine/additive_engine.h"
 
@@ -42,6 +47,13 @@ void AdditiveEngine::Init(BufferAllocator* allocator) {
   amplitudes_ = allocator->Allocate<float>(kNumHarmonics);
   for (int i = 0; i < kNumHarmonicOscillators; ++i) {
     harmonic_oscillator_[i].Init();
+  }
+  for (int i = 0; i < kNumIntegerHarmonics; ++i) {
+    const float width = 0.4f * static_cast<float>(i) / \
+        static_cast<float>(kNumIntegerHarmonics - 1);
+    const float side = (i & 1) ? -1.0f : 1.0f;
+    StereoPanGains(
+        0.5f + side * width, &pan_gain_left_[i], &pan_gain_right_[i]);
   }
 }
 
@@ -141,6 +153,21 @@ void AdditiveEngine::Render(
   for (int i = 0; i < 24; ++i) {
     amplitudes_[i] *= (i & 1) ? even_gain : odd_gain;
   }
+
+  if (parameters.stereo) {
+    float left_amplitudes[kNumIntegerHarmonics];
+    float right_amplitudes[kNumIntegerHarmonics];
+    for (int i = 0; i < kNumIntegerHarmonics; ++i) {
+      left_amplitudes[i] = amplitudes_[i] * pan_gain_left_[i];
+      right_amplitudes[i] = amplitudes_[i] * pan_gain_right_[i];
+    }
+    harmonic_oscillator_[0].RenderStereo<1>(
+        f0, &left_amplitudes[0], &right_amplitudes[0], out, aux, size);
+    harmonic_oscillator_[1].RenderStereo<13>(
+        f0, &left_amplitudes[12], &right_amplitudes[12], out, aux, size);
+    return;
+  }
+
   harmonic_oscillator_[0].Render<1>(f0, &amplitudes_[0], out, size);
   harmonic_oscillator_[1].Render<13>(f0, &amplitudes_[12], out, size);
 

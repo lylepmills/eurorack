@@ -174,6 +174,12 @@ void Voice::Render(
   }
   EngineParameters p;
   p.chord_set_option = patch.chord_set_option;
+  // Aux output mode 3 requests a true stereo render (OUT = left,
+  // AUX = right) from engines that support it; the others fall back to
+  // their regular aux output.
+  const bool stereo_render = patch.aux_subosc_wave_option == 3 &&
+      e->stereo_capable();
+  p.stereo = stereo_render;
   p.macro = patch.locked_frequency_pot_option == 3
       ? patch.freqlock_param
       : 0.5f;
@@ -272,7 +278,9 @@ void Voice::Render(
   bool already_enveloped = pp_s.already_enveloped;
   e->Render(p, out_buffer_, aux_buffer_, size, &already_enveloped);
 
-  if (patch.aux_subosc_wave_option >= 1) {
+  const bool aux_replaced_by_subosc = patch.aux_subosc_wave_option == 1 ||
+      patch.aux_subosc_wave_option == 2;
+  if (aux_replaced_by_subosc) {
     float frequency = NoteToFrequency(p.note);
     if (patch.aux_subosc_octave_option == 1) {
       frequency /= 2.0f;
@@ -309,7 +317,7 @@ void Voice::Render(
   
   bool lpg_bypass = already_enveloped || \
       (!level_patched && !modulations.trigger_patched);
-  bool aux_lpg_bypass = lpg_bypass || (patch.aux_subosc_wave_option != 0 && !use_aux_crossfade);
+  bool aux_lpg_bypass = lpg_bypass || (aux_replaced_by_subosc && !use_aux_crossfade);
   
   // Compute LPG parameters.
   if (!lpg_bypass) {
@@ -339,7 +347,8 @@ void Voice::Render(
       2);
 
   aux_post_processor_.Process(
-      pp_s.aux_gain,
+      // A stereo pair must leave with the same gain on both channels.
+      stereo_render ? pp_s.out_gain : pp_s.aux_gain,
       aux_lpg_bypass,
       lpg_envelope_.gain(),
       lpg_envelope_.frequency(),

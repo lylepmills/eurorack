@@ -25,6 +25,11 @@
 // -----------------------------------------------------------------------------
 //
 // Three voices of string synthesis.
+//
+// OUT: sum of the three strings. AUX: raw exciter signals.
+// alt firmware, stereo mode: each string is panned to a fixed position -
+// left, center, right in round-robin order - and the exciter bus is not
+// rendered.
 
 #ifndef PLAITS_DSP_ENGINE_STRING_ENGINE_H_
 #define PLAITS_DSP_ENGINE_STRING_ENGINE_H_
@@ -49,6 +54,7 @@ class StringEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
+  virtual bool stereo_capable() const { return true; }
 
  private:
   StringVoice voice_[kNumStrings];

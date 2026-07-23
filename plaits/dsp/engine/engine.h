@@ -31,6 +31,7 @@
 
 #include "plaits/dsp/dsp.h"
 
+#include "stmlib/dsp/dsp.h"
 #include "stmlib/dsp/units.h"
 #include "stmlib/utils/buffer_allocator.h"
 
@@ -63,6 +64,8 @@ enum TriggerState {
 };
 
 struct EngineParameters {
+  EngineParameters() : stereo(false) { }
+
   int trigger;
   float note;
   float timbre;
@@ -76,7 +79,22 @@ struct EngineParameters {
 
   // alt firmware
   uint8_t chord_set_option;
+
+  // alt firmware: when true, the voice requests a true stereo render — OUT
+  // becomes the left channel and AUX the right channel. The voice only sets
+  // this for engines reporting stereo_capable(); an engine that ignores the
+  // flag keeps producing its regular out/aux pair.
+  bool stereo;
 };
+
+// Equal-power gains for one component of a stereo render.
+// position 0.0 = hard left, 0.5 = center, 1.0 = hard right.
+// stmlib::Sqrt compiles to a bare VSQRT: the firmware links no libm sqrtf.
+inline void StereoPanGains(float position, float* left, float* right) {
+  CONSTRAIN(position, 0.0f, 1.0f);
+  *left = stmlib::Sqrt(1.0f - position);
+  *right = stmlib::Sqrt(position);
+}
 
 struct PostProcessingSettings {
   // A negative value indicates that a limiter must be used.
@@ -108,6 +126,11 @@ class Engine {
       float* aux,
       size_t size,
       bool* already_enveloped) = 0;
+  // alt firmware: an engine that honours EngineParameters::stereo (rendering
+  // OUT as the left channel and AUX as the right channel) reports it here, so
+  // that the voice post-processes both channels symmetrically. Engines that
+  // keep the default also keep their regular aux in stereo mode.
+  virtual bool stereo_capable() const { return false; }
   PostProcessingSettings post_processing_settings;
 };
 

@@ -25,6 +25,11 @@
 // -----------------------------------------------------------------------------
 //
 // 6-operator FM synth.
+//
+// OUT, AUX: both carry the mix of the two voices. In stereo mode, OUT/AUX
+// become left/right: triggered notes alternate between the two sides as the
+// round-robin allocator swaps voices, while a free-running drone (a single
+// sustained voice) stays centred.
 
 #ifndef PLAITS_DSP_ENGINE_SIX_OP_ENGINE_H_
 #define PLAITS_DSP_ENGINE_SIX_OP_ENGINE_H_
@@ -97,7 +102,8 @@ class SixOpEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-      
+  virtual bool stereo_capable() const { return true; }
+
   void LoadBank(int bank);
   
  private:
@@ -108,6 +114,7 @@ class SixOpEngine : public Engine {
   float* temp_buffer_;
   float* acc_buffer_;
   float post_filter_;
+  float post_filter_right_;
   int active_voice_;
   int rendered_voice_;
   

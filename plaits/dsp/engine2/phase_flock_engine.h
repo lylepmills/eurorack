@@ -2,6 +2,15 @@
 // SPDX-License-Identifier: MIT
 //
 // Mean-field coupled phase-oscillator synthesis engine.
+//
+// OUT: first circular moment of the flock (mean of sines). AUX: second
+// circular moment, an octave-flavoured projection that survives two-cluster
+// cancellation. In stereo mode, OUT/AUX become L/R: each oscillator holds a
+// fixed equal-power pan position spread across the field in detune order,
+// with the near-zero-detune oscillator centred, and both channels reuse the
+// mono moment's normalization so loudness matches. Synchronization audibly
+// collapses the stereo width toward mono — that emergent behaviour is the
+// point of this mode.
 
 #ifndef PLAITS_DSP_ENGINE2_PHASE_FLOCK_ENGINE_H_
 #define PLAITS_DSP_ENGINE2_PHASE_FLOCK_ENGINE_H_
@@ -25,6 +34,7 @@ class PhaseFlockEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
+  virtual bool stereo_capable() const { return true; }
 
  private:
   void Scatter();
