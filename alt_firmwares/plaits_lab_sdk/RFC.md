@@ -64,7 +64,11 @@ $SDK submit $PKG/my-model --output my-model.zip
 `check` validates metadata, licensing, source boundaries, scenarios, and a
 host compilation. `check --full` and `submit` also run sanitizer-backed preview
 scenarios and audio-health analysis. `dev` serves a same-origin audition page
-(hot reload, scope, spectrum, and A/B listening) at the address it prints.
+(hot reload, scope, spectrum, and A/B listening) at the address it prints. When
+the Emscripten toolchain is present, `dev` also compiles the engine to
+WebAssembly and offers real-time live audition in the browser (an AudioWorklet
+running the same source and parameter contract); it is optional and never part
+of validation or the firmware build.
 
 Local tooling can produce an explicitly unreviewed hardware WAV for the
 contributor's own module, using the pinned ARM toolchain locally or through the

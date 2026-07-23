@@ -240,6 +240,52 @@ class PackageTests(unittest.TestCase):
         self.assertNotIn("https://", html)
         self.assertNotIn("devServer", html)
 
+    def test_live_audition_worklet_is_static_and_same_origin(self) -> None:
+        # The AudioWorklet processor is served verbatim by the dev server and
+        # registers under the name the page instantiates.
+        worklet = (plaits_lab.SDK_DIR / "audition_worklet.js").read_text(encoding="utf-8")
+        self.assertIn("registerProcessor('plaits-audition'", worklet)
+        # The live-audition UI loads the wasm + worklet from its OWN origin.
+        html = (plaits_lab.SDK_DIR / "dev_editor.html").read_text(encoding="utf-8")
+        self.assertIn("/v1/audition.wasm", html)
+        self.assertIn("/audition_worklet.js", html)
+
+    def test_compile_wasm_without_emcc_reports_clearly(self) -> None:
+        # Live audition is OPTIONAL: with no emcc on PATH the wasm build must fail
+        # with a clear, actionable error rather than a raw traceback.
+        package = plaits_lab.builtin_package("chords")
+        real_which = plaits_lab.shutil.which
+        plaits_lab.shutil.which = lambda name: None if name == "emcc" else real_which(name)
+        try:
+            self.assertIsNone(plaits_lab.wasm_compiler_path())
+            with self.assertRaises(plaits_lab.PackageError) as ctx:
+                plaits_lab.compile_wasm(package, Path(tempfile.gettempdir()) / "unbuilt.wasm")
+            self.assertIn("emcc", str(ctx.exception))
+        finally:
+            plaits_lab.shutil.which = real_which
+
+    def test_renderer_and_wasm_share_translation_units(self) -> None:
+        # Both native and wasm builds must compile the SAME de-duplicated source
+        # set (only the entry harness differs) — the invariant behind the shared
+        # engine_translation_units() helper.
+        package = plaits_lab.builtin_package("chords")
+        renderer_entry = plaits_lab.SDK_DIR / "render_model.cc"
+        wasm_entry = plaits_lab.SDK_DIR / "wasm_audition.cc"
+        renderer_units = plaits_lab.engine_translation_units(package, renderer_entry)
+        wasm_units = plaits_lab.engine_translation_units(package, wasm_entry)
+        self.assertEqual(renderer_units[1:], wasm_units[1:])
+        self.assertEqual(len(renderer_units), len(set(renderer_units)))
+
+    @unittest.skipUnless(shutil.which("emcc"), "emscripten (emcc) required")
+    def test_compile_wasm_builds_standalone_module(self) -> None:
+        package = plaits_lab.builtin_package("chords")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            out = Path(temp_dir) / "audition.wasm"
+            plaits_lab.compile_wasm(package, out)
+            data = out.read_bytes()
+            self.assertTrue(data.startswith(b"\x00asm"))  # wasm magic
+            self.assertGreater(len(data), 1000)
+
     def test_dev_contributor_url_preserves_editor_path(self) -> None:
         # The bug: the full page path was dropped for a bare /contribute.
         self.assertEqual(

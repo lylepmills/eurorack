@@ -40,6 +40,14 @@ playback, and A/B rendering against any built-in model. The local server
 recompiles after a source change; source never leaves your machine. Pass
 `--editor <page-url>` to drive the full hosted contributor site instead.
 
+When the Emscripten toolchain (`emcc`) is on your PATH, the page also offers a
+real-time **Live audition**: the engine is compiled to WebAssembly and runs in
+a browser AudioWorklet, so it plays continuously and every control, pitch, and
+trigger change is heard instantly — no render step. It is entirely optional; the
+render-and-listen workflow above needs only a host C++ compiler. Install the
+toolchain once with [emsdk](https://emscripten.org/docs/getting_started/downloads.html)
+and `source ./emsdk_env.sh` before `dev`.
+
 ## Validation and submission
 
 ```sh

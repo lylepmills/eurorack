@@ -437,17 +437,20 @@ def compiler_path(requested: str | None) -> str:
     return compiler
 
 
-def compile_renderer(
-    package: dict[str, Any], output: Path, requested_compiler: str | None,
-    sanitizers: bool = False,
-) -> None:
+def engine_header_define(package: dict[str, Any]) -> str:
     manifest = package["manifest"]
-    source = manifest["source"]
-    header_include = (
+    return (
         package["header"].name
         if manifest["packageType"] == "community"
         else package["header"].relative_to(package["repo_root"]).as_posix()
     )
+
+
+def engine_translation_units(package: dict[str, Any], entry: Path) -> list[str]:
+    """De-duplicated .cc list for a package build: the given entry harness, the
+    package's own source, fork support files, declared shared modules, and the
+    always-linked base set — each resolved path handed to the compiler once."""
+    manifest = package["manifest"]
     support_files: list[Path] = []
     if "forkedFrom" in manifest:
         upstream, _ = builtin_engine(manifest["forkedFrom"])
@@ -460,11 +463,8 @@ def compile_renderer(
     shared_sources = shared_module_sources(
         manifest.get("sharedModules", []), package["repo_root"]
     )
-    # Every translation unit linked into the renderer, de-duplicated by resolved
-    # path so a shared module already reachable as a fork support file (or in the
-    # always-linked base set) is never handed to the compiler twice.
-    translation_units = [
-        Path(__file__).with_name("render_model.cc"),
+    units = [
+        entry,
         *package["source_files"],
         *support_files,
         *shared_sources,
@@ -472,33 +472,33 @@ def compile_renderer(
         package["repo_root"] / "stmlib/dsp/units.cc",
         package["repo_root"] / "stmlib/utils/random.cc",
     ]
-    seen_units: set[str] = set()
+    seen: set[str] = set()
     compiled: list[str] = []
-    for unit in translation_units:
+    for unit in units:
         key = str(unit.resolve())
-        if key not in seen_units:
-            seen_units.add(key)
+        if key not in seen:
+            seen.add(key)
             compiled.append(str(unit))
+    return compiled
+
+
+def compile_renderer(
+    package: dict[str, Any], output: Path, requested_compiler: str | None,
+    sanitizers: bool = False,
+) -> None:
+    manifest = package["manifest"]
+    compiled = engine_translation_units(package, Path(__file__).with_name("render_model.cc"))
     command = [
         compiler_path(requested_compiler),
-        "-std=c++11",
-        "-DTEST",
-        "-O2",
-        "-Wall",
-        "-Werror",
-        "-Wno-unused-variable",
-        "-Wno-unused-parameter",
-        "-Wno-unused-local-typedefs",
-        "-Wno-deprecated-declarations",
-        f'-DPLAITS_LAB_ENGINE_HEADER="{header_include}"',
-        f'-DPLAITS_LAB_ENGINE_CLASS=plaits::{source["className"]}',
-        "-I",
-        str(package["repo_root"]),
-        "-I",
-        str(package["source_root"]),
+        "-std=c++11", "-DTEST", "-O2", "-Wall", "-Werror",
+        "-Wno-unused-variable", "-Wno-unused-parameter",
+        "-Wno-unused-local-typedefs", "-Wno-deprecated-declarations",
+        f'-DPLAITS_LAB_ENGINE_HEADER="{engine_header_define(package)}"',
+        f'-DPLAITS_LAB_ENGINE_CLASS=plaits::{manifest["source"]["className"]}',
+        "-I", str(package["repo_root"]),
+        "-I", str(package["source_root"]),
         *compiled,
-        "-o",
-        str(output),
+        "-o", str(output),
     ]
     if sanitizers:
         command[4:4] = ["-fsanitize=address,undefined", "-fno-omit-frame-pointer"]
@@ -506,6 +506,43 @@ def compile_renderer(
     if result.returncode:
         details = (result.stderr or result.stdout).strip()
         raise PackageError(f"host compilation failed\n{details}")
+
+
+def wasm_compiler_path() -> str | None:
+    return shutil.which("emcc")
+
+
+# Emscripten exports the audition harness surface the AudioWorklet drives.
+WASM_EXPORTS = '["_init","_render","_set_params","_trigger","_main_out","_aux_out"]'
+
+
+def compile_wasm(package: dict[str, Any], output: Path) -> None:
+    """Compile the package to a standalone .wasm for the browser live-audition
+    AudioWorklet — same sources as the native renderer, but the STATEFUL
+    wasm_audition.cc harness. Requires emscripten (emcc) on PATH; live audition
+    is simply unavailable when it is not."""
+    emcc = wasm_compiler_path()
+    if emcc is None:
+        raise PackageError("emscripten (emcc) not on PATH; run `source <emsdk>/emsdk_env.sh`")
+    manifest = package["manifest"]
+    compiled = engine_translation_units(package, Path(__file__).with_name("wasm_audition.cc"))
+    command = [
+        emcc,
+        "-std=c++11", "-DTEST", "-O2",
+        f'-DPLAITS_LAB_ENGINE_HEADER="{engine_header_define(package)}"',
+        f'-DPLAITS_LAB_ENGINE_CLASS=plaits::{manifest["source"]["className"]}',
+        "-I", str(package["repo_root"]),
+        "-I", str(package["source_root"]),
+        *compiled,
+        "-sSTANDALONE_WASM=1",
+        f"-sEXPORTED_FUNCTIONS={WASM_EXPORTS}",
+        "--no-entry",
+        "-o", str(output),
+    ]
+    result = subprocess.run(command, text=True, capture_output=True, check=False)
+    if result.returncode:
+        details = (result.stderr or result.stdout).strip()
+        raise PackageError(f"wasm compilation failed\n{details}")
 
 
 def slug_to_class(slug: str) -> str:
@@ -1076,6 +1113,8 @@ class DevSession:
         self.compiler = compiler
         self.temp_dir = tempfile.TemporaryDirectory(prefix="plaits-lab-dev-")
         self.renderer = Path(self.temp_dir.name) / "render-model"
+        self.wasm = Path(self.temp_dir.name) / "audition.wasm"
+        self.wasm_available = False
         self.fingerprint = ""
         self.reference_renderers: dict[str, Path] = {}
 
@@ -1102,6 +1141,13 @@ class DevSession:
         if recompiled:
             compile_renderer(package, self.renderer, self.compiler)
             self.fingerprint = fingerprint
+            if wasm_compiler_path() is not None:
+                try:
+                    compile_wasm(package, self.wasm)
+                    self.wasm_available = True
+                except PackageError as error:
+                    self.wasm_available = False
+                    print(f"live audition unavailable (wasm build failed): {error}")
         return package, recompiled
 
     def render(self, request: dict[str, Any]) -> tuple[bytes, bool]:
@@ -1216,6 +1262,27 @@ def dev_command(args: argparse.Namespace) -> int:
                 self.end_headers()
                 self.wfile.write(html)
                 return
+            if request_path == "/audition_worklet.js":
+                js = Path(__file__).with_name("audition_worklet.js").read_bytes()
+                self.send_response(HTTPStatus.OK)
+                self.send_header("Content-Type", "text/javascript; charset=utf-8")
+                self.send_header("Content-Length", str(len(js)))
+                self.cors()
+                self.end_headers()
+                self.wfile.write(js)
+                return
+            if request_path == "/v1/audition.wasm":
+                if session.wasm_available and session.wasm.is_file():
+                    data = session.wasm.read_bytes()
+                    self.send_response(HTTPStatus.OK)
+                    self.send_header("Content-Type", "application/wasm")
+                    self.send_header("Content-Length", str(len(data)))
+                    self.cors()
+                    self.end_headers()
+                    self.wfile.write(data)
+                else:
+                    self.send_json({"error": "live audition unavailable"}, HTTPStatus.NOT_FOUND)
+                return
             if request_path == "/v1/catalog":
                 catalog, _ = load_builtin_catalog()
                 self.send_json({"engines": [
@@ -1232,6 +1299,7 @@ def dev_command(args: argparse.Namespace) -> int:
                         "digest": package_content_digest(current["directory"]),
                         "sourceRevision": session.fingerprint,
                         "recompiled": recompiled,
+                        "live": session.wasm_available,
                         "checks": ["package", "license", "source-policy", "host-compile"],
                     })
                 except PackageError as error:
