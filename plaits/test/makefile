@@ -91,6 +91,19 @@ $(BUILD_DIR)%.d: %.cc
 plaits_test:  $(OBJS)
 	g++ -g -o $(TARGET) $(OBJS) $(HOST_LINK_FLAGS) $(CXXFLAGS) -lm
 
+# Per-engine render-cost benchmark (cpu_bench.cc). Links every engine object
+# except the plaits_test main, times each engine's Render in mono vs stereo, and
+# prints "<id> <mono_ns> <stereo_ns>". Absolute ns are host numbers; use the
+# RATIOS (stereo/mono, unroll on/off) which are architecture-robust — see the
+# file header. Unrolling is a COMPILE-time flag, so pass it through CXXFLAGS and
+# rebuild the objects between variants (the ARM firmware ships -funroll-loops):
+#   make clean && make cpu-bench CXXFLAGS=-funroll-loops
+#   make clean && make cpu-bench CXXFLAGS=-fno-unroll-loops
+CPU_BENCH_OBJS = $(filter-out $(BUILD_DIR)plaits_test.o,$(OBJS)) $(BUILD_DIR)cpu_bench.o
+cpu-bench:  $(CPU_BENCH_OBJS)
+	g++ -g -O2 -o cpu_bench $(CPU_BENCH_OBJS) $(HOST_LINK_FLAGS) $(CXXFLAGS) -lm
+	./cpu_bench
+
 depends:  $(DEPS)
 	cat $(DEPS) > $(DEP_FILE)
 
