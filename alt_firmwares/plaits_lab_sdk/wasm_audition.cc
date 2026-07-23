@@ -40,6 +40,19 @@ float g_block_aux[kBlockSize];
 int g_block_fill = 0;
 int g_block_pos = 0;
 bool g_retrigger = false;
+bool g_block_already = false;  // did the last block self-envelope?
+
+// Amplitude envelope emulating Plaits' low-pass gate on TRIG. The audition
+// harness calls Engine::Render() DIRECTLY (no plaits::Voice), so a sustained
+// engine that ignores parameters.trigger would otherwise never respond to a
+// strike. PLUCKED mode opens this envelope on a strike and decays it to
+// silence; SUSTAINED mode holds it open (a continuous drone for tweaking).
+// Engines that shape their own amplitude (already_enveloped, e.g. the drums)
+// bypass it so we never double-envelope them.
+enum EnvMode { ENV_SUSTAINED = 0, ENV_PLUCKED = 1 };
+int g_env_mode = ENV_SUSTAINED;
+float g_env = 1.0f;
+const float kEnvDecay = 0.99976f;  // ~0.6 s to -60 dB at 48 kHz
 
 // Output buffers the worklet reads after render(n).
 const int kMaxRender = 256;
@@ -67,6 +80,16 @@ void init() {
   g_block_fill = 0;
   g_block_pos = 0;
   g_retrigger = false;
+  g_block_already = false;
+  g_env = 1.0f;
+  g_env_mode = ENV_SUSTAINED;
+}
+
+// 0 = sustained (continuous drone), 1 = plucked (each strike opens the LPG and
+// decays to silence). Switching to plucked opens the gate so it sounds at once.
+void set_env_mode(int mode) {
+  g_env_mode = mode ? ENV_PLUCKED : ENV_SUSTAINED;
+  g_env = 1.0f;
 }
 
 void set_params(float note, float harmonics, float timbre, float morph, float macro) {
@@ -78,7 +101,11 @@ void set_params(float note, float harmonics, float timbre, float morph, float ma
 }
 
 // Fire a single trigger rising edge on the next rendered block (re-strike).
-void trigger() { g_retrigger = true; }
+// In plucked mode this also re-opens the LPG envelope.
+void trigger() {
+  g_retrigger = true;
+  if (g_env_mode == ENV_PLUCKED) g_env = 1.0f;
+}
 
 // Render `size` (<= kMaxRender) samples into g_out_main / g_out_aux.
 void render(int size) {
@@ -93,14 +120,18 @@ void render(int size) {
       g_retrigger = false;
       bool already = false;
       g_engine->Render(g_params, g_block_main, g_block_aux, kBlockSize, &already);
+      g_block_already = already;
       g_block_fill = static_cast<int>(kBlockSize);
       g_block_pos = 0;
     }
     int take = size - produced;
     if (take > g_block_fill) take = g_block_fill;
+    const bool apply_env = (g_env_mode == ENV_PLUCKED) && !g_block_already;
     for (int i = 0; i < take; ++i) {
-      g_out_main[produced + i] = g_block_main[g_block_pos + i];
-      g_out_aux[produced + i] = g_block_aux[g_block_pos + i];
+      const float amp = apply_env ? g_env : 1.0f;
+      g_out_main[produced + i] = g_block_main[g_block_pos + i] * amp;
+      g_out_aux[produced + i] = g_block_aux[g_block_pos + i] * amp;
+      if (apply_env) g_env *= kEnvDecay;
     }
     g_block_pos += take;
     g_block_fill -= take;

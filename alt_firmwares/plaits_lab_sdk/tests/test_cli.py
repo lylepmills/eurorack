@@ -250,6 +250,16 @@ class PackageTests(unittest.TestCase):
         self.assertIn("/v1/audition.wasm", html)
         self.assertIn("/audition_worklet.js", html)
 
+    def test_live_audition_envelope_surface_is_wired(self) -> None:
+        # The Strike/Sustained-Plucked path: the harness must export set_env_mode,
+        # implement the low-pass-gate decay, and the worklet must forward 'env'.
+        self.assertIn("_set_env_mode", plaits_lab.WASM_EXPORTS)
+        harness = (plaits_lab.SDK_DIR / "wasm_audition.cc").read_text(encoding="utf-8")
+        self.assertIn("set_env_mode", harness)
+        self.assertIn("ENV_PLUCKED", harness)
+        worklet = (plaits_lab.SDK_DIR / "audition_worklet.js").read_text(encoding="utf-8")
+        self.assertIn("'env'", worklet)
+
     def test_compile_wasm_without_emcc_reports_clearly(self) -> None:
         # Live audition is OPTIONAL: with no emcc on PATH the wasm build must fail
         # with a clear, actionable error rather than a raw traceback.

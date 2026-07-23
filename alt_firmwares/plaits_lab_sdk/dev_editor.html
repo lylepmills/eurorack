@@ -33,8 +33,7 @@
   button.primary:hover:not(:disabled) { background:#c13e22; color:#FFF8F0; }
   button:disabled { opacity:.5; cursor:default; }
   .actions label { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); }
-  .live-row { border-top:1px solid var(--border); margin-top:14px; padding-top:14px; }
-  .live-row .sub { color:var(--subtle); font-size:12px; }
+  #live-actions .sub { color:var(--subtle); font-size:12px; flex-basis:100%; }
   #live-status.err { color:var(--accent); }
   select { border:1px solid var(--border); border-radius:8px; padding:6px 8px; background:var(--card); font-size:12px; }
   .scope-tabs { display:inline-flex; gap:4px; margin-bottom:8px; }
@@ -68,17 +67,19 @@
     </div>
     <div class="card">
       <div class="controls" id="controls"></div>
-      <div class="actions">
+      <div class="actions hidden" id="live-actions">
+        <button class="primary" id="live-toggle">▶ Live audition</button>
+        <button id="live-strike">Strike</button>
+        <label>Envelope <select id="live-env"><option value="0">Sustained</option><option value="1">Plucked</option></select></label>
+        <label>Monitor <select id="live-monitor"><option value="2">Main L / Aux R</option><option value="0">Main only</option><option value="1">Aux only</option></select></label>
+        <button id="live-reload">Reload edits</button>
+        <span class="sub" id="live-status">Real time — tweak any control and hear it change.</span>
+      </div>
+      <div class="actions" id="offline-actions">
         <button class="primary" id="render">Render preview</button>
         <button id="recheck">Recheck source</button>
         <label><input type="checkbox" id="trigger" /> Triggered</label>
         <label>A/B against <select id="ab"><option value="">None</option></select></label>
-      </div>
-      <div class="actions live-row hidden" id="live-actions">
-        <button id="live-toggle">▶ Live audition</button>
-        <button id="live-strike">Strike</button>
-        <label>Monitor <select id="live-monitor"><option value="2">Main L / Aux R</option><option value="0">Main only</option><option value="1">Aux only</option></select></label>
-        <span class="sub" id="live-status">Real time — tweak any control and hear it instantly.</span>
       </div>
     </div>
     <div class="card">
@@ -169,14 +170,27 @@ async function refreshPackage() {
     $('offline').classList.add('hidden');
     $('bench').classList.remove('hidden');
     setPill('Connected', 'on');
+    // Live audition is the primary path when the wasm build is available; the
+    // render-and-listen controls only appear as the fallback (no emcc).
     $('live-actions').classList.toggle('hidden', !value.live);
+    $('offline-actions').classList.toggle('hidden', !!value.live);
+    if (value.live) {
+      $('preview-wrap').classList.add('hidden');
+      $('reference-wrap').classList.add('hidden');
+    }
     if (!value.live) {
       stopLive();
     } else if (value.recompiled && audio.running) {
       // New source was compiled to a fresh .wasm; reload it into the live engine.
       await startLive();
     }
-    notice(value.recompiled ? 'Source changed and recompiled successfully.' : 'Connected and ready. Move a control and render.');
+    if (value.live) {
+      notice(value.recompiled ? 'Source recompiled — reloaded into the live engine.'
+        : 'Connected. Press Live audition, then tweak any control to hear it change.');
+    } else {
+      notice(value.recompiled ? 'Source changed and recompiled successfully.'
+        : 'Connected and ready. Move a control and render. (Install emcc for real-time live audition.)');
+    }
   } catch (error) {
     setPill('Offline', 'off');
     $('offline-notice').textContent = 'Could not reach or validate the package: ' + (error.message || error);
@@ -246,13 +260,44 @@ $('tab-scope').addEventListener('click', () => { state.scope = 'scope'; $('tab-s
 $('tab-spectrum').addEventListener('click', () => { state.scope = 'spectrum'; $('tab-spectrum').classList.add('active'); $('tab-scope').classList.remove('active'); });
 
 // ---- Live audition (WebAssembly + AudioWorklet) ----------------------------
-const audio = { ctx: null, node: null, gain: null, running: false, moduleAdded: false };
+const audio = { ctx: null, node: null, gain: null, analyser: null, running: false, moduleAdded: false, raf: 0 };
 
 function liveParamsMsg() {
   return { type: 'params', note: state.note, harmonics: state.controls.harmonics, timbre: state.controls.timbre, morph: state.controls.morph, macro: state.controls.macro };
 }
 function pushLiveParams() { if (audio.running && audio.node) audio.node.port.postMessage(liveParamsMsg()); }
 function liveStatus(text, isErr) { const s = $('live-status'); s.textContent = text || ''; s.classList.toggle('err', !!isErr); }
+
+function drawLiveFrame() {
+  if (!audio.running || !audio.analyser) return;
+  const canvas = $('scope'), ctx = canvas.getContext('2d');
+  const { width, height } = canvas;
+  ctx.fillStyle = '#171918'; ctx.fillRect(0, 0, width, height);
+  if (state.scope === 'spectrum') {
+    const bins = audio.analyser.frequencyBinCount, data = new Float32Array(bins);
+    audio.analyser.getFloatFrequencyData(data);
+    ctx.strokeStyle = '#f0bd45'; ctx.lineWidth = 2; ctx.beginPath();
+    const shown = Math.floor(bins * 0.5), cols = 120;
+    for (let c = 0; c < cols; c++) {
+      const mag = Math.max(0, Math.min(1, (data[Math.floor(c / cols * shown)] + 100) / 90));
+      const x = c / (cols - 1) * width, y = height - mag * height * 0.95;
+      c ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.stroke();
+  } else {
+    const n = audio.analyser.fftSize, data = new Float32Array(n);
+    audio.analyser.getFloatTimeDomainData(data);
+    ctx.strokeStyle = '#78a98b'; ctx.lineWidth = 2; ctx.beginPath();
+    const step = Math.max(1, Math.floor(n / width));
+    let j = 0;
+    for (let i = 0; i < n; i += step, j++) {
+      const x = j / (Math.floor(n / step) - 1) * width, y = height * (0.5 - data[i] * 0.45);
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.stroke();
+  }
+  audio.raf = requestAnimationFrame(drawLiveFrame);
+}
 
 async function startLive() {
   try {
@@ -265,28 +310,35 @@ async function startLive() {
     if (audio.node) { try { audio.node.disconnect(); } catch (e) {} }
     const node = new AudioWorkletNode(audio.ctx, 'plaits-audition', {
       numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
-      processorOptions: { wasmModule: module, params: liveParamsMsg() },
+      processorOptions: { wasmModule: module, params: liveParamsMsg(), envMode: Number($('live-env').value) },
     });
     node.port.onmessage = (e) => { if (e.data && e.data.type === 'error') liveStatus('engine error: ' + e.data.message, true); };
     node.port.postMessage({ type: 'monitor', value: Number($('live-monitor').value) });
+    node.port.postMessage({ type: 'env', value: Number($('live-env').value) });
     if (!audio.gain) { audio.gain = audio.ctx.createGain(); audio.gain.gain.value = 0.5; audio.gain.connect(audio.ctx.destination); }
+    if (!audio.analyser) { audio.analyser = audio.ctx.createAnalyser(); audio.analyser.fftSize = 2048; }
     node.connect(audio.gain);
+    node.connect(audio.analyser);
     audio.node = node; audio.running = true;
     $('live-toggle').textContent = '■ Stop live'; $('live-toggle').classList.add('primary');
     liveStatus('Live — move any control to hear it change.');
+    cancelAnimationFrame(audio.raf); audio.raf = requestAnimationFrame(drawLiveFrame);
   } catch (err) {
     liveStatus(err.message || 'Could not start live audition', true);
     stopLive();
   }
 }
 function stopLive() {
+  cancelAnimationFrame(audio.raf); audio.raf = 0;
   if (audio.node) { try { audio.node.disconnect(); } catch (e) {} audio.node = null; }
   audio.running = false;
   $('live-toggle').textContent = '▶ Live audition'; $('live-toggle').classList.remove('primary');
 }
 $('live-toggle').addEventListener('click', () => { audio.running ? stopLive() : startLive(); });
 $('live-strike').addEventListener('click', () => { if (audio.running && audio.node) audio.node.port.postMessage({ type: 'trigger' }); });
+$('live-env').addEventListener('change', (e) => { if (audio.running && audio.node) audio.node.port.postMessage({ type: 'env', value: Number(e.target.value) }); });
 $('live-monitor').addEventListener('change', (e) => { if (audio.running && audio.node) audio.node.port.postMessage({ type: 'monitor', value: Number(e.target.value) }); });
+$('live-reload').addEventListener('click', refreshPackage);
 
 refreshPackage();
 loadCatalog();

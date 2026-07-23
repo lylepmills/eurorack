@@ -33,6 +33,8 @@ class PlaitsAuditionProcessor extends AudioWorkletProcessor {
         this.auxPtr = e.aux_out();
         const p = options.processorOptions.params;
         if (p) e.set_params(p.note, p.harmonics, p.timbre, p.morph, p.macro);
+        const env = options.processorOptions.envMode | 0;
+        if (typeof e.set_env_mode === 'function') e.set_env_mode(env);
         this.ready = true;
       } catch (err) {
         this.port.postMessage({ type: 'error', message: String(err && err.message || err) });
@@ -46,6 +48,8 @@ class PlaitsAuditionProcessor extends AudioWorkletProcessor {
         this.exports.set_params(data.note, data.harmonics, data.timbre, data.morph, data.macro);
       } else if (data.type === 'trigger') {
         this.exports.trigger();
+      } else if (data.type === 'env') {
+        if (typeof this.exports.set_env_mode === 'function') this.exports.set_env_mode(data.value | 0);
       } else if (data.type === 'monitor') {
         this.monitor = data.value | 0;
       }

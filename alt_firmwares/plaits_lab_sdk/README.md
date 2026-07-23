@@ -35,18 +35,37 @@ $SDK dev ./$PKG/my-engine
 
 Open the `http://127.0.0.1:4179/` link it prints. Page and API are the same
 origin, so there is no connecting, no CORS/CSP, and no browser local-network
-permission: four Plaits controls, pitch, trigger, scope/spectrum, audio
-playback, and A/B rendering against any built-in model. The local server
-recompiles after a source change; source never leaves your machine. Pass
-`--editor <page-url>` to drive the full hosted contributor site instead.
+permission. The local server recompiles after a source change; source never
+leaves your machine. Pass `--editor <page-url>` to drive the full hosted
+contributor site instead.
 
-When the Emscripten toolchain (`emcc`) is on your PATH, the page also offers a
-real-time **Live audition**: the engine is compiled to WebAssembly and runs in
-a browser AudioWorklet, so it plays continuously and every control, pitch, and
-trigger change is heard instantly — no render step. It is entirely optional; the
-render-and-listen workflow above needs only a host C++ compiler. Install the
-toolchain once with [emsdk](https://emscripten.org/docs/getting_started/downloads.html)
-and `source ./emsdk_env.sh` before `dev`.
+**Live audition (recommended).** With the Emscripten toolchain (`emcc`) on your
+PATH, `dev` compiles your engine to WebAssembly and the page runs it in a
+browser AudioWorklet — it plays continuously and every control, pitch, envelope,
+and strike change is heard **instantly**, with a live scope/spectrum. This is the
+primary way to audition; no render step. Install the toolchain once:
+
+```sh
+# macOS / Linux
+git clone https://github.com/emscripten-core/emsdk.git
+cd emsdk && ./emsdk install latest && ./emsdk activate latest
+source ./emsdk_env.sh          # do this in each shell before `plaits-lab dev`
+```
+
+```powershell
+# Windows (PowerShell)
+git clone https://github.com/emscripten-core/emsdk.git
+cd emsdk; .\emsdk install latest; .\emsdk activate latest
+.\emsdk_env.ps1                # do this in each shell before `plaits-lab dev`
+```
+
+If `emcc` is not found, `dev` falls back to a render-and-listen page (Render
+preview, scope/spectrum, and A/B against any built-in model) that needs only a
+host C++ compiler — but live audition is the better experience, so installing
+Emscripten once is worth it. The **Envelope** control switches between a
+continuous drone (**Sustained**) and a struck note (**Plucked**, where **Strike**
+opens a low-pass-gate decay) — the same low-pass-gate behavior Plaits applies to a
+patched trigger, so sustained engines respond to Strike too.
 
 ## Validation and submission
 

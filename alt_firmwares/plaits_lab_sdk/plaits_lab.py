@@ -513,7 +513,8 @@ def wasm_compiler_path() -> str | None:
 
 
 # Emscripten exports the audition harness surface the AudioWorklet drives.
-WASM_EXPORTS = '["_init","_render","_set_params","_trigger","_main_out","_aux_out"]'
+WASM_EXPORTS = ('["_init","_render","_set_params","_trigger","_set_env_mode",'
+               '"_main_out","_aux_out"]')
 
 
 def compile_wasm(package: dict[str, Any], output: Path) -> None:
