@@ -1099,6 +1099,19 @@ class DevSession:
         return output.read_bytes()
 
 
+def contributor_url_for(editor: str, server_url: str) -> str:
+    """The contributor-center URL to open, preserving the editor's PATH.
+
+    `--editor` is the full page URL (e.g. https://rubato.audio/plaits-palette/
+    contribute); a bare origin falls back to the contributor route rather than
+    the wrong top-level /contribute.
+    """
+    parsed = urlparse(editor)
+    origin = f"{parsed.scheme}://{parsed.netloc}"
+    path = parsed.path.rstrip("/") or "/plaits-palette/contribute"
+    return f"{origin}{path}?devServer={quote(server_url, safe='')}"
+
+
 def dev_command(args: argparse.Namespace) -> int:
     session = DevSession(args.package, args.compiler)
     package, _ = session.ensure_renderer()
@@ -1196,7 +1209,7 @@ def dev_command(args: argparse.Namespace) -> int:
 
     server = ThreadingHTTPServer((args.host, args.port), Handler)
     server_url = f"http://{args.host}:{args.port}"
-    contributor_url = f"{editor_origin}/contribute?devServer={quote(server_url, safe='')}"
+    contributor_url = contributor_url_for(args.editor, server_url)
     print(f"serving {package['manifest']['id']} from {server_url}")
     print(f"open {contributor_url}")
     print("source changes are revalidated and recompiled on the next preview")
