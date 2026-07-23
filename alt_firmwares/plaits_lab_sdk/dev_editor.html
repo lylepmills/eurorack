@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Plaits Lab — local audition</title>
+<style>
+  :root { --bg:#FBF6EC; --card:#FFFCF5; --ink:#1A1410; --muted:#5C4F44; --subtle:#8B7B6E; --accent:#DC4A2C; --border:#E8D9C0; --scope:#171918; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:26px 20px 60px; }
+  header { display:flex; align-items:baseline; justify-content:space-between; gap:16px; margin-bottom:6px; }
+  h1 { margin:0; font-size:19px; font-weight:600; letter-spacing:-.01em; }
+  .sub { color:var(--subtle); font-size:12px; }
+  .pill { font-size:11px; font-weight:600; padding:4px 11px; border-radius:999px; border:1px solid var(--border); color:var(--subtle); }
+  .pill.on { color:#2f7d52; border-color:#a9d5bd; background:#eef7f1; }
+  .pill.off { color:var(--accent); border-color:#e7bbb0; background:#fbeeea; }
+  .card { margin-top:16px; padding:18px; border:1px solid var(--border); border-radius:14px; background:var(--card); }
+  .summary { display:flex; flex-wrap:wrap; gap:8px 26px; font-size:12px; }
+  .summary b { display:block; color:var(--subtle); font-weight:600; font-size:10px; text-transform:uppercase; letter-spacing:.05em; }
+  code { font-family:"SF Mono",ui-monospace,monospace; font-size:12px; }
+  .controls { display:grid; gap:14px; margin-top:4px; }
+  .controls label { display:grid; gap:5px; }
+  .controls .row { display:flex; justify-content:space-between; align-items:baseline; }
+  .controls .row strong { font-weight:600; }
+  .controls .row output { font-variant-numeric:tabular-nums; color:var(--muted); }
+  .controls small { color:var(--subtle); font-size:11px; }
+  input[type=range] { width:100%; accent-color:var(--accent); }
+  .actions { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:16px; }
+  button { border:1px solid var(--border); border-radius:9px; padding:9px 15px; background:var(--card); color:var(--ink); font-size:13px; font-weight:600; cursor:pointer; }
+  button:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#FFF8F0; }
+  button.primary:hover:not(:disabled) { background:#c13e22; color:#FFF8F0; }
+  button:disabled { opacity:.5; cursor:default; }
+  .actions label { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); }
+  select { border:1px solid var(--border); border-radius:8px; padding:6px 8px; background:var(--card); font-size:12px; }
+  .scope-tabs { display:inline-flex; gap:4px; margin-bottom:8px; }
+  .scope-tabs button { padding:5px 12px; font-size:11px; }
+  .scope-tabs button.active { border-color:var(--accent); color:var(--accent); }
+  canvas { width:100%; height:180px; border-radius:10px; display:block; background:var(--scope); }
+  audio { width:100%; margin-top:12px; }
+  .audio-label { display:block; margin-top:12px; color:var(--subtle); font-size:11px; }
+  .notice { margin-top:14px; color:var(--muted); font-size:12px; min-height:18px; }
+  .notice.err { color:var(--accent); }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div><h1>Plaits Lab — local audition</h1><div class="sub">Served by <code>plaits-lab dev</code> on this machine</div></div>
+    <span id="pill" class="pill">Connecting…</span>
+  </header>
+
+  <div id="offline" class="card">
+    <div class="notice" id="offline-notice">Reaching the local server…</div>
+  </div>
+
+  <div id="bench" class="hidden">
+    <div class="card">
+      <div class="summary">
+        <div><b>Package</b><code id="pkg-id">—</code></div>
+        <div><b>Digest</b><code id="pkg-digest">—</code></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="controls" id="controls"></div>
+      <div class="actions">
+        <button class="primary" id="render">Render preview</button>
+        <button id="recheck">Recheck source</button>
+        <label><input type="checkbox" id="trigger" /> Triggered</label>
+        <label>A/B against <select id="ab"><option value="">None</option></select></label>
+      </div>
+    </div>
+    <div class="card">
+      <div class="scope-tabs">
+        <button id="tab-scope" class="active">Scope</button>
+        <button id="tab-spectrum">Spectrum</button>
+      </div>
+      <canvas id="scope" width="720" height="180"></canvas>
+      <div id="preview-wrap" class="hidden"><span class="audio-label">Your package</span><audio id="preview" controls></audio></div>
+      <div id="reference-wrap" class="hidden"><span class="audio-label" id="reference-label">Reference</span><audio id="reference" controls></audio></div>
+      <div class="notice" id="notice"></div>
+    </div>
+  </div>
+</main>
+<script>
+const CONTROL_IDS = ['harmonics', 'timbre', 'morph', 'macro'];
+const state = {
+  controls: { harmonics: 0.5, timbre: 0.5, morph: 0.5, macro: 0.5 },
+  note: 48,
+  triggerHz: 0,
+  scope: 'scope',
+  comparison: '',
+  pkg: null,
+};
+const $ = (id) => document.getElementById(id);
+
+function setPill(text, kind) { const p = $('pill'); p.textContent = text; p.className = 'pill' + (kind ? ' ' + kind : ''); }
+function notice(text, isErr) { const n = $('notice'); n.textContent = text || ''; n.className = 'notice' + (isErr ? ' err' : ''); }
+
+function drawAudio(buffer, spectrum) {
+  const canvas = $('scope');
+  const view = new DataView(buffer);
+  const samples = Math.max(0, (buffer.byteLength - 44) / 4);
+  const values = Array.from({ length: Math.min(samples, 2048) }, (_, i) => view.getInt16(44 + i * 4, true) / 32768);
+  const ctx = canvas.getContext('2d');
+  if (!ctx || !values.length) return;
+  const { width, height } = canvas;
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = '#171918'; ctx.fillRect(0, 0, width, height);
+  ctx.strokeStyle = spectrum ? '#f0bd45' : '#78a98b';
+  ctx.lineWidth = 2; ctx.beginPath();
+  if (!spectrum) {
+    values.forEach((v, i) => { const x = i / (values.length - 1) * width; const y = height * (0.5 - v * 0.42); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+  } else {
+    const bins = 72;
+    for (let bin = 1; bin <= bins; bin += 1) {
+      let re = 0, im = 0; const step = Math.max(1, Math.floor(values.length / 512));
+      for (let i = 0; i < values.length; i += step) { const a = 2 * Math.PI * bin * i / values.length; re += values[i] * Math.cos(a); im -= values[i] * Math.sin(a); }
+      const mag = Math.min(1, Math.hypot(re, im) / 40); const x = bin / bins * width; const y = height - mag * height * 0.9;
+      bin === 1 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+  }
+  ctx.stroke();
+}
+
+function renderControls() {
+  const wrap = $('controls');
+  wrap.innerHTML = '';
+  const labels = {};
+  (state.pkg.manifest.controls || []).forEach((c) => { labels[c.id] = c; });
+  CONTROL_IDS.forEach((id) => {
+    const meta = labels[id] || { label: id, description: '' };
+    const label = document.createElement('label');
+    label.innerHTML = `<span class="row"><strong>${meta.label}</strong><output>${state.controls[id].toFixed(2)}</output></span>`
+      + `<input type="range" min="0" max="1" step="0.01" value="${state.controls[id]}" />`
+      + (meta.description ? `<small>${meta.description}</small>` : '');
+    const input = label.querySelector('input');
+    const out = label.querySelector('output');
+    input.addEventListener('input', () => { state.controls[id] = Number(input.value); out.textContent = state.controls[id].toFixed(2); });
+    wrap.appendChild(label);
+  });
+  const pitch = document.createElement('label');
+  pitch.innerHTML = `<span class="row"><strong>Pitch</strong><output>${state.note}</output></span><input type="range" min="12" max="108" value="${state.note}" />`;
+  const pinput = pitch.querySelector('input'), pout = pitch.querySelector('output');
+  pinput.addEventListener('input', () => { state.note = Number(pinput.value); pout.textContent = state.note; });
+  wrap.appendChild(pitch);
+}
+
+async function refreshPackage() {
+  try {
+    const response = await fetch('/v1/package', { cache: 'no-store' });
+    const value = await response.json();
+    if (!response.ok) throw new Error(value.error || 'Local validation failed');
+    state.pkg = value;
+    $('pkg-id').textContent = `${value.manifest.id}@${value.manifest.version}`;
+    $('pkg-digest').textContent = (value.digest || '').slice(0, 22) + '…';
+    renderControls();
+    $('offline').classList.add('hidden');
+    $('bench').classList.remove('hidden');
+    setPill('Connected', 'on');
+    notice(value.recompiled ? 'Source changed and recompiled successfully.' : 'Connected and ready. Move a control and render.');
+  } catch (error) {
+    setPill('Offline', 'off');
+    $('offline-notice').textContent = 'Could not reach or validate the package: ' + (error.message || error);
+  }
+}
+
+async function loadCatalog() {
+  try {
+    const response = await fetch('/v1/catalog', { cache: 'no-store' });
+    if (!response.ok) return;
+    const value = await response.json();
+    const select = $('ab');
+    (value.engines || []).forEach((engine) => {
+      const option = document.createElement('option');
+      option.value = engine.id; option.textContent = engine.name;
+      select.appendChild(option);
+    });
+  } catch { /* A/B stays None-only */ }
+}
+
+function requestBody() {
+  return JSON.stringify({
+    durationSeconds: 2,
+    note: state.note,
+    triggerHz: state.triggerHz,
+    controls: Object.fromEntries(CONTROL_IDS.map((id) => [id, [state.controls[id], state.controls[id]]])),
+  });
+}
+
+async function renderPreview() {
+  const button = $('render');
+  button.disabled = true; button.textContent = 'Rendering…';
+  notice('Rendering with the current source and controls…');
+  try {
+    const body = requestBody();
+    const response = await fetch('/v1/render', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+    if (!response.ok) { const v = await response.json(); throw new Error(v.error || 'Preview render failed'); }
+    const data = await response.arrayBuffer();
+    const url = URL.createObjectURL(new Blob([data], { type: 'audio/wav' }));
+    const preview = $('preview'); preview.src = url; $('preview-wrap').classList.remove('hidden'); preview.play().catch(() => {});
+    drawAudio(data, state.scope === 'spectrum');
+    if (state.comparison) {
+      const rr = await fetch(`/v1/reference/${state.comparison}/render`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+      if (rr.ok) {
+        const rdata = await rr.arrayBuffer();
+        const rurl = URL.createObjectURL(new Blob([rdata], { type: 'audio/wav' }));
+        $('reference').src = rurl;
+        $('reference-label').textContent = ($('ab').selectedOptions[0]?.textContent || 'Reference') + ' reference';
+        $('reference-wrap').classList.remove('hidden');
+      }
+    } else {
+      $('reference-wrap').classList.add('hidden');
+    }
+    notice(response.headers.get('X-Plaits-Recompiled') === 'true' ? 'Source changed, recompiled, and rendered.' : 'Rendered from the current controls.');
+  } catch (error) {
+    notice(error.message || 'Preview render failed.', true);
+  } finally {
+    button.disabled = false; button.textContent = 'Render preview';
+  }
+}
+
+$('render').addEventListener('click', renderPreview);
+$('recheck').addEventListener('click', refreshPackage);
+$('trigger').addEventListener('change', (e) => { state.triggerHz = e.target.checked ? 4 : 0; });
+$('ab').addEventListener('change', (e) => { state.comparison = e.target.value; });
+$('tab-scope').addEventListener('click', () => { state.scope = 'scope'; $('tab-scope').classList.add('active'); $('tab-spectrum').classList.remove('active'); });
+$('tab-spectrum').addEventListener('click', () => { state.scope = 'spectrum'; $('tab-spectrum').classList.add('active'); $('tab-scope').classList.remove('active'); });
+
+refreshPackage();
+loadCatalog();
+</script>
+</body>
+</html>

@@ -207,6 +207,17 @@ class PackageTests(unittest.TestCase):
         with self.assertRaises(plaits_lab.PackageError):
             plaits_lab.validate_shared_modules(["not-a-real-module"])
 
+    def test_dev_editor_ui_is_same_origin(self) -> None:
+        html = (plaits_lab.SDK_DIR / "dev_editor.html").read_text(encoding="utf-8")
+        # The built-in audition UI must talk to its OWN server via relative /v1
+        # paths — never an absolute origin or the devServer cross-origin dance,
+        # which is the whole reason it exists (no CORS/CSP/local-network issues).
+        for endpoint in ("/v1/package", "/v1/render", "/v1/catalog"):
+            self.assertIn(endpoint, html)
+        self.assertNotIn("http://", html)
+        self.assertNotIn("https://", html)
+        self.assertNotIn("devServer", html)
+
     def test_dev_contributor_url_preserves_editor_path(self) -> None:
         # The bug: the full page path was dropped for a bare /contribute.
         self.assertEqual(

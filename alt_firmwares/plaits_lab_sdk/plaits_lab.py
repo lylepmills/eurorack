@@ -24,6 +24,7 @@ from typing import Any
 
 
 SDK_VERSION = "plaits-engine-cpp-v1"
+DEV_EDITOR_DEFAULT = "http://localhost:3000"
 SDK_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SDK_DIR.parents[1]
 CATALOG_PATH = SDK_DIR.parent / "plaits_lab_catalog/catalog.json"
@@ -1120,6 +1121,15 @@ def dev_command(args: argparse.Namespace) -> int:
             and not editor.username and not editor.password,
             "--editor must be an HTTP(S) origin")
     editor_origin = f"{editor.scheme}://{editor.netloc}"
+    # The dev server now serves its own audition UI (dev_editor.html) at "/", so
+    # its OWN origin(s) must be allowed too — a same-origin POST still sends an
+    # Origin header. --editor stays supported for driving the full website.
+    allowed_origins = {
+        editor_origin,
+        f"http://{args.host}:{args.port}",
+        f"http://127.0.0.1:{args.port}",
+        f"http://localhost:{args.port}",
+    }
 
     class Handler(BaseHTTPRequestHandler):
         server_version = "PlaitsLabSDK/0"
@@ -1138,7 +1148,7 @@ def dev_command(args: argparse.Namespace) -> int:
 
         def origin_allowed(self) -> bool:
             origin = self.headers.get("Origin")
-            if origin is None or origin == editor_origin:
+            if origin is None or origin in allowed_origins:
                 return True
             self.send_json({"error": "origin not allowed"}, HTTPStatus.FORBIDDEN)
             return False
@@ -1162,7 +1172,24 @@ def dev_command(args: argparse.Namespace) -> int:
         def do_GET(self) -> None:  # noqa: N802
             if not self.origin_allowed():
                 return
-            if urlparse(self.path).path == "/v1/package":
+            request_path = urlparse(self.path).path
+            if request_path in ("/", "/index.html"):
+                html = Path(__file__).with_name("dev_editor.html").read_bytes()
+                self.send_response(HTTPStatus.OK)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(html)))
+                self.cors()
+                self.end_headers()
+                self.wfile.write(html)
+                return
+            if request_path == "/v1/catalog":
+                catalog, _ = load_builtin_catalog()
+                self.send_json({"engines": [
+                    {"id": engine_id, "name": engine["name"]}
+                    for engine_id, engine in catalog.items()
+                ]})
+                return
+            if request_path == "/v1/package":
                 try:
                     current, recompiled = session.ensure_renderer()
                     self.send_json({
@@ -1214,9 +1241,10 @@ def dev_command(args: argparse.Namespace) -> int:
 
     server = ThreadingHTTPServer((args.host, args.port), Handler)
     server_url = f"http://{args.host}:{args.port}"
-    contributor_url = contributor_url_for(args.editor, server_url)
     print(f"serving {package['manifest']['id']} from {server_url}")
-    print(f"open {contributor_url}")
+    print(f"open {server_url}/  — audition it in your browser (nothing else to set up)")
+    if args.editor != DEV_EDITOR_DEFAULT:
+        print(f"or drive the full contributor site: {contributor_url_for(args.editor, server_url)}")
     print("source changes are revalidated and recompiled on the next preview")
     try:
         server.serve_forever()
@@ -1280,7 +1308,7 @@ def build_parser() -> argparse.ArgumentParser:
     dev_parser.add_argument("package")
     dev_parser.add_argument("--host", default="127.0.0.1")
     dev_parser.add_argument("--port", type=int, default=4179)
-    dev_parser.add_argument("--editor", default="http://localhost:3000")
+    dev_parser.add_argument("--editor", default=DEV_EDITOR_DEFAULT)
     dev_parser.add_argument("--compiler")
     dev_parser.add_argument("--verbose", action="store_true")
     dev_parser.set_defaults(handler=dev_command)
