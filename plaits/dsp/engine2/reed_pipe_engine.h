@@ -2,6 +2,13 @@
 // SPDX-License-Identifier: MIT
 //
 // Lightweight nonlinear reed and fractional-delay bore engine.
+//
+// OUT: bore pressure read through a movable pickup, DC-blocked and soft-clipped.
+// AUX: the reed flow, given make-up gain. In stereo mode, OUT/AUX become L/R:
+// the waveguide runs once and a second pickup, mirrored down the bore
+// (1 - pickup_position), reads the same standing wave from a different point,
+// so the two taps a fixed distance apart give genuine spatial stereo; the
+// reed-flow AUX is skipped.
 
 #ifndef PLAITS_DSP_ENGINE2_REED_PIPE_ENGINE_H_
 #define PLAITS_DSP_ENGINE2_REED_PIPE_ENGINE_H_
@@ -41,6 +48,7 @@ class ReedPipeEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
+  virtual bool stereo_capable() const { return true; }
 
  private:
   DelayLine<float, kReedPipeDelaySize> bore_;

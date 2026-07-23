@@ -33,7 +33,12 @@
 #include "plaits/dsp/oscillator/oscillator.h"
 
 namespace plaits {
-  
+
+// OUT: wavefolder (lut_fold). AUX: sine/overtone blend of the second folder
+// table (lut_fold_2). In stereo mode OUT/AUX become L/R and the AUX overtone
+// blend is dropped: the two folder tables are panned apart instead (fold to
+// 0.25, fold_2 to 0.75), so each channel carries a different fold of the same
+// index while both remain in phase for a mono sum.
 class WaveshapingEngine : public Engine {
  public:
   WaveshapingEngine() { }
@@ -47,7 +52,8 @@ class WaveshapingEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-  
+  virtual bool stereo_capable() const { return true; }
+
  private:
   Oscillator slope_;
   Oscillator triangle_;

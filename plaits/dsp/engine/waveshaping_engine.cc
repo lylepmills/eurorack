@@ -103,7 +103,15 @@ void WaveshapingEngine::Render(
       &previous_overtone_gain_,
       overtone_gain * (2.0f - overtone_gain),
       size);
-  
+
+  // In stereo the two wavefolder tables are genuinely different shapings of
+  // the same drive index, so they are panned apart instead of blended into a
+  // single AUX. fold leans left (0.25), fold_2 leans right (0.75); both tables
+  // reach both channels (equal-power), so a mono sum keeps them in phase.
+  float fold_left, fold_right, fold_2_left, fold_2_right;
+  StereoPanGains(0.25f, &fold_left, &fold_right);
+  StereoPanGains(0.75f, &fold_2_left, &fold_2_right);
+
   for (size_t i = 0; i < size; ++i) {
     float shape = shape_modulation.Next() * 3.9999f;
     MAKE_INTEGRAL_FRACTIONAL(shape);
@@ -130,10 +138,15 @@ void WaveshapingEngine::Render(
         lut_fold + 1, index, 512.0f);
     float fold_2 = -InterpolateHermite(
         lut_fold_2 + 1, index, 512.0f);
-    
-    float sine = Sine(aux[i] * 0.25f + 0.5f);
-    out[i] = fold;
-    aux[i] = sine + (fold_2 - sine) * overtone_gain_modulation.Next();
+
+    if (parameters.stereo) {
+      out[i] = fold * fold_left + fold_2 * fold_2_left;
+      aux[i] = fold * fold_right + fold_2 * fold_2_right;
+    } else {
+      float sine = Sine(aux[i] * 0.25f + 0.5f);
+      out[i] = fold;
+      aux[i] = sine + (fold_2 - sine) * overtone_gain_modulation.Next();
+    }
   }
 }
 

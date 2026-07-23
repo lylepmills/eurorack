@@ -162,17 +162,37 @@ void ReedPipeEngine::Render(
         0.9975f * out_dc_output_;
     out_dc_input_ = pressure;
     out_dc_output_ = dc_out;
-
-    const float dc_aux = reed_flow - aux_dc_input_ + \
-        0.9975f * aux_dc_output_;
-    aux_dc_input_ = reed_flow;
-    aux_dc_output_ = dc_aux;
-
     out[i] = 0.58f * SoftClip(dc_out);
-    // Reed flow is naturally much smaller than bore pressure. Give AUX enough
-    // make-up gain to serve as a useful alternate output without changing the
-    // nonlinear feedback path itself.
-    aux[i] = 0.9f * SoftClip(2.8f * dc_aux);
+
+    if (parameters.stereo) {
+      // OUT/AUX become L/R: a second pickup a fixed third of the bore away
+      // from the movable one reads the same shared waveguide through the
+      // identical blend, so the two taps always sit a fixed distance apart
+      // (a plain mirror would collapse onto the first tap whenever HARMONICS
+      // parks the pickup near the bore's midpoint). The R pickup reuses the
+      // aux DC-blocker state and the reed-flow AUX is dropped.
+      const float pickup_position_r = pickup_position > 0.5f
+          ? pickup_position - 0.33f
+          : pickup_position + 0.33f;
+      const float pickup_wave_r = bore_.Read(
+          max(2.0f, delay * pickup_position_r));
+      const float pressure_r = (1.0f - pickup_amount) * \
+          (outgoing_ + returning) + pickup_amount * pickup_wave_r;
+      const float dc_aux_r = pressure_r - aux_dc_input_ + \
+          0.9975f * aux_dc_output_;
+      aux_dc_input_ = pressure_r;
+      aux_dc_output_ = dc_aux_r;
+      aux[i] = 0.58f * SoftClip(dc_aux_r);
+    } else {
+      const float dc_aux = reed_flow - aux_dc_input_ + \
+          0.9975f * aux_dc_output_;
+      aux_dc_input_ = reed_flow;
+      aux_dc_output_ = dc_aux;
+      // Reed flow is naturally much smaller than bore pressure. Give AUX enough
+      // make-up gain to serve as a useful alternate output without changing the
+      // nonlinear feedback path itself.
+      aux[i] = 0.9f * SoftClip(2.8f * dc_aux);
+    }
   }
 }
 

@@ -131,7 +131,42 @@ void GendyEngine::Render(
       sample = linear + (smooth - linear) * (parameters.macro * 2.0f - 1.0f);
     }
     out[i] = sample * 0.8f;
-    aux[i] = stepped * 0.65f;
+    if (parameters.stereo) {
+      // OUT/AUX become L/R: the breakpoints mutate and phase_/segment_ advance
+      // once (shared), and the R channel reads the same breakpoint set at the
+      // antipodal phase with an independent segment lookup (not disturbing the
+      // real segment_ state). The stepped AUX is dropped.
+      float antipodal_phase = phase_ + 0.5f;
+      if (antipodal_phase >= 1.0f) {
+        antipodal_phase -= 1.0f;
+      }
+      int segment_r = 0;
+      while (segment_r < num_breakpoints_ - 1 &&
+          antipodal_phase >= boundary_[segment_r]) {
+        ++segment_r;
+      }
+      const int next_r = segment_r + 1 == num_breakpoints_ ? 0 : segment_r + 1;
+      const float start_r = segment_r == 0 ? 0.0f : boundary_[segment_r - 1];
+      const float width_r = boundary_[segment_r] - start_r;
+      float t_r = (antipodal_phase - start_r) / width_r;
+      CONSTRAIN(t_r, 0.0f, 1.0f);
+
+      const float stepped_r = amplitude_[segment_r];
+      const float linear_r = stepped_r + (amplitude_[next_r] - stepped_r) * t_r;
+      const float smooth_t_r = t_r * t_r * (3.0f - 2.0f * t_r);
+      const float smooth_r = stepped_r + \
+          (amplitude_[next_r] - stepped_r) * smooth_t_r;
+      float sample_r;
+      if (parameters.macro < 0.5f) {
+        sample_r = stepped_r + (linear_r - stepped_r) * parameters.macro * 2.0f;
+      } else {
+        sample_r = linear_r + \
+            (smooth_r - linear_r) * (parameters.macro * 2.0f - 1.0f);
+      }
+      aux[i] = sample_r * 0.8f;
+    } else {
+      aux[i] = stepped * 0.65f;
+    }
   }
 }
 

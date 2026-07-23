@@ -28,6 +28,8 @@ void TapfieldEngine::Reset() {
   target_ = 0.0f;
   value_ = 0.0f;
   aux_target_ = -1.0f;
+  target_r_ = 0.0f;
+  value_r_ = 0.0f;
   ConfigureTopology(0.0f);
   Seed();
 }
@@ -106,14 +108,18 @@ void TapfieldEngine::Clock(float corruption) {
   }
 }
 
-float TapfieldEngine::Decode(float timbre) const {
+float TapfieldEngine::Decode(float timbre, bool reversed) const {
   const uint32_t gray = state_ ^ (state_ >> 1);
   const float gray_amount = timbre;
   const float weight_amount = timbre * timbre;
   float value = 0.0f;
   float weight_sum = 0.0f;
   for (int i = 0; i < 8; ++i) {
-    const int bit = i * (register_length_ - 1) / 7;
+    // The reversed decode reads the same eight tap positions from the opposite
+    // end of the register, producing a decorrelated waveform for the R channel.
+    const int bit = reversed
+        ? (register_length_ - 1) - i * (register_length_ - 1) / 7
+        : i * (register_length_ - 1) / 7;
     const float direct_value = (state_ & (1u << bit)) ? 1.0f : -1.0f;
     const float gray_value = (gray & (1u << bit)) ? 1.0f : -1.0f;
     const float bit_value = direct_value + \
@@ -137,7 +143,11 @@ void TapfieldEngine::Render(
   if (parameters.trigger & TRIGGER_RISING_EDGE) {
     Seed();
     clock_phase_ = 0.0f;
-    target_ = Decode(parameters.timbre);
+    target_ = Decode(parameters.timbre, false);
+    if (parameters.stereo) {
+      target_r_ = Decode(parameters.timbre, true);
+      value_r_ = 0.0f;
+    }
   }
 
   const float clock_frequency = min(
@@ -151,11 +161,22 @@ void TapfieldEngine::Render(
     if (clock_phase_ >= 1.0f) {
       clock_phase_ -= 1.0f;
       Clock(parameters.morph);
-      target_ = Decode(parameters.timbre);
+      target_ = Decode(parameters.timbre, false);
+      if (parameters.stereo) {
+        target_r_ = Decode(parameters.timbre, true);
+      }
     }
     value_ += slew * (target_ - value_);
     out[i] = 0.9f * value_;
-    aux[i] = 0.72f * aux_target_;
+    if (parameters.stereo) {
+      // OUT/AUX become L/R: the register clocks and the OUT decode slews once
+      // (shared), and the R channel slews an independent reversed-order decode
+      // of the same register. The raw-bit AUX is dropped.
+      value_r_ += slew * (target_r_ - value_r_);
+      aux[i] = 0.9f * value_r_;
+    } else {
+      aux[i] = 0.72f * aux_target_;
+    }
   }
 }
 

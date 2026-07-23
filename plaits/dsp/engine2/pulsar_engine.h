@@ -2,6 +2,13 @@
 // SPDX-License-Identifier: MIT
 //
 // Pulsar synthesis engine.
+//
+// OUT: the main pulsaret train (cluster window x formant carrier). AUX: a
+// second train whose cluster window is skew-complemented and offset by half
+// a period, with a higher formant carrier. The two trains share a pitch but
+// are otherwise decorrelated at matched gain, so stereo mode just relabels
+// OUT/AUX as a left/right pair; the audio path is unchanged and Render()
+// ignores EngineParameters::stereo.
 
 #ifndef PLAITS_DSP_ENGINE2_PULSAR_ENGINE_H_
 #define PLAITS_DSP_ENGINE2_PULSAR_ENGINE_H_
@@ -23,6 +30,9 @@ class PulsarEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
+  // The two pulsaret trains are inherently decorrelated (see header comment):
+  // stereo mode just relabels the existing OUT/AUX pair as left/right.
+  virtual bool stereo_capable() const { return true; }
 
  private:
   float phase_;

@@ -2,6 +2,13 @@
 // SPDX-License-Identifier: MIT
 //
 // Phase-cancellation oscillator bank.
+//
+// OUT = weighted sum of four phase-offset harmonic-wave voices.
+// AUX = orthogonal pair-difference field emphasizing the rejected partials.
+// In stereo mode OUT/AUX become the left/right channels: the same four
+// weighted voices are panned across the field (reference voice centered, the
+// three spread voices fanned out) instead of summed, and the pair-difference
+// AUX is dropped.
 
 #include "plaits/dsp/engine2/phase_weave_engine.h"
 
@@ -20,6 +27,13 @@ using namespace stmlib;
 namespace {
 
 const int kPhaseWeavePartials = 8;
+
+// Fixed stereo positions for the four phase-offset voices. Voice 0 is the
+// zero-offset reference and sits dead center; voices 1/2/3 fan out across the
+// field so their phase-cancellation beating is spread rather than summed.
+const float kPhaseWeavePan[4] = {
+  0.5f, 0.2f, 0.8f, 0.35f
+};
 
 inline float WrapPhase(float phase) {
   while (phase < 0.0f) {
@@ -110,6 +124,20 @@ void PhaseWeaveEngine::Render(
   ParameterInterpolator rotation_modulation(
       &rotation_, target_rotation, size);
 
+  // In stereo, OUT/AUX become L/R: the same per-voice weights, normalization,
+  // and drive as the mono OUT, but the four weighted voices are panned across
+  // the field instead of summed to a single mono signal. The orthogonal
+  // pair-difference AUX is dropped. Pan gains are equal-power and only depend
+  // on the fixed constellation, so they are computed once per block.
+  const bool stereo = parameters.stereo;
+  float pan_left[4];
+  float pan_right[4];
+  if (stereo) {
+    for (int j = 0; j < 4; ++j) {
+      StereoPanGains(kPhaseWeavePan[j], &pan_left[j], &pan_right[j]);
+    }
+  }
+
   for (size_t i = 0; i < size; ++i) {
     const float constellation = constellation_modulation.Next();
     const float spread = spread_modulation.Next();
@@ -149,24 +177,43 @@ void PhaseWeaveEngine::Render(
     };
     const float weight_sum = fabsf(weight[0]) + fabsf(weight[1]) + \
         fabsf(weight[2]) + fabsf(weight[3]);
-    float main = 0.0f;
-    for (int j = 0; j < 4; ++j) {
-      main += voice[j] * weight[j];
-    }
-    main *= 0.92f / weight_sum;
-
-    // AUX is the orthogonal pair-difference field. It emphasizes the partials
-    // rejected by OUT and remains distinct throughout the MORPH sweep.
-    const float difference = \
-        0.58f * (voice[0] - voice[2]) + \
-        0.42f * (voice[1] - voice[3]);
 
     // Moving away from the macro midpoint both rotates the constellation and
     // gently saturates the cancellation peaks. SoftClip provides a final hard
     // bound even when controls jump between blocks.
     const float drive = 1.0f + 11.111111f * fabsf(rotation);
-    out[i] = 0.9f * SoftClip(main * drive);
-    aux[i] = 0.72f * SoftClip(difference * (0.8f + 0.2f * drive));
+
+    if (stereo) {
+      // Pan the four weighted voices across the field rather than summing
+      // them, keeping the same normalization and drive so per-channel
+      // loudness tracks the mono OUT.
+      float left = 0.0f;
+      float right = 0.0f;
+      for (int j = 0; j < 4; ++j) {
+        const float weighted = voice[j] * weight[j];
+        left += weighted * pan_left[j];
+        right += weighted * pan_right[j];
+      }
+      const float scale = 0.92f / weight_sum;
+      out[i] = 0.9f * SoftClip(left * scale * drive);
+      aux[i] = 0.9f * SoftClip(right * scale * drive);
+    } else {
+      float main = 0.0f;
+      for (int j = 0; j < 4; ++j) {
+        main += voice[j] * weight[j];
+      }
+      main *= 0.92f / weight_sum;
+
+      // AUX is the orthogonal pair-difference field. It emphasizes the
+      // partials rejected by OUT and remains distinct throughout the MORPH
+      // sweep.
+      const float difference = \
+          0.58f * (voice[0] - voice[2]) + \
+          0.42f * (voice[1] - voice[3]);
+
+      out[i] = 0.9f * SoftClip(main * drive);
+      aux[i] = 0.72f * SoftClip(difference * (0.8f + 0.2f * drive));
+    }
   }
 }
 

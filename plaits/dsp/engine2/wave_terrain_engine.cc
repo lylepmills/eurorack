@@ -219,21 +219,40 @@ void WaveTerrainEngine::Render(
 
     float out_s = 0.0f;
     float aux_s = 0.0f;
-    
+    float aux_r_s = 0.0f;
+
     for (size_t j = 0; j < kOversampling; ++j) {
       const float x = path_x[ij] * (1.0f - fabsf(x_offset)) + x_offset;
       const float y = path_y[ij] * (1.0f - fabsf(current_y_offset)) + \
           current_y_offset;
-      ++ij;
-      
+
       const float z0 = Terrain(x, y, z_integral);
       const float z1 = Terrain(x, y, z_integral + 1);
       const float z = (z0 + (z1 - z0) * z_fractional);
       out_s += z;
-      aux_s += y + z;
+      if (parameters.stereo) {
+        // OUT/AUX become L/R: the trajectory and terrain index run once
+        // (shared), and the R channel reads a second pickup at the sample
+        // point rotated 90 degrees about the origin (swap the path axes and
+        // flip one sign), landing on a decorrelated region of the same
+        // terrain. The Sine(y + z) AUX is dropped.
+        const float x_r = path_y[ij] * (1.0f - fabsf(x_offset)) + x_offset;
+        const float y_r = -path_x[ij] * (1.0f - fabsf(current_y_offset)) + \
+            current_y_offset;
+        const float z0_r = Terrain(x_r, y_r, z_integral);
+        const float z1_r = Terrain(x_r, y_r, z_integral + 1);
+        aux_r_s += (z0_r + (z1_r - z0_r) * z_fractional);
+      } else {
+        aux_s += y + z;
+      }
+      ++ij;
     }
     out[i] = kScale * out_s;
-    aux[i] = Sine(1.0f + 0.5f * kScale * aux_s);
+    if (parameters.stereo) {
+      aux[i] = kScale * aux_r_s;
+    } else {
+      aux[i] = Sine(1.0f + 0.5f * kScale * aux_s);
+    }
   }
 }
 

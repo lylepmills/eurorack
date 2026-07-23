@@ -25,6 +25,10 @@
 // -----------------------------------------------------------------------------
 //
 // Classic 2-op FM found in Braids, Rings and Elements.
+//
+// OUT: FM carrier. AUX: sub-oscillator (half frequency, PM'd by the carrier).
+// alt firmware, stereo mode: the carrier is panned to 0.4 and the sub to 0.6 -
+// a gentle octave-spread kept near centre.
 
 #include "plaits/dsp/engine/fm_engine.h"
 
@@ -94,7 +98,19 @@ void FMEngine::Render(
       &previous_feedback_, 2.0f * parameters.morph - 1.0f, size);
   Downsampler carrier_downsampler(&carrier_fir_);
   Downsampler sub_downsampler(&sub_fir_);
-  
+
+  // Equal-power pan gains for the stereo octave-spread, computed once at
+  // control rate. The carrier sits slightly left of centre, the sub slightly
+  // right.
+  float carrier_left = 0.0f;
+  float carrier_right = 0.0f;
+  float sub_left = 0.0f;
+  float sub_right = 0.0f;
+  if (parameters.stereo) {
+    StereoPanGains(0.4f, &carrier_left, &carrier_right);
+    StereoPanGains(0.6f, &sub_left, &sub_right);
+  }
+
   while (size--) {
     const float max_uint32 = 4294967296.0f;
     const float amount = amount_modulation.Next();
@@ -119,8 +135,15 @@ void FMEngine::Render(
       sub_downsampler.Accumulate(j, sub);
     }
     
-    *out++ = carrier_downsampler.Read();
-    *aux++ = sub_downsampler.Read();
+    if (parameters.stereo) {
+      const float c = carrier_downsampler.Read();
+      const float s = sub_downsampler.Read();
+      *out++ = c * carrier_left + s * sub_left;
+      *aux++ = c * carrier_right + s * sub_right;
+    } else {
+      *out++ = carrier_downsampler.Read();
+      *aux++ = sub_downsampler.Read();
+    }
   }
 }
 

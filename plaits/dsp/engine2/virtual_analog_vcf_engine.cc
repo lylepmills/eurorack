@@ -125,9 +125,19 @@ void VirtualAnalogVCFEngine::Render(
     lp = SoftClip(lp * gain);
     lp += stage2_gain * \
         (SoftClip(svf_[1].Process<FILTER_MODE_LOW_PASS>(lp)) - lp);
-    
-    out[i] = lp;
-    aux[i] = SoftClip(hp * gain);
+
+    if (parameters.stereo) {
+      // Mid/side high-frequency widener: the low/mid body (lp) stays centred
+      // and only the SoftClip'd high band is spread as an L-R difference. A
+      // mono sum (L + R = 2*lp) preserves the body and merely decorrelates the
+      // highs, so this stays mono-compatible.
+      const float side = 0.6f * SoftClip(hp * gain);
+      out[i] = lp + side;
+      aux[i] = lp - side;
+    } else {
+      out[i] = lp;
+      aux[i] = SoftClip(hp * gain);
+    }
   }
 }
 

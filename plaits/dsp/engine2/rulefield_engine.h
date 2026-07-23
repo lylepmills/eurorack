@@ -2,6 +2,13 @@
 // SPDX-License-Identifier: MIT
 //
 // Cellular-automaton wavecycle engine.
+//
+// OUT: a cells<->edges blend of the CA row, read around the ring by phase_.
+// AUX: an activity readout of the same row. In stereo mode, OUT/AUX become
+// L/R: the CA evolves and phase_ advances once (shared), and the R channel
+// reads the same OUT-style blend at the antipodal phase (half a ring away),
+// sampling the spatial field at two decorrelated positions; the activity AUX
+// is skipped.
 
 #ifndef PLAITS_DSP_ENGINE2_RULEFIELD_ENGINE_H_
 #define PLAITS_DSP_ENGINE2_RULEFIELD_ENGINE_H_
@@ -25,6 +32,7 @@ class RulefieldEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
+  virtual bool stereo_capable() const { return true; }
 
  private:
   static uint32_t RotateLeft(uint32_t value);

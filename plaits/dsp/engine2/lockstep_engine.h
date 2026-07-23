@@ -17,6 +17,13 @@ namespace plaits {
 // during the capture transient the damping/capture terms already shape.
 const float kLockstepFeedthrough = 0.35f;
 
+// OUT: the follower oscillator (soft-square shaped). AUX: charge-pump + the
+// reference/follower difference, which fades to silence at a clean lock. In
+// stereo mode OUT/AUX become L/R and the fading AUX is dropped; RIGHT instead
+// carries a matching soft-square shaping of the REFERENCE oscillator, so the
+// two channels are two locked oscillators (OUT to 0.3, reference to 0.7) that
+// spread on non-integer ratios and converge at lock. Both reach both channels
+// (equal-power), so a mono sum stays in phase.
 class LockstepEngine : public Engine {
  public:
   LockstepEngine() { }
@@ -30,6 +37,7 @@ class LockstepEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
+  virtual bool stereo_capable() const { return true; }
 
  private:
   float reference_phase_;

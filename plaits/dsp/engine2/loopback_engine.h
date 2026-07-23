@@ -16,6 +16,10 @@ namespace plaits {
 // barely perturbed the AM depth.
 const float kLoopbackFeedbackDepth = 0.5f;
 
+// OUT: AM carrier body (main). AUX: sideband product. In stereo mode OUT/AUX
+// become L/R and the two components are panned apart (main to 0.35, sidebands
+// to 0.65), each keeping its own scale so the timbre is preserved; both reach
+// both channels so a mono sum stays in phase.
 class LoopbackEngine : public Engine {
  public:
   LoopbackEngine() { }
@@ -29,6 +33,7 @@ class LoopbackEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
+  virtual bool stereo_capable() const { return true; }
 
  private:
   float carrier_phase_;

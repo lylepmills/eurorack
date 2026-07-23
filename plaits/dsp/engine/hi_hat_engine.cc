@@ -26,6 +26,10 @@
 //
 // 808-style HH with two noise sources - one faithful to the original, the other
 // more metallic.
+//
+// OUT: faithful 808 hi-hat (hi_hat_1). AUX: metallic hi-hat (hi_hat_2).
+// alt firmware, stereo mode: the faithful hi-hat is panned to 0.28 and the
+// metallic one to 0.72.
 
 #include "plaits/dsp/engine/hi_hat_engine.h"
 
@@ -80,6 +84,20 @@ void HiHatEngine::Render(
       temp_buffer_ + size,
       aux,
       size);
+
+  if (parameters.stereo) {
+    // Spread the faithful and metallic hi-hats across the stereo field.
+    float faithful_left, faithful_right;
+    float metallic_left, metallic_right;
+    StereoPanGains(0.28f, &faithful_left, &faithful_right);
+    StereoPanGains(0.72f, &metallic_left, &metallic_right);
+    for (size_t i = 0; i < size; ++i) {
+      const float faithful = out[i];
+      const float metallic = aux[i];
+      out[i] = faithful * faithful_left + metallic * metallic_left;
+      aux[i] = faithful * faithful_right + metallic * metallic_right;
+    }
+  }
 }
 
 }  // namespace plaits

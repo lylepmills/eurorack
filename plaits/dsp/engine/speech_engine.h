@@ -25,6 +25,13 @@
 // -----------------------------------------------------------------------------
 //
 // Various flavours of speech synthesis.
+//
+// OUT: the selected voice model (naive/SAM/LPC), mixed with the secondary
+// formant path by MACRO (voice amount / spectral sharpening). AUX: the
+// secondary path. In stereo mode, OUT/AUX become L/R: the final MACRO mix is
+// replaced by a gentle equal-power pan of the two existing paths -- the voice
+// slightly left, the secondary formant path slightly right -- so the same
+// utterance widens across both channels. The model selection is unchanged.
 
 #ifndef PLAITS_DSP_ENGINE_SPEECH_ENGINE_H_
 #define PLAITS_DSP_ENGINE_SPEECH_ENGINE_H_
@@ -51,7 +58,8 @@ class SpeechEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-  
+  virtual bool stereo_capable() const { return true; }
+
   inline void set_prosody_amount(float prosody_amount) {
     prosody_amount_ = prosody_amount;
   }

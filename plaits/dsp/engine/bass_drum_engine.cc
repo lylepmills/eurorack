@@ -25,6 +25,11 @@
 // -----------------------------------------------------------------------------
 //
 // 808 and synthetic bass drum generators.
+//
+// OUT: analog 808 kick (after overdrive). AUX: synthetic kick.
+// alt firmware, stereo mode: the analog kick is panned to 0.42 and the
+// synthetic kick to 0.58 - both kept near centre so the low end stays largely
+// mono-compatible.
 
 #include "plaits/dsp/engine/bass_drum_engine.h"
 
@@ -92,6 +97,21 @@ void BassDrumEngine::Render(
       max(parameters.harmonics * 2.0f - 1.0f, 0.0f),
       aux,
       size);
+
+  if (parameters.stereo) {
+    // Spread the two kick models across the stereo field. Both are panned
+    // close to the centre so the low end stays largely mono-compatible.
+    float analog_left, analog_right;
+    float synthetic_left, synthetic_right;
+    StereoPanGains(0.42f, &analog_left, &analog_right);
+    StereoPanGains(0.58f, &synthetic_left, &synthetic_right);
+    for (size_t i = 0; i < size; ++i) {
+      const float analog = out[i];
+      const float synthetic = aux[i];
+      out[i] = analog * analog_left + synthetic * synthetic_left;
+      aux[i] = analog * analog_right + synthetic * synthetic_right;
+    }
+  }
 }
 
 }  // namespace plaits

@@ -50,7 +50,11 @@ class VirtualAnalogEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-  
+  // OUT/AUX carry L/R when stereo is requested: the engine's two constituent
+  // oscillators are panned across the field (in the compiled VA_VARIANT 2 this
+  // is the saw and the sync square), and the monster-sync AUX is dropped.
+  virtual bool stereo_capable() const { return true; }
+
  private:
   float ComputeDetuning(float detune) const;
   

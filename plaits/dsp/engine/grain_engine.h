@@ -51,7 +51,10 @@ class GrainEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-    
+  // OUT/AUX carry L/R when stereo is requested: the two grainlets are
+  // DC-blocked separately and panned, and the AUX Z-oscillator is dropped.
+  virtual bool stereo_capable() const { return true; }
+
  private:
   GrainletOscillator grainlet_[2];
   // VOSIMOscillator vosim_oscillator_;

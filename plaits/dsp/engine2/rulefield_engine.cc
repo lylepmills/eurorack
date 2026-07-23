@@ -151,10 +151,27 @@ void RulefieldEngine::Render(
         row_, row_density_, phase_, parameters.macro);
     const float edges = ReadWave(
         edge_row_, edge_density_, phase_, parameters.macro);
-    const float activity = ReadWave(
-        activity_row_, activity_density_, phase_, parameters.macro);
     out[i] = 0.9f * (cells + (edges - cells) * parameters.timbre);
-    aux[i] = 0.9f * activity;
+    if (parameters.stereo) {
+      // OUT/AUX become L/R: the CA evolves and phase_ advances once (shared),
+      // then the same cells<->edges blend is read at the antipodal phase, half
+      // a ring away. Sampling the spatial field at two positions gives
+      // decorrelated stereo that follows the automaton; the activity AUX is
+      // dropped.
+      float antipodal_phase = phase_ + 0.5f;
+      if (antipodal_phase >= 1.0f) {
+        antipodal_phase -= 1.0f;
+      }
+      const float cells_r = ReadWave(
+          row_, row_density_, antipodal_phase, parameters.macro);
+      const float edges_r = ReadWave(
+          edge_row_, edge_density_, antipodal_phase, parameters.macro);
+      aux[i] = 0.9f * (cells_r + (edges_r - cells_r) * parameters.timbre);
+    } else {
+      const float activity = ReadWave(
+          activity_row_, activity_density_, phase_, parameters.macro);
+      aux[i] = 0.9f * activity;
+    }
   }
 }
 

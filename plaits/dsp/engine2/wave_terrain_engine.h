@@ -32,6 +32,12 @@
 // takes 4kb per terrain! It turned out that directly evaluating the terrain
 // function on the fly uses less flash, but is also faster than bicubic
 // interpolation of the terrain data.
+//
+// OUT: the terrain height z at the trajectory point (x, y). AUX: Sine(y + z).
+// In stereo mode, OUT/AUX become L/R: the trajectory and terrain index run
+// once (shared), and the R channel reads a second terrain pickup at the sample
+// point rotated 90 degrees about the origin, landing on a decorrelated region
+// of the same terrain; the Sine(y + z) AUX is skipped.
 
 #ifndef PLAITS_DSP_ENGINE_WAVE_TERRAIN_ENGINE_H_
 #define PLAITS_DSP_ENGINE_WAVE_TERRAIN_ENGINE_H_
@@ -56,7 +62,8 @@ class WaveTerrainEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-  
+  virtual bool stereo_capable() const { return true; }
+
  private:
   float Terrain(float x, float y, int terrain_index);
   

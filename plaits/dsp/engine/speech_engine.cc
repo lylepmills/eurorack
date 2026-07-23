@@ -140,15 +140,31 @@ void SpeechEngine::Render(
         size);
   }
 
-  const float voice_amount = parameters.macro * 2.0f;
-  const float spectral_sharpening = (parameters.macro - 0.5f) * 5.0f;
-  for (size_t i = 0; i < size; ++i) {
-    const float voice = out[i];
-    ONE_POLE(post_filter_, voice, 0.12f);
-    if (parameters.macro < 0.5f) {
-      out[i] = aux[i] + (out[i] - aux[i]) * voice_amount;
-    } else {
-      out[i] = voice + (voice - post_filter_) * spectral_sharpening;
+  if (parameters.stereo) {
+    // OUT/AUX become L/R: replace the MACRO mix with a gentle equal-power pan
+    // of the two existing paths so both are audible as a widened voice. The
+    // voice path leans slightly left, the secondary formant path slightly
+    // right; both appear on both channels, so a mono sum does not cancel.
+    float voice_l, voice_r, secondary_l, secondary_r;
+    StereoPanGains(0.4f, &voice_l, &voice_r);
+    StereoPanGains(0.6f, &secondary_l, &secondary_r);
+    for (size_t i = 0; i < size; ++i) {
+      const float voice = out[i];
+      const float secondary = aux[i];
+      out[i] = voice * voice_l + secondary * secondary_l;
+      aux[i] = voice * voice_r + secondary * secondary_r;
+    }
+  } else {
+    const float voice_amount = parameters.macro * 2.0f;
+    const float spectral_sharpening = (parameters.macro - 0.5f) * 5.0f;
+    for (size_t i = 0; i < size; ++i) {
+      const float voice = out[i];
+      ONE_POLE(post_filter_, voice, 0.12f);
+      if (parameters.macro < 0.5f) {
+        out[i] = aux[i] + (out[i] - aux[i]) * voice_amount;
+      } else {
+        out[i] = voice + (voice - post_filter_) * spectral_sharpening;
+      }
     }
   }
 }

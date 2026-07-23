@@ -2,6 +2,13 @@
 // SPDX-License-Identifier: MIT
 //
 // Three-state cyclic attractor synthesis engine.
+//
+// OUT: the MORPH-selected attractor coordinate. AUX: the same orbit one
+// coordinate behind. Because the Thomas flow is cyclically symmetric, its
+// three state variables are naturally decorrelated (roughly 120 degrees
+// apart around the orbit), so OUT and AUX are already a matched-gain
+// decorrelated pair. Stereo mode just relabels them as a left/right pair;
+// the audio path is unchanged and Render() ignores EngineParameters::stereo.
 
 #ifndef PLAITS_DSP_ENGINE2_ATTRACTOR_ENGINE_H_
 #define PLAITS_DSP_ENGINE2_ATTRACTOR_ENGINE_H_
@@ -23,6 +30,9 @@ class AttractorEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
+  // The two coordinate taps are inherently decorrelated (see header comment):
+  // stereo mode just relabels the existing OUT/AUX pair as left/right.
+  virtual bool stereo_capable() const { return true; }
 
  private:
   void Seed(float accent);

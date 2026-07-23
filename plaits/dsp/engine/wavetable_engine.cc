@@ -63,7 +63,8 @@ void WavetableEngine::Init(BufferAllocator* allocator) {
   previous_f0_ = a0;
 
   diff_out_.Init();
-  
+  diff_out_r_.Init();
+
   wave_map_ = allocator->Allocate<const int16_t*>(kNumWavesPerBank);
 }
 
@@ -214,7 +215,42 @@ void WavetableEngine::Render(
       float mix = xyz0 + (xyz1 - xyz0) * z_fractional;
       mix = diff_out_.Process(cutoff, mix) * gain;
       *out++ = mix;
-      *aux++ = static_cast<float>(static_cast<int>(mix * 32.0f)) / 32.0f;
+      if (parameters.stereo) {
+        // OUT/AUX become L/R: the (x, y, z) cell and wave phase advance once
+        // (shared), and the R channel reads the same cell half a wave-cycle
+        // away -- the wave phase offset by half the table -- combined
+        // identically and filtered by a second differentiator. This decorrelates
+        // the two channels while tracking the same terrain. The bitcrush AUX is
+        // dropped.
+        const int p_integral_r =
+            (p_integral + int(kTableSize) / 2) & (int(kTableSize) - 1);
+
+        float x0y0z0_r = ReadWave(x0, y0, z0, p_integral_r, p_fractional);
+        float x1y0z0_r = ReadWave(x1, y0, z0, p_integral_r, p_fractional);
+        float xy0z0_r = x0y0z0_r + (x1y0z0_r - x0y0z0_r) * x_fractional;
+
+        float x0y1z0_r = ReadWave(x0, y1, z0, p_integral_r, p_fractional);
+        float x1y1z0_r = ReadWave(x1, y1, z0, p_integral_r, p_fractional);
+        float xy1z0_r = x0y1z0_r + (x1y1z0_r - x0y1z0_r) * x_fractional;
+
+        float xyz0_r = xy0z0_r + (xy1z0_r - xy0z0_r) * y_fractional;
+
+        float x0y0z1_r = ReadWave(x0, y0, z1, p_integral_r, p_fractional);
+        float x1y0z1_r = ReadWave(x1, y0, z1, p_integral_r, p_fractional);
+        float xy0z1_r = x0y0z1_r + (x1y0z1_r - x0y0z1_r) * x_fractional;
+
+        float x0y1z1_r = ReadWave(x0, y1, z1, p_integral_r, p_fractional);
+        float x1y1z1_r = ReadWave(x1, y1, z1, p_integral_r, p_fractional);
+        float xy1z1_r = x0y1z1_r + (x1y1z1_r - x0y1z1_r) * x_fractional;
+
+        float xyz1_r = xy0z1_r + (xy1z1_r - xy0z1_r) * y_fractional;
+
+        float mix_r = xyz0_r + (xyz1_r - xyz0_r) * z_fractional;
+        mix_r = diff_out_r_.Process(cutoff, mix_r) * gain;
+        *aux++ = mix_r;
+      } else {
+        *aux++ = static_cast<float>(static_cast<int>(mix * 32.0f)) / 32.0f;
+      }
     }
   }
 }

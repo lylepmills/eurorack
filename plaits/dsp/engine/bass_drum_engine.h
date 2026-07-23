@@ -25,6 +25,11 @@
 // -----------------------------------------------------------------------------
 //
 // 808 and synthetic bass drum generators.
+//
+// OUT: analog 808 kick (after overdrive). AUX: synthetic kick.
+// alt firmware, stereo mode: the analog kick is panned to 0.42 and the
+// synthetic kick to 0.58 - both kept near centre so the low end stays largely
+// mono-compatible.
 
 #ifndef PLAITS_DSP_ENGINE_BASS_DRUM_ENGINE_H_
 #define PLAITS_DSP_ENGINE_BASS_DRUM_ENGINE_H_
@@ -50,6 +55,7 @@ class BassDrumEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
+  virtual bool stereo_capable() const { return true; }
 
  private:
   AnalogBassDrum analog_bass_drum_;

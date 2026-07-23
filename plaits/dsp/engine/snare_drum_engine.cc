@@ -25,6 +25,10 @@
 // -----------------------------------------------------------------------------
 //
 // 808 and synthetic snare drum generators.
+//
+// OUT: analog 808 snare. AUX: synthetic snare.
+// alt firmware, stereo mode: the analog snare is panned to 0.3 and the
+// synthetic snare to 0.7 - snares tolerate more width than kicks.
 
 #include "plaits/dsp/engine/snare_drum_engine.h"
 
@@ -77,6 +81,21 @@ void SnareDrumEngine::Render(
       mode_spread,
       aux,
       size);
+
+  if (parameters.stereo) {
+    // Spread the two snare models across the stereo field; snares tolerate
+    // more width than kicks.
+    float analog_left, analog_right;
+    float synthetic_left, synthetic_right;
+    StereoPanGains(0.3f, &analog_left, &analog_right);
+    StereoPanGains(0.7f, &synthetic_left, &synthetic_right);
+    for (size_t i = 0; i < size; ++i) {
+      const float analog = out[i];
+      const float synthetic = aux[i];
+      out[i] = analog * analog_left + synthetic * synthetic_left;
+      aux[i] = analog * analog_right + synthetic * synthetic_right;
+    }
+  }
 }
 
 }  // namespace plaits

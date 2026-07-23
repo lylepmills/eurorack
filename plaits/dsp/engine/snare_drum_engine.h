@@ -25,6 +25,10 @@
 // -----------------------------------------------------------------------------
 //
 // 808 and synthetic snare drum generators.
+//
+// OUT: analog 808 snare. AUX: synthetic snare.
+// alt firmware, stereo mode: the analog snare is panned to 0.3 and the
+// synthetic snare to 0.7 - snares tolerate more width than kicks.
 
 #ifndef PLAITS_DSP_ENGINE_SNARE_DRUM_ENGINE_H_
 #define PLAITS_DSP_ENGINE_SNARE_DRUM_ENGINE_H_
@@ -48,6 +52,7 @@ class SnareDrumEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
+  virtual bool stereo_capable() const { return true; }
 
  private:
   AnalogSnareDrum analog_snare_drum_;

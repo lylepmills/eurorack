@@ -1,6 +1,13 @@
 // Copyright 2026 Lyle Mills.
 //
 // Dynamic stochastic (GENDY-inspired) synthesis engine.
+//
+// OUT: the breakpoint wave read by phase_/segment_ (stepped->linear->smooth by
+// MACRO). AUX: a stepped sample-and-hold of the breakpoint. In stereo mode,
+// OUT/AUX become L/R: the breakpoint set mutates and phase_/segment_ advance
+// once (shared), and the R channel reads the same breakpoints at the antipodal
+// phase (half a cycle away) with an independent segment lookup, giving a
+// decorrelated wave from the same breakpoint set; the stepped AUX is dropped.
 
 #ifndef PLAITS_DSP_ENGINE2_GENDY_ENGINE_H_
 #define PLAITS_DSP_ENGINE2_GENDY_ENGINE_H_
@@ -24,6 +31,7 @@ class GendyEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
+  virtual bool stereo_capable() const { return true; }
 
  private:
   void Randomize(int num_breakpoints);

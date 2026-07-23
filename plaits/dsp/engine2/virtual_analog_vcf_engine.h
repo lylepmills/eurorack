@@ -36,7 +36,12 @@
 #include "plaits/dsp/oscillator/variable_shape_oscillator.h"
 
 namespace plaits {
-  
+
+// OUT: the two-stage low-pass body. AUX: the SoftClip'd high-pass band. In
+// stereo mode OUT/AUX become L/R as a mid/side high-frequency widener: the
+// low/mid body stays centred and only the high band is spread as an L-R
+// difference (out = lp + side, aux = lp - side). A mono sum (L + R = 2*lp)
+// preserves the body and only decorrelates the highs, so it is mono-safe.
 class VirtualAnalogVCFEngine : public Engine {
  public:
   VirtualAnalogVCFEngine() { }
@@ -50,7 +55,8 @@ class VirtualAnalogVCFEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-  
+  virtual bool stereo_capable() const { return true; }
+
  private:
   stmlib::Svf svf_[2];
   VariableShapeOscillator oscillator_;

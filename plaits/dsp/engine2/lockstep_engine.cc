@@ -119,6 +119,16 @@ void LockstepEngine::Render(
   const float detector_smoothing = 0.002f + \
       0.075f * parameters.timbre * parameters.timbre;
 
+  // In stereo the fading charge-pump AUX is dropped (it would collapse the
+  // right channel at a clean lock). Instead the two channels are two locked
+  // oscillators: the follower's OUT signal leans left (0.3) and a matching
+  // soft-square shaping of the REFERENCE oscillator leans right (0.7). They
+  // spread apart at non-integer ratios and converge as the loop locks; both
+  // reach both channels (equal-power), so a mono sum stays in phase.
+  float follower_left, follower_right, reference_left, reference_right;
+  StereoPanGains(0.3f, &follower_left, &follower_right);
+  StereoPanGains(0.7f, &reference_left, &reference_right);
+
   for (size_t i = 0; i < size; ++i) {
     reference_phase_ = Wrap(reference_phase_ + reference_frequency);
 
@@ -163,14 +173,31 @@ void LockstepEngine::Render(
     // still adds transient grit on top during acquisition.
     const float error_shape = min(
         1.0f, parameters.morph + 4.0f * fabsf(phase_error));
-    out[i] = (carrier + (soft_square - carrier) * error_shape) * 0.78f;
+    const float out_signal = \
+        (carrier + (soft_square - carrier) * error_shape) * 0.78f;
 
-    // AUX exposes the charge-pump acquisition signal plus the audible
-    // difference between reference and follower. It fades toward silence at
-    // a clean 1:1 lock and remains active at harmonic/subharmonic ratios.
-    const float reference = SineNoWrap(reference_phase_);
-    aux[i] = LimitAudio(
-        detector_lp_ * 0.58f + (reference - carrier) * 0.31f);
+    if (parameters.stereo) {
+      // RIGHT carries the REFERENCE oscillator shaped through the same
+      // soft-square + error_shape path as OUT, so the two channels are two
+      // locked oscillators that spread on non-integer ratios and converge at
+      // lock. The charge-pump AUX is dropped here (it fades to silence at a
+      // clean lock and would collapse the right channel).
+      const float reference_carrier = SineNoWrap(reference_phase_);
+      const float reference_soft_square = reference_carrier / \
+          (0.22f + 0.78f * fabsf(reference_carrier));
+      const float reference_signal = (reference_carrier + \
+          (reference_soft_square - reference_carrier) * error_shape) * 0.78f;
+      out[i] = out_signal * follower_left + reference_signal * reference_left;
+      aux[i] = out_signal * follower_right + reference_signal * reference_right;
+    } else {
+      out[i] = out_signal;
+      // AUX exposes the charge-pump acquisition signal plus the audible
+      // difference between reference and follower. It fades toward silence at
+      // a clean 1:1 lock and remains active at harmonic/subharmonic ratios.
+      const float reference = SineNoWrap(reference_phase_);
+      aux[i] = LimitAudio(
+          detector_lp_ * 0.58f + (reference - carrier) * 0.31f);
+    }
   }
 }
 

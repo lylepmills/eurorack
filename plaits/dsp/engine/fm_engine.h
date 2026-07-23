@@ -25,6 +25,10 @@
 // -----------------------------------------------------------------------------
 //
 // Classic 2-op FM, as found in Braids, Rings and Elements.
+//
+// OUT: FM carrier. AUX: sub-oscillator (half frequency, PM'd by the carrier).
+// alt firmware, stereo mode: the carrier is panned to 0.4 and the sub to 0.6 -
+// a gentle octave-spread kept near centre.
 
 #ifndef PLAITS_DSP_ENGINE_FM_ENGINE_H_
 #define PLAITS_DSP_ENGINE_FM_ENGINE_H_
@@ -46,7 +50,8 @@ class FMEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-  
+  virtual bool stereo_capable() const { return true; }
+
  private:
   uint32_t carrier_phase_;
   uint32_t modulator_phase_;

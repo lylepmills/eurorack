@@ -58,6 +58,14 @@ void LoopbackEngine::Render(
   ParameterInterpolator morph_modulation(&morph_, morph, size);
   ParameterInterpolator polarity_modulation(&polarity_, polarity, size);
 
+  // The AM carrier body and the sideband product are genuinely different
+  // signals, so in stereo they are panned apart (main to 0.35, sidebands to
+  // 0.65) while each keeps its own scale. Both components reach both channels
+  // (equal-power), so a mono sum stays in phase.
+  float main_left, main_right, sideband_left, sideband_right;
+  StereoPanGains(0.35f, &main_left, &main_right);
+  StereoPanGains(0.65f, &sideband_left, &sideband_right);
+
   for (size_t i = 0; i < size; ++i) {
     const float current_ratio = ratio_modulation.Next();
     const float current_depth = depth_modulation.Next();
@@ -101,8 +109,15 @@ void LoopbackEngine::Render(
     const float main = carrier * envelope;
     const float sidebands = carrier * current_depth * \
         shaped_feedback * normalization;
-    out[i] = 0.9f * main;
-    aux[i] = 1.55f * sidebands;
+    if (parameters.stereo) {
+      const float body = 0.9f * main;
+      const float sideband_signal = 1.55f * sidebands;
+      out[i] = body * main_left + sideband_signal * sideband_left;
+      aux[i] = body * main_right + sideband_signal * sideband_right;
+    } else {
+      out[i] = 0.9f * main;
+      aux[i] = 1.55f * sidebands;
+    }
   }
 }
 

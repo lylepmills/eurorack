@@ -25,6 +25,14 @@
 // -----------------------------------------------------------------------------
 //
 // 8x8x3 wave terrain.
+//
+// OUT: an 8-point (x, y, z) interpolation of the 3-D wavetable at the wave
+// phase, differentiated and gain-scaled. AUX: a 5-bit bitcrush of OUT. In
+// stereo mode, OUT/AUX become L/R: the (x, y, z) cell and wave phase advance
+// once (shared), and the R channel takes a second 8-point read of the same
+// cell half a wave-cycle away (wave phase offset by half the table) with its
+// own differentiator; the bitcrush AUX is dropped. This doubles the wavetable
+// interpolation cost in stereo.
 
 #ifndef PLAITS_DSP_ENGINE_WAVETABLE_ENGINE_H_
 #define PLAITS_DSP_ENGINE_WAVETABLE_ENGINE_H_
@@ -47,7 +55,8 @@ class WavetableEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-  
+  virtual bool stereo_capable() const { return true; }
+
  private:
   float ReadWave(int x, int y, int z, int phase_i, float phase_f);
    
@@ -71,7 +80,9 @@ class WavetableEngine : public Engine {
   const int16_t** wave_map_;
   
   Differentiator diff_out_;
-  
+  // Second differentiator for the R-channel readout, used only in stereo.
+  Differentiator diff_out_r_;
+
   DISALLOW_COPY_AND_ASSIGN(WavetableEngine);
 };
 

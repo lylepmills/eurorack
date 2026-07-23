@@ -26,6 +26,10 @@
 //
 // 808-style HH with two noise sources - one faithful to the original, the other
 // more metallic.
+//
+// OUT: faithful 808 hi-hat (hi_hat_1). AUX: metallic hi-hat (hi_hat_2).
+// alt firmware, stereo mode: the faithful hi-hat is panned to 0.28 and the
+// metallic one to 0.72.
 
 #ifndef PLAITS_DSP_ENGINE_HI_HAT_ENGINE_H_
 #define PLAITS_DSP_ENGINE_HI_HAT_ENGINE_H_
@@ -48,6 +52,7 @@ class HiHatEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
+  virtual bool stereo_capable() const { return true; }
 
  private:
   HiHat<SquareNoise, SwingVCA, true, false> hi_hat_1_;

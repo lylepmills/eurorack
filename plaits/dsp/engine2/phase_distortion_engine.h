@@ -26,6 +26,13 @@
 //
 // Phase distortion and phase modulation with an asymmetric triangle as the
 // modulator.
+//
+// OUT: the hard-synced phase-distortion oscillator. AUX: a free-running
+// oscillator with the same settings. The free oscillator drifts against the
+// synced one, so the two are a matched-gain decorrelated pair whose width
+// grows as they slip out of phase. Stereo mode just relabels OUT/AUX as a
+// left/right pair; the audio path is unchanged and Render() ignores
+// EngineParameters::stereo.
 
 #ifndef PLAITS_DSP_ENGINE_PHASE_DISTORTION_ENGINE_H_
 #define PLAITS_DSP_ENGINE_PHASE_DISTORTION_ENGINE_H_
@@ -48,7 +55,10 @@ class PhaseDistortionEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-  
+  // The synced and free-running oscillators are inherently decorrelated (see
+  // header comment): stereo mode just relabels the OUT/AUX pair as left/right.
+  virtual bool stereo_capable() const { return true; }
+
  private:
   VariableShapeOscillator shaper_;
   VariableShapeOscillator modulator_;

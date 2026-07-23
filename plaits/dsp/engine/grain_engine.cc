@@ -25,6 +25,12 @@
 // -----------------------------------------------------------------------------
 //
 // Windowed sine segments.
+//
+// OUT = the two grainlets summed and DC-blocked.
+// AUX = a separate Z-oscillator.
+// In stereo mode OUT/AUX become the left/right channels: the two grainlets are
+// DC-blocked separately and panned (grainlet 0 left-of-center, the ratio-
+// detuned grainlet 1 right-of-center), and the AUX Z-oscillator is dropped.
 
 #include <algorithm>
 
@@ -71,6 +77,28 @@ void GrainEngine::Render(
   grainlet_[0].Render(f0, f1, carrier_shape, carrier_bleed_fixed, out, size);
   grainlet_[1].Render(f0, f1 * ratio, carrier_shape, carrier_bleed_fixed, aux, size);
   dc_blocker_[0].set_f<FREQUENCY_DIRTY>(0.3f * f0);
+
+  if (parameters.stereo) {
+    // OUT/AUX become L/R: keep the two grainlets separate, DC-block each on
+    // its own blocker (same 0.3*f0 cutoff), then pan. grainlet_[1] carries the
+    // HARMONICS ratio detuning, so it belongs off-center. The AUX z-oscillator
+    // is not rendered in stereo.
+    dc_blocker_[1].set_f<FREQUENCY_DIRTY>(0.3f * f0);
+    dc_blocker_[0].Process<FILTER_MODE_HIGH_PASS>(out, size);
+    dc_blocker_[1].Process<FILTER_MODE_HIGH_PASS>(aux, size);
+    float grainlet_0_left, grainlet_0_right;
+    float grainlet_1_left, grainlet_1_right;
+    StereoPanGains(0.2f, &grainlet_0_left, &grainlet_0_right);
+    StereoPanGains(0.8f, &grainlet_1_left, &grainlet_1_right);
+    for (size_t i = 0; i < size; ++i) {
+      const float grainlet_0 = out[i];
+      const float grainlet_1 = aux[i];
+      out[i] = grainlet_0 * grainlet_0_left + grainlet_1 * grainlet_1_left;
+      aux[i] = grainlet_0 * grainlet_0_right + grainlet_1 * grainlet_1_right;
+    }
+    return;
+  }
+
   for (size_t i = 0; i < size; ++i) {
     out[i] = dc_blocker_[0].Process<FILTER_MODE_HIGH_PASS>(out[i] + aux[i]);
   }
