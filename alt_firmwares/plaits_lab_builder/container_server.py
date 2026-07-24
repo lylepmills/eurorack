@@ -90,6 +90,56 @@ def parse_size(elf_path: Path) -> tuple[int, int, int]:
     return int(fields[0]), int(fields[1]), int(fields[2])
 
 
+# The application flash region (224 KB) and usable RAM budget (32 KB less a 1 KB
+# stack reserve) the linked firmware must fit — kept in sync with the values the
+# post-link size check and the stm32f373x_flash_application_large.ld linker
+# script enforce.
+FLASH_BUDGET_BYTES = 224 * 1024
+RAM_BUDGET_BYTES = 32 * 1024
+RAM_STACK_RESERVE_BYTES = 1024
+
+# GNU ld reports an over-budget link as a region overflow. The overflow line
+# ("region `FLASH' overflowed by N bytes") carries the exact overage; the
+# section line ("... will not fit in region `FLASH'") is the fallback when the
+# byte count is absent. Both name FLASH or RAM.
+_REGION_OVERFLOW_RE = re.compile(r"region `(FLASH|RAM)' overflowed by (\d+) bytes")
+_REGION_NOFIT_RE = re.compile(r"will not fit in region `(FLASH|RAM)'")
+
+
+def classify_link_failure(log: str) -> tuple[str, str] | None:
+    """Map a linker region overflow in `log` to a specific (code, message).
+
+    A recipe that overruns the module's memory fails at the LINK step, not with
+    a compiler error — so the user must be told they exceeded a size budget (and
+    by how much) rather than handed the generic "did not produce a valid ARM
+    build", which reads like an internal fault. FLASH is the common case (too
+    many or too heavy engines, per-engine stereo, or extra chord tables); RAM
+    can overflow the same way. Returns None when the failure is not a region
+    overflow (a genuine compiler error), leaving it classified compiler_failed.
+    """
+    overflow = _REGION_OVERFLOW_RE.search(log)
+    if overflow:
+        region = overflow.group(1)
+        by = f" by {int(overflow.group(2))} bytes"
+    else:
+        nofit = _REGION_NOFIT_RE.search(log)
+        if not nofit:
+            return None
+        region, by = nofit.group(1), ""
+    if region == "FLASH":
+        return (
+            "flash_budget_exceeded",
+            f"This palette is too large for Plaits' flash memory{by}. Remove an "
+            "engine, disable per-engine stereo, or drop a chord table, then "
+            "build again.",
+        )
+    return (
+        "ram_budget_exceeded",
+        f"This palette needs more RAM than Plaits has{by}. Remove a "
+        "memory-heavy engine, then build again.",
+    )
+
+
 # Catalog id -> the PLAITS_STEREO_<MACRO> that gates that engine's stereo render
 # code (see plaits/dsp/engine/stereo_config.h and the makefile). The three DX7
 # banks share the six-op engine, so they map to one macro. The five declare-only
@@ -224,8 +274,17 @@ def build_firmware(payload: Any) -> tuple[Path, dict[str, str]]:
 
     log = redact_log(result.stdout + "\n" + result.stderr)
     if result.returncode != 0:
-        code = "flash_budget_exceeded" if "will not fit in region `FLASH'" in log else "compiler_failed"
-        raise BuildError(code, "The firmware recipe did not produce a valid ARM build.", log)
+        classified = classify_link_failure(log)
+        if classified is not None:
+            code, message = classified
+        else:
+            code, message = (
+                "compiler_failed",
+                "The firmware recipe did not compile. This is usually a problem "
+                "on our end rather than your palette — please try again, and "
+                "report it if it persists.",
+            )
+        raise BuildError(code, message, log)
 
     artifact_dir = build_dir / "plaits"
     wav_path = artifact_dir / "plaits.wav"
@@ -235,10 +294,23 @@ def build_firmware(payload: Any) -> tuple[Path, dict[str, str]]:
         raise BuildError("invalid_artifact", "The compiler did not produce every required firmware artifact.", log)
 
     text_bytes, data_bytes, bss_bytes = parse_size(elf_path)
-    if text_bytes + data_bytes > 224 * 1024:
-        raise BuildError("flash_budget_exceeded", "The firmware exceeds Plaits' application flash budget.", log)
-    if bss_bytes + 1024 > 32 * 1024:
-        raise BuildError("ram_budget_exceeded", "The firmware exceeds Plaits' runtime memory budget.", log)
+    if text_bytes + data_bytes > FLASH_BUDGET_BYTES:
+        over = text_bytes + data_bytes - FLASH_BUDGET_BYTES
+        raise BuildError(
+            "flash_budget_exceeded",
+            f"This palette is too large for Plaits' flash memory by {over} bytes. "
+            "Remove an engine, disable per-engine stereo, or drop a chord table, "
+            "then build again.",
+            log,
+        )
+    if bss_bytes + RAM_STACK_RESERVE_BYTES > RAM_BUDGET_BYTES:
+        over = bss_bytes + RAM_STACK_RESERVE_BYTES - RAM_BUDGET_BYTES
+        raise BuildError(
+            "ram_budget_exceeded",
+            f"This palette needs more RAM than Plaits has by {over} bytes. "
+            "Remove a memory-heavy engine, then build again.",
+            log,
+        )
 
     metadata = {
         "X-Plaits-Binary-Sha256": sha256_file(bin_path),
