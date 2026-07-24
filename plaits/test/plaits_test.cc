@@ -1723,6 +1723,136 @@ void ValidateSixOpMacroResponse() {
   }
 }
 
+// Fill `count` patches with a distinct, audible carrier output level each, and
+// zero the rest of the 32-slot blob. Distinct levels make each patch produce a
+// measurably different render signature; the zeroed tail is silent — so a
+// Harmonics position that lands on it (which the old fixed-32 quantizer did for
+// most of the dial when count < 32) reads as ~0.
+void PrepareDistinctSixOpBank(uint8_t* bank, int count) {
+  memset(bank, 0, UserData::SIZE);
+  for (int patch = 0; patch < count; ++patch) {
+    uint8_t* data = bank + patch * fm::Patch::SYX_SIZE;
+    for (int op = 0; op < 6; ++op) {
+      uint8_t* op_data = data + op * 17;
+      for (int i = 0; i < 8; ++i) {
+        op_data[i] = 99;
+      }
+      op_data[12] = 7 << 3;
+      // Carrier output level, spread across patches so each is distinct and all
+      // stay clearly audible (99, 91, 83, ... never near-silent).
+      op_data[14] = static_cast<uint8_t>(99 - 8 * patch);
+      op_data[15] = 1 << 1;
+    }
+    for (int i = 0; i < 4; ++i) {
+      data[102 + i] = 99;
+      data[106 + i] = 50;
+    }
+    data[110] = 0;
+    data[111] = 3 | (1 << 3);
+    data[117] = 24;
+  }
+}
+
+double SixOpMacroSignatureLen(
+    const uint8_t* bank,
+    size_t length,
+    float harmonics,
+    size_t num_blocks = 128) {
+  memset(ram_block, 0, sizeof(ram_block));
+  BufferAllocator allocator(ram_block, sizeof(ram_block));
+  static SixOpEngine e;
+  e.Init(&allocator);
+  e.LoadUserData(bank, length);
+
+  EngineParameters p;
+  p.note = 48.0f;
+  p.accent = 0.8f;
+  p.chord_set_option = 0;
+  p.harmonics = harmonics;
+  p.timbre = 0.5f;
+  p.morph = 0.5f;
+  p.macro = 0.5f;
+
+  double signature = 0.0;
+  for (size_t block = 0; block < num_blocks; ++block) {
+    float out[kAudioBlockSize];
+    float aux[kAudioBlockSize];
+    p.trigger = TRIGGER_UNPATCHED;
+    bool already_enveloped;
+    e.Render(p, out, aux, kAudioBlockSize, &already_enveloped);
+    for (size_t i = 0; i < kAudioBlockSize; ++i) {
+      if (!isfinite(out[i]) || !isfinite(aux[i]) ||
+          fabsf(out[i]) > 16.0f || fabsf(aux[i]) > 16.0f) {
+        abort();
+      }
+      signature += fabsf(out[i]);
+    }
+  }
+  return signature;
+}
+
+// A bank baked with fewer than 32 patches must map the WHOLE Harmonics range
+// across exactly those patches — the reason the web builder no longer has to
+// zone-fill a short pick list up to 32. Two claims:
+//   1) No Harmonics position selects an empty (silent) slot: the minimum
+//      signature over a fine sweep stays clearly audible. The old fixed-32
+//      quantizer would send most of the dial into the zeroed tail (~0).
+//   2) The sweep still reaches every real patch: the number of distinct
+//      signature plateaus equals the bank's patch count.
+void ValidateSixOpShortBank() {
+  static uint8_t bank[UserData::SIZE];
+  const int kCount = 5;
+  PrepareDistinctSixOpBank(bank, kCount);
+  const size_t length = kCount * fm::Patch::SYX_SIZE;
+
+  const int kSteps = 40;
+  double min_sig = 1e30;
+  double plateaus[64];
+  int num_plateaus = 0;
+  for (int step = 0; step < kSteps; ++step) {
+    const float harmonics = (static_cast<float>(step) + 0.5f) / kSteps;
+    const double sig = SixOpMacroSignatureLen(bank, length, harmonics);
+    if (sig < min_sig) {
+      min_sig = sig;
+    }
+    bool matched = false;
+    for (int j = 0; j < num_plateaus; ++j) {
+      if (fabs(sig - plateaus[j]) < max(1.0, plateaus[j] * 0.02)) {
+        matched = true;
+        break;
+      }
+    }
+    if (!matched && num_plateaus < 64) {
+      plateaus[num_plateaus++] = sig;
+    }
+  }
+
+  // Claim 1: the whole dial stays on real (audible) patches. A full-bank stock
+  // patch here signs in the thousands; an empty slot signs ~0. Use a floor well
+  // above zero but far below a real patch.
+  if (min_sig < 100.0) {
+    fprintf(
+        stderr,
+        "Short six-op bank (%d patches) leaves a silent Harmonics zone: "
+        "min signature over the sweep = %f (expected all positions audible)\n",
+        kCount,
+        min_sig);
+    abort();
+  }
+
+  // Claim 2: every baked patch is reachable, and no more than that exist.
+  if (num_plateaus != kCount) {
+    fprintf(
+        stderr,
+        "Short six-op bank (%d patches) maps Harmonics to %d distinct patches "
+        "(expected %d)\n",
+        kCount,
+        num_plateaus,
+        kCount);
+    abort();
+  }
+}
+
 void TestExperimentalEngines() {
   printf("Validating selectable chord tables...\n");
   fflush(stdout);
@@ -1848,6 +1978,8 @@ void TestExperimentalEngines() {
   ValidateStockMacroResponse<PhaseDistortionEngine>("Phase Distortion");
   printf("  Six-op FM\n");
   ValidateSixOpMacroResponse();
+  printf("  Six-op FM short bank\n");
+  ValidateSixOpShortBank();
   printf("  Wave Terrain\n");
   ValidateStockMacroResponse<WaveTerrainEngine>("Wave Terrain");
   printf("  Chiptune\n");

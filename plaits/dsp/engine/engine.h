@@ -132,6 +132,18 @@ class Engine {
   virtual void Init(stmlib::BufferAllocator* allocator) = 0;
   virtual void Reset() = 0;
   virtual void LoadUserData(const uint8_t* user_data) = 0;
+  // alt firmware: length-aware variant for variable-length user banks. `length`
+  // is the number of VALID packed bytes the caller baked (e.g. a short FM bank
+  // of n patches is n * fm::Patch::SYX_SIZE). The base default ignores it and
+  // forwards to the fixed-size version, so the many engines that don't carry a
+  // bank need no change; only SixOpEngine overrides this to size its patch bank
+  // (and its Harmonics quantizer) to the real count. Called through an Engine*,
+  // so name lookup resolves both overloads on the base type — a derived class
+  // that overrides only the single-argument version still dispatches here.
+  virtual void LoadUserData(const uint8_t* user_data, size_t length) {
+    (void) length;
+    LoadUserData(user_data);
+  }
   virtual void Render(
       const EngineParameters& parameters,
       float* out,

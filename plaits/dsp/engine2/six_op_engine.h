@@ -97,6 +97,10 @@ class SixOpEngine : public Engine {
   virtual void Init(stmlib::BufferAllocator* allocator);
   virtual void Reset();
   virtual void LoadUserData(const uint8_t* user_data);
+  // Variable-length bank: `length` bytes hold length / SYX_SIZE patches (1..32).
+  // The Harmonics quantizer is re-sized to that count, so the dial sweeps only
+  // the patches actually present — no need to zone-fill a short bank to 32.
+  virtual void LoadUserData(const uint8_t* user_data, size_t length);
   virtual void Render(const EngineParameters& parameters,
       float* out,
       float* aux,
@@ -110,6 +114,7 @@ class SixOpEngine : public Engine {
   stmlib::HysteresisQuantizer2 patch_index_quantizer_;
   fm::Algorithms<6> algorithms_;
   fm::Patch* patches_;
+  int num_patches_;
   FMVoice voice_[kNumSixOpVoices];
   float* temp_buffer_;
   float* acc_buffer_;

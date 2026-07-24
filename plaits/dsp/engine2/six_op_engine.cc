@@ -83,7 +83,8 @@ void SixOpEngine::Init(BufferAllocator* allocator) {
   temp_buffer_ = allocator->Allocate<float>(kMaxBlockSize * 4);
   acc_buffer_ = allocator->Allocate<float>(kMaxBlockSize * kNumSixOpVoices);
   patches_ = allocator->Allocate<fm::Patch>(kNumPatchesPerBank);
-  
+  num_patches_ = kNumPatchesPerBank;
+
   post_filter_ = 0.0f;
   post_filter_right_ = 0.0f;
   active_voice_ = kNumSixOpVoices - 1;
@@ -96,12 +97,36 @@ void SixOpEngine::Reset() {
 }
 
 void SixOpEngine::LoadUserData(const uint8_t* user_data) {
+  // A bare load (no explicit length) is a full 32-patch bank — the shape of a
+  // stock DX7 .syx and of the runtime TIMBRE-loaded user bank. Behaviour is
+  // byte-identical to the original fixed-32 path.
+  LoadUserData(user_data, kNumPatchesPerBank * fm::Patch::SYX_SIZE);
+}
+
+void SixOpEngine::LoadUserData(const uint8_t* user_data, size_t length) {
   // The shipped firmware always supplies a real patch bank, but the SDK preview
   // and the reference-render path call LoadUserData(NULL) for engines with no
   // bank; unpacking a null pointer dereferences it. Guard the unpack and still
   // reset the voices so a null load leaves a well-defined (default) patch set.
+  //
+  // `length` is the count of valid packed bytes; length / SYX_SIZE patches are
+  // actually present (a recipe may bake fewer than 32). Re-size the Harmonics
+  // patch-index quantizer to that count so the dial addresses only the real
+  // patches — the block-fill zone-spreading the web builder used to do to reach
+  // 32 becomes unnecessary. A null load keeps the full 32-step quantizer.
+  int n = user_data
+      ? static_cast<int>(length / fm::Patch::SYX_SIZE)
+      : kNumPatchesPerBank;
+  if (n < 1) {
+    n = 1;
+  } else if (n > kNumPatchesPerBank) {
+    n = kNumPatchesPerBank;
+  }
+  num_patches_ = n;
+  patch_index_quantizer_.Init(n, 0.005f, false);
+
   if (user_data) {
-    for (int i = 0; i < kNumPatchesPerBank; ++i) {
+    for (int i = 0; i < n; ++i) {
       patches_[i].Unpack(user_data + i * fm::Patch::SYX_SIZE);
     }
   }
