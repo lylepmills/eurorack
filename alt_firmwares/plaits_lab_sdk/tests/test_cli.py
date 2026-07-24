@@ -204,12 +204,18 @@ class PackageTests(unittest.TestCase):
             captured: dict[str, list[str]] = {}
             real_run, real_which = plaits_lab.subprocess.run, plaits_lab.shutil.which
             plaits_lab.shutil.which = lambda name: "/usr/bin/docker" if name == "docker" else real_which(name)
+            # The size is measured INSIDE the container; the mock returns it on the
+            # container's stdout, and the Docker path must surface it (not swallow it).
             plaits_lab.subprocess.run = lambda cmd, **kw: (
-                captured.__setitem__("cmd", cmd) or SimpleNamespace(returncode=0, stdout="", stderr=""))
+                captured.__setitem__("cmd", cmd)
+                or SimpleNamespace(returncode=0, stdout="  model size: 1,234 bytes of flash\n", stderr=""))
+            out = io.StringIO()
             try:
-                plaits_lab.arm_compile_check(package, args)
+                with redirect_stdout(out):
+                    plaits_lab.arm_compile_check(package, args)
             finally:
                 plaits_lab.subprocess.run, plaits_lab.shutil.which = real_run, real_which
+            self.assertIn("model size: 1,234 bytes", out.getvalue())  # surfaced, not swallowed
             joined = " ".join(captured["cmd"])
             self.assertIn("img:test", joined)                   # the builder image
             self.assertIn("check /contributor --arm", joined)   # compile-only check, not `build`

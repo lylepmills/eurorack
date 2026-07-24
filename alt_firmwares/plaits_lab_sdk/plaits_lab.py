@@ -1185,6 +1185,11 @@ def arm_compile_check(package: dict[str, Any], args: argparse.Namespace) -> None
             f"  docker build --platform linux/amd64 -t {args.docker_image} -f Dockerfile.plaits-builder .\n"
             f"{details}"
         )
+    # The size is measured inside the container (that's where the toolchain is);
+    # surface it here, or a Docker-path check --arm would swallow it.
+    for line in result.stdout.splitlines():
+        if "model size" in line:
+            print(line)
 
 
 def _arm_compile_native(package: dict[str, Any], args: argparse.Namespace, toolchain: Path) -> None:
