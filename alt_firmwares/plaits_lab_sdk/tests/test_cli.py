@@ -119,6 +119,45 @@ class PackageTests(unittest.TestCase):
             with self.assertRaises(plaits_lab.PackageError):
                 plaits_lab.validate_community_source([source])
 
+    def test_source_policy_failure_points_at_the_line(self) -> None:
+        # A rejected engine should tell the contributor WHERE and HOW to fix it,
+        # not just name the rule category.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source = Path(temp_dir) / "leaky.cc"
+            source.write_text("// header\nvoid Init() {\n  buffer = new float[64];\n}\n", encoding="utf-8")
+            with self.assertRaises(plaits_lab.PackageError) as ctx:
+                plaits_lab.validate_community_source([source])
+            message = str(ctx.exception)
+            self.assertIn("leaky.cc:3", message)          # the offending line
+            self.assertIn("dynamic allocation", message)  # the category
+            self.assertIn("BufferAllocator", message)     # the fix hint
+
+    def test_audio_health_messages_are_actionable(self) -> None:
+        import wave as wave_module
+
+        def write_wav(path: Path, sample_fn) -> None:
+            with wave_module.open(str(path), "wb") as out:
+                out.setnchannels(2); out.setsampwidth(2); out.setframerate(48000)
+                frames = bytearray()
+                for i in range(48000):  # 1 second
+                    v = max(-32768, min(32767, int(sample_fn(i))))
+                    frames += int(v).to_bytes(2, "little", signed=True) * 2
+                out.writeframes(bytes(frames))
+        with tempfile.TemporaryDirectory() as temp_dir:
+            silent = Path(temp_dir) / "silent.wav"
+            write_wav(silent, lambda i: 0)
+            with self.assertRaises(plaits_lab.PackageError) as ctx:
+                plaits_lab.analyze_wav(silent, 1.0, 0.1)
+            self.assertIn("silent", str(ctx.exception))
+            self.assertIn("Render()", str(ctx.exception))
+
+            biased = Path(temp_dir) / "biased.wav"
+            write_wav(biased, lambda i: 16000)  # large constant DC offset
+            with self.assertRaises(plaits_lab.PackageError) as ctx:
+                plaits_lab.analyze_wav(biased, 1.0, 0.1)
+            self.assertIn("DC offset", str(ctx.exception))
+            self.assertIn("center the waveform", str(ctx.exception))
+
     def test_authoritative_catalog_exposes_every_forkable_model(self) -> None:
         catalog, public = plaits_lab.load_builtin_catalog()
         self.assertEqual(len(catalog), 39)

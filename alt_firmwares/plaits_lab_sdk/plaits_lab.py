@@ -46,6 +46,13 @@ FORBIDDEN_SOURCE_PATTERNS = {
     ),
     "direct hardware access": re.compile(r"\b(?:HAL_|NVIC_|FLASH_|RCC_|GPIO|SysTick)"),
 }
+# What to do about each forbidden category, appended to the failure so a
+# contributor sees the fix, not just the rule.
+FORBIDDEN_SOURCE_HINTS = {
+    "inline assembly": "write portable C++ instead",
+    "dynamic allocation": "preallocate in Init() with the BufferAllocator — no malloc/new/free/delete at audio rate",
+    "direct hardware access": "engines read only EngineParameters; they never touch peripherals or registers",
+}
 
 
 class PackageError(Exception):
@@ -251,7 +258,13 @@ def validate_community_source(
         source = path.read_text(encoding="utf-8")
         policy_source = strip_cpp_comments(source)
         for description, pattern in FORBIDDEN_SOURCE_PATTERNS.items():
-            require(pattern.search(policy_source) is None, f"{path.name} uses forbidden {description}")
+            match = pattern.search(policy_source)
+            if match is not None:
+                line = policy_source.count("\n", 0, match.start()) + 1
+                raise PackageError(
+                    f"{path.name}:{line} uses forbidden {description} "
+                    f"({match.group(0).strip()!r}) — {FORBIDDEN_SOURCE_HINTS[description]}"
+                )
         for match in re.finditer(r'^\s*#\s*include\s*([<"])([^>"]+)[>"]', source, re.MULTILINE):
             delimiter, include = match.groups()
             require(".." not in Path(include).parts, f"{path.name} include escapes the package: {include}")
@@ -865,9 +878,13 @@ def analyze_wav(path: Path, expected_seconds: float, render_seconds: float) -> d
     rms = math.sqrt(sum(sample * sample for sample in normalized) / max(1, len(normalized)))
     dc_offset = sum(normalized) / max(1, len(normalized))
     silent_fraction = sum(abs(sample) < 1.0 / 32768.0 for sample in normalized) / max(1, len(normalized))
-    require(peak >= 0.001 and rms >= 0.0001, f"{path.name} is silent or effectively silent")
+    require(peak >= 0.001 and rms >= 0.0001,
+            f"{path.name} is silent — Render() must write non-zero samples to out[]/aux[] "
+            f"for this scenario's control settings (check tests/scenarios.json)")
     require(peak <= 1.0, f"{path.name} contains invalid PCM amplitude")
-    require(abs(dc_offset) <= 0.2, f"{path.name} has excessive DC offset ({dc_offset:.4f})")
+    require(abs(dc_offset) <= 0.2,
+            f"{path.name} has excessive DC offset ({dc_offset:.4f}) — center the waveform around zero; "
+            f"a constant added to every out[] sample shifts it (or lower postProcessing.outGain/auxGain)")
     return {
         "channels": channels,
         "sampleRate": sample_rate,
