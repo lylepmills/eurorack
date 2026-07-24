@@ -132,6 +132,24 @@ class PackageTests(unittest.TestCase):
             self.assertIn("dynamic allocation", message)  # the category
             self.assertIn("BufferAllocator", message)     # the fix hint
 
+    def test_check_flags_cstdint_for_cxx98(self) -> None:
+        # <cstdint> needs C++11; the firmware is C++98. check should point at
+        # <stdint.h>, not the generic "non-SDK header" rejection.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source = Path(temp_dir) / "types.cc"
+            source.write_text('#include <cstdint>\nuint32_t f() { return 0; }\n', encoding="utf-8")
+            with self.assertRaises(plaits_lab.PackageError) as ctx:
+                plaits_lab.validate_community_source([source])
+            message = str(ctx.exception)
+            self.assertIn("<cstdint>", message)
+            self.assertIn("C++98", message)
+            self.assertIn("<stdint.h>", message)
+        # <stdint.h> (the C++98-safe header) is fine.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source = Path(temp_dir) / "ok.cc"
+            source.write_text('#include <stdint.h>\nuint32_t f() { return 0; }\n', encoding="utf-8")
+            plaits_lab.validate_community_source([source])
+
     def test_check_flags_libm_transcendentals(self) -> None:
         # libm transcendentals compile on the host but can't link on the bare-metal
         # firmware; check catches them at validation with the shared-LUT fix (NOT

@@ -103,6 +103,10 @@ warnings rather than automatic rejection.
   shared LUTs — `plaits::Sine` and `stmlib::SemitonesToRatio`. `check` rejects
   them (the host compiler is more permissive), so this surfaces before the
   hardware link, not at it.
+- The firmware builds as **C++98** (arm-none-eabi 4.8). The host `check` compile
+  is C++11, so C++11-only code (e.g. `<cstdint>`, `auto`, range-for) passes there
+  and fails the hardware toolchain. Write C++98 — use `<stdint.h>` for fixed-width
+  integers. `check` flags `<cstdint>`; `check --arm` catches the rest.
 - Community source is compiled in a networkless, resource-limited container,
   but container isolation does not make the resulting MCU firmware safe.
 - Community catalog cards remain typographic; preview audio is generated from

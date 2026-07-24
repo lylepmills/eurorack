@@ -37,7 +37,14 @@ CATALOG_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 VERSION_PATTERN = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 CLASS_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 ALLOWED_COMMUNITY_SYSTEM_HEADERS = {
-    "algorithm", "cmath", "cstddef", "cstdint", "limits", "stdint.h",
+    "algorithm", "cmath", "cstddef", "limits", "stdint.h",
+}
+# The firmware builds as C++98 (arm-none-eabi 4.8), so <cstdint> — the C++11
+# header — doesn't compile there even though the host check (C++11) accepts it.
+# Point contributors at the C++98-safe C header rather than a bare "non-SDK
+# header" rejection.
+CXX11_HEADER_REPLACEMENTS = {
+    "cstdint": "stdint.h",
 }
 FORBIDDEN_SOURCE_PATTERNS = {
     "inline assembly": re.compile(r"\b(?:asm|__asm__)\b"),
@@ -292,6 +299,12 @@ def validate_community_source(
             delimiter, include = match.groups()
             require(".." not in Path(include).parts, f"{path.name} include escapes the package: {include}")
             if delimiter == "<":
+                if include in CXX11_HEADER_REPLACEMENTS:
+                    raise PackageError(
+                        f"{path.name} includes <{include}>, which needs C++11 — the firmware "
+                        f"is C++98, so the host check compiles it but the hardware build won't. "
+                        f"Use <{CXX11_HEADER_REPLACEMENTS[include]}>."
+                    )
                 require(include in ALLOWED_COMMUNITY_SYSTEM_HEADERS,
                         f"{path.name} uses non-SDK system header <{include}>")
             else:
