@@ -103,9 +103,17 @@ $SDK build ./$PKG/my-engine --hardware --output /tmp/my-engine-firmware.wav
 
 This produces an **UNREVIEWED** audio updater for hardware the contributor
 controls. The CLI uses a local ARM 4.8.3 toolchain when present and otherwise
-runs `plaits-lab-builder:local` through Docker. It reports linked ARM size.
-Hosted firmware builds never compile draft source; they accept only published
-package version/digest references from the catalog.
+runs `plaits-lab-builder:local` through Docker. Hosted firmware builds never
+compile draft source; they accept only published package version/digest
+references from the catalog.
+
+The local build carries **your engine alone** — not the full stock palette. The
+24-model palette already fills the 224 KB flash, which would leave a heavy engine
+no room; with only your engine registered, the linker drops every stock engine
+and hands you nearly all of flash. So a big model (Speech is ~23 KB of flash)
+fits fine here. The build prints how much flash the firmware uses and how much is
+free; `check --arm` prints your engine's own size, so you always know how heavy it
+is. (Arranging a full multi-model palette is the hosted builder's job.)
 
 Unlike audition and `check` (which need only `stmlib`), the ARM firmware build
 also needs the `stm_audio_bootloader` submodule, and — without a local ARM 4.8.3

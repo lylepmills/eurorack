@@ -1013,11 +1013,30 @@ def cpp_float(value: float) -> str:
     return f"{value:.1f}f"
 
 
+# The STM32F373 application flash region (stmlib linker script). The whole
+# firmware — base + every engine — must fit in this.
+PLAITS_FLASH_BYTES = 224 * 1024
+
+
+def arm_flash_footprint(size_tool: Path, paths: list[str]) -> int | None:
+    """Sum of .text + .data (the flash footprint) across the given ARM object(s)
+    or ELF, via arm-none-eabi-size; None if unavailable or unparseable."""
+    if not size_tool.is_file():
+        return None
+    total = 0
+    for path in paths:
+        result = subprocess.run([str(size_tool), str(path)], text=True, capture_output=True, check=False)
+        if result.returncode != 0:
+            return None
+        try:
+            fields = result.stdout.strip().splitlines()[-1].split()
+            total += int(fields[0]) + int(fields[1])  # text (code + rodata) + data
+        except (IndexError, ValueError):
+            return None
+    return total
+
+
 def render_local_hardware_config(package: dict[str, Any]) -> str:
-    catalog, _ = load_builtin_catalog()
-    slots = list(read_json(SDK_DIR.parent / "plaits_lab_builder/default_recipe.json")["slots"])
-    custom_id = "__local_contributor__"
-    slots[16] = custom_id
     manifest = package["manifest"]
     source = manifest["source"]
     post = manifest["postProcessing"]
@@ -1029,7 +1048,13 @@ def render_local_hardware_config(package: dict[str, Any]) -> str:
         },
         "postProcessing": post,
     }
-    selected = [custom if engine_id == custom_id else catalog[engine_id] for engine_id in slots[16:24] + slots[0:16]]
+    # The local hardware build carries the contributor's engine ALONE. A full
+    # 24-model palette already sits at the 224 KB flash ceiling, so a heavy engine
+    # has no room; registering only this one lets the linker's --gc-sections drop
+    # every stock engine and hand almost all of flash to the contributor. (The
+    # hosted builder is where a full palette is arranged; the local build's job is
+    # to prove THIS engine on hardware.)
+    selected = [custom]
     unique: list[dict[str, Any]] = []
     seen: set[str] = set()
     for item in selected:
@@ -1155,6 +1180,13 @@ def _arm_compile_native(package: dict[str, Any], args: argparse.Namespace, toolc
         result = subprocess.run(command, cwd=package["repo_root"], text=True, capture_output=True, check=False)
         if result.returncode:
             raise PackageError(f"ARM compilation failed\n{(result.stdout + result.stderr)[-8000:]}")
+        flash = arm_flash_footprint(toolchain / "bin/arm-none-eabi-size", objects)
+        if flash is not None:
+            # The engine's own code size — how heavy the model is. For scale, the
+            # stock engines span roughly 2 KB (Virtual Analog) to 23 KB (Speech);
+            # the local build carries your engine alone, so nearly all 224 KB is
+            # available minus the base firmware.
+            print(f"  model size: {flash:,} bytes of flash")
 
 
 def hardware_build_command(args: argparse.Namespace) -> int:
@@ -1236,14 +1268,13 @@ def hardware_build_command(args: argparse.Namespace) -> int:
         if not wav.is_file():
             raise PackageError("ARM build did not produce an audio firmware updater")
         shutil.copyfile(wav, output)
-        size_tool = toolchain / "bin/arm-none-eabi-size"
-        if elf.is_file() and size_tool.is_file():
-            size_result = subprocess.run([str(size_tool), str(elf)], text=True, capture_output=True, check=False)
-            size = size_result.stdout.strip().splitlines()[-1] if size_result.returncode == 0 else "size unavailable"
-        else:
-            size = "size unavailable"
+        flash = arm_flash_footprint(toolchain / "bin/arm-none-eabi-size", [str(elf)]) if elf.is_file() else None
     print(f"built UNREVIEWED local firmware {output}")
-    print(f"ARM size: {size}")
+    if flash is not None:
+        free = PLAITS_FLASH_BYTES - flash
+        pct = 100.0 * flash / PLAITS_FLASH_BYTES
+        print(f"flash: {flash:,} / {PLAITS_FLASH_BYTES:,} bytes ({pct:.0f}% used, {free:,} free) "
+              f"— your engine alone, so this is its room to grow")
     print("Install only on hardware you control; this package has not passed publication review.")
     return 0
 

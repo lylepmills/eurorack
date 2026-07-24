@@ -198,6 +198,34 @@ class PackageTests(unittest.TestCase):
             self.assertIn("--native", joined)                   # runs the compile inside the container
             self.assertNotIn("--hardware", joined)              # NOT a full firmware build
 
+    def test_local_hardware_config_carries_only_the_contributor_engine(self) -> None:
+        # The local build registers ONLY the community engine, so the linker strips
+        # the stock palette and hands its flash to the contributor.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            pkg_dir = Path(temp_dir) / "solo"
+            with redirect_stdout(io.StringIO()):
+                plaits_lab.init_command(SimpleNamespace(
+                    output=str(pkg_dir), from_engine="blank", author="T",
+                    package_id="test-author/solo", slug="solo", name="Solo"))
+            config = plaits_lab.render_local_hardware_config(plaits_lab.load_package(str(pkg_dir)))
+            self.assertEqual(config.count("RegisterInstance"), 1)
+            self.assertIn("solo_engine.h", config)
+            self.assertNotIn("virtual_analog", config.lower())
+
+    def test_arm_flash_footprint_sums_text_and_data(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            tool = Path(temp_dir) / "arm-none-eabi-size"; tool.write_text("#!/bin/sh\n")
+            obj = Path(temp_dir) / "x.o"; obj.write_text("")
+            real_run = plaits_lab.subprocess.run
+            plaits_lab.subprocess.run = lambda cmd, **kw: SimpleNamespace(
+                returncode=0, stdout="   text    data     bss     dec\n   1200      48      16    1264\n", stderr="")
+            try:
+                flash = plaits_lab.arm_flash_footprint(tool, [str(obj)])
+            finally:
+                plaits_lab.subprocess.run = real_run
+            self.assertEqual(flash, 1248)  # text 1200 + data 48
+        self.assertIsNone(plaits_lab.arm_flash_footprint(Path("/nonexistent-size"), []))
+
     def test_audio_health_messages_are_actionable(self) -> None:
         import wave as wave_module
 
