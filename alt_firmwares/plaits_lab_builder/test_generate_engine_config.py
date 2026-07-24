@@ -274,6 +274,48 @@ class GenerateEngineConfigTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "schemaVersion 7"):
             validate_recipe(recipe)
 
+    def v11_recipe(self, engine_ids: list) -> dict:
+        recipe = self.v7_recipe(engine_ids)
+        recipe["schemaVersion"] = 11
+        return recipe
+
+    def test_full_palette_emits_identity_engine_rows(self) -> None:
+        # A fully-packed palette maps each engine to its own compact row, so
+        # PLAITS_ENGINE_ROWS is the identity — byte-identical to pre-sparse builds.
+        config = render_config(validate_recipe(self.load("default_recipe.json")))
+        self.assertIn(
+            "#define PLAITS_ENGINE_ROWS { 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7 }",
+            config)
+
+    def test_v11_sparse_bank_keeps_engine_rows(self) -> None:
+        # Green bank holds engines at rows 0, 2, 4 (gaps at 1, 3 kept in place);
+        # red and amber full. Internal order amber, green, red.
+        engine_ids = (
+            ["virtual-analog", None, "virtual-analog", None, "virtual-analog", None, None, None]
+            + ["virtual-analog"] * 8
+            + ["virtual-analog"] * 8
+        )
+        config = render_config(validate_recipe(self.v11_recipe(engine_ids)))
+        self.assertIn("#define PLAITS_ENGINE_COUNT 19", config)
+        self.assertIn("#define PLAITS_BANK_SIZES { 8, 3, 8 }", config)
+        # amber 0..7, then green's kept rows 0,2,4, then red 0..7.
+        self.assertIn(
+            "#define PLAITS_ENGINE_ROWS { 0, 1, 2, 3, 4, 5, 6, 7, 0, 2, 4, 0, 1, 2, 3, 4, 5, 6, 7 }",
+            config)
+
+    def test_sparse_bank_rejected_below_v11(self) -> None:
+        # The same sparse layout is rejected on a v7 or v10 recipe — only v11 can
+        # place engines on non-contiguous rows.
+        engine_ids = (
+            ["virtual-analog", None, "virtual-analog"] + [None] * 5
+            + ["virtual-analog"] * 8 + ["virtual-analog"] * 8
+        )
+        for version in (7, 10):
+            recipe = self.v11_recipe(engine_ids)
+            recipe["schemaVersion"] = version
+            with self.assertRaisesRegex(ValueError, "contiguous"):
+                validate_recipe(recipe)
+
     def test_v7_normalized_bare_string_slots(self) -> None:
         # The Worker contract normalizes filled slots to bare engine IDs, so the
         # generator's production input is strings interleaved with None.

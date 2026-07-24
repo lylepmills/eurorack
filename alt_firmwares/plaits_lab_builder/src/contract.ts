@@ -58,7 +58,7 @@ export type NormalizedUserDataBank = {
 };
 
 export type NormalizedRecipe = {
-  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10;
+  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11;
   target: "mutable-instruments-plaits";
   firmware: "rubato-plaits";
   // A null entry is an empty slot (v7 short banks); filled slots are engine ids.
@@ -248,21 +248,32 @@ function hasExactKeys(value: Record<string, unknown>, keys: string[]): boolean {
   return actual.length === expected.length && actual.every((key, index) => key === expected[index]);
 }
 
-function validateBankShape(slots: (string | null)[]): void {
-  if (slots.every((slot) => slot === null)) {
-    throw new ContractError("invalid_slots", "A firmware recipe must contain at least one engine.");
-  }
-  // Each 8-slot bank's engines must be contiguous at its front (empty slots only
-  // trail), the shape the module's per-bank navigation and the editor maintain.
+// A bank is "sparse" when an empty slot has a filled slot after it in the same
+// 8-slot bank — a gap the user kept in place rather than compacting to the front.
+function hasSparseBank(slots: (string | null)[]): boolean {
   for (let start = 0; start < slots.length; start += 8) {
     let seenEmpty = false;
     for (const slot of slots.slice(start, start + 8)) {
       if (slot === null) {
         seenEmpty = true;
       } else if (seenEmpty) {
-        throw new ContractError("invalid_slots", "A bank's engines must be contiguous, with empty slots only at the end.");
+        return true;
       }
     }
+  }
+  return false;
+}
+
+function validateBankShape(slots: (string | null)[], schemaVersion: number): void {
+  if (slots.every((slot) => slot === null)) {
+    throw new ContractError("invalid_slots", "A firmware recipe must contain at least one engine.");
+  }
+  // A bank's engines may be sparse (a gap kept in place) only on a v11 recipe —
+  // the firmware then lights each engine on its own physical row. Older recipes
+  // must keep each 8-slot bank's engines contiguous at its front, the shape the
+  // pre-sparse per-bank navigation assumed.
+  if (hasSparseBank(slots) && schemaVersion < 11) {
+    throw new ContractError("invalid_slots", "A bank's engines must be contiguous, with empty slots only at the end, unless the recipe uses schema version 11.");
   }
 }
 
@@ -321,8 +332,10 @@ function normalizeStereoEngines(
     throw new ContractError("invalid_recipe", "A version 10 recipe must carry a stereoEngines list.");
   }
   if (!present) return undefined;
-  if (candidate.schemaVersion !== 10) {
-    throw new ContractError("unsupported_schema", "stereoEngines requires recipe schema version 10.");
+  // v10's defining feature; a v11 (sparse) recipe may also carry it when its aux
+  // output is stereo, since v11 is a superset of v10.
+  if (candidate.schemaVersion !== 10 && candidate.schemaVersion !== 11) {
+    throw new ContractError("unsupported_schema", "stereoEngines requires recipe schema version 10 or 11.");
   }
   if (auxOutput !== "stereo") {
     throw new ContractError("invalid_recipe", "stereoEngines is only valid with the stereo aux output.");
@@ -340,8 +353,8 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     throw new ContractError("invalid_recipe", "The build recipe must be a JSON object.");
   }
   const candidate = value as Record<string, unknown>;
-  if (![2, 3, 4, 5, 6, 7, 8, 9, 10].includes(Number(candidate.schemaVersion))) {
-    throw new ContractError("unsupported_schema", "Only Plaits Palette recipe schema versions 2 through 10 can be built.");
+  if (![2, 3, 4, 5, 6, 7, 8, 9, 10, 11].includes(Number(candidate.schemaVersion))) {
+    throw new ContractError("unsupported_schema", "Only Plaits Palette recipe schema versions 2 through 11 can be built.");
   }
   if (candidate.target !== "mutable-instruments-plaits" || candidate.firmware !== "rubato-plaits") {
     throw new ContractError("unsupported_target", "That recipe targets a different firmware family.");
@@ -352,8 +365,8 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
   if (!Array.isArray(candidate.slots) || (candidate.slots.length !== 24 && candidate.slots.length !== 32)) {
     throw new ContractError("invalid_slots", "A firmware recipe must contain 24 engine slots, or 32 for a four-bank build.");
   }
-  if (candidate.slots.length === 32 && ![6, 7, 8, 9, 10].includes(Number(candidate.schemaVersion))) {
-    throw new ContractError("invalid_slots", "32-slot recipes require recipe schema version 6, 7, 8, 9, or 10.");
+  if (candidate.slots.length === 32 && ![6, 7, 8, 9, 10, 11].includes(Number(candidate.schemaVersion))) {
+    throw new ContractError("invalid_slots", "32-slot recipes require recipe schema version 6, 7, 8, 9, 10, or 11.");
   }
   const slots: (string | null)[] = candidate.schemaVersion === 2
     ? candidate.slots.map((id) => {
@@ -364,9 +377,9 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
       })
     : candidate.slots.map((value) => {
         if (value === null) {
-          // An empty slot — only short-bank (v7/v8/v9) recipes may carry them.
-          if (![7, 8, 9, 10].includes(Number(candidate.schemaVersion))) {
-            throw new ContractError("invalid_slots", "Empty slots require recipe schema version 7, 8, 9, or 10.");
+          // An empty slot — only short-bank / sparse (v7+) recipes may carry them.
+          if (![7, 8, 9, 10, 11].includes(Number(candidate.schemaVersion))) {
+            throw new ContractError("invalid_slots", "Empty slots require recipe schema version 7, 8, 9, 10, or 11.");
           }
           return null;
         }
@@ -383,19 +396,21 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
         }
         return approved.id;
       });
-  validateBankShape(slots);
+  validateBankShape(slots, Number(candidate.schemaVersion));
   let chordTables: NormalizedChordTable[];
   let userDataBanks: NormalizedUserDataBank[] | undefined;
   if (candidate.schemaVersion === 5 || candidate.schemaVersion === 6
       || candidate.schemaVersion === 7 || candidate.schemaVersion === 8
-      || candidate.schemaVersion === 9 || candidate.schemaVersion === 10) {
+      || candidate.schemaVersion === 9 || candidate.schemaVersion === 10
+      || candidate.schemaVersion === 11) {
     const resources = candidate.resources;
     // v6 always carries the custom-FM-banks resource (its defining feature).
-    // v7/v8/v9 mirror the editor: userDataBanks only for a 32-slot (fourth-bank)
-    // recipe; a 24-slot v7/v8/v9 carries chord tables only, like v5.
+    // v7+ mirror the editor: userDataBanks only for a 32-slot (fourth-bank)
+    // recipe; a 24-slot v7+ carries chord tables only, like v5.
     const expectsUserDataBanks = candidate.schemaVersion === 6
       || ((candidate.schemaVersion === 7 || candidate.schemaVersion === 8
-        || candidate.schemaVersion === 9 || candidate.schemaVersion === 10) && candidate.slots.length === 32);
+        || candidate.schemaVersion === 9 || candidate.schemaVersion === 10
+        || candidate.schemaVersion === 11) && candidate.slots.length === 32);
     const expectedKeys = expectsUserDataBanks ? ["chordTables", "userDataBanks"] : ["chordTables"];
     if (!resources || typeof resources !== "object"
         || !hasExactKeys(resources as Record<string, unknown>, expectedKeys)) {
@@ -410,20 +425,22 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
   }
   const configuration = candidate.schemaVersion === 4 || candidate.schemaVersion === 5
       || candidate.schemaVersion === 6 || candidate.schemaVersion === 7 || candidate.schemaVersion === 8
-      || candidate.schemaVersion === 9 || candidate.schemaVersion === 10
+      || candidate.schemaVersion === 9 || candidate.schemaVersion === 10 || candidate.schemaVersion === 11
     ? normalizeConfiguration(candidate, chordTables)
     : defaultConfiguration;
   // Per-engine stereo (schema 10): a stereoEngines list names the engines built
   // with the stereo render path. Only valid when the aux option is stereo.
   const stereoEngines = normalizeStereoEngines(candidate, configuration.initialOptions.auxOutput);
   return {
-    // Per-engine stereo (a stereoEngines list) needs a v10 builder and dominates
-    // every lower feature version. Then the global stereo aux mode needs v9;
-    // more than six chord tables needs the fast-blink LED tier (v8); a short-
-    // bank recipe (an empty slot) stays v7; a candidate that carried v6
-    // resources (even an empty custom-bank list, e.g. a 32-slot recipe) stays
-    // v6; else v5.
-    schemaVersion: stereoEngines !== undefined ? 10
+    // A sparse bank (a gap kept in place) needs a v11 builder and dominates every
+    // lower feature version — only v11 can place engines on non-contiguous rows.
+    // Then per-engine stereo (a stereoEngines list) needs v10; the global stereo
+    // aux mode needs v9; more than six chord tables needs the fast-blink LED tier
+    // (v8); a short-bank recipe (a trailing empty slot) stays v7; a candidate that
+    // carried v6 resources (even an empty custom-bank list, e.g. a 32-slot recipe)
+    // stays v6; else v5.
+    schemaVersion: hasSparseBank(slots) ? 11
+      : stereoEngines !== undefined ? 10
       : configuration.initialOptions.auxOutput === "stereo" ? 9
       : chordTables.length > maxLegacyChordTables ? 8
       : slots.some((slot) => slot === null) ? 7

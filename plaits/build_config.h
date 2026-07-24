@@ -29,6 +29,19 @@
 #define PLAITS_BANK_SIZES { 8, 8, 8 }
 #endif
 
+// Physical LED row (0..7) of each engine within its bank, in the same registry
+// order as the engine list (amber, green, red, and optionally orange) — one
+// entry per engine, summing to PLAITS_ENGINE_COUNT. This lets a bank keep gaps
+// in place: an engine holds its own row instead of the bank compacting to the
+// front, so deleting a mid-bank model leaves the others on their LEDs and their
+// select-button positions. The generated header emits it alongside
+// PLAITS_BANK_SIZES; the default is the identity mapping (each bank filled
+// front-to-back 0..7), byte-identical to the pre-sparse-bank behavior.
+#ifndef PLAITS_ENGINE_ROWS
+#define PLAITS_ENGINE_ROWS \
+    { 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7 }
+#endif
+
 #ifndef PLAITS_BUILD_NAVIGATION_MODE
 #define PLAITS_BUILD_NAVIGATION_MODE 0
 #endif

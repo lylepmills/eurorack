@@ -55,6 +55,15 @@ static const int32_t kLongPressTime = 2000;
 static const uint8_t kBankSizes[] = PLAITS_BANK_SIZES;
 static const int kNumBanks = sizeof(kBankSizes) / sizeof(kBankSizes[0]);
 
+// Physical LED row (0..7) of each engine within its bank, indexed by the flat,
+// compact engine index. Engine navigation stays compact — the select button
+// cycles the bank's real engines and MODEL CV maps across them — but the LED
+// lights each engine's TRUE row, so a bank with gaps (a deleted mid-bank model)
+// shows its engines at their kept positions rather than slid to the front. For
+// a fully-packed bank this is the identity (row == compact row) and behaves
+// exactly as before. See PLAITS_ENGINE_ROWS in build_config.h.
+static const uint8_t kEngineRows[] = PLAITS_ENGINE_ROWS;
+
 static const uint8_t kNumOptions = 7;
 static const uint8_t kNumLockedFrequencyPotOptions = 4;
 static const uint8_t kNumModelCVOptions = 4;
@@ -200,11 +209,13 @@ void Ui::UpdateLEDs() {
   switch (mode_) {
     case UI_MODE_NORMAL:
       {
-        // Selected with the buttons
+        // Selected with the buttons. The lit LED is the engine's PHYSICAL row
+        // (kEngineRows), so an engine in a gapped bank stays on its own LED
+        // rather than the compacted position; the bank (hence color) is still
+        // derived from the compact index.
         const int selected_bank =
             BankOfEngine(kBankSizes, kNumBanks, patch_->engine);
-        const int selected_row =
-            RowOfEngine(kBankSizes, kNumBanks, patch_->engine);
+        const int selected_row = kEngineRows[patch_->engine];
         uint32_t selected_color = pwm_counter < triangle
             ? BankToColor(selected_bank)
             : LED_COLOR_OFF;
@@ -212,8 +223,7 @@ void Ui::UpdateLEDs() {
         // With the CV modulation applied
         const int active_bank =
             BankOfEngine(kBankSizes, kNumBanks, active_engine_);
-        const int active_row =
-            RowOfEngine(kBankSizes, kNumBanks, active_engine_);
+        const int active_row = kEngineRows[active_engine_];
         uint32_t active_color = BankToColor(active_bank);
 
         leds_.set(active_row, active_color);

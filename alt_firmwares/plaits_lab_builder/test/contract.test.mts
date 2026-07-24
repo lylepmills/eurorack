@@ -320,6 +320,52 @@ test("version 7 accepts short banks (empty slots) and stays v7", async () => {
   assert.notEqual(await computeBuildKey(normalized, identity), await computeBuildKey(full, identity));
 });
 
+test("version 11 accepts a sparse bank (a kept mid-bank gap) and normalizes to v11", async () => {
+  const publicCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url), "utf8"));
+  const chordCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_chord_tables/catalog.json", import.meta.url), "utf8"));
+  const byId = new Map(publicCatalog.engines.map((engine: { id: string }) => [engine.id, engine]));
+  const publishedTable = structuredClone(chordCatalog.tables[0]);
+  const reference = (engineId: string) => {
+    const engine = byId.get(engineId) as { packageId: string; version: string; digest: string };
+    return { engine: engineId, package: engine.packageId, version: engine.version, digest: engine.digest };
+  };
+  const slot = (id: string | null) => (id === null ? null : reference(id));
+  const makeRecipe = (slotIds: (string | null)[], schemaVersion = 11) => ({
+    ...fixture,
+    schemaVersion,
+    slots: slotIds.map(slot),
+    preferences: { navigationMode: "banked" },
+    initialOptions: {
+      lockedFrequencyKnob: "octaves", modelInput: "model", levelInput: "level",
+      auxOutput: "alternate-model", suboscillatorOctave: 0, chordTable: publishedTable.id, holdOnTrigger: false,
+    },
+    resources: { chordTables: [publishedTable] },
+  });
+
+  // Green bank keeps a gap in place (slot 1 empty, slots 2+ filled) — the whole
+  // point of a sparse bank.
+  const sparse: (string | null)[] = [
+    fixture.slots[0], null, ...fixture.slots.slice(2, 8),
+    ...fixture.slots.slice(8, 16),
+    ...fixture.slots.slice(16, 24),
+  ];
+  const normalized = normalizeRecipe(makeRecipe(sparse));
+  assert.equal(normalized.schemaVersion, 11);  // sparse dominates and needs a v11 builder
+  assert.equal(normalized.slots.length, 24);
+  assert.equal(normalized.slots[1], null);           // the gap is preserved in place
+  assert.notEqual(normalized.slots[2], null);        // engines still follow it
+
+  // The same sparse layout is rejected below v11 (v7 and v10).
+  assert.throws(() => normalizeRecipe(makeRecipe(sparse, 7)), /contiguous/);
+  assert.throws(() => normalizeRecipe(makeRecipe(sparse, 10)), /contiguous/);
+
+  // A fully-filled v11 recipe normalizes DOWN — v11 is only forced by an actual
+  // gap, so a contiguous palette keeps its lower feature version.
+  assert.equal(normalizeRecipe(makeRecipe(fixture.slots)).schemaVersion, 5);
+});
+
 test("manual keys derive from documentation identity, not build identity", async () => {
   const { computeManualKey } = await import("../src/contract.ts");
   const recipe = normalizeRecipe(fixture);

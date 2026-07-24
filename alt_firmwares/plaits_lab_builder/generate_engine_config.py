@@ -207,8 +207,8 @@ def normalize_slots(slots: list[Any], schema_version: int) -> list[str | None]:
     normalized: list[str | None] = []
     for reference in slots:
         if reference is None:
-            if schema_version not in (7, 8, 9, 10):
-                raise ValueError("empty slots require schemaVersion 7, 8, 9, or 10")
+            if schema_version not in (7, 8, 9, 10, 11):
+                raise ValueError("empty slots require schemaVersion 7, 8, 9, 10, or 11")
             normalized.append(None)
             continue
         if isinstance(reference, str):
@@ -235,27 +235,40 @@ def normalize_slots(slots: list[Any], schema_version: int) -> list[str | None]:
     return normalized
 
 
-def validate_bank_shape(public_slots: list[str | None]) -> None:
-    """The palette must hold at least one engine, and each bank's engines must be
-    contiguous at its front (empty slots only trail) — the shape the module's
-    per-bank navigation expects and the editor guarantees."""
-    if all(engine_id is None for engine_id in public_slots):
-        raise ValueError("recipe must contain at least one engine")
+def has_sparse_bank(public_slots: list[str | None]) -> bool:
+    """A bank is "sparse" when an empty slot has a filled slot AFTER it in the
+    same bank — a gap the user kept in place. The firmware holds each engine on
+    its own LED row for these; a bank whose empties only TRAIL is a plain short
+    bank, not sparse."""
     for start in range(0, len(public_slots), 8):
         seen_empty = False
         for engine_id in public_slots[start:start + 8]:
             if engine_id is None:
                 seen_empty = True
             elif seen_empty:
-                raise ValueError("a bank's engines must be contiguous (empty slots only at the end)")
+                return True
+    return False
+
+
+def validate_bank_shape(public_slots: list[str | None], schema_version: int) -> None:
+    """The palette must hold at least one engine. A bank's engines may be sparse
+    (a gap kept in place, not compacted to the front) only on a schemaVersion 11
+    recipe — the module firmware then keeps each engine on its physical LED row.
+    Older recipes must keep each bank's engines contiguous at its front, the
+    shape the pre-sparse navigation assumed."""
+    if all(engine_id is None for engine_id in public_slots):
+        raise ValueError("recipe must contain at least one engine")
+    if has_sparse_bank(public_slots) and schema_version < 11:
+        raise ValueError("a bank's engines must be contiguous (empty slots only "
+                         "at the end) unless the recipe uses schemaVersion 11")
 
 
 def validate_recipe(value: Any) -> BuildRecipe:
     if not isinstance(value, dict):
         raise ValueError("recipe must be a JSON object")
     schema_version = value.get("schemaVersion")
-    if schema_version not in (2, 3, 4, 5, 6, 7, 8, 9, 10):
-        raise ValueError("recipe schemaVersion must be 2, 3, 4, 5, 6, 7, 8, 9, or 10")
+    if schema_version not in (2, 3, 4, 5, 6, 7, 8, 9, 10, 11):
+        raise ValueError("recipe schemaVersion must be 2, 3, 4, 5, 6, 7, 8, 9, 10, or 11")
     if value.get("target") != "mutable-instruments-plaits":
         raise ValueError("unsupported firmware target")
     if value.get("firmware") != "rubato-plaits":
@@ -265,17 +278,17 @@ def validate_recipe(value: Any) -> BuildRecipe:
     slots = value.get("slots")
     if not isinstance(slots, list) or len(slots) not in (24, 32):
         raise ValueError("recipe must contain 24 slots, or 32 for a four-bank build")
-    if len(slots) == 32 and schema_version not in (6, 7, 8, 9, 10):
-        raise ValueError("32-slot recipes require schemaVersion 6, 7, 8, 9, or 10")
+    if len(slots) == 32 and schema_version not in (6, 7, 8, 9, 10, 11):
+        raise ValueError("32-slot recipes require schemaVersion 6, 7, 8, 9, 10, or 11")
     public_slots = normalize_slots(slots, schema_version)
-    validate_bank_shape(public_slots)
+    validate_bank_shape(public_slots, schema_version)
     user_data_banks: list[tuple[int, bytes]] = []
-    if schema_version in (5, 6, 7, 8, 9, 10):
+    if schema_version in (5, 6, 7, 8, 9, 10, 11):
         resources = value.get("resources")
         # v6 always carries the custom-FM-banks resource (its defining feature).
-        # v7/v8/v9 mirror the editor: userDataBanks only for a 32-slot (fourth-
-        # bank) recipe; a 24-slot v7/v8/v9 carries chord tables only, like v5.
-        expect_user_data_banks = schema_version == 6 or (schema_version in (7, 8, 9, 10) and len(slots) == 32)
+        # v7+ mirror the editor: userDataBanks only for a 32-slot (fourth-bank)
+        # recipe; a 24-slot v7+ carries chord tables only, like v5.
+        expect_user_data_banks = schema_version == 6 or (schema_version in (7, 8, 9, 10, 11) and len(slots) == 32)
         expected_resource_keys = {"chordTables", "userDataBanks"} if expect_user_data_banks else {"chordTables"}
         if not isinstance(resources, dict) or set(resources) != expected_resource_keys:
             raise ValueError("recipe must contain only supported firmware resources")
@@ -284,7 +297,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
             user_data_banks = validate_user_data_banks(resources.get("userDataBanks"))
     else:
         chord_tables = validate_chord_tables(DEFAULT_CHORD_TABLES)
-    configuration = value if schema_version in (4, 5, 6, 7, 8, 9, 10) else DEFAULT_CONFIGURATION
+    configuration = value if schema_version in (4, 5, 6, 7, 8, 9, 10, 11) else DEFAULT_CONFIGURATION
     preferences = configuration.get("preferences")
     options = configuration.get("initialOptions")
     if not isinstance(preferences, dict) or not isinstance(options, dict):
@@ -337,8 +350,10 @@ def validate_recipe(value: Any) -> BuildRecipe:
     # treats as "all stereo-capable engines" (back-compat with the global gate).
     stereo_engines: tuple[str, ...] | None = None
     if "stereoEngines" in value:
-        if schema_version != 10:
-            raise ValueError("stereoEngines requires schemaVersion 10")
+        # v10's defining feature; a v11 (sparse) recipe may also carry it when its
+        # aux output is stereo, since v11 is a superset of v10.
+        if schema_version not in (10, 11):
+            raise ValueError("stereoEngines requires schemaVersion 10 or 11")
         raw = value.get("stereoEngines")
         if not isinstance(raw, list) or not all(
             isinstance(engine_id, str) and engine_id in PUBLIC_ENGINES for engine_id in raw
@@ -374,8 +389,14 @@ def render_config(recipe: BuildRecipe) -> str:
     # count becomes PLAITS_BANK_SIZES so navigation wraps at the real size.
     public_banks = [public_slots[i:i + 8] for i in range(0, len(public_slots), 8)]
     internal_order = [2, 0, 1] + ([3] if len(public_banks) > 3 else [])
+    # Each internal bank keeps its filled engines paired with their PHYSICAL row
+    # (0..7 within the public bank). Empty slots are dropped from the engine list
+    # (navigation stays compact) but their positions survive as gaps in the rows
+    # of the engines that follow — that row map becomes PLAITS_ENGINE_ROWS so the
+    # module lights each engine at its kept LED position.
     internal_banks = [
-        [engine_id for engine_id in public_banks[bank] if engine_id is not None]
+        [(engine_id, row) for row, engine_id in enumerate(public_banks[bank])
+         if engine_id is not None]
         for bank in internal_order
     ]
     bank_sizes = [len(bank) for bank in internal_banks]
@@ -383,7 +404,8 @@ def render_config(recipe: BuildRecipe) -> str:
     # would shift); interior/leading empties stay 0 to keep bank->color aligned.
     while len(bank_sizes) > 1 and bank_sizes[-1] == 0:
         bank_sizes.pop()
-    internal_slots = [engine_id for bank in internal_banks for engine_id in bank]
+    internal_slots = [engine_id for bank in internal_banks for engine_id, _ in bank]
+    engine_rows = [row for bank in internal_banks for _, row in bank]
     selected = [CATALOG[engine_id] for engine_id in internal_slots]
 
     unique: list[Engine] = []
@@ -457,6 +479,7 @@ def render_config(recipe: BuildRecipe) -> str:
 
 #define PLAITS_ENGINE_COUNT {len(selected)}
 #define PLAITS_BANK_SIZES {{ {", ".join(str(size) for size in bank_sizes)} }}
+#define PLAITS_ENGINE_ROWS {{ {", ".join(str(row) for row in engine_rows)} }}
 #define PLAITS_HAS_SPEECH_ENGINE {1 if any(item.behavior == 'speech' for item in selected) else 0}
 #define PLAITS_HAS_CHIPTUNE_ENGINE {1 if any(item.behavior == 'chiptune' for item in selected) else 0}
 #define PLAITS_HAS_USER_DATA_BANK {1 if any(item.user_data_bank >= 0 for item in selected) else 0}
