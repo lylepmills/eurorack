@@ -132,6 +132,26 @@ class PackageTests(unittest.TestCase):
             self.assertIn("dynamic allocation", message)  # the category
             self.assertIn("BufferAllocator", message)     # the fix hint
 
+    def test_check_flags_non_portable_std_math(self) -> None:
+        # std::log2/std::exp2 compile on the host but not on the pinned ARM
+        # toolchain; check should catch that at validation, not at the hardware
+        # build, with the portable replacement.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source = Path(temp_dir) / "pitchy.cc"
+            source.write_text("float f() {\n  return std::log2(2.0f);\n}\n", encoding="utf-8")
+            with self.assertRaises(plaits_lab.PackageError) as ctx:
+                plaits_lab.validate_community_source([source])
+            message = str(ctx.exception)
+            self.assertIn("pitchy.cc:2", message)
+            self.assertIn("std::log2", message)
+            self.assertIn("ARM toolchain", message)
+            self.assertIn("std::log(", message)  # the suggested replacement
+        # A comment mentioning it must not trip the check (comments are stripped).
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source = Path(temp_dir) / "commented.cc"
+            source.write_text("// avoid std::log2 here\nfloat f() { return 0.0f; }\n", encoding="utf-8")
+            plaits_lab.validate_community_source([source])
+
     def test_audio_health_messages_are_actionable(self) -> None:
         import wave as wave_module
 

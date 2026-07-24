@@ -53,6 +53,14 @@ FORBIDDEN_SOURCE_HINTS = {
     "dynamic allocation": "preallocate in Init() with the BufferAllocator — no malloc/new/free/delete at audio rate",
     "direct hardware access": "engines read only EngineParameters; they never touch peripherals or registers",
 }
+# C99 <cmath> functions the host compiler has but the pinned ARM toolchain
+# (GCC 4.8.3 + newlib) does not expose in std:: — so `check`'s host compile
+# passes and the hardware build fails. Flag the common ones (pitch/frequency
+# math reaches for these) with a portable replacement. Extend as more surface.
+NON_PORTABLE_STD = {
+    "std::log2": "std::log(x) * 1.4426950408889634f  (1 / ln 2)",
+    "std::exp2": "std::exp(x * 0.6931471805599453f)  (ln 2)",
+}
 
 
 class PackageError(Exception):
@@ -264,6 +272,15 @@ def validate_community_source(
                 raise PackageError(
                     f"{path.name}:{line} uses forbidden {description} "
                     f"({match.group(0).strip()!r}) — {FORBIDDEN_SOURCE_HINTS[description]}"
+                )
+        for symbol, replacement in NON_PORTABLE_STD.items():
+            match = re.search(re.escape(symbol) + r"\b", policy_source)
+            if match is not None:
+                line = policy_source.count("\n", 0, match.start()) + 1
+                raise PackageError(
+                    f"{path.name}:{line} uses {symbol}, which the pinned ARM toolchain "
+                    f"(GCC 4.8.3) doesn't provide in std:: — the host check compiles it, "
+                    f"but the hardware build won't. Use {replacement}."
                 )
         for match in re.finditer(r'^\s*#\s*include\s*([<"])([^>"]+)[>"]', source, re.MULTILINE):
             delimiter, include = match.groups()
