@@ -97,4 +97,18 @@ runs `plaits-lab-builder:local` through Docker. It reports linked ARM size.
 Hosted firmware builds never compile draft source; they accept only published
 package version/digest references from the catalog.
 
+Unlike audition and `check` (which need only `stmlib`), the ARM firmware build
+also needs the `stm_audio_bootloader` submodule, and — without a local ARM 4.8.3
+toolchain — **Docker** plus a one-time builder image. Install
+[Docker](https://docs.docker.com/get-docker/) if you don't have it, then set both
+up once:
+
+```sh
+git submodule update --init stmlib stm_audio_bootloader
+docker build --platform linux/amd64 -t plaits-lab-builder:local -f Dockerfile.plaits-builder .
+```
+
+(The image build downloads the pinned ARM 4.8.3 toolchain and warms a compile
+cache, so it takes a while — but only the first time.)
+
 See `RFC.md` for the contract and trust-boundary decisions.

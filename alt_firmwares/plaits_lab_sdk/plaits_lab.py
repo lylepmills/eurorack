@@ -1066,7 +1066,11 @@ def hardware_build_command(args: argparse.Namespace) -> int:
         if not args.native:
             docker = shutil.which("docker")
             if not docker:
-                raise PackageError("ARM toolchain and Docker are both unavailable")
+                raise PackageError(
+                    "the hardware build needs either the ARM 4.8.3 toolchain or Docker, "
+                    "and neither was found. Install Docker Desktop "
+                    "(https://docs.docker.com/get-docker/) — or the ARM toolchain — then re-run."
+                )
             output = Path(args.output).resolve()
             output.parent.mkdir(parents=True, exist_ok=True)
             command = [
@@ -1084,9 +1088,13 @@ def hardware_build_command(args: argparse.Namespace) -> int:
             if result.returncode:
                 details = (result.stdout + result.stderr)[-8000:]
                 raise PackageError(
-                    f"containerized ARM build failed; build {args.docker_image} with "
-                    f"`docker build --platform linux/amd64 -t {args.docker_image} "
-                    f"-f Dockerfile.plaits-builder .`\n{details}"
+                    f"containerized ARM build failed. If the {args.docker_image} image is "
+                    f"missing, build it once first (the hardware build also needs the "
+                    f"stm_audio_bootloader submodule the base setup skips):\n"
+                    f"  git submodule update --init stmlib stm_audio_bootloader\n"
+                    f"  docker build --platform linux/amd64 -t {args.docker_image} "
+                    f"-f Dockerfile.plaits-builder .\n"
+                    f"then re-run this command.\n{details}"
                 )
             print(result.stdout.strip())
             return 0
