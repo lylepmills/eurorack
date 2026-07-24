@@ -108,6 +108,60 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertIn("#define PLAITS_HAS_USER_DATA_BANK_OVERRIDE 0", config)
         self.assertNotIn("kUserDataBankOverride_0", config)
 
+    def v12_recipe(self, slots: list, user_data_banks: list[dict]) -> dict:
+        return {
+            "schemaVersion": 12,
+            "target": "mutable-instruments-plaits",
+            "firmware": "rubato-plaits",
+            "output": "audio-wav",
+            "slots": slots,
+            "preferences": dict(DEFAULT_CONFIGURATION["preferences"]),
+            "initialOptions": dict(DEFAULT_CONFIGURATION["initialOptions"]),
+            "resources": {
+                "chordTables": [dict(table) for table in DEFAULT_CHORD_TABLES],
+                "userDataBanks": user_data_banks,
+            },
+        }
+
+    def test_v12_per_slot_bank_gets_a_fresh_index_above_the_factory_three(self) -> None:
+        slots = ["dx7-bank-a", "dx7-bank-b", "dx7-bank-c"] + ["virtual-analog"] * 21
+        recipe = self.v12_recipe(slots, [{"slot": 0, "bank": self.bank_document(first_byte=7)}])
+        config = render_config(validate_recipe(recipe))
+        self.assertIn("#define PLAITS_HAS_USER_DATA_BANK_OVERRIDE 1", config)
+        # The customized slot gets index 3 (above factory 0/1/2), with its own array.
+        self.assertIn("static const uint8_t kUserDataBankOverride_3[4096] = { 7, 0,", config)
+        self.assertIn(
+            "static const uint8_t* const kUserDataBankOverride[4] = { NULL, NULL, NULL, kUserDataBankOverride_3 };",
+            config)
+
+    def test_v12_two_slots_of_the_same_engine_get_distinct_banks(self) -> None:
+        # The whole point of v12: two dx7-bank-a placements, each its OWN bank.
+        slots = ["dx7-bank-a", "dx7-bank-a", "dx7-bank-c"] + ["virtual-analog"] * 21
+        recipe = self.v12_recipe(slots, [
+            {"slot": 0, "bank": self.bank_document(first_byte=11)},
+            {"slot": 1, "bank": self.bank_document(first_byte=22)},
+        ])
+        config = render_config(validate_recipe(recipe))
+        self.assertIn("static const uint8_t kUserDataBankOverride_3[4096] = { 11, 0,", config)
+        self.assertIn("static const uint8_t kUserDataBankOverride_4[4096] = { 22, 0,", config)
+        self.assertIn(
+            "static const uint8_t* const kUserDataBankOverride[5] = "
+            "{ NULL, NULL, NULL, kUserDataBankOverride_3, kUserDataBankOverride_4 };",
+            config)
+
+    def test_v12_uncustomized_fm_slot_keeps_its_factory_index(self) -> None:
+        slots = ["dx7-bank-b"] + ["virtual-analog"] * 23
+        recipe = self.v12_recipe(slots, [])
+        config = render_config(validate_recipe(recipe))
+        self.assertIn("#define PLAITS_HAS_USER_DATA_BANK_OVERRIDE 0", config)
+        self.assertIn("static const int8_t kEngineUserDataBank[24] = {", config)
+
+    def test_v12_bank_on_a_non_existent_slot_is_rejected(self) -> None:
+        recipe = self.v12_recipe(["dx7-bank-a"] + ["virtual-analog"] * 23,
+                                 [{"slot": 99, "bank": self.bank_document()}])
+        with self.assertRaisesRegex(ValueError, "distinct palette slot"):
+            validate_recipe(recipe)
+
     def test_malformed_custom_bank_is_rejected(self) -> None:
         slots = self.load("mixed_recipe.json")["slots"]
         short = self.bank_document()

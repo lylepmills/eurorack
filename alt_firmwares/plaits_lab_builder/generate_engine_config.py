@@ -53,8 +53,13 @@ class BuildRecipe:
     chord_set_option: int
     hold_on_trigger_option: int
     options_profile_id: int
-    # index (0..2) -> 4096 packed bytes for a custom bank overriding a built-in one.
+    # v6 (index-keyed): built-in bank index (0..2) -> 4096 packed bytes, overriding
+    # a factory bank globally for every slot that uses it.
     user_data_bank_overrides: tuple[tuple[int, bytes], ...] = ()
+    # v12 (slot-keyed): public slot index -> 4096 packed bytes, a bank baked for
+    # THAT slot alone. Each gets its own bank index above the factory three, so a
+    # palette can carry as many distinct FM banks as flash allows.
+    slot_bank_overrides: tuple[tuple[int, bytes], ...] = ()
     # Catalog ids of engines built with the stereo (OUT/AUX L/R) render path.
     # None means "not specified" — a pre-per-engine (schema <= 9) recipe, which
     # the builder treats as all stereo-capable engines when the aux option is
@@ -156,13 +161,30 @@ def validate_chord_tables(value: Any) -> list[dict[str, Any]]:
     return result
 
 
-def validate_user_data_banks(value: Any) -> list[tuple[int, bytes]]:
-    """Validate a v6 recipe's custom FM banks into (index, 4096 packed bytes).
+def _packed_bank_bytes(bank: Any) -> bytes:
+    """Validate one custom bank's 32 voices into 4096 packed bytes, checked
+    exactly (32 patches x 128 bytes, every byte a 7-bit value) since they are
+    baked verbatim into the firmware. Metadata never reaches the ARM build."""
+    if not isinstance(bank, dict):
+        raise ValueError("recipe contains an invalid custom bank")
+    voices = bank.get("voices")
+    if not isinstance(voices, list) or len(voices) != PATCHES_PER_BANK:
+        raise ValueError("a custom bank must contain exactly 32 voices")
+    packed = bytearray()
+    for voice in voices:
+        if not isinstance(voice, dict):
+            raise ValueError("a custom-bank voice is invalid")
+        data = voice.get("packed")
+        if not isinstance(data, list) or len(data) != PACKED_PATCH_SIZE \
+                or any(type(byte) is not int or byte < 0 or byte > 127 for byte in data):
+            raise ValueError("a custom-bank voice must have 128 packed 7-bit bytes")
+        packed.extend(data)
+    return bytes(packed)
 
-    The packed bytes are baked verbatim into the firmware, so they are checked
-    exactly: 32 patches x 128 bytes, every byte a 7-bit value. Metadata is
-    validated for shape only (it never reaches the ARM build).
-    """
+
+def validate_user_data_banks(value: Any) -> list[tuple[int, bytes]]:
+    """Validate a v6 recipe's custom FM banks into (index, 4096 packed bytes),
+    index-keyed onto the three built-in banks (0-2)."""
     if not isinstance(value, list) or len(value) > MAX_USER_DATA_BANKS:
         raise ValueError("recipe must contain between zero and three custom banks")
     result: list[tuple[int, bytes]] = []
@@ -174,22 +196,27 @@ def validate_user_data_banks(value: Any) -> list[tuple[int, bytes]]:
         if type(index) is not int or not 0 <= index < MAX_USER_DATA_BANKS or index in seen:
             raise ValueError("a custom bank must target a distinct built-in FM bank (0-2)")
         seen.add(index)
-        bank = entry["bank"]
-        if not isinstance(bank, dict):
-            raise ValueError("recipe contains an invalid custom bank")
-        voices = bank.get("voices")
-        if not isinstance(voices, list) or len(voices) != PATCHES_PER_BANK:
-            raise ValueError("a custom bank must contain exactly 32 voices")
-        packed = bytearray()
-        for voice in voices:
-            if not isinstance(voice, dict):
-                raise ValueError("a custom-bank voice is invalid")
-            data = voice.get("packed")
-            if not isinstance(data, list) or len(data) != PACKED_PATCH_SIZE \
-                    or any(type(byte) is not int or byte < 0 or byte > 127 for byte in data):
-                raise ValueError("a custom-bank voice must have 128 packed 7-bit bytes")
-            packed.extend(data)
-        result.append((index, bytes(packed)))
+        result.append((index, _packed_bank_bytes(entry["bank"])))
+    return result
+
+
+def validate_user_data_banks_v12(value: Any, num_slots: int) -> list[tuple[int, bytes]]:
+    """Validate a v12 recipe's per-SLOT custom FM banks into (slot, 4096 packed
+    bytes). A bank is keyed by the palette slot it belongs to; each customized FM
+    slot gets its own bank, so the only bound is one bank per slot (the flash
+    budget, enforced by the ARM build, is the real limit)."""
+    if not isinstance(value, list) or len(value) > num_slots:
+        raise ValueError("recipe contains an unsupported set of custom banks")
+    result: list[tuple[int, bytes]] = []
+    seen: set[int] = set()
+    for entry in value:
+        if not isinstance(entry, dict) or set(entry) != {"slot", "bank"}:
+            raise ValueError("recipe contains an invalid custom-bank assignment")
+        slot = entry["slot"]
+        if type(slot) is not int or not 0 <= slot < num_slots or slot in seen:
+            raise ValueError("a custom bank must target a distinct palette slot")
+        seen.add(slot)
+        result.append((slot, _packed_bank_bytes(entry["bank"])))
     return result
 
 
@@ -267,8 +294,8 @@ def validate_recipe(value: Any) -> BuildRecipe:
     if not isinstance(value, dict):
         raise ValueError("recipe must be a JSON object")
     schema_version = value.get("schemaVersion")
-    if schema_version not in (2, 3, 4, 5, 6, 7, 8, 9, 10, 11):
-        raise ValueError("recipe schemaVersion must be 2, 3, 4, 5, 6, 7, 8, 9, 10, or 11")
+    if schema_version not in (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12):
+        raise ValueError("recipe schemaVersion must be 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, or 12")
     if value.get("target") != "mutable-instruments-plaits":
         raise ValueError("unsupported firmware target")
     if value.get("firmware") != "rubato-plaits":
@@ -278,26 +305,32 @@ def validate_recipe(value: Any) -> BuildRecipe:
     slots = value.get("slots")
     if not isinstance(slots, list) or len(slots) not in (24, 32):
         raise ValueError("recipe must contain 24 slots, or 32 for a four-bank build")
-    if len(slots) == 32 and schema_version not in (6, 7, 8, 9, 10, 11):
-        raise ValueError("32-slot recipes require schemaVersion 6, 7, 8, 9, 10, or 11")
+    if len(slots) == 32 and schema_version not in (6, 7, 8, 9, 10, 11, 12):
+        raise ValueError("32-slot recipes require schemaVersion 6, 7, 8, 9, 10, 11, or 12")
     public_slots = normalize_slots(slots, schema_version)
     validate_bank_shape(public_slots, schema_version)
-    user_data_banks: list[tuple[int, bytes]] = []
-    if schema_version in (5, 6, 7, 8, 9, 10, 11):
+    user_data_banks: list[tuple[int, bytes]] = []   # v6 index-keyed
+    slot_banks: list[tuple[int, bytes]] = []        # v12 slot-keyed
+    if schema_version in (5, 6, 7, 8, 9, 10, 11, 12):
         resources = value.get("resources")
-        # v6 always carries the custom-FM-banks resource (its defining feature).
-        # v7+ mirror the editor: userDataBanks only for a 32-slot (fourth-bank)
-        # recipe; a 24-slot v7+ carries chord tables only, like v5.
-        expect_user_data_banks = schema_version == 6 or (schema_version in (7, 8, 9, 10, 11) and len(slots) == 32)
+        # v6 always carries the custom-FM-banks resource (its defining feature), and
+        # v12 always carries per-slot banks (its defining feature — 24 or 32 slots).
+        # v7-v11 mirror the editor: userDataBanks only for a 32-slot (fourth-bank)
+        # recipe; a 24-slot v7-v11 carries chord tables only, like v5.
+        expect_user_data_banks = schema_version in (6, 12) \
+            or (schema_version in (7, 8, 9, 10, 11) and len(slots) == 32)
         expected_resource_keys = {"chordTables", "userDataBanks"} if expect_user_data_banks else {"chordTables"}
         if not isinstance(resources, dict) or set(resources) != expected_resource_keys:
             raise ValueError("recipe must contain only supported firmware resources")
         chord_tables = validate_chord_tables(resources.get("chordTables"))
         if expect_user_data_banks:
-            user_data_banks = validate_user_data_banks(resources.get("userDataBanks"))
+            if schema_version == 12:
+                slot_banks = validate_user_data_banks_v12(resources.get("userDataBanks"), len(slots))
+            else:
+                user_data_banks = validate_user_data_banks(resources.get("userDataBanks"))
     else:
         chord_tables = validate_chord_tables(DEFAULT_CHORD_TABLES)
-    configuration = value if schema_version in (4, 5, 6, 7, 8, 9, 10, 11) else DEFAULT_CONFIGURATION
+    configuration = value if schema_version in (4, 5, 6, 7, 8, 9, 10, 11, 12) else DEFAULT_CONFIGURATION
     preferences = configuration.get("preferences")
     options = configuration.get("initialOptions")
     if not isinstance(preferences, dict) or not isinstance(options, dict):
@@ -350,10 +383,10 @@ def validate_recipe(value: Any) -> BuildRecipe:
     # treats as "all stereo-capable engines" (back-compat with the global gate).
     stereo_engines: tuple[str, ...] | None = None
     if "stereoEngines" in value:
-        # v10's defining feature; a v11 (sparse) recipe may also carry it when its
-        # aux output is stereo, since v11 is a superset of v10.
-        if schema_version not in (10, 11):
-            raise ValueError("stereoEngines requires schemaVersion 10 or 11")
+        # v10's defining feature; a v11 (sparse) or v12 (per-slot banks) recipe may
+        # also carry it when its aux output is stereo, since each is a superset of v10.
+        if schema_version not in (10, 11, 12):
+            raise ValueError("stereoEngines requires schemaVersion 10, 11, or 12")
         raw = value.get("stereoEngines")
         if not isinstance(raw, list) or not all(
             isinstance(engine_id, str) and engine_id in PUBLIC_ENGINES for engine_id in raw
@@ -368,6 +401,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
         chord_tables=chord_tables,
         options_profile_id=profile_id,
         user_data_bank_overrides=tuple(user_data_banks),
+        slot_bank_overrides=tuple(slot_banks),
         stereo_engines=stereo_engines,
         **normalized_options,
     )
@@ -406,6 +440,14 @@ def render_config(recipe: BuildRecipe) -> str:
         bank_sizes.pop()
     internal_slots = [engine_id for bank in internal_banks for engine_id, _ in bank]
     engine_rows = [row for bank in internal_banks for _, row in bank]
+    # The PUBLIC slot index of each selected engine (= its public bank * 8 + its
+    # physical row). v12 per-slot custom banks are keyed by this, so it maps a
+    # recipe's slot-keyed banks through the internal reordering to `selected`.
+    public_slot_of_selected = [
+        internal_order[ib] * 8 + row
+        for ib, bank in enumerate(internal_banks)
+        for _, row in bank
+    ]
     selected = [CATALOG[engine_id] for engine_id in internal_slots]
 
     unique: list[Engine] = []
@@ -427,7 +469,6 @@ def render_config(recipe: BuildRecipe) -> str:
         )
         for item in selected
     )
-    user_data_banks = ", ".join(str(item.user_data_bank) for item in selected)
     speech_mask = sum(1 << index for index, item in enumerate(selected) if item.behavior == "speech")
     chiptune_mask = sum(1 << index for index, item in enumerate(selected) if item.behavior == "chiptune")
     chord_offsets: list[int] = []
@@ -443,31 +484,54 @@ def render_config(recipe: BuildRecipe) -> str:
             chord_arp_lengths.append(str(chord["arpLength"]))
             chord_offset += 1
 
-    # Custom-bank overrides: bake only banks a placed engine actually uses, so an
-    # orphaned assignment (its engine removed) never bloats the firmware. Each
-    # override replaces the built-in fm_patches_table[index] default; a runtime
-    # TIMBRE-loaded user bank still takes precedence in voice.cc.
-    used_banks = {item.user_data_bank for item in selected if item.user_data_bank >= 0}
-    active_overrides = [
-        (index, data) for index, data in recipe.user_data_bank_overrides if index in used_banks
-    ]
-    override_index = {index for index, _ in active_overrides}
+    # Assign every placed FM-bank engine a bank index for kEngineUserDataBank:
+    #   * an un-customized preset slot keeps its factory index (0/1/2), so the
+    #     firmware falls through to fm_patches_table[index];
+    #   * a v12 per-slot custom bank gets a FRESH index (>= 3) with its own baked
+    #     4096-byte array — this is what lets a palette hold N distinct banks.
+    # v6 index-keyed overrides (a whole factory bank replaced) still resolve at
+    # 0/1/2. A runtime TIMBRE-loaded user bank still takes precedence in voice.cc.
+    factory_override = dict(recipe.user_data_bank_overrides)        # v6: index -> bytes
+    slot_override = dict(recipe.slot_bank_overrides)                # v12: public slot -> bytes
+    engine_bank_index: list[int] = []                              # per selected engine
+    custom_arrays: list[tuple[int, bytes]] = []                    # (index >= 3, bytes)
+    next_custom_index = MAX_USER_DATA_BANKS
+    for engine, public_slot in zip(selected, public_slot_of_selected):
+        if engine.user_data_bank < 0:
+            engine_bank_index.append(-1)
+        elif public_slot in slot_override:
+            custom_arrays.append((next_custom_index, slot_override[public_slot]))
+            engine_bank_index.append(next_custom_index)
+            next_custom_index += 1
+        else:
+            engine_bank_index.append(engine.user_data_bank)
+    user_data_banks = ", ".join(str(index) for index in engine_bank_index)
+    # v6 factory overrides only for factory banks a placed engine actually uses
+    # (an orphaned assignment, its engine removed, never bloats the firmware).
+    used_factory = {index for index in engine_bank_index if 0 <= index < MAX_USER_DATA_BANKS}
+    factory_arrays = [(index, factory_override[index]) for index in sorted(used_factory)
+                      if index in factory_override]
+    override_arrays_all = factory_arrays + custom_arrays           # unique indices
+    override_by_index = {index for index, _ in override_arrays_all}
+    # The pointer table must span every bank index the engine table can reference:
+    # indices 0..2 (factory, possibly overridden) plus every allocated custom one.
+    table_size = next_custom_index
     override_arrays = "\n".join(
         "static const uint8_t kUserDataBankOverride_{index}[{size}] = {{ {body} }};".format(
             index=index, size=PACKED_BANK_SIZE, body=", ".join(str(byte) for byte in data)
         )
-        for index, data in active_overrides
+        for index, data in override_arrays_all
     )
     override_table = "static const uint8_t* const kUserDataBankOverride[{count}] = {{ {pointers} }};".format(
-        count=MAX_USER_DATA_BANKS,
+        count=table_size,
         pointers=", ".join(
-            f"kUserDataBankOverride_{i}" if i in override_index else "NULL"
-            for i in range(MAX_USER_DATA_BANKS)
+            f"kUserDataBankOverride_{i}" if i in override_by_index else "NULL"
+            for i in range(table_size)
         ),
-    ) if active_overrides else ""
+    ) if override_arrays_all else ""
     user_data_bank_override_block = (
         f"\n#if PLAITS_HAS_USER_DATA_BANK_OVERRIDE\n{override_arrays}\n{override_table}\n#endif\n"
-        if active_overrides else ""
+        if override_arrays_all else ""
     )
 
     return f"""// Generated by alt_firmwares/plaits_lab_builder/generate_engine_config.py.
@@ -483,7 +547,7 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_HAS_SPEECH_ENGINE {1 if any(item.behavior == 'speech' for item in selected) else 0}
 #define PLAITS_HAS_CHIPTUNE_ENGINE {1 if any(item.behavior == 'chiptune' for item in selected) else 0}
 #define PLAITS_HAS_USER_DATA_BANK {1 if any(item.user_data_bank >= 0 for item in selected) else 0}
-#define PLAITS_HAS_USER_DATA_BANK_OVERRIDE {1 if active_overrides else 0}
+#define PLAITS_HAS_USER_DATA_BANK_OVERRIDE {1 if override_arrays_all else 0}
 
 #define PLAITS_CHORD_TABLE_COUNT {len(recipe.chord_tables)}
 #define PLAITS_CHORD_COUNT {chord_offset}
