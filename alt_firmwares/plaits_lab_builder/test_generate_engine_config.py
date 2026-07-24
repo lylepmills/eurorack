@@ -454,6 +454,50 @@ class GenerateEngineConfigTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "schemaVersion 10"):
             validate_recipe(recipe)
 
+    def test_v10_allows_empty_slots(self) -> None:
+        # Per-engine stereo (v10) is a superset of v7-v9 and must accept empty
+        # slots — a stereo palette with a model deleted (e.g. the Stereo Dreams
+        # preset, which drops Speech). The Worker contract already allows this;
+        # the generator formerly rejected it (empty-slot gate stuck at 7,8,9),
+        # so the Worker accepted a recipe the container then failed.
+        public = self.load("../plaits_lab_catalog/public_catalog.json")
+        by_id = {engine["id"]: engine for engine in public["engines"]}
+        recipe = self.load("default_recipe.json")
+        slot_ids = list(recipe["slots"])
+        slot_ids[7] = None  # drop one model -> empty slot
+        recipe.update({
+            "schemaVersion": 10,
+            "slots": [
+                None if engine_id is None else {
+                    "engine": engine_id,
+                    "package": by_id[engine_id]["packageId"],
+                    "version": by_id[engine_id]["version"],
+                    "digest": by_id[engine_id]["digest"],
+                }
+                for engine_id in slot_ids
+            ],
+            "preferences": {"navigationMode": "linear"},
+            "initialOptions": {
+                "lockedFrequencyKnob": "octaves",
+                "modelInput": "model",
+                "levelInput": "level",
+                "auxOutput": "stereo",
+                "suboscillatorOctave": 0,
+                "chordTable": DEFAULT_CHORD_TABLES[0]["id"],
+                "holdOnTrigger": False,
+            },
+            "resources": {"chordTables": DEFAULT_CHORD_TABLES},
+            "stereoEngines": ["chiptune", "modal-resonator"],
+        })
+        config = render_config(validate_recipe(recipe))
+        # 24 slots minus the one empty -> 23 engines. The public green bank holds
+        # the hole (slot 7); in registry order (amber, green, red) it reads
+        # { 8, 7, 8 }. default_recipe's slot 7 is Speech, so this is exactly the
+        # Stereo Dreams shape (Speech dropped).
+        self.assertIn("#define PLAITS_ENGINE_COUNT 23", config)
+        self.assertIn("#define PLAITS_BANK_SIZES { 8, 7, 8 }", config)
+        self.assertIn("#define PLAITS_HAS_SPEECH_ENGINE 0", config)
+
     def test_local_chord_tables_are_rendered_as_bounded_numeric_data(self) -> None:
         public = self.load("../plaits_lab_catalog/public_catalog.json")
         chord_catalog = self.load("../plaits_lab_chord_tables/catalog.json")

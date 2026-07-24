@@ -199,13 +199,16 @@ def normalize_slots(slots: list[Any], schema_version: int) -> list[str | None]:
             raise ValueError("recipe contains an unapproved engine ID")
         return list(slots)
 
-    # v7 short-bank recipes carry null entries for empty slots; keep them as None
-    # so render_config can size each bank. Other schemas never contain empties.
+    # v7+ short-bank recipes carry null entries for empty slots; keep them as None
+    # so render_config can size each bank. v5/v6 are always fully filled. (v10 —
+    # per-engine stereo — is a superset of v7/v8/v9 and must allow empties too;
+    # the Worker contract already does, so omitting 10 here rejected a recipe the
+    # Worker had accepted, e.g. a stereo palette with a model deleted.)
     normalized: list[str | None] = []
     for reference in slots:
         if reference is None:
-            if schema_version not in (7, 8, 9):
-                raise ValueError("empty slots require schemaVersion 7, 8, or 9")
+            if schema_version not in (7, 8, 9, 10):
+                raise ValueError("empty slots require schemaVersion 7, 8, 9, or 10")
             normalized.append(None)
             continue
         if isinstance(reference, str):
@@ -263,7 +266,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
     if not isinstance(slots, list) or len(slots) not in (24, 32):
         raise ValueError("recipe must contain 24 slots, or 32 for a four-bank build")
     if len(slots) == 32 and schema_version not in (6, 7, 8, 9, 10):
-        raise ValueError("32-slot recipes require schemaVersion 6, 7, 8, or 9")
+        raise ValueError("32-slot recipes require schemaVersion 6, 7, 8, 9, or 10")
     public_slots = normalize_slots(slots, schema_version)
     validate_bank_shape(public_slots)
     user_data_banks: list[tuple[int, bytes]] = []
