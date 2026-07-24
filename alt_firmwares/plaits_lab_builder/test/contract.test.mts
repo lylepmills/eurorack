@@ -213,6 +213,30 @@ test("version 6 carries a validated custom FM bank and hashes its packed bytes",
     () => normalizeRecipe(makeRecipe([{ index: 0, bank: makeBank() }, { index: 0, bank: makeBank() }])),
     /distinct/,
   );
+
+  // v12: per-slot custom banks normalize to schemaVersion 12, keyed by slot (not
+  // index) — two banks on distinct slots both survive.
+  const v12Recipe = {
+    ...makeRecipe([]),
+    schemaVersion: 12,
+    resources: {
+      chordTables: [publishedTable],
+      userDataBanks: [{ slot: 0, bank: makeBank() }, { slot: 5, bank: makeBank() }],
+    },
+  };
+  const v12 = normalizeRecipe(v12Recipe);
+  assert.equal(v12.schemaVersion, 12);
+  assert.equal(v12.resources.userDataBanks!.length, 2);
+  assert.equal((v12.resources.userDataBanks![0] as { slot: number }).slot, 0);
+  assert.equal((v12.resources.userDataBanks![1] as { slot: number }).slot, 5);
+  // A bank on a slot that does not exist is rejected.
+  assert.throws(
+    () => normalizeRecipe({
+      ...v12Recipe,
+      resources: { chordTables: [publishedTable], userDataBanks: [{ slot: 99, bank: makeBank() }] },
+    }),
+    /distinct palette slot/,
+  );
 });
 
 test("version 6 accepts a 32-slot fourth-bank recipe with no custom banks", async () => {

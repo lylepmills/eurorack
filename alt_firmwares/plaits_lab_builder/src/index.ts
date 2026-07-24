@@ -569,10 +569,12 @@ export default {
       if (request.method === "GET" && url.pathname === "/v1/catalog") {
         response = json({
           schemaVersion: 2,
-          recipeSchemaVersion: 11,
+          recipeSchemaVersion: 12,
           approvedEngineIds,
           chordTables: approvedChordTables,
-          limits: { chordTables: 9, chordsPerTable: 24, userDataBanks: 3 },
+          // userDataBanks: v12 keys banks per slot, so the ceiling is the slot
+          // count (32); the flash budget is the real limit the ARM build enforces.
+          limits: { chordTables: 9, chordsPerTable: 24, userDataBanks: 32 },
           buildContract: env.PLAITS_BUILD_CONTRACT,
         });
       } else if (request.method === "POST" && url.pathname === "/v1/builds") {
