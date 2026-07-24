@@ -166,6 +166,7 @@ target.
 | July 23, 2026 (schema 9, stereo gated) | `b107b1c4f041` | `rev-b107b1c4f041` |
 | July 23, 2026 (schema 10, per-engine stereo) | `8b3e1cb6fe3b` | `rev-8b3e1cb6fe3b` |
 | July 24, 2026 (schema 10, empty-slot fix) | `effbb4573178` | `rev-effbb4573178` |
+| July 24, 2026 (schema 11, sparse banks) | `c961b1d86063` | `rev-c961b1d86063` |
 
 Three consequences a rollback has that a forward deploy does not:
 
