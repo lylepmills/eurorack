@@ -55,6 +55,11 @@ class BuildRecipe:
     options_profile_id: int
     # index (0..2) -> 4096 packed bytes for a custom bank overriding a built-in one.
     user_data_bank_overrides: tuple[tuple[int, bytes], ...] = ()
+    # Catalog ids of engines built with the stereo (OUT/AUX L/R) render path.
+    # None means "not specified" — a pre-per-engine (schema <= 9) recipe, which
+    # the builder treats as all stereo-capable engines when the aux option is
+    # stereo. A tuple (schema 10) lists exactly the enabled engines.
+    stereo_engines: tuple[str, ...] | None = None
 
 
 def load_catalog() -> dict[str, Engine]:
@@ -246,8 +251,8 @@ def validate_recipe(value: Any) -> BuildRecipe:
     if not isinstance(value, dict):
         raise ValueError("recipe must be a JSON object")
     schema_version = value.get("schemaVersion")
-    if schema_version not in (2, 3, 4, 5, 6, 7, 8, 9):
-        raise ValueError("recipe schemaVersion must be 2, 3, 4, 5, 6, 7, 8, or 9")
+    if schema_version not in (2, 3, 4, 5, 6, 7, 8, 9, 10):
+        raise ValueError("recipe schemaVersion must be 2, 3, 4, 5, 6, 7, 8, 9, or 10")
     if value.get("target") != "mutable-instruments-plaits":
         raise ValueError("unsupported firmware target")
     if value.get("firmware") != "rubato-plaits":
@@ -257,17 +262,17 @@ def validate_recipe(value: Any) -> BuildRecipe:
     slots = value.get("slots")
     if not isinstance(slots, list) or len(slots) not in (24, 32):
         raise ValueError("recipe must contain 24 slots, or 32 for a four-bank build")
-    if len(slots) == 32 and schema_version not in (6, 7, 8, 9):
+    if len(slots) == 32 and schema_version not in (6, 7, 8, 9, 10):
         raise ValueError("32-slot recipes require schemaVersion 6, 7, 8, or 9")
     public_slots = normalize_slots(slots, schema_version)
     validate_bank_shape(public_slots)
     user_data_banks: list[tuple[int, bytes]] = []
-    if schema_version in (5, 6, 7, 8, 9):
+    if schema_version in (5, 6, 7, 8, 9, 10):
         resources = value.get("resources")
         # v6 always carries the custom-FM-banks resource (its defining feature).
         # v7/v8/v9 mirror the editor: userDataBanks only for a 32-slot (fourth-
         # bank) recipe; a 24-slot v7/v8/v9 carries chord tables only, like v5.
-        expect_user_data_banks = schema_version == 6 or (schema_version in (7, 8, 9) and len(slots) == 32)
+        expect_user_data_banks = schema_version == 6 or (schema_version in (7, 8, 9, 10) and len(slots) == 32)
         expected_resource_keys = {"chordTables", "userDataBanks"} if expect_user_data_banks else {"chordTables"}
         if not isinstance(resources, dict) or set(resources) != expected_resource_keys:
             raise ValueError("recipe must contain only supported firmware resources")
@@ -276,7 +281,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
             user_data_banks = validate_user_data_banks(resources.get("userDataBanks"))
     else:
         chord_tables = validate_chord_tables(DEFAULT_CHORD_TABLES)
-    configuration = value if schema_version in (4, 5, 6, 7, 8, 9) else DEFAULT_CONFIGURATION
+    configuration = value if schema_version in (4, 5, 6, 7, 8, 9, 10) else DEFAULT_CONFIGURATION
     preferences = configuration.get("preferences")
     options = configuration.get("initialOptions")
     if not isinstance(preferences, dict) or not isinstance(options, dict):
@@ -323,11 +328,29 @@ def validate_recipe(value: Any) -> BuildRecipe:
     # while reserving low bytes 0 and 1 so saved states from the old navigation
     # setting can never look initialized.
     profile_id = ((profile_code // 254) << 8) | (2 + profile_code % 254)
+
+    # Per-engine stereo (schema 10): stereoEngines lists the catalog ids built
+    # with the stereo render path. Absent on schema <= 9, which the container
+    # treats as "all stereo-capable engines" (back-compat with the global gate).
+    stereo_engines: tuple[str, ...] | None = None
+    if "stereoEngines" in value:
+        if schema_version != 10:
+            raise ValueError("stereoEngines requires schemaVersion 10")
+        raw = value.get("stereoEngines")
+        if not isinstance(raw, list) or not all(
+            isinstance(engine_id, str) and engine_id in PUBLIC_ENGINES for engine_id in raw
+        ):
+            raise ValueError("stereoEngines must list approved engine ids")
+        stereo_engines = tuple(dict.fromkeys(raw))
+    elif schema_version == 10:
+        raise ValueError("schemaVersion 10 recipes must carry a stereoEngines list")
+
     return BuildRecipe(
         public_slots=public_slots,
         chord_tables=chord_tables,
         options_profile_id=profile_id,
         user_data_bank_overrides=tuple(user_data_banks),
+        stereo_engines=stereo_engines,
         **normalized_options,
     )
 

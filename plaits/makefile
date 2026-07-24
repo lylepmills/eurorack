@@ -83,6 +83,32 @@ ifneq ($(ENGINE_CONFIG),)
 $(patsubst %,$(BUILD_DIR)%,$(RECIPE_CONFIG_OBJS)): CPPFLAGS += -include $(ENGINE_CONFIG)
 endif
 
+# Per-engine stereo (OUT/AUX as an L/R pair) is gated at compile time by
+# PLAITS_STEREO_<X> (default 1 in stereo_config.h). To disable an engine's
+# stereo the hosted builder passes PLAITS_STEREO_<X>=0, and the rule below adds
+# -DPLAITS_STEREO_<X>=0 to ONLY that engine's object — so each engine caches as
+# just two variants (on/off) and the default (all-stereo) build's warm ccache is
+# untouched (no flag is added when the value is 1/unset). <MACRO>:<object> pairs;
+# the three DX7 banks share six_op_engine, hence SIX_OP.
+PLAITS_STEREO_MODELS = \
+  VIRTUAL_ANALOG:virtual_analog_engine WAVESHAPING:waveshaping_engine \
+  TWO_OP_FM:fm_engine GRANULAR_FORMANT:grain_engine HARMONIC:additive_engine \
+  WAVETABLE:wavetable_engine CHORDS:chord_engine SPEECH:speech_engine \
+  SWARM:swarm_engine FILTERED_NOISE:noise_engine PARTICLE_NOISE:particle_engine \
+  INHARMONIC_STRING:string_engine MODAL_RESONATOR:modal_engine \
+  ANALOG_BASS_DRUM:bass_drum_engine ANALOG_SNARE:snare_drum_engine \
+  ANALOG_HI_HAT:hi_hat_engine VIRTUAL_ANALOG_VCF:virtual_analog_vcf_engine \
+  WAVE_TERRAIN:wave_terrain_engine CHIPTUNE:chiptune_engine SIX_OP:six_op_engine \
+  GLISSON:glisson_engine GENDY:gendy_engine SCANNED:scanned_engine \
+  LOOPBACK:loopback_engine LOCKSTEP:lockstep_engine TAPFIELD:tapfield_engine \
+  PHASE_WEAVE:phase_weave_engine SIDEBAND_BANK:sideband_engine \
+  UNDERTOW:undertow_engine REED_PIPE:reed_pipe_engine \
+  PHASE_FLOCK:phase_flock_engine RULEFIELD:rulefield_engine
+define _plaits_stereo_rule
+$(BUILD_DIR)$(word 2,$(subst :, ,$(1))).o: CPPFLAGS += $$(if $$(filter 0,$$(PLAITS_STEREO_$(word 1,$(subst :, ,$(1))))),-DPLAITS_STEREO_$(word 1,$(subst :, ,$(1)))=0)
+endef
+$(foreach _m,$(PLAITS_STEREO_MODELS),$(eval $(call _plaits_stereo_rule,$(_m))))
+
 # Rule for building the firmware update file
 wav:  $(TARGET_BIN)
 	python stm_audio_bootloader/qpsk/encoder.py \

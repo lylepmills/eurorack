@@ -444,3 +444,48 @@ test("the stereo aux-output mode requires and normalizes to v9", async () => {
   recipe.initialOptions.auxOutput = "quadraphonic";
   assert.throws(() => normalizeRecipe(recipe), /unsupported firmware option/);
 });
+
+test("per-engine stereo (stereoEngines) requires and normalizes to v10", async () => {
+  const publicCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const chordCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_chord_tables/catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const byId = new Map(publicCatalog.engines.map((engine: { id: string }) => [engine.id, engine]));
+  const table = structuredClone(chordCatalog.tables[0]);
+  const recipe: Record<string, unknown> = {
+    ...fixture,
+    schemaVersion: 10,
+    slots: fixture.slots.map((engineId: string) => {
+      const engine = byId.get(engineId) as { packageId: string; version: string; digest: string };
+      return { engine: engineId, package: engine.packageId, version: engine.version, digest: engine.digest };
+    }),
+    preferences: { navigationMode: "linear" },
+    initialOptions: {
+      lockedFrequencyKnob: "octaves", modelInput: "model", levelInput: "level",
+      auxOutput: "stereo", suboscillatorOctave: 0, chordTable: table.id, holdOnTrigger: false,
+    },
+    resources: { chordTables: [table] },
+    stereoEngines: ["chiptune", "modal-resonator", "chiptune"],
+  };
+  const normalized = normalizeRecipe(recipe);
+  assert.equal(normalized.schemaVersion, 10);
+  assert.deepEqual(normalized.stereoEngines, ["chiptune", "modal-resonator"]); // deduped
+
+  // A v10 recipe must carry the list.
+  const missing = { ...recipe }; delete missing.stereoEngines;
+  assert.throws(() => normalizeRecipe(missing), /must carry a stereoEngines/);
+
+  // stereoEngines is only valid with the stereo aux option.
+  const monoAux = { ...recipe, initialOptions: { ...(recipe.initialOptions as object), auxOutput: "alternate-model" } };
+  assert.throws(() => normalizeRecipe(monoAux), /only valid with the stereo aux/);
+
+  // Unknown engine ids are rejected.
+  assert.throws(() => normalizeRecipe({ ...recipe, stereoEngines: ["not-an-engine"] }), /approved engine ids/);
+
+  // A schema-9 recipe with a stereoEngines list is refused (needs v10).
+  assert.throws(() => normalizeRecipe({ ...recipe, schemaVersion: 9 }), /requires recipe schema version 10/);
+});

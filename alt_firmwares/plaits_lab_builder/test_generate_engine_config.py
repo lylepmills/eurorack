@@ -410,6 +410,50 @@ class GenerateEngineConfigTest(unittest.TestCase):
         # v9 builder accepts it.
         self.assertIn("#define PLAITS_BUILD_AUX_SUBOSC_WAVE_OPTION 3", config)
 
+    def test_v10_parses_the_per_engine_stereo_list(self) -> None:
+        public = self.load("../plaits_lab_catalog/public_catalog.json")
+        by_id = {engine["id"]: engine for engine in public["engines"]}
+        recipe = self.load("default_recipe.json")
+        recipe.update({
+            "schemaVersion": 10,
+            "slots": [
+                {
+                    "engine": engine_id,
+                    "package": by_id[engine_id]["packageId"],
+                    "version": by_id[engine_id]["version"],
+                    "digest": by_id[engine_id]["digest"],
+                }
+                for engine_id in recipe["slots"]
+            ],
+            "preferences": {"navigationMode": "linear"},
+            "initialOptions": {
+                "lockedFrequencyKnob": "octaves",
+                "modelInput": "model",
+                "levelInput": "level",
+                "auxOutput": "stereo",
+                "suboscillatorOctave": 0,
+                "chordTable": DEFAULT_CHORD_TABLES[0]["id"],
+                "holdOnTrigger": False,
+            },
+            "resources": {"chordTables": DEFAULT_CHORD_TABLES},
+            "stereoEngines": ["chiptune", "modal-resonator", "chiptune"],
+        })
+        built = validate_recipe(recipe)
+        self.assertEqual(built.stereo_engines, ("chiptune", "modal-resonator"))  # deduped
+
+        # A v10 recipe must carry the list; an unknown id is rejected.
+        no_list = {k: v for k, v in recipe.items() if k != "stereoEngines"}
+        with self.assertRaisesRegex(ValueError, "stereoEngines"):
+            validate_recipe(no_list)
+        recipe["stereoEngines"] = ["not-an-engine"]
+        with self.assertRaisesRegex(ValueError, "approved engine ids"):
+            validate_recipe(recipe)
+        # stereoEngines on a schema-9 recipe is refused.
+        recipe["stereoEngines"] = ["chiptune"]
+        recipe["schemaVersion"] = 9
+        with self.assertRaisesRegex(ValueError, "schemaVersion 10"):
+            validate_recipe(recipe)
+
     def test_local_chord_tables_are_rendered_as_bounded_numeric_data(self) -> None:
         public = self.load("../plaits_lab_catalog/public_catalog.json")
         chord_catalog = self.load("../plaits_lab_chord_tables/catalog.json")

@@ -569,7 +569,7 @@ export default {
       if (request.method === "GET" && url.pathname === "/v1/catalog") {
         response = json({
           schemaVersion: 2,
-          recipeSchemaVersion: 9,
+          recipeSchemaVersion: 10,
           approvedEngineIds,
           chordTables: approvedChordTables,
           limits: { chordTables: 9, chordsPerTable: 24, userDataBanks: 3 },

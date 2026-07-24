@@ -58,7 +58,7 @@ export type NormalizedUserDataBank = {
 };
 
 export type NormalizedRecipe = {
-  schemaVersion: 5 | 6 | 7 | 8 | 9;
+  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10;
   target: "mutable-instruments-plaits";
   firmware: "rubato-plaits";
   // A null entry is an empty slot (v7 short banks); filled slots are engine ids.
@@ -80,6 +80,10 @@ export type NormalizedRecipe = {
     // Present only on a v6 recipe (at least one custom bank).
     userDataBanks?: NormalizedUserDataBank[];
   };
+  // Catalog ids of the engines built with the stereo render path (schema 10).
+  // Absent on schema <= 9 (the global-stereo recipes, which the builder treats
+  // as all stereo-capable engines when the aux option is stereo).
+  stereoEngines?: string[];
   output: "audio-wav";
 };
 
@@ -304,13 +308,40 @@ function normalizeConfiguration(
   };
 }
 
+// Per-engine stereo (schema 10). A stereoEngines list names the approved engines
+// built with the stereo render path; it is only meaningful with the stereo aux
+// option. Returns the deduped list, or undefined for a schema <= 9 recipe (which
+// the builder treats as all stereo-capable engines when aux is stereo).
+function normalizeStereoEngines(
+  candidate: Record<string, unknown>,
+  auxOutput: string,
+): string[] | undefined {
+  const present = "stereoEngines" in candidate;
+  if (candidate.schemaVersion === 10 && !present) {
+    throw new ContractError("invalid_recipe", "A version 10 recipe must carry a stereoEngines list.");
+  }
+  if (!present) return undefined;
+  if (candidate.schemaVersion !== 10) {
+    throw new ContractError("unsupported_schema", "stereoEngines requires recipe schema version 10.");
+  }
+  if (auxOutput !== "stereo") {
+    throw new ContractError("invalid_recipe", "stereoEngines is only valid with the stereo aux output.");
+  }
+  const raw = candidate.stereoEngines;
+  if (!Array.isArray(raw)
+      || !raw.every((id) => typeof id === "string" && approvedEngineIdSet.has(id))) {
+    throw new ContractError("invalid_recipe", "stereoEngines must list approved engine ids.");
+  }
+  return [...new Set(raw as string[])];
+}
+
 export function normalizeRecipe(value: unknown): NormalizedRecipe {
   if (!value || typeof value !== "object") {
     throw new ContractError("invalid_recipe", "The build recipe must be a JSON object.");
   }
   const candidate = value as Record<string, unknown>;
-  if (![2, 3, 4, 5, 6, 7, 8, 9].includes(Number(candidate.schemaVersion))) {
-    throw new ContractError("unsupported_schema", "Only Plaits Palette recipe schema versions 2 through 9 can be built.");
+  if (![2, 3, 4, 5, 6, 7, 8, 9, 10].includes(Number(candidate.schemaVersion))) {
+    throw new ContractError("unsupported_schema", "Only Plaits Palette recipe schema versions 2 through 10 can be built.");
   }
   if (candidate.target !== "mutable-instruments-plaits" || candidate.firmware !== "rubato-plaits") {
     throw new ContractError("unsupported_target", "That recipe targets a different firmware family.");
@@ -321,8 +352,8 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
   if (!Array.isArray(candidate.slots) || (candidate.slots.length !== 24 && candidate.slots.length !== 32)) {
     throw new ContractError("invalid_slots", "A firmware recipe must contain 24 engine slots, or 32 for a four-bank build.");
   }
-  if (candidate.slots.length === 32 && ![6, 7, 8, 9].includes(Number(candidate.schemaVersion))) {
-    throw new ContractError("invalid_slots", "32-slot recipes require recipe schema version 6, 7, 8, or 9.");
+  if (candidate.slots.length === 32 && ![6, 7, 8, 9, 10].includes(Number(candidate.schemaVersion))) {
+    throw new ContractError("invalid_slots", "32-slot recipes require recipe schema version 6, 7, 8, 9, or 10.");
   }
   const slots: (string | null)[] = candidate.schemaVersion === 2
     ? candidate.slots.map((id) => {
@@ -334,8 +365,8 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     : candidate.slots.map((value) => {
         if (value === null) {
           // An empty slot — only short-bank (v7/v8/v9) recipes may carry them.
-          if (![7, 8, 9].includes(Number(candidate.schemaVersion))) {
-            throw new ContractError("invalid_slots", "Empty slots require recipe schema version 7, 8, or 9.");
+          if (![7, 8, 9, 10].includes(Number(candidate.schemaVersion))) {
+            throw new ContractError("invalid_slots", "Empty slots require recipe schema version 7, 8, 9, or 10.");
           }
           return null;
         }
@@ -357,14 +388,14 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
   let userDataBanks: NormalizedUserDataBank[] | undefined;
   if (candidate.schemaVersion === 5 || candidate.schemaVersion === 6
       || candidate.schemaVersion === 7 || candidate.schemaVersion === 8
-      || candidate.schemaVersion === 9) {
+      || candidate.schemaVersion === 9 || candidate.schemaVersion === 10) {
     const resources = candidate.resources;
     // v6 always carries the custom-FM-banks resource (its defining feature).
     // v7/v8/v9 mirror the editor: userDataBanks only for a 32-slot (fourth-bank)
     // recipe; a 24-slot v7/v8/v9 carries chord tables only, like v5.
     const expectsUserDataBanks = candidate.schemaVersion === 6
       || ((candidate.schemaVersion === 7 || candidate.schemaVersion === 8
-        || candidate.schemaVersion === 9) && candidate.slots.length === 32);
+        || candidate.schemaVersion === 9 || candidate.schemaVersion === 10) && candidate.slots.length === 32);
     const expectedKeys = expectsUserDataBanks ? ["chordTables", "userDataBanks"] : ["chordTables"];
     if (!resources || typeof resources !== "object"
         || !hasExactKeys(resources as Record<string, unknown>, expectedKeys)) {
@@ -379,16 +410,21 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
   }
   const configuration = candidate.schemaVersion === 4 || candidate.schemaVersion === 5
       || candidate.schemaVersion === 6 || candidate.schemaVersion === 7 || candidate.schemaVersion === 8
-      || candidate.schemaVersion === 9
+      || candidate.schemaVersion === 9 || candidate.schemaVersion === 10
     ? normalizeConfiguration(candidate, chordTables)
     : defaultConfiguration;
+  // Per-engine stereo (schema 10): a stereoEngines list names the engines built
+  // with the stereo render path. Only valid when the aux option is stereo.
+  const stereoEngines = normalizeStereoEngines(candidate, configuration.initialOptions.auxOutput);
   return {
-    // The stereo aux-output mode needs a v9 builder and dominates every lower
-    // feature version. Otherwise: more than six chord tables needs the fast-
-    // blink LED tier (v8); a short-bank recipe (an empty slot) stays v7; a
-    // candidate that carried v6 resources (even an empty custom-bank list, e.g.
-    // a 32-slot recipe) stays v6; else v5.
-    schemaVersion: configuration.initialOptions.auxOutput === "stereo" ? 9
+    // Per-engine stereo (a stereoEngines list) needs a v10 builder and dominates
+    // every lower feature version. Then the global stereo aux mode needs v9;
+    // more than six chord tables needs the fast-blink LED tier (v8); a short-
+    // bank recipe (an empty slot) stays v7; a candidate that carried v6
+    // resources (even an empty custom-bank list, e.g. a 32-slot recipe) stays
+    // v6; else v5.
+    schemaVersion: stereoEngines !== undefined ? 10
+      : configuration.initialOptions.auxOutput === "stereo" ? 9
       : chordTables.length > maxLegacyChordTables ? 8
       : slots.some((slot) => slot === null) ? 7
       : (userDataBanks !== undefined ? 6 : 5),
@@ -397,6 +433,7 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     slots,
     preferences: { ...configuration.preferences },
     initialOptions: { ...configuration.initialOptions },
+    ...(stereoEngines !== undefined ? { stereoEngines } : {}),
     resources: userDataBanks ? { chordTables, userDataBanks } : { chordTables },
     output: "audio-wav",
   };

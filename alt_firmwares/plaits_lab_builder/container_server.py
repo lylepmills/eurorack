@@ -90,6 +90,63 @@ def parse_size(elf_path: Path) -> tuple[int, int, int]:
     return int(fields[0]), int(fields[1]), int(fields[2])
 
 
+# Catalog id -> the PLAITS_STEREO_<MACRO> that gates that engine's stereo render
+# code (see plaits/dsp/engine/stereo_config.h and the makefile). The three DX7
+# banks share the six-op engine, so they map to one macro. The five declare-only
+# engines whose out/aux is already a stereo pair at ~0 cost are absent — they are
+# never gated. Keep this in sync with PLAITS_STEREO_MODELS in plaits/makefile.
+STEREO_MACROS = {
+    "virtual-analog": "VIRTUAL_ANALOG",
+    "waveshaping": "WAVESHAPING",
+    "two-op-fm": "TWO_OP_FM",
+    "granular-formant": "GRANULAR_FORMANT",
+    "harmonic": "HARMONIC",
+    "wavetable": "WAVETABLE",
+    "chords": "CHORDS",
+    "speech": "SPEECH",
+    "swarm": "SWARM",
+    "filtered-noise": "FILTERED_NOISE",
+    "particle-noise": "PARTICLE_NOISE",
+    "inharmonic-string": "INHARMONIC_STRING",
+    "modal-resonator": "MODAL_RESONATOR",
+    "analog-bass-drum": "ANALOG_BASS_DRUM",
+    "analog-snare": "ANALOG_SNARE",
+    "analog-hi-hat": "ANALOG_HI_HAT",
+    "virtual-analog-vcf": "VIRTUAL_ANALOG_VCF",
+    "wave-terrain": "WAVE_TERRAIN",
+    "chiptune": "CHIPTUNE",
+    "dx7-bank-a": "SIX_OP",
+    "dx7-bank-b": "SIX_OP",
+    "dx7-bank-c": "SIX_OP",
+    "glisson": "GLISSON",
+    "gendy": "GENDY",
+    "scanned": "SCANNED",
+    "loopback": "LOOPBACK",
+    "lockstep": "LOCKSTEP",
+    "tapfield": "TAPFIELD",
+    "phase-weave": "PHASE_WEAVE",
+    "sideband-bank": "SIDEBAND_BANK",
+    "undertow": "UNDERTOW",
+    "reed-pipe": "REED_PIPE",
+    "phase-flock": "PHASE_FLOCK",
+    "rulefield": "RULEFIELD",
+}
+ALL_STEREO_MACROS = frozenset(STEREO_MACROS.values())
+
+
+def _stereo_disable_flags(aux_stereo: bool, stereo_engines: Any) -> list[str]:
+    """PLAITS_STEREO_<MACRO>=0 make vars for every engine left in mono."""
+    if not aux_stereo:
+        enabled = frozenset()
+    elif stereo_engines is None:
+        enabled = ALL_STEREO_MACROS  # schema <= 9: global-stereo back-compat
+    else:
+        enabled = frozenset(
+            STEREO_MACROS[e] for e in stereo_engines if e in STEREO_MACROS
+        )
+    return [f"PLAITS_STEREO_{macro}=0" for macro in sorted(ALL_STEREO_MACROS - enabled)]
+
+
 def build_firmware(payload: Any) -> tuple[Path, dict[str, str]]:
     if not isinstance(payload, dict):
         raise BuildError("invalid_request", "The build request must be a JSON object.")
@@ -128,19 +185,19 @@ def build_firmware(payload: Any) -> tuple[Path, dict[str, str]]:
         "-j4",
         "wav",
     ]
-    # The per-engine stereo render path (OUT/AUX as an L/R pair) costs ~26 KB of
-    # flash across the engine registry — enough to push a full 24-engine palette
-    # over the 224 KB budget. It is only reachable when the aux option selects
-    # stereo (value 3), so a recipe that does NOT select stereo is compiled with
-    # PLAITS_ENABLE_STEREO=0, which folds every engine's stereo branch away and
-    # restores the pre-stereo firmware size. PROJECT_CONFIGURATION is a global
-    # define, so it reaches the shared engine objects (unlike -include
-    # ENGINE_CONFIG, which the makefile applies only to the recipe-config
-    # objects); ccache keeps a warm variant for each of the two states. Stereo
-    # recipes pass nothing here (engine.h defaults the flag to 1), so their
-    # build stays byte-identical to the always-stereo firmware.
-    if validated_recipe.aux_subosc_wave_option != 3:
-        command.append("PROJECT_CONFIGURATION=-DPLAITS_ENABLE_STEREO=0")
+    # Per-engine stereo. The stereo render path (OUT/AUX as an L/R pair) costs
+    # flash per engine, so it is compiled only for the engines a recipe enables.
+    # The makefile turns each PLAITS_STEREO_<MACRO>=0 make var into a -D on that
+    # engine's object alone, so each engine caches as two variants and the
+    # default (all-stereo) build's warm ccache is untouched. Enabled set:
+    #   - aux != stereo: nothing is stereo -> disable every engine.
+    #   - aux == stereo, stereo_engines is None (schema <= 9): the global-stereo
+    #     back-compat case -> enable all.
+    #   - aux == stereo, stereo_engines given (schema 10): enable exactly those.
+    command.extend(_stereo_disable_flags(
+        validated_recipe.aux_subosc_wave_option == 3,
+        validated_recipe.stereo_engines,
+    ))
     # Pin the full locale, including LC_CTYPE: ccache folds these into its hash,
     # and Python's PEP 538 C-locale coercion otherwise injects LC_CTYPE=C.UTF-8
     # here, which would never match the image's shell-built warm cache (LC_CTYPE=C)
