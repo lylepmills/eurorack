@@ -211,6 +211,13 @@ class PackageTests(unittest.TestCase):
             self.assertEqual(config.count("RegisterInstance"), 1)
             self.assertIn("solo_engine.h", config)
             self.assertNotIn("virtual_analog", config.lower())
+            # The navigation config must MATCH the single registration, or the
+            # firmware keeps its default 24-slot / 3-bank layout and exposes null
+            # engines. Keep 3 banks (a <3-bank array is untested): the tested
+            # single-populated-bank pattern {N,0,0}.
+            self.assertIn("#define PLAITS_ENGINE_COUNT 1", config)
+            self.assertIn("#define PLAITS_BANK_SIZES { 1, 0, 0 }", config)
+            self.assertIn("#define PLAITS_ENGINE_ROWS { 0 }", config)
 
     def test_arm_flash_footprint_sums_text_and_data(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
