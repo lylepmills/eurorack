@@ -1273,7 +1273,10 @@ def hardware_build_command(args: argparse.Namespace) -> int:
                     f"-f Dockerfile.plaits-builder .\n"
                     f"then re-run this command.\n{details}"
                 )
-            print(result.stdout.strip())
+            # The container wrote the WAV to /output/<name>, which is the mount of
+            # the host's output dir — rewrite that container path back to the real
+            # host path so the message points at a file the user can actually find.
+            print(result.stdout.strip().replace(f"/output/{output.name}", str(output)))
             return 0
         raise PackageError(
             f"ARM toolchain not found at {compiler}; run inside the Plaits devcontainer or pass --toolchain"

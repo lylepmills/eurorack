@@ -243,6 +243,32 @@ class PackageTests(unittest.TestCase):
             self.assertIn("#define PLAITS_BANK_SIZES { 1, 0, 0 }", config)
             self.assertIn("#define PLAITS_ENGINE_ROWS { 0 }", config)
 
+    def test_hardware_build_reports_host_output_path(self) -> None:
+        # The container writes the WAV to /output/<name> (a mount of the host dir);
+        # the message must show the HOST path, or the user can't find the file.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            pkg_dir = Path(temp_dir) / "hw"
+            with redirect_stdout(io.StringIO()):
+                plaits_lab.init_command(SimpleNamespace(
+                    output=str(pkg_dir), from_engine="blank", author="T",
+                    package_id="test-author/hw", slug="hw", name="Hw"))
+            out_wav = Path(temp_dir) / "hw-firmware.wav"
+            args = SimpleNamespace(package=str(pkg_dir), output=str(out_wav),
+                                   toolchain="/nonexistent-arm", docker_image="img:test", native=False)
+            real_run, real_which = plaits_lab.subprocess.run, plaits_lab.shutil.which
+            plaits_lab.shutil.which = lambda name: "/usr/bin/docker" if name == "docker" else real_which(name)
+            plaits_lab.subprocess.run = lambda cmd, **kw: SimpleNamespace(
+                returncode=0, stdout=f"built UNREVIEWED local firmware /output/{out_wav.name}\n", stderr="")
+            printed = io.StringIO()
+            try:
+                with redirect_stdout(printed):
+                    plaits_lab.hardware_build_command(args)
+            finally:
+                plaits_lab.subprocess.run, plaits_lab.shutil.which = real_run, real_which
+            text = printed.getvalue()
+            self.assertIn(str(out_wav.resolve()), text)              # the real host path
+            self.assertNotIn(f"/output/{out_wav.name}", text)        # not the container path
+
     def test_arm_flash_footprint_sums_text_and_data(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             tool = Path(temp_dir) / "arm-none-eabi-size"; tool.write_text("#!/bin/sh\n")
