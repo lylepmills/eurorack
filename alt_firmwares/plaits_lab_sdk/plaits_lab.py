@@ -1073,6 +1073,20 @@ def hardware_build_command(args: argparse.Namespace) -> int:
                 )
             output = Path(args.output).resolve()
             output.parent.mkdir(parents=True, exist_ok=True)
+            # plaits/resources.cc is checked in, but its make rule regenerates it
+            # whenever a resources/*.py prerequisite is newer (stmlib/makefile.inc),
+            # writing bank_*.raw into the working tree. The builder image stamps it
+            # newest so make never fires that rule — but we mount the host checkout
+            # read-only OVER that stamp, and a fresh git checkout has arbitrary
+            # mtimes, so make tries to regenerate it and dies on the read-only
+            # mount. Re-stamp the host copy (mtime only, content untouched) so the
+            # mounted view is up to date, exactly as the image does.
+            resources_cc = package["repo_root"] / "plaits" / "resources.cc"
+            if resources_cc.is_file():
+                try:
+                    resources_cc.touch()
+                except OSError:
+                    pass
             command = [
                 docker, "run", "--rm", "--platform", "linux/amd64",
                 "--entrypoint", "python3",
