@@ -53,6 +53,14 @@ FORBIDDEN_SOURCE_HINTS = {
     "dynamic allocation": "preallocate in Init() with the BufferAllocator — no malloc/new/free/delete at audio rate",
     "direct hardware access": "engines read only EngineParameters; they never touch peripherals or registers",
 }
+# C99 <cmath> functions the host compiler has but the pinned ARM toolchain
+# (GCC 4.8.3 + newlib) does not expose in std:: — so `check`'s host compile
+# passes and the hardware build fails. Flag the common ones (pitch/frequency
+# math reaches for these) with a portable replacement. Extend as more surface.
+NON_PORTABLE_STD = {
+    "std::log2": "std::log(x) * 1.4426950408889634f  (1 / ln 2)",
+    "std::exp2": "std::exp(x * 0.6931471805599453f)  (ln 2)",
+}
 
 
 class PackageError(Exception):
@@ -264,6 +272,15 @@ def validate_community_source(
                 raise PackageError(
                     f"{path.name}:{line} uses forbidden {description} "
                     f"({match.group(0).strip()!r}) — {FORBIDDEN_SOURCE_HINTS[description]}"
+                )
+        for symbol, replacement in NON_PORTABLE_STD.items():
+            match = re.search(re.escape(symbol) + r"\b", policy_source)
+            if match is not None:
+                line = policy_source.count("\n", 0, match.start()) + 1
+                raise PackageError(
+                    f"{path.name}:{line} uses {symbol}, which the pinned ARM toolchain "
+                    f"(GCC 4.8.3) doesn't provide in std:: — the host check compiles it, "
+                    f"but the hardware build won't. Use {replacement}."
                 )
         for match in re.finditer(r'^\s*#\s*include\s*([<"])([^>"]+)[>"]', source, re.MULTILINE):
             delimiter, include = match.groups()
@@ -527,7 +544,7 @@ def wasm_compiler_path() -> str | None:
 
 # Emscripten exports the audition harness surface the AudioWorklet drives.
 WASM_EXPORTS = ('["_init","_render","_set_params","_trigger","_set_env_mode",'
-               '"_main_out","_aux_out"]')
+               '"_set_stereo","_stereo_capable","_main_out","_aux_out"]')
 
 
 def compile_wasm(package: dict[str, Any], output: Path) -> None:
@@ -1073,6 +1090,20 @@ def hardware_build_command(args: argparse.Namespace) -> int:
                 )
             output = Path(args.output).resolve()
             output.parent.mkdir(parents=True, exist_ok=True)
+            # plaits/resources.cc is checked in, but its make rule regenerates it
+            # whenever a resources/*.py prerequisite is newer (stmlib/makefile.inc),
+            # writing bank_*.raw into the working tree. The builder image stamps it
+            # newest so make never fires that rule — but we mount the host checkout
+            # read-only OVER that stamp, and a fresh git checkout has arbitrary
+            # mtimes, so make tries to regenerate it and dies on the read-only
+            # mount. Re-stamp the host copy (mtime only, content untouched) so the
+            # mounted view is up to date, exactly as the image does.
+            resources_cc = package["repo_root"] / "plaits" / "resources.cc"
+            if resources_cc.is_file():
+                try:
+                    resources_cc.touch()
+                except OSError:
+                    pass
             command = [
                 docker, "run", "--rm", "--platform", "linux/amd64",
                 "--entrypoint", "python3",

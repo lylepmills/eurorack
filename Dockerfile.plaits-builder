@@ -48,6 +48,10 @@ RUN cd /workspace && python3 alt_firmwares/plaits_lab_builder/check_config_scope
 # resources/*.py prerequisite is newer. COPY does not preserve the committed
 # ordering, and the read-only workspace cannot be rewritten at build or request
 # time, so stamp the generated file as newest to keep make from touching it.
+# NOTE: the local hardware build mounts the host checkout read-only OVER this
+# stamp, so plaits_lab.py hardware_build_command re-stamps the same file on the
+# host before `docker run`. If you ever add another generated-in-tree file that
+# make can rebuild, stamp it in BOTH places or the read-only build breaks again.
 RUN touch /workspace/plaits/resources.cc
 RUN chmod -R a-w /workspace
 

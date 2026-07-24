@@ -132,6 +132,26 @@ class PackageTests(unittest.TestCase):
             self.assertIn("dynamic allocation", message)  # the category
             self.assertIn("BufferAllocator", message)     # the fix hint
 
+    def test_check_flags_non_portable_std_math(self) -> None:
+        # std::log2/std::exp2 compile on the host but not on the pinned ARM
+        # toolchain; check should catch that at validation, not at the hardware
+        # build, with the portable replacement.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source = Path(temp_dir) / "pitchy.cc"
+            source.write_text("float f() {\n  return std::log2(2.0f);\n}\n", encoding="utf-8")
+            with self.assertRaises(plaits_lab.PackageError) as ctx:
+                plaits_lab.validate_community_source([source])
+            message = str(ctx.exception)
+            self.assertIn("pitchy.cc:2", message)
+            self.assertIn("std::log2", message)
+            self.assertIn("ARM toolchain", message)
+            self.assertIn("std::log(", message)  # the suggested replacement
+        # A comment mentioning it must not trip the check (comments are stripped).
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source = Path(temp_dir) / "commented.cc"
+            source.write_text("// avoid std::log2 here\nfloat f() { return 0.0f; }\n", encoding="utf-8")
+            plaits_lab.validate_community_source([source])
+
     def test_audio_health_messages_are_actionable(self) -> None:
         import wave as wave_module
 
@@ -298,6 +318,21 @@ class PackageTests(unittest.TestCase):
         self.assertIn("ENV_PLUCKED", harness)
         worklet = (plaits_lab.SDK_DIR / "audition_worklet.js").read_text(encoding="utf-8")
         self.assertIn("'env'", worklet)
+
+    def test_live_audition_stereo_surface_is_wired(self) -> None:
+        # The audition must be able to drive parameters.stereo and read back
+        # stereo_capable(), so a contributor can hear a stereo engine's L/R render.
+        self.assertIn("_set_stereo", plaits_lab.WASM_EXPORTS)
+        self.assertIn("_stereo_capable", plaits_lab.WASM_EXPORTS)
+        harness = (plaits_lab.SDK_DIR / "wasm_audition.cc").read_text(encoding="utf-8")
+        self.assertIn("g_params.stereo", harness)
+        self.assertIn("stereo_capable", harness)
+        worklet = (plaits_lab.SDK_DIR / "audition_worklet.js").read_text(encoding="utf-8")
+        self.assertIn("'stereo'", worklet)
+        self.assertIn("stereoCapable", worklet)
+        # Stereo is a Monitor option that gates on stereo capability.
+        html = (plaits_lab.SDK_DIR / "dev_editor.html").read_text(encoding="utf-8")
+        self.assertIn("monitor-stereo-opt", html)
 
     def test_compile_wasm_without_emcc_reports_clearly(self) -> None:
         # Live audition is OPTIONAL: with no emcc on PATH the wasm build must fail

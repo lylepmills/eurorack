@@ -71,7 +71,7 @@
         <button class="primary" id="live-toggle">▶ Live audition</button>
         <button id="live-strike">Strike</button>
         <label>Envelope <select id="live-env"><option value="0">Sustained</option><option value="1">Plucked</option></select></label>
-        <label>Monitor <select id="live-monitor"><option value="0">Main only</option><option value="2">Main + Aux (L/R)</option><option value="1">Aux only</option></select></label>
+        <label>Monitor <select id="live-monitor"><option value="main">Main only</option><option value="aux">Aux only</option><option value="mainaux">Main + Aux (L/R)</option><option value="stereo" id="monitor-stereo-opt" disabled>Stereo (mono engine)</option></select></label>
         <button id="live-reload">Reload edits</button>
         <span class="sub" id="live-status">Real time — tweak any control and hear it change.</span>
       </div>
@@ -349,10 +349,14 @@ async function startLive() {
     if (audio.node) { try { audio.node.disconnect(); } catch (e) {} }
     const node = new AudioWorkletNode(audio.ctx, 'plaits-audition', {
       numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
-      processorOptions: { wasmModule: module, params: liveParamsMsg(), envMode: Number($('live-env').value) },
+      processorOptions: { wasmModule: module, params: liveParamsMsg(), envMode: Number($('live-env').value), stereo: monitorStereo() },
     });
-    node.port.onmessage = (e) => { if (e.data && e.data.type === 'error') liveStatus('engine error: ' + e.data.message, true); };
-    node.port.postMessage({ type: 'monitor', value: Number($('live-monitor').value) });
+    node.port.onmessage = (e) => {
+      if (!e.data) return;
+      if (e.data.type === 'error') liveStatus('engine error: ' + e.data.message, true);
+      else if (e.data.type === 'ready') applyStereoCapability(e.data.stereoCapable);
+    };
+    applyMonitor();
     node.port.postMessage({ type: 'env', value: Number($('live-env').value) });
     if (!audio.gain) { audio.gain = audio.ctx.createGain(); audio.gain.gain.value = 0.5; audio.gain.connect(audio.ctx.destination); }
     if (!audio.analyser) { audio.analyser = audio.ctx.createAnalyser(); audio.analyser.fftSize = 4096; }
@@ -379,8 +383,27 @@ $('live-strike').addEventListener('click', async () => {
   if (audio.running && audio.node) audio.node.port.postMessage({ type: 'trigger' });
 });
 $('live-env').addEventListener('change', (e) => { if (audio.running && audio.node) audio.node.port.postMessage({ type: 'env', value: Number(e.target.value) }); });
-$('live-monitor').addEventListener('change', (e) => { if (audio.running && audio.node) audio.node.port.postMessage({ type: 'monitor', value: Number(e.target.value) }); });
 $('live-reload').addEventListener('click', refreshPackage);
+
+// Monitor is one control now: 'stereo' renders in stereo (parameters.stereo) and
+// listens L/R; the others render mono and choose the routing.
+function monitorStereo() { return $('live-monitor').value === 'stereo' ? 1 : 0; }
+function monitorRoute() { const v = $('live-monitor').value; return v === 'aux' ? 1 : (v === 'main' ? 0 : 2); }
+function applyMonitor() {
+  if (!(audio.running && audio.node)) return;
+  audio.node.port.postMessage({ type: 'stereo', value: monitorStereo() });
+  audio.node.port.postMessage({ type: 'monitor', value: monitorRoute() });
+}
+$('live-monitor').addEventListener('change', applyMonitor);
+
+// The 'Stereo' monitor option is available only for an engine that renders a real
+// L/R pair; otherwise it's disabled and any stereo selection falls back to Main.
+function applyStereoCapability(capable) {
+  const opt = $('monitor-stereo-opt');
+  opt.disabled = !capable;
+  opt.textContent = capable ? 'Stereo' : 'Stereo (mono engine)';
+  if (!capable && $('live-monitor').value === 'stereo') { $('live-monitor').value = 'main'; applyMonitor(); }
+}
 
 refreshPackage();
 loadCatalog();

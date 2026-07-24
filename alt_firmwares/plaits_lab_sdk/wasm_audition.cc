@@ -77,12 +77,26 @@ void init() {
   g_params.accent = 0.8f;
   g_params.chord_set_option = 0;
   g_params.trigger = TRIGGER_UNPATCHED;
+  g_params.stereo = false;
   g_block_fill = 0;
   g_block_pos = 0;
   g_retrigger = false;
   g_block_already = false;
   g_env = 1.0f;
   g_env_mode = ENV_SUSTAINED;
+}
+
+// Request a true stereo render (OUT=left, AUX=right) — only meaningful for an
+// engine that reports stereo_capable() and honors parameters.stereo; a mono
+// engine ignores it. Lets the audition exercise the same stereo path the voice
+// drives on hardware when the palette turns stereo on for this model.
+void set_stereo(int on) { g_params.stereo = on ? true : false; }
+
+// 1 if the loaded engine overrides stereo_capable() to true (it renders a real
+// L/R pair when parameters.stereo is set); 0 for a mono engine. The audition UI
+// uses this to show whether stereo is available for this model.
+int stereo_capable() {
+  return (g_engine != nullptr && g_engine->stereo_capable()) ? 1 : 0;
 }
 
 // 0 = sustained (continuous drone), 1 = plucked (each strike opens the LPG and
