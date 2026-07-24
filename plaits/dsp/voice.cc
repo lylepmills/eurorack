@@ -149,6 +149,12 @@ void Voice::Render(
   if (engine_index != previous_engine_index_ || reload_user_data_) {
     UserData user_data;
     const uint8_t* data = user_data.ptr(engine_index);
+    // Number of valid packed patch bytes behind `data`. A runtime TIMBRE-loaded
+    // bank and every built-in factory bank are full 32-patch banks; only a
+    // recipe-baked custom bank may be shorter, in which case its length comes
+    // from the generated size table. LoadUserData sizes the engine's Harmonics
+    // quantizer to length / SYX_SIZE, so a short bank sweeps only its own patches.
+    size_t data_length = UserData::SIZE;
 #if PLAITS_HAS_USER_DATA_BANK
     if (!data && kEngineUserDataBank[engine_index] >= 0) {
       const int bank = kEngineUserDataBank[engine_index];
@@ -158,14 +164,18 @@ void Voice::Render(
       // for a bank no slot reaches. This build never NAMES fm_patches_table, so
       // --gc-sections drops the factory blobs of any customized-away / absent
       // banks. A runtime TIMBRE-loaded user bank (above) still takes precedence.
+      // kResolvedUserDataBankSize carries each bank's real byte length, so a
+      // short custom bank (< 32 patches) sizes the engine's Harmonics quantizer
+      // to its own count; stock banks resolve to the full 32-patch length.
       data = kResolvedUserDataBank[bank];
+      data_length = kResolvedUserDataBankSize[bank];
 #else
       // Stock / default firmware: fall through to the built-in factory banks.
       data = fm_patches_table[bank];
 #endif  // PLAITS_HAS_RESOLVED_USER_DATA_BANK
     }
 #endif  // PLAITS_HAS_USER_DATA_BANK
-    e->LoadUserData(data);
+    e->LoadUserData(data, data_length);
     e->Reset();
 
     out_post_processor_.Reset();

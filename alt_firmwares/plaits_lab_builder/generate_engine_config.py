@@ -172,14 +172,18 @@ def validate_chord_tables(value: Any) -> list[dict[str, Any]]:
 
 
 def _packed_bank_bytes(bank: Any) -> bytes:
-    """Validate one custom bank's 32 voices into 4096 packed bytes, checked
-    exactly (32 patches x 128 bytes, every byte a 7-bit value) since they are
-    baked verbatim into the firmware. Metadata never reaches the ARM build."""
+    """Validate one custom bank's voices into packed bytes, checked exactly
+    (128 bytes/patch, every byte a 7-bit value) since they are baked verbatim
+    into the firmware. Metadata never reaches the ARM build. A bank may hold
+    1..32 patches; a bank with fewer than 32 is a "short" bank and the recipe
+    must be schemaVersion 13 (enforced by the caller). The returned length is
+    len(voices) * 128, so the firmware's Harmonics quantizer sizes to the real
+    patch count and the baked array is only as large as the bank needs."""
     if not isinstance(bank, dict):
         raise ValueError("recipe contains an invalid custom bank")
     voices = bank.get("voices")
-    if not isinstance(voices, list) or len(voices) != PATCHES_PER_BANK:
-        raise ValueError("a custom bank must contain exactly 32 voices")
+    if not isinstance(voices, list) or not 1 <= len(voices) <= PATCHES_PER_BANK:
+        raise ValueError("a custom bank must contain between 1 and 32 voices")
     packed = bytearray()
     for voice in voices:
         if not isinstance(voice, dict):
@@ -244,8 +248,8 @@ def normalize_slots(slots: list[Any], schema_version: int) -> list[str | None]:
     normalized: list[str | None] = []
     for reference in slots:
         if reference is None:
-            if schema_version not in (7, 8, 9, 10, 11):
-                raise ValueError("empty slots require schemaVersion 7, 8, 9, 10, or 11")
+            if schema_version not in (7, 8, 9, 10, 11, 13):
+                raise ValueError("empty slots require schemaVersion 7, 8, 9, 10, 11, or 13")
             normalized.append(None)
             continue
         if isinstance(reference, str):
@@ -304,8 +308,8 @@ def validate_recipe(value: Any) -> BuildRecipe:
     if not isinstance(value, dict):
         raise ValueError("recipe must be a JSON object")
     schema_version = value.get("schemaVersion")
-    if schema_version not in (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12):
-        raise ValueError("recipe schemaVersion must be 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, or 12")
+    if schema_version not in (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13):
+        raise ValueError("recipe schemaVersion must be 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, or 13")
     if value.get("target") != "mutable-instruments-plaits":
         raise ValueError("unsupported firmware target")
     if value.get("firmware") != "rubato-plaits":
@@ -315,32 +319,42 @@ def validate_recipe(value: Any) -> BuildRecipe:
     slots = value.get("slots")
     if not isinstance(slots, list) or len(slots) not in (24, 32):
         raise ValueError("recipe must contain 24 slots, or 32 for a four-bank build")
-    if len(slots) == 32 and schema_version not in (6, 7, 8, 9, 10, 11, 12):
-        raise ValueError("32-slot recipes require schemaVersion 6, 7, 8, 9, 10, 11, or 12")
+    if len(slots) == 32 and schema_version not in (6, 7, 8, 9, 10, 11, 12, 13):
+        raise ValueError("32-slot recipes require schemaVersion 6, 7, 8, 9, 10, 11, 12, or 13")
     public_slots = normalize_slots(slots, schema_version)
     validate_bank_shape(public_slots, schema_version)
     user_data_banks: list[tuple[int, bytes]] = []   # v6 index-keyed
     slot_banks: list[tuple[int, bytes]] = []        # v12 slot-keyed
-    if schema_version in (5, 6, 7, 8, 9, 10, 11, 12):
+    if schema_version in (5, 6, 7, 8, 9, 10, 11, 12, 13):
         resources = value.get("resources")
         # v6 always carries the custom-FM-banks resource (its defining feature), and
         # v12 always carries per-slot banks (its defining feature — 24 or 32 slots).
         # v7-v11 mirror the editor: userDataBanks only for a 32-slot (fourth-bank)
         # recipe; a 24-slot v7-v11 carries chord tables only, like v5.
-        expect_user_data_banks = schema_version in (6, 12) \
+        expect_user_data_banks = schema_version in (6, 12, 13) \
             or (schema_version in (7, 8, 9, 10, 11) and len(slots) == 32)
         expected_resource_keys = {"chordTables", "userDataBanks"} if expect_user_data_banks else {"chordTables"}
         if not isinstance(resources, dict) or set(resources) != expected_resource_keys:
             raise ValueError("recipe must contain only supported firmware resources")
         chord_tables = validate_chord_tables(resources.get("chordTables"))
         if expect_user_data_banks:
-            if schema_version == 12:
+            if schema_version in (12, 13):
                 slot_banks = validate_user_data_banks_v12(resources.get("userDataBanks"), len(slots))
             else:
                 user_data_banks = validate_user_data_banks(resources.get("userDataBanks"))
+        # A bank with fewer than 32 patches (a "short" bank) needs the firmware's
+        # variable-length quantizer, advertised as schemaVersion 13. Older builders
+        # would bake it but keep the fixed 32-step dial, so gate it here.
+        short_banks = [
+            length for _, length in
+            ((slot, len(data)) for slot, data in (user_data_banks + slot_banks))
+            if length < PACKED_BANK_SIZE
+        ]
+        if short_banks and schema_version < 13:
+            raise ValueError("short (fewer than 32-patch) FM banks require schemaVersion 13")
     else:
         chord_tables = validate_chord_tables(DEFAULT_CHORD_TABLES)
-    configuration = value if schema_version in (4, 5, 6, 7, 8, 9, 10, 11, 12) else DEFAULT_CONFIGURATION
+    configuration = value if schema_version in (4, 5, 6, 7, 8, 9, 10, 11, 12, 13) else DEFAULT_CONFIGURATION
     preferences = configuration.get("preferences")
     options = configuration.get("initialOptions")
     if not isinstance(preferences, dict) or not isinstance(options, dict):
@@ -561,9 +575,14 @@ def render_config(recipe: BuildRecipe) -> str:
     # indices 0..2 (factory, possibly overridden) plus every allocated custom one.
     table_size = next_custom_index
     has_user_data_bank = any(item.user_data_bank >= 0 for item in selected)
+    # Each baked override array is only as long as its bank needs (n patches * 128
+    # bytes); a short bank costs proportionally less flash. voice.cc reads the
+    # matching length from kResolvedUserDataBankSize (below) so the engine sizes
+    # its Harmonics quantizer to that count.
+    size_by_index = {index: len(data) for index, data in override_arrays_all}
     override_arrays = "\n".join(
         "static const uint8_t kUserDataBankOverride_{index}[{size}] = {{ {body} }};".format(
-            index=index, size=PACKED_BANK_SIZE, body=", ".join(str(byte) for byte in data)
+            index=index, size=len(data), body=", ".join(str(byte) for byte in data)
         )
         for index, data in override_arrays_all
     )
@@ -586,12 +605,24 @@ def render_config(recipe: BuildRecipe) -> str:
             return f"syx_bank_{i}"
         return "NULL"
 
+    # Byte length behind each resolved pointer: a custom override is only as long
+    # as its patch count (a short bank < 4096); a live stock factory bank — and an
+    # unreferenced NULL slot, whose length is never read — is a full 32-patch bank.
+    # voice.cc reads this to size the six-op Harmonics quantizer per resident bank.
+    def _resolved_size(i: int) -> int:
+        return size_by_index.get(i, PACKED_BANK_SIZE)
+
     resolved_table = "static const uint8_t* const kResolvedUserDataBank[{count}] = {{ {pointers} }};".format(
         count=table_size,
         pointers=", ".join(_resolved_pointer(i) for i in range(table_size)),
     ) if has_user_data_bank else ""
+    resolved_size_table = "static const size_t kResolvedUserDataBankSize[{count}] = {{ {sizes} }};".format(
+        count=table_size,
+        sizes=", ".join(str(_resolved_size(i)) for i in range(table_size)),
+    ) if has_user_data_bank else ""
     user_data_bank_override_block = (
-        f"\n#if PLAITS_HAS_USER_DATA_BANK\n{override_arrays}\n{resolved_table}\n#endif\n"
+        f"\n#if PLAITS_HAS_USER_DATA_BANK\n{override_arrays}\n{resolved_table}\n"
+        f"{resolved_size_table}\n#endif\n"
         if has_user_data_bank else ""
     )
 

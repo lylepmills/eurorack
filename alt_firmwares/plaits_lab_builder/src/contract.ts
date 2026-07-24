@@ -35,10 +35,10 @@ export type NormalizedChordTable = {
 // individual features. Every guard below tests against one of these lists AND
 // renders its rejection message from the same list, so the accepted range and
 // the text a caller of plaits-api.rubato.audio reads can never drift apart.
-const supportedSchemaVersions: readonly number[] = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-const fourBankSchemaVersions: readonly number[] = [6, 7, 8, 9, 10, 11, 12];  // 32 slots
-const sparseSlotSchemaVersions: readonly number[] = [7, 8, 9, 10, 11, 12];   // empty slots
-const stereoEngineSchemaVersions: readonly number[] = [10, 11, 12];          // stereoEngines list
+const supportedSchemaVersions: readonly number[] = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
+const fourBankSchemaVersions: readonly number[] = [6, 7, 8, 9, 10, 11, 12, 13];  // 32 slots
+const sparseSlotSchemaVersions: readonly number[] = [7, 8, 9, 10, 11, 12, 13];   // empty slots
+const stereoEngineSchemaVersions: readonly number[] = [10, 11, 12, 13];          // stereoEngines list; v13 = short FM bank
 const sparseBankMinSchemaVersion = 11;                                       // gaps inside a bank
 
 // "2 through 12" for a long contiguous run, "10, 11, or 12" for a short list.
@@ -83,7 +83,7 @@ export type NormalizedSlotBank = {
 };
 
 export type NormalizedRecipe = {
-  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
+  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13;
   target: "mutable-instruments-plaits";
   firmware: "rubato-plaits";
   // A null entry is an empty slot (v7 short banks); filled slots are engine ids.
@@ -212,8 +212,8 @@ function normalizeBankDocument(value: unknown): NormalizedUserDataBank["bank"] {
       || !shortText(bank.name, 80) || !shortText(bank.author, 80) || !shortText(bank.license, 32)
       || !["Mutable Instruments", "Community", "Local"].includes(String(bank.origin))
       || !shortText(bank.description, 240)
-      || !Array.isArray(bank.voices) || bank.voices.length !== patchesPerBank) {
-    throw new ContractError("invalid_user_data_bank", "A custom bank contains unsupported metadata or is not 32 voices.");
+      || !Array.isArray(bank.voices) || bank.voices.length < 1 || bank.voices.length > patchesPerBank) {
+    throw new ContractError("invalid_user_data_bank", "A custom bank contains unsupported metadata or is not 1–32 voices.");
   }
   const voices: NormalizedBankVoice[] = bank.voices.map((raw) => {
     if (!raw || typeof raw !== "object") {
@@ -469,13 +469,15 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
   if (candidate.schemaVersion === 5 || candidate.schemaVersion === 6
       || candidate.schemaVersion === 7 || candidate.schemaVersion === 8
       || candidate.schemaVersion === 9 || candidate.schemaVersion === 10
-      || candidate.schemaVersion === 11 || candidate.schemaVersion === 12) {
+      || candidate.schemaVersion === 11 || candidate.schemaVersion === 12
+      || candidate.schemaVersion === 13) {
     const resources = candidate.resources;
     // v6 always carries index-keyed banks; v12 always carries per-slot banks (its
     // defining feature, 24 or 32 slots). v7-v11 mirror the editor: userDataBanks
     // only for a 32-slot (fourth-bank) recipe; a 24-slot v7-v11 carries chord
     // tables only, like v5.
     const expectsUserDataBanks = candidate.schemaVersion === 6 || candidate.schemaVersion === 12
+      || candidate.schemaVersion === 13
       || ((candidate.schemaVersion === 7 || candidate.schemaVersion === 8
         || candidate.schemaVersion === 9 || candidate.schemaVersion === 10
         || candidate.schemaVersion === 11) && candidate.slots.length === 32);
@@ -487,10 +489,19 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     chordTables = normalizeChordTables((resources as Record<string, unknown>).chordTables);
     if (expectsUserDataBanks) {
       const rawBanks = (resources as Record<string, unknown>).userDataBanks;
-      if (candidate.schemaVersion === 12) {
+      if (candidate.schemaVersion === 12 || candidate.schemaVersion === 13) {
         slotBanks = normalizeSlotBanks(rawBanks, candidate.slots.length);
       } else {
         userDataBanks = normalizeUserDataBanks(rawBanks);
+      }
+      // A bank with fewer than 32 patches needs the firmware's variable-length
+      // Harmonics quantizer, advertised as schema version 13. An older builder
+      // would bake it but keep the fixed 32-step dial, so gate it here — mirrors
+      // the container-side generator.
+      const banks = [...(userDataBanks ?? []), ...(slotBanks ?? [])];
+      if (banks.some((b) => b.bank.voices.length < patchesPerBank)
+          && Number(candidate.schemaVersion) < 13) {
+        throw new ContractError("unsupported_schema", "Short FM banks require recipe schema version 13.");
       }
     }
   } else {
@@ -499,21 +510,24 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
   const configuration = candidate.schemaVersion === 4 || candidate.schemaVersion === 5
       || candidate.schemaVersion === 6 || candidate.schemaVersion === 7 || candidate.schemaVersion === 8
       || candidate.schemaVersion === 9 || candidate.schemaVersion === 10 || candidate.schemaVersion === 11
-      || candidate.schemaVersion === 12
+      || candidate.schemaVersion === 12 || candidate.schemaVersion === 13
     ? normalizeConfiguration(candidate, chordTables)
     : defaultConfiguration;
   // Per-engine stereo (schema 10): a stereoEngines list names the engines built
   // with the stereo render path. Only valid when the aux option is stereo.
   const stereoEngines = normalizeStereoEngines(candidate, configuration.initialOptions.auxOutput);
   return {
-    // Newest first: per-slot custom banks need a v12 builder and dominate all
-    // (only v12 keys banks by slot). Then a sparse bank (a gap kept in place) needs
-    // v11; per-engine stereo (a stereoEngines list) needs v10; the global stereo
-    // aux mode needs v9; more than six chord tables needs the fast-blink LED tier
+    // Newest first: a per-slot custom bank with fewer than 32 patches (a "short"
+    // FM bank) needs the firmware's variable-length Harmonics quantizer, v13, and
+    // dominates all. Any other per-slot custom bank needs a v12 builder (only v12
+    // keys banks by slot). Then a sparse bank (a gap kept in place) needs v11;
+    // per-engine stereo (a stereoEngines list) needs v10; the global stereo aux
+    // mode needs v9; more than six chord tables needs the fast-blink LED tier
     // (v8); a short-bank recipe (a trailing empty slot) stays v7; a candidate that
     // carried v6 resources (even an empty custom-bank list, e.g. a 32-slot recipe)
     // stays v6; else v5.
-    schemaVersion: slotBanks !== undefined ? 12
+    schemaVersion: slotBanks !== undefined
+        ? (slotBanks.some((b) => b.bank.voices.length < patchesPerBank) ? 13 : 12)
       : hasSparseBank(slots) ? 11
       : stereoEngines !== undefined ? 10
       : configuration.initialOptions.auxOutput === "stereo" ? 9

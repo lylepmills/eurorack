@@ -202,13 +202,22 @@ test("version 6 carries a validated custom FM bank and hashes its packed bytes",
   changed.voices[5].packed[10] = 77;
   assert.notEqual(first, await computeBuildKey(normalizeRecipe(makeRecipe([{ index: 0, bank: changed }])), identity));
 
-  // Rejections: out-of-range byte, wrong voice count, duplicate index.
+  // Rejections: out-of-range byte, wrong packed length, duplicate index.
   const badByte = makeBank();
   badByte.voices[0].packed[0] = 200;
   assert.throws(() => normalizeRecipe(makeRecipe([{ index: 0, bank: badByte }])), /7-bit/);
+  const badPacked = makeBank();
+  badPacked.voices[0].packed = Array(127).fill(0);
+  assert.throws(() => normalizeRecipe(makeRecipe([{ index: 0, bank: badPacked }])), /7-bit/);
+  // A short (< 32-voice) bank is now well-formed, but needs a v13 builder; a v6
+  // recipe carrying one is rejected with the schema gate, not a shape error.
   const short = makeBank();
-  short.voices = short.voices.slice(0, 31);
-  assert.throws(() => normalizeRecipe(makeRecipe([{ index: 0, bank: short }])), /32 voices/);
+  short.voices = short.voices.slice(0, 4);
+  assert.throws(() => normalizeRecipe(makeRecipe([{ index: 0, bank: short }])), /schema version 13/);
+  // An empty (0-voice) bank is malformed at any schema.
+  const empty = makeBank();
+  empty.voices = [];
+  assert.throws(() => normalizeRecipe(makeRecipe([{ index: 0, bank: empty }])), /1–32 voices/);
   assert.throws(
     () => normalizeRecipe(makeRecipe([{ index: 0, bank: makeBank() }, { index: 0, bank: makeBank() }])),
     /distinct/,
@@ -236,6 +245,25 @@ test("version 6 carries a validated custom FM bank and hashes its packed bytes",
       resources: { chordTables: [publishedTable], userDataBanks: [{ slot: 99, bank: makeBank() }] },
     }),
     /distinct palette slot/,
+  );
+
+  // v13: a per-slot bank with fewer than 32 patches (a "short" FM bank) normalizes
+  // to schemaVersion 13 — the firmware then sizes its Harmonics dial to the real
+  // patch count. A full-length per-slot bank stays v12.
+  const shortSlotBank = makeBank();
+  shortSlotBank.voices = shortSlotBank.voices.slice(0, 5);
+  const v13Recipe = {
+    ...v12Recipe,
+    schemaVersion: 13,
+    resources: { chordTables: [publishedTable], userDataBanks: [{ slot: 0, bank: shortSlotBank }] },
+  };
+  const v13 = normalizeRecipe(v13Recipe);
+  assert.equal(v13.schemaVersion, 13);
+  assert.equal(v13.resources.userDataBanks![0].bank.voices.length, 5);
+  // The same short bank declared as v12 is rejected (needs the v13 quantizer).
+  assert.throws(
+    () => normalizeRecipe({ ...v13Recipe, schemaVersion: 12 }),
+    /schema version 13/,
   );
 });
 
@@ -564,7 +592,7 @@ test("per-engine stereo (stereoEngines) requires and normalizes to v10", async (
 // must name the range the guard actually accepts — it once still said "2
 // through 11" after v12 (per-slot custom FM banks) had been accepted.
 test("the unsupported-schema message names the range the guard accepts", () => {
-  const highest = 12;
+  const highest = 13;
   // Reports the schema code a version is rejected with, or null if the version
   // itself was accepted (a later invalid_slots / unapproved_package complaint
   // about the fixture's shape means the version passed this guard).

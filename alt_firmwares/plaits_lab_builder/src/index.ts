@@ -569,7 +569,7 @@ export default {
       if (request.method === "GET" && url.pathname === "/v1/catalog") {
         response = json({
           schemaVersion: 2,
-          recipeSchemaVersion: 12,
+          recipeSchemaVersion: 13,
           approvedEngineIds,
           chordTables: approvedChordTables,
           // userDataBanks: v12 keys banks per slot, so the ceiling is the slot

@@ -289,10 +289,56 @@ class GenerateEngineConfigTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "distinct palette slot"):
             validate_recipe(recipe)
 
+    def short_bank_document(self, count: int, first_byte: int = 0) -> dict:
+        doc = self.bank_document(first_byte=first_byte)
+        doc["voices"] = doc["voices"][:count]
+        return doc
+
+    def v13_recipe(self, slots: list, user_data_banks: list[dict]) -> dict:
+        recipe = self.v12_recipe(slots, user_data_banks)
+        recipe["schemaVersion"] = 13
+        return recipe
+
+    def test_v13_short_bank_emits_its_real_size(self) -> None:
+        slots = ["dx7-bank-a"] + ["virtual-analog"] * 23
+        recipe = self.v13_recipe(
+            slots, [{"slot": 0, "bank": self.short_bank_document(4, first_byte=9)}])
+        config = render_config(validate_recipe(recipe))
+        # 4 patches * 128 bytes = a 512-byte array, and a matching size-table entry
+        # so voice.cc sizes the Harmonics quantizer to 4 patches.
+        self.assertIn("static const uint8_t kUserDataBankOverride_3[512] = { 9, 0,", config)
+        self.assertIn(
+            "static const size_t kResolvedUserDataBankSize[4] = { 4096, 4096, 4096, 512 };",
+            config)
+
+    def test_v13_full_bank_keeps_full_size(self) -> None:
+        slots = ["dx7-bank-a"] + ["virtual-analog"] * 23
+        recipe = self.v13_recipe(
+            slots, [{"slot": 0, "bank": self.bank_document(first_byte=5)}])
+        config = render_config(validate_recipe(recipe))
+        self.assertIn("static const uint8_t kUserDataBankOverride_3[4096] = { 5, 0,", config)
+        self.assertIn(
+            "static const size_t kResolvedUserDataBankSize[4] = { 4096, 4096, 4096, 4096 };",
+            config)
+
+    def test_short_bank_rejected_below_v13(self) -> None:
+        slots = ["dx7-bank-a"] + ["virtual-analog"] * 23
+        recipe = self.v12_recipe(
+            slots, [{"slot": 0, "bank": self.short_bank_document(4)}])
+        with self.assertRaisesRegex(ValueError, "schemaVersion 13"):
+            validate_recipe(recipe)
+
+    def test_empty_bank_is_rejected(self) -> None:
+        slots = ["dx7-bank-a"] + ["virtual-analog"] * 23
+        recipe = self.v13_recipe(
+            slots, [{"slot": 0, "bank": self.short_bank_document(0)}])
+        with self.assertRaisesRegex(ValueError, "between 1 and 32"):
+            validate_recipe(recipe)
+
     def test_malformed_custom_bank_is_rejected(self) -> None:
         slots = self.load("mixed_recipe.json")["slots"]
         short = self.bank_document()
-        short["voices"] = short["voices"][:31]
+        short["voices"][0]["packed"] = [0] * 127  # wrong packed length
         with self.assertRaises(ValueError):
             validate_recipe(self.v6_recipe(slots, [{"index": 0, "bank": short}]))
         out_of_range = self.bank_document(first_byte=200)  # >127
