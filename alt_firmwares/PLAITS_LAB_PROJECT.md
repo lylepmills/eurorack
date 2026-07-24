@@ -294,13 +294,29 @@ A bank may hold FEWER than eight engines. Shipped end-to-end and DEPLOYED
 2026-07-21 (source `7b62cbd851d4` / image `rev-7b62cbd851d4`).
 
 - **Recipe: schema v7.** Empty slots are `null` entries; `slots` stays 24 or 32
-  physically, with each bank's engines contiguous at the front (empties trail).
-  Full 24/32 palettes still emit v5/v6, byte-identical. The Worker contract
+  physically. On a v7 short-bank recipe each bank's engines are contiguous at the
+  front (empties trail); a mid-bank gap needs v11 (see the sparse-banks addendum
+  below). Full 24/32 palettes still emit v5/v6, byte-identical. The Worker contract
   accepts v7 (keeps `schemaVersion: 7` when empties are present so the compiler
   applies short-bank rules) and validates bank shape; the generator emits
   `PLAITS_BANK_SIZES` in the internal amber/green/red(/orange) order — dropping
   trailing empty banks, keeping interior/leading empties as `0` so bank->LED
   color stays aligned — and `PLAITS_ENGINE_COUNT` is the post-compaction total.
+- **Sparse banks — schema v11, SHIPPED + DEPLOYED 2026-07-24** (source
+  `c961b1d86063` / image `rev-c961b1d86063`, hardware-audited). A gap kept BEFORE
+  a filled slot in the same bank (not just trailing empties) is allowed and lifts
+  the recipe to v11; the module holds each engine on its own physical LED row
+  instead of compacting the bank to the front, so deleting a mid-bank model keeps
+  the others on their LEDs and select-button positions. **Navigation stays
+  compact** — the select button cycles the bank's real engines and MODEL CV maps
+  across them; only the LED display changes. The generator emits a
+  `PLAITS_ENGINE_ROWS` table (physical row per compact engine); `ui.cc` uses
+  `kEngineRows[engine]` for the lit LED instead of `RowOfEngine`, while
+  `bank_navigation.h` is untouched. `build_config.h` defaults `PLAITS_ENGINE_ROWS`
+  to the identity mapping, so default/stock builds stay byte-identical. Validator
+  (`validate_bank_shape` / `contract.ts`) gates a sparse layout on v11; `/v1/catalog`
+  advertises `recipeSchemaVersion` 11. No engine DSP changed, so engine digests are
+  unmoved — no catalog re-sync (website pin stays at the per-engine-stereo rev).
 - **Firmware: per-bank-memory navigation ("design B").** `plaits/bank_navigation.h`
   (pure, host-tested in `plaits/test/`) — within-bank stepping wraps at the
   bank's real size; change-bank lands on the destination bank's LAST-SELECTED row

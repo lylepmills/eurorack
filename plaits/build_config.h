@@ -22,9 +22,11 @@
 // Per-bank engine counts, in the module's display order (green, red, amber, and
 // optionally orange). One to four banks; each holds 0..8 engines. A bank with
 // fewer than eight is a "short bank" whose select-button cycle wraps at its real
-// size (see bank_navigation.h). The values must sum to PLAITS_ENGINE_COUNT and
-// none may exceed eight — both checked with static_assert in ui.cc. The default
-// is three full banks of eight (24), byte-identical to before.
+// size (see bank_navigation.h). This is a COUNT per bank — where a bank's gaps
+// sit (a "sparse bank") is carried separately by PLAITS_ENGINE_ROWS below. The
+// values must sum to PLAITS_ENGINE_COUNT and none may exceed eight — both checked
+// with static_assert in ui.cc. The default is three full banks of eight (24),
+// byte-identical to before.
 #ifndef PLAITS_BANK_SIZES
 #define PLAITS_BANK_SIZES { 8, 8, 8 }
 #endif

@@ -256,7 +256,8 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         for bank_slot in range(8):
             entry = document["slots"][bank_index * 8 + bank_slot]
             engine = entry["engine"]
-            # Empty slots (v7 short banks) have no engine — show a muted dash.
+            # Empty slots (v7 short banks or a v11 sparse-bank gap) have no
+            # engine — show a muted dash at the slot's true position.
             name_para = (
                 Paragraph(_escape(engine["name"]), bank_model_style)
                 if engine is not None
