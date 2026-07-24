@@ -80,6 +80,16 @@ scenario, and reject invalid duration, silent output, or excessive DC. The
 bundle contains the exact source, deterministic preview WAVs, content digest,
 and per-scenario peak/RMS/DC/silence/realtime metrics.
 
+`check` compiles with your **host** compiler, which is more permissive than the
+pinned hardware toolchain (e.g. it has `std::log2`/`std::exp2`; the ARM newlib
+does not). Add `--arm` to also compile your engine against the real ARM 4.8.3
+toolchain — via a local toolchain, or the builder Docker image if present — and
+catch hardware-only errors before the full hardware build:
+
+```sh
+$SDK check ./$PKG/my-engine --full --arm
+```
+
 The contributor center uploads that bundle as a private draft. Publication is
 an explicit sequence: `draft → in-review → checks-passed → hardware-beta →
 published`. Maintainers can reject at any review gate. Package IDs and semantic

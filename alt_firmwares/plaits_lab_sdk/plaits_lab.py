@@ -843,6 +843,11 @@ def check_command(args: argparse.Namespace) -> int:
         print("✓ host compilation")
         if args.full:
             print("✓ sanitizer execution and audio health")
+        if args.full and not args.arm:
+            print("  tip: add --arm to also compile against the hardware (ARM) toolchain")
+    if args.arm:
+        arm_compile_check(package, args)
+        print("✓ ARM (hardware-toolchain) compilation")
     return 0
 
 
@@ -1071,6 +1076,77 @@ static const uint32_t kChiptuneEngineMask = 0x{chiptune_mask:08x};
 
 #endif  // PLAITS_DSP_ENGINE_CONFIG_H_
 """
+
+
+def arm_compile_check(package: dict[str, Any], args: argparse.Namespace) -> None:
+    """Compile the package's own source against the pinned ARM (hardware) toolchain
+    to catch errors the host `check` compile can't — the host compiler has C99
+    std:: math (std::log2/exp2, ...) that the ARM newlib doesn't, template quirks
+    differ, etc. Objects only (no link, no firmware image), so it's fast. Uses a
+    local ARM toolchain if present, otherwise the builder Docker image."""
+    if package["manifest"]["packageType"] != "community":
+        return  # reference packages already build portably on the ARM toolchain
+    toolchain = Path(args.toolchain).resolve()
+    compiler = toolchain / "bin/arm-none-eabi-g++"
+    if compiler.is_file():
+        _arm_compile_native(package, args, toolchain)
+        return
+    if args.native:
+        raise PackageError(
+            f"ARM toolchain not found at {compiler}; run inside the Plaits devcontainer or pass --toolchain"
+        )
+    docker = shutil.which("docker")
+    if not docker:
+        raise PackageError(
+            "check --arm needs the ARM 4.8.3 toolchain or Docker + the builder image. "
+            "Install Docker Desktop (https://docs.docker.com/get-docker/) and build the image "
+            "once (see the hardware-build step), or pass --toolchain to a local toolchain."
+        )
+    # Same read-only-mount resources.cc stamp as the hardware build (see there).
+    resources_cc = package["repo_root"] / "plaits" / "resources.cc"
+    if resources_cc.is_file():
+        try:
+            resources_cc.touch()
+        except OSError:
+            pass
+    command = [
+        docker, "run", "--rm", "--platform", "linux/amd64", "--entrypoint", "python3",
+        "-v", f"{package['repo_root']}:/workspace:ro",
+        "-v", f"{package['directory']}:/contributor:ro",
+        "-w", "/workspace", args.docker_image,
+        "alt_firmwares/plaits_lab_sdk/plaits_lab.py", "check", "/contributor",
+        "--arm", "--native", "--no-compile", "--toolchain", args.toolchain,
+    ]
+    result = subprocess.run(command, text=True, capture_output=True, check=False)
+    if result.returncode:
+        details = (result.stdout + result.stderr)[-8000:]
+        raise PackageError(
+            f"ARM compilation failed. If the {args.docker_image} image is missing, build it "
+            f"once first (see the hardware-build step):\n"
+            f"  git submodule update --init stmlib stm_audio_bootloader\n"
+            f"  docker build --platform linux/amd64 -t {args.docker_image} -f Dockerfile.plaits-builder .\n"
+            f"{details}"
+        )
+
+
+def _arm_compile_native(package: dict[str, Any], args: argparse.Namespace, toolchain: Path) -> None:
+    with tempfile.TemporaryDirectory(prefix="plaits-lab-armcheck-") as temp_dir:
+        build_root = Path(temp_dir) / "build"
+        config = Path(temp_dir) / "engine_config.h"
+        config.write_text(render_local_hardware_config(package), encoding="utf-8")
+        cppflags = f"-fno-exceptions -fno-rtti -I{package['source_root']} -include {config}"
+        # Build only the package's OWN object(s): the makefile's $(BUILD_DIR)%.o
+        # rule resolves each source through VPATH=$(PACKAGES) (which includes
+        # PLAITS_EXTRA_PACKAGES). No link, no other firmware objects.
+        objects = [str(build_root / "plaits" / f"{source.stem}.o") for source in package["source_files"]]
+        command = [
+            "make", "-f", "plaits/makefile", f"BUILD_ROOT={build_root}/",
+            f"TOOLCHAIN_PATH={toolchain}/", f"PLAITS_EXTRA_PACKAGES={package['source_root']}",
+            f"CPPFLAGS={cppflags}", "-j2", *objects,
+        ]
+        result = subprocess.run(command, cwd=package["repo_root"], text=True, capture_output=True, check=False)
+        if result.returncode:
+            raise PackageError(f"ARM compilation failed\n{(result.stdout + result.stderr)[-8000:]}")
 
 
 def hardware_build_command(args: argparse.Namespace) -> int:
@@ -1439,6 +1515,11 @@ def build_parser() -> argparse.ArgumentParser:
     check_parser.add_argument("--compiler")
     check_parser.add_argument("--no-compile", action="store_true")
     check_parser.add_argument("--full", action="store_true", help="run sanitizers and every audio scenario")
+    check_parser.add_argument("--arm", action="store_true",
+                              help="also compile against the pinned ARM (hardware) toolchain")
+    check_parser.add_argument("--toolchain", default="/usr/local/arm-4.8.3")
+    check_parser.add_argument("--docker-image", default="plaits-lab-builder:local")
+    check_parser.add_argument("--native", action="store_true", help=argparse.SUPPRESS)
     check_parser.set_defaults(handler=check_command)
 
     render_parser = subparsers.add_parser("render", help="render a declared preview scenario")

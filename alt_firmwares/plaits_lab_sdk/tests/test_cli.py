@@ -152,6 +152,39 @@ class PackageTests(unittest.TestCase):
             source.write_text("// avoid std::log2 here\nfloat f() { return 0.0f; }\n", encoding="utf-8")
             plaits_lab.validate_community_source([source])
 
+    def test_check_arm_skips_reference_packages(self) -> None:
+        # Reference packages already build on the ARM toolchain; --arm is a no-op
+        # for them (no toolchain/docker needed, no error).
+        package = plaits_lab.builtin_package("chords")
+        plaits_lab.arm_compile_check(
+            package, SimpleNamespace(toolchain="/nonexistent", docker_image="x", native=False))
+
+    def test_check_arm_dispatches_to_builder_container(self) -> None:
+        # With no local ARM toolchain, --arm compiles the package via the builder
+        # image — a compile-only 'check', not a full firmware build.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            pkg_dir = Path(temp_dir) / "armed"
+            with redirect_stdout(io.StringIO()):
+                plaits_lab.init_command(SimpleNamespace(
+                    output=str(pkg_dir), from_engine="blank", author="T",
+                    package_id="test-author/armed", slug="armed", name="Armed"))
+            package = plaits_lab.load_package(str(pkg_dir))
+            args = SimpleNamespace(toolchain="/nonexistent-arm", docker_image="img:test", native=False)
+            captured: dict[str, list[str]] = {}
+            real_run, real_which = plaits_lab.subprocess.run, plaits_lab.shutil.which
+            plaits_lab.shutil.which = lambda name: "/usr/bin/docker" if name == "docker" else real_which(name)
+            plaits_lab.subprocess.run = lambda cmd, **kw: (
+                captured.__setitem__("cmd", cmd) or SimpleNamespace(returncode=0, stdout="", stderr=""))
+            try:
+                plaits_lab.arm_compile_check(package, args)
+            finally:
+                plaits_lab.subprocess.run, plaits_lab.shutil.which = real_run, real_which
+            joined = " ".join(captured["cmd"])
+            self.assertIn("img:test", joined)                   # the builder image
+            self.assertIn("check /contributor --arm", joined)   # compile-only check, not `build`
+            self.assertIn("--native", joined)                   # runs the compile inside the container
+            self.assertNotIn("--hardware", joined)              # NOT a full firmware build
+
     def test_audio_health_messages_are_actionable(self) -> None:
         import wave as wave_module
 
