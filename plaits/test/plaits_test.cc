@@ -1739,7 +1739,9 @@ void PrepareDistinctSixOpBank(uint8_t* bank, int count) {
       }
       op_data[12] = 7 << 3;
       // Carrier output level, spread across patches so each is distinct and all
-      // stay clearly audible (99, 91, 83, ... never near-silent).
+      // stay clearly audible (99, 91, 83, ... never near-silent). Spacing 8
+      // clears the nonlinear DX7 level->loudness curve near the top so adjacent
+      // patches resolve as separate plateaus.
       op_data[14] = static_cast<uint8_t>(99 - 8 * patch);
       op_data[15] = 1 << 1;
     }
@@ -1850,6 +1852,160 @@ void ValidateSixOpShortBank() {
         num_plateaus,
         kCount);
     abort();
+  }
+}
+
+// A region bank: patches [0, split) carry `low` carrier level, [split, count)
+// carry `high`, and the 32-slot tail is zeroed (silent). This lets a switch test
+// read the resident bank's SIZE off the audio: whether the top of the dial is
+// silent (past the real patches) or loud (reaching a high-index loud patch).
+void PrepareRegionSixOpBank(
+    uint8_t* bank, int count, int split, uint8_t low, uint8_t high) {
+  memset(bank, 0, UserData::SIZE);
+  for (int patch = 0; patch < count; ++patch) {
+    uint8_t* data = bank + patch * fm::Patch::SYX_SIZE;
+    const uint8_t level = patch < split ? low : high;
+    for (int op = 0; op < 6; ++op) {
+      uint8_t* op_data = data + op * 17;
+      for (int i = 0; i < 8; ++i) {
+        op_data[i] = 99;
+      }
+      op_data[12] = 7 << 3;
+      op_data[14] = level;
+      op_data[15] = 1 << 1;
+    }
+    for (int i = 0; i < 4; ++i) {
+      data[102 + i] = 99;
+      data[106 + i] = 50;
+    }
+    data[110] = 0;
+    data[111] = 3 | (1 << 3);
+    data[117] = 24;
+  }
+}
+
+// Sweep the Harmonics dial across an ALREADY-LOADED engine; report the quietest
+// and loudest position. No Init/Reset here — the caller owns the engine, which
+// is what lets this probe a bank SWITCH on one shared instance.
+void SixOpSweepMinMax(SixOpEngine* e, double* out_min, double* out_max) {
+  const int kSteps = 40;
+  double min_sig = 1e30, max_sig = 0.0;
+  for (int step = 0; step < kSteps; ++step) {
+    EngineParameters p;
+    p.note = 48.0f;
+    p.accent = 0.8f;
+    p.chord_set_option = 0;
+    p.harmonics = (static_cast<float>(step) + 0.5f) / kSteps;
+    p.timbre = 0.5f;
+    p.morph = 0.5f;
+    p.macro = 0.5f;
+    double sig = 0.0;
+    for (size_t block = 0; block < 128; ++block) {
+      float out[kAudioBlockSize];
+      float aux[kAudioBlockSize];
+      p.trigger = TRIGGER_UNPATCHED;
+      bool already_enveloped;
+      e->Render(p, out, aux, kAudioBlockSize, &already_enveloped);
+      for (size_t i = 0; i < kAudioBlockSize; ++i) {
+        if (!isfinite(out[i]) || fabsf(out[i]) > 16.0f) {
+          abort();
+        }
+        sig += fabsf(out[i]);
+      }
+    }
+    if (sig < min_sig) min_sig = sig;
+    if (sig > max_sig) max_sig = sig;
+  }
+  *out_min = min_sig;
+  *out_max = max_sig;
+}
+
+// The factory DX7 banks are a SINGLE SixOpEngine instance RegisterInstance'd at
+// three slots; voice.cc swaps the resident bank (LoadUserData + Reset) when you
+// navigate between those slots. So banks of different lengths never coexist in
+// the engine — but the SHARED patch-index quantizer must re-size on EVERY switch.
+// Drive that switch on one instance and read the resident bank's size off the
+// audio. Two banks, chosen so a mis-size is unambiguous:
+//   SMALL: 6 patches, all LOUD, slots 6..31 silent.
+//   LARGE: 16 patches; low indices QUIET, high indices (>=6) LOUD.
+// Facts that only hold if the quantizer re-sizes on each switch:
+//   - after switching to SMALL: no Harmonics position is silent (a stale larger
+//     quantizer would dip into SMALL's empty 6..N tail -> min ~ 0).
+//   - after switching to LARGE: the dial reaches a LOUD high-index patch (a stale
+//     smaller quantizer would only reach LARGE's quiet low indices -> max stays
+//     quiet).
+// Reset() after each load mirrors voice.cc's post-load Reset on a slot switch.
+void ValidateSixOpBankSwitch() {
+  static uint8_t bank_small[UserData::SIZE];
+  static uint8_t bank_large[UserData::SIZE];
+  const int kSmall = 6;
+  const int kLarge = 16;
+  PrepareRegionSixOpBank(bank_small, kSmall, kSmall, 99, 99);   // all loud
+  PrepareRegionSixOpBank(bank_large, kLarge, kSmall, 20, 99);   // low quiet, high loud
+
+  // Loud vs quiet render signatures, measured on fresh instances, to derive
+  // thresholds the switch sequence must satisfy.
+  double dummy_min, loud_max, quiet_min, quiet_max;
+  {
+    memset(ram_block, 0, sizeof(ram_block));
+    BufferAllocator a(ram_block, sizeof(ram_block));
+    static SixOpEngine ref;
+    ref.Init(&a);
+    ref.LoadUserData(bank_small, kSmall * fm::Patch::SYX_SIZE);
+    ref.Reset();
+    SixOpSweepMinMax(&ref, &dummy_min, &loud_max);          // all-loud reference
+  }
+  {
+    memset(ram_block, 0, sizeof(ram_block));
+    BufferAllocator a(ram_block, sizeof(ram_block));
+    static SixOpEngine ref;
+    ref.Init(&a);
+    // A "quiet-only" bank = LARGE's low region, to bound what a stuck-small
+    // quantizer could ever reach.
+    static uint8_t quiet[UserData::SIZE];
+    PrepareRegionSixOpBank(quiet, kSmall, kSmall, 20, 20);
+    ref.LoadUserData(quiet, kSmall * fm::Patch::SYX_SIZE);
+    ref.Reset();
+    SixOpSweepMinMax(&ref, &quiet_min, &quiet_max);
+  }
+  // Sanity: loud is clearly louder than quiet, with a wide margin to test in.
+  const double loud_floor = 0.5 * (quiet_max + loud_max);
+
+  memset(ram_block, 0, sizeof(ram_block));
+  BufferAllocator allocator(ram_block, sizeof(ram_block));
+  static SixOpEngine e;
+  e.Init(&allocator);
+
+  struct { const uint8_t* bank; int count; bool loud_top; } seq[] = {
+    { bank_small, kSmall, false },  // fresh
+    { bank_large, kLarge, true  },  // grow  (6 -> 16): must reach a loud high patch
+    { bank_small, kSmall, false },  // shrink (16 -> 6): must have no silent zone
+    { bank_large, kLarge, true  },  // grow again
+  };
+
+  for (int s = 0; s < 4; ++s) {
+    e.LoadUserData(seq[s].bank, seq[s].count * fm::Patch::SYX_SIZE);
+    e.Reset();  // mirror voice.cc's post-load Reset on a slot switch
+    double min_sig = 0.0, max_sig = 0.0;
+    SixOpSweepMinMax(&e, &min_sig, &max_sig);
+
+    // Shrink integrity: the resident bank has no silent tail in range.
+    if (min_sig < quiet_min * 0.5) {
+      fprintf(stderr,
+          "Bank switch step %d (%d patches): a Harmonics position is silent "
+          "(min=%f) — quantizer did not shrink to the resident bank\n",
+          s, seq[s].count, min_sig);
+      abort();
+    }
+    // Grow integrity: switching up must reach a loud high-index patch that a
+    // stuck-smaller quantizer could never address.
+    if (seq[s].loud_top && max_sig < loud_floor) {
+      fprintf(stderr,
+          "Bank switch step %d (%d patches): dial never reached a loud "
+          "high-index patch (max=%f < %f) — quantizer did not re-grow\n",
+          s, seq[s].count, max_sig, loud_floor);
+      abort();
+    }
   }
 }
 
@@ -1980,6 +2136,8 @@ void TestExperimentalEngines() {
   ValidateSixOpMacroResponse();
   printf("  Six-op FM short bank\n");
   ValidateSixOpShortBank();
+  printf("  Six-op FM bank switch\n");
+  ValidateSixOpBankSwitch();
   printf("  Wave Terrain\n");
   ValidateStockMacroResponse<WaveTerrainEngine>("Wave Terrain");
   printf("  Chiptune\n");
