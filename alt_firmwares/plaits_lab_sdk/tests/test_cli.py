@@ -310,8 +310,9 @@ class PackageTests(unittest.TestCase):
         worklet = (plaits_lab.SDK_DIR / "audition_worklet.js").read_text(encoding="utf-8")
         self.assertIn("'stereo'", worklet)
         self.assertIn("stereoCapable", worklet)
+        # Stereo is a Monitor option that gates on stereo capability.
         html = (plaits_lab.SDK_DIR / "dev_editor.html").read_text(encoding="utf-8")
-        self.assertIn("live-stereo", html)
+        self.assertIn("monitor-stereo-opt", html)
 
     def test_compile_wasm_without_emcc_reports_clearly(self) -> None:
         # Live audition is OPTIONAL: with no emcc on PATH the wasm build must fail
