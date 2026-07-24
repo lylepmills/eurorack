@@ -98,8 +98,10 @@ Hosted firmware builds never compile draft source; they accept only published
 package version/digest references from the catalog.
 
 Unlike audition and `check` (which need only `stmlib`), the ARM firmware build
-also needs the `stm_audio_bootloader` submodule, and — without a local toolchain
-— a one-time builder image. Set both up once:
+also needs the `stm_audio_bootloader` submodule, and — without a local ARM 4.8.3
+toolchain — **Docker** plus a one-time builder image. Install
+[Docker](https://docs.docker.com/get-docker/) if you don't have it, then set both
+up once:
 
 ```sh
 git submodule update --init stmlib stm_audio_bootloader

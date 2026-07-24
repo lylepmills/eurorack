@@ -1066,7 +1066,11 @@ def hardware_build_command(args: argparse.Namespace) -> int:
         if not args.native:
             docker = shutil.which("docker")
             if not docker:
-                raise PackageError("ARM toolchain and Docker are both unavailable")
+                raise PackageError(
+                    "the hardware build needs either the ARM 4.8.3 toolchain or Docker, "
+                    "and neither was found. Install Docker Desktop "
+                    "(https://docs.docker.com/get-docker/) — or the ARM toolchain — then re-run."
+                )
             output = Path(args.output).resolve()
             output.parent.mkdir(parents=True, exist_ok=True)
             command = [
