@@ -454,7 +454,7 @@ void StringSynthPart::Process(
   
   copy(&in[0], &in[size], &aux[0]);
   copy(&in[0], &in[size], &out[0]);
-  int32_t chord_size = min(kStringSynthVoices / polyphony_, kMaxChordSize);
+  int32_t chord_size = min(12 / polyphony_, kMaxChordSize);
   for (int32_t group = 0; group < polyphony_; ++group) {
     ChordNote notes[kMaxChordSize];
     float harmonics[kNumHarmonics * 2];
@@ -480,16 +480,22 @@ void StringSynthPart::Process(
       notes[i].amplitude = n >= 0.0f && n <= 17.0f ? 1.0f : 0.7f;
     }
 
-    for (int32_t chord_note = 0; chord_note < chord_size; ++chord_note) {
-      float note = 0.0f;
-      note += group_[group].tonic;
-      note += performance_state.tonic;
-      note += performance_state.fm;
-      note += notes[chord_note].note;
-      
+    for (int32_t chord_note = 0; chord_note <= chord_size; ++chord_note) {
+      // Render an extra root voice in the alt easter egg mode only
+      if ((chord_note == chord_size) && (performance_state.mode != MODE_EASTER_EGG_ROOT)) {
+        continue;
+      }
+
+      float note = group_[group].tonic + performance_state.tonic + performance_state.fm;
+      float amplitude = 1.0f;
+      if (chord_note < chord_size) {
+        note += notes[chord_note].note;
+        amplitude = notes[chord_note].amplitude;
+      }
+
       float amplitudes[kNumHarmonics * 2];
       for (int32_t i = 0; i < kNumHarmonics * 2; ++i) {
-        amplitudes[i] = notes[chord_note].amplitude * harmonics[i];
+        amplitudes[i] = amplitude * harmonics[i];
       }
       
       // Fold truncated harmonics.
@@ -502,11 +508,15 @@ void StringSynthPart::Process(
       }
 
       float frequency = SemitonesToRatio(note - 69.0f) * a3;
-      voice_[group * chord_size + chord_note].Render(
+      float* render_output = (group + chord_note) & 1 ? out : aux;
+      if (performance_state.mode == MODE_EASTER_EGG_ROOT) {
+        render_output = (chord_note == chord_size) ? aux : out;
+      }
+      voice_[group * (chord_size + 1) + chord_note].Render(
           frequency,
           amplitudes,
           num_harmonics,
-          (group + chord_note) & 1 ? out : aux,
+          render_output,
           size);
     }
   }

@@ -293,7 +293,7 @@ int32_t CvScaler::NumChords(PerformanceState* performance_state, uint8_t polypho
     case CHORD_TABLE_JON:
       return kNumJonChords;
     case CHORD_TABLE_JOE:
-      if (performance_state->mode == MODE_EASTER_EGG) {
+      if (performance_state->mode >= MODE_EASTER_EGG) {
         return kNumJoeEasterEggChords;
       } else if (polyphony == 1) {
         return 15;
