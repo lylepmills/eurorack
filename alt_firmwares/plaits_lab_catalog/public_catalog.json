@@ -32,7 +32,7 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:36fe3b59b8fd3ead50dc481e5d392eaa47e2018ee6aa289be29b6021c9967ece",
+      "digest": "sha256:b79d2b437212a40f8dabc22cf27d7644d4e21bff3791f2ec851f6d7fca9a649d",
       "documentationDigest": "sha256:f1e5b8101e33dce12c7d37bb7ed1f5ec3e12fe1b0d28f8b60e898502f2a1f220",
       "manual": {
         "controls": {
@@ -76,7 +76,7 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:454ca0af48b4c2a1644ed07e06cafb27a063c4e59d8741e1331da379257d07b4",
+      "digest": "sha256:6d9dbb9fc38c3f2408458733ea791034f21c48fbddf00a501b36bb2615382757",
       "documentationDigest": "sha256:7e3e69745c59659eb13caad7ecb43291608b75ca83e7ca7a0b9b9f4cdf92a2ed",
       "manual": {
         "controls": {
@@ -120,7 +120,7 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:59392a024b04f02624c5761777dc18ac2da500faa68644206ffe4b316bf80819",
+      "digest": "sha256:4ef78db6a55466cfe4c2a8f68044b7f09d0a14d820194e01a2cb69d87ae2bd59",
       "documentationDigest": "sha256:fa8b268980030a9794cd2bc80bd31df3a4f75665664196263ab8b19d95634726",
       "manual": {
         "controls": {
@@ -164,7 +164,7 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:c9c3ea139b2cb87d336a9f7c29126643563b1070a0bdeea9ad6df1ecb201324a",
+      "digest": "sha256:28fd16dae4fe130de5eabca3125a0e16c1152efa7b7d0b68d907b2f0f6e2aac7",
       "documentationDigest": "sha256:06fdb33005835b225966ed6f1f7bda9702ef07c9f5ed8b4b39a47434dcaab8b4",
       "manual": {
         "controls": {
@@ -208,7 +208,7 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:207124d350a6234b30eae9a019241716a7c8a92e95c9233ead7f0cab523adfd8",
+      "digest": "sha256:8bba819ce9f3eba0b92885faeef0d0bd9bf6034c7fc10f7328b915f3d5cc0b94",
       "documentationDigest": "sha256:75b3aca9d32d75590ff5dfe569bf4a07679e7bebca39d7c1d37f49f5047f2248",
       "manual": {
         "controls": {
@@ -252,7 +252,7 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:0938cd70b283b1f47547bbd9caf8b2479a66e4704c959268618b23defbbe9699",
+      "digest": "sha256:309143fd65c27cfe472a8348850b49c8a9a36023d02f97356f45cae7ef27013f",
       "documentationDigest": "sha256:2a38be7a26f865c6af7c0d8812fb8c9b09d9f6ade4431dc316a7fd97e1249041",
       "manual": {
         "controls": {
@@ -299,7 +299,7 @@
         "chord-bank"
       ],
       "version": "1.0.0",
-      "digest": "sha256:7d0a5c444752a245b166944bf3bd931e6fcb17cf31b6fd5ba23b5434ce9e80b4",
+      "digest": "sha256:8d83b4b7c8ed54d187be57477354842350dbf184966a7f31ce3e7ba27d3c0ecd",
       "documentationDigest": "sha256:4c84392a2ec269bd370cddd079c90911bf09ef76757b80bd2e48b0a9fb4eace7",
       "manual": {
         "controls": {
@@ -343,7 +343,7 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:4526ee90f978c49da8df4d09144e3b8854fd9054927d02c57150dbc7c1443cdd",
+      "digest": "sha256:edc902ab4fd6d7861857f32fc833897dbe8a73bbcf6811ade937a0b140fba847",
       "documentationDigest": "sha256:57e87a895bc4eea79e5e44a00f559dbdfa349f05523bc35e640231b845a505eb",
       "manual": {
         "controls": {
@@ -387,7 +387,7 @@
         "tone": "red"
       },
       "version": "1.0.0",
-      "digest": "sha256:0e86819831b6835f6c5d8b2b42c8b011475f1a2d930a42862fd941791171bb4e",
+      "digest": "sha256:43461aa3899017c5016ba78f97827363c9dbd78e2656316da35aecfb90aeed39",
       "documentationDigest": "sha256:ca5e970285ce8f79898eab0ba0b12e46abc5be59a707c8407aeb7f0792c00cd2",
       "manual": {
         "controls": {
@@ -431,7 +431,7 @@
         "tone": "red"
       },
       "version": "1.0.0",
-      "digest": "sha256:863190ca085b0bb55d19905df7437fb4c25fbff304b390736b34402424984eac",
+      "digest": "sha256:22fbdf9971a9e66961cee38ea5a0787b1568efe72518fcca084c75ed9ea26b0d",
       "documentationDigest": "sha256:9f0cf021d04bfc3deb23ad0a2547981b4336ea583cb94196833f46976b4a1bd3",
       "manual": {
         "controls": {
@@ -475,7 +475,7 @@
         "tone": "red"
       },
       "version": "1.0.0",
-      "digest": "sha256:1d4614bcf89202c2bcebf36046df24c01e52cfaa0490b0861025e7080058cc20",
+      "digest": "sha256:23085bc2cc50deeccd31b70c034f8777a63a07e8a62d110f52e810bbbed11978",
       "documentationDigest": "sha256:0763aa2f9f11ffc328d8b4f19bede9db77cf950ae659eb2b73e3e8cb3327a848",
       "manual": {
         "controls": {
@@ -522,7 +522,7 @@
         "physical-string"
       ],
       "version": "1.0.0",
-      "digest": "sha256:b9d41abe02e15bde9db477a742354f054fd9b21bd9d86504020eb9b9c90ffe33",
+      "digest": "sha256:a087ac71a3ab954ecbfda30e3c5c2b59136a2b85476e834de473e6768b89e5d7",
       "documentationDigest": "sha256:271fe6e2c7c55e915e66ec3415472b0992cbb5cb3e2af981759f9327d5d5c068",
       "manual": {
         "controls": {
@@ -569,7 +569,7 @@
         "physical-modal"
       ],
       "version": "1.0.0",
-      "digest": "sha256:fd97552533560800b4b9a8acb03e098f34df057e70e71ee41d03d6c3c30a4eea",
+      "digest": "sha256:0b4fedcc6515b8e0f849cb8a2c8f1f1a878b368a01c1c6c544626a3fa31f124b",
       "documentationDigest": "sha256:ed0f242effc18f10c87c91dee52ab4802a1e8a0dfa0545a420430354f3487b3e",
       "manual": {
         "controls": {
@@ -613,7 +613,7 @@
         "tone": "red"
       },
       "version": "1.0.0",
-      "digest": "sha256:fb8da0a18da0e31f454b511dfe298264fb2540d10316ad81588d3c225b219ffd",
+      "digest": "sha256:d7cdc65be5798a50a6d93f4e561a05c33bce52a85249eeb1cdd14ed7f1ce7038",
       "documentationDigest": "sha256:4a4629bac343e8f162c097c09dd032afd52b3c4d1b9c6beddf43d57c58286d3b",
       "manual": {
         "controls": {
@@ -657,7 +657,7 @@
         "tone": "red"
       },
       "version": "1.0.0",
-      "digest": "sha256:0ca2ba3cdfee8f8b916f057017fc89594cfe91d6dda3685918db365c6daa2280",
+      "digest": "sha256:75ff57b25a1ccc3f1f2f80f908d42dbb184222b3db2210c053f9daef2da3d44c",
       "documentationDigest": "sha256:78753380b5376a29d22f593fa53b766b4efa20dbbb9b8ca6c5a6981e36420923",
       "manual": {
         "controls": {
@@ -702,7 +702,7 @@
         "tone": "red"
       },
       "version": "1.0.0",
-      "digest": "sha256:9479e4e0dd89db36abf7f3749a36aaa478192fd78a79e3be47d83de0133c1d49",
+      "digest": "sha256:b48864395f63a802a4979f716142d51e6917831ece4d9f248f9f9ffd63b891c6",
       "documentationDigest": "sha256:aad7ddcc68e41cbf572ccdecf613a545c3e098e4ab8b0710c9a6a9a93dc58d83",
       "manual": {
         "controls": {
@@ -747,7 +747,7 @@
         "tone": "amber"
       },
       "version": "1.0.0",
-      "digest": "sha256:ecb4ae4b4bfb9d68f4c73b15401031d09718c6ef0c0822f214c6f84f334bd485",
+      "digest": "sha256:21b16c1ac7029d677e9cb9b23af58d38e802a16c75d97f692578cd8bab55ee35",
       "documentationDigest": "sha256:b3511e98e128e010917313d69049ad1cb75ab89433ccdedd974045e81dd9abb2",
       "manual": {
         "controls": {
@@ -839,7 +839,7 @@
         "fm-core"
       ],
       "version": "1.0.0",
-      "digest": "sha256:5ccd38c92c9e087c462950d18b392067659f2efd7b8f9bd4ca59aee16513a59e",
+      "digest": "sha256:9ecb13b2d4cef5d0055265d4e04231a760b156bda1a01d971f0277ad0fb512e3",
       "documentationDigest": "sha256:59fd9a343077f364f88ac65959f595ad9c57f418edb2b265cc9676fc3b8e0dad",
       "manual": {
         "controls": {
@@ -888,7 +888,7 @@
         "fm-core"
       ],
       "version": "1.0.0",
-      "digest": "sha256:6bc892a6969d169d476d45c737d2bef1098a87ffb2e232e023a27d872367f2b8",
+      "digest": "sha256:033c92c3b9df11e966086c33309ff739c5defd35e795cbddec94fc3710f6649c",
       "documentationDigest": "sha256:cf8dae750bb35368b51e57811004b4b6843bc4d3276baebaf0de5b7509710288",
       "manual": {
         "controls": {
@@ -937,7 +937,7 @@
         "fm-core"
       ],
       "version": "1.0.0",
-      "digest": "sha256:7905f77983c45873a178f5c07f0d132420f99ffb5d69ecb6036677a69bca2940",
+      "digest": "sha256:79ba758a3428f627d8801ec3a020d628550c03ac3cfa89f2fad85d2b49898cdb",
       "documentationDigest": "sha256:7e48d31c9fcf5160428213fc57cb1bf9c0c7f90ea56166816b856377eb6bc2a5",
       "manual": {
         "controls": {
@@ -982,7 +982,7 @@
         "tone": "amber"
       },
       "version": "1.0.0",
-      "digest": "sha256:a40f01322dce0a4f04e67cae5f0076d038ae1d989c75824a07c64b3dd8c576a6",
+      "digest": "sha256:07c8d5de95d750f6c98badc4186eb4a6471837f0bf06b2dab4d9fc12736ce84b",
       "documentationDigest": "sha256:aa33d560ecd3a260dd428f195af0cc595cda11f9682931504663db9bbcf2380f",
       "manual": {
         "controls": {
@@ -1078,7 +1078,7 @@
         "chord-bank"
       ],
       "version": "1.0.0",
-      "digest": "sha256:241a5fab94da9e028f3ea3c4fcdd034825bc8394cac2a29e592a13724707cd25",
+      "digest": "sha256:70ec82eefe6a0f16036eb9efb271297381ffdfb53ab5c65dd087875115ab876a",
       "documentationDigest": "sha256:86c171eb509b4ae69fa7a142e0ff85ea13c9b5e1eda41e373772c1badc77feb7",
       "manual": {
         "controls": {
@@ -1118,7 +1118,7 @@
         "Counter-moving chirps"
       ],
       "version": "1.0.0",
-      "digest": "sha256:634d8d1e33156202902beec3e418f9125c2e61ee36dc3ab1d5272c6797626d72",
+      "digest": "sha256:bea28182b1b553cfb0e6fb51226010ce2679bbea772e94550ed5c559b9741eaf",
       "documentationDigest": "sha256:0c458ea6dd843aa392e72271bc84c9b4163a4eb4ef951f93b2cab4c3e97dedd6",
       "manual": {
         "controls": {
@@ -1158,7 +1158,7 @@
         "Raw stepped waveform"
       ],
       "version": "1.0.0",
-      "digest": "sha256:38f4c3146a0b0bc19b41f6573e4565816f3ccd4a082fb7c6655243ab022db766",
+      "digest": "sha256:08b344f6787414708b3388d72a760a0c9f0ee75b46f1d904df2a795e075214aa",
       "documentationDigest": "sha256:7f9d1d9285f64d8bb88c7ba17561da612362cfdd52de3ed0cca6cf91c11693f2",
       "manual": {
         "controls": {
@@ -1198,7 +1198,7 @@
         "Spatial derivative"
       ],
       "version": "1.0.0",
-      "digest": "sha256:50a330a9f8163afd95b6f026a07e191cc6a912b5b87f5dc893b5f5b993da3c4d",
+      "digest": "sha256:c2ad697ec19994ab33415749cee476ea08754ff23670fcfac91fc750ebe4b529",
       "documentationDigest": "sha256:ec5308ad7b2412c5130787a343a238b3acabb2e9f3f7c3cae5b4a5da3ead26fd",
       "manual": {
         "controls": {
@@ -1279,7 +1279,7 @@
         "Isolated sidebands"
       ],
       "version": "1.0.0",
-      "digest": "sha256:3cc5c60b0c4096dfacff36e44aa52b8433c0113a86122b85303f56449e31840d",
+      "digest": "sha256:e0488080479695fcc73a1039adfe5ba27f078a7b0f42b6369fc993b31914f2b0",
       "documentationDigest": "sha256:6617480462a58381787496d9e23b998678168abd5ffb3481ab0181ea0843592c",
       "manual": {
         "controls": {
@@ -1319,7 +1319,7 @@
         "Acquisition and phase error"
       ],
       "version": "1.0.0",
-      "digest": "sha256:1c7ec16884664ff7b89153df2d4b9d76abaa24f777e0f57454a1851d40510845",
+      "digest": "sha256:538759c8cb65e59763b4d8f17cc91f3bc7f6027e2ba78f1c1b5e6d9849848a0e",
       "documentationDigest": "sha256:7483de973d5ad4ff5ff444b6cfff6ba2eea6ed75ab1e2300e3920c71e7153c1b",
       "manual": {
         "controls": {
@@ -1359,7 +1359,7 @@
         "Raw carry stream"
       ],
       "version": "1.0.0",
-      "digest": "sha256:764413a060b414665a95d8fc626d070108864309e0e63e3bfd060f9c921ec3b5",
+      "digest": "sha256:cfa21eacc4db0035da9cb5c91e42e1695c96ba07a6b89206e7e327f0aa79d1df",
       "documentationDigest": "sha256:9cbea7d54a74375951edb31254d55d62f2368e185c7d40ae839333ca0f24103b",
       "manual": {
         "controls": {
@@ -1399,7 +1399,7 @@
         "Orthogonal pair differences"
       ],
       "version": "1.0.0",
-      "digest": "sha256:4164fc1eb01459a17e631c9474f2968a1caa0325345e6fe395e4b146f5c813a2",
+      "digest": "sha256:a34f3009a360f7b066be864fa932a4c516332efa37e3239790a91cafde3404da",
       "documentationDigest": "sha256:27d0dec0a5dffa157145b198992e969ece56f5e0d55e045e0c249637ce6a8a42",
       "manual": {
         "controls": {
@@ -1439,7 +1439,7 @@
         "Lower sideband bank"
       ],
       "version": "1.0.0",
-      "digest": "sha256:09fad6c70017e71aa4bad21550556799c1b8834b8ea570ebd9e29c0d1ea917ca",
+      "digest": "sha256:f90f0aab89bd463b8cd8977cfaad803c7619055b642a90ea03d4d4df9cf443eb",
       "documentationDigest": "sha256:6804393ea21f471687028f7409dae445e007c7bc92d1fc12d75538c5853ff4f0",
       "manual": {
         "controls": {
@@ -1519,7 +1519,7 @@
         "Hollow alternating lattice"
       ],
       "version": "1.0.0",
-      "digest": "sha256:3bbf33a7568317d3ef1bebec4dd8855b2c3ea2ad803da2f68a6bb964bb115f3c",
+      "digest": "sha256:cee4301588fe9387b1e54b8259ee0cffabc53bd81a48767d526eee1f35ab9872",
       "documentationDigest": "sha256:3e748cb431557f1ebbc5aa571a96cbfda606309739dad48016ea44ce03fe4686",
       "manual": {
         "controls": {
@@ -1559,7 +1559,7 @@
         "Reed flow"
       ],
       "version": "1.0.0",
-      "digest": "sha256:40336b45723b8d78724bc5765e26b1c6b25762ee6e16984475208c23a5886d93",
+      "digest": "sha256:c02e0576cfebed8d13e1dca1b236ad78adf2c87051ff72aebf1a5801faeb74ae",
       "documentationDigest": "sha256:5235345bc520390cc0b3b00a683bf860b3330b3ae873007adcd9a26ec17ecf07",
       "manual": {
         "controls": {
@@ -1599,7 +1599,7 @@
         "Second circular moment"
       ],
       "version": "1.0.0",
-      "digest": "sha256:61212db6160595715028e3ad58430eebc5c44b4572b327a04b54868ef5b7f857",
+      "digest": "sha256:fb08ee3b4f8a95c934f2bb0a82c5022399abf8151ea169311010d2b7b3b98e4c",
       "documentationDigest": "sha256:387d248ab03674076425e1a9c8b3ff143dcd17a74d47b0377d40773774d8cc4b",
       "manual": {
         "controls": {
@@ -1639,7 +1639,7 @@
         "Inter-generation activity"
       ],
       "version": "1.0.0",
-      "digest": "sha256:35e0dd55ef81001b54e03756e4f7a4234fe0d6d13c1aae984779ecb17bdbfe80",
+      "digest": "sha256:ad12a9214a1bfcee7384764ced59db3f1dbbca80c1e225869b0cca74ad1ffe1d",
       "documentationDigest": "sha256:0b2999a9c49a1955ec42402135b3d7f03c800ec5d6cce2b1cfd2706e5650b013",
       "manual": {
         "controls": {
