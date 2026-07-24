@@ -53,14 +53,21 @@ FORBIDDEN_SOURCE_HINTS = {
     "dynamic allocation": "preallocate in Init() with the BufferAllocator — no malloc/new/free/delete at audio rate",
     "direct hardware access": "engines read only EngineParameters; they never touch peripherals or registers",
 }
-# C99 <cmath> functions the host compiler has but the pinned ARM toolchain
-# (GCC 4.8.3 + newlib) does not expose in std:: — so `check`'s host compile
-# passes and the hardware build fails. Flag the common ones (pitch/frequency
-# math reaches for these) with a portable replacement. Extend as more surface.
-NON_PORTABLE_STD = {
-    "std::log2": "std::log(x) * 1.4426950408889634f  (1 / ln 2)",
-    "std::exp2": "std::exp(x * 0.6931471805599453f)  (ln 2)",
-}
+# libm transcendentals: the host compiler links them, but the bare-metal firmware
+# can't — they pull in __errno and bloat flash — so an engine using them passes
+# `check`'s host compile and then fails at the hardware LINK. Catch them here and
+# point at the shared LUT replacements. (\b-anchored, so std::log doesn't shadow
+# std::log2/std::log10 and std::exp doesn't shadow std::exp2.)
+NON_PORTABLE_STD = (
+    "std::sin", "std::cos", "std::tan",
+    "std::exp2", "std::exp", "std::log2", "std::log10", "std::log", "std::pow",
+)
+NON_PORTABLE_STD_HINT = (
+    "the firmware can't link libm — use the shared LUTs: plaits::Sine(phase) for "
+    "sin/cos (phase in [0,1); plaits/dsp/oscillator/sine_oscillator.h), and "
+    "stmlib::SemitonesToRatio(x*12) for 2^x and pow (stmlib/dsp/units.h). log2 has "
+    "no shared helper — roll a bit-trick approximation (see the helix example)"
+)
 
 
 class PackageError(Exception):
@@ -273,14 +280,13 @@ def validate_community_source(
                     f"{path.name}:{line} uses forbidden {description} "
                     f"({match.group(0).strip()!r}) — {FORBIDDEN_SOURCE_HINTS[description]}"
                 )
-        for symbol, replacement in NON_PORTABLE_STD.items():
+        for symbol in NON_PORTABLE_STD:
             match = re.search(re.escape(symbol) + r"\b", policy_source)
             if match is not None:
                 line = policy_source.count("\n", 0, match.start()) + 1
                 raise PackageError(
-                    f"{path.name}:{line} uses {symbol}, which the pinned ARM toolchain "
-                    f"(GCC 4.8.3) doesn't provide in std:: — the host check compiles it, "
-                    f"but the hardware build won't. Use {replacement}."
+                    f"{path.name}:{line} uses {symbol}, which the host check compiles but "
+                    f"the hardware build can't link — {NON_PORTABLE_STD_HINT}."
                 )
         for match in re.finditer(r'^\s*#\s*include\s*([<"])([^>"]+)[>"]', source, re.MULTILINE):
             delimiter, include = match.groups()
@@ -672,7 +678,9 @@ class {class_name} : public Engine {{
 
 #include \"{slug}_engine.h\"
 
-#include <cmath>
+// The firmware is bare-metal — it can't link libm (std::sin/exp/log/pow), so use
+// the shared LUTs: plaits::Sine here, stmlib::SemitonesToRatio for 2^x.
+#include \"plaits/dsp/oscillator/sine_oscillator.h\"
 
 namespace plaits {{
 
@@ -685,7 +693,7 @@ void {class_name}::Render(const EngineParameters& parameters, float* out,
   for (size_t i = 0; i < size; ++i) {{
     phase_ += frequency;
     phase_ -= static_cast<int>(phase_);
-    out[i] = 0.5f * std::sin(phase_ * 6.28318530718f);
+    out[i] = 0.5f * Sine(phase_);   // sine LUT — phase in [0, 1)
     aux[i] = out[i] * (0.25f + 0.75f * parameters.macro);
   }}
 }}

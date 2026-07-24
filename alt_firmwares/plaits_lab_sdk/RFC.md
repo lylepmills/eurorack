@@ -98,6 +98,11 @@ warnings rather than automatic rejection.
 - No external packages or network access during builds.
 - No custom user data, samples, generated binary blobs, assembly, threads,
   dynamic loading, system calls, or direct hardware access.
+- No libm transcendentals (`std::sin`/`cos`/`exp`/`log`/`pow`/…): the bare-metal
+  firmware can't link them (they pull in `__errno` and bloat flash). Use the
+  shared LUTs — `plaits::Sine` and `stmlib::SemitonesToRatio`. `check` rejects
+  them (the host compiler is more permissive), so this surfaces before the
+  hardware link, not at it.
 - Community source is compiled in a networkless, resource-limited container,
   but container isolation does not make the resulting MCU firmware safe.
 - Community catalog cards remain typographic; preview audio is generated from

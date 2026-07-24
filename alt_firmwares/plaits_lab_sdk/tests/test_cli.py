@@ -132,24 +132,37 @@ class PackageTests(unittest.TestCase):
             self.assertIn("dynamic allocation", message)  # the category
             self.assertIn("BufferAllocator", message)     # the fix hint
 
-    def test_check_flags_non_portable_std_math(self) -> None:
-        # std::log2/std::exp2 compile on the host but not on the pinned ARM
-        # toolchain; check should catch that at validation, not at the hardware
-        # build, with the portable replacement.
+    def test_check_flags_libm_transcendentals(self) -> None:
+        # libm transcendentals compile on the host but can't link on the bare-metal
+        # firmware; check catches them at validation with the shared-LUT fix (NOT
+        # std::log/std::exp, which are libm too).
+        for call, symbol in [
+            ("std::log2(x)", "std::log2"), ("std::exp2(x)", "std::exp2"),
+            ("std::sin(x)", "std::sin"), ("std::exp(x)", "std::exp"),
+            ("std::pow(x, 2.0f)", "std::pow"), ("std::log(x)", "std::log"),
+        ]:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                source = Path(temp_dir) / "pitchy.cc"
+                source.write_text(f"float f(float x) {{\n  return {call};\n}}\n", encoding="utf-8")
+                with self.assertRaises(plaits_lab.PackageError) as ctx:
+                    plaits_lab.validate_community_source([source])
+                message = str(ctx.exception)
+                self.assertIn("pitchy.cc:2", message)
+                self.assertIn(symbol, message)
+                self.assertIn("can't link", message)
+                self.assertIn("plaits::Sine", message)          # the real portable fix
+                self.assertNotIn("std::log(x)", message)         # never suggest more libm
+        # std::log must not shadow std::log2 (word-boundary): report the exact call.
         with tempfile.TemporaryDirectory() as temp_dir:
-            source = Path(temp_dir) / "pitchy.cc"
-            source.write_text("float f() {\n  return std::log2(2.0f);\n}\n", encoding="utf-8")
+            source = Path(temp_dir) / "only_log2.cc"
+            source.write_text("float f(float x) { return std::log2(x); }\n", encoding="utf-8")
             with self.assertRaises(plaits_lab.PackageError) as ctx:
                 plaits_lab.validate_community_source([source])
-            message = str(ctx.exception)
-            self.assertIn("pitchy.cc:2", message)
-            self.assertIn("std::log2", message)
-            self.assertIn("ARM toolchain", message)
-            self.assertIn("std::log(", message)  # the suggested replacement
+            self.assertIn("std::log2", str(ctx.exception))
         # A comment mentioning it must not trip the check (comments are stripped).
         with tempfile.TemporaryDirectory() as temp_dir:
             source = Path(temp_dir) / "commented.cc"
-            source.write_text("// avoid std::log2 here\nfloat f() { return 0.0f; }\n", encoding="utf-8")
+            source.write_text("// avoid std::sin here\nfloat f() { return 0.0f; }\n", encoding="utf-8")
             plaits_lab.validate_community_source([source])
 
     def test_check_arm_skips_reference_packages(self) -> None:
