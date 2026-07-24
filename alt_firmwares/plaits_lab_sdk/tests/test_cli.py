@@ -299,6 +299,20 @@ class PackageTests(unittest.TestCase):
         worklet = (plaits_lab.SDK_DIR / "audition_worklet.js").read_text(encoding="utf-8")
         self.assertIn("'env'", worklet)
 
+    def test_live_audition_stereo_surface_is_wired(self) -> None:
+        # The audition must be able to drive parameters.stereo and read back
+        # stereo_capable(), so a contributor can hear a stereo engine's L/R render.
+        self.assertIn("_set_stereo", plaits_lab.WASM_EXPORTS)
+        self.assertIn("_stereo_capable", plaits_lab.WASM_EXPORTS)
+        harness = (plaits_lab.SDK_DIR / "wasm_audition.cc").read_text(encoding="utf-8")
+        self.assertIn("g_params.stereo", harness)
+        self.assertIn("stereo_capable", harness)
+        worklet = (plaits_lab.SDK_DIR / "audition_worklet.js").read_text(encoding="utf-8")
+        self.assertIn("'stereo'", worklet)
+        self.assertIn("stereoCapable", worklet)
+        html = (plaits_lab.SDK_DIR / "dev_editor.html").read_text(encoding="utf-8")
+        self.assertIn("live-stereo", html)
+
     def test_compile_wasm_without_emcc_reports_clearly(self) -> None:
         # Live audition is OPTIONAL: with no emcc on PATH the wasm build must fail
         # with a clear, actionable error rather than a raw traceback.

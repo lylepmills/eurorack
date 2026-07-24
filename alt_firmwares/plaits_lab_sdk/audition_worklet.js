@@ -35,7 +35,12 @@ class PlaitsAuditionProcessor extends AudioWorkletProcessor {
         if (p) e.set_params(p.note, p.harmonics, p.timbre, p.morph, p.macro);
         const env = options.processorOptions.envMode | 0;
         if (typeof e.set_env_mode === 'function') e.set_env_mode(env);
+        if (options.processorOptions.stereo && typeof e.set_stereo === 'function') e.set_stereo(1);
         this.ready = true;
+        // Tell the page whether this engine renders a real L/R pair, so it can
+        // offer (or grey out) the Stereo control.
+        const stereoCapable = typeof e.stereo_capable === 'function' && e.stereo_capable() === 1;
+        this.port.postMessage({ type: 'ready', stereoCapable });
       } catch (err) {
         this.port.postMessage({ type: 'error', message: String(err && err.message || err) });
       }
@@ -50,6 +55,8 @@ class PlaitsAuditionProcessor extends AudioWorkletProcessor {
         this.exports.trigger();
       } else if (data.type === 'env') {
         if (typeof this.exports.set_env_mode === 'function') this.exports.set_env_mode(data.value | 0);
+      } else if (data.type === 'stereo') {
+        if (typeof this.exports.set_stereo === 'function') this.exports.set_stereo(data.value ? 1 : 0);
       } else if (data.type === 'monitor') {
         this.monitor = data.value | 0;
       }

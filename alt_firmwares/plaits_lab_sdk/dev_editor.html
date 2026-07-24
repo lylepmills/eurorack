@@ -71,6 +71,7 @@
         <button class="primary" id="live-toggle">▶ Live audition</button>
         <button id="live-strike">Strike</button>
         <label>Envelope <select id="live-env"><option value="0">Sustained</option><option value="1">Plucked</option></select></label>
+        <label id="live-stereo-label" title="This engine renders a mono OUT/AUX"><input type="checkbox" id="live-stereo" disabled /> Stereo <span id="live-stereo-note" class="sub">(mono engine)</span></label>
         <label>Monitor <select id="live-monitor"><option value="0">Main only</option><option value="2">Main + Aux (L/R)</option><option value="1">Aux only</option></select></label>
         <button id="live-reload">Reload edits</button>
         <span class="sub" id="live-status">Real time — tweak any control and hear it change.</span>
@@ -349,9 +350,13 @@ async function startLive() {
     if (audio.node) { try { audio.node.disconnect(); } catch (e) {} }
     const node = new AudioWorkletNode(audio.ctx, 'plaits-audition', {
       numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
-      processorOptions: { wasmModule: module, params: liveParamsMsg(), envMode: Number($('live-env').value) },
+      processorOptions: { wasmModule: module, params: liveParamsMsg(), envMode: Number($('live-env').value), stereo: $('live-stereo').checked },
     });
-    node.port.onmessage = (e) => { if (e.data && e.data.type === 'error') liveStatus('engine error: ' + e.data.message, true); };
+    node.port.onmessage = (e) => {
+      if (!e.data) return;
+      if (e.data.type === 'error') liveStatus('engine error: ' + e.data.message, true);
+      else if (e.data.type === 'ready') applyStereoCapability(e.data.stereoCapable);
+    };
     node.port.postMessage({ type: 'monitor', value: Number($('live-monitor').value) });
     node.port.postMessage({ type: 'env', value: Number($('live-env').value) });
     if (!audio.gain) { audio.gain = audio.ctx.createGain(); audio.gain.gain.value = 0.5; audio.gain.connect(audio.ctx.destination); }
@@ -381,6 +386,24 @@ $('live-strike').addEventListener('click', async () => {
 $('live-env').addEventListener('change', (e) => { if (audio.running && audio.node) audio.node.port.postMessage({ type: 'env', value: Number(e.target.value) }); });
 $('live-monitor').addEventListener('change', (e) => { if (audio.running && audio.node) audio.node.port.postMessage({ type: 'monitor', value: Number(e.target.value) }); });
 $('live-reload').addEventListener('click', refreshPackage);
+
+// The engine reports whether it renders a real L/R pair; enable Stereo only then.
+function applyStereoCapability(capable) {
+  const box = $('live-stereo'), label = $('live-stereo-label'), note = $('live-stereo-note');
+  box.disabled = !capable;
+  if (!capable) { box.checked = false; note.textContent = '(mono engine)'; label.title = 'This engine renders a mono OUT/AUX'; }
+  else { note.textContent = ''; label.title = 'Render OUT/AUX as a true L/R stereo pair'; }
+}
+$('live-stereo').addEventListener('change', (e) => {
+  if (!(audio.running && audio.node)) return;
+  const on = e.target.checked;
+  audio.node.port.postMessage({ type: 'stereo', value: on });
+  // Hearing the stereo image means listening to both channels; a mono render is
+  // clearest on Main. Flip the monitor to match, and keep the select in sync.
+  const monitor = on ? 2 : 0;
+  $('live-monitor').value = String(monitor);
+  audio.node.port.postMessage({ type: 'monitor', value: monitor });
+});
 
 refreshPackage();
 loadCatalog();
