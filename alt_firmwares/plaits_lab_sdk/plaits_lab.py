@@ -1301,8 +1301,15 @@ def hardware_build_command(args: argparse.Namespace) -> int:
         if not wav.is_file():
             raise PackageError("ARM build did not produce an audio firmware updater")
         shutil.copyfile(wav, output)
-        flash = arm_flash_footprint(toolchain / "bin/arm-none-eabi-size", [str(elf)]) if elf.is_file() else None
+        size_tool = toolchain / "bin/arm-none-eabi-size"
+        flash = arm_flash_footprint(size_tool, [str(elf)]) if elf.is_file() else None
+        # The engine's own object(s) are in the build tree — measure them for the
+        # model's code size, same as `check --arm` reports.
+        model_objects = [str(build_root / "plaits" / f"{source.stem}.o") for source in package["source_files"]]
+        model_flash = arm_flash_footprint(size_tool, model_objects)
     print(f"built UNREVIEWED local firmware {output}")
+    if model_flash is not None:
+        print(f"model size: {model_flash:,} bytes of flash (your engine's own code)")
     if flash is not None:
         free = PLAITS_FLASH_BYTES - flash
         pct = 100.0 * flash / PLAITS_FLASH_BYTES
