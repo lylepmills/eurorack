@@ -154,7 +154,7 @@ void AdditiveEngine::Render(
     amplitudes_[i] *= (i & 1) ? even_gain : odd_gain;
   }
 
-  if (parameters.stereo) {
+  if ((PLAITS_STEREO_HARMONIC && parameters.stereo)) {
     float left_amplitudes[kNumIntegerHarmonics];
     float right_amplitudes[kNumIntegerHarmonics];
     for (int i = 0; i < kNumIntegerHarmonics; ++i) {

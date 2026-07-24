@@ -176,7 +176,7 @@ void LockstepEngine::Render(
     const float out_signal = \
         (carrier + (soft_square - carrier) * error_shape) * 0.78f;
 
-    if (parameters.stereo) {
+    if ((PLAITS_STEREO_LOCKSTEP && parameters.stereo)) {
       // RIGHT carries the REFERENCE oscillator shaped through the same
       // soft-square + error_shape path as OUT, so the two channels are two
       // locked oscillators that spread on non-integer ratios and converge at

@@ -215,7 +215,7 @@ void WavetableEngine::Render(
       float mix = xyz0 + (xyz1 - xyz0) * z_fractional;
       mix = diff_out_.Process(cutoff, mix) * gain;
       *out++ = mix;
-      if (parameters.stereo) {
+      if ((PLAITS_STEREO_WAVETABLE && parameters.stereo)) {
         // OUT/AUX become L/R: the (x, y, z) cell and wave phase advance once
         // (shared), and the R channel reads the same cell half a wave-cycle
         // away -- the wave phase offset by half the table -- combined

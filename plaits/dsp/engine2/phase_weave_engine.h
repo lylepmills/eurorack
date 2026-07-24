@@ -26,7 +26,7 @@ class PhaseWeaveEngine : public Engine {
   // OUT/AUX carry L/R when stereo is requested: the four weighted voices are
   // panned across the field rather than summed, and the pair-difference AUX
   // is dropped.
-  virtual bool stereo_capable() const { return true; }
+  virtual bool stereo_capable() const { return PLAITS_STEREO_PHASE_WEAVE; }
 
  private:
   float phase_;

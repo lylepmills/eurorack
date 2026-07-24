@@ -36,15 +36,14 @@
 #include "stmlib/utils/buffer_allocator.h"
 
 // alt firmware: the stereo aux-output render path (OUT/AUX as a true L/R pair)
-// is a compile-time build variant. It is ON by default, so host tests, local
-// firmware, and stock builds are unchanged. The hosted builder passes
-// -DPLAITS_ENABLE_STEREO=0 for any recipe that does NOT select the stereo aux
-// option, which turns EngineParameters::stereo into a compile-time `false` and
-// lets the compiler dead-strip every engine's stereo branch — recovering the
-// per-engine flash the stereo paths would otherwise cost on a non-stereo build.
-#ifndef PLAITS_ENABLE_STEREO
-#define PLAITS_ENABLE_STEREO 1
-#endif
+// is gated PER ENGINE at compile time. Each stereo-capable engine guards its
+// stereo render with `if (PLAITS_STEREO_<X> && parameters.stereo)` and reports
+// `stereo_capable() { return PLAITS_STEREO_<X>; }`; when a flag is 0 that
+// engine's stereo code is dead-stripped and the voice never routes stereo to
+// it. Every flag defaults to 1 (host tests / local / stock builds carry all of
+// it); the hosted builder passes -DPLAITS_STEREO_<X>=0 per object for the
+// engines a recipe leaves in mono.
+#include "plaits/dsp/engine/stereo_config.h"
 
 namespace plaits {
 
@@ -75,9 +74,7 @@ enum TriggerState {
 };
 
 struct EngineParameters {
-#if PLAITS_ENABLE_STEREO
   EngineParameters() : stereo(false) { }
-#endif
 
   int trigger;
   float note;
@@ -96,17 +93,10 @@ struct EngineParameters {
   // alt firmware: when true, the voice requests a true stereo render — OUT
   // becomes the left channel and AUX the right channel. The voice only sets
   // this for engines reporting stereo_capable(); an engine that ignores the
-  // flag keeps producing its regular out/aux pair. When the stereo build
-  // variant is disabled this is a compile-time `false`, so every engine's
-  // `if (parameters.stereo)` branch constant-folds away and is dead-stripped.
-#if PLAITS_ENABLE_STEREO
+  // flag keeps producing its regular out/aux pair. An engine built with its
+  // PLAITS_STEREO_<X> flag off reports stereo_capable() == false, so the voice
+  // never sets this true for it and its stereo branch is dead-stripped.
   bool stereo;
-#else
-  // C++03 (the gcc-4.8 firmware toolchain): a static const integral member with
-  // an in-class initializer is a compile-time constant, so it folds the same as
-  // a constexpr without requiring C++11.
-  static const bool stereo = false;
-#endif
 };
 
 // Equal-power gains for one component of a stereo render.

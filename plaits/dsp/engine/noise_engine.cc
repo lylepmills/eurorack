@@ -79,7 +79,7 @@ void NoiseEngine::Render(
   clocked_noise_[0].Render(sync, clock_f, aux, size);
   clocked_noise_[1].Render(
       sync,
-      parameters.stereo ? clock_f : clock_f * f1 / f0,
+      (PLAITS_STEREO_FILTERED_NOISE && parameters.stereo) ? clock_f : clock_f * f1 / f0,
       temp_buffer_,
       size);
 
@@ -93,7 +93,7 @@ void NoiseEngine::Render(
   const float* in_1 = aux;
   const float* in_2 = temp_buffer_;
 
-  if (parameters.stereo) {
+  if ((PLAITS_STEREO_FILTERED_NOISE && parameters.stereo)) {
     // The BP filter normally feeding AUX is reconfigured as the right
     // channel's multimode filter. Its state is reused as-is: a click can be
     // heard when the mode is toggled.

@@ -60,7 +60,7 @@ class ChiptuneEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-  virtual bool stereo_capable() const { return true; }
+  virtual bool stereo_capable() const { return PLAITS_STEREO_CHIPTUNE; }
 
   inline void set_envelope_shape(float envelope_shape) {
     envelope_shape_ = envelope_shape;

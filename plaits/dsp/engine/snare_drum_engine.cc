@@ -82,7 +82,7 @@ void SnareDrumEngine::Render(
       aux,
       size);
 
-  if (parameters.stereo) {
+  if ((PLAITS_STEREO_ANALOG_SNARE && parameters.stereo)) {
     // Spread the two snare models across the stereo field; snares tolerate
     // more width than kicks.
     float analog_left, analog_right;

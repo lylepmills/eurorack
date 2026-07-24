@@ -33,7 +33,7 @@ class LoopbackEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-  virtual bool stereo_capable() const { return true; }
+  virtual bool stereo_capable() const { return PLAITS_STEREO_LOOPBACK; }
 
  private:
   float carrier_phase_;

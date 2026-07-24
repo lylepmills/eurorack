@@ -166,7 +166,7 @@ void SidebandEngine::Render(
         -1.0f);
   }
 
-  if (parameters.stereo) {
+  if ((PLAITS_STEREO_SIDEBAND_BANK && parameters.stereo)) {
     // OUT/AUX become L/R: both channels carry the full spectrum, with a
     // complementary 85/15 power split between the upper and lower banks.
     const float a = Sqrt(0.85f);

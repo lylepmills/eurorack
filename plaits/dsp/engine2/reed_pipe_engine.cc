@@ -164,7 +164,7 @@ void ReedPipeEngine::Render(
     out_dc_output_ = dc_out;
     out[i] = 0.58f * SoftClip(dc_out);
 
-    if (parameters.stereo) {
+    if ((PLAITS_STEREO_REED_PIPE && parameters.stereo)) {
       // OUT/AUX become L/R: a second pickup a fixed third of the bore away
       // from the movable one reads the same shared waveguide through the
       // identical blend, so the two taps always sit a fixed distance apart

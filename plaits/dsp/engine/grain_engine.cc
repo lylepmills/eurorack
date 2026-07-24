@@ -78,7 +78,7 @@ void GrainEngine::Render(
   grainlet_[1].Render(f0, f1 * ratio, carrier_shape, carrier_bleed_fixed, aux, size);
   dc_blocker_[0].set_f<FREQUENCY_DIRTY>(0.3f * f0);
 
-  if (parameters.stereo) {
+  if ((PLAITS_STEREO_GRANULAR_FORMANT && parameters.stereo)) {
     // OUT/AUX become L/R: keep the two grainlets separate, DC-block each on
     // its own blocker (same 0.3*f0 cutoff), then pan. grainlet_[1] carries the
     // HARMONICS ratio detuning, so it belongs off-center. The AUX z-oscillator

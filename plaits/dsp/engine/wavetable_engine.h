@@ -55,7 +55,7 @@ class WavetableEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-  virtual bool stereo_capable() const { return true; }
+  virtual bool stereo_capable() const { return PLAITS_STEREO_WAVETABLE; }
 
  private:
   float ReadWave(int x, int y, int z, int phase_i, float phase_f);

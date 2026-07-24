@@ -211,7 +211,7 @@ void ScannedEngine::Render(
     const float shaped = ReadPickup(
         warped_phase, parameters.timbre, fold_amount, &derivative);
     out[i] = shaped * 0.8f;
-    if (parameters.stereo) {
+    if ((PLAITS_STEREO_SCANNED && parameters.stereo)) {
       // OUT/AUX become L/R: a second pickup a quarter of the scan span away
       // reads the same string through the identical readout and wavefolder.
       // The physics is shared; only this readout is extra.

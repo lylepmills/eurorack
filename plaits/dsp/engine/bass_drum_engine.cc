@@ -98,7 +98,7 @@ void BassDrumEngine::Render(
       aux,
       size);
 
-  if (parameters.stereo) {
+  if ((PLAITS_STEREO_ANALOG_BASS_DRUM && parameters.stereo)) {
     // Spread the two kick models across the stereo field. Both are panned
     // close to the centre so the low end stays largely mono-compatible.
     float analog_left, analog_right;

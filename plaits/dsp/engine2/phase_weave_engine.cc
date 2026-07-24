@@ -129,7 +129,7 @@ void PhaseWeaveEngine::Render(
   // the field instead of summed to a single mono signal. The orthogonal
   // pair-difference AUX is dropped. Pan gains are equal-power and only depend
   // on the fixed constellation, so they are computed once per block.
-  const bool stereo = parameters.stereo;
+  const bool stereo = (PLAITS_STEREO_PHASE_WEAVE && parameters.stereo);
   float pan_left[4];
   float pan_right[4];
   if (stereo) {

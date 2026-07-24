@@ -50,7 +50,7 @@ class FMEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-  virtual bool stereo_capable() const { return true; }
+  virtual bool stereo_capable() const { return PLAITS_STEREO_TWO_OP_FM; }
 
  private:
   uint32_t carrier_phase_;

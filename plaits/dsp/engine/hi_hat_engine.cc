@@ -85,7 +85,7 @@ void HiHatEngine::Render(
       aux,
       size);
 
-  if (parameters.stereo) {
+  if ((PLAITS_STEREO_ANALOG_HI_HAT && parameters.stereo)) {
     // Spread the faithful and metallic hi-hats across the stereo field.
     float faithful_left, faithful_right;
     float metallic_left, metallic_right;

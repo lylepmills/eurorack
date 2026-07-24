@@ -32,7 +32,7 @@ class RulefieldEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-  virtual bool stereo_capable() const { return true; }
+  virtual bool stereo_capable() const { return PLAITS_STEREO_RULEFIELD; }
 
  private:
   static uint32_t RotateLeft(uint32_t value);

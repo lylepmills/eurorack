@@ -109,7 +109,7 @@ void VirtualAnalogEngine::Render(
   primary_.Render(primary_f, pw_1, shape_1, temp_buffer_, size);
   auxiliary_.Render(auxiliary_f, pw_2, shape_2, aux, size);
 
-  if (parameters.stereo) {
+  if ((PLAITS_STEREO_VIRTUAL_ANALOG && parameters.stereo)) {
     // OUT/AUX become L/R: pan the two detuned varishape oscillators (primary
     // left-of-center, auxiliary right-of-center) and drop the sync byproduct.
     float primary_left, primary_right, auxiliary_left, auxiliary_right;
@@ -157,7 +157,7 @@ void VirtualAnalogEngine::Render(
   float pw = 0.5f + (parameters.morph - 0.66f) * 1.4f;
   CONSTRAIN(pw, 0.5f, 0.99f);
 
-  if (parameters.stereo) {
+  if ((PLAITS_STEREO_VIRTUAL_ANALOG && parameters.stereo)) {
     // OUT/AUX become L/R: pan the two detuned varishape oscillators (primary
     // left-of-center, auxiliary right-of-center). The sync oscillator and the
     // TIMBRE crossfade are dropped, but both crossfade interpolators are still
@@ -235,7 +235,7 @@ void VirtualAnalogEngine::Render(
   // Render monster sync to AUX. Skipped in stereo, where AUX carries the saw's
   // right channel instead. primary_/auxiliary_ are only used here, so freezing
   // their phases in stereo has no audible effect on the OUT oscillators.
-  if (!parameters.stereo) {
+  if (!(PLAITS_STEREO_VIRTUAL_ANALOG && parameters.stereo)) {
     primary_.Render(primary_f, primary_sync_f, pw, shape, out, size);
     auxiliary_.Render(auxiliary_f, auxiliary_sync_f, pw, shape, aux, size);
     for (size_t i = 0; i < size; ++i) {
@@ -285,7 +285,7 @@ void VirtualAnalogEngine::Render(
       saw_gain * (1.0f - oscillator_balance) * norm,
       size);
 
-  if (parameters.stereo) {
+  if ((PLAITS_STEREO_VIRTUAL_ANALOG && parameters.stereo)) {
     // Pan the two oscillators across the field. Both interpolators are still
     // advanced once per sample, so auxiliary_amount_/xmod_amount_ end at the
     // same targets as in mono. The saw sits at 0.72 (it carries the HARMONICS

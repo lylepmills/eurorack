@@ -81,7 +81,7 @@ void SwarmEngine::Render(
   fill(&out[0], &out[size], 0.0f);
   fill(&aux[0], &aux[size], 0.0f);
 
-  if (parameters.stereo) {
+  if ((PLAITS_STEREO_SWARM && parameters.stereo)) {
     for (int i = 0; i < kNumSwarmVoices; ++i) {
       float saw[kMaxBlockSize];
       fill(&saw[0], &saw[size], 0.0f);

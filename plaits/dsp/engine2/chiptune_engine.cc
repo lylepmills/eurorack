@@ -117,7 +117,7 @@ void ChiptuneEngine::Render(
     const float note_f0 = f0 * chords_.sorted_ratio(
         arpeggiator_note) * register_transposition;
     root_transposition = octave;
-    if (parameters.stereo) {
+    if (PLAITS_STEREO_CHIPTUNE && parameters.stereo) {
       float temp[kMaxBlockSize];
       voice_[0].Render(note_f0, shape, temp, size);
       for (size_t j = 0; j < size; ++j) {
@@ -166,7 +166,7 @@ void ChiptuneEngine::Render(
     }
   
     fill(&out[0], &out[size], 0.0f);
-    if (parameters.stereo) {
+    if (PLAITS_STEREO_CHIPTUNE && parameters.stereo) {
       fill(&aux[0], &aux[size], 0.0f);
       float temp[kMaxBlockSize];
       for (int voice = 0; voice < kChordNumVoices; ++voice) {
@@ -192,7 +192,7 @@ void ChiptuneEngine::Render(
     }
   }
 
-  if (parameters.stereo) {
+  if (PLAITS_STEREO_CHIPTUNE && parameters.stereo) {
     // The bass stays centered, and the envelope is applied to each component
     // before it reaches the two channels, like in mono.
     float temp[kMaxBlockSize];

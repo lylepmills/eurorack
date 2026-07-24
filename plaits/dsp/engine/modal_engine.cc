@@ -67,7 +67,7 @@ void ModalEngine::Render(
   const float exciter_q = ApplyMacro(
       stock_exciter_q, 0.5f, 6.0f, parameters.macro);
 
-  if (parameters.stereo) {
+  if ((PLAITS_STEREO_MODAL_RESONATOR && parameters.stereo)) {
     voice_.RenderStereo(
         sustain,
         parameters.trigger & TRIGGER_RISING_EDGE,

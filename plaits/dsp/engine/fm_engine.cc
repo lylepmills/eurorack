@@ -106,7 +106,7 @@ void FMEngine::Render(
   float carrier_right = 0.0f;
   float sub_left = 0.0f;
   float sub_right = 0.0f;
-  if (parameters.stereo) {
+  if ((PLAITS_STEREO_TWO_OP_FM && parameters.stereo)) {
     StereoPanGains(0.4f, &carrier_left, &carrier_right);
     StereoPanGains(0.6f, &sub_left, &sub_right);
   }
@@ -135,7 +135,7 @@ void FMEngine::Render(
       sub_downsampler.Accumulate(j, sub);
     }
     
-    if (parameters.stereo) {
+    if ((PLAITS_STEREO_TWO_OP_FM && parameters.stereo)) {
       const float c = carrier_downsampler.Read();
       const float s = sub_downsampler.Read();
       *out++ = c * carrier_left + s * sub_left;

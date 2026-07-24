@@ -131,7 +131,7 @@ void GendyEngine::Render(
       sample = linear + (smooth - linear) * (parameters.macro * 2.0f - 1.0f);
     }
     out[i] = sample * 0.8f;
-    if (parameters.stereo) {
+    if ((PLAITS_STEREO_GENDY && parameters.stereo)) {
       // OUT/AUX become L/R: the breakpoints mutate and phase_/segment_ advance
       // once (shared), and the R channel reads the same breakpoint set at the
       // antipodal phase with an independent segment lookup (not disturbing the

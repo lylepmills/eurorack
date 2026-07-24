@@ -55,7 +55,7 @@ class VirtualAnalogVCFEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-  virtual bool stereo_capable() const { return true; }
+  virtual bool stereo_capable() const { return PLAITS_STEREO_VIRTUAL_ANALOG_VCF; }
 
  private:
   stmlib::Svf svf_[2];

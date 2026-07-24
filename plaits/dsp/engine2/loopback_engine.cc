@@ -109,7 +109,7 @@ void LoopbackEngine::Render(
     const float main = carrier * envelope;
     const float sidebands = carrier * current_depth * \
         shaped_feedback * normalization;
-    if (parameters.stereo) {
+    if ((PLAITS_STEREO_LOOPBACK && parameters.stereo)) {
       const float body = 0.9f * main;
       const float sideband_signal = 1.55f * sidebands;
       out[i] = body * main_left + sideband_signal * sideband_left;

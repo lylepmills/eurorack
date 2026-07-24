@@ -144,7 +144,7 @@ void TapfieldEngine::Render(
     Seed();
     clock_phase_ = 0.0f;
     target_ = Decode(parameters.timbre, false);
-    if (parameters.stereo) {
+    if ((PLAITS_STEREO_TAPFIELD && parameters.stereo)) {
       target_r_ = Decode(parameters.timbre, true);
       value_r_ = 0.0f;
     }
@@ -162,13 +162,13 @@ void TapfieldEngine::Render(
       clock_phase_ -= 1.0f;
       Clock(parameters.morph);
       target_ = Decode(parameters.timbre, false);
-      if (parameters.stereo) {
+      if ((PLAITS_STEREO_TAPFIELD && parameters.stereo)) {
         target_r_ = Decode(parameters.timbre, true);
       }
     }
     value_ += slew * (target_ - value_);
     out[i] = 0.9f * value_;
-    if (parameters.stereo) {
+    if ((PLAITS_STEREO_TAPFIELD && parameters.stereo)) {
       // OUT/AUX become L/R: the register clocks and the OUT decode slews once
       // (shared), and the R channel slews an independent reversed-order decode
       // of the same register. The raw-bit AUX is dropped.

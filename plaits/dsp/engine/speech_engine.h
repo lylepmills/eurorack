@@ -58,7 +58,7 @@ class SpeechEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-  virtual bool stereo_capable() const { return true; }
+  virtual bool stereo_capable() const { return PLAITS_STEREO_SPEECH; }
 
   inline void set_prosody_amount(float prosody_amount) {
     prosody_amount_ = prosody_amount;

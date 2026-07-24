@@ -139,7 +139,7 @@ void WaveshapingEngine::Render(
     float fold_2 = -InterpolateHermite(
         lut_fold_2 + 1, index, 512.0f);
 
-    if (parameters.stereo) {
+    if ((PLAITS_STEREO_WAVESHAPING && parameters.stereo)) {
       out[i] = fold * fold_left + fold_2 * fold_2_left;
       aux[i] = fold * fold_right + fold_2 * fold_2_right;
     } else {

@@ -152,7 +152,7 @@ void RulefieldEngine::Render(
     const float edges = ReadWave(
         edge_row_, edge_density_, phase_, parameters.macro);
     out[i] = 0.9f * (cells + (edges - cells) * parameters.timbre);
-    if (parameters.stereo) {
+    if ((PLAITS_STEREO_RULEFIELD && parameters.stereo)) {
       // OUT/AUX become L/R: the CA evolves and phase_ advances once (shared),
       // then the same cells<->edges blend is read at the antipodal phase, half
       // a ring away. Sampling the spatial field at two positions gives

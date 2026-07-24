@@ -126,7 +126,7 @@ void VirtualAnalogVCFEngine::Render(
     lp += stage2_gain * \
         (SoftClip(svf_[1].Process<FILTER_MODE_LOW_PASS>(lp)) - lp);
 
-    if (parameters.stereo) {
+    if ((PLAITS_STEREO_VIRTUAL_ANALOG_VCF && parameters.stereo)) {
       // Mid/side high-frequency widener: the low/mid body (lp) stays centred
       // and only the SoftClip'd high band is spread as an L-R difference. A
       // mono sum (L + R = 2*lp) preserves the body and merely decorrelates the

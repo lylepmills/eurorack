@@ -104,7 +104,7 @@ void PhaseFlockEngine::Render(
   const float normalization = 1.0f / \
       static_cast<float>(kNumPhaseFlockOscillators);
 
-  const bool stereo = parameters.stereo;
+  const bool stereo = (PLAITS_STEREO_PHASE_FLOCK && parameters.stereo);
   float pan_left[kNumPhaseFlockOscillators];
   float pan_right[kNumPhaseFlockOscillators];
   if (stereo) {

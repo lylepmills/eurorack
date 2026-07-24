@@ -92,7 +92,7 @@ void ParticleEngine::Render(
   fill(&out[0], &out[size], 0.0f);
   fill(&aux[0], &aux[size], 0.0f);
 
-  if (parameters.stereo) {
+  if ((PLAITS_STEREO_PARTICLE_NOISE && parameters.stereo)) {
     for (int i = 0; i < kNumParticles; ++i) {
       float left_gain, right_gain;
       StereoPanGains(particle_pan[i], &left_gain, &right_gain);

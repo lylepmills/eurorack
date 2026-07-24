@@ -169,7 +169,7 @@ void SixOpEngine::Render(
   //   voice_[i].Render(temp_buffer_, size);
   // }
 
-  if (parameters.stereo) {
+  if ((PLAITS_STEREO_SIX_OP && parameters.stereo)) {
     // Staggered rendering, split by voice: the accumulation buffer always
     // holds the tail of the single voice rendered on the previous block, so
     // per-voice pan gains can be applied when the two halves are combined.

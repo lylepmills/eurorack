@@ -106,19 +106,19 @@ void GlissonEngine::Render(
           direction,
           duration,
           static_cast<float>(i) / static_cast<float>(num_grains),
-          parameters.stereo);
+          (PLAITS_STEREO_GLISSON && parameters.stereo));
     }
     reset_pending_ = false;
   } else if (num_grains > num_grains_) {
     for (int i = num_grains_; i < num_grains; ++i) {
       StartGrain(
-          &grain_[i], scatter, direction, duration, 0.0f, parameters.stereo);
+          &grain_[i], scatter, direction, duration, 0.0f, (PLAITS_STEREO_GLISSON && parameters.stereo));
     }
   }
   num_grains_ = num_grains;
 
   const float gain = 0.72f / static_cast<float>(num_grains);
-  if (parameters.stereo) {
+  if ((PLAITS_STEREO_GLISSON && parameters.stereo)) {
     for (int i = 0; i < num_grains; ++i) {
       Grain* g = &grain_[i];
       for (size_t j = 0; j < size; ++j) {

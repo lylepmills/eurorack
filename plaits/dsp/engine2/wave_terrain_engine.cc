@@ -230,7 +230,7 @@ void WaveTerrainEngine::Render(
       const float z1 = Terrain(x, y, z_integral + 1);
       const float z = (z0 + (z1 - z0) * z_fractional);
       out_s += z;
-      if (parameters.stereo) {
+      if ((PLAITS_STEREO_WAVE_TERRAIN && parameters.stereo)) {
         // OUT/AUX become L/R: the trajectory and terrain index run once
         // (shared), and the R channel reads a second pickup at the sample
         // point rotated 90 degrees about the origin (swap the path axes and
@@ -248,7 +248,7 @@ void WaveTerrainEngine::Render(
       ++ij;
     }
     out[i] = kScale * out_s;
-    if (parameters.stereo) {
+    if ((PLAITS_STEREO_WAVE_TERRAIN && parameters.stereo)) {
       aux[i] = kScale * aux_r_s;
     } else {
       aux[i] = Sine(1.0f + 0.5f * kScale * aux_s);

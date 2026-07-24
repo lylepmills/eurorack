@@ -81,7 +81,7 @@ void StringEngine::Render(
   const float exciter_size = ApplyMacro(
       1.0f, 0.25f, 4.0f, parameters.macro);
 
-  if (parameters.stereo) {
+  if ((PLAITS_STEREO_INHARMONIC_STRING && parameters.stereo)) {
     for (int i = 0; i < kNumStrings; ++i) {
       float string_out[kMaxBlockSize];
       float exciter[kMaxBlockSize];

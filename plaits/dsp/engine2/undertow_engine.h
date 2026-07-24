@@ -32,7 +32,7 @@ class UndertowEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-  virtual bool stereo_capable() const { return true; }
+  virtual bool stereo_capable() const { return PLAITS_STEREO_UNDERTOW; }
 
  private:
   void ComputeRegistration(float registration, float* amplitude) const;

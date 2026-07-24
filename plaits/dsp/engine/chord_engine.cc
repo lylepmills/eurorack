@@ -140,7 +140,7 @@ void ChordEngine::Render(
   const float f0 = NoteToFrequency(parameters.note) * 0.998f;
   const float waveform = max((morph_lp_ - 0.535f) * 2.15f, 0.0f);
 
-  if (parameters.stereo) {
+  if ((PLAITS_STEREO_CHORDS && parameters.stereo)) {
     const float voice_balance = ApplyMacro(
         1.0f, 0.0f, 2.0f, parameters.macro);
     for (int note = 0; note < kChordNumVoices; ++note) {

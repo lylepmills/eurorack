@@ -34,7 +34,7 @@ class PhaseFlockEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-  virtual bool stereo_capable() const { return true; }
+  virtual bool stereo_capable() const { return PLAITS_STEREO_PHASE_FLOCK; }
 
  private:
   void Scatter();

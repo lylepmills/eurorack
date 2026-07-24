@@ -175,7 +175,7 @@ void UndertowEngine::Render(
 
     float out_channel_target = main_target[voice] * main_gain;
     float aux_channel_target = aux_target[voice] * aux_gain;
-    if (parameters.stereo) {
+    if ((PLAITS_STEREO_UNDERTOW && parameters.stereo)) {
       // OUT/AUX become L/R: the voice keeps its registration level, split by
       // equal-power pan gains. The alternating-polarity lattice is skipped so
       // that both channels stay mono-compatible.

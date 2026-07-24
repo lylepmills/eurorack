@@ -140,7 +140,7 @@ void SpeechEngine::Render(
         size);
   }
 
-  if (parameters.stereo) {
+  if ((PLAITS_STEREO_SPEECH && parameters.stereo)) {
     // OUT/AUX become L/R: replace the MACRO mix with a gentle equal-power pan
     // of the two existing paths so both are audible as a widened voice. The
     // voice path leans slightly left, the secondary formant path slightly
