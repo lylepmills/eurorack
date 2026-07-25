@@ -96,13 +96,20 @@ the useful proof case because it combines all three built-in DX banks with all
 four Rubato engines, which the former stock/experimental compile switch could
 not express.
 
-Verified mixed-recipe output at source revision `0e6e6f202307`:
+Verified mixed-recipe output at source revision `720d1406e87b`:
 
-- ARM text: 223,760 bytes
+- ARM text: 201,344 bytes
 - ARM data: 48 bytes
 - BSS: 27,824 bytes
-- Binary SHA-256: `9c72ad071eb5849e59c1ee0fe47ca2ee3f8672b82dbd2cc507117df20cee3788`
-- WAV SHA-256: `4ce8b282446c613a71aaa79961dbf85e9f478047e8307c044c26a39120b45ad4`
+- Binary SHA-256: `695eb862b65b8ccea9a48cf4f91e77e9d527229e6620ede07057a5ce17c275e2`
+- WAV SHA-256: `ab63035b75a19293602a67901216d62a9640ef412cc7ee01b647ba12e91e4b66`
+
+Measured by submitting `mixed_build_request.json` to the image under test. The
+same request against the previous image (`rev-0e6e6f202307`) gives 201,296 text
+bytes, so this revision costs 48 bytes — the added suboscillator value and its
+decode. The 223,760 figure recorded here for that revision does not reproduce
+from this request and was measured some other way; treat these as reproducible
+only via the procedure above, per the note below.
 
 These are revision-specific. The July 17 schema-5 figures (199,952 / 48 / 27,392,
 binary `564c2322…`, WAV `2e9a93cb…`) held at revision
@@ -115,7 +122,25 @@ The production Worker, queues, R2 bucket, Durable Objects, and compiler
 Container are managed by `wrangler.jsonc`. Before each firmware-source rollout:
 
 1. Compute and set a new immutable `PLAITS_SOURCE_REVISION`.
-2. Build and push the matching container image tag.
+2. Build and push the matching container image tag. **Pass the revision as a
+   build arg**, not just as a Worker var — the container stamps its own
+   `PLAITS_SOURCE_REVISION` into every artifact's `X-Plaits-Source-Revision`,
+   which the Worker prefers over its own var when recording build metadata. The
+   Dockerfile's `ARG` default is a fixed old commit, so an image built without
+   the flag silently reports that instead. `rev-0e6e6f202307` was built this way
+   and stamped `303a9afad9f1` on everything it compiled:
+
+   ```sh
+   docker build --platform linux/amd64 \
+     --build-arg PLAITS_SOURCE_REVISION=<revision> \
+     -t registry.cloudflare.com/<account-id>/plaits-lab-build-service-firmwarebuilder:rev-<revision> \
+     -f Dockerfile.plaits-builder .
+   <account-wrangler> containers push \
+     registry.cloudflare.com/<account-id>/plaits-lab-build-service-firmwarebuilder:rev-<revision>
+   ```
+
+   Confirm with `curl -sD - -o /dev/null localhost:<port>/build/<key> | grep
+   Source-Revision` against the image before pushing.
 3. Regenerate the engine allowlist: `pnpm run catalog:regen` (rewrites
    `../plaits_lab_catalog/public_catalog.json` from the exporter at the
    checked-out commit), then commit any change. Each engine digest hashes its
@@ -139,7 +164,7 @@ system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-303a9afad9f1` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-720d1406e87b` (immutable
 commit-derived tags replaced the date-based convention). After deploying a
 new image, wait for `wrangler containers list` to report `ready` before smoke
 testing; requests made while the application was still `provisioning` reached
@@ -169,6 +194,7 @@ target.
 | July 24, 2026 (schema 11, sparse banks) | `c961b1d86063` | `rev-c961b1d86063` |
 | July 24, 2026 (schema 12, per-slot FM banks) | `6cd7d2cf841c` | `rev-6cd7d2cf841c` |
 | July 25, 2026 (options menu reorder) | `0e6e6f202307` | `rev-0e6e6f202307` |
+| July 25, 2026 (aux output / subosc split) | `720d1406e87b` | `rev-720d1406e87b` |
 
 Three consequences a rollback has that a forward deploy does not:
 
