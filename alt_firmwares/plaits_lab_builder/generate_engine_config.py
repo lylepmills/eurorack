@@ -44,8 +44,10 @@ PACKED_BANK_SIZE = PATCHES_PER_BANK * PACKED_PATCH_SIZE  # 4096
 # bump moves every build to an id no old firmware ever minted — which is what
 # makes a module reset its saved options to the recipe's exactly once instead of
 # reinterpreting the old numbers. Version 1: options menu reordered, and the
-# fourth macro / stereo promoted to value 1 on their lights (2026-07).
-OPTIONS_LAYOUT_VERSION = 1
+# fourth macro / stereo promoted to value 1 on their lights (2026-07). Version 2:
+# the aux output holds one suboscillator value instead of two (square/sine), and
+# the suboscillator light carries shape and octave together (2026-07).
+OPTIONS_LAYOUT_VERSION = 2
 
 
 @dataclass(frozen=True)
@@ -56,8 +58,8 @@ class BuildRecipe:
     locked_frequency_pot_option: int
     model_cv_option: int
     level_cv_option: int
-    aux_subosc_wave_option: int
-    aux_subosc_octave_option: int
+    aux_output_option: int
+    aux_subosc_option: int
     chord_set_option: int
     hold_on_trigger_option: int
     options_profile_id: int
@@ -358,8 +360,14 @@ def validate_recipe(value: Any) -> BuildRecipe:
         "locked_frequency_pot_option": (options.get("lockedFrequencyKnob"), {"octaves": 0, "macro-4": 1, "aux-crossfade": 2, "decay": 3}),
         "model_cv_option": (options.get("modelInput"), {"model": 0, "macro-4": 1, "aux-crossfade": 2, "lpg-colour": 3}),
         "level_cv_option": (options.get("levelInput"), {"level": 0, "decay": 1}),
-        "aux_subosc_wave_option": (options.get("auxOutput"), {"alternate-model": 0, "stereo": 1, "square-subosc": 2, "sine-subosc": 3}),
-        "aux_subosc_octave_option": (options.get("suboscillatorOctave"), {0: 0, -1: 1, -2: 2}),
+        # The recipe records the suboscillator's SHAPE inside auxOutput and its
+        # octave beside it; the firmware splits the pair the other way, into one
+        # aux-output setting (regular / stereo / subosc) and one suboscillator
+        # setting that carries shape and octave together. The two forms are a
+        # bijection, so the recipe format is unchanged and every saved recipe
+        # still builds - the shape just moves across, below.
+        "aux_output_option": (options.get("auxOutput"), {"alternate-model": 0, "stereo": 1, "square-subosc": 2, "sine-subosc": 2}),
+        "aux_subosc_option": (options.get("suboscillatorOctave"), {0: 0, -1: 1, -2: 2}),
         "chord_set_option": (options.get("chordTable"), {
             table["id"]: index for index, table in enumerate(chord_tables)
         }),
@@ -370,6 +378,14 @@ def validate_recipe(value: Any) -> BuildRecipe:
         if selected not in allowed or (name == "hold_on_trigger_option" and not isinstance(selected, bool)):
             raise ValueError("recipe contains an unsupported firmware option")
         normalized_options[name] = allowed[selected]
+    # Shape and octave share one firmware value (plaits/dsp/voice.h): 0-2 square
+    # at 0/-1/-2 octaves, 3-5 sine at the same three. The octave landed above;
+    # the shape comes from auxOutput, the only place the recipe records it. It
+    # is carried even when the aux output is not a suboscillator, so the recipe
+    # keeps its remembered shape and the profile-id fold below stays injective
+    # over every (auxOutput, suboscillatorOctave) pair.
+    if options.get("auxOutput") == "sine-subosc":
+        normalized_options["aux_subosc_option"] += 3
 
     # A module keeps its saved options across an audio reflash, and the firmware
     # only overwrites them (ApplyBuildOptionDefaults) when the recipe's profile
@@ -384,10 +400,10 @@ def validate_recipe(value: Any) -> BuildRecipe:
     for name, radix in (
         ("model_cv_option", 4),
         ("level_cv_option", 2),
-        # The aux/subosc-wave option gained a fourth value (stereo OUT/AUX), so
-        # its radix is 4.
-        ("aux_subosc_wave_option", 4),
-        ("aux_subosc_octave_option", 3),
+        # Regular aux model, stereo OUT/AUX, suboscillator.
+        ("aux_output_option", 3),
+        # Square/sine crossed with 0, -1 and -2 octaves.
+        ("aux_subosc_option", 6),
         # Nine, matching validate_chord_tables' cap. A smaller radix here would
         # let a table at index 6-8 alias into the next digit, so two different
         # recipes could mint one profile id and the second would not apply its
@@ -396,11 +412,14 @@ def validate_recipe(value: Any) -> BuildRecipe:
         ("hold_on_trigger_option", 2),
     ):
         profile_code = profile_code * radix + normalized_options[name]
-    # The reversible encoding stays well under the reserved range (max profile
-    # code < 254*256 — the option digits span 6912 values per layout version),
-    # so it still fits the legacy navigation and padding bytes, while reserving
-    # low bytes 0 and 1 so saved states from the old navigation setting can
-    # never look initialized.
+    # The reversible encoding has to stay under the reserved range (profile code
+    # < 254*256 = 65024) to fit the legacy navigation and padding bytes, while
+    # reserving low bytes 0 and 1 so saved states from the old navigation setting
+    # can never look initialized. The option digits span 10368 values per layout
+    # version, so the ceiling arrives at layout version 6 — the assertion is
+    # here so that lands as a build error rather than as colliding profile ids.
+    if profile_code >= 254 * 256:
+        raise ValueError("options profile code has outgrown the reserved range")
     profile_id = ((profile_code // 254) << 8) | (2 + profile_code % 254)
 
     # Per-engine stereo (schema 10): stereoEngines lists the catalog ids built
@@ -585,8 +604,8 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_BUILD_LOCKED_FREQUENCY_POT_OPTION {recipe.locked_frequency_pot_option}
 #define PLAITS_BUILD_MODEL_CV_OPTION {recipe.model_cv_option}
 #define PLAITS_BUILD_LEVEL_CV_OPTION {recipe.level_cv_option}
-#define PLAITS_BUILD_AUX_SUBOSC_WAVE_OPTION {recipe.aux_subosc_wave_option}
-#define PLAITS_BUILD_AUX_SUBOSC_OCTAVE_OPTION {recipe.aux_subosc_octave_option}
+#define PLAITS_BUILD_AUX_OUTPUT_OPTION {recipe.aux_output_option}
+#define PLAITS_BUILD_AUX_SUBOSC_OPTION {recipe.aux_subosc_option}
 #define PLAITS_BUILD_CHORD_SET_OPTION {recipe.chord_set_option}
 #define PLAITS_BUILD_HOLD_ON_TRIGGER_OPTION {recipe.hold_on_trigger_option}
 #define PLAITS_BUILD_OPTIONS_PROFILE_ID 0x{recipe.options_profile_id:04x}u

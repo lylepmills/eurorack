@@ -73,8 +73,8 @@ static const uint8_t kEngineRows[] = PLAITS_ENGINE_ROWS;
 // would be the whole hazard of reordering.
 enum OptionLight {
   OPTION_LIGHT_CHORD_SET = 0,
-  OPTION_LIGHT_AUX_WAVE,
-  OPTION_LIGHT_SUBOSC_OCTAVE,
+  OPTION_LIGHT_AUX_OUTPUT,
+  OPTION_LIGHT_SUBOSC,
   OPTION_LIGHT_FREQUENCY_POT,
   OPTION_LIGHT_MODEL_CV,
   OPTION_LIGHT_LEVEL_CV,
@@ -86,10 +86,11 @@ static const uint8_t kNumOptions = OPTION_LIGHT_LAST;
 static const uint8_t kNumLockedFrequencyPotOptions = 4;
 static const uint8_t kNumModelCVOptions = 4;
 static const uint8_t kNumLevelCVOptions = 2;
-// Wave options: regular aux, stereo (true L/R pair on stereo-capable engines),
-// square subosc, sine subosc.
-static const uint8_t kNumSuboscWaveOptions = 4;
-static const uint8_t kNumSuboscOctaveOptions = 3;
+// Aux output: regular aux model, stereo (true L/R pair on stereo-capable
+// engines), suboscillator. The suboscillator's own light then carries shape
+// and octave together - square/sine crossed with 0, -1 and -2 octaves.
+static const uint8_t kNumAuxOutputOptions = 3;
+static const uint8_t kNumSuboscOptions = 6;
 static const uint8_t kNumChordSetOptions = PLAITS_CHORD_TABLE_COUNT;
 static const uint8_t kNumHoldOnTriggerOptions = 2;
 
@@ -152,10 +153,10 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
 }
 
 // An option light whose setting cannot do anything right now. The suboscillator
-// octave only matters while the aux output IS a suboscillator; rather than show
-// a light that does nothing, the menu darkens it and walks past it.
+// shape and octave only matter while the aux output IS a suboscillator; rather
+// than show a light that does nothing, the menu darkens it and walks past it.
 bool Ui::OptionInert(int index) const {
-  return index == OPTION_LIGHT_SUBOSC_OCTAVE && !patch_->aux_is_subosc();
+  return index == OPTION_LIGHT_SUBOSC && !patch_->aux_is_subosc();
 }
 
 // Step to the next light the player can actually use. The loop is bounded so
@@ -186,8 +187,8 @@ void Ui::LoadState() {
   patch_->locked_frequency_pot_option = state.locked_frequency_pot_option;
   patch_->model_cv_option = state.model_cv_option;
   patch_->level_cv_option = state.level_cv_option;
-  patch_->aux_subosc_wave_option = state.aux_subosc_wave_option;
-  patch_->aux_subosc_octave_option = state.aux_subosc_octave_option;
+  patch_->aux_output_option = state.aux_output_option;
+  patch_->aux_subosc_option = state.aux_subosc_option;
   patch_->chord_set_option = state.chord_set_option;
   patch_->hold_on_trigger_option = state.hold_on_trigger_option;
   locked_octave_ = state.locked_octave;
@@ -214,8 +215,8 @@ void Ui::SaveState() {
   state->locked_frequency_pot_option = patch_->locked_frequency_pot_option;
   state->model_cv_option = patch_->model_cv_option;
   state->level_cv_option = patch_->level_cv_option;
-  state->aux_subosc_wave_option = patch_->aux_subosc_wave_option;
-  state->aux_subosc_octave_option = patch_->aux_subosc_octave_option;
+  state->aux_output_option = patch_->aux_output_option;
+  state->aux_subosc_option = patch_->aux_subosc_option;
   state->chord_set_option = patch_->chord_set_option;
   state->hold_on_trigger_option = patch_->hold_on_trigger_option;
   state->locked_octave = locked_octave_;
@@ -395,10 +396,10 @@ void Ui::UpdateLEDs() {
         int option_value = 0;
         if (i == OPTION_LIGHT_CHORD_SET) {
           option_value = patch_->chord_set_option;
-        } else if (i == OPTION_LIGHT_AUX_WAVE) {
-          option_value = patch_->aux_subosc_wave_option;
-        } else if (i == OPTION_LIGHT_SUBOSC_OCTAVE) {
-          option_value = patch_->aux_subosc_octave_option;
+        } else if (i == OPTION_LIGHT_AUX_OUTPUT) {
+          option_value = patch_->aux_output_option;
+        } else if (i == OPTION_LIGHT_SUBOSC) {
+          option_value = patch_->aux_subosc_option;
         } else if (i == OPTION_LIGHT_FREQUENCY_POT) {
           option_value = patch_->locked_frequency_pot_option;
         } else if (i == OPTION_LIGHT_MODEL_CV) {
@@ -604,15 +605,15 @@ void Ui::ReadSwitches() {
           if (patch_->chord_set_option >= kNumChordSetOptions) {
             patch_->chord_set_option = 0;
           }
-        } else if (option_index_ == OPTION_LIGHT_AUX_WAVE) {
-          patch_->aux_subosc_wave_option += 1;
-          if (patch_->aux_subosc_wave_option >= kNumSuboscWaveOptions) {
-            patch_->aux_subosc_wave_option = 0;
+        } else if (option_index_ == OPTION_LIGHT_AUX_OUTPUT) {
+          patch_->aux_output_option += 1;
+          if (patch_->aux_output_option >= kNumAuxOutputOptions) {
+            patch_->aux_output_option = 0;
           }
-        } else if (option_index_ == OPTION_LIGHT_SUBOSC_OCTAVE) {
-          patch_->aux_subosc_octave_option += 1;
-          if (patch_->aux_subosc_octave_option >= kNumSuboscOctaveOptions) {
-            patch_->aux_subosc_octave_option = 0;
+        } else if (option_index_ == OPTION_LIGHT_SUBOSC) {
+          patch_->aux_subosc_option += 1;
+          if (patch_->aux_subosc_option >= kNumSuboscOptions) {
+            patch_->aux_subosc_option = 0;
           }
         } else if (option_index_ == OPTION_LIGHT_FREQUENCY_POT) {
           // Leaving octave-switching mode while the knob is in the locked

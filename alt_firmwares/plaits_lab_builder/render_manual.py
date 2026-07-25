@@ -35,8 +35,11 @@ PANEL_LABELS = ("HARMONICS", "TIMBRE", "MORPH", "FOURTH")
 # blinking tier. Both orders mirror plaits/dsp/voice.h — keep them in step.
 MENU_LIGHTS = (
     ("Chord table", None),
-    ("Aux output", ("Regular aux model", "Stereo (OUT/AUX = L/R)", "Square subosc", "Sine subosc")),
-    ("Subosc octave", ("Same pitch", "-1 octave", "-2 octaves")),
+    ("Aux output", ("Regular aux model", "Stereo (OUT/AUX = L/R)", "Suboscillator")),
+    ("Suboscillator", (
+        "Square", "Square, -1 octave", "Square, -2 octaves",
+        "Sine", "Sine, -1 octave", "Sine, -2 octaves",
+    )),
     ("FREQUENCY knob", ("Octaves", "Fourth macro", "Aux crossfade", "LPG decay")),
     ("MODEL input", ("Model select", "Fourth macro", "Aux crossfade", "LPG colour (VCFA->VCA)")),
     ("LEVEL input", ("Level", "LPG decay")),

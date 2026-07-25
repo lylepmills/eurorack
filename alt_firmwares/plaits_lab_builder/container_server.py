@@ -184,6 +184,18 @@ STEREO_MACROS = {
 ALL_STEREO_MACROS = frozenset(STEREO_MACROS.values())
 
 
+def _recipe_is_stereo(validated_recipe: Any) -> bool:
+    """Whether a validated recipe asks for the stereo OUT/AUX render path.
+
+    Value 1 is stereo in the firmware's aux-output numbering (plaits/dsp/voice.h).
+    This used to be spelled `== 3` inline at the call site — stereo's value before
+    the options reorder moved it to 1 — so stereo recipes compiled every engine
+    mono and sine-subosc recipes paid ~26 KB of flash for a path they could not
+    reach. Named and pinned by a test now, since nothing else notices the drift.
+    """
+    return validated_recipe.aux_output_option == 1
+
+
 def _stereo_disable_flags(aux_stereo: bool, stereo_engines: Any) -> list[str]:
     """PLAITS_STEREO_<MACRO>=0 make vars for every engine left in mono."""
     if not aux_stereo:
@@ -245,7 +257,7 @@ def build_firmware(payload: Any) -> tuple[Path, dict[str, str]]:
     #     back-compat case -> enable all.
     #   - aux == stereo, stereo_engines given (schema 10): enable exactly those.
     command.extend(_stereo_disable_flags(
-        validated_recipe.aux_subosc_wave_option == 3,
+        _recipe_is_stereo(validated_recipe),
         validated_recipe.stereo_engines,
     ))
     # Pin the full locale, including LC_CTYPE: ccache folds these into its hash,

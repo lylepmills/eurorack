@@ -150,15 +150,18 @@ struct Patch {
   // 0 - regular aux model
   // 1 - stereo: OUT/AUX become a true L/R pair on stereo-capable engines
   //     (the other engines keep their regular aux output)
-  // 2 - square wave suboscillator
-  // 3 - sine wave suboscillator
-  uint8_t aux_subosc_wave_option;
-  // 0 - no octave shift
-  // 1 - 1 octave down
-  // 2 - 2 octaves down
-  // Only has an effect while aux_is_subosc(); the UI hides its menu light
+  // 2 - suboscillator, shaped and tuned by aux_subosc_option
+  uint8_t aux_output_option;
+  // Shape and octave in one value, so the suboscillator is one setting on one
+  // light rather than two. Shape is the slower-moving choice, so it takes the
+  // blink tier and the octave takes the hue: the three squares are the three
+  // solid colors, the three sines the same three blinking.
+  // 0 - square             3 - sine
+  // 1 - square, -1 octave  4 - sine, -1 octave
+  // 2 - square, -2 octaves 5 - sine, -2 octaves
+  // Only has an effect while aux_is_subosc(); the UI darkens its menu light
   // otherwise.
-  uint8_t aux_subosc_octave_option;
+  uint8_t aux_subosc_option;
   // Index into the chord tables this firmware was built with (up to nine).
   uint8_t chord_set_option;
   // 0 - don't hold params on trigger (original)
@@ -166,12 +169,12 @@ struct Patch {
   //     (note model is already held on trigger by default)
   uint8_t hold_on_trigger_option;
 
-  // The two readings of aux_subosc_wave_option that both the DSP and the UI
-  // need. Keeping them here means a future renumber touches one place.
-  inline bool aux_is_stereo() const { return aux_subosc_wave_option == 1; }
-  inline bool aux_is_subosc() const {
-    return aux_subosc_wave_option == 2 || aux_subosc_wave_option == 3;
-  }
+  // The readings of the two aux options that the DSP and the UI need. Keeping
+  // them here means a future renumber touches one place.
+  inline bool aux_is_stereo() const { return aux_output_option == 1; }
+  inline bool aux_is_subosc() const { return aux_output_option == 2; }
+  inline bool aux_subosc_is_sine() const { return aux_subosc_option >= 3; }
+  inline int aux_subosc_octaves_down() const { return aux_subosc_option % 3; }
 };
 
 struct Modulations {

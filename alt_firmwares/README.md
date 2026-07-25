@@ -212,14 +212,15 @@ With this table, instead of Frequency defining the root and Harmonics defining c
 ### Second light - Aux output
 Green means the regular aux model, red means stereo (OUT and AUX become a true
 L/R pair on models built with a stereo render; the others keep their regular aux
-output), yellow means a square wave subosc, and blinking green means a sine wave
-subosc.
+output), and yellow means a suboscillator — shaped and tuned by the third light.
 
-### Third light - Aux suboscillator octave option
-Green means +0 octaves (same frequency as the main model), red means -1 octave,
-yellow means -2 octaves. This light only appears when the second light is set to
-a suboscillator — otherwise it has nothing to act on, so it stays dark and the
-left button walks straight past it.
+### Third light - Suboscillator
+Shape and octave in one setting. Solid colours are the square wave, the same
+three blinking are the sine: green +0 octaves (same frequency as the main
+model), red -1 octave, yellow -2 octaves; then blinking green, red and yellow
+for the sine at those same three octaves. This light only appears when the
+second light is set to a suboscillator — otherwise it has nothing to act on, so
+it stays dark and the left button walks straight past it.
 
 ### Fourth light - Frequency knob alt functionality (when frequency is locked i.e. in octave-switching mode)
 Green means octaves (as in the stock firmware), red means controlling the fourth

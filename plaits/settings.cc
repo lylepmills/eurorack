@@ -41,8 +41,8 @@ static void ApplyBuildOptionDefaults(State* state) {
   state->locked_frequency_pot_option = PLAITS_BUILD_LOCKED_FREQUENCY_POT_OPTION;
   state->model_cv_option = PLAITS_BUILD_MODEL_CV_OPTION;
   state->level_cv_option = PLAITS_BUILD_LEVEL_CV_OPTION;
-  state->aux_subosc_wave_option = PLAITS_BUILD_AUX_SUBOSC_WAVE_OPTION;
-  state->aux_subosc_octave_option = PLAITS_BUILD_AUX_SUBOSC_OCTAVE_OPTION;
+  state->aux_output_option = PLAITS_BUILD_AUX_OUTPUT_OPTION;
+  state->aux_subosc_option = PLAITS_BUILD_AUX_SUBOSC_OPTION;
   state->chord_set_option = PLAITS_BUILD_CHORD_SET_OPTION;
   state->hold_on_trigger_option = PLAITS_BUILD_HOLD_ON_TRIGGER_OPTION;
   state->options_profile_id_low = PLAITS_BUILD_OPTIONS_PROFILE_ID & 0xff;
@@ -67,8 +67,8 @@ bool Settings::Init() {
   CONSTRAIN(state_.locked_frequency_pot_option, 0, 3);
   CONSTRAIN(state_.model_cv_option, 0, 3);
   CONSTRAIN(state_.level_cv_option, 0, 1);
-  CONSTRAIN(state_.aux_subosc_wave_option, 0, 3);
-  CONSTRAIN(state_.aux_subosc_octave_option, 0, 2);
+  CONSTRAIN(state_.aux_output_option, 0, 2);
+  CONSTRAIN(state_.aux_subosc_option, 0, 5);
   CONSTRAIN(state_.chord_set_option, 0, PLAITS_CHORD_TABLE_COUNT - 1);
   CONSTRAIN(state_.hold_on_trigger_option, 0, 1);
   CONSTRAIN(state_.locked_octave, 0, 8);

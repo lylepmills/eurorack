@@ -1,8 +1,16 @@
 from __future__ import annotations
 
+import json
 import unittest
+from pathlib import Path
 
-from container_server import classify_link_failure
+from container_server import (
+    ALL_STEREO_MACROS,
+    _recipe_is_stereo,
+    _stereo_disable_flags,
+    classify_link_failure,
+)
+from generate_engine_config import DEFAULT_CONFIGURATION, validate_recipe
 
 
 class ClassifyLinkFailureTest(unittest.TestCase):
@@ -44,6 +52,43 @@ class ClassifyLinkFailureTest(unittest.TestCase):
             "make: *** [voice.o] Error 1\n"
         )
         self.assertIsNone(classify_link_failure(log))
+
+
+class StereoSelectionTest(unittest.TestCase):
+    """The seam where the aux-output NUMBER decides whether stereo is compiled.
+
+    Nothing else notices when the firmware renumbers that option: the recipe
+    binds by name, the build still succeeds, and the only symptom is a stereo
+    firmware that plays mono. So read it back through validate_recipe rather
+    than restating the number.
+    """
+
+    def recipe_for(self, aux_output: str) -> object:
+        recipe = json.loads(
+            (Path(__file__).parent / "default_recipe.json").read_text(encoding="utf-8")
+        )
+        recipe["schemaVersion"] = 4
+        recipe["preferences"] = {"navigationMode": "linear"}
+        recipe["initialOptions"] = dict(
+            DEFAULT_CONFIGURATION["initialOptions"], auxOutput=aux_output
+        )
+        return validate_recipe(recipe)
+
+    def test_only_a_stereo_recipe_selects_the_stereo_render_path(self) -> None:
+        self.assertTrue(_recipe_is_stereo(self.recipe_for("stereo")))
+        for aux_output in ("alternate-model", "square-subosc", "sine-subosc"):
+            self.assertFalse(
+                _recipe_is_stereo(self.recipe_for(aux_output)), msg=aux_output
+            )
+
+    def test_a_stereo_recipe_without_a_list_keeps_every_engine_stereo(self) -> None:
+        # Schema <= 9 carried no per-engine list; the whole build is stereo.
+        self.assertEqual(_stereo_disable_flags(True, None), [])
+
+    def test_a_mono_recipe_disables_every_engine_stereo_path(self) -> None:
+        self.assertEqual(
+            len(_stereo_disable_flags(False, None)), len(ALL_STEREO_MACROS)
+        )
 
 
 if __name__ == "__main__":

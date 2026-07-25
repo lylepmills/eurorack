@@ -64,8 +64,8 @@ struct State {
   uint8_t locked_frequency_pot_option;
   uint8_t model_cv_option;
   uint8_t level_cv_option;
-  uint8_t aux_subosc_wave_option;
-  uint8_t aux_subosc_octave_option;
+  uint8_t aux_output_option;
+  uint8_t aux_subosc_option;
   uint8_t chord_set_option;
   uint8_t hold_on_trigger_option;
   // Reuses the legacy navigation byte. Generated profile IDs always have a

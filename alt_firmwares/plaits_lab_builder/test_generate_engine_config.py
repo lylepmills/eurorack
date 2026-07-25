@@ -30,7 +30,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
         # agree and do not reset each other's saved options. Moves only with
         # OPTIONS_LAYOUT_VERSION.
         recipe = validate_recipe(self.load("default_recipe.json"))
-        self.assertEqual(recipe.options_profile_id, 0x1B38)
+        self.assertEqual(recipe.options_profile_id, 0x51A4)
 
     def test_option_values_match_the_firmware_numbering(self) -> None:
         # These numbers are the firmware's (plaits/dsp/voice.h): they pick the
@@ -53,10 +53,42 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertEqual(build.locked_frequency_pot_option, 1)
         self.assertEqual(build.model_cv_option, 1)
         self.assertEqual(build.level_cv_option, 1)
-        self.assertEqual(build.aux_subosc_wave_option, 1)
-        self.assertEqual(build.aux_subosc_octave_option, 2)
+        self.assertEqual(build.aux_output_option, 1)
+        self.assertEqual(build.aux_subosc_option, 2)
         self.assertEqual(build.chord_set_option, 2)
         self.assertEqual(build.hold_on_trigger_option, 1)
+
+    def test_subosc_shape_and_octave_fold_into_one_firmware_value(self) -> None:
+        # The recipe keeps the shape in auxOutput and the octave beside it; the
+        # firmware wants one aux-output setting and one suboscillator setting
+        # carrying both. Square takes 0-2, sine 3-5, each over 0/-1/-2 octaves.
+        expected = {
+            ("square-subosc", 0): (2, 0),
+            ("square-subosc", -1): (2, 1),
+            ("square-subosc", -2): (2, 2),
+            ("sine-subosc", 0): (2, 3),
+            ("sine-subosc", -1): (2, 4),
+            ("sine-subosc", -2): (2, 5),
+            # Not a suboscillator: the shape and octave are carried anyway, so a
+            # recipe keeps the settings the player steps back to.
+            ("alternate-model", -1): (0, 1),
+            ("stereo", 0): (1, 0),
+        }
+        recipe = self.load("default_recipe.json")
+        recipe["schemaVersion"] = 4
+        recipe["preferences"] = {"navigationMode": "linear"}
+        for (aux, octave), (aux_value, subosc_value) in expected.items():
+            recipe["initialOptions"] = dict(
+                DEFAULT_CONFIGURATION["initialOptions"],
+                auxOutput=aux,
+                suboscillatorOctave=octave,
+            )
+            build = validate_recipe(recipe)
+            self.assertEqual(
+                (build.aux_output_option, build.aux_subosc_option),
+                (aux_value, subosc_value),
+                msg=f"{aux} at {octave} octaves",
+            )
 
     def test_every_chord_table_slot_maps_to_a_distinct_profile(self) -> None:
         # Nine tables fit on the hardware, so the chord digit's radix must be
@@ -483,8 +515,10 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertIn("#define PLAITS_BUILD_LOCKED_FREQUENCY_POT_OPTION 1", config)
         self.assertIn("#define PLAITS_BUILD_MODEL_CV_OPTION 2", config)
         self.assertIn("#define PLAITS_BUILD_LEVEL_CV_OPTION 1", config)
-        self.assertIn("#define PLAITS_BUILD_AUX_SUBOSC_WAVE_OPTION 3", config)
-        self.assertIn("#define PLAITS_BUILD_AUX_SUBOSC_OCTAVE_OPTION 2", config)
+        # A sine suboscillator two octaves down: aux output 2 (suboscillator),
+        # and the sine half of the subosc light at its -2 octave value.
+        self.assertIn("#define PLAITS_BUILD_AUX_OUTPUT_OPTION 2", config)
+        self.assertIn("#define PLAITS_BUILD_AUX_SUBOSC_OPTION 5", config)
         self.assertIn("#define PLAITS_BUILD_CHORD_SET_OPTION 2", config)
         self.assertIn("#define PLAITS_BUILD_HOLD_ON_TRIGGER_OPTION 1", config)
         self.assertRegex(config, r"#define PLAITS_BUILD_OPTIONS_PROFILE_ID 0x[0-9a-f]{4}u")
@@ -560,7 +594,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
         config = render_config(validate_recipe(recipe))
         # Stereo (OUT/AUX as a true L/R pair) sits at aux value 1, one step off
         # the regular aux model, and only a v9 builder accepts it.
-        self.assertIn("#define PLAITS_BUILD_AUX_SUBOSC_WAVE_OPTION 1", config)
+        self.assertIn("#define PLAITS_BUILD_AUX_OUTPUT_OPTION 1", config)
 
     def test_v10_parses_the_per_engine_stereo_list(self) -> None:
         public = self.load("../plaits_lab_catalog/public_catalog.json")

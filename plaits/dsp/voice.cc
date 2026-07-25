@@ -280,16 +280,17 @@ void Voice::Render(
 
   if (patch.aux_is_subosc()) {
     float frequency = NoteToFrequency(p.note);
-    if (patch.aux_subosc_octave_option == 1) {
+    const int octaves_down = patch.aux_subosc_octaves_down();
+    if (octaves_down == 1) {
       frequency /= 2.0f;
-    } else if (patch.aux_subosc_octave_option == 2) {
+    } else if (octaves_down == 2) {
       frequency /= 4.0f;
     }
 
-    if (patch.aux_subosc_wave_option == 2) {
-      square_oscillator_.Render(frequency, aux_buffer_, size);
-    } else {
+    if (patch.aux_subosc_is_sine()) {
       sine_oscillator_.Render(frequency, aux_buffer_, size);
+    } else {
+      square_oscillator_.Render(frequency, aux_buffer_, size);
     }
   }
 
