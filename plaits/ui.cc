@@ -130,6 +130,9 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
   data_transfer_progress_ = 0.0f;
 
   locked_octave_ = 4;
+#if PLAITS_CPU_PROBE
+  cpu_usage_ = 0.0f;
+#endif
 }
 
 void Ui::LoadState() {

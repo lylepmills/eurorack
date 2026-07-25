@@ -94,12 +94,13 @@ class Ui {
 
   uint8_t HandleFactoryTestingRequest(uint8_t command);
 
- private:
-  void UpdateLEDs();
 #if PLAITS_CPU_PROBE
   // Probe builds turn the LEDs into a CPU meter; see plaits/cpu_probe.h.
   inline void DisplayCpuUsage(float usage) { cpu_usage_ = usage; }
 #endif
+
+ private:
+  void UpdateLEDs();
   void ReadSwitches();
   void ProcessPotsHiddenParameters();
   void LoadState();
@@ -157,6 +158,9 @@ class Ui {
   // but using manual aux crossfade, stores the last octave
   // chosen by manually selection using the frequency pot
   uint8_t locked_octave_;
+#if PLAITS_CPU_PROBE
+  float cpu_usage_;
+#endif
 
   stmlib::HysteresisQuantizer2 octave_quantizer_;
 
