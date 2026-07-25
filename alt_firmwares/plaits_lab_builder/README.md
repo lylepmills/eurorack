@@ -96,13 +96,13 @@ the useful proof case because it combines all three built-in DX banks with all
 four Rubato engines, which the former stock/experimental compile switch could
 not express.
 
-Verified mixed-recipe output at source revision `303a9afad9f1`:
+Verified mixed-recipe output at source revision `0e6e6f202307`:
 
-- ARM text: 199,152 bytes
+- ARM text: 223,760 bytes
 - ARM data: 48 bytes
-- BSS: 27,360 bytes
-- Binary SHA-256: `1e56ba075dcb914e1b137b931d199f2164b8dae8f1c8493ae7446de73fdce521`
-- WAV SHA-256: `b0a6949509a6a84951e7c29e7ef19136a890706b2737d803c1d6f0f751e18bbb`
+- BSS: 27,824 bytes
+- Binary SHA-256: `9c72ad071eb5849e59c1ee0fe47ca2ee3f8672b82dbd2cc507117df20cee3788`
+- WAV SHA-256: `4ce8b282446c613a71aaa79961dbf85e9f478047e8307c044c26a39120b45ad4`
 
 These are revision-specific. The July 17 schema-5 figures (199,952 / 48 / 27,392,
 binary `564c2322…`, WAV `2e9a93cb…`) held at revision
@@ -168,6 +168,7 @@ target.
 | July 24, 2026 (schema 10, empty-slot fix) | `effbb4573178` | `rev-effbb4573178` |
 | July 24, 2026 (schema 11, sparse banks) | `c961b1d86063` | `rev-c961b1d86063` |
 | July 24, 2026 (schema 12, per-slot FM banks) | `6cd7d2cf841c` | `rev-6cd7d2cf841c` |
+| July 25, 2026 (options menu reorder) | `0e6e6f202307` | `rev-0e6e6f202307` |
 
 Three consequences a rollback has that a forward deploy does not:
 
