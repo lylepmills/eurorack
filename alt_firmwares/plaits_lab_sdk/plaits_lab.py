@@ -18,13 +18,12 @@ import zipfile
 from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import quote, urlparse
+from urllib.parse import urlparse
 from pathlib import Path
 from typing import Any
 
 
 SDK_VERSION = "plaits-engine-cpp-v1"
-DEV_EDITOR_DEFAULT = "http://localhost:3000"
 SDK_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SDK_DIR.parents[1]
 CATALOG_PATH = SDK_DIR.parent / "plaits_lab_catalog/catalog.json"
@@ -1574,32 +1573,15 @@ class DevSession:
         return output.read_bytes()
 
 
-def contributor_url_for(editor: str, server_url: str) -> str:
-    """The contributor-center URL to open, preserving the editor's PATH.
-
-    `--editor` is the full page URL (e.g. https://rubato.audio/plaits-palette/
-    contribute); a bare origin falls back to the contributor route rather than
-    the wrong top-level /contribute.
-    """
-    parsed = urlparse(editor)
-    origin = f"{parsed.scheme}://{parsed.netloc}"
-    path = parsed.path.rstrip("/") or "/plaits-palette/contribute"
-    return f"{origin}{path}?devServer={quote(server_url, safe='')}"
-
-
 def dev_command(args: argparse.Namespace) -> int:
     session = DevSession(args.package, args.compiler)
     package, _ = session.ensure_renderer()
-    editor = urlparse(args.editor)
-    require(editor.scheme in {"http", "https"} and bool(editor.netloc)
-            and not editor.username and not editor.password,
-            "--editor must be an HTTP(S) origin")
-    editor_origin = f"{editor.scheme}://{editor.netloc}"
-    # The dev server now serves its own audition UI (dev_editor.html) at "/", so
-    # its OWN origin(s) must be allowed too — a same-origin POST still sends an
-    # Origin header. --editor stays supported for driving the full website.
+    # The dev server serves its own audition UI (dev_editor.html) at "/", so page
+    # and API are always same-origin — no CORS, and no cross-origin caller to
+    # allow. A same-origin POST still sends an Origin header, so the guard below
+    # accepts exactly this server's own origins (and rejects anything else, which
+    # is what keeps another page in the browser from driving it).
     allowed_origins = {
-        editor_origin,
         f"http://{args.host}:{args.port}",
         f"http://127.0.0.1:{args.port}",
         f"http://localhost:{args.port}",
@@ -1608,16 +1590,7 @@ def dev_command(args: argparse.Namespace) -> int:
     class Handler(BaseHTTPRequestHandler):
         server_version = "PlaitsLabSDK/0"
 
-        def cors(self) -> None:
-            self.send_header("Access-Control-Allow-Origin", editor_origin)
-            self.send_header("Vary", "Origin")
-            self.send_header("Access-Control-Allow-Headers", "Content-Type")
-            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-            # Opt into Private Network Access: a public HTTPS contributor page
-            # (e.g. rubato.audio) reaching this loopback dev server is a
-            # public->private request that Chrome blocks at the preflight unless
-            # the server returns this header. Harmless for a localhost editor.
-            self.send_header("Access-Control-Allow-Private-Network", "true")
+        def common_headers(self) -> None:
             self.send_header("Cache-Control", "no-store")
 
         def origin_allowed(self) -> bool:
@@ -1632,16 +1605,9 @@ def dev_command(args: argparse.Namespace) -> int:
             self.send_response(status)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(body)))
-            self.cors()
+            self.common_headers()
             self.end_headers()
             self.wfile.write(body)
-
-        def do_OPTIONS(self) -> None:  # noqa: N802
-            if not self.origin_allowed():
-                return
-            self.send_response(HTTPStatus.NO_CONTENT)
-            self.cors()
-            self.end_headers()
 
         def do_GET(self) -> None:  # noqa: N802
             if not self.origin_allowed():
@@ -1652,7 +1618,7 @@ def dev_command(args: argparse.Namespace) -> int:
                 self.send_response(HTTPStatus.OK)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.send_header("Content-Length", str(len(html)))
-                self.cors()
+                self.common_headers()
                 self.end_headers()
                 self.wfile.write(html)
                 return
@@ -1661,7 +1627,7 @@ def dev_command(args: argparse.Namespace) -> int:
                 self.send_response(HTTPStatus.OK)
                 self.send_header("Content-Type", "text/javascript; charset=utf-8")
                 self.send_header("Content-Length", str(len(js)))
-                self.cors()
+                self.common_headers()
                 self.end_headers()
                 self.wfile.write(js)
                 return
@@ -1671,7 +1637,7 @@ def dev_command(args: argparse.Namespace) -> int:
                     self.send_response(HTTPStatus.OK)
                     self.send_header("Content-Type", "application/wasm")
                     self.send_header("Content-Length", str(len(data)))
-                    self.cors()
+                    self.common_headers()
                     self.end_headers()
                     self.wfile.write(data)
                 else:
@@ -1725,7 +1691,7 @@ def dev_command(args: argparse.Namespace) -> int:
                 self.send_header("Content-Type", "audio/wav")
                 self.send_header("Content-Length", str(len(wav)))
                 self.send_header("X-Plaits-Recompiled", "true" if recompiled else "false")
-                self.cors()
+                self.common_headers()
                 self.end_headers()
                 self.wfile.write(wav)
             except (PackageError, json.JSONDecodeError) as error:
@@ -1739,8 +1705,6 @@ def dev_command(args: argparse.Namespace) -> int:
     server_url = f"http://{args.host}:{args.port}"
     print(f"serving {package['manifest']['id']} from {server_url}")
     print(f"open {server_url}/  — audition it in your browser (nothing else to set up)")
-    if args.editor != DEV_EDITOR_DEFAULT:
-        print(f"or drive the full contributor site: {contributor_url_for(args.editor, server_url)}")
     print("source changes are revalidated and recompiled on the next preview")
     try:
         server.serve_forever()
@@ -1809,7 +1773,6 @@ def build_parser() -> argparse.ArgumentParser:
     dev_parser.add_argument("package")
     dev_parser.add_argument("--host", default="127.0.0.1")
     dev_parser.add_argument("--port", type=int, default=4179)
-    dev_parser.add_argument("--editor", default=DEV_EDITOR_DEFAULT)
     dev_parser.add_argument("--compiler")
     dev_parser.add_argument("--verbose", action="store_true")
     dev_parser.set_defaults(handler=dev_command)

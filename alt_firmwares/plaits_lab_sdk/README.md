@@ -36,8 +36,7 @@ $SDK dev ./$PKG/my-engine
 Open the `http://127.0.0.1:4179/` link it prints. Page and API are the same
 origin, so there is no connecting, no CORS/CSP, and no browser local-network
 permission. The local server recompiles after a source change; source never
-leaves your machine. Pass `--editor <page-url>` to drive the full hosted
-contributor site instead.
+leaves your machine.
 
 **Live audition (recommended).** With the Emscripten toolchain (`emcc`) on your
 PATH, `dev` compiles your engine to WebAssembly and the page runs it in a

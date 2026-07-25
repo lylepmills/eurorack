@@ -23,7 +23,8 @@ community-model SDK, catalog, contributor center, and submission lifecycle.
   this remains a local contributor aid rather than a production trust boundary.
 - The local browser bridge supports the four model controls, pitch, trigger,
   MIDI, scope/spectrum, and A/B rendering against every built-in model. It binds
-  only to localhost by default and restricts browser origins to `--editor`.
+  only to localhost by default and serves its own same-origin audition page;
+  browser origins other than its own are rejected.
 - A local community package can be linked into a complete ARM audio updater.
   The command uses the pinned local toolchain or the AMD64 Docker image and
   labels the result unreviewed.

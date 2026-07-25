@@ -573,21 +573,6 @@ class PackageTests(unittest.TestCase):
             self.assertTrue(data.startswith(b"\x00asm"))  # wasm magic
             self.assertGreater(len(data), 1000)
 
-    def test_dev_contributor_url_preserves_editor_path(self) -> None:
-        # The bug: the full page path was dropped for a bare /contribute.
-        self.assertEqual(
-            plaits_lab.contributor_url_for(
-                "https://rubato.audio/plaits-palette/contribute", "http://127.0.0.1:4179"),
-            "https://rubato.audio/plaits-palette/contribute"
-            "?devServer=http%3A%2F%2F127.0.0.1%3A4179",
-        )
-        # A bare origin falls back to the contributor route, not top-level /contribute.
-        self.assertEqual(
-            plaits_lab.contributor_url_for("http://localhost:4321", "http://127.0.0.1:4179"),
-            "http://localhost:4321/plaits-palette/contribute"
-            "?devServer=http%3A%2F%2F127.0.0.1%3A4179",
-        )
-
     @unittest.skipUnless(shutil.which("c++") or shutil.which("g++"), "host C++ compiler required")
     def test_from_scratch_engine_can_link_shared_chord_bank(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
