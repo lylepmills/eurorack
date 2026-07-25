@@ -214,7 +214,14 @@ void Ui::UpdateLEDs() {
   // Each LED is one eighth of the audio callback's budget: lit green while the
   // engine fits, amber for the last quarter, and all eight blinking red once it
   // is over budget (the blink gets faster the further over it is).
-  {
+  //
+  // ONLY in the normal (engine-select) view. That display is the one a probe
+  // build can spare -- these are one-model firmwares, so there is nothing to
+  // select -- while every other screen still has work to do: a contributor has
+  // to be able to set the octave, dial in LPG colour and decay, and walk the
+  // options page to reach the very settings an engine may depend on. Taking
+  // those over would make the probe build untestable.
+  if (mode_ == UI_MODE_NORMAL) {
     const float usage = cpu_usage_;
     if (usage > 1.0f) {
       // Over budget: blink everything red, faster the worse it is.
@@ -231,7 +238,11 @@ void Ui::UpdateLEDs() {
       // "not running at all".
       if (lit < 1 && usage > 0.0f) lit = 1;
       for (int i = 0; i < lit; ++i) {
-        leds_.set(i, i >= kNumLEDs - 2 ? LED_COLOR_YELLOW : LED_COLOR_GREEN);
+        // Fills bottom-up, so the bar rises as the engine gets more expensive.
+        // Colour keys off the LEVEL (i), not the physical LED, so the top two
+        // eighths of the scale are always the amber ones.
+        leds_.set(kNumLEDs - 1 - i,
+                  i >= kNumLEDs - 2 ? LED_COLOR_YELLOW : LED_COLOR_GREEN);
       }
     }
     leds_.Write();
