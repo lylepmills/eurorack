@@ -27,6 +27,7 @@
 #include "plaits/drivers/audio_dac.h"
 
 #include "plaits/dsp/dsp.h"
+#include "plaits/cpu_probe.h"
 #include "plaits/dsp/voice.h"
 #include "plaits/settings.h"
 #include "plaits/ui.h"
@@ -46,6 +47,7 @@ Modulations modulations;
 Patch patch;
 Settings settings;
 Ui ui;
+PLAITS_CPU_PROBE_DECLARE
 UserData user_data;
 UserDataReceiver user_data_receiver;
 Voice voice;
@@ -116,7 +118,10 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
         ui.DisplayDataTransferProgress(-1.0f);
       }
     }
+    PLAITS_CPU_PROBE_BEGIN
     voice.Render(patch, modulations, (Voice::Frame*)(output), size);
+    PLAITS_CPU_PROBE_END(size)
+    PLAITS_CPU_PROBE_READOUT((Voice::Frame*)(output), size)
     ui.set_active_engine(voice.active_engine());
   }
   
@@ -142,6 +147,7 @@ void Init() {
   settings.Init();
   ui.Init(&patch, &modulations, &settings);
   
+  PLAITS_CPU_PROBE_INIT
   audio_dac.Init(48000, kBlockSize);
 
   audio_dac.Start(&FillBuffer);

@@ -1230,10 +1230,17 @@ def arm_flash_footprint(size_tool: Path, paths: list[str]) -> int | None:
     return total
 
 
-def render_local_hardware_config(package: dict[str, Any]) -> str:
+def render_local_hardware_config(
+    package: dict[str, Any], cpu_probe: bool = False,
+) -> str:
     manifest = package["manifest"]
     source = manifest["source"]
     post = manifest["postProcessing"]
+    # A probe build measures Voice::Render with the Cortex-M4 cycle counter and
+    # reports the result on AUX; see plaits/cpu_probe.h. Emitted through the
+    # generated config rather than as a make flag so it travels into the
+    # containerised build with everything else.
+    cpu_probe_define = "#define PLAITS_CPU_PROBE 1\n" if cpu_probe else ""
     custom = {
         "source": {
             "header": package["header"].name,
@@ -1289,7 +1296,7 @@ def render_local_hardware_config(package: dict[str, Any]) -> str:
 
 {includes}
 
-#define PLAITS_ENGINE_COUNT {engine_count}
+{cpu_probe_define}#define PLAITS_ENGINE_COUNT {engine_count}
 #define PLAITS_BANK_SIZES {{ {", ".join(str(size) for size in bank_sizes)} }}
 #define PLAITS_ENGINE_ROWS {{ {", ".join(str(row) for row in engine_rows)} }}
 #define PLAITS_HAS_SPEECH_ENGINE {1 if speech_mask else 0}
@@ -1377,7 +1384,9 @@ def _arm_compile_native(package: dict[str, Any], args: argparse.Namespace, toolc
     with tempfile.TemporaryDirectory(prefix="plaits-lab-armcheck-") as temp_dir:
         build_root = Path(temp_dir) / "build"
         config = Path(temp_dir) / "engine_config.h"
-        config.write_text(render_local_hardware_config(package), encoding="utf-8")
+        config.write_text(
+            render_local_hardware_config(package, cpu_probe=getattr(args, "cpu_probe", False)),
+            encoding="utf-8")
         cppflags = f"-fno-exceptions -fno-rtti -I{package['source_root']} -include {config}"
         # Build only the package's OWN object(s): the makefile's $(BUILD_DIR)%.o
         # rule resolves each source through VPATH=$(PACKAGES) (which includes
@@ -1440,6 +1449,7 @@ def hardware_build_command(args: argparse.Namespace) -> int:
                 "-w", "/workspace", args.docker_image,
                 "alt_firmwares/plaits_lab_sdk/plaits_lab.py", "build", "/contributor",
                 "--hardware", "--output", f"/output/{output.name}",
+                *(["--cpu-probe"] if getattr(args, "cpu_probe", False) else []),
                 "--toolchain", args.toolchain, "--native",
             ]
             result = subprocess.run(command, text=True, capture_output=True, check=False)
@@ -1467,7 +1477,9 @@ def hardware_build_command(args: argparse.Namespace) -> int:
     with tempfile.TemporaryDirectory(prefix="plaits-lab-hardware-") as temp_dir:
         build_root = Path(temp_dir) / "build"
         config = Path(temp_dir) / "engine_config.h"
-        config.write_text(render_local_hardware_config(package), encoding="utf-8")
+        config.write_text(
+            render_local_hardware_config(package, cpu_probe=getattr(args, "cpu_probe", False)),
+            encoding="utf-8")
         cppflags = f"-fno-exceptions -fno-rtti -I{package['source_root']} -include {config}"
         command = [
             "make", "-f", "plaits/makefile", f"BUILD_ROOT={build_root}/",
@@ -1763,6 +1775,8 @@ def build_parser() -> argparse.ArgumentParser:
     build_parser_command = subparsers.add_parser("build", help="build an unreviewed local hardware firmware")
     build_parser_command.add_argument("package")
     build_parser_command.add_argument("--hardware", action="store_true", required=True)
+    build_parser_command.add_argument("--cpu-probe", action="store_true",
+        help="measure Voice::Render on-chip with the DWT cycle counter and report on AUX")
     build_parser_command.add_argument("--output", required=True)
     build_parser_command.add_argument("--toolchain", default="/usr/local/arm-4.8.3")
     build_parser_command.add_argument("--docker-image", default="plaits-lab-builder:local")
