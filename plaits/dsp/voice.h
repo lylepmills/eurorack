@@ -126,37 +126,52 @@ struct Patch {
   float lpg_colour;
 
   float freqlock_param;
+  // Option VALUES are ordered most-reached-for first, so the common settings
+  // land on the solid LED colors (0 green, 1 red, 2 yellow) and the rare ones
+  // fall through to the blinking tier. A module keeps its saved options across
+  // an audio reflash, so any change to the meaning of a value here must be
+  // paired with an OPTIONS_LAYOUT_VERSION bump in the builder's profile-id
+  // encoding (generate_engine_config.py) - that is what forces a one-time
+  // ApplyBuildOptionDefaults instead of silently re-reading old numbers under
+  // new meanings.
   // 0 - manual octave switching
-  // 1 - manual control of decay (without button press)
+  // 1 - fourth synthesis macro
   // 2 - manual aux crossfade
-  // 3 - fourth synthesis macro
+  // 3 - manual control of decay (without button press)
   uint8_t locked_frequency_pot_option;
   // 0 - cv control of model (original)
-  // 1 - cv control of lpg colour
+  // 1 - cv control of the fourth synthesis macro
   // 2 - cv control of aux crossfade
+  // 3 - cv control of lpg colour
   uint8_t model_cv_option;
   // 0 - cv control of level (original)
   // 1 - cv control of decay
-  // 2 - cv control of the fourth synthesis macro
   uint8_t level_cv_option;
   // 0 - regular aux model
-  // 1 - square wave
-  // 2 - sine wave
-  // 3 - stereo: OUT/AUX become a true L/R pair on stereo-capable engines
+  // 1 - stereo: OUT/AUX become a true L/R pair on stereo-capable engines
   //     (the other engines keep their regular aux output)
+  // 2 - square wave suboscillator
+  // 3 - sine wave suboscillator
   uint8_t aux_subosc_wave_option;
   // 0 - no octave shift
   // 1 - 1 octave down
   // 2 - 2 octaves down
+  // Only has an effect while aux_is_subosc(); the UI hides its menu light
+  // otherwise.
   uint8_t aux_subosc_octave_option;
-  // 0 - original chord set
-  // 1 - jon butler chord set
-  // 2 - joe mcmullen chord set
+  // Index into the chord tables this firmware was built with (up to nine).
   uint8_t chord_set_option;
   // 0 - don't hold params on trigger (original)
   // 1 - hold timbre, morph, harmo, level, v/oct cv modulations on trigger (not fm)
   //     (note model is already held on trigger by default)
   uint8_t hold_on_trigger_option;
+
+  // The two readings of aux_subosc_wave_option that both the DSP and the UI
+  // need. Keeping them here means a future renumber touches one place.
+  inline bool aux_is_stereo() const { return aux_subosc_wave_option == 1; }
+  inline bool aux_is_subosc() const {
+    return aux_subosc_wave_option == 2 || aux_subosc_wave_option == 3;
+  }
 };
 
 struct Modulations {

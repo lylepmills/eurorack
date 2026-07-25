@@ -98,7 +98,7 @@ void Voice::Render(
   }
   bool level_patched = modulations.level_patched;
   float patch_decay = patch.decay;
-  if (patch.locked_frequency_pot_option == 1) {
+  if (patch.locked_frequency_pot_option == 3) {
     patch_decay = patch.freqlock_param;
   }
   float macro_cv = 0.0f;
@@ -110,9 +110,9 @@ void Voice::Render(
   CONSTRAIN(patch_decay, 0.0f, 1.0f);
 
   float patch_lpg_colour = patch.lpg_colour;
-  if (patch.model_cv_option == 1) {
+  if (patch.model_cv_option == 3) {
     patch_lpg_colour += modulations.engine;
-  } else if (patch.model_cv_option == 3) {
+  } else if (patch.model_cv_option == 1) {
     // Repurpose the MODEL CV input as the fourth synthesis macro. Unlike the
     // LEVEL macro option this does not require TRIG to be patched, since the
     // MODEL input never drives the internal VCA.
@@ -174,14 +174,13 @@ void Voice::Render(
   }
   EngineParameters p;
   p.chord_set_option = patch.chord_set_option;
-  // Aux output mode 3 requests a true stereo render (OUT = left, AUX = right)
+  // The stereo aux mode requests a true stereo render (OUT = left, AUX = right)
   // from engines that support it; the others fall back to their regular aux
   // output. stereo_capable() is compile-time false for an engine built with its
   // PLAITS_STEREO_<X> flag off, so stereo is never routed to it.
-  const bool stereo_render = patch.aux_subosc_wave_option == 3 &&
-      e->stereo_capable();
+  const bool stereo_render = patch.aux_is_stereo() && e->stereo_capable();
   p.stereo = stereo_render;
-  p.macro = patch.locked_frequency_pot_option == 3
+  p.macro = patch.locked_frequency_pot_option == 1
       ? patch.freqlock_param
       : 0.5f;
   p.macro += macro_cv;
@@ -279,9 +278,7 @@ void Voice::Render(
   bool already_enveloped = pp_s.already_enveloped;
   e->Render(p, out_buffer_, aux_buffer_, size, &already_enveloped);
 
-  const bool aux_replaced_by_subosc = patch.aux_subosc_wave_option == 1 ||
-      patch.aux_subosc_wave_option == 2;
-  if (aux_replaced_by_subosc) {
+  if (patch.aux_is_subosc()) {
     float frequency = NoteToFrequency(p.note);
     if (patch.aux_subosc_octave_option == 1) {
       frequency /= 2.0f;
@@ -289,9 +286,9 @@ void Voice::Render(
       frequency /= 4.0f;
     }
 
-    if (patch.aux_subosc_wave_option == 1) {
+    if (patch.aux_subosc_wave_option == 2) {
       square_oscillator_.Render(frequency, aux_buffer_, size);
-    } else if (patch.aux_subosc_wave_option == 2) {
+    } else {
       sine_oscillator_.Render(frequency, aux_buffer_, size);
     }
   }
@@ -318,7 +315,7 @@ void Voice::Render(
   
   bool lpg_bypass = already_enveloped || \
       (!level_patched && !modulations.trigger_patched);
-  bool aux_lpg_bypass = lpg_bypass || (aux_replaced_by_subosc && !use_aux_crossfade);
+  bool aux_lpg_bypass = lpg_bypass || (patch.aux_is_subosc() && !use_aux_crossfade);
   
   // Compute LPG parameters.
   if (!lpg_bypass) {

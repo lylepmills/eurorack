@@ -81,8 +81,14 @@
 #define PLAITS_BUILD_HOLD_ON_TRIGGER_OPTION 0
 #endif
 
+// The id a locally built (non-hosted) firmware stamps into saved settings. It
+// must equal what the builder mints for an all-default recipe, or switching
+// between a local build and a hosted default build resets options each way.
+// Currently OPTIONS_LAYOUT_VERSION 1 with every option at value 0; recompute
+// with generate_engine_config.validate_recipe(default_recipe.json) after any
+// change to the fold.
 #ifndef PLAITS_BUILD_OPTIONS_PROFILE_ID
-#define PLAITS_BUILD_OPTIONS_PROFILE_ID 0x0002u
+#define PLAITS_BUILD_OPTIONS_PROFILE_ID 0x1B38u
 #endif
 
 #endif  // PLAITS_BUILD_CONFIG_H_

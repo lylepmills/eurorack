@@ -23,19 +23,23 @@ BANKS = (
 CONTROL_IDS = ("harmonics", "timbre", "morph", "macro")
 PANEL_LABELS = ("HARMONICS", "TIMBRE", "MORPH", "FOURTH")
 
-# The options menu is seven "lights". Each light cycles through an ordered list
-# of settings, and the module shows the current one as an LED color (plaits
+# The options menu is seven "lights", ordered so the ones a player reaches for
+# most sit nearest the start of the walk. Each light cycles through an ordered
+# list of settings, and the module shows the current one as an LED color (plaits
 # ui.cc): value 0 green, 1 red, 2 yellow, then 3-5 the SAME colors blinking — so
-# a light can hold more than three settings. Light 1 has four, light 7 has two.
-# Light 6 (the chord table) lists whichever tables THIS build loaded, so that row
-# is recipe-specific. A meanings value of None is filled from the recipe.
+# a light can hold more than three settings. Light 1 (the chord table) lists
+# whichever tables THIS build loaded, so that row is recipe-specific and reaches
+# the fast-blink tier; a meanings value of None is filled from the recipe.
+# Within a light the settings are likewise ordered by reach, which is why the
+# fourth macro and stereo sit at value 1 (solid red) rather than out in the
+# blinking tier. Both orders mirror plaits/dsp/voice.h — keep them in step.
 MENU_LIGHTS = (
-    ("FREQUENCY knob", ("Octaves", "LPG decay", "Aux crossfade", "Fourth macro")),
-    ("MODEL input", ("Model select", "LPG colour (VCFA->VCA)", "Aux crossfade", "Fourth macro")),
-    ("LEVEL input", ("Level", "LPG decay")),
-    ("Aux suboscillator", ("Regular aux model", "Square wave", "Sine wave", "Stereo (OUT/AUX = L/R)")),
-    ("Subosc octave", ("Same pitch", "-1 octave", "-2 octaves")),
     ("Chord table", None),
+    ("Aux output", ("Regular aux model", "Stereo (OUT/AUX = L/R)", "Square subosc", "Sine subosc")),
+    ("Subosc octave", ("Same pitch", "-1 octave", "-2 octaves")),
+    ("FREQUENCY knob", ("Octaves", "Fourth macro", "Aux crossfade", "LPG decay")),
+    ("MODEL input", ("Model select", "Fourth macro", "Aux crossfade", "LPG colour (VCFA->VCA)")),
+    ("LEVEL input", ("Level", "LPG decay")),
     ("Hold on trigger", ("Off (live CV)", "Sample & hold")),
 )
 
@@ -353,7 +357,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
                 Paragraph("FOURTH CONTROL", table_header_style),
                 Paragraph(
                     "Hold the right model button and turn HARMONICS until the model LEDs blink yellow; this selects the octave-switching frequency range. "
-                    "Short-press both model buttons to open the alternate-firmware options menu. Use the left button to select the first light, then press the right button until it blinks green. "
+                    "Short-press both model buttons to open the alternate-firmware options menu. Use the left button to walk to LIGHT 4, then press the right button once, until it turns red. "
                     "Press both buttons again to exit. The FREQUENCY knob now controls the selected model's fourth parameter; for Mutable Instruments models, noon preserves the original sound.",
                     small_style,
                 ),
@@ -375,14 +379,15 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
             "Short-press both buttons at once to enter or exit the options menu. The first seven lights are the menu: "
             "the left button moves between them, the right button steps through a light's settings, and the light's color shows the current one — "
             "green, red, and yellow, then the same three colors blinking for a fourth, fifth, or sixth setting — "
-            "and, on LIGHT 6, blinking fast for a seventh, eighth, or ninth.",
+            "and, on LIGHT 1, blinking fast for a seventh, eighth, or ninth.",
             intro_style,
         ),
         menu_table,
         Spacer(1, 0.1 * inch),
         Paragraph(
-            "LIGHT 1 applies in octave-switching (frequency-locked) mode. LIGHT 3's LPG-decay and fourth-macro settings apply only when TRIG is patched. "
-            "LIGHT 6 applies to chord-capable models and lists the chord tables loaded in this build (up to nine). "
+            "LIGHT 1 applies to chord-capable models and lists the chord tables loaded in this build (up to nine). "
+            "LIGHT 3 stays dark, and the left button walks past it, unless LIGHT 2 is set to a suboscillator — it has nothing to act on otherwise. "
+            "LIGHT 4 applies in octave-switching (frequency-locked) mode. LIGHT 6's LPG-decay setting applies only when TRIG is patched. "
             "Model navigation (linear or banked) is chosen when you build the firmware, not from this menu.",
             small_muted_style,
         ),

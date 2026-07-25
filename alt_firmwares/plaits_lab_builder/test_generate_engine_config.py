@@ -25,8 +25,64 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertEqual(len(CATALOG), 39)
 
     def test_legacy_recipes_receive_the_stable_default_option_profile(self) -> None:
+        # Also the value PLAITS_BUILD_OPTIONS_PROFILE_ID carries in
+        # plaits/build_config.h, so a local build and a hosted default build
+        # agree and do not reset each other's saved options. Moves only with
+        # OPTIONS_LAYOUT_VERSION.
         recipe = validate_recipe(self.load("default_recipe.json"))
-        self.assertEqual(recipe.options_profile_id, 0x0002)
+        self.assertEqual(recipe.options_profile_id, 0x1B38)
+
+    def test_option_values_match_the_firmware_numbering(self) -> None:
+        # These numbers are the firmware's (plaits/dsp/voice.h): they pick the
+        # LED color each setting shows and the DSP compares against them
+        # directly. Recipes bind by name, so a drift here is silent — hence the
+        # pin. Changing any of it means bumping OPTIONS_LAYOUT_VERSION.
+        recipe = self.load("default_recipe.json")
+        recipe["schemaVersion"] = 4
+        recipe["preferences"] = {"navigationMode": "linear"}
+        recipe["initialOptions"] = {
+            "lockedFrequencyKnob": "macro-4",
+            "modelInput": "macro-4",
+            "levelInput": "decay",
+            "auxOutput": "stereo",
+            "suboscillatorOctave": -2,
+            "chordTable": "joe-mcmullen",
+            "holdOnTrigger": True,
+        }
+        build = validate_recipe(recipe)
+        self.assertEqual(build.locked_frequency_pot_option, 1)
+        self.assertEqual(build.model_cv_option, 1)
+        self.assertEqual(build.level_cv_option, 1)
+        self.assertEqual(build.aux_subosc_wave_option, 1)
+        self.assertEqual(build.aux_subosc_octave_option, 2)
+        self.assertEqual(build.chord_set_option, 2)
+        self.assertEqual(build.hold_on_trigger_option, 1)
+
+    def test_every_chord_table_slot_maps_to_a_distinct_profile(self) -> None:
+        # Nine tables fit on the hardware, so the chord digit's radix must be
+        # nine. A smaller one lets tables 6-8 alias into the next digit, and the
+        # colliding recipe silently skips applying its starting options.
+        recipe = self.load("default_recipe.json")
+        recipe["schemaVersion"] = 5
+        recipe["preferences"] = {"navigationMode": "linear"}
+        tables = list(DEFAULT_CHORD_TABLES)
+        while len(tables) < 9:
+            draft = json.loads(json.dumps(DEFAULT_CHORD_TABLES[0]))
+            draft.update({
+                "id": f"draft-{len(tables)}",
+                "packageId": f"local/draft-{len(tables)}",
+                "digest": None,
+                "origin": "Local",
+            })
+            tables.append(draft)
+        recipe["resources"] = {"chordTables": tables}
+        markers = set()
+        for table in tables:
+            recipe["initialOptions"] = dict(
+                DEFAULT_CONFIGURATION["initialOptions"], chordTable=table["id"]
+            )
+            markers.add(validate_recipe(recipe).options_profile_id)
+        self.assertEqual(len(markers), 9)
 
     def test_every_option_profile_has_a_unique_legacy_safe_marker(self) -> None:
         recipe = self.load("default_recipe.json")
@@ -424,10 +480,10 @@ class GenerateEngineConfigTest(unittest.TestCase):
         })
         config = render_config(validate_recipe(recipe))
         self.assertIn("#define PLAITS_BUILD_NAVIGATION_MODE 1", config)
-        self.assertIn("#define PLAITS_BUILD_LOCKED_FREQUENCY_POT_OPTION 3", config)
+        self.assertIn("#define PLAITS_BUILD_LOCKED_FREQUENCY_POT_OPTION 1", config)
         self.assertIn("#define PLAITS_BUILD_MODEL_CV_OPTION 2", config)
         self.assertIn("#define PLAITS_BUILD_LEVEL_CV_OPTION 1", config)
-        self.assertIn("#define PLAITS_BUILD_AUX_SUBOSC_WAVE_OPTION 2", config)
+        self.assertIn("#define PLAITS_BUILD_AUX_SUBOSC_WAVE_OPTION 3", config)
         self.assertIn("#define PLAITS_BUILD_AUX_SUBOSC_OCTAVE_OPTION 2", config)
         self.assertIn("#define PLAITS_BUILD_CHORD_SET_OPTION 2", config)
         self.assertIn("#define PLAITS_BUILD_HOLD_ON_TRIGGER_OPTION 1", config)
@@ -464,7 +520,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
             },
         })
         config = render_config(validate_recipe(recipe))
-        self.assertIn("#define PLAITS_BUILD_MODEL_CV_OPTION 3", config)
+        self.assertIn("#define PLAITS_BUILD_MODEL_CV_OPTION 1", config)
         self.assertIn("#define PLAITS_BUILD_LEVEL_CV_OPTION 0", config)
 
         # The fourth macro moved off the LEVEL input, so requesting it there
@@ -474,7 +530,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unsupported firmware option"):
             validate_recipe(recipe)
 
-    def test_stereo_aux_output_emits_wave_option_three_under_v9(self) -> None:
+    def test_stereo_aux_output_emits_wave_option_one_under_v9(self) -> None:
         public = self.load("../plaits_lab_catalog/public_catalog.json")
         by_id = {engine["id"]: engine for engine in public["engines"]}
         recipe = self.load("default_recipe.json")
@@ -502,9 +558,9 @@ class GenerateEngineConfigTest(unittest.TestCase):
             "resources": {"chordTables": DEFAULT_CHORD_TABLES},
         })
         config = render_config(validate_recipe(recipe))
-        # Stereo is the fourth aux value (OUT/AUX as a true L/R pair), and only a
-        # v9 builder accepts it.
-        self.assertIn("#define PLAITS_BUILD_AUX_SUBOSC_WAVE_OPTION 3", config)
+        # Stereo (OUT/AUX as a true L/R pair) sits at aux value 1, one step off
+        # the regular aux model, and only a v9 builder accepts it.
+        self.assertIn("#define PLAITS_BUILD_AUX_SUBOSC_WAVE_OPTION 1", config)
 
     def test_v10_parses_the_per_engine_stereo_list(self) -> None:
         public = self.load("../plaits_lab_catalog/public_catalog.json")

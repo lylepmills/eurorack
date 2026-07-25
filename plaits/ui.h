@@ -110,6 +110,9 @@ class Ui {
   void Navigate(int button);
   uint32_t BankToColor(int bank);
 
+  bool OptionInert(int index) const;
+  void AdvanceOptionIndex();
+
   void RealignPots() {
     for (int i = POTS_ADC_CHANNEL_FREQUENCY_POT;
          i <= POTS_ADC_CHANNEL_MORPH_POT; ++i) {

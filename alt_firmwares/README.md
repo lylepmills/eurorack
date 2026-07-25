@@ -141,27 +141,19 @@ menu items by pressing the left button, and you can switch the option for that
 item by pressing the right button. The current settings are represented by the
 color of the LED lights. In order, they represent the following.
 
-### First light - Frequency knob alt functionality (when frequency is locked i.e. in octave-switching mode)
-Green means octaves (as in the stock firmware), red means controlling decay,
-yellow means controlling aux crossfade, and blinking green means controlling
-the fourth macro. When neither this nor the MODEL input is assigned to the
-fourth macro, it rests at its neutral midpoint.
+**Note if you are coming from an earlier build:** the menu was reordered in July
+2026 so the options you reach for most sit closest to the start of the walk, and
+a couple of settings moved to a different color on their light — most visibly,
+the fourth macro is now solid red rather than blinking green. Older writeups and
+videos will refer to the previous positions. Installing a build made after the
+reorder resets the menu once, to the starting options the build was made with;
+everything else (calibration, selected model, tuning) is preserved as usual.
 
-### Second light - MODEL input alt functionality
-Green means model (as in the stock firmware), red means LPG colour (VCFA->VCA), yellow means aux crossfade, and blinking green means the fourth macro. The fourth macro option does not require TRIG to be patched.
-
-### Third light - LEVEL input alt functionality
-Green means level (as in the stock firmware) and red means decay of the internal
-envelope. The red option applies if and only if TRIG is patched.
-
-### Fourth light - Aux suboscillator wave option
-Green means the regular aux model, red means a square wave subosc, yellow means a sine wave subosc
-
-### Fifth light - Aux suboscillator octave option
-Green means the +0 octaves (same frequency as the main model), red means -1 octave, yellow means -2 octaves. Note this will only have an effect if the suboscillator wave option is set to something other than the regular aux model.
-
-### Sixth light - Chord table option (chord mode only)
-Green means the original chord table, red means the alternate chord table by Jon Butler, yellow means the alternate chord table by Joe McMullen
+### First light - Chord table option (chord mode only)
+Green means the original chord table, red means the alternate chord table by Jon
+Butler, yellow means the alternate chord table by Joe McMullen. A Plaits Lab
+build can carry up to nine tables: the fourth through sixth repeat those colors
+blinking, and the seventh through ninth repeat them blinking fast.
 
 #### Original chords
 - Octave
@@ -216,6 +208,31 @@ With this table, instead of Frequency defining the root and Harmonics defining c
 - ii m7
 - I maj7sus4/vii
 - V 7sus4
+
+### Second light - Aux output
+Green means the regular aux model, red means stereo (OUT and AUX become a true
+L/R pair on models built with a stereo render; the others keep their regular aux
+output), yellow means a square wave subosc, and blinking green means a sine wave
+subosc.
+
+### Third light - Aux suboscillator octave option
+Green means +0 octaves (same frequency as the main model), red means -1 octave,
+yellow means -2 octaves. This light only appears when the second light is set to
+a suboscillator — otherwise it has nothing to act on, so it stays dark and the
+left button walks straight past it.
+
+### Fourth light - Frequency knob alt functionality (when frequency is locked i.e. in octave-switching mode)
+Green means octaves (as in the stock firmware), red means controlling the fourth
+macro, yellow means controlling aux crossfade, and blinking green means
+controlling decay. When neither this nor the MODEL input is assigned to the
+fourth macro, it rests at its neutral midpoint.
+
+### Fifth light - MODEL input alt functionality
+Green means model (as in the stock firmware), red means the fourth macro, yellow means aux crossfade, and blinking green means LPG colour (VCFA->VCA). The fourth macro option does not require TRIG to be patched.
+
+### Sixth light - LEVEL input alt functionality
+Green means level (as in the stock firmware) and red means decay of the internal
+envelope. The red option applies if and only if TRIG is patched.
 
 ### Seventh light - Hold params on trigger
 Green means don't hold params upon receiving a trigger (as in the stock firmware), red means internally sample and hold the CV inputs for Timbre, Morph, Harmonics, Level and V/Oct whenever a trigger is received.

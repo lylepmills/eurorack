@@ -39,6 +39,14 @@ PATCHES_PER_BANK = 32
 PACKED_PATCH_SIZE = 128
 PACKED_BANK_SIZE = PATCHES_PER_BANK * PACKED_PATCH_SIZE  # 4096
 
+# Bumped whenever a stored option value changes meaning in the firmware (see the
+# value tables in plaits/dsp/voice.h). It seeds the options profile-id fold, so a
+# bump moves every build to an id no old firmware ever minted — which is what
+# makes a module reset its saved options to the recipe's exactly once instead of
+# reinterpreting the old numbers. Version 1: options menu reordered, and the
+# fourth macro / stereo promoted to value 1 on their lights (2026-07).
+OPTIONS_LAYOUT_VERSION = 1
+
 
 @dataclass(frozen=True)
 class BuildRecipe:
@@ -343,10 +351,14 @@ def validate_recipe(value: Any) -> BuildRecipe:
 
     mappings = {
         "navigation_mode": (preferences.get("navigationMode"), {"linear": 0, "banked": 1}),
-        "locked_frequency_pot_option": (options.get("lockedFrequencyKnob"), {"octaves": 0, "decay": 1, "aux-crossfade": 2, "macro-4": 3}),
-        "model_cv_option": (options.get("modelInput"), {"model": 0, "lpg-colour": 1, "aux-crossfade": 2, "macro-4": 3}),
+        # Value order is the firmware's (plaits/dsp/voice.h), not a display
+        # order: it decides which LED color each setting shows and is baked into
+        # the DSP's comparisons. Recipes bind by NAME, so reordering here is
+        # invisible to the recipe format - but see OPTIONS_LAYOUT_VERSION.
+        "locked_frequency_pot_option": (options.get("lockedFrequencyKnob"), {"octaves": 0, "macro-4": 1, "aux-crossfade": 2, "decay": 3}),
+        "model_cv_option": (options.get("modelInput"), {"model": 0, "macro-4": 1, "aux-crossfade": 2, "lpg-colour": 3}),
         "level_cv_option": (options.get("levelInput"), {"level": 0, "decay": 1}),
-        "aux_subosc_wave_option": (options.get("auxOutput"), {"alternate-model": 0, "square-subosc": 1, "sine-subosc": 2, "stereo": 3}),
+        "aux_subosc_wave_option": (options.get("auxOutput"), {"alternate-model": 0, "stereo": 1, "square-subosc": 2, "sine-subosc": 3}),
         "aux_subosc_octave_option": (options.get("suboscillatorOctave"), {0: 0, -1: 1, -2: 2}),
         "chord_set_option": (options.get("chordTable"), {
             table["id"]: index for index, table in enumerate(chord_tables)
@@ -359,23 +371,36 @@ def validate_recipe(value: Any) -> BuildRecipe:
             raise ValueError("recipe contains an unsupported firmware option")
         normalized_options[name] = allowed[selected]
 
-    profile_code = normalized_options["locked_frequency_pot_option"]
+    # A module keeps its saved options across an audio reflash, and the firmware
+    # only overwrites them (ApplyBuildOptionDefaults) when the recipe's profile
+    # id differs from the stored one. So whenever the MEANING of a stored value
+    # changes — an option's values are reordered, or one is inserted — seeding
+    # the fold with a new layout version makes every id disjoint from every id
+    # minted under the old numbering, forcing that reset exactly once. Without
+    # it an unchanged recipe keeps its id and the module silently re-reads old
+    # numbers under new meanings.
+    profile_code = OPTIONS_LAYOUT_VERSION
+    profile_code = profile_code * 4 + normalized_options["locked_frequency_pot_option"]
     for name, radix in (
         ("model_cv_option", 4),
         ("level_cv_option", 2),
         # The aux/subosc-wave option gained a fourth value (stereo OUT/AUX), so
-        # its radix is 4; a default (all-zero) recipe still folds to 0, keeping
-        # its profile id — and thus the default build — unchanged.
+        # its radix is 4.
         ("aux_subosc_wave_option", 4),
         ("aux_subosc_octave_option", 3),
-        ("chord_set_option", 6),
+        # Nine, matching validate_chord_tables' cap. A smaller radix here would
+        # let a table at index 6-8 alias into the next digit, so two different
+        # recipes could mint one profile id and the second would not apply its
+        # starting options.
+        ("chord_set_option", 9),
         ("hold_on_trigger_option", 2),
     ):
         profile_code = profile_code * radix + normalized_options[name]
     # The reversible encoding stays well under the reserved range (max profile
-    # code < 254*256), so it still fits the legacy navigation and padding bytes,
-    # while reserving low bytes 0 and 1 so saved states from the old navigation
-    # setting can never look initialized.
+    # code < 254*256 — the option digits span 6912 values per layout version),
+    # so it still fits the legacy navigation and padding bytes, while reserving
+    # low bytes 0 and 1 so saved states from the old navigation setting can
+    # never look initialized.
     profile_id = ((profile_code // 254) << 8) | (2 + profile_code % 254)
 
     # Per-engine stereo (schema 10): stereoEngines lists the catalog ids built
