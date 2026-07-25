@@ -103,18 +103,22 @@ Your development machine is far faster than a 72 MHz Cortex-M4, so "it renders
 much faster than real time here" proves nothing — an engine several times over
 the hardware budget still looks comfortable on a laptop. What does carry over is
 a **ratio**: `check --full` times your engine and a stock engine using the same
-harness and the same flags, so the machine cancels out. Stock engines are known
-to fit, so anything much heavier than one will not.
+harness and the same flags, so the machine cancels out.
+
+The reference is **two-op-fm, the heaviest stock engine** (picked by timing all
+of them). That makes it a known-good ceiling rather than an arbitrary yardstick:
+Mutable ships it, so the module demonstrably has room for it.
 
 ```
-✓ CPU cost: 26.1 ns/sample vs 27.0 for stock swarm — 1.0x
-⚠ CPU cost: 58.2 ns/sample vs 27.0 for stock swarm — 2.2x
-✗ CPU cost: 216.2 ns/sample vs 27.0 for stock swarm — 8.0x
+✓ CPU cost: 58.2 ns/sample vs 95.6 for stock two-op-fm — 0.6x
+⚠ CPU cost: 130.4 ns/sample vs 95.6 for stock two-op-fm — 1.4x
+✗ CPU cost: 216.2 ns/sample vs 95.6 for stock two-op-fm — 2.3x
 ```
 
-At or near the reference you are fine. Above it you are heavier than anything
-Mutable shipped — it may still fit, but only hardware can tell you. Far above
-it, the check fails.
+At or under the reference you are provably fine — you cost no more than an
+engine that already ships. Above it you are heavier than anything Mutable
+shipped: it may still fit, but only hardware can tell you. At 2× the check
+fails; that is the measured point at which a real engine overran the module.
 
 **The usual cause is per-sample work that only needs doing per block.** Anything
 depending solely on the parameters — envelopes, filter coefficients, per-voice

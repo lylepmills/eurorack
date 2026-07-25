@@ -552,16 +552,29 @@ def dedupe_units(units: list[Path]) -> list[str]:
 # harness with the same flags: the machine cancels out, and stock engines are
 # known to fit. So the check times the package against a stock engine and reads
 # the ratio.
-CPU_REFERENCE_ENGINE = "swarm"          # one of the heaviest stock engines
+# The reference is the HEAVIEST stock engine, since that is the known-good
+# ceiling: Mutable shipped it, so the module demonstrably has room for it. Every
+# catalog engine was timed by this harness to pick it (ns/sample, this host):
+#
+#   two-op-fm 95.6 | particle-noise 89.8 | inharmonic-string 49.3 | lockstep 47.2
+#   analog-hi-hat 46.7 | analog-bass-drum 45.2 | granular-formant 37.0
+#   chords 33.1 | modal-resonator 32.6 | string-machine 28.4 | swarm 25.4
+#   virtual-analog 25.2 | waveshaping 16.8 | pulsar 11.5
+#   (speech/chiptune/dx7 measure 4-8 because they idle without user data)
+#
+# Re-run that survey if the engine set changes. Note swarm — the first reference
+# used here — is near the MEDIAN, not the ceiling; measuring against it made
+# engines look ~3.8x more expensive than they are.
+CPU_REFERENCE_ENGINE = "two-op-fm"
 CPU_BENCH_BLOCKS = 200000               # ~2.4M samples; well past timer noise
 CPU_BENCH_REPEATS = 3
-# Thresholds are heuristics anchored on the one hardware-confirmed data point
-# (~8x the reference demonstrably overran the module) plus the fact that every
-# stock engine ships. At or under the reference is certainly fine; past it an
-# engine is heavier than anything Mutable shipped, which is worth knowing but
-# not necessarily fatal; well past it there is no plausible way it fits.
-CPU_RATIO_WARN = 1.25
-CPU_RATIO_FAIL = 4.0
+# Thresholds bracket the two known points: the reference itself ships and works
+# (1.0x), and a community engine measured at 2.3x the reference demonstrably
+# overran the module. So at or under the reference is proven fine; above it is
+# heavier than anything Mutable shipped and unproven; at 2x we are at the
+# confirmed-failure point. Heuristics — retune as hardware data accumulates.
+CPU_RATIO_WARN = 1.0
+CPU_RATIO_FAIL = 2.0
 
 
 def compile_cpu_bench(
@@ -629,9 +642,12 @@ def cpu_reference_ratio(
     )
 
     reference, _ = builtin_engine(CPU_REFERENCE_ENGINE)
+    # Honour the reference's declared shared modules — an engine that uses one
+    # (e.g. chords -> chord-bank) does not link without it.
     reference_units = dedupe_units([
         entry,
         *(repo_root / item for item in reference["source"]["files"]),
+        *shared_module_sources(reference.get("sharedModules", []), repo_root),
         repo_root / "plaits/resources.cc",
         repo_root / "stmlib/dsp/units.cc",
         repo_root / "stmlib/utils/random.cc",

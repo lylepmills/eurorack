@@ -220,13 +220,14 @@ class PackageTests(unittest.TestCase):
 
     def test_cpu_check_fails_an_engine_that_cannot_fit(self) -> None:
         # Regression for the community engine that passed every other check at
-        # ~8x a stock engine and then starved the module: glitched audio, and a
-        # UI loop too short of cycles to refresh the LEDs.
+        # ~2.3x the heaviest stock engine and then starved the module: glitched
+        # audio, and a UI loop too short of cycles to refresh the LEDs. This is
+        # the measured failure point the fail threshold is anchored on.
         with self.assertRaises(plaits_lab.PackageError) as caught:
             plaits_lab.report_cpu_reference_ratio(
-                {"reference": "swarm", "packageNs": 216.0, "referenceNs": 27.0, "ratio": 8.0})
+                {"reference": "two-op-fm", "packageNs": 216.0, "referenceNs": 96.0, "ratio": 2.3})
         message = str(caught.exception)
-        self.assertIn("8.0x", message)
+        self.assertIn("2.3x", message)
         self.assertIn("per SAMPLE", message)   # names the cause
         self.assertIn("per BLOCK", message)    # and the fix
 
@@ -234,16 +235,17 @@ class PackageTests(unittest.TestCase):
         out = io.StringIO()
         with redirect_stdout(out):
             plaits_lab.report_cpu_reference_ratio(
-                {"reference": "swarm", "packageNs": 58.0, "referenceNs": 27.0, "ratio": 2.15})
+                {"reference": "two-op-fm", "packageNs": 130.0, "referenceNs": 96.0, "ratio": 1.35})
         rendered = out.getvalue()
         self.assertIn("⚠ CPU cost", rendered)
         self.assertIn("verify on hardware", rendered)
 
-    def test_cpu_check_passes_at_stock_engine_cost(self) -> None:
+    def test_cpu_check_passes_below_the_heaviest_stock_engine(self) -> None:
+        # Cheaper than an engine Mutable ships => the module provably has room.
         out = io.StringIO()
         with redirect_stdout(out):
             plaits_lab.report_cpu_reference_ratio(
-                {"reference": "swarm", "packageNs": 26.0, "referenceNs": 27.0, "ratio": 0.96})
+                {"reference": "two-op-fm", "packageNs": 58.0, "referenceNs": 96.0, "ratio": 0.61})
         self.assertIn("✓ CPU cost", out.getvalue())
 
     def test_cpu_check_is_advisory_when_unmeasurable(self) -> None:
