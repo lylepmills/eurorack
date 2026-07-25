@@ -190,6 +190,76 @@ class PackageTests(unittest.TestCase):
         plaits_lab.arm_compile_check(
             package, SimpleNamespace(toolchain="/nonexistent", docker_image="x", native=False))
 
+    def test_cpu_reference_ratio_divides_package_cost_by_stock_cost(self) -> None:
+        # The ratio is the whole point: absolute host timings can't tell you
+        # whether an engine fits on a 72 MHz module, but "N times a stock engine
+        # built by the same harness" cancels the machine out.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            pkg_dir = Path(temp_dir) / "costly"
+            with redirect_stdout(io.StringIO()):
+                plaits_lab.init_command(SimpleNamespace(
+                    output=str(pkg_dir), from_engine="blank", author="T",
+                    package_id="test-author/costly", slug="costly", name="Costly"))
+            package = plaits_lab.load_package(str(pkg_dir))
+            built: list[str] = []
+            real_compile, real_measure = plaits_lab.compile_cpu_bench, plaits_lab.measure_cpu_cost
+            plaits_lab.compile_cpu_bench = (
+                lambda units, header, cls, includes, output, compiler:
+                    built.append(Path(output).name))
+            # 180 ns for the package, 30 ns for stock -> 6.0x
+            plaits_lab.measure_cpu_cost = (
+                lambda binary: 180.0 if "package" in Path(binary).name else 30.0)
+            try:
+                cost = plaits_lab.cpu_reference_ratio(package, None, Path(temp_dir))
+            finally:
+                plaits_lab.compile_cpu_bench, plaits_lab.measure_cpu_cost = real_compile, real_measure
+            self.assertEqual(cost["reference"], plaits_lab.CPU_REFERENCE_ENGINE)
+            self.assertAlmostEqual(cost["ratio"], 6.0)
+            # Both the package AND the stock reference are built by this harness.
+            self.assertEqual(len(built), 2)
+
+    def test_cpu_check_fails_an_engine_that_cannot_fit(self) -> None:
+        # Regression for the community engine that passed every other check at
+        # ~8x a stock engine and then starved the module: glitched audio, and a
+        # UI loop too short of cycles to refresh the LEDs.
+        with self.assertRaises(plaits_lab.PackageError) as caught:
+            plaits_lab.report_cpu_reference_ratio(
+                {"reference": "swarm", "packageNs": 216.0, "referenceNs": 27.0, "ratio": 8.0})
+        message = str(caught.exception)
+        self.assertIn("8.0x", message)
+        self.assertIn("per SAMPLE", message)   # names the cause
+        self.assertIn("per BLOCK", message)    # and the fix
+
+    def test_cpu_check_warns_but_passes_above_the_reference(self) -> None:
+        out = io.StringIO()
+        with redirect_stdout(out):
+            plaits_lab.report_cpu_reference_ratio(
+                {"reference": "swarm", "packageNs": 58.0, "referenceNs": 27.0, "ratio": 2.15})
+        rendered = out.getvalue()
+        self.assertIn("⚠ CPU cost", rendered)
+        self.assertIn("verify on hardware", rendered)
+
+    def test_cpu_check_passes_at_stock_engine_cost(self) -> None:
+        out = io.StringIO()
+        with redirect_stdout(out):
+            plaits_lab.report_cpu_reference_ratio(
+                {"reference": "swarm", "packageNs": 26.0, "referenceNs": 27.0, "ratio": 0.96})
+        self.assertIn("✓ CPU cost", out.getvalue())
+
+    def test_cpu_check_is_advisory_when_unmeasurable(self) -> None:
+        # An unavailable measurement must never block a contributor.
+        out = io.StringIO()
+        with redirect_stdout(out):
+            plaits_lab.report_cpu_reference_ratio(None)
+        self.assertEqual(out.getvalue(), "")
+
+    def test_dedupe_units_keeps_first_seen_order(self) -> None:
+        root = Path(plaits_lab.__file__).parent
+        units = [root / "cpu_bench.cc", root / "render_model.cc", root / "cpu_bench.cc"]
+        deduped = plaits_lab.dedupe_units(units)
+        self.assertEqual([Path(item).name for item in deduped],
+                         ["cpu_bench.cc", "render_model.cc"])
+
     def test_check_arm_dispatches_to_builder_container(self) -> None:
         # With no local ARM toolchain, --arm compiles the package via the builder
         # image — a compile-only 'check', not a full firmware build.

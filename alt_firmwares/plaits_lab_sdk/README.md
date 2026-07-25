@@ -76,7 +76,8 @@ $SDK submit ./$PKG/my-engine --output ./my-engine.plaits-package.zip
 
 Full checks enforce the manifest, license, source boundary and allowlist,
 compile with address/undefined-behavior sanitizers, execute every declared
-scenario, and reject invalid duration, silent output, or excessive DC. The
+scenario, measure CPU cost against a stock engine (see below), and reject
+invalid duration, silent output, or excessive DC. The
 bundle contains the exact source, deterministic preview WAVs, content digest,
 and per-scenario peak/RMS/DC/silence/realtime metrics.
 
@@ -89,6 +90,40 @@ catch hardware-only errors before the full hardware build:
 ```sh
 $SDK check ./$PKG/my-engine --full --arm
 ```
+
+### Will it run in real time?
+
+The module gives you roughly **1500 CPU cycles per sample** (72 MHz ÷ 48 kHz) —
+and that budget covers everything, not just your engine: the low-pass gate, the
+output stage, the UI and the ADCs all come out of it. Overrun it and the audio
+callback can't finish a block in time, so the output glitches and distorts and
+the starved UI loop stops refreshing the LEDs.
+
+Your development machine is far faster than a 72 MHz Cortex-M4, so "it renders
+much faster than real time here" proves nothing — an engine several times over
+the hardware budget still looks comfortable on a laptop. What does carry over is
+a **ratio**: `check --full` times your engine and a stock engine using the same
+harness and the same flags, so the machine cancels out. Stock engines are known
+to fit, so anything much heavier than one will not.
+
+```
+✓ CPU cost: 26.1 ns/sample vs 27.0 for stock swarm — 1.0x
+⚠ CPU cost: 58.2 ns/sample vs 27.0 for stock swarm — 2.2x
+✗ CPU cost: 216.2 ns/sample vs 27.0 for stock swarm — 8.0x
+```
+
+At or near the reference you are fine. Above it you are heavier than anything
+Mutable shipped — it may still fit, but only hardware can tell you. Far above
+it, the check fails.
+
+**The usual cause is per-sample work that only needs doing per block.** Anything
+depending solely on the parameters — envelopes, filter coefficients, per-voice
+gains and frequencies, and above all every `exp`/`log`/`pow` — belongs above the
+per-sample loop, leaving it just the oscillator. Stock engines are written this
+way, and it is routinely the difference between 8× over budget and comfortably
+inside it: a 24-voice engine that computed a power and two exponentials per
+voice *per sample* got 3.7× cheaper, with bit-identical output, purely by
+hoisting that work to once per block.
 
 The contributor center uploads that bundle as a private draft. Publication is
 an explicit sequence: `draft → in-review → checks-passed → hardware-beta →

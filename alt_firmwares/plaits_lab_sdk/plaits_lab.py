@@ -521,6 +521,12 @@ def engine_translation_units(package: dict[str, Any], entry: Path) -> list[str]:
         package["repo_root"] / "stmlib/dsp/units.cc",
         package["repo_root"] / "stmlib/utils/random.cc",
     ]
+    return dedupe_units(units)
+
+
+def dedupe_units(units: list[Path]) -> list[str]:
+    """Resolved-path de-duplication: each translation unit handed to the
+    compiler exactly once, in first-seen order."""
     seen: set[str] = set()
     compiled: list[str] = []
     for unit in units:
@@ -529,6 +535,157 @@ def engine_translation_units(package: dict[str, Any], entry: Path) -> list[str]:
             seen.add(key)
             compiled.append(str(unit))
     return compiled
+
+
+# --- CPU reference-ratio check -------------------------------------------
+#
+# The module gives an engine roughly 1500 CPU cycles per sample (72 MHz / 48
+# kHz) for EVERYTHING — synthesis, the LPG, output post-processing, the UI and
+# the ADCs. Nothing on the host measures that directly: a development machine
+# is far faster than a 72 MHz Cortex-M4, so an engine several times over the
+# hardware budget still renders in a small fraction of real time here. (That is
+# exactly how a community engine costing ~8x a stock engine passed every check
+# and then starved the module — glitched audio, and a UI loop so short of
+# cycles the LEDs stopped refreshing.)
+#
+# What DOES carry over is the ratio between two engines built by the same
+# harness with the same flags: the machine cancels out, and stock engines are
+# known to fit. So the check times the package against a stock engine and reads
+# the ratio.
+CPU_REFERENCE_ENGINE = "swarm"          # one of the heaviest stock engines
+CPU_BENCH_BLOCKS = 200000               # ~2.4M samples; well past timer noise
+CPU_BENCH_REPEATS = 3
+# Thresholds are heuristics anchored on the one hardware-confirmed data point
+# (~8x the reference demonstrably overran the module) plus the fact that every
+# stock engine ships. At or under the reference is certainly fine; past it an
+# engine is heavier than anything Mutable shipped, which is worth knowing but
+# not necessarily fatal; well past it there is no plausible way it fits.
+CPU_RATIO_WARN = 1.25
+CPU_RATIO_FAIL = 4.0
+
+
+def compile_cpu_bench(
+    units: list[str], header: str, class_name: str, includes: list[Path],
+    output: Path, requested_compiler: str | None,
+) -> None:
+    """Build one engine against cpu_bench.cc. Optimized and WITHOUT sanitizers —
+    this build is timed, and the sanitized renderer used elsewhere in `check`
+    runs orders of magnitude slower than the real code."""
+    command = [
+        compiler_path(requested_compiler),
+        "-std=c++11", "-DTEST", "-O2",
+        "-Wno-unused-variable", "-Wno-unused-parameter",
+        "-Wno-unused-local-typedefs", "-Wno-deprecated-declarations",
+        f'-DPLAITS_LAB_ENGINE_HEADER="{header}"',
+        f"-DPLAITS_LAB_ENGINE_CLASS={class_name}",
+    ]
+    for include in includes:
+        command += ["-I", str(include)]
+    command += [*units, "-o", str(output)]
+    result = subprocess.run(command, text=True, capture_output=True, check=False)
+    if result.returncode:
+        details = (result.stderr or result.stdout).strip()
+        raise PackageError(f"CPU benchmark compilation failed\n{details[-2000:]}")
+
+
+def measure_cpu_cost(binary: Path) -> float:
+    """Nanoseconds per output sample, best of CPU_BENCH_REPEATS runs. Best rather
+    than mean: the fastest run is the one least disturbed by other load."""
+    best: float | None = None
+    for _ in range(CPU_BENCH_REPEATS):
+        result = subprocess.run(
+            [str(binary), str(CPU_BENCH_BLOCKS)], text=True, capture_output=True, check=False,
+        )
+        if result.returncode:
+            raise PackageError(
+                f"CPU benchmark failed: {(result.stderr or result.stdout).strip()}"
+            )
+        try:
+            value = float(result.stdout.split()[0])
+        except (IndexError, ValueError):
+            raise PackageError(f"CPU benchmark produced no timing: {result.stdout.strip()!r}")
+        if best is None or value < best:
+            best = value
+    return best if best is not None else 0.0
+
+
+def cpu_reference_ratio(
+    package: dict[str, Any], requested_compiler: str | None, temp_dir: Path,
+) -> dict[str, Any]:
+    """Time this engine and a stock engine under the same harness; return both
+    costs and their ratio."""
+    entry = Path(__file__).with_name("cpu_bench.cc")
+    repo_root = package["repo_root"]
+    manifest = package["manifest"]
+
+    package_binary = temp_dir / "cpu-bench-package"
+    compile_cpu_bench(
+        engine_translation_units(package, entry),
+        engine_header_define(package),
+        f'plaits::{manifest["source"]["className"]}',
+        [repo_root, package["source_root"]],
+        package_binary,
+        requested_compiler,
+    )
+
+    reference, _ = builtin_engine(CPU_REFERENCE_ENGINE)
+    reference_units = dedupe_units([
+        entry,
+        *(repo_root / item for item in reference["source"]["files"]),
+        repo_root / "plaits/resources.cc",
+        repo_root / "stmlib/dsp/units.cc",
+        repo_root / "stmlib/utils/random.cc",
+    ])
+    reference_binary = temp_dir / "cpu-bench-reference"
+    compile_cpu_bench(
+        reference_units,
+        reference["source"]["header"],
+        f'plaits::{reference["source"]["className"]}',
+        [repo_root],
+        reference_binary,
+        requested_compiler,
+    )
+
+    package_ns = measure_cpu_cost(package_binary)
+    reference_ns = measure_cpu_cost(reference_binary)
+    return {
+        "reference": CPU_REFERENCE_ENGINE,
+        "packageNs": package_ns,
+        "referenceNs": reference_ns,
+        "ratio": package_ns / reference_ns if reference_ns > 0 else float("inf"),
+    }
+
+
+def report_cpu_reference_ratio(cost: dict[str, Any] | None) -> None:
+    """Print the CPU verdict; raise when an engine cannot plausibly fit."""
+    if cost is None:
+        return
+    ratio = cost["ratio"]
+    detail = (
+        f"{cost['packageNs']:.1f} ns/sample vs {cost['referenceNs']:.1f} for stock "
+        f"{cost['reference']} — {ratio:.1f}x"
+    )
+    if ratio >= CPU_RATIO_FAIL:
+        raise PackageError(
+            f"CPU cost: {detail}\n"
+            f"  The module allows ~1500 cycles per sample for synthesis, the LPG, the\n"
+            f"  output stage and the UI combined. At {ratio:.1f}x a stock engine this cannot\n"
+            f"  fit: the audio callback overruns (glitched, distorted output) and the\n"
+            f"  starved UI loop stops refreshing the LEDs.\n"
+            f"  Usual cause: work done per SAMPLE that only needs doing per BLOCK.\n"
+            f"  Hoist anything that depends only on the parameters — envelopes, filter\n"
+            f"  coefficients, per-voice gains and frequencies, and every exp/log/pow —\n"
+            f"  above the per-sample loop, leaving it the oscillator itself."
+        )
+    if ratio > CPU_RATIO_WARN:
+        print(f"⚠ CPU cost: {detail}")
+        print(
+            "  Heavier than any stock engine. It may still fit, but nothing on the host\n"
+            "  can prove that — verify on hardware, and check for per-sample work that\n"
+            "  could be hoisted to per-block."
+        )
+    else:
+        print(f"✓ CPU cost: {detail}")
 
 
 def compile_renderer(
@@ -847,6 +1004,7 @@ def check_command(args: argparse.Namespace) -> int:
     report_autodeclared(package)
     print(f"✓ package {package['manifest']['id']}@{package['manifest']['version']}")
     print("✓ metadata, license, source policy, and scenarios")
+    cpu_cost: dict[str, Any] | None = None
     if not args.no_compile:
         with tempfile.TemporaryDirectory(prefix="plaits-lab-check-") as temp_dir:
             renderer = Path(temp_dir) / "render-model"
@@ -861,9 +1019,17 @@ def check_command(args: argparse.Namespace) -> int:
                         f"RMS {metrics['rms']:.4f}, DC {metrics['dcOffset']:.5f}, "
                         f"host {metrics['hostRealtimeRatio']:.2f}× realtime"
                     )
+                # A toolchain quirk in the reference build must not block a
+                # contributor, so an unavailable measurement degrades to a note.
+                # A measurement that IS available is enforced below.
+                try:
+                    cpu_cost = cpu_reference_ratio(package, args.compiler, Path(temp_dir))
+                except PackageError as error:
+                    print(f"  note: CPU reference check unavailable ({error})")
         print("✓ host compilation")
         if args.full:
             print("✓ sanitizer execution and audio health")
+            report_cpu_reference_ratio(cpu_cost)
         if args.full and not args.arm:
             print("  tip: add --arm to also compile against the hardware (ARM) toolchain")
     if args.arm:
