@@ -96,6 +96,10 @@ class Ui {
 
  private:
   void UpdateLEDs();
+#if PLAITS_CPU_PROBE
+  // Probe builds turn the LEDs into a CPU meter; see plaits/cpu_probe.h.
+  inline void DisplayCpuUsage(float usage) { cpu_usage_ = usage; }
+#endif
   void ReadSwitches();
   void ProcessPotsHiddenParameters();
   void LoadState();

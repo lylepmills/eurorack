@@ -28,6 +28,8 @@
 
 #include "plaits/ui.h"
 
+#include "plaits/cpu_probe.h"
+
 #include <algorithm>
 
 #include "stmlib/dsp/dsp.h"
@@ -201,6 +203,38 @@ uint32_t Ui::BankToColor(int bank) {
 void Ui::UpdateLEDs() {
   leds_.Clear();
   ++pwm_counter_;
+
+#if PLAITS_CPU_PROBE
+  // A probe build's LEDs are a CPU meter, so an engine's cost is readable with
+  // nothing patched at all -- the AUX tone stays available for a precise
+  // reading, but you no longer have to give up an output to get a rough one.
+  // Each LED is one eighth of the audio callback's budget: lit green while the
+  // engine fits, amber for the last quarter, and all eight blinking red once it
+  // is over budget (the blink gets faster the further over it is).
+  {
+    const float usage = cpu_usage_;
+    if (usage > 1.0f) {
+      // Over budget: blink everything red, faster the worse it is.
+      const int shift = usage > 2.0f ? 5 : (usage > 1.5f ? 6 : 7);
+      if ((pwm_counter_ >> shift) & 1) {
+        for (int i = 0; i < kNumLEDs; ++i) {
+          leds_.set(i, LED_COLOR_RED);
+        }
+      }
+    } else {
+      int lit = static_cast<int>(usage * static_cast<float>(kNumLEDs) + 0.5f);
+      if (lit > kNumLEDs) lit = kNumLEDs;
+      // Always show something, so "running but nearly free" is distinct from
+      // "not running at all".
+      if (lit < 1 && usage > 0.0f) lit = 1;
+      for (int i = 0; i < lit; ++i) {
+        leds_.set(i, i >= kNumLEDs - 2 ? LED_COLOR_YELLOW : LED_COLOR_GREEN);
+      }
+    }
+    leds_.Write();
+    return;
+  }
+#endif  // PLAITS_CPU_PROBE
 
   int pwm_counter = pwm_counter_ & 15;
   int triangle = (pwm_counter_ >> 4) & 31;

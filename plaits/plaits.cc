@@ -122,6 +122,7 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
     voice.Render(patch, modulations, (Voice::Frame*)(output), size);
     PLAITS_CPU_PROBE_END(size)
     PLAITS_CPU_PROBE_READOUT((Voice::Frame*)(output), size)
+    PLAITS_CPU_PROBE_DISPLAY(ui)
     ui.set_active_engine(voice.active_engine());
   }
   

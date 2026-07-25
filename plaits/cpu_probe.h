@@ -119,6 +119,7 @@ class CpuProbe {
 #define PLAITS_CPU_PROBE_BEGIN cpu_probe.Begin();
 #define PLAITS_CPU_PROBE_END(size) cpu_probe.End(size);
 #define PLAITS_CPU_PROBE_READOUT(frames, size) cpu_probe.WriteReadout(frames, size);
+#define PLAITS_CPU_PROBE_DISPLAY(ui) (ui).DisplayCpuUsage(cpu_probe.usage());
 
 #else
 
@@ -127,6 +128,7 @@ class CpuProbe {
 #define PLAITS_CPU_PROBE_BEGIN
 #define PLAITS_CPU_PROBE_END(size)
 #define PLAITS_CPU_PROBE_READOUT(frames, size)
+#define PLAITS_CPU_PROBE_DISPLAY(ui)
 
 #endif  // PLAITS_CPU_PROBE
 
