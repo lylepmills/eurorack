@@ -19,8 +19,9 @@
 #error "PLAITS_ENGINE_COUNT must be between 1 and 32"
 #endif
 
-// Per-bank engine counts, in the module's display order (green, red, amber, and
-// optionally orange). One to four banks; each holds 0..8 engines. A bank with
+// Per-bank engine counts, in the module's display order (amber, green, red, and
+// optionally orange — see Ui::BankToColor). One to four banks; each holds 0..8
+// engines. A bank with
 // fewer than eight is a "short bank" whose select-button cycle wraps at its real
 // size (see bank_navigation.h). This is a COUNT per bank — where a bank's gaps
 // sit (a "sparse bank") is carried separately by PLAITS_ENGINE_ROWS below. The

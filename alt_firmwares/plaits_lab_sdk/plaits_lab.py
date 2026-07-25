@@ -1122,7 +1122,7 @@ def render_local_hardware_config(package: dict[str, Any]) -> str:
 
 namespace plaits {{
 #if PLAITS_HAS_USER_DATA_BANK
-static const int8_t kEngineUserDataBank[24] = {{ {", ".join(str(value) for value in user_data)} }};
+static const int8_t kEngineUserDataBank[{engine_count}] = {{ {", ".join(str(value) for value in user_data)} }};
 #endif
 #if PLAITS_HAS_SPEECH_ENGINE
 static const uint32_t kSpeechEngineMask = 0x{speech_mask:08x};

@@ -108,7 +108,8 @@ compile draft source; they accept only published package version/digest
 references from the catalog.
 
 The firmware this produces is a **one-model Plaits — just yours.** The module
-boots into your single model (in the green bank; the red/amber banks are empty),
+boots into your single model (the first slot, which the LEDs show amber/yellow —
+bank 0's colour; the green and red banks are empty),
 so there's nothing else to scroll past while you test it. This isn't only for
 tidiness: the full 24-model palette already fills the 224 KB flash, which would
 leave a heavy engine no room, so registering your engine alone lets the linker
