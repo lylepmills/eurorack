@@ -125,10 +125,12 @@ Container are managed by `wrangler.jsonc`. Before each firmware-source rollout:
 2. Build and push the matching container image tag. **Pass the revision as a
    build arg**, not just as a Worker var — the container stamps its own
    `PLAITS_SOURCE_REVISION` into every artifact's `X-Plaits-Source-Revision`,
-   which the Worker prefers over its own var when recording build metadata. The
-   Dockerfile's `ARG` default is a fixed old commit, so an image built without
-   the flag silently reports that instead. `rev-0e6e6f202307` was built this way
-   and stamped `303a9afad9f1` on everything it compiled:
+   which the Worker prefers over its own var when recording build metadata. An
+   image built without the flag reports the Dockerfile's `ARG` default —
+   `development` since 2026-07-26, deliberately not a real-looking commit. It
+   used to default to a fixed old commit, and `rev-0e6e6f202307` was built
+   without the flag and stamped `303a9afad9f1` on everything it compiled, which
+   is exactly the failure the sentinel makes visible instead:
 
    ```sh
    docker build --platform linux/amd64 \
@@ -140,7 +142,10 @@ Container are managed by `wrangler.jsonc`. Before each firmware-source rollout:
    ```
 
    Confirm with `curl -sD - -o /dev/null localhost:<port>/build/<key> | grep
-   Source-Revision` against the image before pushing.
+   Source-Revision` against the image before pushing; `development` there means
+   the build arg was missed. (Local `plaits-lab-builder:local` images are built
+   without the flag on purpose and report `development` — that is only a problem
+   for an image you are about to deploy.)
 3. Regenerate the engine allowlist: `pnpm run catalog:regen` (rewrites
    `../plaits_lab_catalog/public_catalog.json` from the exporter at the
    checked-out commit), then commit any change. Each engine digest hashes its

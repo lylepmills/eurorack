@@ -55,7 +55,15 @@ RUN cd /workspace && python3 alt_firmwares/plaits_lab_builder/check_config_scope
 RUN touch /workspace/plaits/resources.cc
 RUN chmod -R a-w /workspace
 
-ARG PLAITS_SOURCE_REVISION=303a9afad9f1
+# The container stamps this into every artifact's X-Plaits-Source-Revision, and
+# the Worker prefers that header over its own var when recording build metadata.
+# So the default must never be a real-looking commit: an image built without
+# --build-arg would then masquerade as that revision instead of announcing that
+# nobody set one. It used to default to 303a9afad9f1, and rev-0e6e6f202307 was
+# built without the flag and stamped that stale commit on everything it
+# compiled. "development" matches container_server.py's own fallback and is
+# obviously not a rollout, so the mistake shows up the first time anyone looks.
+ARG PLAITS_SOURCE_REVISION=development
 ARG PLAITS_BUILD_CONTRACT=2
 ENV PATH="/usr/local/arm-4.8.3/bin:${PATH}" \
     PYTHONPATH="/workspace" \
