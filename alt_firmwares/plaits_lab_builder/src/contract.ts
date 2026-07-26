@@ -31,6 +31,25 @@ export type NormalizedChordTable = {
   chords: NormalizedChord[];
 };
 
+// Recipe schema versions this builder accepts, plus the subsets that gate
+// individual features. Every guard below tests against one of these lists AND
+// renders its rejection message from the same list, so the accepted range and
+// the text a caller of plaits-api.rubato.audio reads can never drift apart.
+const supportedSchemaVersions: readonly number[] = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+const fourBankSchemaVersions: readonly number[] = [6, 7, 8, 9, 10, 11, 12];  // 32 slots
+const sparseSlotSchemaVersions: readonly number[] = [7, 8, 9, 10, 11, 12];   // empty slots
+const stereoEngineSchemaVersions: readonly number[] = [10, 11, 12];          // stereoEngines list
+const sparseBankMinSchemaVersion = 11;                                       // gaps inside a bank
+
+// "2 through 12" for a long contiguous run, "10, 11, or 12" for a short list.
+function describeSchemaVersions(versions: readonly number[]): string {
+  const sorted = [...versions].sort((a, b) => a - b);
+  const contiguous = sorted.every((v, i) => i === 0 || v === sorted[i - 1]! + 1);
+  if (sorted.length >= 4 && contiguous) return `${sorted[0]} through ${sorted[sorted.length - 1]}`;
+  if (sorted.length === 1) return String(sorted[0]);
+  return `${sorted.slice(0, -1).join(", ")}, or ${sorted[sorted.length - 1]}`;
+}
+
 export const maxUserDataBanks = 3;
 export const patchesPerBank = 32;
 export const packedPatchSize = 128;
@@ -299,12 +318,16 @@ function validateBankShape(slots: (string | null)[], schemaVersion: number): voi
   if (slots.every((slot) => slot === null)) {
     throw new ContractError("invalid_slots", "A firmware recipe must contain at least one engine.");
   }
-  // A bank's engines may be sparse (a gap kept in place) only on a v11 recipe —
-  // the firmware then lights each engine on its own physical row. Older recipes
-  // must keep each 8-slot bank's engines contiguous at its front, the shape the
-  // pre-sparse per-bank navigation assumed.
-  if (hasSparseBank(slots) && schemaVersion < 11) {
-    throw new ContractError("invalid_slots", "A bank's engines must be contiguous, with empty slots only at the end, unless the recipe uses schema version 11.");
+  // A bank's engines may be sparse (a gap kept in place) only on a v11-or-later
+  // recipe — the firmware then lights each engine on its own physical row. Older
+  // recipes must keep each 8-slot bank's engines contiguous at its front, the
+  // shape the pre-sparse per-bank navigation assumed.
+  if (hasSparseBank(slots) && schemaVersion < sparseBankMinSchemaVersion) {
+    throw new ContractError(
+      "invalid_slots",
+      "A bank's engines must be contiguous, with empty slots only at the end, unless the recipe uses"
+        + ` schema version ${sparseBankMinSchemaVersion} or later.`,
+    );
   }
 }
 
@@ -365,8 +388,11 @@ function normalizeStereoEngines(
   if (!present) return undefined;
   // v10's defining feature; a v11 (sparse) recipe may also carry it when its aux
   // output is stereo, since v11 is a superset of v10.
-  if (candidate.schemaVersion !== 10 && candidate.schemaVersion !== 11 && candidate.schemaVersion !== 12) {
-    throw new ContractError("unsupported_schema", "stereoEngines requires recipe schema version 10, 11, or 12.");
+  if (!stereoEngineSchemaVersions.includes(Number(candidate.schemaVersion))) {
+    throw new ContractError(
+      "unsupported_schema",
+      `stereoEngines requires recipe schema version ${describeSchemaVersions(stereoEngineSchemaVersions)}.`,
+    );
   }
   if (auxOutput !== "stereo") {
     throw new ContractError("invalid_recipe", "stereoEngines is only valid with the stereo aux output.");
@@ -384,8 +410,11 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     throw new ContractError("invalid_recipe", "The build recipe must be a JSON object.");
   }
   const candidate = value as Record<string, unknown>;
-  if (![2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].includes(Number(candidate.schemaVersion))) {
-    throw new ContractError("unsupported_schema", "Only Plaits Palette recipe schema versions 2 through 11 can be built.");
+  if (!supportedSchemaVersions.includes(Number(candidate.schemaVersion))) {
+    throw new ContractError(
+      "unsupported_schema",
+      `Only Plaits Palette recipe schema versions ${describeSchemaVersions(supportedSchemaVersions)} can be built.`,
+    );
   }
   if (candidate.target !== "mutable-instruments-plaits" || candidate.firmware !== "rubato-plaits") {
     throw new ContractError("unsupported_target", "That recipe targets a different firmware family.");
@@ -396,8 +425,11 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
   if (!Array.isArray(candidate.slots) || (candidate.slots.length !== 24 && candidate.slots.length !== 32)) {
     throw new ContractError("invalid_slots", "A firmware recipe must contain 24 engine slots, or 32 for a four-bank build.");
   }
-  if (candidate.slots.length === 32 && ![6, 7, 8, 9, 10, 11, 12].includes(Number(candidate.schemaVersion))) {
-    throw new ContractError("invalid_slots", "32-slot recipes require recipe schema version 6, 7, 8, 9, 10, or 11.");
+  if (candidate.slots.length === 32 && !fourBankSchemaVersions.includes(Number(candidate.schemaVersion))) {
+    throw new ContractError(
+      "invalid_slots",
+      `32-slot recipes require recipe schema versions ${describeSchemaVersions(fourBankSchemaVersions)}.`,
+    );
   }
   const slots: (string | null)[] = candidate.schemaVersion === 2
     ? candidate.slots.map((id) => {
@@ -409,8 +441,11 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     : candidate.slots.map((value) => {
         if (value === null) {
           // An empty slot — only short-bank / sparse (v7+) recipes may carry them.
-          if (![7, 8, 9, 10, 11, 12].includes(Number(candidate.schemaVersion))) {
-            throw new ContractError("invalid_slots", "Empty slots require recipe schema version 7, 8, 9, 10, or 11.");
+          if (!sparseSlotSchemaVersions.includes(Number(candidate.schemaVersion))) {
+            throw new ContractError(
+              "invalid_slots",
+              `Empty slots require recipe schema versions ${describeSchemaVersions(sparseSlotSchemaVersions)}.`,
+            );
           }
           return null;
         }

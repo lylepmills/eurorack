@@ -285,7 +285,7 @@ test("version 6 accepts a 32-slot fourth-bank recipe with no custom banks", asyn
   // 32 slots demand schema v6; 24 or 32 are the only counts.
   const v5 = makeRecipe([...fixture.slots, ...fourthBank], 5) as Record<string, unknown>;
   (v5 as { resources: Record<string, unknown> }).resources = { chordTables: [publishedTable] };
-  assert.throws(() => normalizeRecipe(v5), /schema version 6/);
+  assert.throws(() => normalizeRecipe(v5), /schema versions 6 through/);
   assert.throws(() => normalizeRecipe(makeRecipe([...fixture.slots, "loopback"])), /24 engine slots, or 32/);
 });
 
@@ -336,7 +336,7 @@ test("version 7 accepts short banks (empty slots) and stays v7", async () => {
   assert.throws(() => normalizeRecipe(makeRecipe(new Array(24).fill(null))), /at least one engine/);
 
   // Empty slots require v7; the same slots under v6 are refused.
-  assert.throws(() => normalizeRecipe(makeRecipe(ids, 6)), /schema version 7/);
+  assert.throws(() => normalizeRecipe(makeRecipe(ids, 6)), /schema versions 7 through/);
 
   // Short banks change the build identity vs. the same layout fully filled.
   const identity = { sourceRevision: "source", toolchain: "toolchain", contract: "7" };
@@ -558,4 +558,30 @@ test("per-engine stereo (stereoEngines) requires and normalizes to v10", async (
 
   // A schema-9 recipe with a stereoEngines list is refused (needs v10).
   assert.throws(() => normalizeRecipe({ ...recipe, schemaVersion: 9 }), /requires recipe schema version 10/);
+});
+
+// The rejection message is what a plaits-api.rubato.audio caller reads, so it
+// must name the range the guard actually accepts — it once still said "2
+// through 11" after v12 (per-slot custom FM banks) had been accepted.
+test("the unsupported-schema message names the range the guard accepts", () => {
+  const highest = 12;
+  // Reports the schema code a version is rejected with, or null if the version
+  // itself was accepted (a later invalid_slots / unapproved_package complaint
+  // about the fixture's shape means the version passed this guard).
+  const rejection = (version: number): string | null => {
+    try {
+      normalizeRecipe({ ...fixture, schemaVersion: version });
+      return null;
+    } catch (error) {
+      const { code, message } = error as { code?: string; message: string };
+      return code === "unsupported_schema" ? message : null;
+    }
+  };
+  // One past the top is refused, and the message names the true upper bound.
+  const refused = rejection(highest + 1);
+  assert.match(String(refused), new RegExp(`versions 2 through ${highest} can be built`));
+  // ...and the guard really does accept every version that message claims.
+  for (let version = 2; version <= highest; version += 1) {
+    assert.equal(rejection(version), null, `schema version ${version} must not be rejected as unsupported`);
+  }
 });
