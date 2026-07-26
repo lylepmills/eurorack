@@ -187,7 +187,13 @@ class GenerateEngineConfigTest(unittest.TestCase):
         config = render_config(validate_recipe(recipe))
         self.assertIn("#define PLAITS_HAS_USER_DATA_BANK_OVERRIDE 1", config)
         self.assertIn("static const uint8_t kUserDataBankOverride_0[4096] = { 42, 0,", config)
-        self.assertIn("static const uint8_t* const kUserDataBankOverride[3] = { kUserDataBankOverride_0, NULL, NULL };", config)
+        # Bank 0 is overridden; banks 1 and 2 are live stock slots, so the resolved
+        # table names syx_bank_1/2 (not NULL). Only syx_bank_0 goes unreferenced and
+        # is dropped by --gc-sections.
+        self.assertIn(
+            "static const uint8_t* const kResolvedUserDataBank[3] = "
+            "{ kUserDataBankOverride_0, syx_bank_1, syx_bank_2 };",
+            config)
 
     def test_override_for_a_bank_no_engine_uses_is_pruned(self) -> None:
         # No six-op engine placed -> the override is accepted but not baked.
@@ -218,8 +224,11 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertIn("#define PLAITS_HAS_USER_DATA_BANK_OVERRIDE 1", config)
         # The customized slot gets index 3 (above factory 0/1/2), with its own array.
         self.assertIn("static const uint8_t kUserDataBankOverride_3[4096] = { 7, 0,", config)
+        # Bank 0's only slot was customized away, so factory bank 0 is now unreachable
+        # -> NULL (syx_bank_0 dropped). Banks 1 and 2 stay live stock slots.
         self.assertIn(
-            "static const uint8_t* const kUserDataBankOverride[4] = { NULL, NULL, NULL, kUserDataBankOverride_3 };",
+            "static const uint8_t* const kResolvedUserDataBank[4] = "
+            "{ NULL, syx_bank_1, syx_bank_2, kUserDataBankOverride_3 };",
             config)
 
     def test_v12_two_slots_of_the_same_engine_get_distinct_banks(self) -> None:
@@ -232,9 +241,12 @@ class GenerateEngineConfigTest(unittest.TestCase):
         config = render_config(validate_recipe(recipe))
         self.assertIn("static const uint8_t kUserDataBankOverride_3[4096] = { 11, 0,", config)
         self.assertIn("static const uint8_t kUserDataBankOverride_4[4096] = { 22, 0,", config)
+        # Both dx7-bank-a slots (factory 0) were customized and dx7-bank-b (factory 1)
+        # isn't placed, so only factory bank 2 (dx7-bank-c) is live -> syx_bank_2;
+        # banks 0 and 1 are NULL (syx_bank_0/1 dropped).
         self.assertIn(
-            "static const uint8_t* const kUserDataBankOverride[5] = "
-            "{ NULL, NULL, NULL, kUserDataBankOverride_3, kUserDataBankOverride_4 };",
+            "static const uint8_t* const kResolvedUserDataBank[5] = "
+            "{ NULL, NULL, syx_bank_2, kUserDataBankOverride_3, kUserDataBankOverride_4 };",
             config)
 
     def test_v12_uncustomized_fm_slot_keeps_its_factory_index(self) -> None:
@@ -243,6 +255,33 @@ class GenerateEngineConfigTest(unittest.TestCase):
         config = render_config(validate_recipe(recipe))
         self.assertIn("#define PLAITS_HAS_USER_DATA_BANK_OVERRIDE 0", config)
         self.assertIn("static const int8_t kEngineUserDataBank[24] = {", config)
+        # Only dx7-bank-b (factory 1) is placed, so banks 0 and 2 are unreachable:
+        # the resolved table names only syx_bank_1, dropping syx_bank_0/2 (~8 KB)
+        # even with no customization at all.
+        self.assertIn("#define PLAITS_HAS_RESOLVED_USER_DATA_BANK 1", config)
+        self.assertIn(
+            "static const uint8_t* const kResolvedUserDataBank[3] = { NULL, syx_bank_1, NULL };",
+            config)
+
+    def test_v12_customizing_all_three_banks_drops_every_factory_blob(self) -> None:
+        # All three FM slots customized -> no factory bank is reachable, so the
+        # resolved table names no syx_bank_N at all (all ~12 KB of factory data is
+        # dropped; only the three custom arrays remain).
+        slots = ["dx7-bank-a", "dx7-bank-b", "dx7-bank-c"] + ["virtual-analog"] * 21
+        recipe = self.v12_recipe(slots, [
+            {"slot": 0, "bank": self.bank_document(first_byte=1)},
+            {"slot": 1, "bank": self.bank_document(first_byte=2)},
+            {"slot": 2, "bank": self.bank_document(first_byte=3)},
+        ])
+        config = render_config(validate_recipe(recipe))
+        self.assertNotIn("syx_bank_0", config)
+        self.assertNotIn("syx_bank_1", config)
+        self.assertNotIn("syx_bank_2", config)
+        self.assertIn(
+            "static const uint8_t* const kResolvedUserDataBank[6] = "
+            "{ NULL, NULL, NULL, kUserDataBankOverride_3, "
+            "kUserDataBankOverride_4, kUserDataBankOverride_5 };",
+            config)
 
     def test_v12_bank_on_a_non_existent_slot_is_rejected(self) -> None:
         recipe = self.v12_recipe(["dx7-bank-a"] + ["virtual-analog"] * 23,

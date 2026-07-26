@@ -152,15 +152,17 @@ void Voice::Render(
 #if PLAITS_HAS_USER_DATA_BANK
     if (!data && kEngineUserDataBank[engine_index] >= 0) {
       const int bank = kEngineUserDataBank[engine_index];
-#if PLAITS_HAS_USER_DATA_BANK_OVERRIDE
-      // A recipe-baked custom bank replaces the built-in default for this bank;
-      // a runtime TIMBRE-loaded user bank (above) still takes precedence.
-      data = kUserDataBankOverride[bank]
-          ? kUserDataBankOverride[bank]
-          : fm_patches_table[bank];
+#if PLAITS_HAS_RESOLVED_USER_DATA_BANK
+      // The generator resolved every bank to its data pointer at build time: a
+      // recipe-baked custom bank, a live stock factory bank (syx_bank_N), or NULL
+      // for a bank no slot reaches. This build never NAMES fm_patches_table, so
+      // --gc-sections drops the factory blobs of any customized-away / absent
+      // banks. A runtime TIMBRE-loaded user bank (above) still takes precedence.
+      data = kResolvedUserDataBank[bank];
 #else
+      // Stock / default firmware: fall through to the built-in factory banks.
       data = fm_patches_table[bank];
-#endif  // PLAITS_HAS_USER_DATA_BANK_OVERRIDE
+#endif  // PLAITS_HAS_RESOLVED_USER_DATA_BANK
     }
 #endif  // PLAITS_HAS_USER_DATA_BANK
     e->LoadUserData(data);
