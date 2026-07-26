@@ -196,18 +196,15 @@ The authoritative implementation and deployment notes are in
 
 ## Production build-service checkpoint
 
-> SUPERSEDED 2026-07-21 (schema v7): production now runs source revision
-> `7b62cbd851d4` / image `rev-7b62cbd851d4`, deployed from
-> `claude/plaits-lab-integration`. This rollout ships SHORT BANKS (empty slots)
-> — recipe schema v7, per-bank-memory navigation ("design B", persisted across
-> power cycles; see the Short banks section below) — plus the field-guide
-> Options-menu page (which is why `PLAITS_MANUAL_CONTRACT` bumped 1->2).
-> `/v1/catalog` now advertises `recipeSchemaVersion` 7; a live short-bank build
-> was byte-identical to the local build (172624 text). The prior live pair was
-> `8cf101fe28af` / `rev-8cf101fe28af` (DX7 allowlist-freshness + reviewed
-> Lockstep/Loopback/Reed-Pipe DSP + the LEVEL->MODEL fourth-macro CV move). The
-> deploy ledger in `plaits_lab_builder/README.md` is the authoritative record;
-> the July 19 figures below are retained as the schema-v6 rollout checkpoint.
+> ⚠️ **HISTORICAL — this section is the July 19, 2026 (schema v6) rollout
+> checkpoint, not the current deployment.** For what is live right now — source
+> revision, image tag, and the dated rollout ledger — read
+> `plaits_lab_builder/README.md`, which is the authoritative record. Do not
+> restate the live revision here: this used to carry a "production now runs X"
+> banner that each rollout replaced, and it sat five rollouts stale because
+> updating it was nobody's step. The infrastructure inventory below (queue, R2
+> bucket, Durable Objects, rate limit, CORS) is the durable part and is still
+> accurate; only the revision/image lines are frozen at July 19.
 
 Production was redeployed to Cloudflare on July 19, 2026 (the schema v6
 rollout — manuals, optional custom FM banks, opt-in fourth bank):
@@ -437,8 +434,10 @@ downloads — no combined ZIP. Details in
 
 Still open:
 
-1. DONE July 19, 2026: deployed as image `rev-303a9afad9f1` + Worker deploy
-   with the website catalog re-sync landing in the same window (details in
-   the production checkpoint above).
-2. Give all 39 model descriptions a final editorial/listening review and
+1. Give all 39 model descriptions a final editorial/listening review and
    re-check the rendered Letter pages after any catalog wording change.
+
+(The manual rollout that used to sit at the top of this list shipped July 19,
+2026 as image `rev-303a9afad9f1`; it was left in place marked DONE, which is
+how a "Still open" heading stops meaning anything. Close items out of the list
+rather than annotating them in it.)
