@@ -22,6 +22,19 @@ using namespace plaits;
 #define PLAITS_QEMU_BLOCKS 1000
 #endif
 
+// Parameters are settable so the harness can be run at the SAME knob positions
+// a hardware sweep was measured at -- pairing counts with cycles is the whole
+// point, and it only works if both sides evaluate the identical workload.
+#ifndef PLAITS_QEMU_HARMONICS
+#define PLAITS_QEMU_HARMONICS 0.5f
+#endif
+#ifndef PLAITS_QEMU_MACRO
+#define PLAITS_QEMU_MACRO 0.5f
+#endif
+#ifndef PLAITS_QEMU_TIMBRE
+#define PLAITS_QEMU_TIMBRE 0.5f
+#endif
+
 // Semihosting: the only way out of a bare-metal guest. bkpt 0xAB is the ARM
 // convention; QEMU implements it when started with -semihosting-config.
 static inline int Semihost(int op, void* arg) {
@@ -45,11 +58,11 @@ int main() {
   EngineParameters p;
   p.trigger = 0;
   p.note = 48.0f;
-  p.timbre = 0.5f;
+  p.timbre = PLAITS_QEMU_TIMBRE;
   p.morph = 0.5f;
-  p.harmonics = 0.5f;
+  p.harmonics = PLAITS_QEMU_HARMONICS;
   p.accent = 1.0f;
-  p.macro = 0.5f;
+  p.macro = PLAITS_QEMU_MACRO;
   p.chord_set_option = 0;
   p.stereo = false;
 

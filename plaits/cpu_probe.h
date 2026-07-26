@@ -55,6 +55,13 @@ namespace plaits {
 
 #if PLAITS_CPU_PROBE
 
+// The LED meter is separable from the AUX tone. A bench build that steps through
+// many engines needs the normal display to keep showing WHICH engine is
+// selected, so it takes the tone and leaves the LEDs alone.
+#ifndef PLAITS_CPU_PROBE_LEDS
+#define PLAITS_CPU_PROBE_LEDS 1
+#endif
+
 // Full budget maps to this many Hz on the AUX readout.
 const float kCpuProbeFullScaleHz = 1000.0f;
 

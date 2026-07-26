@@ -77,7 +77,7 @@ def run_qemu(elf: Path, plugin: Path) -> tuple[int, int, int, int]:
          "-nographic", "-no-reboot",
          "-semihosting-config", "enable=on,target=native",
          "-plugin", str(plugin), "-kernel", str(elf)],
-        text=True, capture_output=True, check=False, timeout=900,
+        text=True, capture_output=True, check=False, timeout=420,
     )
     match = COUNTS_RE.search(result.stderr)
     if not match:
@@ -94,6 +94,10 @@ def main() -> int:
     parser.add_argument("--image", default="plaits-lab-builder:local")
     parser.add_argument("--blocks-a", type=int, default=200)
     parser.add_argument("--blocks-b", type=int, default=400)
+    parser.add_argument("--harmonics", type=float, default=0.5)
+    parser.add_argument("--macro", type=float, default=0.5)
+    parser.add_argument("--timbre", type=float, default=0.5)
+    parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--keep", action="store_true")
     args = parser.parse_args()
 
@@ -130,7 +134,10 @@ def main() -> int:
                 ["/workspace", "/contributor/src", "/qemu"],
                 [f'-DPLAITS_LAB_ENGINE_HEADER="{plaits_lab.engine_header_define(package)}"',
                  f'-DPLAITS_LAB_ENGINE_CLASS=plaits::{package["manifest"]["source"]["className"]}',
-                 f"-DPLAITS_QEMU_BLOCKS={blocks}"],
+                 f"-DPLAITS_QEMU_BLOCKS={blocks}",
+                 f"-DPLAITS_QEMU_HARMONICS={args.harmonics}f",
+                 f"-DPLAITS_QEMU_MACRO={args.macro}f",
+                 f"-DPLAITS_QEMU_TIMBRE={args.timbre}f"],
                 f"/output/harness_{label}.elf", args.image, [],
             )
             # The builder image's ENTRYPOINT is its build server, so it has to
@@ -148,11 +155,11 @@ def main() -> int:
                 # join would hand to the shell to strip.
                 args.image, "-c", " ".join(shlex.quote(c) for c in cmd),
             ]
-            print(f"building harness ({blocks} blocks)...")
+            if not args.quiet: print(f"building harness ({blocks} blocks)...")
             r = subprocess.run(docker, text=True, capture_output=True, check=False)
             if r.returncode:
                 raise SystemExit(f"harness build failed\n{(r.stderr or r.stdout)[-4000:]}")
-            print(f"running under QEMU ({blocks} blocks)...")
+            if not args.quiet: print(f"running under QEMU ({blocks} blocks)...")
             counts[label] = run_qemu(out_dir / f"harness_{label}.elf", plugin)
 
     d_insn, d_flash, d_ram, d_write = (
@@ -165,6 +172,11 @@ def main() -> int:
               + COST_RAM_READ * per(d_ram))
     usage = cycles / BUDGET_CYCLES_PER_SAMPLE
 
+    if args.quiet:
+        print(f"RESULT harmonics={args.harmonics} macro={args.macro} "
+              f"insns={per(d_insn):.1f} flash={per(d_flash):.1f} "
+              f"ram={per(d_ram):.1f} writes={per(d_write):.1f}")
+        return 0
     print(f"\nper sample, marginal (startup and Init subtracted out):")
     print(f"  instructions      {per(d_insn):8.1f}")
     print(f"  flash reads       {per(d_flash):8.1f}   <- the cost a host timing cannot see")
