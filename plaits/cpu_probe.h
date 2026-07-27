@@ -235,87 +235,13 @@ class CpuProbe {
         if (state_ == 1) {
           burst = true;                       // beacon burst, fixed pitch
         } else if (state_ == 3) {
-          const int used = UsedSections();
-          float hz;
-#if PLAITS_CPU_PROBE_MEMHUNT
-          // The 12-channel survey failed its own sanity check: the DAC
-          // channel, whose target is KNOWN, decoded wrong. So before trusting
-          // any register readout, validate the instrument itself:
-          //   beacon 1: a hardcoded constant (0x20000814) through the exact
-          //             encode path -- must decode to 154 Hz or the
-          //             instrument is broken and nothing else matters.
-          //   beacon 2: DMA1 ch5 (DAC) CCR low bits -- EN must be 1.
-          //   beacons 3-5: DMA1 ch5 CMAR at full width, 12 bits per tone
-          //             ([11:0], [23:12], [31:24]) -- the DAC buffer's true
-          //             address, no aliasing possible.
-          if (report_ == 0) {
-            hz = 25.0f + static_cast<float>((0x20000814u >> 4) & 0xFFFu);
-          } else if (report_ == 1) {
-            const volatile uint32_t* ccr5 = (volatile uint32_t*)0x40020058u;
-            hz = 25.0f + static_cast<float>(*ccr5 & 0xFFFu);
-          } else {
-            const volatile uint32_t* cmar5 = (volatile uint32_t*)0x40020064u;
-            const uint32_t value = *cmar5;
-            uint32_t field = 0;
-            if (report_ == 2) field = value & 0xFFFu;
-            if (report_ == 3) field = (value >> 12) & 0xFFFu;
-            if (report_ == 4) field = (value >> 24) & 0xFFu;
-            hz = 25.0f + static_cast<float>(field);
-          }
-          if (false) {
-#else
-          if (report_ == 0) {
-#endif
-            hz = usage_ * kCpuProbeFullScaleHz;
-          } else if (report_ <= used) {
-            hz = SectionValue(report_ - 1) * kCpuProbeFullScaleHz;
-          } else if (report_ == used + 1) {
-            // RAW same-block ratio: section 0 as a share of its enclosing
-            // total. Nested brackets cannot legitimately exceed 1000 Hz here.
-            hz = raw_elapsed_ > 0
-                ? kCpuProbeFullScaleHz * static_cast<float>(raw_section0_)
-                      / static_cast<float>(raw_elapsed_)
-                : 0.0f;
-          } else if (report_ == used + 2) {
-            // Violation counter: 25 Hz means zero; each violating block adds
-            // 1 Hz (clamped) -- any reading above ~30 Hz is a real break.
-            float v = static_cast<float>(nesting_violations_);
-            hz = 25.0f + (v > 3000.0f ? 3000.0f : v);
-          } else if (report_ == used + 3) {
-            // Canary check failures: 25 Hz = intact. Anything higher means this
-            // object's memory is being overwritten by something else.
-            float c = static_cast<float>(corruption_events_);
-            hz = 25.0f + (c > 3000.0f ? 3000.0f : c);
-          } else if (report_ == used + 4) {
-            // End() cadence ramp: steps ~1 Hz per second of runtime when End
-            // runs at block rate. Two consecutive readout cycles that show the
-            // SAME value mean End has stopped updating this object.
-            hz = 25.0f + static_cast<float>((blocks_ >> 12) & 2047u);
-          } else if (report_ == used + 5) {
-            // Last block's TOTAL, absolute (same scale as report 0). Direct,
-            // EMA-free anchor to compare against the smoothed total.
-            const float budget_one = static_cast<float>(F_CPU) / kSampleRate;
-            hz = raw_elapsed_ > 0
-                ? kCpuProbeFullScaleHz * static_cast<float>(raw_elapsed_)
-                      / (12.0f * budget_one)
-                : 0.0f;
-          } else {
-            // LIVE value of the known-stomped address (0x20000814, the probe
-            // tail in the v3 layout), low then high halfword, each scaled to a
-            // tone. Whatever writes there now writes into a WATCHED window:
-            // when the reported value follows a knob or an input, the writer
-            // has identified itself. The stomped values decoded as small,
-            // slowly-decaying integers -- the bit pattern of DENORMAL FLOATS --
-            // so the prime suspect is someone's filter state living at these
-            // addresses through a wild or stale pointer.
-#if PLAITS_CPU_PROBE_HOST_TEST
-            const uint32_t hot = 0;
-#else
-            const uint32_t hot = *(volatile uint32_t*)0x20000814u;
-#endif
-            const uint32_t half = report_ == used + 6 ? (hot & 0xFFFFu) : (hot >> 16);
-            hz = 25.0f + static_cast<float>(half >> 4);
-          }
+          // All report values route through ONE function with plain returns.
+          // The previous structure spliced modes with `if (false)` over an
+          // else-chain, which only disables the FIRST branch -- the else-ifs
+          // still ran and overwrote the value. Every memhunt reading between
+          // v5 and v7 reported the old beacons under new labels because of
+          // it, and the known-answer beacon is what caught it.
+          float hz = ReportHz(report_, UsedSections());
           if (hz < 25.0f) hz = 25.0f;         // silence must stay distinguishable
           tone_increment = hz / kSampleRate;
         }
@@ -346,6 +272,68 @@ class CpuProbe {
   }
 
  private:
+  float ReportHz(int report, int used) {
+#if PLAITS_CPU_PROBE_MEMHUNT
+    // Known-answer test first: a constant through the exact encode path.
+    if (report == 0) {
+      return 25.0f + static_cast<float>((0x20000814u >> 4) & 0xFFFu);
+    }
+#if PLAITS_CPU_PROBE_HOST_TEST
+    return 25.0f;  // no device registers on the host
+#else
+    if (report == 1) {
+      const volatile uint32_t* ccr5 = (volatile uint32_t*)0x40020058u;
+      return 25.0f + static_cast<float>(*ccr5 & 0xFFFu);
+    }
+    const volatile uint32_t* cmar5 = (volatile uint32_t*)0x40020064u;
+    const uint32_t value = *cmar5;
+    uint32_t field = 0;
+    if (report == 2) field = value & 0xFFFu;
+    if (report == 3) field = (value >> 12) & 0xFFFu;
+    if (report == 4) field = (value >> 24) & 0xFFu;
+    return 25.0f + static_cast<float>(field);
+#endif
+#else
+    if (report == 0) {
+      return usage_ * kCpuProbeFullScaleHz;
+    }
+    if (report <= used) {
+      return SectionValue(report - 1) * kCpuProbeFullScaleHz;
+    }
+    if (report == used + 1) {
+      return raw_elapsed_ > 0
+          ? kCpuProbeFullScaleHz * static_cast<float>(raw_section0_)
+                / static_cast<float>(raw_elapsed_)
+          : 0.0f;
+    }
+    if (report == used + 2) {
+      float v = static_cast<float>(nesting_violations_);
+      return 25.0f + (v > 3000.0f ? 3000.0f : v);
+    }
+    if (report == used + 3) {
+      float c = static_cast<float>(corruption_events_);
+      return 25.0f + (c > 3000.0f ? 3000.0f : c);
+    }
+    if (report == used + 4) {
+      return 25.0f + static_cast<float>((blocks_ >> 12) & 2047u);
+    }
+    if (report == used + 5) {
+      const float budget_one = static_cast<float>(F_CPU) / kSampleRate;
+      return raw_elapsed_ > 0
+          ? kCpuProbeFullScaleHz * static_cast<float>(raw_elapsed_)
+                / (12.0f * budget_one)
+          : 0.0f;
+    }
+#if PLAITS_CPU_PROBE_HOST_TEST
+    return 0.0f;
+#else
+    const uint32_t hot = *(volatile uint32_t*)0x20000814u;
+    const uint32_t half = report == used + 6 ? (hot & 0xFFFFu) : (hot >> 16);
+    return 25.0f + static_cast<float>(half >> 4);
+#endif
+#endif  // PLAITS_CPU_PROBE_MEMHUNT
+  }
+
   float SectionValue(int nth) {
     int seen = 0;
     for (int i = 0; i < kMaxSections; ++i) {
