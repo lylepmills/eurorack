@@ -139,7 +139,7 @@ int main() {
       int active_len = 0, silence_len = 0, transitions = 0;
       bool in_active = false;
       short prev = 0;
-      for (int b = 0; b < 220000; ++b) {
+      for (int b = 0; b < 240000; ++b) {
         probe.WriteReadout(frames, 12);
         for (int i = 0; i < 12; ++i) {
           const bool active = frames[i].aux != 0;
@@ -182,11 +182,14 @@ int main() {
     // Expected: 12 reports -- total, 4 sections, ratio, violations, canary,
     // cadence (20000 warmup blocks >> 12 = 4 -> 29 Hz), last-block absolute,
     // and the two hot-word halves (stubbed on host).
-    const int kReports = 12;
-    const double expect[12] = {3275.0, 3141.7, 2675.0, 2675.0, 2675.0, 3308.3,
-                               2500.0, 2500.0, 2504.0, 3275.0, 2500.0, 2500.0};
-    bool seen[12] = {false, false, false, false, false, false, false, false,
-                     false, false, false, false};
+    // Snapshot block (warmup pattern): elapsed 14400, s0 12000, voices 10800,
+    // one engine call -> 125-coded 2600, ratios 833 and 750 above the floor.
+    const int kReports = 13;
+    const double expect[13] = {3275.0, 3141.7, 2675.0, 2675.0, 2675.0, 3308.3,
+                               2500.0, 2500.0, 2504.0, 3275.0, 2600.0,
+                               3333.3, 3250.0};
+    bool seen[13] = {false, false, false, false, false, false, false, false,
+                     false, false, false, false, false};
 #endif
     for (size_t i = 0; i < beacon_counts.size(); ++i) {
       const int r = beacon_counts[i] - 1;

@@ -162,6 +162,11 @@ class CpuProbe {
     nesting_violations_ = 0;
     blocks_ = 0;
     corruption_events_ = 0;
+    call_count_ = 0;
+    snap_elapsed_ = 0;
+    snap_s0_ = 0;
+    snap_voices_ = 0;
+    snap_calls_ = 0;
     guard_a_ = 0xC0DE1234u;
     guard_b_ = 0x5EC7104Eu;
   }
@@ -177,6 +182,7 @@ class CpuProbe {
     if (index >= 0 && index < kMaxSections) {
       section_start_[index] = DWT->CYCCNT;
       section_used_[index] = true;
+      if (index == 0) ++call_count_;   // engine-bracket entries this block
     }
   }
   inline void SectionEnd(int index) {
@@ -210,6 +216,18 @@ class CpuProbe {
     if (section_used_[0] && section_block_[0] > elapsed) {
       ++nesting_violations_;
     }
+    // ATOMIC single-block snapshot, every 8192 blocks (~2 s): one block's
+    // whole ledger captured together, so its arithmetic must balance --
+    // sections cannot exceed their enclosing total WITHIN one snapshot unless
+    // the nesting genuinely breaks, and the call count says outright whether
+    // the engine rendered more than once inside one bracket.
+    if ((blocks_ & 8191u) == 0u) {
+      snap_elapsed_ = elapsed;
+      snap_s0_ = section_block_[0];
+      snap_voices_ = section_block_[1] + section_block_[2] + section_block_[3];
+      snap_calls_ = call_count_;
+    }
+    call_count_ = 0;
     for (int i = 0; i < kMaxSections; ++i) {
       if (section_used_[i]) {
         const float share = static_cast<float>(section_block_[i]) / budget;
@@ -337,13 +355,23 @@ class CpuProbe {
                 / (12.0f * budget_one)
           : 0.0f;
     }
-#if PLAITS_CPU_PROBE_HOST_TEST
-    return 0.0f;
-#else
-    const uint32_t hot = *(volatile uint32_t*)0x20000814u;
-    const uint32_t half = report == used + 6 ? (hot & 0xFFFFu) : (hot >> 16);
-    return 25.0f + static_cast<float>(half >> 4);
-#endif
+    // One-block snapshot: the arithmetic that must balance.
+    if (report == used + 6) {
+      // Engine renders per bracket in the snapshot block. 1 render = 125.
+      return 25.0f + 100.0f * static_cast<float>(snap_calls_);
+    }
+    if (report == used + 7) {
+      // Section 0 as a share of the SAME block's elapsed. Nested => <= ~1025.
+      return snap_elapsed_ > 0
+          ? 25.0f + 1000.0f * static_cast<float>(snap_s0_)
+                / static_cast<float>(snap_elapsed_)
+          : 25.0f;
+    }
+    // Summed voice sections as a share of the same block's elapsed.
+    return snap_elapsed_ > 0
+        ? 25.0f + 1000.0f * static_cast<float>(snap_voices_)
+              / static_cast<float>(snap_elapsed_)
+        : 25.0f;
 #endif  // PLAITS_CPU_PROBE_MEMHUNT
   }
 
@@ -378,7 +406,7 @@ class CpuProbe {
       for (int i = 0; i < kMaxSections; ++i) {
         if (section_used_[i]) ++reports;
       }
-      if (reports > 1) reports += 7;  // + ratio, violations, canary, cadence, last-block, hot-word
+      if (reports > 1) reports += 8;  // + diagnostics + one-block snapshot
 #if PLAITS_CPU_PROBE_MEMHUNT
       reports = 5;                    // known-answer test + DAC CMAR, full width
 #endif
@@ -424,6 +452,11 @@ class CpuProbe {
   uint32_t nesting_violations_;
   uint32_t blocks_;
   uint32_t corruption_events_;
+  uint32_t call_count_;
+  uint32_t snap_elapsed_;
+  uint32_t snap_s0_;
+  uint32_t snap_voices_;
+  uint32_t snap_calls_;
   uint32_t guard_b_;
 
   DISALLOW_COPY_AND_ASSIGN(CpuProbe);
