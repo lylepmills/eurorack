@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import re
 import shutil
 import struct
@@ -526,6 +527,128 @@ def compiler_path(requested: str | None) -> str:
     return compiler
 
 
+# Windows compilers append .exe when -o names no extension, so a path the SDK
+# builds by hand never matches the file actually written. Every is_file() check
+# on a compiled binary must use the name the compiler produces — above all the
+# dev loop's recompile guard, which otherwise rebuilds on every single request.
+HOST_EXE_SUFFIX = ".exe" if os.name == "nt" else ""
+
+
+def host_binary(directory: Path, name: str) -> Path:
+    """Path of a compiled host executable, carrying the platform's suffix."""
+    return directory / f"{name}{HOST_EXE_SUFFIX}"
+
+
+# The Plaits DSP headers use M_PI, which is POSIX rather than ISO C++: under
+# strict -std=c++11 the MinGW/UCRT <cmath> hides it, while glibc and macOS
+# expose it regardless. Defining this is a no-op off Windows, so it goes on
+# every compile rather than behind a platform branch.
+MATH_CONSTANTS_DEFINE = "-D_USE_MATH_DEFINES"
+
+SANITIZER_FLAGS = ["-fsanitize=address,undefined", "-fno-omit-frame-pointer"]
+
+# LeakSanitizer runs as part of ASan on Linux but does not exist on macOS (Apple's
+# ASan ships no LSan). Left on, the SAME package passes `check --full` on macOS and
+# fails on Linux — including inside the builder image a Windows contributor
+# delegates to — which would make the submission gate depend on the reviewer's OS.
+#
+# It also cannot report anything about contributor code: FORBIDDEN_SOURCE_PATTERNS
+# rejects malloc/calloc/realloc/free/new/delete before a package ever compiles, so
+# an engine has no way to leak. The only reachable allocations are in the SDK's own
+# harness — stmlib's test WavWriter callocs a scratch buffer per Write() and never
+# frees it (~48 B per render block, upstream in the pinned submodule).
+#
+# So: same verdict everywhere, and nothing of value lost. ASan and UBSan — which
+# are what this gate is actually for — stay fully on.
+SANITIZER_RUNTIME_ENV = {"ASAN_OPTIONS": "detect_leaks=0"}
+
+_SANITIZER_SUPPORT: dict[str, bool] = {}
+
+
+def host_sanitizers_available(requested_compiler: str | None) -> bool:
+    """Whether the host compiler can COMPILE AND LINK with ASan/UBSan.
+
+    MinGW-w64 — the compiler a Windows contributor most likely has, and the one
+    `c++`/`g++` autodetection finds there — ships no sanitizer runtime: it
+    accepts the flags and then fails at link with `cannot find -lasan`. Only
+    building a trivial program tells us for sure, so probe once per compiler and
+    cache. When this is False the sanitized commands run in the builder image
+    instead, which is Linux and always has the runtimes.
+    """
+    compiler = compiler_path(requested_compiler)
+    if compiler not in _SANITIZER_SUPPORT:
+        with tempfile.TemporaryDirectory(prefix="plaits-lab-sanprobe-") as temp_dir:
+            probe = Path(temp_dir) / "probe.cc"
+            probe.write_text("int main() { return 0; }\n", encoding="utf-8")
+            result = subprocess.run(
+                [compiler, *SANITIZER_FLAGS, str(probe),
+                 "-o", str(host_binary(Path(temp_dir), "probe"))],
+                text=True, capture_output=True, check=False,
+            )
+        _SANITIZER_SUPPORT[compiler] = result.returncode == 0
+    return _SANITIZER_SUPPORT[compiler]
+
+
+def sdk_docker_command(
+    docker: str, image: str, package: dict[str, Any], sdk_args: list[str],
+    extra_mounts: list[str] | None = None,
+) -> list[str]:
+    """A `docker run` of this same CLI inside the builder image, with the repo at
+    /workspace and the package at /contributor (both read-only). Every delegating
+    command shares this shape, so it lives in one place — the mounts and the
+    `--platform linux/amd64` pin are easy to get subtly wrong per copy."""
+    return [
+        docker, "run", "--rm", "--platform", "linux/amd64", "--entrypoint", "python3",
+        "-v", f"{package['repo_root']}:/workspace:ro",
+        "-v", f"{package['directory']}:/contributor:ro",
+        *(extra_mounts or []),
+        "-w", "/workspace", image,
+        "alt_firmwares/plaits_lab_sdk/plaits_lab.py", *sdk_args,
+    ]
+
+
+DOCKER_IMAGE_HINT = (
+    "Build the builder image once first:\n"
+    "  git submodule update --init stmlib stm_audio_bootloader\n"
+    "  docker build --platform linux/amd64 -t {image} -f Dockerfile.plaits-builder ."
+)
+
+NO_SANITIZER_HELP = (
+    "{command} runs the sanitizers, and this host's C++ compiler ({compiler}) has no\n"
+    "sanitizer runtime — MinGW-w64 does not ship one. Install Docker Desktop\n"
+    "(https://docs.docker.com/get-docker/) and the SDK will run this step in the\n"
+    "builder image automatically.\n" + DOCKER_IMAGE_HINT
+)
+
+
+def run_sanitized_in_docker(
+    package: dict[str, Any], args: argparse.Namespace, label: str,
+    sdk_args: list[str], extra_mounts: list[str] | None = None,
+) -> int:
+    """Re-run a sanitizer-dependent command inside the builder image. Output is
+    streamed rather than captured: these compile and render for tens of seconds,
+    and the container prints exactly the progress the contributor wants to see."""
+    docker = shutil.which("docker")
+    if not docker:
+        # Built only on the failure path: naming the compiler means resolving it.
+        raise PackageError(NO_SANITIZER_HELP.format(
+            command=label, compiler=compiler_path(args.compiler),
+            image=args.docker_image,
+        ))
+    # flush: the container writes straight to the terminal, so an unflushed note
+    # would surface after the output it is meant to introduce.
+    print(f"note: host compiler cannot link the sanitizers — running {label} "
+          f"in {args.docker_image}", flush=True)
+    command = sdk_docker_command(docker, args.docker_image, package, sdk_args, extra_mounts)
+    result = subprocess.run(command, check=False)
+    if result.returncode:
+        raise PackageError(
+            f"{label} failed in the builder image. If the {args.docker_image} image is "
+            f"missing, " + DOCKER_IMAGE_HINT.format(image=args.docker_image)
+        )
+    return 0
+
+
 def engine_header_define(package: dict[str, Any]) -> str:
     manifest = package["manifest"]
     return (
@@ -626,7 +749,7 @@ def compile_cpu_bench(
     runs orders of magnitude slower than the real code."""
     command = [
         compiler_path(requested_compiler),
-        "-std=c++11", "-DTEST", "-O2",
+        "-std=c++11", MATH_CONSTANTS_DEFINE, "-DTEST", "-O2",
         "-Wno-unused-variable", "-Wno-unused-parameter",
         "-Wno-unused-local-typedefs", "-Wno-deprecated-declarations",
         f'-DPLAITS_LAB_ENGINE_HEADER="{header}"',
@@ -671,7 +794,7 @@ def cpu_reference_ratio(
     repo_root = package["repo_root"]
     manifest = package["manifest"]
 
-    package_binary = temp_dir / "cpu-bench-package"
+    package_binary = host_binary(temp_dir, "cpu-bench-package")
     compile_cpu_bench(
         engine_translation_units(package, entry),
         engine_header_define(package),
@@ -692,7 +815,7 @@ def cpu_reference_ratio(
         repo_root / "stmlib/dsp/units.cc",
         repo_root / "stmlib/utils/random.cc",
     ])
-    reference_binary = temp_dir / "cpu-bench-reference"
+    reference_binary = host_binary(temp_dir, "cpu-bench-reference")
     compile_cpu_bench(
         reference_units,
         reference["source"]["header"],
@@ -766,7 +889,7 @@ def compile_renderer(
     compiled = engine_translation_units(package, Path(__file__).with_name("render_model.cc"))
     command = [
         compiler_path(requested_compiler),
-        "-std=c++11", "-DTEST", "-O2", "-Wall", "-Werror",
+        "-std=c++11", MATH_CONSTANTS_DEFINE, "-DTEST", "-O2", "-Wall", "-Werror",
         "-Wno-unused-variable", "-Wno-unused-parameter",
         "-Wno-unused-local-typedefs", "-Wno-deprecated-declarations",
         f'-DPLAITS_LAB_ENGINE_HEADER="{engine_header_define(package)}"',
@@ -777,7 +900,9 @@ def compile_renderer(
         "-o", str(output),
     ]
     if sanitizers:
-        command[4:4] = ["-fsanitize=address,undefined", "-fno-omit-frame-pointer"]
+        # Same list host_sanitizers_available() probes for, so the capability
+        # check can never test different flags than the real build uses.
+        command[4:4] = SANITIZER_FLAGS
     result = subprocess.run(command, text=True, capture_output=True, check=False)
     if result.returncode:
         details = (result.stderr or result.stdout).strip()
@@ -805,7 +930,7 @@ def compile_wasm(package: dict[str, Any], output: Path) -> None:
     compiled = engine_translation_units(package, Path(__file__).with_name("wasm_audition.cc"))
     command = [
         emcc,
-        "-std=c++11", "-DTEST", "-O2",
+        "-std=c++11", MATH_CONSTANTS_DEFINE, "-DTEST", "-O2",
         f'-DPLAITS_LAB_ENGINE_HEADER="{engine_header_define(package)}"',
         f'-DPLAITS_LAB_ENGINE_CLASS=plaits::{manifest["source"]["className"]}',
         "-I", str(package["repo_root"]),
@@ -1248,13 +1373,28 @@ def report_autodeclared(package: dict[str, Any]) -> None:
 def check_command(args: argparse.Namespace) -> int:
     package = load_package(args.package, autodeclare=True)
     report_autodeclared(package)
+    # --full is the submission gate, so it must be runnable everywhere. Where the
+    # host cannot link the sanitizers, hand the whole check to the builder image.
+    # Delegating here — before any output — keeps the container's own ✓ lines the
+    # only ones printed, and the autodeclare pass above has already settled
+    # plaits-engine.json, so mounting the package read-only is safe.
+    if args.full and not args.no_compile and not args.native \
+            and not host_sanitizers_available(args.compiler):
+        # Forward --arm too, or asking for the hardware-toolchain compile would
+        # be silently dropped on the way into the container — the run would look
+        # clean while having skipped exactly the check that was requested. The
+        # image carries the ARM toolchain, so --native runs it there directly.
+        delegated = ["check", "/contributor", "--full", "--native"]
+        if args.arm:
+            delegated += ["--arm", "--toolchain", args.toolchain]
+        return run_sanitized_in_docker(package, args, "check --full", delegated)
     print(f"✓ package {package['manifest']['id']}@{package['manifest']['version']}")
     print(f"✓ metadata, scenarios, source policy, and {package['manifest']['license']} "
           "licensing (LICENSE text and per-file SPDX tags agree)")
     cpu_cost: dict[str, Any] | None = None
     if not args.no_compile:
         with tempfile.TemporaryDirectory(prefix="plaits-lab-check-") as temp_dir:
-            renderer = Path(temp_dir) / "render-model"
+            renderer = host_binary(Path(temp_dir), "render-model")
             compile_renderer(package, renderer, args.compiler, sanitizers=args.full)
             if args.full:
                 for scenario in package["scenarios"]:
@@ -1311,7 +1451,11 @@ def run_scenario(
         str(scenario["triggerHz"]), str(post["outGain"]), str(post["auxGain"]),
     ]
     started = time.monotonic()
-    result = subprocess.run(command, text=True, capture_output=True, check=False)
+    result = subprocess.run(
+        command, text=True, capture_output=True, check=False,
+        # Harmless for a non-sanitized build, which simply ignores it.
+        env={**os.environ, **SANITIZER_RUNTIME_ENV},
+    )
     elapsed = time.monotonic() - started
     if result.returncode:
         raise PackageError(f"scenario {scenario['id']} failed: {(result.stderr or result.stdout).strip()}")
@@ -1364,7 +1508,7 @@ def render_command(args: argparse.Namespace) -> int:
     output = Path(args.output).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="plaits-lab-render-") as temp_dir:
-        renderer = Path(temp_dir) / "render-model"
+        renderer = host_binary(Path(temp_dir), "render-model")
         compile_renderer(package, renderer, args.compiler)
         elapsed = run_scenario(package, renderer, scenario, output)
         metrics = analyze_wav(output, scenario["durationSeconds"], elapsed)
@@ -1376,9 +1520,13 @@ def package_content_digest(package_dir: Path) -> str:
     import hashlib
 
     digest = hashlib.sha256()
+    # Order on the POSIX relative path, never on the Path object: Path ordering
+    # is case-folded and backslash-separated on Windows, so the same package
+    # would hash in a different file order there and produce a different digest.
     files = sorted(
-        path for path in package_dir.rglob("*")
-        if path.is_file() and ".plaits-lab" not in path.parts
+        (path for path in package_dir.rglob("*")
+         if path.is_file() and ".plaits-lab" not in path.parts),
+        key=lambda path: path.relative_to(package_dir).as_posix(),
     )
     for path in files:
         relative = path.relative_to(package_dir).as_posix()
@@ -1399,10 +1547,21 @@ def submit_command(args: argparse.Namespace) -> int:
     package = load_package(args.package)
     output = Path(args.output).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
+    # A bundle is only accepted if it passed the sanitizers, so submit builds one
+    # in the builder image when the host cannot. The output directory is the one
+    # writable mount; the container writes the zip straight into it, and the
+    # digest it records is identical to a host-built one (package_content_digest
+    # orders on POSIX relative paths, so it does not vary by platform).
+    if not args.native and not host_sanitizers_available(args.compiler):
+        return run_sanitized_in_docker(
+            package, args, "submit",
+            ["submit", "/contributor", "--output", f"/output/{output.name}", "--native"],
+            extra_mounts=["-v", f"{output.parent}:/output"],
+        )
     with tempfile.TemporaryDirectory(prefix="plaits-lab-submit-") as temp_dir:
         preview_dir = Path(temp_dir) / "previews"
         preview_dir.mkdir()
-        renderer = Path(temp_dir) / "render-model"
+        renderer = host_binary(Path(temp_dir), "render-model")
         compile_renderer(package, renderer, args.compiler, sanitizers=True)
         analyses: dict[str, dict[str, float | int]] = {}
         for scenario in package["scenarios"]:
@@ -1425,9 +1584,14 @@ def submit_command(args: argparse.Namespace) -> int:
             "nextStates": ["in-review", "withdrawn"],
         }
         with zipfile.ZipFile(output, "w") as archive:
-            for path in sorted(item for item in package["directory"].rglob("*") if item.is_file()):
+            # Same POSIX-relative ordering as package_content_digest, so a bundle
+            # built on Windows lays its entries out identically to one built here.
+            for path in sorted(
+                (item for item in package["directory"].rglob("*") if item.is_file()),
+                key=lambda item: item.relative_to(package["directory"]).as_posix(),
+            ):
                 add_zip_file(archive, f"package/{path.relative_to(package['directory']).as_posix()}", path.read_bytes())
-            for path in sorted(preview_dir.glob("*.wav")):
+            for path in sorted(preview_dir.glob("*.wav"), key=lambda item: item.name):
                 add_zip_file(archive, f"previews/{path.name}", path.read_bytes())
             add_zip_file(archive, "submission.json", (json.dumps(submission, indent=2) + "\n").encode("utf-8"))
     print(f"created draft submission {output}")
@@ -1675,14 +1839,11 @@ def arm_compile_check(package: dict[str, Any], args: argparse.Namespace) -> None
             resources_cc.touch()
         except OSError:
             pass
-    command = [
-        docker, "run", "--rm", "--platform", "linux/amd64", "--entrypoint", "python3",
-        "-v", f"{package['repo_root']}:/workspace:ro",
-        "-v", f"{package['directory']}:/contributor:ro",
-        "-w", "/workspace", args.docker_image,
-        "alt_firmwares/plaits_lab_sdk/plaits_lab.py", "check", "/contributor",
-        "--arm", "--native", "--no-compile", "--toolchain", args.toolchain,
-    ]
+    command = sdk_docker_command(
+        docker, args.docker_image, package,
+        ["check", "/contributor", "--arm", "--native", "--no-compile",
+         "--toolchain", args.toolchain],
+    )
     result = subprocess.run(command, text=True, capture_output=True, check=False)
     if result.returncode:
         details = (result.stdout + result.stderr)[-8000:]
@@ -1842,7 +2003,7 @@ class DevSession:
         self.package_arg = package_arg
         self.compiler = compiler
         self.temp_dir = tempfile.TemporaryDirectory(prefix="plaits-lab-dev-")
-        self.renderer = Path(self.temp_dir.name) / "render-model"
+        self.renderer = host_binary(Path(self.temp_dir.name), "render-model")
         self.wasm = Path(self.temp_dir.name) / "audition.wasm"
         self.wasm_available = False
         self.fingerprint = ""
@@ -1888,7 +2049,7 @@ class DevSession:
         package = builtin_package(engine_id)
         renderer = self.reference_renderers.get(engine_id)
         if renderer is None:
-            renderer = Path(self.temp_dir.name) / f"reference-{engine_id}"
+            renderer = host_binary(Path(self.temp_dir.name), f"reference-{engine_id}")
             compile_renderer(package, renderer, self.compiler)
             self.reference_renderers[engine_id] = renderer
         return self.render_package(package, renderer, request, f"reference-{engine_id}.wav")
@@ -2098,6 +2259,8 @@ def build_parser() -> argparse.ArgumentParser:
     submit_parser.add_argument("package")
     submit_parser.add_argument("--output", required=True)
     submit_parser.add_argument("--compiler")
+    submit_parser.add_argument("--docker-image", default="plaits-lab-builder:local")
+    submit_parser.add_argument("--native", action="store_true", help=argparse.SUPPRESS)
     submit_parser.set_defaults(handler=submit_command)
 
     build_parser_command = subparsers.add_parser("build", help="build an unreviewed local hardware firmware")
@@ -2125,7 +2288,28 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def use_utf8_output() -> None:
+    """Make stdout/stderr UTF-8 regardless of the platform's locale.
+
+    This CLI prints ✓ and em dashes. On Windows, Python only uses the console's
+    UTF-8 path while stdout is a terminal — the moment it is REDIRECTED (a pipe,
+    `> build.log`, a CI capture) it falls back to the locale encoding, cp1252,
+    where those characters do not exist, and every command dies with
+    UnicodeEncodeError before doing any work. Reconfiguring costs nothing on
+    macOS/Linux, which are already UTF-8. Done here rather than at import so
+    merely importing the module never mutates global stream state (the tests do).
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            try:
+                reconfigure(encoding="utf-8", errors="replace")
+            except (ValueError, OSError):
+                pass  # already detached or not reconfigurable; not worth failing over
+
+
 def main(argv: list[str] | None = None) -> int:
+    use_utf8_output()
     try:
         args = build_parser().parse_args(argv)
         return args.handler(args)

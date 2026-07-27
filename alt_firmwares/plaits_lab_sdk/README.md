@@ -6,7 +6,9 @@ Rubato, and audition model is represented in the same authoritative package
 catalog; community packages use the same controls, outputs, scenarios, and
 content-addressed version model.
 
-Run commands from the eurorack repository root:
+Run commands from the eurorack repository root. On Windows use `python` rather
+than `python3` — a stock python.org install provides `python` and `py`, while
+`python3.exe` exists only as a Microsoft Store alias stub that errors out:
 
 ```sh
 SDK="python3 alt_firmwares/plaits_lab_sdk/plaits_lab.py"
@@ -117,6 +119,13 @@ scenario, measure CPU cost against a stock engine (see below), and reject
 invalid duration, silent output, or excessive DC. The
 bundle contains the exact source, deterministic preview WAVs, content digest,
 and per-scenario peak/RMS/DC/silence/realtime metrics.
+
+Both of those commands need a compiler that can link the sanitizers. MinGW-w64
+— the usual Windows toolchain — ships no sanitizer runtime, so there the SDK
+runs these two steps inside the builder Docker image instead, and says so. That
+needs Docker plus a one-time `docker build` of the image (the same one the
+hardware-build step uses); everything else still runs natively. Nothing changes
+on macOS or Linux, where the host compiler sanitizes directly.
 
 `check` compiles with your **host** compiler, which is more permissive than the
 pinned hardware toolchain (e.g. it has `std::log2`/`std::exp2`; the ARM newlib

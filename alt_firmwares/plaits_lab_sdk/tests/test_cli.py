@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import io
 import json
+import sys
 import shutil
 import tempfile
 import unittest
@@ -17,6 +19,15 @@ SPEC = importlib.util.spec_from_file_location("plaits_lab", SDK_DIR / "plaits_la
 assert SPEC and SPEC.loader
 plaits_lab = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(plaits_lab)
+
+
+def host_can_sanitize() -> bool:
+    """Probe guard for tests that need a real sanitized build. Absent any host
+    compiler at all the probe raises, which is still 'cannot sanitize' here."""
+    try:
+        return plaits_lab.host_sanitizers_available(None)
+    except plaits_lab.PackageError:
+        return False
 
 
 # These stand in for contributor-written sources, so they carry the same SPDX
@@ -484,6 +495,11 @@ class PackageTests(unittest.TestCase):
 
     @unittest.skipUnless(shutil.which("c++") or shutil.which("g++"), "host C++ compiler required")
     def test_blank_package_can_be_validated_and_bundled(self) -> None:
+        # Exercises the HOST bundling path end to end, so it needs a toolchain
+        # that can actually link the sanitizers — MinGW-w64 cannot, and there the
+        # real submit delegates to Docker instead (covered separately below).
+        if not host_can_sanitize():
+            self.skipTest("host C++ toolchain ships no sanitizer runtime")
         with tempfile.TemporaryDirectory() as temp_dir:
             package = Path(temp_dir) / "bright-wave"
             plaits_lab.init_command(SimpleNamespace(
@@ -496,6 +512,7 @@ class PackageTests(unittest.TestCase):
             bundle = Path(temp_dir) / "bright-wave.zip"
             plaits_lab.submit_command(SimpleNamespace(
                 package=str(package), output=str(bundle), compiler=None,
+                native=True, docker_image="unused",
             ))
             with zipfile.ZipFile(bundle) as archive:
                 submission = json.loads(archive.read("submission.json"))
@@ -781,7 +798,7 @@ class PackageTests(unittest.TestCase):
             manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
             package = plaits_lab.load_package(str(package_dir))
-            renderer = Path(temp_dir) / "render-model"
+            renderer = plaits_lab.host_binary(Path(temp_dir), "render-model")
             plaits_lab.compile_renderer(package, renderer, None)
             self.assertTrue(renderer.exists())
 
@@ -797,7 +814,7 @@ class PackageTests(unittest.TestCase):
                 with self.subTest(engine=engine_id):
                     package = plaits_lab.builtin_package(engine_id)
                     self.assertTrue(package["manifest"]["sharedModules"])
-                    renderer = Path(temp_dir) / f"reference-{engine_id}"
+                    renderer = plaits_lab.host_binary(Path(temp_dir), f"reference-{engine_id}")
                     plaits_lab.compile_renderer(package, renderer, None)
                     self.assertTrue(renderer.exists())
 
@@ -805,13 +822,196 @@ class PackageTests(unittest.TestCase):
     def test_six_op_reference_survives_null_user_data(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             package = plaits_lab.builtin_package("dx7-bank-a")
-            renderer = Path(temp_dir) / "reference-dx7"
+            renderer = plaits_lab.host_binary(Path(temp_dir), "reference-dx7")
             plaits_lab.compile_renderer(package, renderer, None)
             scenario = package["scenarios"][0]
             output = Path(temp_dir) / "dx7.wav"
             # Before the LoadUserData null-guard this render SIGSEGVs.
             plaits_lab.run_scenario(package, renderer, scenario, output)
             self.assertTrue(output.exists())
+
+    def _community_package(self, temp_dir: str, slug: str) -> dict:
+        pkg_dir = Path(temp_dir) / slug
+        with redirect_stdout(io.StringIO()):
+            plaits_lab.init_command(SimpleNamespace(
+                output=str(pkg_dir), from_engine="blank", author="T",
+                package_id=f"test-author/{slug}", slug=slug, name=slug.title()))
+        return plaits_lab.load_package(str(pkg_dir))
+
+    def _capture_docker_run(self, fn) -> tuple[list[str], str]:
+        """Run fn() with docker present and subprocess.run stubbed; return the
+        command docker was handed plus anything printed."""
+        captured: dict[str, list[str]] = {}
+        real_run, real_which = plaits_lab.subprocess.run, plaits_lab.shutil.which
+        plaits_lab.shutil.which = (
+            lambda name: "/usr/bin/docker" if name == "docker" else real_which(name))
+        plaits_lab.subprocess.run = lambda cmd, **kw: (
+            captured.__setitem__("cmd", cmd) or SimpleNamespace(returncode=0, stdout="", stderr=""))
+        out = io.StringIO()
+        try:
+            with redirect_stdout(out):
+                fn()
+        finally:
+            plaits_lab.subprocess.run, plaits_lab.shutil.which = real_run, real_which
+        return captured.get("cmd", []), out.getvalue()
+
+    def test_full_check_delegates_to_the_builder_image_without_host_sanitizers(self) -> None:
+        # MinGW-w64 compiles the sanitizer flags and then cannot link them, so on
+        # Windows the submission gate has to run in the image instead of failing.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            package = self._community_package(temp_dir, "gated")
+            args = SimpleNamespace(package=str(package["directory"]), compiler=None,
+                                   no_compile=False, full=True, arm=False,
+                                   toolchain="/nonexistent-arm",
+                                   docker_image="img:test", native=False)
+            real_probe = plaits_lab.host_sanitizers_available
+            plaits_lab.host_sanitizers_available = lambda _compiler: False
+            try:
+                cmd, printed = self._capture_docker_run(
+                    lambda: plaits_lab.check_command(args))
+            finally:
+                plaits_lab.host_sanitizers_available = real_probe
+
+        self.assertEqual(cmd[:3], ["/usr/bin/docker", "run", "--rm"])
+        self.assertIn("--platform", cmd)
+        self.assertEqual(cmd[cmd.index("--platform") + 1], "linux/amd64")
+        self.assertEqual(cmd[-4:], ["check", "/contributor", "--full", "--native"])
+        # Both mounts read-only: the container must not write into the checkout.
+        self.assertIn(f"{package['repo_root']}:/workspace:ro", cmd)
+        self.assertIn(f"{package['directory']}:/contributor:ro", cmd)
+        self.assertIn("cannot link the sanitizers", printed)
+
+    def test_submit_delegates_with_a_writable_output_mount(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            package = self._community_package(temp_dir, "bundled")
+            out_zip = Path(temp_dir) / "dist" / "bundled.zip"
+            args = SimpleNamespace(package=str(package["directory"]), compiler=None,
+                                   output=str(out_zip), docker_image="img:test",
+                                   native=False)
+            real_probe = plaits_lab.host_sanitizers_available
+            plaits_lab.host_sanitizers_available = lambda _compiler: False
+            try:
+                cmd, _ = self._capture_docker_run(lambda: plaits_lab.submit_command(args))
+            finally:
+                plaits_lab.host_sanitizers_available = real_probe
+
+        # The zip has to come back out, so /output is the one writable mount and
+        # the container is told to write there under the caller's chosen name.
+        self.assertIn(f"{out_zip.resolve().parent}:/output", cmd)
+        self.assertEqual(
+            cmd[-5:],
+            ["submit", "/contributor", "--output", "/output/bundled.zip", "--native"])
+
+    def test_native_never_delegates_to_docker(self) -> None:
+        # --native is what the SDK passes to ITSELF inside the container. If it
+        # delegated, the container would try to run docker in docker forever.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            package = self._community_package(temp_dir, "inner")
+            args = SimpleNamespace(package=str(package["directory"]), compiler=None,
+                                   no_compile=True, full=True, arm=False,
+                                   toolchain="/nonexistent-arm",
+                                   docker_image="img:test", native=True)
+            real_probe = plaits_lab.host_sanitizers_available
+            plaits_lab.host_sanitizers_available = lambda _compiler: False
+            try:
+                cmd, _ = self._capture_docker_run(lambda: plaits_lab.check_command(args))
+            finally:
+                plaits_lab.host_sanitizers_available = real_probe
+        self.assertEqual(cmd, [])  # docker was never invoked
+
+    def test_sanitizer_probe_tests_the_flags_the_real_build_uses(self) -> None:
+        # A probe that checked different flags than compile_renderer injects could
+        # green-light a toolchain that then fails the actual sanitized build.
+        source = Path(plaits_lab.__file__).read_text(encoding="utf-8")
+        self.assertIn("command[4:4] = SANITIZER_FLAGS", source)
+        self.assertEqual(
+            plaits_lab.SANITIZER_FLAGS,
+            ["-fsanitize=address,undefined", "-fno-omit-frame-pointer"])
+
+    def test_scenarios_run_with_leak_detection_off(self) -> None:
+        # LSan exists on Linux but not macOS, so leaving it on makes the same
+        # package pass check --full on one and fail on the other — including in
+        # the builder image Windows delegates to. It can only ever fire on the
+        # SDK's own harness anyway: contributor source cannot allocate (below).
+        self.assertEqual(plaits_lab.SANITIZER_RUNTIME_ENV.get("ASAN_OPTIONS"),
+                         "detect_leaks=0")
+        captured: dict[str, dict] = {}
+        real_run = plaits_lab.subprocess.run
+        plaits_lab.subprocess.run = lambda cmd, **kw: (
+            captured.__setitem__("env", kw.get("env") or {})
+            or SimpleNamespace(returncode=0, stdout="", stderr=""))
+        try:
+            plaits_lab.run_scenario(
+                {"manifest": {"postProcessing": {"outGain": 1.0, "auxGain": 1.0}}},
+                Path("renderer"),
+                {"id": "hero", "durationSeconds": 1, "note": 48, "triggerHz": 0,
+                 "controls": {k: [0.0, 1.0] for k in
+                              ("harmonics", "timbre", "morph", "macro")}},
+                Path("out.wav"))
+        finally:
+            plaits_lab.subprocess.run = real_run
+        self.assertEqual(captured["env"].get("ASAN_OPTIONS"), "detect_leaks=0")
+        # and the rest of the environment survives, or the compiler/PATH is lost
+        self.assertIn("PATH", {k.upper(): v for k, v in captured["env"].items()})
+
+    def test_contributor_source_cannot_allocate(self) -> None:
+        # The premise that makes disabling LSan lossless: an engine that heap
+        # allocates is rejected by policy long before it is ever compiled.
+        for snippet in ("void Render() { void* p = malloc(4); }",
+                        "void Render() { int* p = new int; }",
+                        "void Render() { free(ptr); }"):
+            with self.subTest(snippet=snippet):
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    source = Path(temp_dir) / "engine.cc"
+                    source.write_text(snippet, encoding="utf-8")
+                    with self.assertRaises(plaits_lab.PackageError):
+                        plaits_lab.validate_community_source([source])
+
+    def test_output_is_utf8_even_when_redirected(self) -> None:
+        # The CLI prints ✓. On Windows a redirected stdout falls back to cp1252,
+        # which has no ✓, so every command died with UnicodeEncodeError the
+        # moment output was piped or captured to a log.
+        buffer = io.BytesIO()
+        stream = io.TextIOWrapper(buffer, encoding="cp1252", newline="")
+        real_stdout, real_stderr = sys.stdout, sys.stderr
+        sys.stdout = sys.stderr = stream
+        try:
+            plaits_lab.use_utf8_output()
+            print("✓ package ok")
+            stream.flush()
+        finally:
+            sys.stdout, sys.stderr = real_stdout, real_stderr
+        self.assertEqual(stream.encoding.lower().replace("-", ""), "utf8")
+        self.assertIn("✓".encode("utf-8"), buffer.getvalue())
+
+    def test_content_digest_hashes_in_posix_relative_order(self) -> None:
+        # The digest is the package's identity, so it must not depend on the
+        # host's path ordering. Sorting Path OBJECTS would break that: on
+        # Windows they compare case-folded and backslash-separated, so
+        # "README.md" lands after "plaits-engine.json" and a nested "dsp/x.cc"
+        # moves relative to "dsp-extra.cc" — a different digest for the same
+        # bytes. These names are chosen to expose both differences.
+        names = [
+            "README.md", "LICENSE", "plaits-engine.json",
+            "dsp/filter.cc", "dsp-extra.cc",
+        ]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            package_dir = Path(temp_dir) / "package"
+            for name in names:
+                path = package_dir / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(f"contents of {name}\n".encode("utf-8"))
+
+            expected = hashlib.sha256()
+            for relative in sorted(names):  # plain strings: POSIX order, everywhere
+                expected.update(relative.encode("utf-8"))
+                expected.update(b"\0")
+                expected.update((package_dir / relative).read_bytes())
+
+            self.assertEqual(
+                plaits_lab.package_content_digest(package_dir),
+                "sha256:" + expected.hexdigest(),
+            )
 
 
 if __name__ == "__main__":
