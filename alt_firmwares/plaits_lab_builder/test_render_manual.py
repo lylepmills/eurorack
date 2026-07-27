@@ -1,17 +1,35 @@
 from __future__ import annotations
 
+import base64
 import importlib.util
 import json
+import re
 import tempfile
 import unittest
+import zlib
 from pathlib import Path
 
 from generate_engine_config import DEFAULT_CHORD_TABLES, DEFAULT_CONFIGURATION
-from render_manual import CONTROL_IDS, manual_document, render_pdf
+from render_manual import CONTROL_IDS, _clip, display_name, manual_document, render_pdf
 
 
 FIXTURES = Path(__file__).parent
 HAS_REPORTLAB = importlib.util.find_spec("reportlab") is not None
+
+
+def pdf_strings(path: Path) -> str:
+    """Every literal string drawn into the PDF, concatenated. ReportLab writes
+    its content streams ASCII85 + Flate encoded, so they're inflated first. Good
+    enough to assert WHAT the guide prints (not where), with no PDF-parser
+    dependency in the builder image."""
+    raw = path.read_bytes()
+    streams = []
+    for match in re.finditer(rb"stream\r?\n(.*?)endstream", raw, re.S):
+        try:
+            streams.append(zlib.decompress(base64.a85decode(match.group(1), adobe=True)).decode("latin-1"))
+        except Exception:
+            continue
+    return "".join(re.findall(r"\((?:\\.|[^\\()])*\)", "\n".join(streams)))
 
 
 class RenderManualTest(unittest.TestCase):
@@ -214,6 +232,50 @@ class RenderManualTest(unittest.TestCase):
         self.assertEqual(document["slots"][18]["customBank"]["name"], "Warm Keys")
         # dx7-bank-c reads factory bank 2, which this recipe left alone.
         self.assertIsNone(document["slots"][20]["customBank"])
+
+    def test_a_customized_slot_is_named_for_its_custom_bank(self) -> None:
+        # The factory A/B/C letter describes patches the slot no longer plays.
+        self.assertEqual(display_name("6-Op FM Bank A", None), "6-Op FM Bank A")
+        self.assertEqual(
+            display_name("6-Op FM Bank A", {"name": "Warm Keys"}), "Custom 6-Op FM Bank",
+        )
+
+    def test_a_bank_name_too_wide_for_the_slot_row_is_ellipsized(self) -> None:
+        # The bank map's rows are a fixed height, so an over-long subtitle has to
+        # lose its tail rather than wrap into the row below.
+        self.assertEqual(_clip("Warm Keys", "Helvetica", 6.4, 200), "Warm Keys")
+        clipped = _clip("An Extremely Long Custom Bank Name That Runs On", "Helvetica", 6.4, 60)
+        self.assertTrue(clipped.endswith("…"))
+        self.assertLess(len(clipped), len("An Extremely Long Custom Bank Name That Runs On"))
+        self.assertEqual(_clip("", "Helvetica", 6.4, 60), "")
+
+    @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
+    def test_the_bank_map_prints_the_custom_bank_label_and_name(self) -> None:
+        # The regression: page 1 used to list a customized six-op slot under its
+        # factory letter, so the map disagreed with the slot's own reference page.
+        document = manual_document(self.slot_bank_recipe([{"slot": 16, "bank": self.bank_document()}]))
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "manual.pdf"
+            render_pdf(document, path)
+            printed = pdf_strings(path)
+        # Bank map and model-reference title both, so the two agree.
+        self.assertEqual(printed.count("Custom 6-Op FM Bank"), 2)
+        # The bank's own name rides along as the map's subtitle (the second
+        # occurrence is the reference page's credit row).
+        self.assertEqual(printed.count("Warm Keys"), 2)
+        self.assertNotIn("6-Op FM Bank A", printed)
+        # A six-op slot the recipe left alone keeps its factory letter.
+        self.assertIn("6-Op FM Bank B", printed)
+
+    @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
+    def test_an_unnamed_custom_bank_prints_the_label_alone(self) -> None:
+        document = manual_document(self.slot_bank_recipe([{"slot": 16, "bank": self.bank_document(name="")}]))
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "manual.pdf"
+            render_pdf(document, path)
+            printed = pdf_strings(path)
+        self.assertEqual(printed.count("Custom 6-Op FM Bank"), 2)
+        self.assertNotIn("6-Op FM Bank A", printed)
 
     @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
     def test_custom_bank_pdf_renders_deterministically(self) -> None:
