@@ -1715,7 +1715,7 @@ def render_stock_bench_config(engine_ids: tuple[str, ...] = STOCK_BENCH_ENGINES,
 
 
 def render_local_hardware_config(
-    package: dict[str, Any], cpu_probe: bool = False,
+    package: dict[str, Any], cpu_probe: bool = False, memhunt: bool = False,
 ) -> str:
     manifest = package["manifest"]
     source = manifest["source"]
@@ -1725,6 +1725,8 @@ def render_local_hardware_config(
     # generated config rather than as a make flag so it travels into the
     # containerised build with everything else.
     cpu_probe_define = "#define PLAITS_CPU_PROBE 1\n" if cpu_probe else ""
+    if cpu_probe and memhunt:
+        cpu_probe_define += "#define PLAITS_CPU_PROBE_MEMHUNT 1\n"
     custom = {
         "source": {
             "header": package["header"].name,
@@ -1868,7 +1870,8 @@ def _arm_compile_native(package: dict[str, Any], args: argparse.Namespace, toolc
         config.write_text(
             render_stock_bench_config(flush_to_zero=getattr(args, "ftz", False))
             if getattr(args, "stock_bench", False)
-            else render_local_hardware_config(package, cpu_probe=getattr(args, "cpu_probe", False)),
+            else render_local_hardware_config(package, cpu_probe=getattr(args, "cpu_probe", False),
+                                         memhunt=getattr(args, "memhunt", False)),
             encoding="utf-8")
         cppflags = f"-fno-exceptions -fno-rtti -I{package['source_root']} -include {config}"
         # Build only the package's OWN object(s): the makefile's $(BUILD_DIR)%.o
@@ -1935,6 +1938,7 @@ def hardware_build_command(args: argparse.Namespace) -> int:
                 *(["--cpu-probe"] if getattr(args, "cpu_probe", False) else []),
                 *(["--stock-bench"] if getattr(args, "stock_bench", False) else []),
                 *(["--ftz"] if getattr(args, "ftz", False) else []),
+                *(["--memhunt"] if getattr(args, "memhunt", False) else []),
                 "--toolchain", args.toolchain, "--native",
             ]
             result = subprocess.run(command, text=True, capture_output=True, check=False)
@@ -1964,7 +1968,8 @@ def hardware_build_command(args: argparse.Namespace) -> int:
         config = Path(temp_dir) / "engine_config.h"
         config.write_text(
             render_stock_bench_config() if getattr(args, "stock_bench", False)
-            else render_local_hardware_config(package, cpu_probe=getattr(args, "cpu_probe", False)),
+            else render_local_hardware_config(package, cpu_probe=getattr(args, "cpu_probe", False),
+                                         memhunt=getattr(args, "memhunt", False)),
             encoding="utf-8")
         cppflags = f"-fno-exceptions -fno-rtti -I{package['source_root']} -include {config}"
         command = [
@@ -2270,6 +2275,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="probe builds: enable FPU flush-to-zero (denormal test)")
     build_parser_command.add_argument("--stock-bench", action="store_true",
         help="build a multi-engine bench firmware (stock engines + AUX cycle readout)")
+    build_parser_command.add_argument("--memhunt", action="store_true",
+        help="probe builds: readout carries only the watched address (writer hunt)")
     build_parser_command.add_argument("--cpu-probe", action="store_true",
         help="measure Voice::Render on-chip with the DWT cycle counter and report on AUX")
     build_parser_command.add_argument("--output", required=True)

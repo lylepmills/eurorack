@@ -88,6 +88,14 @@ namespace plaits {
 #define PLAITS_CPU_PROBE_HOST_TEST 0
 #endif
 
+// Memhunt: the readout carries ONLY the live halfwords of the watched address,
+// alternating every few seconds -- fast enough to hear the value track a knob
+// or an input while someone sweeps controls. Used to identify what is writing
+// into memory it does not own; see the v3/v4 investigation.
+#ifndef PLAITS_CPU_PROBE_MEMHUNT
+#define PLAITS_CPU_PROBE_MEMHUNT 0
+#endif
+
 // Full budget maps to this many Hz on the AUX readout.
 const float kCpuProbeFullScaleHz = 1000.0f;
 
@@ -229,7 +237,14 @@ class CpuProbe {
         } else if (state_ == 3) {
           const int used = UsedSections();
           float hz;
+#if PLAITS_CPU_PROBE_MEMHUNT
+          const uint32_t hot_now = *(volatile uint32_t*)0x20000814u;
+          const uint32_t h = report_ == 0 ? (hot_now & 0xFFFFu) : (hot_now >> 16);
+          hz = 25.0f + static_cast<float>(h >> 4);
+          if (false) {
+#else
           if (report_ == 0) {
+#endif
             hz = usage_ * kCpuProbeFullScaleHz;
           } else if (report_ <= used) {
             hz = SectionValue(report_ - 1) * kCpuProbeFullScaleHz;
@@ -342,6 +357,9 @@ class CpuProbe {
         if (section_used_[i]) ++reports;
       }
       if (reports > 1) reports += 7;  // + ratio, violations, canary, cadence, last-block, hot-word
+#if PLAITS_CPU_PROBE_MEMHUNT
+      reports = 2;                    // hot word lo/hi only, ~5 s per revisit
+#endif
       report_ = (report_ + 1) % reports;
       state_ = 0; state_samples_ = kSilence;
       phase_ = 0.0f;
