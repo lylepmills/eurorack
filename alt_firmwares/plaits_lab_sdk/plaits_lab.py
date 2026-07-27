@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import re
 import shutil
 import struct
@@ -485,6 +486,25 @@ def compiler_path(requested: str | None) -> str:
     return compiler
 
 
+# Windows compilers append .exe when -o names no extension, so a path the SDK
+# builds by hand never matches the file actually written. Every is_file() check
+# on a compiled binary must use the name the compiler produces — above all the
+# dev loop's recompile guard, which otherwise rebuilds on every single request.
+HOST_EXE_SUFFIX = ".exe" if os.name == "nt" else ""
+
+
+def host_binary(directory: Path, name: str) -> Path:
+    """Path of a compiled host executable, carrying the platform's suffix."""
+    return directory / f"{name}{HOST_EXE_SUFFIX}"
+
+
+# The Plaits DSP headers use M_PI, which is POSIX rather than ISO C++: under
+# strict -std=c++11 the MinGW/UCRT <cmath> hides it, while glibc and macOS
+# expose it regardless. Defining this is a no-op off Windows, so it goes on
+# every compile rather than behind a platform branch.
+MATH_CONSTANTS_DEFINE = "-D_USE_MATH_DEFINES"
+
+
 def engine_header_define(package: dict[str, Any]) -> str:
     manifest = package["manifest"]
     return (
@@ -585,7 +605,7 @@ def compile_cpu_bench(
     runs orders of magnitude slower than the real code."""
     command = [
         compiler_path(requested_compiler),
-        "-std=c++11", "-DTEST", "-O2",
+        "-std=c++11", MATH_CONSTANTS_DEFINE, "-DTEST", "-O2",
         "-Wno-unused-variable", "-Wno-unused-parameter",
         "-Wno-unused-local-typedefs", "-Wno-deprecated-declarations",
         f'-DPLAITS_LAB_ENGINE_HEADER="{header}"',
@@ -630,7 +650,7 @@ def cpu_reference_ratio(
     repo_root = package["repo_root"]
     manifest = package["manifest"]
 
-    package_binary = temp_dir / "cpu-bench-package"
+    package_binary = host_binary(temp_dir, "cpu-bench-package")
     compile_cpu_bench(
         engine_translation_units(package, entry),
         engine_header_define(package),
@@ -651,7 +671,7 @@ def cpu_reference_ratio(
         repo_root / "stmlib/dsp/units.cc",
         repo_root / "stmlib/utils/random.cc",
     ])
-    reference_binary = temp_dir / "cpu-bench-reference"
+    reference_binary = host_binary(temp_dir, "cpu-bench-reference")
     compile_cpu_bench(
         reference_units,
         reference["source"]["header"],
@@ -725,7 +745,7 @@ def compile_renderer(
     compiled = engine_translation_units(package, Path(__file__).with_name("render_model.cc"))
     command = [
         compiler_path(requested_compiler),
-        "-std=c++11", "-DTEST", "-O2", "-Wall", "-Werror",
+        "-std=c++11", MATH_CONSTANTS_DEFINE, "-DTEST", "-O2", "-Wall", "-Werror",
         "-Wno-unused-variable", "-Wno-unused-parameter",
         "-Wno-unused-local-typedefs", "-Wno-deprecated-declarations",
         f'-DPLAITS_LAB_ENGINE_HEADER="{engine_header_define(package)}"',
@@ -764,7 +784,7 @@ def compile_wasm(package: dict[str, Any], output: Path) -> None:
     compiled = engine_translation_units(package, Path(__file__).with_name("wasm_audition.cc"))
     command = [
         emcc,
-        "-std=c++11", "-DTEST", "-O2",
+        "-std=c++11", MATH_CONSTANTS_DEFINE, "-DTEST", "-O2",
         f'-DPLAITS_LAB_ENGINE_HEADER="{engine_header_define(package)}"',
         f'-DPLAITS_LAB_ENGINE_CLASS=plaits::{manifest["source"]["className"]}',
         "-I", str(package["repo_root"]),
@@ -1036,7 +1056,7 @@ def check_command(args: argparse.Namespace) -> int:
     cpu_cost: dict[str, Any] | None = None
     if not args.no_compile:
         with tempfile.TemporaryDirectory(prefix="plaits-lab-check-") as temp_dir:
-            renderer = Path(temp_dir) / "render-model"
+            renderer = host_binary(Path(temp_dir), "render-model")
             compile_renderer(package, renderer, args.compiler, sanitizers=args.full)
             if args.full:
                 for scenario in package["scenarios"]:
@@ -1146,7 +1166,7 @@ def render_command(args: argparse.Namespace) -> int:
     output = Path(args.output).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="plaits-lab-render-") as temp_dir:
-        renderer = Path(temp_dir) / "render-model"
+        renderer = host_binary(Path(temp_dir), "render-model")
         compile_renderer(package, renderer, args.compiler)
         elapsed = run_scenario(package, renderer, scenario, output)
         metrics = analyze_wav(output, scenario["durationSeconds"], elapsed)
@@ -1158,9 +1178,13 @@ def package_content_digest(package_dir: Path) -> str:
     import hashlib
 
     digest = hashlib.sha256()
+    # Order on the POSIX relative path, never on the Path object: Path ordering
+    # is case-folded and backslash-separated on Windows, so the same package
+    # would hash in a different file order there and produce a different digest.
     files = sorted(
-        path for path in package_dir.rglob("*")
-        if path.is_file() and ".plaits-lab" not in path.parts
+        (path for path in package_dir.rglob("*")
+         if path.is_file() and ".plaits-lab" not in path.parts),
+        key=lambda path: path.relative_to(package_dir).as_posix(),
     )
     for path in files:
         relative = path.relative_to(package_dir).as_posix()
@@ -1184,7 +1208,7 @@ def submit_command(args: argparse.Namespace) -> int:
     with tempfile.TemporaryDirectory(prefix="plaits-lab-submit-") as temp_dir:
         preview_dir = Path(temp_dir) / "previews"
         preview_dir.mkdir()
-        renderer = Path(temp_dir) / "render-model"
+        renderer = host_binary(Path(temp_dir), "render-model")
         compile_renderer(package, renderer, args.compiler, sanitizers=True)
         analyses: dict[str, dict[str, float | int]] = {}
         for scenario in package["scenarios"]:
@@ -1207,9 +1231,14 @@ def submit_command(args: argparse.Namespace) -> int:
             "nextStates": ["in-review", "withdrawn"],
         }
         with zipfile.ZipFile(output, "w") as archive:
-            for path in sorted(item for item in package["directory"].rglob("*") if item.is_file()):
+            # Same POSIX-relative ordering as package_content_digest, so a bundle
+            # built on Windows lays its entries out identically to one built here.
+            for path in sorted(
+                (item for item in package["directory"].rglob("*") if item.is_file()),
+                key=lambda item: item.relative_to(package["directory"]).as_posix(),
+            ):
                 add_zip_file(archive, f"package/{path.relative_to(package['directory']).as_posix()}", path.read_bytes())
-            for path in sorted(preview_dir.glob("*.wav")):
+            for path in sorted(preview_dir.glob("*.wav"), key=lambda item: item.name):
                 add_zip_file(archive, f"previews/{path.name}", path.read_bytes())
             add_zip_file(archive, "submission.json", (json.dumps(submission, indent=2) + "\n").encode("utf-8"))
     print(f"created draft submission {output}")
@@ -1624,7 +1653,7 @@ class DevSession:
         self.package_arg = package_arg
         self.compiler = compiler
         self.temp_dir = tempfile.TemporaryDirectory(prefix="plaits-lab-dev-")
-        self.renderer = Path(self.temp_dir.name) / "render-model"
+        self.renderer = host_binary(Path(self.temp_dir.name), "render-model")
         self.wasm = Path(self.temp_dir.name) / "audition.wasm"
         self.wasm_available = False
         self.fingerprint = ""
@@ -1670,7 +1699,7 @@ class DevSession:
         package = builtin_package(engine_id)
         renderer = self.reference_renderers.get(engine_id)
         if renderer is None:
-            renderer = Path(self.temp_dir.name) / f"reference-{engine_id}"
+            renderer = host_binary(Path(self.temp_dir.name), f"reference-{engine_id}")
             compile_renderer(package, renderer, self.compiler)
             self.reference_renderers[engine_id] = renderer
         return self.render_package(package, renderer, request, f"reference-{engine_id}.wav")

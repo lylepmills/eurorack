@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import io
 import json
@@ -652,7 +653,7 @@ class PackageTests(unittest.TestCase):
             manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
             package = plaits_lab.load_package(str(package_dir))
-            renderer = Path(temp_dir) / "render-model"
+            renderer = plaits_lab.host_binary(Path(temp_dir), "render-model")
             plaits_lab.compile_renderer(package, renderer, None)
             self.assertTrue(renderer.exists())
 
@@ -668,7 +669,7 @@ class PackageTests(unittest.TestCase):
                 with self.subTest(engine=engine_id):
                     package = plaits_lab.builtin_package(engine_id)
                     self.assertTrue(package["manifest"]["sharedModules"])
-                    renderer = Path(temp_dir) / f"reference-{engine_id}"
+                    renderer = plaits_lab.host_binary(Path(temp_dir), f"reference-{engine_id}")
                     plaits_lab.compile_renderer(package, renderer, None)
                     self.assertTrue(renderer.exists())
 
@@ -676,13 +677,42 @@ class PackageTests(unittest.TestCase):
     def test_six_op_reference_survives_null_user_data(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             package = plaits_lab.builtin_package("dx7-bank-a")
-            renderer = Path(temp_dir) / "reference-dx7"
+            renderer = plaits_lab.host_binary(Path(temp_dir), "reference-dx7")
             plaits_lab.compile_renderer(package, renderer, None)
             scenario = package["scenarios"][0]
             output = Path(temp_dir) / "dx7.wav"
             # Before the LoadUserData null-guard this render SIGSEGVs.
             plaits_lab.run_scenario(package, renderer, scenario, output)
             self.assertTrue(output.exists())
+
+    def test_content_digest_hashes_in_posix_relative_order(self) -> None:
+        # The digest is the package's identity, so it must not depend on the
+        # host's path ordering. Sorting Path OBJECTS would break that: on
+        # Windows they compare case-folded and backslash-separated, so
+        # "README.md" lands after "plaits-engine.json" and a nested "dsp/x.cc"
+        # moves relative to "dsp-extra.cc" — a different digest for the same
+        # bytes. These names are chosen to expose both differences.
+        names = [
+            "README.md", "LICENSE", "plaits-engine.json",
+            "dsp/filter.cc", "dsp-extra.cc",
+        ]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            package_dir = Path(temp_dir) / "package"
+            for name in names:
+                path = package_dir / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(f"contents of {name}\n".encode("utf-8"))
+
+            expected = hashlib.sha256()
+            for relative in sorted(names):  # plain strings: POSIX order, everywhere
+                expected.update(relative.encode("utf-8"))
+                expected.update(b"\0")
+                expected.update((package_dir / relative).read_bytes())
+
+            self.assertEqual(
+                plaits_lab.package_content_digest(package_dir),
+                "sha256:" + expected.hexdigest(),
+            )
 
 
 if __name__ == "__main__":
