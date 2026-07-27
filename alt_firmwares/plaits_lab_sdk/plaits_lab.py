@@ -506,6 +506,21 @@ MATH_CONSTANTS_DEFINE = "-D_USE_MATH_DEFINES"
 
 SANITIZER_FLAGS = ["-fsanitize=address,undefined", "-fno-omit-frame-pointer"]
 
+# LeakSanitizer runs as part of ASan on Linux but does not exist on macOS (Apple's
+# ASan ships no LSan). Left on, the SAME package passes `check --full` on macOS and
+# fails on Linux — including inside the builder image a Windows contributor
+# delegates to — which would make the submission gate depend on the reviewer's OS.
+#
+# It also cannot report anything about contributor code: FORBIDDEN_SOURCE_PATTERNS
+# rejects malloc/calloc/realloc/free/new/delete before a package ever compiles, so
+# an engine has no way to leak. The only reachable allocations are in the SDK's own
+# harness — stmlib's test WavWriter callocs a scratch buffer per Write() and never
+# frees it (~48 B per render block, upstream in the pinned submodule).
+#
+# So: same verdict everywhere, and nothing of value lost. ASan and UBSan — which
+# are what this gate is actually for — stay fully on.
+SANITIZER_RUNTIME_ENV = {"ASAN_OPTIONS": "detect_leaks=0"}
+
 _SANITIZER_SUPPORT: dict[str, bool] = {}
 
 
@@ -1148,10 +1163,14 @@ def check_command(args: argparse.Namespace) -> int:
     # plaits-engine.json, so mounting the package read-only is safe.
     if args.full and not args.no_compile and not args.native \
             and not host_sanitizers_available(args.compiler):
-        return run_sanitized_in_docker(
-            package, args, "check --full",
-            ["check", "/contributor", "--full", "--native"],
-        )
+        # Forward --arm too, or asking for the hardware-toolchain compile would
+        # be silently dropped on the way into the container — the run would look
+        # clean while having skipped exactly the check that was requested. The
+        # image carries the ARM toolchain, so --native runs it there directly.
+        delegated = ["check", "/contributor", "--full", "--native"]
+        if args.arm:
+            delegated += ["--arm", "--toolchain", args.toolchain]
+        return run_sanitized_in_docker(package, args, "check --full", delegated)
     print(f"✓ package {package['manifest']['id']}@{package['manifest']['version']}")
     print("✓ metadata, license, source policy, and scenarios")
     cpu_cost: dict[str, Any] | None = None
@@ -1214,7 +1233,11 @@ def run_scenario(
         str(scenario["triggerHz"]), str(post["outGain"]), str(post["auxGain"]),
     ]
     started = time.monotonic()
-    result = subprocess.run(command, text=True, capture_output=True, check=False)
+    result = subprocess.run(
+        command, text=True, capture_output=True, check=False,
+        # Harmless for a non-sanitized build, which simply ignores it.
+        env={**os.environ, **SANITIZER_RUNTIME_ENV},
+    )
     elapsed = time.monotonic() - started
     if result.returncode:
         raise PackageError(f"scenario {scenario['id']} failed: {(result.stderr or result.stdout).strip()}")
@@ -2044,7 +2067,28 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def use_utf8_output() -> None:
+    """Make stdout/stderr UTF-8 regardless of the platform's locale.
+
+    This CLI prints ✓ and em dashes. On Windows, Python only uses the console's
+    UTF-8 path while stdout is a terminal — the moment it is REDIRECTED (a pipe,
+    `> build.log`, a CI capture) it falls back to the locale encoding, cp1252,
+    where those characters do not exist, and every command dies with
+    UnicodeEncodeError before doing any work. Reconfiguring costs nothing on
+    macOS/Linux, which are already UTF-8. Done here rather than at import so
+    merely importing the module never mutates global stream state (the tests do).
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            try:
+                reconfigure(encoding="utf-8", errors="replace")
+            except (ValueError, OSError):
+                pass  # already detached or not reconfigurable; not worth failing over
+
+
 def main(argv: list[str] | None = None) -> int:
+    use_utf8_output()
     try:
         args = build_parser().parse_args(argv)
         return args.handler(args)

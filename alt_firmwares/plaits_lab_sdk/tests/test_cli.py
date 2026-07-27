@@ -4,6 +4,7 @@ import hashlib
 import importlib.util
 import io
 import json
+import sys
 import shutil
 import tempfile
 import unittest
@@ -797,6 +798,62 @@ class PackageTests(unittest.TestCase):
         self.assertEqual(
             plaits_lab.SANITIZER_FLAGS,
             ["-fsanitize=address,undefined", "-fno-omit-frame-pointer"])
+
+    def test_scenarios_run_with_leak_detection_off(self) -> None:
+        # LSan exists on Linux but not macOS, so leaving it on makes the same
+        # package pass check --full on one and fail on the other — including in
+        # the builder image Windows delegates to. It can only ever fire on the
+        # SDK's own harness anyway: contributor source cannot allocate (below).
+        self.assertEqual(plaits_lab.SANITIZER_RUNTIME_ENV.get("ASAN_OPTIONS"),
+                         "detect_leaks=0")
+        captured: dict[str, dict] = {}
+        real_run = plaits_lab.subprocess.run
+        plaits_lab.subprocess.run = lambda cmd, **kw: (
+            captured.__setitem__("env", kw.get("env") or {})
+            or SimpleNamespace(returncode=0, stdout="", stderr=""))
+        try:
+            plaits_lab.run_scenario(
+                {"manifest": {"postProcessing": {"outGain": 1.0, "auxGain": 1.0}}},
+                Path("renderer"),
+                {"id": "hero", "durationSeconds": 1, "note": 48, "triggerHz": 0,
+                 "controls": {k: [0.0, 1.0] for k in
+                              ("harmonics", "timbre", "morph", "macro")}},
+                Path("out.wav"))
+        finally:
+            plaits_lab.subprocess.run = real_run
+        self.assertEqual(captured["env"].get("ASAN_OPTIONS"), "detect_leaks=0")
+        # and the rest of the environment survives, or the compiler/PATH is lost
+        self.assertIn("PATH", {k.upper(): v for k, v in captured["env"].items()})
+
+    def test_contributor_source_cannot_allocate(self) -> None:
+        # The premise that makes disabling LSan lossless: an engine that heap
+        # allocates is rejected by policy long before it is ever compiled.
+        for snippet in ("void Render() { void* p = malloc(4); }",
+                        "void Render() { int* p = new int; }",
+                        "void Render() { free(ptr); }"):
+            with self.subTest(snippet=snippet):
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    source = Path(temp_dir) / "engine.cc"
+                    source.write_text(snippet, encoding="utf-8")
+                    with self.assertRaises(plaits_lab.PackageError):
+                        plaits_lab.validate_community_source([source])
+
+    def test_output_is_utf8_even_when_redirected(self) -> None:
+        # The CLI prints ✓. On Windows a redirected stdout falls back to cp1252,
+        # which has no ✓, so every command died with UnicodeEncodeError the
+        # moment output was piped or captured to a log.
+        buffer = io.BytesIO()
+        stream = io.TextIOWrapper(buffer, encoding="cp1252", newline="")
+        real_stdout, real_stderr = sys.stdout, sys.stderr
+        sys.stdout = sys.stderr = stream
+        try:
+            plaits_lab.use_utf8_output()
+            print("✓ package ok")
+            stream.flush()
+        finally:
+            sys.stdout, sys.stderr = real_stdout, real_stderr
+        self.assertEqual(stream.encoding.lower().replace("-", ""), "utf8")
+        self.assertIn("✓".encode("utf-8"), buffer.getvalue())
 
     def test_content_digest_hashes_in_posix_relative_order(self) -> None:
         # The digest is the package's identity, so it must not depend on the
