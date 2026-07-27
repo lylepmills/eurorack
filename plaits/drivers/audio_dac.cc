@@ -122,10 +122,18 @@ extern "C" {
 void DMA1_Channel5_IRQHandler(void) {
   uint32_t flags = DMA1->ISR;
   DMA1->IFCR = DMA1_FLAG_TC5 | DMA1_FLAG_HT5;
+  // Service BOTH halves when both are pending, oldest first. The original
+  // `else if` silently starved half 0 whenever the render fell behind: with
+  // both flags set on entry, TC always won, so half 0 froze at its last
+  // contents and the DAC interleaved live audio with a stale fragment -- the
+  // mechanism that corrupted every probe tone reading on overrunning builds,
+  // and an audible failure mode of its own under transient overload. HT
+  // (first half finished playing) precedes TC in time, so refill 0 first.
+  if (flags & DMA1_FLAG_HT5) {
+    plaits::AudioDac::GetInstance()->Fill(0);
+  }
   if (flags & DMA1_FLAG_TC5) {
     plaits::AudioDac::GetInstance()->Fill(1);
-  } else if (flags & DMA1_FLAG_HT5) {
-    plaits::AudioDac::GetInstance()->Fill(0);
   }
 }
   

@@ -157,6 +157,7 @@ class CpuProbe {
     state_samples_ = 24000;
     report_ = 0;
     bursts_left_ = 0;
+    report_value_ = 0.0f;
     raw_elapsed_ = 0;
     raw_section0_ = 0;
     nesting_violations_ = 0;
@@ -303,17 +304,11 @@ class CpuProbe {
         --state_samples_;
         if (state_ == 1) {
           burst = true;                       // beacon burst, fixed pitch
-        } else if (state_ == 3) {
-          // All report values route through ONE function with plain returns.
-          // The previous structure spliced modes with `if (false)` over an
-          // else-chain, which only disables the FIRST branch -- the else-ifs
-          // still ran and overwrote the value. Every memhunt reading between
-          // v5 and v7 reported the old beacons under new labels because of
-          // it, and the known-answer beacon is what caught it.
-          float hz = ReportHz(report_, UsedSections());
-          if (hz < 25.0f) hz = 25.0f;         // zero still reads as the floor
-          hz += kCpuProbeToneFloor - 25.0f;   // lift out of the replay band
-          tone_increment = hz / kSampleRate;
+        } else if (state_ == 3 || state_ == 5) {
+          // Both tones at floor + value: the frequency channel. The value was
+          // cached at the transition into the reference tone, so it cannot
+          // drift between the reference and the value tone of one report.
+          tone_increment = (kCpuProbeToneFloor + report_value_) / kSampleRate;
         }
       }
       current_hz_ = burst ? 2400.0f : tone_increment * kSampleRate;
@@ -462,12 +457,21 @@ class CpuProbe {
     return 0.0f;
   }
 
-  // states: 0 silence -> (1 burst -> 2 gap) x (report_+1) -> 3 tone -> next report
+  // states: 0 silence -> (1 burst -> 2 gap) x (report_+1)
+  //         -> 3 REFERENCE tone (fixed length) -> 4 gap -> 5 VALUE tone
+  //         (length proportional to the value) -> next report.
+  //
+  // The value rides on BOTH channels: the tones' frequency (fast to decode,
+  // honest when the build keeps up) and the ratio of the value tone's length
+  // to the reference tone's (immune to overrun: the state machine ticks per
+  // rendered sample, so late rendering stretches both tones by the same
+  // factor and the ratio cancels it exactly).
   void NextReadoutState() {
     const int kSilence = 19200;   // 0.4 s
     const int kBurst = 3360;      // 70 ms
     const int kGap = 3360;
-    const int kTone = 76800;      // 1.6 s
+    const int kRefTone = 57600;   // 1.2 s
+    const int kMidGap = 12000;    // 0.25 s
     if (state_ == 0) {
       bursts_left_ = report_ + 1;
       state_ = 1; state_samples_ = kBurst;
@@ -476,7 +480,19 @@ class CpuProbe {
       state_ = 2; state_samples_ = kGap;
     } else if (state_ == 2) {
       if (bursts_left_ > 0) { state_ = 1; state_samples_ = kBurst; }
-      else { state_ = 3; state_samples_ = kTone; }
+      else {
+        float v = ReportHz(report_, UsedSections()) - 25.0f;
+        if (v < 0.0f) v = 0.0f;
+        if (v > 4095.0f) v = 4095.0f;
+        report_value_ = v;
+        state_ = 3; state_samples_ = kRefTone;
+      }
+    } else if (state_ == 3) {
+      state_ = 4; state_samples_ = kMidGap;
+    } else if (state_ == 4) {
+      state_ = 5;
+      state_samples_ = 14400 + static_cast<int>(
+          43200.0f * report_value_ / 4096.0f);   // 0.3 .. 1.2 s
     } else {
       int reports = 1;
       for (int i = 0; i < kMaxSections; ++i) {
@@ -523,6 +539,7 @@ class CpuProbe {
   int state_samples_;
   int report_;
   int bursts_left_;
+  float report_value_;
   uint32_t raw_elapsed_;
   uint32_t raw_section0_;
   uint32_t nesting_violations_;

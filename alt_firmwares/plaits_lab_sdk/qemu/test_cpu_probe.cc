@@ -130,16 +130,21 @@ int main() {
     for (int b = 0; b < 20000; ++b) {
       RunBlock(&probe, 1200, 3600, 1200, 1200);  // usage 0.8, s0 2/3, voices 0.2
     }
-    // Generate ~55 s of readout -- a full 12-report cycle needs ~42 s.
+    // Generate ~75 s of readout and decode the two-tone ratio format: per
+    // report, N bursts, a fixed-length REFERENCE tone, then a VALUE tone whose
+    // length encodes the value. Both the frequency channel and the duration
+    // ratio must decode to the same value.
     std::vector<int> beacon_counts;
-    std::vector<double> tone_hz;
+    std::vector<double> tone_hz;      // value tone's frequency
+    std::vector<double> ratio_value;  // duration-ratio-decoded value
     {
       Voice::Frame frames[12];
       int bursts = 0;
-      int active_len = 0, silence_len = 0, transitions = 0;
+      int active_len = 0, transitions = 0;
+      int ref_len = -1;
       bool in_active = false;
       short prev = 0;
-      for (int b = 0; b < 300000; ++b) {
+      for (int b = 0; b < 400000; ++b) {
         probe.WriteReadout(frames, 12);
         for (int i = 0; i < 12; ++i) {
           const bool active = frames[i].aux != 0;
@@ -156,15 +161,20 @@ int main() {
           } else {
             if (in_active) {
               in_active = false;
-              if (active_len < 7200) {         // < 0.15 s: beacon burst
+              if (active_len < 7200) {          // < 0.15 s: beacon burst
                 ++bursts;
-              } else {                          // tone
+              } else if (ref_len < 0) {          // first long tone: reference
+                ref_len = active_len;
+              } else {                           // second long tone: value
                 beacon_counts.push_back(bursts);
                 tone_hz.push_back(0.5 * transitions * 48000.0 / active_len);
+                const double r =
+                    static_cast<double>(active_len) / ref_len;
+                ratio_value.push_back((r - 0.25) * 4096.0 / 0.75);
                 bursts = 0;
+                ref_len = -1;
               }
             }
-            ++silence_len;
           }
         }
       }
@@ -202,7 +212,15 @@ int main() {
       if (err > 0.05) {
         printf("  beacon %d: got %.1f Hz, expected %.1f Hz\n",
                r + 1, tone_hz[i], expect[r]);
-        CHECK(false, "beacon tone mismatch");
+        CHECK(false, "beacon tone frequency mismatch");
+      }
+      // The ratio channel must agree with the frequency channel: this is the
+      // overrun-immune encoding, and it has to carry the same value.
+      const double v_expected = expect[r] - 2500.0;
+      if (std::fabs(ratio_value[i] - v_expected) > 40.0) {
+        printf("  beacon %d: ratio-decoded %.0f, expected %.0f\n",
+               r + 1, ratio_value[i], v_expected);
+        CHECK(false, "beacon duration-ratio mismatch");
       }
     }
     for (int r = 0; r < kReports; ++r) {
