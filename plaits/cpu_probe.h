@@ -99,6 +99,18 @@ namespace plaits {
 // Full budget maps to this many Hz on the AUX readout.
 const float kCpuProbeFullScaleHz = 1000.0f;
 
+// Every tone is lifted above this floor. The readout is generated in 12-sample
+// blocks, and on a build that overruns its audio deadline the DAC REPLAYS
+// stale blocks while the CPU catches up: a tone whose half-period fits inside
+// 12 samples (>= ~2 kHz) survives replay intact, while a lower tone is chopped
+// into repeating fragments that decode as stable-looking garbage. Every
+// "impossible" reading in the corruption investigation -- the tripped canary,
+// the decreasing counters, the nested section exceeding its parent -- was a
+// tone below 2 kHz read from an overrunning build; every reading above it was
+// consistent across runs. Values ride ABOVE the floor, out of the artifact
+// band regardless of load.
+const float kCpuProbeToneFloor = 2500.0f;
+
 class CpuProbe {
  public:
   CpuProbe() { }
@@ -242,7 +254,8 @@ class CpuProbe {
           // v5 and v7 reported the old beacons under new labels because of
           // it, and the known-answer beacon is what caught it.
           float hz = ReportHz(report_, UsedSections());
-          if (hz < 25.0f) hz = 25.0f;         // silence must stay distinguishable
+          if (hz < 25.0f) hz = 25.0f;         // zero still reads as the floor
+          hz += kCpuProbeToneFloor - 25.0f;   // lift out of the replay band
           tone_increment = hz / kSampleRate;
         }
       }

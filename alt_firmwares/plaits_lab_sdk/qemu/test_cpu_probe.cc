@@ -176,15 +176,15 @@ int main() {
     // chain and reported the WRONG VALUES under memhunt labels -- the exact
     // bug a mode never compiled by the test suite gets to keep.
     const int kReports = 5;
-    const double expect[5] = {154.0, 25.0, 25.0, 25.0, 25.0};
+    const double expect[5] = {2629.0, 2500.0, 2500.0, 2500.0, 2500.0};
     bool seen[5] = {false, false, false, false, false};
 #else
     // Expected: 12 reports -- total, 4 sections, ratio, violations, canary,
     // cadence (20000 warmup blocks >> 12 = 4 -> 29 Hz), last-block absolute,
     // and the two hot-word halves (stubbed on host).
     const int kReports = 12;
-    const double expect[12] = {800.0, 666.7, 200.0, 200.0, 200.0, 833.3,
-                               25.0, 25.0, 29.0, 800.0, 25.0, 25.0};
+    const double expect[12] = {3275.0, 3141.7, 2675.0, 2675.0, 2675.0, 3308.3,
+                               2500.0, 2500.0, 2504.0, 3275.0, 2500.0, 2500.0};
     bool seen[12] = {false, false, false, false, false, false, false, false,
                      false, false, false, false};
 #endif
