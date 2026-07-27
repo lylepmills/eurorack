@@ -547,10 +547,15 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
   };
 }
 
-// A manual's identity is the slot layout plus each selected engine's
-// DOCUMENTATION digest (and the renderer contract) — deliberately NOT the
-// firmware source revision or toolchain, so firmware-only rollouts keep
-// reusing cached manuals and prose-only edits never invalidate firmware.
+// A manual's identity is everything the PDF PRINTS: the slot layout, each
+// selected engine's DOCUMENTATION digest, the chord tables the options-menu page
+// lists, and the credit each custom FM bank contributes. Deliberately NOT the
+// firmware source revision or toolchain, so firmware-only rollouts keep reusing
+// cached manuals and prose-only edits never invalidate firmware — and not the
+// packed patch bytes either, since the guide credits a bank rather than listing
+// its patches, so two banks with identical credits DO render the same guide.
+// (Anything the renderer starts printing has to be added here and the manual
+// contract bumped, or the cache serves a guide describing a different recipe.)
 export async function computeManualKey(
   recipe: NormalizedRecipe,
   manualContract: string,
@@ -563,10 +568,24 @@ export async function computeManualKey(
       if (!engine) throw new ContractError("unapproved_engine", "The recipe contains an engine that is not approved for builds.");
       return [engineId, engine.documentationDigest];
     });
+  // Both bank shapes carry their key (v6 `index`, v12/v13 `slot`) into the fold,
+  // so a bank that moves between slots — or from one factory bank to another —
+  // is a different guide even when its credit is unchanged.
+  const banks: (NormalizedUserDataBank | NormalizedSlotBank)[] = recipe.resources.userDataBanks ?? [];
+  const customBanks = banks.map((entry) => [
+    "slot" in entry ? `slot:${entry.slot}` : `index:${entry.index}`,
+    entry.bank.name,
+    entry.bank.author,
+    entry.bank.origin,
+    entry.bank.description,
+    entry.bank.voices.length,
+  ]);
   const canonical = JSON.stringify({
     manualContract,
     slots: recipe.slots,
     documentation,
+    chordTables: recipe.resources.chordTables.map((table) => table.name),
+    customBanks,
   });
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical));
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");

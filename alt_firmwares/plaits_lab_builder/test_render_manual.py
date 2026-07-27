@@ -127,6 +127,108 @@ class RenderManualTest(unittest.TestCase):
             self.assertEqual(first.read_bytes(), second.read_bytes())
             self.assertTrue(first.read_bytes().startswith(b"%PDF-"))
 
+    def bank_document(self, name: str = "Warm Keys", patches: int = 32) -> dict:
+        return {
+            "id": "warm-keys", "packageId": "anon/warm-keys", "version": "1.0.0",
+            "digest": None, "name": name, "author": "T. Contributor", "license": "CC0-1.0",
+            "origin": "Community", "description": "Eight electric pianos and their ghosts.",
+            "voices": [
+                {"name": f"V{i}", "algorithm": 1, "packed": [0] * 128} for i in range(patches)
+            ],
+        }
+
+    def slot_bank_recipe(self, banks: list[dict], schema_version: int = 12) -> dict:
+        # mixed_recipe.json places the three six-op banks at slots 16, 18, and 20.
+        recipe = self.load("mixed_recipe.json")
+        recipe.update(
+            schemaVersion=schema_version,
+            preferences=dict(DEFAULT_CONFIGURATION["preferences"]),
+            initialOptions=dict(DEFAULT_CONFIGURATION["initialOptions"]),
+            resources={
+                "chordTables": [dict(table) for table in DEFAULT_CHORD_TABLES],
+                "userDataBanks": banks,
+            },
+        )
+        return recipe
+
+    def test_customized_slot_carries_its_bank_credit(self) -> None:
+        recipe = self.slot_bank_recipe([{"slot": 16, "bank": self.bank_document()}])
+        document = manual_document(recipe)
+        self.assertEqual(document["slots"][16]["customBank"], {
+            "name": "Warm Keys", "author": "T. Contributor", "origin": "Community",
+            "description": "Eight electric pianos and their ghosts.", "patches": 32,
+        })
+        # An untouched FM slot keeps the factory bank, so it carries no credit.
+        self.assertIsNone(document["slots"][18]["customBank"])
+        self.assertIsNone(document["slots"][0]["customBank"])
+        customized = [model for model in document["models"] if model["customBank"]]
+        self.assertEqual([model["id"] for model in customized], ["dx7-bank-a"])
+
+    def test_a_short_bank_reports_its_real_patch_count(self) -> None:
+        recipe = self.slot_bank_recipe(
+            [{"slot": 16, "bank": self.bank_document(patches=6)}],
+            schema_version=13,
+        )
+        document = manual_document(recipe)
+        self.assertEqual(document["slots"][16]["customBank"]["patches"], 6)
+
+    def test_two_placements_of_one_engine_split_by_their_banks(self) -> None:
+        # v12's defining case: the same FM engine twice, each slot with its own
+        # bank. Merging them into one reference would credit the wrong bank for
+        # one of the two locations.
+        recipe = self.slot_bank_recipe([
+            {"slot": 16, "bank": self.bank_document(name="Warm Keys")},
+            {"slot": 18, "bank": self.bank_document(name="Cold Bells")},
+        ])
+        recipe["slots"][18] = "dx7-bank-a"
+        document = manual_document(recipe)
+        entries = [model for model in document["models"] if model["id"] == "dx7-bank-a"]
+        self.assertEqual(
+            [(model["customBank"]["name"], model["locations"]) for model in entries],
+            [
+                ("Warm Keys", [{"bank": "amber", "bankName": "AMBER", "color": "#D59635", "number": 1}]),
+                ("Cold Bells", [{"bank": "amber", "bankName": "AMBER", "color": "#D59635", "number": 3}]),
+            ],
+        )
+
+    def test_two_placements_sharing_one_bank_stay_a_single_reference(self) -> None:
+        recipe = self.slot_bank_recipe([
+            {"slot": 16, "bank": self.bank_document()},
+            {"slot": 18, "bank": self.bank_document()},
+        ])
+        recipe["slots"][18] = "dx7-bank-a"
+        document = manual_document(recipe)
+        entries = [model for model in document["models"] if model["id"] == "dx7-bank-a"]
+        self.assertEqual(len(entries), 1)
+        self.assertEqual([item["number"] for item in entries[0]["locations"]], [1, 3])
+
+    def test_a_v6_index_keyed_bank_credits_every_slot_playing_it(self) -> None:
+        # v6 overrides a FACTORY bank, so the credit lands on every placement of
+        # the engine that reads that bank — here both dx7-bank-a slots.
+        recipe = self.slot_bank_recipe(
+            [{"index": 0, "bank": self.bank_document()}], schema_version=6,
+        )
+        recipe["slots"][18] = "dx7-bank-a"
+        document = manual_document(recipe)
+        self.assertEqual(document["slots"][16]["customBank"]["name"], "Warm Keys")
+        self.assertEqual(document["slots"][18]["customBank"]["name"], "Warm Keys")
+        # dx7-bank-c reads factory bank 2, which this recipe left alone.
+        self.assertIsNone(document["slots"][20]["customBank"])
+
+    @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
+    def test_custom_bank_pdf_renders_deterministically(self) -> None:
+        document = manual_document(self.slot_bank_recipe([
+            {"slot": 16, "bank": self.bank_document()},
+            {"slot": 18, "bank": self.bank_document(name="")},
+        ]))
+        with tempfile.TemporaryDirectory() as temp_dir:
+            first = Path(temp_dir) / "first.pdf"
+            second = Path(temp_dir) / "second.pdf"
+            render_pdf(document, first)
+            render_pdf(document, second)
+            self.assertEqual(first.read_bytes(), second.read_bytes())
+            self.assertTrue(first.read_bytes().startswith(b"%PDF-"))
+
     def nine_table_recipe(self) -> dict:
         base = DEFAULT_CHORD_TABLES[0]
         tables = [dict(t) for t in DEFAULT_CHORD_TABLES]

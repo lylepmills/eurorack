@@ -434,11 +434,87 @@ test("manual keys derive from documentation identity, not build identity", async
   [reordered.slots[0], reordered.slots[1]] = [reordered.slots[1], reordered.slots[0]];
   assert.notEqual(first, await computeManualKey(reordered, "1"));
 
-  // …but firmware options and chord-table edits share the same field guide.
+  // …but firmware options do not — nothing on the page reports them.
   const optionsChanged = normalizeRecipe(fixture);
   optionsChanged.preferences = { ...optionsChanged.preferences, navigationMode: "banked" };
   optionsChanged.initialOptions = { ...optionsChanged.initialOptions, holdOnTrigger: true };
   assert.equal(first, await computeManualKey(optionsChanged, "1"));
+
+  // The options-menu page lists LIGHT 1's chord tables by name, so a table swap
+  // is a different guide. (It shared a key until 2026-07, which served the wrong
+  // LIGHT 1 row from cache.)
+  const tablesChanged = normalizeRecipe(fixture);
+  tablesChanged.resources.chordTables = tablesChanged.resources.chordTables.map((table, index) =>
+    index === 0 ? { ...table, name: "Renamed Table" } : table);
+  assert.notEqual(first, await computeManualKey(tablesChanged, "1"));
+});
+
+test("manual keys separate recipes by their custom FM bank credits", async () => {
+  const { computeManualKey, normalizeRecipe } = await import("../src/contract.ts");
+  const publicCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const chordCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_chord_tables/catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const byId = new Map(publicCatalog.engines.map((engine: { id: string }) => [engine.id, engine]));
+  const publishedTable = structuredClone(chordCatalog.tables[0]);
+  const bankDocument = (overrides: Record<string, unknown> = {}) => ({
+    id: "warm-keys", packageId: "anon/warm-keys", version: "1.0.0", digest: null,
+    name: "Warm Keys", author: "T. Contributor", license: "CC0-1.0",
+    origin: "Community", description: "Eight electric pianos.",
+    voices: Array.from({ length: 32 }, (_unused, index) => ({
+      name: `V${index}`, algorithm: 1, packed: Array(128).fill(0) as number[],
+    })),
+    ...overrides,
+  });
+  const recipeWith = (userDataBanks: unknown[], schemaVersion = 12) => ({
+    ...fixture,
+    schemaVersion,
+    slots: fixture.slots.map((engineId: string) => {
+      const engine = byId.get(engineId) as { packageId: string; version: string; digest: string };
+      return { engine: engineId, package: engine.packageId, version: engine.version, digest: engine.digest };
+    }),
+    preferences: { navigationMode: "linear" },
+    initialOptions: {
+      lockedFrequencyKnob: "octaves", modelInput: "model", levelInput: "level",
+      auxOutput: "alternate-model", suboscillatorOctave: 0, chordTable: publishedTable.id,
+      holdOnTrigger: false,
+    },
+    resources: { chordTables: [publishedTable], userDataBanks },
+  });
+  const banked = (bank: Record<string, unknown>, slot = 0) =>
+    normalizeRecipe(recipeWith([{ slot, bank }], bank.voices instanceof Array && bank.voices.length < 32 ? 13 : 12));
+
+  const base = await computeManualKey(banked(bankDocument()), "1");
+  assert.match(base, /^[0-9a-f]{64}$/);
+  assert.equal(base, await computeManualKey(banked(bankDocument()), "1"));
+
+  // Every credited field the guide prints moves the key…
+  for (const overrides of [
+    { name: "Cold Bells" },
+    { author: "Someone Else" },
+    { origin: "Local" },
+    { description: "Different prose." },
+    { voices: bankDocument().voices.slice(0, 6) },  // a short bank: the patch count is printed
+  ]) {
+    assert.notEqual(base, await computeManualKey(banked(bankDocument(overrides)), "1"));
+  }
+
+  // …as does moving the same bank to another slot, since the guide credits it
+  // against that slot's model entry.
+  assert.notEqual(base, await computeManualKey(banked(bankDocument(), 1), "1"));
+
+  // But the packed patch bytes do not: the guide credits a bank rather than
+  // listing its patches, so those recipes really do render the same PDF.
+  const edited = bankDocument();
+  edited.voices[0].packed[0] = 42;
+  assert.equal(base, await computeManualKey(banked(edited), "1"));
+
+  // A stock recipe and a customized one are never the same guide.
+  assert.notEqual(base, await computeManualKey(normalizeRecipe(recipeWith([])), "1"));
 });
 
 test("version 8 accepts up to nine chord tables and normalizes to v8", async () => {

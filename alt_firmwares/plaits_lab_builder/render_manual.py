@@ -71,26 +71,95 @@ def position(slot: int) -> dict[str, Any]:
     return {"bank": bank["id"], "bankName": bank["name"], "color": bank["color"], "number": slot % 8 + 1}
 
 
+def _bank_credit(bank: Any) -> dict[str, Any]:
+    """The printable half of a custom FM bank: who made it and how big it is.
+    The packed patch bytes are the ARM build's business; the guide only credits
+    the bank and states its patch count, which is what the HARMONICS dial spans.
+    Metadata is untrusted here (validate_recipe checks only the voices), so every
+    field is coerced and clipped to the Worker contract's own limits."""
+
+    def text(key: str, limit: int) -> str:
+        value = bank.get(key) if isinstance(bank, dict) else None
+        return value[:limit].strip() if isinstance(value, str) else ""
+
+    voices = bank.get("voices") if isinstance(bank, dict) else None
+    return {
+        "name": text("name", 80),
+        "author": text("author", 80),
+        "origin": text("origin", 32),
+        "description": text("description", 240),
+        "patches": len(voices) if isinstance(voices, list) else 0,
+    }
+
+
+def custom_bank_credits(recipe: Any, slots: list[str | None], by_id: dict[str, Any]) -> dict[int, dict[str, Any]]:
+    """Map each public slot whose built-in FM bank the recipe replaced to that
+    bank's credit. Both recipe shapes are honored: v6 keys a bank by the BUILT-IN
+    index it overrides (so it lands on every slot playing that factory bank),
+    while v12/v13 key it by the palette slot, so two placements of the same FM
+    engine can hold different banks."""
+    resources = recipe.get("resources") if isinstance(recipe, dict) else None
+    entries = resources.get("userDataBanks") if isinstance(resources, dict) else None
+    if not isinstance(entries, list):
+        return {}
+    credits: dict[int, dict[str, Any]] = {}
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        credit = _bank_credit(entry.get("bank"))
+        if "slot" in entry:
+            slot = entry["slot"]
+            if isinstance(slot, int) and 0 <= slot < len(slots) and slots[slot] is not None:
+                credits[slot] = credit
+            continue
+        index = entry.get("index")
+        if not isinstance(index, int):
+            continue
+        for slot, engine_id in enumerate(slots):
+            if engine_id is None:
+                continue
+            implementation = by_id.get(engine_id, {}).get("implementation", {})
+            if implementation.get("userDataBank") == index:
+                credits[slot] = credit
+    return credits
+
+
 def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]:
     build = validate_recipe(recipe)
     slots = build.public_slots
     catalog = load_catalog()
     by_id = {engine["id"]: engine for engine in catalog["engines"]}
+    credits = custom_bank_credits(recipe, slots, by_id)
     models: list[dict[str, Any]] = []
-    seen: set[str] = set()
+    seen: set[tuple[str, str | None]] = set()
     for slot, engine_id in enumerate(slots):
         # v7 short-bank recipes leave empty slots as None — they have no model
         # reference, so they must not be dereferenced (KeyError) or listed.
-        if engine_id is None or engine_id in seen:
+        if engine_id is None:
             continue
-        seen.add(engine_id)
+        # Identity is the engine AND its bank: two slots of one FM engine holding
+        # different custom banks are different models to a player, so they get
+        # their own reference entries rather than merging into one.
+        credit = credits.get(slot)
+        key = (engine_id, json.dumps(credit, sort_keys=True) if credit else None)
+        if key in seen:
+            continue
+        seen.add(key)
         engine = by_id[engine_id]
-        locations = [position(index) for index, value in enumerate(slots) if value == engine_id]
-        models.append({**engine, "locations": locations})
+        locations = [
+            position(index)
+            for index, value in enumerate(slots)
+            if value == engine_id and (credits.get(index) or None) == credit
+        ]
+        models.append({**engine, "locations": locations, "customBank": credit})
     return {
         "buildKey": build_key,
         "slots": [
-            {"engine": by_id[engine_id] if engine_id is not None else None, "position": position(slot)}
+            {
+                "engine": by_id[engine_id] if engine_id is not None else None,
+                "position": position(slot),
+                "customBank": credits.get(slot),
+            }
             for slot, engine_id in enumerate(slots)
         ],
         "models": models,
@@ -417,13 +486,31 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
             ]),
         )
-        details = Paragraph(_escape(model["description"]), body_style)
+        # A customized FM slot no longer plays the factory patches the catalog
+        # prose describes, so the bank's own description stands in for it and
+        # HARMONICS is re-stated against the real patch count. Everything else
+        # about the engine (TIMBRE, MORPH, the fourth macro, TRIG) is unchanged
+        # by a bank swap and keeps its catalog prose.
+        credit = model.get("customBank")
+        descriptions = model["manual"]["controls"]
+        if credit:
+            details_text = credit["description"] or (
+                "This slot plays a custom six-operator FM bank in place of the built-in one."
+            )
+            descriptions = {
+                **descriptions,
+                "harmonics": "Selects one of the {} in this slot's custom bank.".format(
+                    "single patch" if credit["patches"] == 1 else f"{credit['patches']} patches"
+                ),
+            }
+        else:
+            details_text = model["description"]
+        details = Paragraph(_escape(details_text), body_style)
         parameter_rows: list[list[Any]] = [[
             Paragraph("PANEL", table_header_style),
             Paragraph("PARAMETER", table_header_style),
             Paragraph("WHAT IT DOES", table_header_style),
         ]]
-        descriptions = model["manual"]["controls"]
         for index, control_id in enumerate(CONTROL_IDS):
             parameter_rows.append([
                 Paragraph(PANEL_LABELS[index], table_header_style),
@@ -459,10 +546,38 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
             ]),
         )
+        story.extend([title, details, Spacer(1, 0.07 * inch)])
+        if credit:
+            byline = credit["name"] or "Untitled bank"
+            if credit["author"]:
+                byline += f" — {credit['author']}"
+            if credit["origin"]:
+                byline += f" ({credit['origin']})"
+            patches = "1 patch" if credit["patches"] == 1 else f"{credit['patches']} patches"
+            story.extend([
+                Table(
+                    [[
+                        Paragraph("CUSTOM BANK", table_header_style),
+                        Paragraph(
+                            f"<b>{_escape(byline)}</b>"
+                            f'<font color="#687069"> · {patches}</font>',
+                            small_style,
+                        ),
+                    ]],
+                    colWidths=[1.1 * inch, 5.2 * inch],
+                    style=TableStyle([
+                        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#EFECE3")),
+                        ("BOX", (0, 0), (-1, -1), 0.35, line),
+                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 5),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+                        ("TOPPADDING", (0, 0), (-1, -1), 4),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                    ]),
+                ),
+                Spacer(1, 0.07 * inch),
+            ])
         story.extend([
-            title,
-            details,
-            Spacer(1, 0.07 * inch),
             parameters,
             behavior,
             Spacer(1, 0.22 * inch),

@@ -44,23 +44,45 @@ deterministic and runs with ReportLab inside the compiler image. It deliberately
 omits internal layout IDs and per-model attributions. Generated PDFs are ignored
 build products and should be reproduced from the recipe.
 
+A slot whose built-in six-op FM bank the recipe replaced is credited in its model
+reference: the bank's name, author, origin, and description, plus the patch count
+HARMONICS spans (which a short v13 bank changes). Because a v12/v13 bank belongs
+to a SLOT, two placements of one FM engine carrying different banks get separate
+model entries instead of deduplicating into one — a v6 bank overrides a factory
+bank, so its credit lands on every slot playing that bank. The guide credits a
+bank rather than listing its patches; the patch names live in the editor.
+
 Manual generation is integrated into the service (2026-07-18): the queue
 consumer renders the PDF through the container's synchronous `POST /manual`
 endpoint after a successful compile (a manual failure never fails the
 firmware build), stores it in R2 under `manuals/<manualKey>.pdf`, reports
 `manual.status` / `manual.downloadUrl` in job status, serves
 `GET /v1/builds/:buildKey/manual`, and backfills the PDF for already-cached
-firmware via `manualOnly` queue messages. `computeManualKey` hashes the slot
-layout + each engine's DOCUMENTATION digest + `PLAITS_MANUAL_CONTRACT` —
-deliberately not the firmware source revision or toolchain — so prose-only
-edits never invalidate firmware and firmware rollouts keep reusing cached
-manuals. Bump `PLAITS_MANUAL_CONTRACT` when the renderer's layout changes.
+firmware via `manualOnly` queue messages. `computeManualKey` hashes everything
+the PDF PRINTS — the slot layout, each engine's DOCUMENTATION digest, the chord
+tables the options-menu page lists, each custom FM bank's credit, and
+`PLAITS_MANUAL_CONTRACT` — deliberately not the firmware source revision or
+toolchain, so prose-only edits never invalidate firmware and firmware rollouts
+keep reusing cached manuals. It is likewise NOT the packed patch bytes: the
+guide credits a bank instead of listing its patches, so two banks with equal
+credits do render the same PDF. Anything the renderer starts printing must be
+added to the key. Bump `PLAITS_MANUAL_CONTRACT` when the renderer's layout
+changes — or when the key's inputs change, so cached PDFs re-render (contract 5
+covers the FM-bank credits, and the chord-table fold that fixed guides served
+from cache with another recipe's LIGHT 1 row).
 This checkpoint is NOT yet deployed: it needs a new container image AND
 Worker deploy. Because the firmware source also changed since the deployed
 `schema5-20260717` image (the chord-table `ChordBank` rework moved the
 `chords` engine digest), that rollout must bump `PLAITS_SOURCE_REVISION`,
 use a new immutable image tag, and land together with the website catalog
 re-sync (`rubato-audio/website/scripts/sync-plaits-catalog.mjs`).
+
+The custom-FM-bank credits (2026-07-26) need the same two halves: the renderer
+change ships in a container image, the key change in a Worker deploy. Deploy the
+Worker alone and every recipe re-keys to a manual the old image renders without
+credits; ship the image alone and cached PDFs keep their old (credit-free, and
+for chord tables possibly wrong) contents, since the key never moved. The
+firmware source is untouched, so `PLAITS_SOURCE_REVISION` does not move.
 
 The build key covers the normalized slots, preferences, starting options,
 ordered chord-table data (without `createdAt`), source revision, toolchain
@@ -218,8 +240,9 @@ Three consequences a rollback has that a forward deploy does not:
   reject — going from schema 6 to schema 5, for instance, makes the 32-slot
   fourth bank unbuildable while the UI still offers it.
 
-Field guides survive a rollback: manual keys hash documentation identity and
-`PLAITS_MANUAL_CONTRACT`, deliberately not the source revision.
+Field guides survive a rollback: manual keys hash documentation identity, the
+recipe content the guide prints, and `PLAITS_MANUAL_CONTRACT` — deliberately not
+the source revision.
 
 The July 17 production smoke test completed build
 `76e8c1c9dde6b238be377994dc27d62116acaa67f585547d6823afa1b40447cb`

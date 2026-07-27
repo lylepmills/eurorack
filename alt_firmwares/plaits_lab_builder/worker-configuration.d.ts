@@ -9,7 +9,7 @@ interface __BaseEnv_Env {
 	PLAITS_SOURCE_REVISION: "720d1406e87b";
 	PLAITS_TOOLCHAIN_ID: "gcc-arm-none-eabi-4.8-2013q4";
 	PLAITS_BUILD_CONTRACT: "2";
-	PLAITS_MANUAL_CONTRACT: "4";
+	PLAITS_MANUAL_CONTRACT: "5";
 	FIRMWARE_BUILDER: DurableObjectNamespace<import("./src/index").FirmwareBuilder>;
 	BUILD_JOBS: DurableObjectNamespace<import("./src/index").BuildJob>;
 }
