@@ -238,9 +238,27 @@ class CpuProbe {
           const int used = UsedSections();
           float hz;
 #if PLAITS_CPU_PROBE_MEMHUNT
-          const uint32_t hot_now = *(volatile uint32_t*)0x20000814u;
-          const uint32_t h = report_ == 0 ? (hot_now & 0xFFFFu) : (hot_now >> 16);
-          hz = 25.0f + static_cast<float>(h >> 4);
+          // DMA SURVEY: report where every DMA channel's memory address
+          // register points. The value at the stomped address tracks cable
+          // patch-state and sits at CV-ADC sample scale, so the writer is
+          // almost certainly a DMA channel aimed at the wrong address -- and
+          // the DMA controller itself can tell us. Beacons 1-7 are DMA1
+          // channels 1-7, beacons 8-12 are DMA2 channels 1-5. A disabled
+          // channel reads 25 Hz; an enabled one encodes bits [15:4] of its
+          // CMAR (16-byte resolution within the 32 KB RAM). The stomped
+          // window 0x20000814 encodes as ~154 Hz.
+          const int dma2 = report_ >= 7 ? 1 : 0;
+          const int ch = dma2 ? report_ - 7 : report_;
+          const uint32_t base = dma2 ? 0x40020400u : 0x40020000u;
+          const volatile uint32_t* ccr =
+              (volatile uint32_t*)(base + 0x08u + 0x14u * ch);
+          const volatile uint32_t* cmar =
+              (volatile uint32_t*)(base + 0x14u + 0x14u * ch);
+          if (*ccr & 1u) {
+            hz = 25.0f + static_cast<float>((*cmar >> 4) & 0xFFFu);
+          } else {
+            hz = 25.0f;
+          }
           if (false) {
 #else
           if (report_ == 0) {
@@ -358,7 +376,7 @@ class CpuProbe {
       }
       if (reports > 1) reports += 7;  // + ratio, violations, canary, cadence, last-block, hot-word
 #if PLAITS_CPU_PROBE_MEMHUNT
-      reports = 2;                    // hot word lo/hi only, ~5 s per revisit
+      reports = 12;                   // DMA1 ch1-7 + DMA2 ch1-5 CMAR survey
 #endif
       report_ = (report_ + 1) % reports;
       state_ = 0; state_samples_ = kSilence;
