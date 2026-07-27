@@ -20,6 +20,15 @@ plaits_lab = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(plaits_lab)
 
 
+def host_can_sanitize() -> bool:
+    """Probe guard for tests that need a real sanitized build. Absent any host
+    compiler at all the probe raises, which is still 'cannot sanitize' here."""
+    try:
+        return plaits_lab.host_sanitizers_available(None)
+    except plaits_lab.PackageError:
+        return False
+
+
 CHORD_PROBE_HEADER = """\
 #ifndef PLAITS_LAB_CHORD_PROBE_ENGINE_H_
 #define PLAITS_LAB_CHORD_PROBE_ENGINE_H_
@@ -477,6 +486,11 @@ class PackageTests(unittest.TestCase):
 
     @unittest.skipUnless(shutil.which("c++") or shutil.which("g++"), "host C++ compiler required")
     def test_blank_package_can_be_validated_and_bundled(self) -> None:
+        # Exercises the HOST bundling path end to end, so it needs a toolchain
+        # that can actually link the sanitizers — MinGW-w64 cannot, and there the
+        # real submit delegates to Docker instead (covered separately below).
+        if not host_can_sanitize():
+            self.skipTest("host C++ toolchain ships no sanitizer runtime")
         with tempfile.TemporaryDirectory() as temp_dir:
             package = Path(temp_dir) / "bright-wave"
             plaits_lab.init_command(SimpleNamespace(
@@ -489,6 +503,7 @@ class PackageTests(unittest.TestCase):
             bundle = Path(temp_dir) / "bright-wave.zip"
             plaits_lab.submit_command(SimpleNamespace(
                 package=str(package), output=str(bundle), compiler=None,
+                native=True, docker_image="unused",
             ))
             with zipfile.ZipFile(bundle) as archive:
                 submission = json.loads(archive.read("submission.json"))
@@ -684,6 +699,104 @@ class PackageTests(unittest.TestCase):
             # Before the LoadUserData null-guard this render SIGSEGVs.
             plaits_lab.run_scenario(package, renderer, scenario, output)
             self.assertTrue(output.exists())
+
+    def _community_package(self, temp_dir: str, slug: str) -> dict:
+        pkg_dir = Path(temp_dir) / slug
+        with redirect_stdout(io.StringIO()):
+            plaits_lab.init_command(SimpleNamespace(
+                output=str(pkg_dir), from_engine="blank", author="T",
+                package_id=f"test-author/{slug}", slug=slug, name=slug.title()))
+        return plaits_lab.load_package(str(pkg_dir))
+
+    def _capture_docker_run(self, fn) -> tuple[list[str], str]:
+        """Run fn() with docker present and subprocess.run stubbed; return the
+        command docker was handed plus anything printed."""
+        captured: dict[str, list[str]] = {}
+        real_run, real_which = plaits_lab.subprocess.run, plaits_lab.shutil.which
+        plaits_lab.shutil.which = (
+            lambda name: "/usr/bin/docker" if name == "docker" else real_which(name))
+        plaits_lab.subprocess.run = lambda cmd, **kw: (
+            captured.__setitem__("cmd", cmd) or SimpleNamespace(returncode=0, stdout="", stderr=""))
+        out = io.StringIO()
+        try:
+            with redirect_stdout(out):
+                fn()
+        finally:
+            plaits_lab.subprocess.run, plaits_lab.shutil.which = real_run, real_which
+        return captured.get("cmd", []), out.getvalue()
+
+    def test_full_check_delegates_to_the_builder_image_without_host_sanitizers(self) -> None:
+        # MinGW-w64 compiles the sanitizer flags and then cannot link them, so on
+        # Windows the submission gate has to run in the image instead of failing.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            package = self._community_package(temp_dir, "gated")
+            args = SimpleNamespace(package=str(package["directory"]), compiler=None,
+                                   no_compile=False, full=True, arm=False,
+                                   toolchain="/nonexistent-arm",
+                                   docker_image="img:test", native=False)
+            real_probe = plaits_lab.host_sanitizers_available
+            plaits_lab.host_sanitizers_available = lambda _compiler: False
+            try:
+                cmd, printed = self._capture_docker_run(
+                    lambda: plaits_lab.check_command(args))
+            finally:
+                plaits_lab.host_sanitizers_available = real_probe
+
+        self.assertEqual(cmd[:3], ["/usr/bin/docker", "run", "--rm"])
+        self.assertIn("--platform", cmd)
+        self.assertEqual(cmd[cmd.index("--platform") + 1], "linux/amd64")
+        self.assertEqual(cmd[-4:], ["check", "/contributor", "--full", "--native"])
+        # Both mounts read-only: the container must not write into the checkout.
+        self.assertIn(f"{package['repo_root']}:/workspace:ro", cmd)
+        self.assertIn(f"{package['directory']}:/contributor:ro", cmd)
+        self.assertIn("cannot link the sanitizers", printed)
+
+    def test_submit_delegates_with_a_writable_output_mount(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            package = self._community_package(temp_dir, "bundled")
+            out_zip = Path(temp_dir) / "dist" / "bundled.zip"
+            args = SimpleNamespace(package=str(package["directory"]), compiler=None,
+                                   output=str(out_zip), docker_image="img:test",
+                                   native=False)
+            real_probe = plaits_lab.host_sanitizers_available
+            plaits_lab.host_sanitizers_available = lambda _compiler: False
+            try:
+                cmd, _ = self._capture_docker_run(lambda: plaits_lab.submit_command(args))
+            finally:
+                plaits_lab.host_sanitizers_available = real_probe
+
+        # The zip has to come back out, so /output is the one writable mount and
+        # the container is told to write there under the caller's chosen name.
+        self.assertIn(f"{out_zip.resolve().parent}:/output", cmd)
+        self.assertEqual(
+            cmd[-5:],
+            ["submit", "/contributor", "--output", "/output/bundled.zip", "--native"])
+
+    def test_native_never_delegates_to_docker(self) -> None:
+        # --native is what the SDK passes to ITSELF inside the container. If it
+        # delegated, the container would try to run docker in docker forever.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            package = self._community_package(temp_dir, "inner")
+            args = SimpleNamespace(package=str(package["directory"]), compiler=None,
+                                   no_compile=True, full=True, arm=False,
+                                   toolchain="/nonexistent-arm",
+                                   docker_image="img:test", native=True)
+            real_probe = plaits_lab.host_sanitizers_available
+            plaits_lab.host_sanitizers_available = lambda _compiler: False
+            try:
+                cmd, _ = self._capture_docker_run(lambda: plaits_lab.check_command(args))
+            finally:
+                plaits_lab.host_sanitizers_available = real_probe
+        self.assertEqual(cmd, [])  # docker was never invoked
+
+    def test_sanitizer_probe_tests_the_flags_the_real_build_uses(self) -> None:
+        # A probe that checked different flags than compile_renderer injects could
+        # green-light a toolchain that then fails the actual sanitized build.
+        source = Path(plaits_lab.__file__).read_text(encoding="utf-8")
+        self.assertIn("command[4:4] = SANITIZER_FLAGS", source)
+        self.assertEqual(
+            plaits_lab.SANITIZER_FLAGS,
+            ["-fsanitize=address,undefined", "-fno-omit-frame-pointer"])
 
     def test_content_digest_hashes_in_posix_relative_order(self) -> None:
         # The digest is the package's identity, so it must not depend on the

@@ -504,6 +504,94 @@ def host_binary(directory: Path, name: str) -> Path:
 # every compile rather than behind a platform branch.
 MATH_CONSTANTS_DEFINE = "-D_USE_MATH_DEFINES"
 
+SANITIZER_FLAGS = ["-fsanitize=address,undefined", "-fno-omit-frame-pointer"]
+
+_SANITIZER_SUPPORT: dict[str, bool] = {}
+
+
+def host_sanitizers_available(requested_compiler: str | None) -> bool:
+    """Whether the host compiler can COMPILE AND LINK with ASan/UBSan.
+
+    MinGW-w64 — the compiler a Windows contributor most likely has, and the one
+    `c++`/`g++` autodetection finds there — ships no sanitizer runtime: it
+    accepts the flags and then fails at link with `cannot find -lasan`. Only
+    building a trivial program tells us for sure, so probe once per compiler and
+    cache. When this is False the sanitized commands run in the builder image
+    instead, which is Linux and always has the runtimes.
+    """
+    compiler = compiler_path(requested_compiler)
+    if compiler not in _SANITIZER_SUPPORT:
+        with tempfile.TemporaryDirectory(prefix="plaits-lab-sanprobe-") as temp_dir:
+            probe = Path(temp_dir) / "probe.cc"
+            probe.write_text("int main() { return 0; }\n", encoding="utf-8")
+            result = subprocess.run(
+                [compiler, *SANITIZER_FLAGS, str(probe),
+                 "-o", str(host_binary(Path(temp_dir), "probe"))],
+                text=True, capture_output=True, check=False,
+            )
+        _SANITIZER_SUPPORT[compiler] = result.returncode == 0
+    return _SANITIZER_SUPPORT[compiler]
+
+
+def sdk_docker_command(
+    docker: str, image: str, package: dict[str, Any], sdk_args: list[str],
+    extra_mounts: list[str] | None = None,
+) -> list[str]:
+    """A `docker run` of this same CLI inside the builder image, with the repo at
+    /workspace and the package at /contributor (both read-only). Every delegating
+    command shares this shape, so it lives in one place — the mounts and the
+    `--platform linux/amd64` pin are easy to get subtly wrong per copy."""
+    return [
+        docker, "run", "--rm", "--platform", "linux/amd64", "--entrypoint", "python3",
+        "-v", f"{package['repo_root']}:/workspace:ro",
+        "-v", f"{package['directory']}:/contributor:ro",
+        *(extra_mounts or []),
+        "-w", "/workspace", image,
+        "alt_firmwares/plaits_lab_sdk/plaits_lab.py", *sdk_args,
+    ]
+
+
+DOCKER_IMAGE_HINT = (
+    "Build the builder image once first:\n"
+    "  git submodule update --init stmlib stm_audio_bootloader\n"
+    "  docker build --platform linux/amd64 -t {image} -f Dockerfile.plaits-builder ."
+)
+
+NO_SANITIZER_HELP = (
+    "{command} runs the sanitizers, and this host's C++ compiler ({compiler}) has no\n"
+    "sanitizer runtime — MinGW-w64 does not ship one. Install Docker Desktop\n"
+    "(https://docs.docker.com/get-docker/) and the SDK will run this step in the\n"
+    "builder image automatically.\n" + DOCKER_IMAGE_HINT
+)
+
+
+def run_sanitized_in_docker(
+    package: dict[str, Any], args: argparse.Namespace, label: str,
+    sdk_args: list[str], extra_mounts: list[str] | None = None,
+) -> int:
+    """Re-run a sanitizer-dependent command inside the builder image. Output is
+    streamed rather than captured: these compile and render for tens of seconds,
+    and the container prints exactly the progress the contributor wants to see."""
+    docker = shutil.which("docker")
+    if not docker:
+        # Built only on the failure path: naming the compiler means resolving it.
+        raise PackageError(NO_SANITIZER_HELP.format(
+            command=label, compiler=compiler_path(args.compiler),
+            image=args.docker_image,
+        ))
+    # flush: the container writes straight to the terminal, so an unflushed note
+    # would surface after the output it is meant to introduce.
+    print(f"note: host compiler cannot link the sanitizers — running {label} "
+          f"in {args.docker_image}", flush=True)
+    command = sdk_docker_command(docker, args.docker_image, package, sdk_args, extra_mounts)
+    result = subprocess.run(command, check=False)
+    if result.returncode:
+        raise PackageError(
+            f"{label} failed in the builder image. If the {args.docker_image} image is "
+            f"missing, " + DOCKER_IMAGE_HINT.format(image=args.docker_image)
+        )
+    return 0
+
 
 def engine_header_define(package: dict[str, Any]) -> str:
     manifest = package["manifest"]
@@ -756,7 +844,9 @@ def compile_renderer(
         "-o", str(output),
     ]
     if sanitizers:
-        command[4:4] = ["-fsanitize=address,undefined", "-fno-omit-frame-pointer"]
+        # Same list host_sanitizers_available() probes for, so the capability
+        # check can never test different flags than the real build uses.
+        command[4:4] = SANITIZER_FLAGS
     result = subprocess.run(command, text=True, capture_output=True, check=False)
     if result.returncode:
         details = (result.stderr or result.stdout).strip()
@@ -1051,6 +1141,17 @@ def report_autodeclared(package: dict[str, Any]) -> None:
 def check_command(args: argparse.Namespace) -> int:
     package = load_package(args.package, autodeclare=True)
     report_autodeclared(package)
+    # --full is the submission gate, so it must be runnable everywhere. Where the
+    # host cannot link the sanitizers, hand the whole check to the builder image.
+    # Delegating here — before any output — keeps the container's own ✓ lines the
+    # only ones printed, and the autodeclare pass above has already settled
+    # plaits-engine.json, so mounting the package read-only is safe.
+    if args.full and not args.no_compile and not args.native \
+            and not host_sanitizers_available(args.compiler):
+        return run_sanitized_in_docker(
+            package, args, "check --full",
+            ["check", "/contributor", "--full", "--native"],
+        )
     print(f"✓ package {package['manifest']['id']}@{package['manifest']['version']}")
     print("✓ metadata, license, source policy, and scenarios")
     cpu_cost: dict[str, Any] | None = None
@@ -1205,6 +1306,17 @@ def submit_command(args: argparse.Namespace) -> int:
     package = load_package(args.package)
     output = Path(args.output).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
+    # A bundle is only accepted if it passed the sanitizers, so submit builds one
+    # in the builder image when the host cannot. The output directory is the one
+    # writable mount; the container writes the zip straight into it, and the
+    # digest it records is identical to a host-built one (package_content_digest
+    # orders on POSIX relative paths, so it does not vary by platform).
+    if not args.native and not host_sanitizers_available(args.compiler):
+        return run_sanitized_in_docker(
+            package, args, "submit",
+            ["submit", "/contributor", "--output", f"/output/{output.name}", "--native"],
+            extra_mounts=["-v", f"{output.parent}:/output"],
+        )
     with tempfile.TemporaryDirectory(prefix="plaits-lab-submit-") as temp_dir:
         preview_dir = Path(temp_dir) / "previews"
         preview_dir.mkdir()
@@ -1486,14 +1598,11 @@ def arm_compile_check(package: dict[str, Any], args: argparse.Namespace) -> None
             resources_cc.touch()
         except OSError:
             pass
-    command = [
-        docker, "run", "--rm", "--platform", "linux/amd64", "--entrypoint", "python3",
-        "-v", f"{package['repo_root']}:/workspace:ro",
-        "-v", f"{package['directory']}:/contributor:ro",
-        "-w", "/workspace", args.docker_image,
-        "alt_firmwares/plaits_lab_sdk/plaits_lab.py", "check", "/contributor",
-        "--arm", "--native", "--no-compile", "--toolchain", args.toolchain,
-    ]
+    command = sdk_docker_command(
+        docker, args.docker_image, package,
+        ["check", "/contributor", "--arm", "--native", "--no-compile",
+         "--toolchain", args.toolchain],
+    )
     result = subprocess.run(command, text=True, capture_output=True, check=False)
     if result.returncode:
         details = (result.stdout + result.stderr)[-8000:]
@@ -1906,6 +2015,8 @@ def build_parser() -> argparse.ArgumentParser:
     submit_parser.add_argument("package")
     submit_parser.add_argument("--output", required=True)
     submit_parser.add_argument("--compiler")
+    submit_parser.add_argument("--docker-image", default="plaits-lab-builder:local")
+    submit_parser.add_argument("--native", action="store_true", help=argparse.SUPPRESS)
     submit_parser.set_defaults(handler=submit_command)
 
     build_parser_command = subparsers.add_parser("build", help="build an unreviewed local hardware firmware")
