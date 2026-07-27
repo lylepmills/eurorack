@@ -238,26 +238,29 @@ class CpuProbe {
           const int used = UsedSections();
           float hz;
 #if PLAITS_CPU_PROBE_MEMHUNT
-          // DMA SURVEY: report where every DMA channel's memory address
-          // register points. The value at the stomped address tracks cable
-          // patch-state and sits at CV-ADC sample scale, so the writer is
-          // almost certainly a DMA channel aimed at the wrong address -- and
-          // the DMA controller itself can tell us. Beacons 1-7 are DMA1
-          // channels 1-7, beacons 8-12 are DMA2 channels 1-5. A disabled
-          // channel reads 25 Hz; an enabled one encodes bits [15:4] of its
-          // CMAR (16-byte resolution within the 32 KB RAM). The stomped
-          // window 0x20000814 encodes as ~154 Hz.
-          const int dma2 = report_ >= 7 ? 1 : 0;
-          const int ch = dma2 ? report_ - 7 : report_;
-          const uint32_t base = dma2 ? 0x40020400u : 0x40020000u;
-          const volatile uint32_t* ccr =
-              (volatile uint32_t*)(base + 0x08u + 0x14u * ch);
-          const volatile uint32_t* cmar =
-              (volatile uint32_t*)(base + 0x14u + 0x14u * ch);
-          if (*ccr & 1u) {
-            hz = 25.0f + static_cast<float>((*cmar >> 4) & 0xFFFu);
+          // The 12-channel survey failed its own sanity check: the DAC
+          // channel, whose target is KNOWN, decoded wrong. So before trusting
+          // any register readout, validate the instrument itself:
+          //   beacon 1: a hardcoded constant (0x20000814) through the exact
+          //             encode path -- must decode to 154 Hz or the
+          //             instrument is broken and nothing else matters.
+          //   beacon 2: DMA1 ch5 (DAC) CCR low bits -- EN must be 1.
+          //   beacons 3-5: DMA1 ch5 CMAR at full width, 12 bits per tone
+          //             ([11:0], [23:12], [31:24]) -- the DAC buffer's true
+          //             address, no aliasing possible.
+          if (report_ == 0) {
+            hz = 25.0f + static_cast<float>((0x20000814u >> 4) & 0xFFFu);
+          } else if (report_ == 1) {
+            const volatile uint32_t* ccr5 = (volatile uint32_t*)0x40020058u;
+            hz = 25.0f + static_cast<float>(*ccr5 & 0xFFFu);
           } else {
-            hz = 25.0f;
+            const volatile uint32_t* cmar5 = (volatile uint32_t*)0x40020064u;
+            const uint32_t value = *cmar5;
+            uint32_t field = 0;
+            if (report_ == 2) field = value & 0xFFFu;
+            if (report_ == 3) field = (value >> 12) & 0xFFFu;
+            if (report_ == 4) field = (value >> 24) & 0xFFu;
+            hz = 25.0f + static_cast<float>(field);
           }
           if (false) {
 #else
@@ -376,7 +379,7 @@ class CpuProbe {
       }
       if (reports > 1) reports += 7;  // + ratio, violations, canary, cadence, last-block, hot-word
 #if PLAITS_CPU_PROBE_MEMHUNT
-      reports = 12;                   // DMA1 ch1-7 + DMA2 ch1-5 CMAR survey
+      reports = 5;                    // known-answer test + DAC CMAR, full width
 #endif
       report_ = (report_ + 1) % reports;
       state_ = 0; state_samples_ = kSilence;
