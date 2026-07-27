@@ -6,9 +6,7 @@ Rubato, and audition model is represented in the same authoritative package
 catalog; community packages use the same controls, outputs, scenarios, and
 content-addressed version model.
 
-Run commands from the eurorack repository root. On Windows use `python` rather
-than `python3` — a stock python.org install provides `python` and `py`, while
-`python3.exe` exists only as a Microsoft Store alias stub that errors out:
+Run commands from the eurorack repository root:
 
 ```sh
 SDK="python3 alt_firmwares/plaits_lab_sdk/plaits_lab.py"
@@ -21,6 +19,17 @@ $SDK init $PKG/my-engine --author "Your name"
 $SDK init $PKG/pulsar-fork --from pulsar --author "Your name"
 $SDK check ./$PKG/my-engine --full
 $SDK render ./$PKG/my-engine --scenario hero --output /tmp/my-engine.wav
+```
+
+```powershell
+# Windows (PowerShell) — `python`, not `python3`: a stock python.org install
+# provides `python` and `py`, while `python3.exe` is only a Microsoft Store
+# alias stub that errors out. Every other argument is identical.
+$SDK = "python alt_firmwares/plaits_lab_sdk/plaits_lab.py"
+$PKG = "alt_firmwares/plaits_lab_sdk/packages/community"
+
+iex "$SDK catalog"
+iex "$SDK init $PKG/my-engine --author 'Your name'"
 ```
 
 `init --from` accepts any catalog ID printed by `catalog`. A fork copies and
@@ -124,8 +133,17 @@ Both of those commands need a compiler that can link the sanitizers. MinGW-w64
 — the usual Windows toolchain — ships no sanitizer runtime, so there the SDK
 runs these two steps inside the builder Docker image instead, and says so. That
 needs Docker plus a one-time `docker build` of the image (the same one the
-hardware-build step uses); everything else still runs natively. Nothing changes
-on macOS or Linux, where the host compiler sanitizes directly.
+hardware-build step uses); everything else still runs natively. `--arm` is
+carried into the container along with it, so `check --full --arm` still does
+the ARM compile there. Nothing changes on macOS or Linux, where the host
+compiler sanitizes directly.
+
+Scenarios run with `ASAN_OPTIONS=detect_leaks=0` on every platform. LeakSanitizer
+is part of ASan on Linux but does not exist on macOS, so leaving it on would let
+the same package pass `check --full` on one host and fail on another — and it can
+say nothing about an engine regardless, since the source policy rejects
+`malloc`/`calloc`/`new`/`delete` before a package ever compiles. ASan and UBSan,
+which are what this gate is for, stay fully on.
 
 `check` compiles with your **host** compiler, which is more permissive than the
 pinned hardware toolchain (e.g. it has `std::log2`/`std::exp2`; the ARM newlib
