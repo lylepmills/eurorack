@@ -201,6 +201,7 @@ target.
 | July 25, 2026 (options menu reorder) | `0e6e6f202307` | `rev-0e6e6f202307` |
 | July 25, 2026 (aux output / subosc split) | `720d1406e87b` | `rev-720d1406e87b` |
 | July 26, 2026 (factory FM bank strip) | `83a78fad3ee8` | `rev-83a78fad3ee8` |
+| July 26, 2026 (schema 13, variable-length FM banks) | `0152d502f2f3` | `rev-0152d502f2f3` |
 
 Three consequences a rollback has that a forward deploy does not:
 

@@ -15,7 +15,7 @@
   },
   "vars": {
     "PUBLIC_ORIGIN": "https://rubato.audio",
-    "PLAITS_SOURCE_REVISION": "83a78fad3ee8",
+    "PLAITS_SOURCE_REVISION": "0152d502f2f3",
     "PLAITS_TOOLCHAIN_ID": "gcc-arm-none-eabi-4.8-2013q4",
     "PLAITS_BUILD_CONTRACT": "2",
     "PLAITS_MANUAL_CONTRACT": "4"
@@ -23,7 +23,7 @@
   "containers": [
     {
       "class_name": "FirmwareBuilder",
-      "image": "registry.cloudflare.com/256bac4d555b969399df16f575c5f464/plaits-lab-build-service-firmwarebuilder:rev-83a78fad3ee8",
+      "image": "registry.cloudflare.com/256bac4d555b969399df16f575c5f464/plaits-lab-build-service-firmwarebuilder:rev-0152d502f2f3",
       "instance_type": "standard-4",
       "max_instances": 1
     }
