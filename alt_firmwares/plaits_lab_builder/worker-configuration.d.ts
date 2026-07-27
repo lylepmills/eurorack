@@ -6,7 +6,7 @@ interface __BaseEnv_Env {
 	BUILD_QUEUE: Queue;
 	BUILD_RATE_LIMITER: RateLimit;
 	PUBLIC_ORIGIN: "https://rubato.audio";
-	PLAITS_SOURCE_REVISION: "af5eaeb0f5b0";
+	PLAITS_SOURCE_REVISION: "94e84165ea2a";
 	PLAITS_TOOLCHAIN_ID: "gcc-arm-none-eabi-4.8-2013q4";
 	PLAITS_BUILD_CONTRACT: "2";
 	PLAITS_MANUAL_CONTRACT: "6";

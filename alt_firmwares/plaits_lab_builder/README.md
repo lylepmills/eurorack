@@ -77,15 +77,13 @@ The contract is the Worker's alone, and in source (`a0c0791`) it rides in the
 `POST /manual` body as `manualContract` for the container to echo on
 `X-Plaits-Manual-Contract`, so that header describes the render that actually
 happened; the container's `PLAITS_MANUAL_CONTRACT` env var is only the fallback
-for a caller that sends none. **NOT YET DEPLOYED** — the live image still reads
-that env var alone, which nothing sets, so production keeps reporting the image
-default `1` while the Worker is on 5. It waits for the next rollout on purpose:
-the fix is in the container, and shipping a container means a new image, a new
-`PLAITS_SOURCE_REVISION`, and a re-key of every cached artifact — too much churn
-for a header nothing consumes (the Worker records
-`env.PLAITS_MANUAL_CONTRACT` on the R2 object itself). Diagnostic, which is
-exactly why it has to be true — so fold it into the next image and drop this
-paragraph's warning.
+for a caller that sends none. It rode the `rev-94e84165ea2a` rollout, having
+waited out one rollout cycle on purpose: the fix is in the container, and
+shipping a container means a new image, a new `PLAITS_SOURCE_REVISION`, and a
+re-key of every cached artifact — too much churn for a header nothing consumes
+(the Worker records `env.PLAITS_MANUAL_CONTRACT` on the R2 object itself).
+Before that, production reported the image default `1` while the Worker was
+on 5.
 That checkpoint shipped in the July 19 rollout. It needed a new container image
 AND a Worker deploy, and because the firmware source had also changed since the
 deployed `schema5-20260717` image (the chord-table `ChordBank` rework moved the
@@ -213,7 +211,7 @@ system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-af5eaeb0f5b0` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-94e84165ea2a` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a
 new image, wait for `wrangler containers list` to report `ready` before smoke
@@ -248,6 +246,7 @@ target.
 | July 26, 2026 (factory FM bank strip) | `83a78fad3ee8` | `rev-83a78fad3ee8` |
 | July 26, 2026 (schema 13, variable-length FM banks) | `0152d502f2f3` | `rev-0152d502f2f3` |
 | July 27, 2026 (field-guide FM-bank credits, manual contract 5) | `af5eaeb0f5b0` | `rev-af5eaeb0f5b0` |
+| July 27, 2026 (custom-bank naming in the bank map, manual contract 6) | `94e84165ea2a` | `rev-94e84165ea2a` |
 
 Three consequences a rollback has that a forward deploy does not:
 
