@@ -69,7 +69,9 @@ credits do render the same PDF. Anything the renderer starts printing must be
 added to the key. Bump `PLAITS_MANUAL_CONTRACT` when the renderer's layout
 changes — or when the key's inputs change, so cached PDFs re-render (contract 5
 covers the FM-bank credits, and the chord-table fold that fixed guides served
-from cache with another recipe's LIGHT 1 row).
+from cache with another recipe's LIGHT 1 row; contract 6 renames a customized
+six-op slot "Custom 6-Op FM Bank" in the bank map and the model reference,
+subtitled with the bank's own name).
 
 The contract is the Worker's alone, and in source (`a0c0791`) it rides in the
 `POST /manual` body as `manualContract` for the container to echo on

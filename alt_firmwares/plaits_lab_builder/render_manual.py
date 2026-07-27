@@ -171,6 +171,31 @@ def _escape(value: str) -> str:
     return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
+# Once a six-op FM slot carries a custom bank, the factory A/B/C letter is
+# meaningless to the player — the slot no longer plays those patches. So the
+# guide names it the way the editor does: "Custom 6-Op FM Bank", with the bank's
+# own name as the subtitle wherever there is room for one.
+CUSTOM_BANK_LABEL = "Custom 6-Op FM Bank"
+
+
+def display_name(engine_name: str, credit: dict[str, Any] | None) -> str:
+    return CUSTOM_BANK_LABEL if credit else engine_name
+
+
+def _clip(value: str, font: str, size: float, max_width: float) -> str:
+    """Trim a string to one line at the given font/size, ellipsizing if it can't
+    fit. The bank map's slot rows are a fixed height, so a long bank name has to
+    lose its tail rather than wrap into the row below."""
+    from reportlab.pdfbase.pdfmetrics import stringWidth
+
+    if stringWidth(value, font, size) <= max_width:
+        return value
+    clipped = value
+    while clipped and stringWidth(clipped + "…", font, size) > max_width:
+        clipped = clipped[:-1]
+    return (clipped.rstrip() + "…") if clipped else ""
+
+
 def render_pdf(document: dict[str, Any], output: Path) -> None:
     from reportlab.lib import colors
     from reportlab.lib.enums import TA_CENTER, TA_LEFT
@@ -326,19 +351,35 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         Paragraph("Bank map", section_style),
     ]
 
+    # A customized six-op slot prints its bank's name under the label, which
+    # needs a second line. Rows stay a uniform height across all three (or four)
+    # bank tables so slot N of one bank still lines up with slot N of the next.
+    subtitled = any(
+        entry["engine"] is not None and (entry["customBank"] or {}).get("name")
+        for entry in document["slots"]
+    )
+    slot_row_height = (0.35 if subtitled else 0.31) * inch
+
     bank_tables = []
     for bank_index, bank in enumerate(BANKS[:bank_count]):
         rows: list[list[Any]] = [[Paragraph(bank["name"], bank_name_style)]]
         for bank_slot in range(8):
             entry = document["slots"][bank_index * 8 + bank_slot]
             engine = entry["engine"]
+            credit = entry["customBank"]
             # Empty slots (v7 short banks or a v11 sparse-bank gap) have no
             # engine — show a muted dash at the slot's true position.
-            name_para = (
-                Paragraph(_escape(engine["name"]), bank_model_style)
-                if engine is not None
-                else Paragraph("—", small_muted_style)
-            )
+            if engine is None:
+                name_para = Paragraph("—", small_muted_style)
+            else:
+                label = _escape(display_name(engine["name"], credit))
+                subtitle = _escape(_clip((credit or {}).get("name", ""), "Helvetica", 6.4, 1.55 * inch))
+                name_para = Paragraph(
+                    f'{label}<br/><font face="Helvetica" size="6.4" color="#687069">{subtitle}</font>'
+                    if credit and subtitle
+                    else label,
+                    bank_model_style,
+                )
             rows.append([
                 Table(
                     [[Paragraph(f"{bank_slot + 1:02d}", small_muted_style), name_para]],
@@ -352,7 +393,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
                     ]),
                 )
             ])
-        bank_table = Table(rows, colWidths=[2.05 * inch], rowHeights=[0.26 * inch] + [0.31 * inch] * 8)
+        bank_table = Table(rows, colWidths=[2.05 * inch], rowHeights=[0.26 * inch] + [slot_row_height] * 8)
         bank_table.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(bank["color"])),
             ("BACKGROUND", (0, 1), (-1, -1), colors.white),
@@ -473,7 +514,10 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         locations = "  /  ".join(f"{item['bankName']} {item['number']}" for item in model["locations"])
         title = Table(
             [[
-                Paragraph(_escape(model["name"]), model_style),
+                # Titled the same way the bank map lists it, so a reader can
+                # look a customized slot up by the name the map gave it; the
+                # bank's own name/author/patch count follow in the credit row.
+                Paragraph(_escape(display_name(model["name"], model.get("customBank"))), model_style),
                 Paragraph(_escape(locations), location_style),
             ]],
             colWidths=[3.4 * inch, 2.9 * inch],
