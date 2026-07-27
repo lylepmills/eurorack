@@ -39,6 +39,11 @@ static uint64_t n_insn;
    ~14 cycles each on this FPU and are NOT pipelined. */
 static uint64_t n_div;
 static uint64_t n_sqrt;
+/* Float compares: VCMP + the VMRS that moves the flags into the core. Measured
+   on hardware (synthetic BRANCH workload) at ~15.5 cycles per instruction
+   against ~1-3 for everything else -- the costliest thing this core does. */
+static uint64_t n_vcmp;
+static uint64_t n_branch;
 static uint64_t n_read_flash;
 static uint64_t n_read_ram;
 static uint64_t n_write;
@@ -56,6 +61,16 @@ static void vcpu_div_exec(unsigned int cpu_index, void *udata)
 static void vcpu_sqrt_exec(unsigned int cpu_index, void *udata)
 {
     n_sqrt++;
+}
+
+static void vcpu_vcmp_exec(unsigned int cpu_index, void *udata)
+{
+    n_vcmp++;
+}
+
+static void vcpu_branch_exec(unsigned int cpu_index, void *udata)
+{
+    n_branch++;
 }
 
 static void vcpu_mem(unsigned int cpu_index, qemu_plugin_meminfo_t info,
@@ -87,6 +102,20 @@ static void vcpu_tb_trans(qemu_plugin_id_t id, struct qemu_plugin_tb *tb)
             } else if (strncmp(disas, "vsqrt", 5) == 0) {
                 qemu_plugin_register_vcpu_insn_exec_cb(insn, vcpu_sqrt_exec,
                                                        QEMU_PLUGIN_CB_NO_REGS, NULL);
+            } else if (strncmp(disas, "vcmp", 4) == 0 ||
+                       strncmp(disas, "vmrs", 4) == 0) {
+                qemu_plugin_register_vcpu_insn_exec_cb(insn, vcpu_vcmp_exec,
+                                                       QEMU_PLUGIN_CB_NO_REGS, NULL);
+            } else if (disas[0] == 'b' &&
+                       (disas[1] == ' ' || disas[1] == '.' ||
+                        strncmp(disas, "bne", 3) == 0 || strncmp(disas, "beq", 3) == 0 ||
+                        strncmp(disas, "bcc", 3) == 0 || strncmp(disas, "bcs", 3) == 0 ||
+                        strncmp(disas, "bgt", 3) == 0 || strncmp(disas, "bge", 3) == 0 ||
+                        strncmp(disas, "blt", 3) == 0 || strncmp(disas, "ble", 3) == 0 ||
+                        strncmp(disas, "bhi", 3) == 0 || strncmp(disas, "bls", 3) == 0 ||
+                        strncmp(disas, "bmi", 3) == 0 || strncmp(disas, "bpl", 3) == 0)) {
+                qemu_plugin_register_vcpu_insn_exec_cb(insn, vcpu_branch_exec,
+                                                       QEMU_PLUGIN_CB_NO_REGS, NULL);
             }
             g_free(disas);
         }
@@ -101,8 +130,8 @@ static void plugin_exit(qemu_plugin_id_t id, void *p)
     /* Machine-readable single line; the SDK parses this. */
     fprintf(stderr,
             "PLAITS_QEMU_COUNTS insns=%" PRIu64 " flash_reads=%" PRIu64
-            " ram_reads=%" PRIu64 " writes=%" PRIu64 " divs=%" PRIu64 " sqrts=%" PRIu64 "\n",
-            n_insn, n_read_flash, n_read_ram, n_write, n_div, n_sqrt);
+            " ram_reads=%" PRIu64 " writes=%" PRIu64 " divs=%" PRIu64 " sqrts=%" PRIu64 " vcmps=%" PRIu64 " branches=%" PRIu64 "\n",
+            n_insn, n_read_flash, n_read_ram, n_write, n_div, n_sqrt, n_vcmp, n_branch);
     fflush(stderr);
 }
 

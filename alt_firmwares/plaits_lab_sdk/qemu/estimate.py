@@ -64,7 +64,7 @@ SWEEP_POSITIONS = (
 
 COUNTS_RE = re.compile(
     r"PLAITS_QEMU_COUNTS insns=(\d+) flash_reads=(\d+) ram_reads=(\d+) writes=(\d+)"
-    r" divs=(\d+) sqrts=(\d+)"
+    r" divs=(\d+) sqrts=(\d+) vcmps=(\d+) branches=(\d+)"
 )
 
 
@@ -221,7 +221,9 @@ def main() -> int:
             d = [hi[i] - lo[i] for i in range(len(lo))]
             results.append({"position": name, "insns": d[0] / samples,
                             "flash": d[1] / samples, "ram": d[2] / samples,
-                            "writes": d[3] / samples})
+                            "writes": d[3] / samples,
+                            "divs": d[4] / samples, "sqrts": d[5] / samples,
+                            "vcmps": d[6] / samples, "branches": d[7] / samples})
             if not args.quiet:
                 print(f"  {name:10} {d[0]/samples:8.1f} instructions/sample")
 
@@ -231,7 +233,8 @@ def main() -> int:
 
     if args.quiet:
         print(f"RESULT worst={worst['position']} insns={worst['insns']:.1f} "
-              f"usage={100*est['usage']:.0f}%")
+              f"vcmps={worst['vcmps']:.1f} branches={worst['branches']:.1f} "
+              f"divs={worst['divs']:.2f} usage={100*est['usage']:.0f}%")
         return 0
 
     print(f"\nworst case: {worst['position']}  ({worst['insns']:.1f} instructions/sample)")
