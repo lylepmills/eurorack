@@ -255,7 +255,7 @@ class CpuProbe {
             // runs at block rate. Two consecutive readout cycles that show the
             // SAME value mean End has stopped updating this object.
             hz = 25.0f + static_cast<float>((blocks_ >> 12) & 2047u);
-          } else {
+          } else if (report_ == used + 5) {
             // Last block's TOTAL, absolute (same scale as report 0). Direct,
             // EMA-free anchor to compare against the smoothed total.
             const float budget_one = static_cast<float>(F_CPU) / kSampleRate;
@@ -263,6 +263,22 @@ class CpuProbe {
                 ? kCpuProbeFullScaleHz * static_cast<float>(raw_elapsed_)
                       / (12.0f * budget_one)
                 : 0.0f;
+          } else {
+            // LIVE value of the known-stomped address (0x20000814, the probe
+            // tail in the v3 layout), low then high halfword, each scaled to a
+            // tone. Whatever writes there now writes into a WATCHED window:
+            // when the reported value follows a knob or an input, the writer
+            // has identified itself. The stomped values decoded as small,
+            // slowly-decaying integers -- the bit pattern of DENORMAL FLOATS --
+            // so the prime suspect is someone's filter state living at these
+            // addresses through a wild or stale pointer.
+#if PLAITS_CPU_PROBE_HOST_TEST
+            const uint32_t hot = 0;
+#else
+            const uint32_t hot = *(volatile uint32_t*)0x20000814u;
+#endif
+            const uint32_t half = report_ == used + 6 ? (hot & 0xFFFFu) : (hot >> 16);
+            hz = 25.0f + static_cast<float>(half >> 4);
           }
           if (hz < 25.0f) hz = 25.0f;         // silence must stay distinguishable
           tone_increment = hz / kSampleRate;
@@ -325,7 +341,7 @@ class CpuProbe {
       for (int i = 0; i < kMaxSections; ++i) {
         if (section_used_[i]) ++reports;
       }
-      if (reports > 1) reports += 5;  // + ratio, violations, canary, cadence, last-block
+      if (reports > 1) reports += 7;  // + ratio, violations, canary, cadence, last-block, hot-word
       report_ = (report_ + 1) % reports;
       state_ = 0; state_samples_ = kSilence;
       phase_ = 0.0f;

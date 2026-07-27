@@ -171,13 +171,13 @@ int main() {
     }
     // Expected: 10 reports -- total, 4 sections, ratio, violations, canary,
     // cadence (20000 warmup blocks >> 12 = 4 -> 29 Hz), last-block absolute.
-    const double expect[10] = {800.0, 666.7, 200.0, 200.0, 200.0, 833.3,
-                               25.0, 25.0, 29.0, 800.0};
-    bool seen[10] = {false, false, false, false, false, false, false, false,
-                     false, false};
+    const double expect[12] = {800.0, 666.7, 200.0, 200.0, 200.0, 833.3,
+                               25.0, 25.0, 29.0, 800.0, 25.0, 25.0};
+    bool seen[12] = {false, false, false, false, false, false, false, false,
+                     false, false, false, false};
     for (size_t i = 0; i < beacon_counts.size(); ++i) {
       const int r = beacon_counts[i] - 1;
-      if (r < 0 || r > 9) {
+      if (r < 0 || r > 11) {
         CHECK(false, "beacon count out of range");
         continue;
       }
@@ -189,7 +189,7 @@ int main() {
         CHECK(false, "beacon tone mismatch");
       }
     }
-    for (int r = 0; r < 10; ++r) {
+    for (int r = 0; r < 12; ++r) {
       CHECK(seen[r], "every report appears in the cycle");
     }
   }
