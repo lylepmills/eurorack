@@ -70,19 +70,23 @@ added to the key. Bump `PLAITS_MANUAL_CONTRACT` when the renderer's layout
 changes — or when the key's inputs change, so cached PDFs re-render (contract 5
 covers the FM-bank credits, and the chord-table fold that fixed guides served
 from cache with another recipe's LIGHT 1 row).
-This checkpoint is NOT yet deployed: it needs a new container image AND
-Worker deploy. Because the firmware source also changed since the deployed
-`schema5-20260717` image (the chord-table `ChordBank` rework moved the
-`chords` engine digest), that rollout must bump `PLAITS_SOURCE_REVISION`,
-use a new immutable image tag, and land together with the website catalog
-re-sync (`rubato-audio/website/scripts/sync-plaits-catalog.mjs`).
+That checkpoint shipped in the July 19 rollout. It needed a new container image
+AND a Worker deploy, and because the firmware source had also changed since the
+deployed `schema5-20260717` image (the chord-table `ChordBank` rework moved the
+`chords` engine digest), it bumped `PLAITS_SOURCE_REVISION`, used a new
+immutable image tag, and landed with the website catalog re-sync
+(`rubato-audio/website/scripts/sync-plaits-catalog.mjs`).
 
-The custom-FM-bank credits (2026-07-26) need the same two halves: the renderer
-change ships in a container image, the key change in a Worker deploy. Deploy the
-Worker alone and every recipe re-keys to a manual the old image renders without
-credits; ship the image alone and cached PDFs keep their old (credit-free, and
-for chord tables possibly wrong) contents, since the key never moved. The
-firmware source is untouched, so `PLAITS_SOURCE_REVISION` does not move.
+The custom-FM-bank credits shipped the same way on July 27 (`rev-af5eaeb0f5b0`):
+the renderer in the container image, the key change in the Worker. Both halves
+are needed — deploy the Worker alone and every recipe re-keys to a manual the old
+image renders without credits; ship the image alone and cached PDFs keep their
+old (credit-free, and for chord tables possibly wrong) contents, since the key
+never moved. The field-guide change itself touches no firmware source; the
+revision moved because unrelated `plaits/` commits (the host-build runtime chord
+tables, the CPU probe) had landed on master since `rev-0152d502f2f3`. The
+catalog was unaffected: `catalog:check` and the website `--check` both confirmed
+byte-identical snapshots at the new revision, so no engine digest moved.
 
 The build key covers the normalized slots, preferences, starting options,
 ordered chord-table data (without `createdAt`), source revision, toolchain
@@ -118,20 +122,22 @@ the useful proof case because it combines all three built-in DX banks with all
 four Rubato engines, which the former stock/experimental compile switch could
 not express.
 
-Verified mixed-recipe output at source revision `720d1406e87b`:
+Verified mixed-recipe output at source revision `af5eaeb0f5b0`:
 
-- ARM text: 201,344 bytes
+- ARM text: 201,600 bytes
 - ARM data: 48 bytes
 - BSS: 27,824 bytes
-- Binary SHA-256: `695eb862b65b8ccea9a48cf4f91e77e9d527229e6620ede07057a5ce17c275e2`
-- WAV SHA-256: `ab63035b75a19293602a67901216d62a9640ef412cc7ee01b647ba12e91e4b66`
+- Binary SHA-256: `88a6ee83b578642a3bfdc9c66d97ef47010d1eed9476af064b682595656fb825`
+- WAV SHA-256: `b8f37dd9f4518e91ee6ae3245f9d46fdad2d3b75d4859305bd951c9f7048d7ef`
 
 Measured by submitting `mixed_build_request.json` to the image under test. The
-same request against the previous image (`rev-0e6e6f202307`) gives 201,296 text
-bytes, so this revision costs 48 bytes — the added suboscillator value and its
-decode. The 223,760 figure recorded here for that revision does not reproduce
-from this request and was measured some other way; treat these as reproducible
-only via the procedure above, per the note below.
+same request gave 201,344 / 48 / 27,824 at `720d1406e87b` (binary `695eb862…`,
+WAV `ab63035b…`) and 201,296 text bytes at `rev-0e6e6f202307` — so the aux
+output / suboscillator split cost 48 bytes, and the work since (variable-length
+FM banks, the host-build runtime chord tables, the CPU probe) another 256, with
+no BSS movement. The 223,760 figure once recorded for `rev-0e6e6f202307` does not
+reproduce from this request and was measured some other way; treat these as
+reproducible only via the procedure above, per the note below.
 
 These are revision-specific. The July 17 schema-5 figures (199,952 / 48 / 27,392,
 binary `564c2322…`, WAV `2e9a93cb…`) held at revision
@@ -191,8 +197,9 @@ system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-720d1406e87b` (immutable
-commit-derived tags replaced the date-based convention). After deploying a
+`plaits-lab-build-service-firmwarebuilder:rev-af5eaeb0f5b0` (immutable
+commit-derived tags replaced the date-based convention; the table below is the
+full history — keep this line in step with its last row). After deploying a
 new image, wait for `wrangler containers list` to report `ready` before smoke
 testing; requests made while the application was still `provisioning` reached
 the previous live instance during the schema-5 rollout.
@@ -224,6 +231,7 @@ target.
 | July 25, 2026 (aux output / subosc split) | `720d1406e87b` | `rev-720d1406e87b` |
 | July 26, 2026 (factory FM bank strip) | `83a78fad3ee8` | `rev-83a78fad3ee8` |
 | July 26, 2026 (schema 13, variable-length FM banks) | `0152d502f2f3` | `rev-0152d502f2f3` |
+| July 27, 2026 (field-guide FM-bank credits, manual contract 5) | `af5eaeb0f5b0` | `rev-af5eaeb0f5b0` |
 
 Three consequences a rollback has that a forward deploy does not:
 
