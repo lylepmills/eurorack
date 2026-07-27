@@ -81,6 +81,59 @@ static const int16_t chord_cents_[PLAITS_CHORD_COUNT][kChordNumNotes] =
 static const uint8_t chord_arp_lengths_[PLAITS_CHORD_COUNT] =
     PLAITS_CHORD_ARP_LENGTHS;
 
+#ifdef PLAITS_CHORD_RUNTIME_TABLE
+// Host builds only (the website's in-browser preview). A firmware build's chord
+// tables are compile-time constants — the hosted builder bakes them into the
+// generated configuration header — but the web editor must sound the table the
+// user is editing RIGHT NOW, which no compile-time constant can be. So under
+// this macro the four tables are read through pointers that START at the
+// compiled-in tables and can be repointed at caller-owned storage.
+//
+// The firmware never defines PLAITS_CHORD_RUNTIME_TABLE, so its build reads the
+// same static arrays through the same identifiers as before — the generated
+// code is unchanged (guarded by test/chord_bank_codegen_test.sh).
+static const uint8_t* runtime_table_offsets_ = chord_table_offsets_;
+static const uint8_t* runtime_table_sizes_ = chord_table_sizes_;
+static const int16_t (*runtime_chord_cents_)[kChordNumNotes] = chord_cents_;
+static const uint8_t* runtime_arp_lengths_ = chord_arp_lengths_;
+static int runtime_table_count_ = PLAITS_CHORD_TABLE_COUNT;
+
+void ChordBank::SetRuntimeTables(
+    const int16_t (*cents)[kChordNumNotes],
+    const uint8_t* arp_lengths,
+    const uint8_t* table_offsets,
+    const uint8_t* table_sizes,
+    int table_count) {
+  if (!cents || !arp_lengths || !table_offsets || !table_sizes ||
+      table_count <= 0) {
+    // Restore the compiled-in tables rather than leaving dangling pointers.
+    runtime_chord_cents_ = chord_cents_;
+    runtime_arp_lengths_ = chord_arp_lengths_;
+    runtime_table_offsets_ = chord_table_offsets_;
+    runtime_table_sizes_ = chord_table_sizes_;
+    runtime_table_count_ = PLAITS_CHORD_TABLE_COUNT;
+    return;
+  }
+  runtime_chord_cents_ = cents;
+  runtime_arp_lengths_ = arp_lengths;
+  runtime_table_offsets_ = table_offsets;
+  runtime_table_sizes_ = table_sizes;
+  runtime_table_count_ = table_count;
+}
+
+#define PLAITS_CHORD_CENTS_REF runtime_chord_cents_
+#define PLAITS_CHORD_ARP_LENGTHS_REF runtime_arp_lengths_
+#define PLAITS_CHORD_TABLE_OFFSETS_REF runtime_table_offsets_
+#define PLAITS_CHORD_TABLE_SIZES_REF runtime_table_sizes_
+#define PLAITS_CHORD_TABLE_COUNT_REF runtime_table_count_
+#else
+#define PLAITS_CHORD_CENTS_REF chord_cents_
+#define PLAITS_CHORD_ARP_LENGTHS_REF chord_arp_lengths_
+#define PLAITS_CHORD_TABLE_OFFSETS_REF chord_table_offsets_
+#define PLAITS_CHORD_TABLE_SIZES_REF chord_table_sizes_
+#define PLAITS_CHORD_TABLE_COUNT_REF PLAITS_CHORD_TABLE_COUNT
+#endif  // PLAITS_CHORD_RUNTIME_TABLE
+
 void ChordBank::Init(BufferAllocator* allocator) {
   (void) allocator;
   chord_set_option_ = 0xff;
@@ -92,22 +145,22 @@ void ChordBank::UpdateRatios(int chord_index) {
   chord_index_ = chord_index;
   for (int i = 0; i < kChordNumNotes; ++i) {
     ratios_[i] = SemitonesToRatio(
-        static_cast<float>(chord_cents_[chord_index][i]) * 0.01f);
+        static_cast<float>(PLAITS_CHORD_CENTS_REF[chord_index][i]) * 0.01f);
   }
-  num_notes_ = chord_arp_lengths_[chord_index];
+  num_notes_ = PLAITS_CHORD_ARP_LENGTHS_REF[chord_index];
 }
 
 void ChordBank::set_chord(float parameter, uint8_t chord_set_option) {
-  if (chord_set_option >= PLAITS_CHORD_TABLE_COUNT) {
+  if (chord_set_option >= PLAITS_CHORD_TABLE_COUNT_REF) {
     chord_set_option = 0;
   }
   if (chord_set_option_ != chord_set_option) {
     chord_set_option_ = chord_set_option;
     chord_index_quantizer_.Init(
-        chord_table_sizes_[chord_set_option_], 0.075f, false);
+        PLAITS_CHORD_TABLE_SIZES_REF[chord_set_option_], 0.075f, false);
   }
   chord_index_quantizer_.Process(parameter * 1.02f);
-  int chord_index = chord_table_offsets_[chord_set_option_] +
+  int chord_index = PLAITS_CHORD_TABLE_OFFSETS_REF[chord_set_option_] +
       chord_index_quantizer_.quantized_value();
   if (chord_index_ != chord_index) {
     UpdateRatios(chord_index);

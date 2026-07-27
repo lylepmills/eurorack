@@ -63,7 +63,27 @@ class ChordBank {
   }
   
   void set_chord(float parameter, uint8_t chord_set_option);
-  
+
+#ifdef PLAITS_CHORD_RUNTIME_TABLE
+  // Host builds only — see the long comment in chord_bank.cc. Repoints every
+  // ChordBank at caller-owned chord tables instead of the compiled-in ones, so
+  // a host (the website's in-browser preview) can sound a table the user is
+  // editing. `cents` holds `table_offsets[count - 1] + table_sizes[count - 1]`
+  // rows of four cent offsets; the caller owns all four arrays and must keep
+  // them alive for as long as any ChordBank is rendering. Passing a null
+  // pointer or a non-positive count restores the compiled-in tables.
+  //
+  // Call it BEFORE Init()/Reset() on the banks that should see it: a bank
+  // caches its resolved chord index, so a swap under a live instance is not
+  // picked up until the next index change.
+  static void SetRuntimeTables(
+      const int16_t (*cents)[kChordNumNotes],
+      const uint8_t* arp_lengths,
+      const uint8_t* table_offsets,
+      const uint8_t* table_sizes,
+      int table_count);
+#endif  // PLAITS_CHORD_RUNTIME_TABLE
+
   inline int chord_index() const {
     return chord_index_;
   }
