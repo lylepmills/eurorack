@@ -105,9 +105,36 @@ class CpuProbe {
     usage_ = 0.0f;
     phase_ = 0.0f;
     start_ = 0;
+    for (int i = 0; i < kMaxSections; ++i) {
+      section_used_[i] = false;
+      section_block_[i] = 0;
+      section_start_[i] = 0;
+      section_usage_[i] = 0.0f;
+    }
+    state_ = 0;
+    state_samples_ = 24000;
+    report_ = 0;
+    bursts_left_ = 0;
   }
 
   inline void Begin() { start_ = DWT->CYCCNT; }
+
+  // SECTIONS: bracket sub-parts of the render and read each one's cost
+  // separately. This exists because aggregate numbers kept supporting theories
+  // that were wrong -- seven consecutive explanations for one engine's 4x
+  // overrun were refuted. A per-section readout asks the chip WHERE the cycles
+  // go instead of asking the analyst why.
+  inline void SectionBegin(int index) {
+    if (index >= 0 && index < kMaxSections) {
+      section_start_[index] = DWT->CYCCNT;
+      section_used_[index] = true;
+    }
+  }
+  inline void SectionEnd(int index) {
+    if (index >= 0 && index < kMaxSections) {
+      section_block_[index] += DWT->CYCCNT - section_start_[index];
+    }
+  }
 
   inline void End(size_t size) {
     // Unsigned arithmetic wraps correctly, so a counter rollover mid-block
@@ -121,33 +148,129 @@ class CpuProbe {
     // rather than latch forever, so a single startup transient does not sit on
     // the readout for the rest of the session.
     usage_ = usage > usage_ ? usage : usage_ * 0.9995f + usage * 0.0005f;
+    for (int i = 0; i < kMaxSections; ++i) {
+      if (section_used_[i]) {
+        const float share = static_cast<float>(section_block_[i]) / budget;
+        section_usage_[i] = share > section_usage_[i]
+            ? share
+            : section_usage_[i] * 0.9995f + share * 0.0005f;
+      }
+      section_block_[i] = 0;
+    }
   }
 
   // Replaces AUX with the readout tone. Called AFTER End(), so the cost of
   // generating it is excluded from the measurement -- this measures the engine,
   // not the probe.
+  //
+  // With no sections in use, AUX is a continuous tone at usage * 1000 Hz.
+  // With sections, the readout time-multiplexes: for each report it emits
+  // silence, an IDENTITY BEACON of (report + 1) short bursts, then ~1.6 s of
+  // that report's tone. Report 0 is the whole render; the rest are the
+  // sections, in index order. The beacon is what makes a multiplexed reading
+  // decodable without trusting timing alone.
   void WriteReadout(Voice::Frame* frames, size_t size) {
-    const float increment = usage_ * kCpuProbeFullScaleHz / kSampleRate;
+    bool any_section = false;
+    for (int i = 0; i < kMaxSections; ++i) {
+      if (section_used_[i]) any_section = true;
+    }
     for (size_t i = 0; i < size; ++i) {
-      phase_ += increment;
-      if (phase_ >= 1.0f) {
-        phase_ -= 1.0f;
+      float tone_increment = 0.0f;
+      bool burst = false;
+      if (!any_section) {
+        tone_increment = usage_ * kCpuProbeFullScaleHz / kSampleRate;
+      } else {
+        if (state_samples_ == 0) NextReadoutState();
+        --state_samples_;
+        if (state_ == 1) {
+          burst = true;                       // beacon burst, fixed pitch
+        } else if (state_ == 3) {
+          float value = report_ == 0 ? usage_ : SectionValue(report_ - 1);
+          float hz = value * kCpuProbeFullScaleHz;
+          if (hz < 25.0f) hz = 25.0f;         // silence must stay distinguishable
+          tone_increment = hz / kSampleRate;
+        }
       }
-      frames[i].aux = phase_ < 0.5f ? 16000 : -16000;
+      if (burst) {
+        phase_ += 2400.0f / kSampleRate;
+        if (phase_ >= 1.0f) phase_ -= 1.0f;
+        frames[i].aux = phase_ < 0.5f ? 16000 : -16000;
+      } else if (tone_increment > 0.0f) {
+        phase_ += tone_increment;
+        if (phase_ >= 1.0f) phase_ -= 1.0f;
+        frames[i].aux = phase_ < 0.5f ? 16000 : -16000;
+      } else {
+        frames[i].aux = 0;
+      }
     }
   }
 
   inline float usage() const { return usage_; }
 
  private:
+  float SectionValue(int nth) {
+    int seen = 0;
+    for (int i = 0; i < kMaxSections; ++i) {
+      if (section_used_[i]) {
+        if (seen == nth) return section_usage_[i];
+        ++seen;
+      }
+    }
+    return 0.0f;
+  }
+
+  // states: 0 silence -> (1 burst -> 2 gap) x (report_+1) -> 3 tone -> next report
+  void NextReadoutState() {
+    const int kSilence = 19200;   // 0.4 s
+    const int kBurst = 3360;      // 70 ms
+    const int kGap = 3360;
+    const int kTone = 76800;      // 1.6 s
+    if (state_ == 0) {
+      bursts_left_ = report_ + 1;
+      state_ = 1; state_samples_ = kBurst;
+    } else if (state_ == 1) {
+      --bursts_left_;
+      state_ = 2; state_samples_ = kGap;
+    } else if (state_ == 2) {
+      if (bursts_left_ > 0) { state_ = 1; state_samples_ = kBurst; }
+      else { state_ = 3; state_samples_ = kTone; }
+    } else {
+      int reports = 1;
+      for (int i = 0; i < kMaxSections; ++i) {
+        if (section_used_[i]) ++reports;
+      }
+      report_ = (report_ + 1) % reports;
+      state_ = 0; state_samples_ = kSilence;
+      phase_ = 0.0f;
+    }
+  }
+
+ public:
+
+ private:
+  static const int kMaxSections = 6;
+
   uint32_t start_;
   float usage_;
   float phase_;
+  bool section_used_[kMaxSections];
+  uint32_t section_start_[kMaxSections];
+  uint32_t section_block_[kMaxSections];
+  float section_usage_[kMaxSections];
+  int state_;
+  int state_samples_;
+  int report_;
+  int bursts_left_;
 
   DISALLOW_COPY_AND_ASSIGN(CpuProbe);
 };
 
-#define PLAITS_CPU_PROBE_DECLARE plaits::CpuProbe cpu_probe;
+#define PLAITS_CPU_PROBE_DECLARE \
+  plaits::CpuProbe cpu_probe; \
+  extern "C" void plaits_cpu_probe_section(int index, int begin) { \
+    if (begin) { cpu_probe.SectionBegin(index); } \
+    else { cpu_probe.SectionEnd(index); } \
+  }
 #define PLAITS_CPU_PROBE_INIT cpu_probe.Init();
 #define PLAITS_CPU_PROBE_BEGIN cpu_probe.Begin();
 #define PLAITS_CPU_PROBE_END(size) cpu_probe.End(size);

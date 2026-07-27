@@ -41,6 +41,15 @@ using namespace plaits;
 #ifndef PLAITS_QEMU_NOTE
 #define PLAITS_QEMU_NOTE 48.0f
 #endif
+// Trigger STATE, not just level. On an unpatched module the voice hands engines
+// TRIGGER_UNPATCHED (voice.cc), and engines change behaviour on it -- drums
+// sustain, the string engine continuously excites its active voice. Passing 0
+// ("patched, low, never fired") measures an engine that has never sounded:
+// that mismatch made inharmonic-string count 510 instructions under emulation
+// while executing ~4x that on hardware.
+#ifndef PLAITS_QEMU_TRIGGER
+#define PLAITS_QEMU_TRIGGER 2
+#endif
 
 // Semihosting: the only way out of a bare-metal guest. bkpt 0xAB is the ARM
 // convention; QEMU implements it when started with -semihosting-config.
@@ -63,7 +72,7 @@ int main() {
   engine.Init(&allocator);
 
   EngineParameters p;
-  p.trigger = 0;
+  p.trigger = PLAITS_QEMU_TRIGGER;
   p.note = PLAITS_QEMU_NOTE;
   p.timbre = PLAITS_QEMU_TIMBRE;
   p.morph = 0.5f;

@@ -111,6 +111,10 @@ def main() -> int:
     parser.add_argument("--macro", type=float, default=0.5)
     parser.add_argument("--timbre", type=float, default=0.5)
     parser.add_argument("--note", type=float, default=48.0)
+    # unpatched = TRIGGER_UNPATCHED (2), the state an engine sees on a module
+    # with nothing in TRIG -- the calibration condition. patched-idle = 0.
+    parser.add_argument("--trigger", choices=("unpatched", "patched-idle"),
+                        default="unpatched")
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--sweep", action="store_true",
         help="measure several parameter positions and report the worst")
@@ -190,7 +194,8 @@ def main() -> int:
                      f"-DPLAITS_QEMU_HARMONICS={harm}f",
                      f"-DPLAITS_QEMU_MACRO={macro}f",
                      f"-DPLAITS_QEMU_TIMBRE={timb}f",
-                     f"-DPLAITS_QEMU_NOTE={note}f"],
+                     f"-DPLAITS_QEMU_NOTE={note}f",
+                     f"-DPLAITS_QEMU_TRIGGER={2 if args.trigger == 'unpatched' else 0}"],
                     f"/output/h_{name}_{label}.elf", args.image, [])))
         docker = [
             "docker", "run", "--rm", "--platform", "linux/amd64",

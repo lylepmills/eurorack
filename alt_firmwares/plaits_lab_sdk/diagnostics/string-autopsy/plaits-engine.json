@@ -1,0 +1,61 @@
+{
+ "schemaVersion": 1,
+ "sdk": "plaits-engine-cpp-v1",
+ "packageType": "community",
+ "id": "rubato-audio/string-autopsy",
+ "catalogId": "string-autopsy",
+ "version": "0.1.0",
+ "name": "String Autopsy",
+ "author": "Rubato Audio",
+ "origin": "Community",
+ "license": "MIT",
+ "description": "Diagnostic copy of the inharmonic-string engine with per-section cycle bracketing. Not a musical model: it exists to localize an unexplained 4x cost overrun measured on hardware.",
+ "family": "Experimental",
+ "tags": [
+  "community",
+  "experimental"
+ ],
+ "controls": [
+  {
+   "id": "harmonics",
+   "label": "Harmonics",
+   "description": "Controls the model's harmonics dimension."
+  },
+  {
+   "id": "timbre",
+   "label": "Timbre",
+   "description": "Controls the model's timbre dimension."
+  },
+  {
+   "id": "morph",
+   "label": "Morph",
+   "description": "Controls the model's morph dimension."
+  },
+  {
+   "id": "macro",
+   "label": "Macro",
+   "description": "Controls the model's macro dimension."
+  }
+ ],
+ "outputs": {
+  "main": "Primary model output",
+  "aux": "Alternate model output"
+ },
+ "source": {
+  "root": "src",
+  "header": "string_autopsy_engine.h",
+  "files": [
+   "string_autopsy_engine.cc"
+  ],
+  "className": "StringAutopsyEngine"
+ },
+ "postProcessing": {
+  "alreadyEnveloped": true,
+  "outGain": -1.0,
+  "auxGain": 0.8
+ },
+ "scenarios": "tests/scenarios.json",
+ "sharedModules": [
+  "physical-string"
+ ]
+}

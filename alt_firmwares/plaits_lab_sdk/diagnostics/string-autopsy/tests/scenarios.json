@@ -1,0 +1,52 @@
+[
+  {
+    "id": "hero",
+    "name": "Main control sweep",
+    "durationSeconds": 4,
+    "note": 48,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [
+        0.15,
+        0.85
+      ],
+      "timbre": [
+        0.2,
+        0.8
+      ],
+      "morph": [
+        0.1,
+        0.9
+      ],
+      "macro": [
+        0.0,
+        1.0
+      ]
+    }
+  },
+  {
+    "id": "triggered",
+    "name": "Triggered extremes",
+    "durationSeconds": 3,
+    "note": 60,
+    "triggerHz": 4,
+    "controls": {
+      "harmonics": [
+        0.0,
+        1.0
+      ],
+      "timbre": [
+        0.0,
+        1.0
+      ],
+      "morph": [
+        0.0,
+        1.0
+      ],
+      "macro": [
+        0.0,
+        1.0
+      ]
+    }
+  }
+]
