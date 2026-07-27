@@ -6,7 +6,9 @@ Rubato, and audition model is represented in the same authoritative package
 catalog; community packages use the same controls, outputs, scenarios, and
 content-addressed version model.
 
-Run commands from the eurorack repository root:
+Run commands from the eurorack repository root. On Windows use `python` rather
+than `python3` — a stock python.org install provides `python` and `py`, while
+`python3.exe` exists only as a Microsoft Store alias stub that errors out:
 
 ```sh
 SDK="python3 alt_firmwares/plaits_lab_sdk/plaits_lab.py"
