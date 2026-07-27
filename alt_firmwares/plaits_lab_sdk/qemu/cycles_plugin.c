@@ -24,6 +24,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <qemu-plugin.h>
 
@@ -33,6 +34,11 @@ QEMU_PLUGIN_EXPORT int qemu_plugin_version = QEMU_PLUGIN_VERSION;
 #define RAM_BASE 0x20000000ULL
 
 static uint64_t n_insn;
+/* Instructions QEMU counts as one but the hardware pays many cycles for, and
+   which are therefore invisible to a pure instruction count: VDIV and VSQRT are
+   ~14 cycles each on this FPU and are NOT pipelined. */
+static uint64_t n_div;
+static uint64_t n_sqrt;
 static uint64_t n_read_flash;
 static uint64_t n_read_ram;
 static uint64_t n_write;
@@ -40,6 +46,16 @@ static uint64_t n_write;
 static void vcpu_insn_exec(unsigned int cpu_index, void *udata)
 {
     n_insn++;
+}
+
+static void vcpu_div_exec(unsigned int cpu_index, void *udata)
+{
+    n_div++;
+}
+
+static void vcpu_sqrt_exec(unsigned int cpu_index, void *udata)
+{
+    n_sqrt++;
 }
 
 static void vcpu_mem(unsigned int cpu_index, qemu_plugin_meminfo_t info,
@@ -61,6 +77,19 @@ static void vcpu_tb_trans(qemu_plugin_id_t id, struct qemu_plugin_tb *tb)
         struct qemu_plugin_insn *insn = qemu_plugin_tb_get_insn(tb, i);
         qemu_plugin_register_vcpu_insn_exec_cb(insn, vcpu_insn_exec,
                                                QEMU_PLUGIN_CB_NO_REGS, NULL);
+        /* Classify at TRANSLATION time -- once per instruction, not per
+           execution -- so the extra counters cost nothing at run time. */
+        char *disas = qemu_plugin_insn_disas(insn);
+        if (disas) {
+            if (strncmp(disas, "vdiv", 4) == 0) {
+                qemu_plugin_register_vcpu_insn_exec_cb(insn, vcpu_div_exec,
+                                                       QEMU_PLUGIN_CB_NO_REGS, NULL);
+            } else if (strncmp(disas, "vsqrt", 5) == 0) {
+                qemu_plugin_register_vcpu_insn_exec_cb(insn, vcpu_sqrt_exec,
+                                                       QEMU_PLUGIN_CB_NO_REGS, NULL);
+            }
+            g_free(disas);
+        }
         qemu_plugin_register_vcpu_mem_cb(insn, vcpu_mem,
                                          QEMU_PLUGIN_CB_NO_REGS,
                                          QEMU_PLUGIN_MEM_RW, NULL);
@@ -72,8 +101,8 @@ static void plugin_exit(qemu_plugin_id_t id, void *p)
     /* Machine-readable single line; the SDK parses this. */
     fprintf(stderr,
             "PLAITS_QEMU_COUNTS insns=%" PRIu64 " flash_reads=%" PRIu64
-            " ram_reads=%" PRIu64 " writes=%" PRIu64 "\n",
-            n_insn, n_read_flash, n_read_ram, n_write);
+            " ram_reads=%" PRIu64 " writes=%" PRIu64 " divs=%" PRIu64 " sqrts=%" PRIu64 "\n",
+            n_insn, n_read_flash, n_read_ram, n_write, n_div, n_sqrt);
     fflush(stderr);
 }
 

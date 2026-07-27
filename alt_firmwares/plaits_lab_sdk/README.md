@@ -92,41 +92,70 @@ $SDK check ./$PKG/my-engine --full --arm
 
 ### Will it run in real time?
 
-The module gives you roughly **1500 CPU cycles per sample** (72 MHz ÷ 48 kHz) —
-and that budget covers everything, not just your engine: the low-pass gate, the
-output stage, the UI and the ADCs all come out of it. Overrun it and the audio
-callback can't finish a block in time, so the output glitches and distorts and
-the starved UI loop stops refreshing the LEDs.
+The audio callback gets roughly **1500 CPU cycles per sample** (72 MHz ÷ 48 kHz),
+and that covers everything — the low-pass gate, the output stage, the UI and the
+ADCs, not just your engine. Overrun it and the callback cannot finish a block in
+time: the output glitches and the starved UI stops refreshing the LEDs.
 
-Your development machine is far faster than a 72 MHz Cortex-M4, so "it renders
-much faster than real time here" proves nothing — an engine several times over
-the hardware budget still looks comfortable on a laptop. What does carry over is
-a **ratio**: `check --full` times your engine and a stock engine using the same
-harness and the same flags, so the machine cancels out.
+Three tools, in increasing order of authority.
 
-The reference is **two-op-fm, the heaviest stock engine** (picked by timing all
-of them). That makes it a known-good ceiling rather than an arbitrary yardstick:
-Mutable ships it, so the module demonstrably has room for it.
+**1. `check --full` — a smoke test, and only that.** It times your engine against
+a stock one on *this machine*. A development machine's memory system and pipeline
+differ in kind from a 72 MHz Cortex-M4, so this catches only pathologically
+expensive engines. It once reported "0.6× a stock engine" for an engine that ran
+at **281%** of the hardware budget. Treat a clean result here as meaning nothing
+much.
+
+**2. `qemu/estimate.py <package> --sweep` — a calibrated estimate.** Runs your
+engine on an emulated Cortex-M4, counts what it actually executes, and converts
+that to cycles with a model fitted to sixteen real shipping engines measured on
+real hardware:
 
 ```
-✓ CPU cost: 58.2 ns/sample vs 95.6 for stock two-op-fm — 0.6x
-⚠ CPU cost: 130.4 ns/sample vs 95.6 for stock two-op-fm — 1.4x
-✗ CPU cost: 216.2 ns/sample vs 95.6 for stock two-op-fm — 2.3x
+worst case: harm-high  (312.4 instructions/sample)
+  cost varies 1.42x across the parameter space
+
+OK: approximately 61% of the CPU budget (likely 52-77%) -- expected to fit
 ```
 
-At or under the reference you are provably fine — you cost no more than an
-engine that already ships. Above it you are heavier than anything Mutable
-shipped: it may still fit, but only hardware can tell you. At 2× the check
-fails; that is the measured point at which a real engine overran the module.
+It reports a **band**, not a number, and it sweeps parameter positions and
+reports the **worst** — because an engine can pass at one knob position and
+glitch at another.
 
-**The usual cause is per-sample work that only needs doing per block.** Anything
-depending solely on the parameters — envelopes, filter coefficients, per-voice
-gains and frequencies, and above all every `exp`/`log`/`pow` — belongs above the
-per-sample loop, leaving it just the oscillator. Stock engines are written this
-way, and it is routinely the difference between 8× over budget and comfortably
-inside it: a 24-voice engine that computed a power and two exponentials per
-voice *per sample* got 3.7× cheaper, with bit-identical output, purely by
-hoisting that work to once per block.
+Accuracy, measured by predicting each calibration engine from a fit that excludes
+it (`python3 qemu/cost_model.py`): **mean error 14%, 14 of 15 within 30%.**
+
+And the part worth reading twice: **1 engine in 16 costs several times its
+estimate**, for reasons that are invisible to instruction counting in principle
+— five separate explanations were tested against that engine and all five were
+refuted. A clean estimate is not proof.
+
+**3. `build --hardware --cpu-probe` — the measurement.** The Cortex-M4's own
+cycle counter wrapped around the real render call, in the real audio interrupt.
+The eight LEDs become a meter (one per eighth of budget, amber near the limit,
+blinking red once over), and AUX carries a square wave whose *frequency* is the
+answer — 1000 Hz means the whole budget, 600 Hz means 60%. Frequency rather than
+a voltage so the reading survives any gain or coupling between the module and
+whatever measures it. MAIN keeps your audio, so you can listen while measuring.
+
+**Hardware is the authority.** Publication requires a probe measurement; the
+estimate is a pre-flight check, not a substitute.
+
+### Making an engine cheaper
+
+Measured on this core, the things that cost far more than they look:
+
+- **Float comparisons** — `VCMP` plus `VMRS` to move flags into the core stalls
+  the pipeline. A `while (x > 0.001f)` loop is dearer than it looks.
+- **Dependent arithmetic chains** — a serial `sum += ...` across many voices
+  makes every add wait on the previous one. Split it into several partial
+  accumulators and the scheduler can interleave them.
+- **Per-sample work that could be per-block** — envelopes, filter coefficients,
+  per-voice gains and frequencies, and every `exp`/`log`/`pow`.
+
+And one that does *not*: **table lookups are cheap here** — the cheapest thing
+measured, around 1 cycle per instruction. Replacing a LUT with polynomial
+arithmetic to "avoid memory" made an engine slower, not faster.
 
 The contributor center uploads that bundle as a private draft. Publication is
 an explicit sequence: `draft → in-review → checks-passed → hardware-beta →

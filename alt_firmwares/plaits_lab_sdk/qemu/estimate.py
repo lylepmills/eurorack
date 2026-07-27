@@ -51,8 +51,20 @@ ARCH_FLAGS = [
     "--specs=nano.specs", "--specs=nosys.specs", "-fno-use-cxa-atexit",
 ]
 
+# An engine's cost can depend on its parameters, so one sample of the space can
+# miss the case that actually breaks. These positions cover the corners plus the
+# centre; the estimate reports the WORST, because the worst is what glitches.
+SWEEP_POSITIONS = (
+    ("centre",    0.5, 0.5, 0.5, 48.0),
+    ("low",       0.05, 0.05, 0.05, 36.0),
+    ("high",      0.95, 0.95, 0.95, 72.0),
+    ("harm-high", 0.95, 0.5, 0.5, 48.0),
+    ("timbre-hi", 0.5, 0.95, 0.5, 60.0),
+)
+
 COUNTS_RE = re.compile(
     r"PLAITS_QEMU_COUNTS insns=(\d+) flash_reads=(\d+) ram_reads=(\d+) writes=(\d+)"
+    r" divs=(\d+) sqrts=(\d+)"
 )
 
 
@@ -100,6 +112,8 @@ def main() -> int:
     parser.add_argument("--timbre", type=float, default=0.5)
     parser.add_argument("--note", type=float, default=48.0)
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--sweep", action="store_true",
+        help="measure several parameter positions and report the worst")
     parser.add_argument("--keep", action="store_true")
     args = parser.parse_args()
 
@@ -145,73 +159,83 @@ def main() -> int:
         header_define = plaits_lab.engine_header_define(package)
     src_root = Path(package["source_root"])
 
+    from cost_model import CostModel
+    model = CostModel()
+
+    positions = SWEEP_POSITIONS if args.sweep else (
+        ("as-given", args.harmonics, args.timbre, args.macro, args.note),
+    )
+
     with tempfile.TemporaryDirectory(prefix="plaits-qemu-") as temp:
         out_dir = Path(temp)
-        counts = {}
-        for label, blocks in (("a", args.blocks_a), ("b", args.blocks_b)):
-            mapped = []
-            for unit in units:
-                p = Path(unit)
-                if p.is_relative_to(REPO_ROOT):
-                    mapped.append(f"/workspace/{p.relative_to(REPO_ROOT)}")
-                else:
-                    mapped.append(f"/contributor/{p.relative_to(src_root.parent)}")
-            cmd = container_compile(
-                mapped,
-                ["/workspace", "/contributor/src", "/qemu"],
-                [f'-DPLAITS_LAB_ENGINE_HEADER="{header_define}"',
-                 f'-DPLAITS_LAB_ENGINE_CLASS=plaits::{package["manifest"]["source"]["className"]}',
-                 f"-DPLAITS_QEMU_BLOCKS={blocks}",
-                 f"-DPLAITS_QEMU_HARMONICS={args.harmonics}f",
-                 f"-DPLAITS_QEMU_MACRO={args.macro}f",
-                 f"-DPLAITS_QEMU_TIMBRE={args.timbre}f",
-                 f"-DPLAITS_QEMU_NOTE={args.note}f"],
-                f"/output/harness_{label}.elf", args.image, [],
-            )
-            # The builder image's ENTRYPOINT is its build server, so it has to
-            # be overridden to run the toolchain directly -- otherwise the
-            # container sits waiting for a request that never comes.
-            docker = [
-                "docker", "run", "--rm", "--platform", "linux/amd64",
-                "--entrypoint", "sh",
-                "-v", f"{REPO_ROOT}:/workspace:ro",
-                "-v", f"{src_root.parent}:/contributor:ro",
-                "-v", f"{QEMU_DIR}:/qemu:ro",
-                "-v", f"{out_dir}:/output",
-                "-w", "/workspace",
-                # shlex.quote: the header define carries embedded quotes that a bare
-                # join would hand to the shell to strip.
-                args.image, "-c", " ".join(shlex.quote(c) for c in cmd),
-            ]
-            if not args.quiet: print(f"building harness ({blocks} blocks)...")
-            r = subprocess.run(docker, text=True, capture_output=True, check=False)
-            if r.returncode:
-                raise SystemExit(f"harness build failed\n{(r.stderr or r.stdout)[-4000:]}")
-            if not args.quiet: print(f"running under QEMU ({blocks} blocks)...")
-            counts[label] = run_qemu(out_dir / f"harness_{label}.elf", plugin)
+        mapped = []
+        for unit in units:
+            q = Path(unit)
+            if q.is_relative_to(REPO_ROOT):
+                mapped.append(f"/workspace/{q.relative_to(REPO_ROOT)}")
+            else:
+                mapped.append(f"/contributor/{q.relative_to(src_root.parent)}")
 
-    d_insn, d_flash, d_ram, d_write = (
-        counts["b"][i] - counts["a"][i] for i in range(4)
-    )
-    samples = (args.blocks_b - args.blocks_a) * BLOCK_SIZE
-    per = lambda v: v / samples
+        # One docker invocation builds every ELF. Under amd64 emulation the
+        # container start dominates, so batching turns a 5x sweep into roughly
+        # the cost of a single run.
+        commands = []
+        for name, harm, timb, macro, note in positions:
+            for label, blocks in (("a", args.blocks_a), ("b", args.blocks_b)):
+                commands.append(" ".join(shlex.quote(c) for c in container_compile(
+                    mapped, ["/workspace", "/contributor/src", "/qemu"],
+                    [f'-DPLAITS_LAB_ENGINE_HEADER="{header_define}"',
+                     f"-DPLAITS_LAB_ENGINE_CLASS=plaits::{package['manifest']['source']['className']}",
+                     f"-DPLAITS_QEMU_BLOCKS={blocks}",
+                     f"-DPLAITS_QEMU_HARMONICS={harm}f",
+                     f"-DPLAITS_QEMU_MACRO={macro}f",
+                     f"-DPLAITS_QEMU_TIMBRE={timb}f",
+                     f"-DPLAITS_QEMU_NOTE={note}f"],
+                    f"/output/h_{name}_{label}.elf", args.image, [])))
+        docker = [
+            "docker", "run", "--rm", "--platform", "linux/amd64",
+            "--entrypoint", "sh",
+            "-v", f"{REPO_ROOT}:/workspace:ro",
+            "-v", f"{src_root.parent}:/contributor:ro",
+            "-v", f"{QEMU_DIR}:/qemu:ro",
+            "-v", f"{out_dir}:/output",
+            "-w", "/workspace",
+            args.image, "-c", " && ".join(commands),
+        ]
+        if not args.quiet:
+            print(f"building {len(commands)} harnesses ({len(positions)} positions)...")
+        r = subprocess.run(docker, text=True, capture_output=True, check=False)
+        if r.returncode:
+            raise SystemExit(f"harness build failed\n{(r.stderr or r.stdout)[-4000:]}")
 
-    cycles = (COST_INSN * per(d_insn) + COST_FLASH_READ * per(d_flash)
-              + COST_RAM_READ * per(d_ram))
-    usage = cycles / BUDGET_CYCLES_PER_SAMPLE
+        results = []
+        samples = (args.blocks_b - args.blocks_a) * BLOCK_SIZE
+        for name, harm, timb, macro, note in positions:
+            lo = run_qemu(out_dir / f"h_{name}_a.elf", plugin)
+            hi = run_qemu(out_dir / f"h_{name}_b.elf", plugin)
+            d = [hi[i] - lo[i] for i in range(len(lo))]
+            results.append({"position": name, "insns": d[0] / samples,
+                            "flash": d[1] / samples, "ram": d[2] / samples,
+                            "writes": d[3] / samples})
+            if not args.quiet:
+                print(f"  {name:10} {d[0]/samples:8.1f} instructions/sample")
+
+    worst = max(results, key=lambda r: r["insns"])
+    est = model.estimate(worst["insns"])
+    symbol, sentence = model.verdict(worst["insns"])
 
     if args.quiet:
-        print(f"RESULT note={args.note} harmonics={args.harmonics} macro={args.macro} "
-              f"insns={per(d_insn):.1f} flash={per(d_flash):.1f} "
-              f"ram={per(d_ram):.1f} writes={per(d_write):.1f}")
+        print(f"RESULT worst={worst['position']} insns={worst['insns']:.1f} "
+              f"usage={100*est['usage']:.0f}%")
         return 0
-    print(f"\nper sample, marginal (startup and Init subtracted out):")
-    print(f"  instructions      {per(d_insn):8.1f}")
-    print(f"  flash reads       {per(d_flash):8.1f}   <- the cost a host timing cannot see")
-    print(f"  ram reads         {per(d_ram):8.1f}")
-    print(f"  writes            {per(d_write):8.1f}")
-    print(f"\nestimated {cycles:.0f} cycles/sample = {100*usage:.0f}% of the "
-          f"{BUDGET_CYCLES_PER_SAMPLE:.0f}-cycle budget")
+
+    print(f"\nworst case: {worst['position']}  ({worst['insns']:.1f} instructions/sample)")
+    if len(results) > 1:
+        spread = worst["insns"] / min(r["insns"] for r in results)
+        print(f"  cost varies {spread:.2f}x across the parameter space")
+    print(f"\n{symbol}: approximately {100*est['usage']:.0f}% of the CPU budget "
+          f"(likely {100*est['usage_low']:.0f}-{100*est['usage_high']:.0f}%) -- {sentence}")
+    print(f"\n{model.outlier_note()}")
     return 0
 
 

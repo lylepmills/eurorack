@@ -190,6 +190,47 @@ class PackageTests(unittest.TestCase):
         plaits_lab.arm_compile_check(
             package, SimpleNamespace(toolchain="/nonexistent", docker_image="x", native=False))
 
+    def test_cost_model_validates_against_held_out_engines(self) -> None:
+        # The guard that matters. A model reproducing its own fit inputs proves
+        # nothing; this predicts each engine from a fit that EXCLUDES it, which
+        # is what makes a wrong model visible instead of self-confirming.
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "cost_model", Path(plaits_lab.__file__).parent / "qemu/cost_model.py")
+        cost_model = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cost_model)
+
+        rows = cost_model.leave_one_out()
+        ordinary = [abs(r["error_pct"]) for r in rows if not r["outlier"]]
+        self.assertGreaterEqual(len(ordinary), 12)
+        mean_error = sum(ordinary) / len(ordinary)
+        # Held-out accuracy, measured: mean ~14%, worst ~30%. Loosened slightly
+        # so re-measuring does not fail the suite, but tight enough that a model
+        # regression does.
+        self.assertLess(mean_error, 20.0, f"held-out mean error regressed to {mean_error:.1f}%")
+        self.assertTrue(all(e < 45.0 for e in ordinary), "an ordinary engine mispredicted badly")
+
+        model = cost_model.CostModel()
+        self.assertGreater(model.k_mid, 2.0)
+        self.assertLess(model.k_mid, 5.0)
+        self.assertLess(model.k_low, model.k_high)
+        # The estimate must never read as certainty.
+        self.assertIn("hardware", model.outlier_note().lower())
+
+    def test_cost_model_verdict_is_conservative(self) -> None:
+        # An engine is only called OK when the TOP of its band fits: being wrong
+        # optimistically is what ships something broken.
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "cost_model", Path(plaits_lab.__file__).parent / "qemu/cost_model.py")
+        cost_model = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cost_model)
+        model = cost_model.CostModel()
+        self.assertEqual(model.verdict(100)[0], "OK")     # ~10% of budget
+        self.assertEqual(model.verdict(1000)[0], "FAIL")  # ~200% of budget
+        borderline = model.verdict(460)[0]                # modal-resonator, ~86% measured
+        self.assertIn(borderline, ("WARN", "FAIL"))
+
     def test_cpu_probe_build_is_opt_in_and_off_by_default(self) -> None:
         # The probe measures Voice::Render with the Cortex-M4 cycle counter and
         # takes over AUX for its readout, so it must never appear unasked.
@@ -253,7 +294,10 @@ class PackageTests(unittest.TestCase):
                 {"reference": "two-op-fm", "packageNs": 130.0, "referenceNs": 96.0, "ratio": 1.35})
         rendered = out.getvalue()
         self.assertIn("⚠ CPU cost", rendered)
-        self.assertIn("verify on hardware", rendered)
+        # The caveat is the point: a host timing must never read as a hardware
+        # verdict, so it always names the estimator and the on-module probe.
+        self.assertIn("does NOT predict hardware cost", rendered)
+        self.assertIn("--cpu-probe", rendered)
 
     def test_cpu_check_passes_below_the_heaviest_stock_engine(self) -> None:
         # Cheaper than an engine Mutable ships => the module provably has room.

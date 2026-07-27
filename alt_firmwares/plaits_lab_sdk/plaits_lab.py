@@ -671,6 +671,20 @@ def cpu_reference_ratio(
     }
 
 
+# What a host timing can and cannot tell you. Stated at every opportunity
+# because the earlier version of this check reported "0.6x a stock engine" for
+# an engine that ran at 281% of the hardware budget -- a reassuring number is
+# worse than no number.
+_CPU_HOST_CAVEAT = (
+    "A host timing does NOT predict hardware cost: this machine's memory system\n"
+    "  and pipeline differ in kind from a 72 MHz Cortex-M4. This catches only\n"
+    "  pathologically expensive engines. For a real estimate run\n"
+    "    qemu/estimate.py <package> --sweep\n"
+    "  and before publishing, measure on the module itself:\n"
+    "    build --hardware --cpu-probe   (reads out on AUX and the LEDs)"
+)
+
+
 def report_cpu_reference_ratio(cost: dict[str, Any] | None) -> None:
     """Print the CPU verdict; raise when an engine cannot plausibly fit."""
     if cost is None:
@@ -695,12 +709,12 @@ def report_cpu_reference_ratio(cost: dict[str, Any] | None) -> None:
     if ratio > CPU_RATIO_WARN:
         print(f"⚠ CPU cost: {detail}")
         print(
-            "  Heavier than any stock engine. It may still fit, but nothing on the host\n"
-            "  can prove that — verify on hardware, and check for per-sample work that\n"
-            "  could be hoisted to per-block."
+            "  Heavier than any stock engine measured on this host.\n"
+            "  " + _CPU_HOST_CAVEAT
         )
     else:
-        print(f"✓ CPU cost: {detail}")
+        print(f"✓ CPU cost (host smoke test only): {detail}")
+        print("  " + _CPU_HOST_CAVEAT)
 
 
 def compile_renderer(
@@ -1045,6 +1059,10 @@ def check_command(args: argparse.Namespace) -> int:
         if args.full:
             print("✓ sanitizer execution and audio health")
             report_cpu_reference_ratio(cpu_cost)
+            print("\n  CPU: hardware is the authority. `check` cannot measure it;\n"
+                  "  qemu/estimate.py --sweep estimates it with a stated error band,\n"
+                  "  and --cpu-probe measures it for real. Publication requires the\n"
+                  "  hardware measurement.")
         if args.full and not args.arm:
             print("  tip: add --arm to also compile against the hardware (ARM) toolchain")
     if args.arm:

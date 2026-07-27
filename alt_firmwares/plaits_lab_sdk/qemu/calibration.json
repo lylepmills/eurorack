@@ -1,0 +1,53 @@
+{
+  "_comment": [
+    "Paired measurements used to calibrate and validate the CPU estimate.",
+    "",
+    "cycles: measured ON HARDWARE with plaits/cpu_probe.h (DWT cycle counter,",
+    "inside the real audio interrupt), read off the AUX tone of a --stock-bench",
+    "firmware while stepping the model knob through all sixteen engines.",
+    "",
+    "counts: measured under QEMU's mps2-an386 (Cortex-M4) with the TCG plugin in",
+    "cycles_plugin.c, built by the same arm-4.8.3 toolchain as the firmware.",
+    "",
+    "Conditions: HARMONICS/TIMBRE/MORPH/FREQUENCY at centre, nothing patched.",
+    "The percussion engines therefore run in sustain mode (trigger unpatched),",
+    "which is their full-cost path -- their render is unconditional, with no",
+    "early-out when idle.",
+    "",
+    "These are REAL engines on purpose. An earlier attempt calibrated on",
+    "synthetic workloads that each did one thing exclusively; those spread",
+    "cycles-per-instruction 1.01 to 15.54 and predicted nothing, because real",
+    "engines are mixtures and mixtures average. Measured on real engines the",
+    "spread is 1.75x.",
+    "",
+    "inharmonic-string is a genuine outlier at 11.9 cycles/instruction. Pitch,",
+    "memory traffic, denormals, state build-up and divide count were each tested",
+    "and each refuted. It is retained rather than dropped: it is the evidence",
+    "that a static estimate can be badly wrong, and the basis for the failure",
+    "rate the estimate reports."
+  ],
+  "budget_cycles_per_sample": 1500,
+  "engines": [
+    {"id": "two-op-fm",         "insns": 391.3, "flash": 43.3, "ram": 14.8, "writes": 16.4, "divs": 0.33, "cycles": 1110},
+    {"id": "particle-noise",    "insns": 452.1, "flash": 18.2, "ram": 69.6, "writes": 39.4, "divs": null,  "cycles": 1240},
+    {"id": "inharmonic-string", "insns": 510.1, "flash": 12.2, "ram": 92.7, "writes": 63.1, "divs": 1.00, "cycles": 6080, "outlier": true},
+    {"id": "modal-resonator",   "insns": 460.5, "flash": 10.8, "ram": 40.2, "writes": 41.0, "divs": 4.25, "cycles": 1297},
+    {"id": "analog-bass-drum",  "insns": 342.4, "flash": 18.7, "ram": 37.7, "writes": 31.6, "divs": null,  "cycles": 852},
+    {"id": "granular-formant",  "insns": 360.5, "flash": 23.7, "ram": 19.9, "writes": 17.4, "divs": null,  "cycles": 1245},
+    {"id": "harmonic",          "insns": 499.4, "flash": 25.8, "ram": 39.2, "writes": 32.6, "divs": null,  "cycles": 1258},
+    {"id": "chords",            "insns": 492.9, "flash": 21.7, "ram": 47.3, "writes": 37.4, "divs": null,  "cycles": 1251},
+    {"id": "phase-distortion",  "insns": 380.8, "flash": 20.9, "ram": 26.3, "writes": 23.4, "divs": null,  "cycles": 1113},
+    {"id": "string-machine",    "insns": 502.2, "flash": 18.7, "ram": 56.5, "writes": 34.7, "divs": null,  "cycles": 1184},
+    {"id": "swarm",             "insns": 378.6, "flash": 19.6, "ram": 46.8, "writes": 34.2, "divs": null,  "cycles": 1113},
+    {"id": "virtual-analog",    "insns": 302.1, "flash": 10.6, "ram": 25.1, "writes": 22.1, "divs": null,  "cycles": 990},
+    {"id": "wave-terrain",      "insns": 272.2, "flash": 26.8, "ram": 10.2, "writes": 10.6, "divs": null,  "cycles": 990},
+    {"id": "waveshaping",       "insns": 226.2, "flash": 22.5, "ram": 11.8, "writes": 8.3,  "divs": null,  "cycles": 804},
+    {"id": "filtered-noise",    "insns": 215.4, "flash": 10.0, "ram": 19.7, "writes": 23.6, "divs": null,  "cycles": 891},
+    {"id": "pulsar",            "insns": 123.2, "flash": 8.6,  "ram": 2.9,  "writes": 4.3,  "divs": 3.20, "cycles": 466}
+  ],
+  "_provenance": {
+    "hardware": "Plaits, STM32F373 @ 72 MHz, 48 kHz, block size 12",
+    "two_engines_merged": "virtual-analog and wave-terrain read the same plateau (990); their individual costs are within measurement resolution of each other",
+    "measured": "2026-07-26"
+  }
+}
