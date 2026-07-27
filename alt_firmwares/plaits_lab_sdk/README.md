@@ -172,10 +172,14 @@ glitch at another.
 Accuracy, measured by predicting each calibration engine from a fit that excludes
 it (`python3 qemu/cost_model.py`): **mean error 14%, 14 of 15 within 30%.**
 
-And the part worth reading twice: **1 engine in 16 costs several times its
-estimate**, for reasons that are invisible to instruction counting in principle
-— five separate explanations were tested against that engine and all five were
-refuted. A clean estimate is not proof.
+And the part worth reading twice: for a week, one engine appeared to cost
+**4× its estimate** — until the apparent outlier turned out to be the
+*measurement channel* breaking on builds that overrun the audio deadline. The
+LED-meter re-measurement agreed with the model to within a few percent, and all
+16 calibration engines now validate leave-one-out. The durable lesson: near
+100% of budget is exactly where measurement gets hard, so a clean estimate is
+still not a substitute for the hardware probe — and the probe's LED meter is
+the readout to trust when a build overruns.
 
 **3. `build --hardware --cpu-probe` — the measurement.** The Cortex-M4's own
 cycle counter wrapped around the real render call, in the real audio interrupt.

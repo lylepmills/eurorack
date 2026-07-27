@@ -15,10 +15,12 @@ Two things this module refuses to do:
     weights -- and every one produced negative coefficients on real data, which
     is unphysical. The extra terms were fitting noise.
 
-  * Quote a precision it has not earned. One engine in sixteen costs four times
-    its prediction, for reasons that survived five falsification attempts and
-    are invisible to instruction counting in principle. That rate is reported
-    alongside every estimate rather than hidden.
+  * Quote a precision it has not earned. For a week one engine appeared to
+    cost four times its prediction; eight refuted theories later, the culprit
+    was the MEASUREMENT channel breaking on builds that overrun the audio
+    deadline, and the LED-meter re-measurement (94-100% of budget) agreed with
+    the model's 99% prediction to within a few percent. The lesson is encoded
+    here as caution about measurements, not extra model terms.
 
 Run this file directly to print the leave-one-out validation table.
 """
@@ -74,6 +76,14 @@ class CostModel:
         }
 
     def outlier_note(self) -> str:
+        if self.n_outliers == 0:
+            return (
+                f"All {self.n_total} calibration engines land within the band "
+                f"(the one apparent 4x outlier turned out to be a broken "
+                f"measurement channel, not a broken model). Still verify on "
+                f"hardware before publishing: the band is empirical, and an "
+                f"engine near 100% is exactly where measurement gets hard."
+            )
         return (
             f"About 1 engine in {round(self.n_total / max(self.n_outliers, 1))} costs "
             f"SEVERAL TIMES this estimate for reasons no static analysis can see "
@@ -133,7 +143,8 @@ def main() -> int:
 
     ordinary = [abs(r["error_pct"]) for r in rows if not r["outlier"]]
     ordinary.sort()
-    print(f"\nexcluding the known outlier ({len(ordinary)} engines):")
+    label = "excluding known outliers" if any(r["outlier"] for r in rows) else "all engines"
+    print(f"\n{label} ({len(ordinary)}):")
     print(f"  mean |error| {sum(ordinary)/len(ordinary):5.1f}%    "
           f"median {percentile(ordinary, 50):5.1f}%    worst {ordinary[-1]:5.1f}%")
     print(f"  within 20%: {sum(1 for e in ordinary if e <= 20)}/{len(ordinary)}    "
