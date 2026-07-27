@@ -140,6 +140,10 @@ class CpuProbe {
     raw_elapsed_ = 0;
     raw_section0_ = 0;
     nesting_violations_ = 0;
+    blocks_ = 0;
+    corruption_events_ = 0;
+    guard_a_ = 0xC0DE1234u;
+    guard_b_ = 0x5EC7104Eu;
   }
 
   inline void Begin() { start_ = DWT->CYCCNT; }
@@ -177,6 +181,10 @@ class CpuProbe {
     // section EXCEEDING the total that encloses it -- impossible for nested
     // brackets -- and a raw snapshot plus a violation counter is what separates
     // a reporting artifact from a genuine nesting break on the device.
+    ++blocks_;
+    if (guard_a_ != 0xC0DE1234u || guard_b_ != 0x5EC7104Eu) {
+      ++corruption_events_;
+    }
     raw_elapsed_ = elapsed;
     raw_section0_ = section_block_[0];
     if (section_used_[0] && section_block_[0] > elapsed) {
@@ -232,11 +240,29 @@ class CpuProbe {
                 ? kCpuProbeFullScaleHz * static_cast<float>(raw_section0_)
                       / static_cast<float>(raw_elapsed_)
                 : 0.0f;
-          } else {
+          } else if (report_ == used + 2) {
             // Violation counter: 25 Hz means zero; each violating block adds
             // 1 Hz (clamped) -- any reading above ~30 Hz is a real break.
             float v = static_cast<float>(nesting_violations_);
             hz = 25.0f + (v > 3000.0f ? 3000.0f : v);
+          } else if (report_ == used + 3) {
+            // Canary check failures: 25 Hz = intact. Anything higher means this
+            // object's memory is being overwritten by something else.
+            float c = static_cast<float>(corruption_events_);
+            hz = 25.0f + (c > 3000.0f ? 3000.0f : c);
+          } else if (report_ == used + 4) {
+            // End() cadence ramp: steps ~1 Hz per second of runtime when End
+            // runs at block rate. Two consecutive readout cycles that show the
+            // SAME value mean End has stopped updating this object.
+            hz = 25.0f + static_cast<float>((blocks_ >> 12) & 2047u);
+          } else {
+            // Last block's TOTAL, absolute (same scale as report 0). Direct,
+            // EMA-free anchor to compare against the smoothed total.
+            const float budget_one = static_cast<float>(F_CPU) / kSampleRate;
+            hz = raw_elapsed_ > 0
+                ? kCpuProbeFullScaleHz * static_cast<float>(raw_elapsed_)
+                      / (12.0f * budget_one)
+                : 0.0f;
           }
           if (hz < 25.0f) hz = 25.0f;         // silence must stay distinguishable
           tone_increment = hz / kSampleRate;
@@ -299,7 +325,7 @@ class CpuProbe {
       for (int i = 0; i < kMaxSections; ++i) {
         if (section_used_[i]) ++reports;
       }
-      if (reports > 1) reports += 2;  // sections in use: add raw-ratio + violations
+      if (reports > 1) reports += 5;  // + ratio, violations, canary, cadence, last-block
       report_ = (report_ + 1) % reports;
       state_ = 0; state_samples_ = kSilence;
       phase_ = 0.0f;
@@ -319,6 +345,13 @@ class CpuProbe {
  private:
   static const int kMaxSections = 6;
 
+  // Integrity canaries. The v2 diagnostics returned values this code cannot
+  // produce -- a monotonic counter that DECREASED, and a raw ratio contradicting
+  // the violation check computed from the same variables two lines earlier.
+  // Either this object's memory is being overwritten by something else, or
+  // End() is not running against the state the readout reads. The canaries
+  // answer the first directly; the block-cadence ramp answers the second.
+  uint32_t guard_a_;
   uint32_t start_;
   float usage_;
   float phase_;
@@ -333,6 +366,9 @@ class CpuProbe {
   uint32_t raw_elapsed_;
   uint32_t raw_section0_;
   uint32_t nesting_violations_;
+  uint32_t blocks_;
+  uint32_t corruption_events_;
+  uint32_t guard_b_;
 
   DISALLOW_COPY_AND_ASSIGN(CpuProbe);
 };
