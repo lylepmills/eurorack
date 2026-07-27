@@ -169,6 +169,25 @@ class CpuProbe {
     snap_calls_ = 0;
     guard_a_ = 0xC0DE1234u;
     guard_b_ = 0x5EC7104Eu;
+    // Self-checksum of the first 32 KB of the application image, computed once
+    // at boot. Every flash of this module goes through the AUDIO bootloader --
+    // an acoustic channel -- and the impossible readings have been boot-to-boot
+    // variable in ways that look like corrupted CODE rather than broken code.
+    // The host computes the same sum over the built binary; the readout carries
+    // this one. Match = the image on flash is the image we built. Mismatch =
+    // the whole haunted-readings arc was bad flashing.
+#if PLAITS_CPU_PROBE_HOST_TEST
+    image_sum_ = 0;
+#else
+    {
+      const volatile uint32_t* word = (const volatile uint32_t*)0x08008000u;
+      uint32_t sum = 0;
+      for (uint32_t i = 0; i < 8192u; ++i) {
+        sum += word[i];
+      }
+      image_sum_ = sum;
+    }
+#endif
   }
 
   inline void Begin() { start_ = DWT->CYCCNT; }
@@ -367,11 +386,22 @@ class CpuProbe {
                 / static_cast<float>(snap_elapsed_)
           : 25.0f;
     }
-    // Summed voice sections as a share of the same block's elapsed.
-    return snap_elapsed_ > 0
-        ? 25.0f + 1000.0f * static_cast<float>(snap_voices_)
-              / static_cast<float>(snap_elapsed_)
-        : 25.0f;
+    if (report == used + 8) {
+      // Summed voice sections as a share of the same block's elapsed.
+      return snap_elapsed_ > 0
+          ? 25.0f + 1000.0f * static_cast<float>(snap_voices_)
+                / static_cast<float>(snap_elapsed_)
+          : 25.0f;
+    }
+    // Application image checksum, 12+12+8 bits across three reports. Compared
+    // against the same sum computed on the host over the built binary.
+    if (report == used + 9) {
+      return 25.0f + static_cast<float>(image_sum_ & 0xFFFu);
+    }
+    if (report == used + 10) {
+      return 25.0f + static_cast<float>((image_sum_ >> 12) & 0xFFFu);
+    }
+    return 25.0f + static_cast<float>((image_sum_ >> 24) & 0xFFu);
 #endif  // PLAITS_CPU_PROBE_MEMHUNT
   }
 
@@ -406,7 +436,7 @@ class CpuProbe {
       for (int i = 0; i < kMaxSections; ++i) {
         if (section_used_[i]) ++reports;
       }
-      if (reports > 1) reports += 8;  // + diagnostics + one-block snapshot
+      if (reports > 1) reports += 11;  // + diagnostics + snapshot + image checksum
 #if PLAITS_CPU_PROBE_MEMHUNT
       reports = 5;                    // known-answer test + DAC CMAR, full width
 #endif
@@ -457,6 +487,7 @@ class CpuProbe {
   uint32_t snap_s0_;
   uint32_t snap_voices_;
   uint32_t snap_calls_;
+  uint32_t image_sum_;
   uint32_t guard_b_;
 
   DISALLOW_COPY_AND_ASSIGN(CpuProbe);
