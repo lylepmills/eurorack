@@ -130,7 +130,7 @@ int main() {
     for (int b = 0; b < 20000; ++b) {
       RunBlock(&probe, 1200, 3600, 1200, 1200);  // usage 0.8, s0 2/3, voices 0.2
     }
-    // Generate ~30 s of readout and decode it.
+    // Generate ~55 s of readout -- a full 12-report cycle needs ~42 s.
     std::vector<int> beacon_counts;
     std::vector<double> tone_hz;
     {
@@ -139,7 +139,7 @@ int main() {
       int active_len = 0, silence_len = 0, transitions = 0;
       bool in_active = false;
       short prev = 0;
-      for (int b = 0; b < 120000; ++b) {
+      for (int b = 0; b < 220000; ++b) {
         probe.WriteReadout(frames, 12);
         for (int i = 0; i < 12; ++i) {
           const bool active = frames[i].aux != 0;
