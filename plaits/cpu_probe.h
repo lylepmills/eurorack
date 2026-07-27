@@ -43,12 +43,30 @@
 
 #include "stmlib/stmlib.h"
 #include "plaits/dsp/dsp.h"
+#if !PLAITS_CPU_PROBE_HOST_TEST
 #include "plaits/dsp/voice.h"
+#endif
 
 #if PLAITS_CPU_PROBE
+#if PLAITS_CPU_PROBE_HOST_TEST
+// Host unit test: fake the cycle counter and frame type so every line of the
+// accumulate/EMA/readout logic below runs on a development machine, where it
+// can be replayed deterministically and its output decoded and checked.
+struct FakeDwt { uint32_t CTRL; uint32_t CYCCNT; };
+struct FakeCoreDebug { uint32_t DEMCR; };
+extern FakeDwt* DWT;
+extern FakeCoreDebug* CoreDebug;
+#define DWT_CTRL_CYCCNTENA_Msk 1u
+#define CoreDebug_DEMCR_TRCENA_Msk (1u << 24)
+#ifndef F_CPU
+#define F_CPU 72000000L
+#endif
+namespace plaits { class Voice { public: struct Frame { short out; short aux; }; }; }
+#else
 // Only a probe build touches the debug block, so the device headers stay out of
 // every other build (including the host tests, which compile this file's users).
 #include <stm32f37x_conf.h>
+#endif  // PLAITS_CPU_PROBE_HOST_TEST
 #endif  // PLAITS_CPU_PROBE
 
 namespace plaits {
@@ -64,6 +82,10 @@ namespace plaits {
 
 #ifndef PLAITS_CPU_PROBE_FTZ
 #define PLAITS_CPU_PROBE_FTZ 0
+#endif
+
+#ifndef PLAITS_CPU_PROBE_HOST_TEST
+#define PLAITS_CPU_PROBE_HOST_TEST 0
 #endif
 
 // Full budget maps to this many Hz on the AUX readout.
@@ -115,6 +137,9 @@ class CpuProbe {
     state_samples_ = 24000;
     report_ = 0;
     bursts_left_ = 0;
+    raw_elapsed_ = 0;
+    raw_section0_ = 0;
+    nesting_violations_ = 0;
   }
 
   inline void Begin() { start_ = DWT->CYCCNT; }
@@ -148,6 +173,15 @@ class CpuProbe {
     // rather than latch forever, so a single startup transient does not sit on
     // the readout for the rest of the session.
     usage_ = usage > usage_ ? usage : usage_ * 0.9995f + usage * 0.0005f;
+    // Raw same-block values, no EMA. Kept because the EMA path once reported a
+    // section EXCEEDING the total that encloses it -- impossible for nested
+    // brackets -- and a raw snapshot plus a violation counter is what separates
+    // a reporting artifact from a genuine nesting break on the device.
+    raw_elapsed_ = elapsed;
+    raw_section0_ = section_block_[0];
+    if (section_used_[0] && section_block_[0] > elapsed) {
+      ++nesting_violations_;
+    }
     for (int i = 0; i < kMaxSections; ++i) {
       if (section_used_[i]) {
         const float share = static_cast<float>(section_block_[i]) / budget;
@@ -185,8 +219,25 @@ class CpuProbe {
         if (state_ == 1) {
           burst = true;                       // beacon burst, fixed pitch
         } else if (state_ == 3) {
-          float value = report_ == 0 ? usage_ : SectionValue(report_ - 1);
-          float hz = value * kCpuProbeFullScaleHz;
+          const int used = UsedSections();
+          float hz;
+          if (report_ == 0) {
+            hz = usage_ * kCpuProbeFullScaleHz;
+          } else if (report_ <= used) {
+            hz = SectionValue(report_ - 1) * kCpuProbeFullScaleHz;
+          } else if (report_ == used + 1) {
+            // RAW same-block ratio: section 0 as a share of its enclosing
+            // total. Nested brackets cannot legitimately exceed 1000 Hz here.
+            hz = raw_elapsed_ > 0
+                ? kCpuProbeFullScaleHz * static_cast<float>(raw_section0_)
+                      / static_cast<float>(raw_elapsed_)
+                : 0.0f;
+          } else {
+            // Violation counter: 25 Hz means zero; each violating block adds
+            // 1 Hz (clamped) -- any reading above ~30 Hz is a real break.
+            float v = static_cast<float>(nesting_violations_);
+            hz = 25.0f + (v > 3000.0f ? 3000.0f : v);
+          }
           if (hz < 25.0f) hz = 25.0f;         // silence must stay distinguishable
           tone_increment = hz / kSampleRate;
         }
@@ -206,6 +257,15 @@ class CpuProbe {
   }
 
   inline float usage() const { return usage_; }
+  inline float section_usage(int index) const {
+    return index >= 0 && index < kMaxSections ? section_usage_[index] : 0.0f;
+  }
+  inline uint32_t nesting_violations() const { return nesting_violations_; }
+  inline float raw_ratio() const {
+    return raw_elapsed_
+        ? static_cast<float>(raw_section0_) / static_cast<float>(raw_elapsed_)
+        : 0.0f;
+  }
 
  private:
   float SectionValue(int nth) {
@@ -239,10 +299,19 @@ class CpuProbe {
       for (int i = 0; i < kMaxSections; ++i) {
         if (section_used_[i]) ++reports;
       }
+      if (reports > 1) reports += 2;  // sections in use: add raw-ratio + violations
       report_ = (report_ + 1) % reports;
       state_ = 0; state_samples_ = kSilence;
       phase_ = 0.0f;
     }
+  }
+
+  int UsedSections() const {
+    int used = 0;
+    for (int i = 0; i < kMaxSections; ++i) {
+      if (section_used_[i]) ++used;
+    }
+    return used;
   }
 
  public:
@@ -261,6 +330,9 @@ class CpuProbe {
   int state_samples_;
   int report_;
   int bursts_left_;
+  uint32_t raw_elapsed_;
+  uint32_t raw_section0_;
+  uint32_t nesting_violations_;
 
   DISALLOW_COPY_AND_ASSIGN(CpuProbe);
 };
