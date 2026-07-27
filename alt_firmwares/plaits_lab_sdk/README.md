@@ -25,6 +25,43 @@ $SDK render ./$PKG/my-engine --scenario hero --output /tmp/my-engine.wav
 renames the primary implementation into a self-contained community package and
 pins the source package's immutable digest as provenance.
 
+## Licensing
+
+`init` writes a complete `LICENSE` naming you, and stamps a matching
+`// Copyright <year> <you>.` / `// SPDX-License-Identifier: <license>` header
+into every source file it generates. You do not have to find or paste license
+text — but do read what you're agreeing to, because submitting a package is how
+you license it to Rubato Audio and to everyone who flashes the firmware.
+
+A package must use **MIT** (the default), **BSD-2-Clause**, **BSD-3-Clause**, or
+**ISC** — choose with `--license`:
+
+```sh
+$SDK init $PKG/my-engine --author "Your name" --license ISC
+```
+
+The allowlist exists because every engine is statically compiled into one
+firmware image beside Mutable Instruments' MIT-licensed Plaits code and shipped
+as a single audio-installable WAV. A package's license therefore has to be
+*notice-only*: dischargeable by carrying a copyright line in the firmware's
+attribution list, with no copyleft reaching the rest of the image and no
+source-disclosure duty riding on the distributed binary. Those four are exactly
+that set.
+
+**Apache-2.0 is deliberately excluded** even though it is permissive: §4(d)
+makes the NOTICE file travel with every derivative and the §3 patent grant
+carries a termination condition — per-package obligations a flashed firmware
+blob has no way to honor. GPL, LGPL, and MPL are excluded outright.
+
+A **fork keeps its upstream license** and carries both copyright notices — the
+original author's and yours — in the `LICENSE` and at the top of each vendored
+source file. That's what makes it an honest derivative work rather than a
+re-attribution. To pick your own license, start from `--from blank` instead.
+
+`check` verifies all of this: that the `LICENSE` text is really the license the
+manifest declares, that it names a rights holder, and that every source file's
+SPDX tag agrees with the manifest.
+
 ## Browser audition
 
 `dev` serves its own audition page — nothing else to run:
@@ -73,7 +110,8 @@ $SDK check ./$PKG/my-engine --full
 $SDK submit ./$PKG/my-engine --output ./my-engine.plaits-package.zip
 ```
 
-Full checks enforce the manifest, license, source boundary and allowlist,
+Full checks enforce the manifest, licensing (see above — LICENSE text, rights
+holder, and per-file SPDX tags must all agree), source boundary and allowlist,
 compile with address/undefined-behavior sanitizers, execute every declared
 scenario, measure CPU cost against a stock engine (see below), and reject
 invalid duration, silent output, or excessive DC. The

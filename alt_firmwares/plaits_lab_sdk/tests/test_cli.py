@@ -19,7 +19,12 @@ plaits_lab = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(plaits_lab)
 
 
+# These stand in for contributor-written sources, so they carry the same SPDX
+# header load_package() now requires of every community source file.
 CHORD_PROBE_HEADER = """\
+// Copyright 2026 Test Author.
+// SPDX-License-Identifier: MIT
+
 #ifndef PLAITS_LAB_CHORD_PROBE_ENGINE_H_
 #define PLAITS_LAB_CHORD_PROBE_ENGINE_H_
 
@@ -49,6 +54,9 @@ class ChordProbeEngine : public Engine {
 """
 
 CHORD_PROBE_IMPL = """\
+// Copyright 2026 Test Author.
+// SPDX-License-Identifier: MIT
+
 #include "chord-probe_engine.h"
 
 namespace plaits {
@@ -549,6 +557,127 @@ class PackageTests(unittest.TestCase):
     def test_unknown_shared_module_is_rejected(self) -> None:
         with self.assertRaises(plaits_lab.PackageError):
             plaits_lab.validate_shared_modules(["not-a-real-module"])
+
+    def _scaffold(self, directory: Path, slug: str, **overrides) -> Path:
+        """Scaffold a package and return its directory (init_command prints)."""
+        output = directory / slug
+        args = {
+            "output": str(output), "from_engine": "blank", "author": "Ada Lovelace",
+            "license": "MIT", "package_id": None, "slug": slug, "name": "Test Engine",
+        }
+        args.update(overrides)
+        with redirect_stdout(io.StringIO()):
+            plaits_lab.init_command(SimpleNamespace(**args))
+        return output
+
+    def test_scaffold_stamps_the_author_into_license_and_source_headers(self) -> None:
+        # The headers used to read "Copyright 2026 Contributor." regardless of
+        # --author, so a scaffolded engine shipped a notice naming nobody.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            package = self._scaffold(Path(temp_dir), "cloud-chamber")
+            year = plaits_lab.current_year()
+            self.assertIn(f"Copyright (c) {year} Ada Lovelace", (package / "LICENSE").read_text())
+            for source in ("cloud-chamber_engine.h", "cloud-chamber_engine.cc"):
+                text = (package / "src" / source).read_text(encoding="utf-8")
+                self.assertIn(f"// Copyright {year} Ada Lovelace.", text)
+                self.assertEqual(plaits_lab.source_spdx_id(text), "MIT")
+            self.assertNotIn("Contributor.", (package / "src" / "cloud-chamber_engine.h").read_text())
+
+    def test_every_allowed_license_scaffolds_and_validates(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            for spdx in sorted(plaits_lab.ALLOWED_LICENSES):
+                with self.subTest(license=spdx):
+                    slug = spdx.lower().replace(".", "-")
+                    package = self._scaffold(Path(temp_dir), slug, license=spdx)
+                    loaded = plaits_lab.load_package(str(package))
+                    self.assertEqual(loaded["manifest"]["license"], spdx)
+                    # The rendered LICENSE must be identifiable as what it claims,
+                    # or the check below could never distinguish the four.
+                    self.assertEqual(
+                        plaits_lab.identify_license_text((package / "LICENSE").read_text()), spdx,
+                    )
+
+    def test_license_text_must_match_the_declared_license(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            package = self._scaffold(Path(temp_dir), "mismatch")
+            manifest_path = package / "plaits-engine.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["license"] = "ISC"
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            with self.assertRaises(plaits_lab.PackageError) as context:
+                plaits_lab.load_package(str(package))
+            self.assertIn("MIT text but the manifest declares ISC", str(context.exception))
+
+    def test_unrecognized_license_text_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            package = self._scaffold(Path(temp_dir), "copyleft")
+            (package / "LICENSE").write_text(
+                "GNU GENERAL PUBLIC LICENSE\nVersion 3\n\nCopyright (c) 2026 Ada\n", encoding="utf-8",
+            )
+            with self.assertRaises(plaits_lab.PackageError) as context:
+                plaits_lab.load_package(str(package))
+            self.assertIn("recognized license", str(context.exception))
+
+    def test_license_without_a_copyright_holder_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            package = self._scaffold(Path(temp_dir), "holderless")
+            (package / "LICENSE").write_text(
+                f"{plaits_lab.LICENSE_TITLES['MIT']}\n\n{plaits_lab.MIT_BODY}", encoding="utf-8",
+            )
+            with self.assertRaises(plaits_lab.PackageError) as context:
+                plaits_lab.load_package(str(package))
+            self.assertIn("copyright line", str(context.exception))
+
+    def test_source_files_must_carry_a_matching_spdx_tag(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            package = self._scaffold(Path(temp_dir), "untagged")
+            source = package / "src" / "untagged_engine.cc"
+            original = source.read_text(encoding="utf-8")
+
+            source.write_text(original.replace("// SPDX-License-Identifier: MIT\n", ""), encoding="utf-8")
+            with self.assertRaises(plaits_lab.PackageError) as context:
+                plaits_lab.load_package(str(package))
+            self.assertIn("no SPDX-License-Identifier", str(context.exception))
+
+            source.write_text(original.replace("SPDX-License-Identifier: MIT",
+                                               "SPDX-License-Identifier: GPL-3.0"), encoding="utf-8")
+            with self.assertRaises(plaits_lab.PackageError) as context:
+                plaits_lab.load_package(str(package))
+            self.assertIn("declares SPDX-License-Identifier: GPL-3.0", str(context.exception))
+
+    def test_fork_carries_both_copyright_notices(self) -> None:
+        # A fork is a derivative work: the upstream notice has to survive in the
+        # LICENSE and in the vendored source, alongside the contributor's own.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            package = self._scaffold(
+                Path(temp_dir), "va-fork", from_engine="virtual-analog", name=None,
+            )
+            license_text = (package / "LICENSE").read_text(encoding="utf-8")
+            notices = plaits_lab.extract_copyright_notices(license_text)
+            self.assertEqual(len(notices), 2)
+            self.assertIn("Emilie Gillet", notices[0])
+            self.assertIn("Ada Lovelace", notices[1])
+
+            header = (package / "src" / "va-fork_engine.h").read_text(encoding="utf-8")
+            self.assertIn("Modified from Virtual Analog", header)
+            self.assertIn("Copyright 2016 Emilie Gillet", header)
+            self.assertEqual(plaits_lab.source_spdx_id(header), "MIT")
+            plaits_lab.load_package(str(package))
+
+    def test_fork_may_not_relicense_away_from_upstream(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with self.assertRaises(plaits_lab.PackageError) as context:
+                self._scaffold(Path(temp_dir), "relicensed",
+                               from_engine="virtual-analog", name=None, license="ISC")
+            self.assertIn("must stay MIT", str(context.exception))
+
+    def test_apache_2_is_not_silently_accepted(self) -> None:
+        # Excluded deliberately (NOTICE propagation + patent-termination clause);
+        # this pins the decision so a future edit is a conscious one.
+        self.assertNotIn("Apache-2.0", plaits_lab.ALLOWED_LICENSES)
+        apache = ("Apache License\nVersion 2.0\n\nCopyright (c) 2026 Ada\n"
+                  "Licensed under the Apache License, Version 2.0\n")
+        self.assertIsNone(plaits_lab.identify_license_text(apache))
 
     def test_dev_editor_ui_is_same_origin(self) -> None:
         html = (plaits_lab.SDK_DIR / "dev_editor.html").read_text(encoding="utf-8")

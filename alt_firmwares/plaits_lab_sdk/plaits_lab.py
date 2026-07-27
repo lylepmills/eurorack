@@ -29,7 +29,22 @@ REPO_ROOT = SDK_DIR.parents[1]
 CATALOG_PATH = SDK_DIR.parent / "plaits_lab_catalog/catalog.json"
 PUBLIC_CATALOG_PATH = SDK_DIR.parent / "plaits_lab_catalog/public_catalog.json"
 SHARED_MODULES_PATH = SDK_DIR.parent / "plaits_lab_catalog/shared_modules.json"
+PACKAGES_DIR = SDK_DIR / "packages"
+# Every engine is statically compiled into ONE firmware image beside Mutable's
+# MIT-licensed Plaits code and shipped as a single audio-installable WAV. So a
+# package's license has to be NOTICE-ONLY: dischargeable by carrying a copyright
+# line in the firmware's attribution list, with no copyleft reaching the rest of
+# the image and no source-disclosure duty riding on the distributed binary.
+# MIT / BSD-2-Clause / BSD-3-Clause / ISC are exactly that set.
+#
+# Apache-2.0 is DELIBERATELY excluded despite being permissive: §4(d) makes the
+# NOTICE file travel with every derivative, and the §3 patent grant carries a
+# termination condition — per-package obligations a flashed firmware blob has no
+# way to honor. GPL / LGPL / MPL are excluded outright (copyleft, or a per-file
+# source-disclosure duty). Revisit only alongside a real story for shipping
+# per-package notices with the firmware.
 ALLOWED_LICENSES = {"MIT", "BSD-2-Clause", "BSD-3-Clause", "ISC"}
+DEFAULT_LICENSE = "MIT"
 CONTROL_IDS = ["harmonics", "timbre", "morph", "macro"]
 ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*$")
 CATALOG_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*$")
@@ -396,6 +411,21 @@ def load_package(package_arg: str, autodeclare: bool = False) -> dict[str, Any]:
         validate_shared_modules(manifest["sharedModules"])
     require((package_dir / "LICENSE").is_file(), "package must contain LICENSE")
     require((package_dir / "README.md").is_file(), "package must contain README.md")
+    # The LICENSE file is the whole evidentiary record for a contribution — a
+    # submission carries no other statement of terms — so its TEXT has to agree
+    # with the manifest, not merely exist. Without this, declaring "ISC" over
+    # MIT text (or pasting GPL in) passed `check` green.
+    license_text = (package_dir / "LICENSE").read_text(encoding="utf-8")
+    detected_license = identify_license_text(license_text)
+    require(detected_license is not None,
+            "LICENSE does not contain the text of a recognized license; it must carry "
+            f"the full text of one of {sorted(ALLOWED_LICENSES)}")
+    require(detected_license == manifest["license"],
+            f"LICENSE contains {detected_license} text but the manifest declares "
+            f"{manifest['license']} — make the two agree")
+    require(bool(extract_copyright_notices(license_text)),
+            "LICENSE must carry a copyright line naming the rights holder "
+            "(for example: Copyright (c) 2026 Your Name)")
 
     controls = manifest["controls"]
     require(isinstance(controls, list) and len(controls) == 4, "controls must contain exactly four entries")
@@ -439,6 +469,17 @@ def load_package(package_arg: str, autodeclare: bool = False) -> dict[str, Any]:
         source_files.append(source_file)
     autodeclared: list[str] = []
     if manifest["packageType"] == "community":
+        # Every vendored file states its own terms. Built-in references are
+        # exempt: they point at firmware sources that carry Emilie Gillet's full
+        # MIT header instead of an SPDX tag, and those aren't ours to restamp.
+        for path in [header, *source_files]:
+            tag = source_spdx_id(path.read_text(encoding="utf-8"))
+            require(tag is not None,
+                    f"{path.name} has no SPDX-License-Identifier header; add "
+                    f"`// SPDX-License-Identifier: {manifest['license']}` at the top of the file")
+            require(tag == manifest["license"],
+                    f"{path.name} declares SPDX-License-Identifier: {tag} but the manifest "
+                    f"declares {manifest['license']} — make the two agree")
         declared = list(manifest.get("sharedModules", []))
         if autodeclare:
             autodeclared = autodeclare_shared_modules([header, *source_files], declared)
@@ -816,12 +857,7 @@ def default_scenarios() -> list[dict[str, Any]]:
     ]
 
 
-def mit_license(author: str) -> str:
-    return f"""MIT License
-
-Copyright (c) 2026 {author}
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
+MIT_BODY = """Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the \"Software\"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
@@ -840,11 +876,130 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
+ISC_BODY = """Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
 
-def blank_source(slug: str, class_name: str) -> tuple[str, str]:
+THE SOFTWARE IS PROVIDED \"AS IS\" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+"""
+
+_BSD_PREAMBLE = """Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+"""
+
+_BSD_THIRD_CLAUSE = """
+3. Neither the name of the copyright holder nor the names of its contributors
+   may be used to endorse or promote products derived from this software
+   without specific prior written permission.
+"""
+
+_BSD_DISCLAIMER = """
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+"""
+
+LICENSE_TITLES = {
+    "MIT": "MIT License",
+    "ISC": "ISC License",
+    "BSD-2-Clause": "BSD 2-Clause License",
+    "BSD-3-Clause": "BSD 3-Clause License",
+}
+
+LICENSE_BODIES = {
+    "MIT": MIT_BODY,
+    "ISC": ISC_BODY,
+    "BSD-2-Clause": _BSD_PREAMBLE + _BSD_DISCLAIMER,
+    "BSD-3-Clause": _BSD_PREAMBLE + _BSD_THIRD_CLAUSE + _BSD_DISCLAIMER,
+}
+
+
+def current_year() -> int:
+    return datetime.now(timezone.utc).year
+
+
+def copyright_line(author: str, year: int | None = None) -> str:
+    return f"Copyright (c) {year or current_year()} {author}"
+
+
+def license_file_text(spdx: str, notices: list[str]) -> str:
+    """Render a LICENSE file: a title, one copyright line per notice, one body.
+
+    A fork carries TWO notices (upstream first, then the contributor) — the
+    package is a derivative work, and the upstream notice has to survive under
+    every license in ALLOWED_LICENSES.
+    """
+    require(spdx in ALLOWED_LICENSES, f"license must be one of {sorted(ALLOWED_LICENSES)}")
+    require(bool(notices), "a LICENSE needs at least one copyright notice")
+    return f"{LICENSE_TITLES[spdx]}\n\n" + "\n".join(notices) + f"\n\n{LICENSE_BODIES[spdx]}"
+
+
+def mit_license(author: str, year: int | None = None) -> str:
+    return license_file_text("MIT", [copyright_line(author, year)])
+
+
+def _normalize_license_text(text: str) -> str:
+    """Collapse a license to comparable words: lowercase, punctuation-free.
+
+    Keeps "/" so ISC's "and/or distribute" stays distinguishable, and drops the
+    comment markers a license pasted into a source header would carry.
+    """
+    return " ".join(re.sub(r"[^a-z0-9/]+", " ", text.lower()).split())
+
+
+def identify_license_text(text: str) -> str | None:
+    """Return the SPDX id whose canonical text `text` contains, or None.
+
+    Matches on each license's operative grant rather than a whole-file digest,
+    so a real LICENSE still identifies after a contributor reflows it, adds a
+    second copyright holder, or edits the year.
+    """
+    normalized = _normalize_license_text(text)
+    if "permission to use copy modify and/or distribute this software for any purpose" in normalized:
+        return "ISC"
+    if "permission is hereby granted free of charge" in normalized and "sublicense" in normalized:
+        return "MIT"
+    if "redistribution and use in source and binary forms" in normalized:
+        if "neither the name of" in normalized:
+            return "BSD-3-Clause"
+        return "BSD-2-Clause"
+    return None
+
+
+SPDX_PATTERN = re.compile(r"SPDX-License-Identifier:\s*([A-Za-z0-9.\-+]+)")
+
+
+def source_spdx_id(text: str) -> str | None:
+    """Read the SPDX-License-Identifier tag out of a source file's header comment."""
+    match = SPDX_PATTERN.search(text)
+    return match.group(1) if match else None
+
+
+def blank_source(slug: str, class_name: str, author: str,
+                 spdx: str = DEFAULT_LICENSE, year: int | None = None) -> tuple[str, str]:
     guard = f"PLAITS_LAB_{slug.replace('-', '_').upper()}_ENGINE_H_"
-    header = f"""// Copyright 2026 Contributor.
-// SPDX-License-Identifier: MIT
+    notice = f"// Copyright {year or current_year()} {author}.\n// SPDX-License-Identifier: {spdx}"
+    header = f"""{notice}
 
 #ifndef {guard}
 #define {guard}
@@ -872,8 +1027,7 @@ class {class_name} : public Engine {{
 
 #endif  // {guard}
 """
-    implementation = f"""// Copyright 2026 Contributor.
-// SPDX-License-Identifier: MIT
+    implementation = f"""{notice}
 
 #include \"{slug}_engine.h\"
 
@@ -902,6 +1056,40 @@ void {class_name}::Render(const EngineParameters& parameters, float* out,
     return header, implementation
 
 
+_COPYRIGHT_LINE = re.compile(r"^\s*(?://\s*)?(Copyright\s+(?:\(c\)\s*)?[0-9].*?)\s*$", re.MULTILINE)
+
+
+def extract_copyright_notices(text: str) -> list[str]:
+    """Pull the copyright lines out of a LICENSE or a source-header comment.
+
+    Order-preserving and de-duplicated, so re-forking an already-forked package
+    doesn't stack the same notice twice.
+    """
+    return list(dict.fromkeys(match.group(1) for match in _COPYRIGHT_LINE.finditer(text)))
+
+
+def upstream_attribution(package_id: str, fallback_source: str) -> tuple[str, list[str]]:
+    """Return (license id, copyright notices) for a built-in package being forked.
+
+    Prefers the package's own LICENSE; falls back to the notices in the source it
+    vendors, so a catalog entry with no package directory still attributes.
+    """
+    package_dir = PACKAGES_DIR / package_id
+    manifest_path = package_dir / "plaits-engine.json"
+    license_path = package_dir / "LICENSE"
+    spdx = DEFAULT_LICENSE
+    if manifest_path.is_file():
+        declared = read_json(manifest_path).get("license")
+        if declared in ALLOWED_LICENSES:
+            spdx = declared
+    notices: list[str] = []
+    if license_path.is_file():
+        notices = extract_copyright_notices(license_path.read_text(encoding="utf-8"))
+    if not notices:
+        notices = extract_copyright_notices(fallback_source)
+    return spdx, notices
+
+
 def init_command(args: argparse.Namespace) -> int:
     output = Path(args.output).resolve()
     require(not output.exists(), f"output already exists: {output}")
@@ -910,6 +1098,11 @@ def init_command(args: argparse.Namespace) -> int:
     package_id = args.package_id or f"community/{slug}"
     require(ID_PATTERN.fullmatch(package_id) is not None, "package ID must use namespace/slug form")
     class_name = slug_to_class(slug)
+    # Older callers (and the tests predating --license) build args without it.
+    spdx = getattr(args, "license", None) or DEFAULT_LICENSE
+    require(spdx in ALLOWED_LICENSES,
+            f"license must be one of {sorted(ALLOWED_LICENSES)}")
+    year = current_year()
     source_dir = output / "src"
     tests_dir = output / "tests"
     source_dir.mkdir(parents=True)
@@ -923,7 +1116,8 @@ def init_command(args: argparse.Namespace) -> int:
         family = "Experimental"
         tags = ["community", "experimental"]
         post = {"alreadyEnveloped": False, "outGain": 0.8, "auxGain": 0.8}
-        header, implementation = blank_source(slug, class_name)
+        header, implementation = blank_source(slug, class_name, args.author, spdx, year)
+        license_notices = [copyright_line(args.author, year)]
         forked_from = None
         forked_shared: list[str] = []
     else:
@@ -953,6 +1147,29 @@ def init_command(args: argparse.Namespace) -> int:
         forked_shared = list(upstream.get("sharedModules", []))
         upstream_reference = f"{upstream['packageId']}@{public['version']} ({public['digest']})"
 
+        # A fork is a DERIVATIVE WORK: the upstream notice has to survive, and
+        # the contributor's own notice has to say it's a modification rather
+        # than replace what it was modified from. Keeping the fork on upstream's
+        # license also keeps each source file a single-license file, so the SPDX
+        # tag `check` enforces below stays a plain id instead of an expression.
+        upstream_spdx, upstream_notices = upstream_attribution(upstream["packageId"], header)
+        require(spdx == upstream_spdx,
+                f"a fork of {upstream['name']} must stay {upstream_spdx} (its upstream license), "
+                f"not {spdx}; start from --from blank to choose your own license")
+        vendored_notice = (
+            f"// Copyright {year} {args.author}.\n"
+            f"// SPDX-License-Identifier: {spdx}\n"
+            "//\n"
+            # The pinned digest lives in the manifest's `upstream` field; the
+            # header keeps the human-readable half so it stays readable.
+            f"// Modified from {upstream['name']} "
+            f"({upstream['packageId']}@{public['version']}) for Plaits Lab.\n"
+            "// The original copyright and license notice follow.\n\n"
+        )
+        header = vendored_notice + header
+        implementation = vendored_notice + implementation
+        license_notices = [*upstream_notices, copyright_line(args.author, year)]
+
     header_name = f"{slug}_engine.h"
     implementation_name = f"{slug}_engine.cc"
     (source_dir / header_name).write_text(header, encoding="utf-8")
@@ -967,7 +1184,7 @@ def init_command(args: argparse.Namespace) -> int:
         "name": name,
         "author": args.author,
         "origin": "Community",
-        "license": "MIT",
+        "license": spdx,
         "description": description,
         "family": family,
         "tags": tags,
@@ -987,7 +1204,7 @@ def init_command(args: argparse.Namespace) -> int:
             manifest["sharedModules"] = forked_shared
     (output / "plaits-engine.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     (tests_dir / "scenarios.json").write_text(json.dumps(default_scenarios(), indent=2) + "\n", encoding="utf-8")
-    (output / "LICENSE").write_text(mit_license(args.author), encoding="utf-8")
+    (output / "LICENSE").write_text(license_file_text(spdx, license_notices), encoding="utf-8")
     (output / "README.md").write_text(
         f"# {name}\n\nA Plaits Lab community engine package.\n\n"
         f"Run `plaits-lab check .` and `plaits-lab render . --output preview.wav` from this directory.\n",
@@ -1032,7 +1249,8 @@ def check_command(args: argparse.Namespace) -> int:
     package = load_package(args.package, autodeclare=True)
     report_autodeclared(package)
     print(f"✓ package {package['manifest']['id']}@{package['manifest']['version']}")
-    print("✓ metadata, license, source policy, and scenarios")
+    print(f"✓ metadata, scenarios, source policy, and {package['manifest']['license']} "
+          "licensing (LICENSE text and per-file SPDX tags agree)")
     cpu_cost: dict[str, Any] | None = None
     if not args.no_compile:
         with tempfile.TemporaryDirectory(prefix="plaits-lab-check-") as temp_dir:
@@ -1849,6 +2067,9 @@ def build_parser() -> argparse.ArgumentParser:
     init_parser.add_argument("output")
     init_parser.add_argument("--from", dest="from_engine", default="blank")
     init_parser.add_argument("--author", default="Contributor")
+    init_parser.add_argument("--license", default=DEFAULT_LICENSE, choices=sorted(ALLOWED_LICENSES),
+                             help=f"license for the package (default {DEFAULT_LICENSE}); "
+                                  "a fork must keep its upstream license")
     init_parser.add_argument("--package-id")
     init_parser.add_argument("--slug")
     init_parser.add_argument("--name")
