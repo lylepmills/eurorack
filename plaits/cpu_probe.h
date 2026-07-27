@@ -168,6 +168,9 @@ class CpuProbe {
     snap_voices_ = 0;
     snap_calls_ = 0;
     guard_a_ = 0xC0DE1234u;
+    dma_base_ = 0;
+    last_write_cycles_ = 0;
+    current_hz_ = 0.0f;
     guard_b_ = 0x5EC7104Eu;
     // Self-checksum of the first 32 KB of the application image, computed once
     // at boot. Every flash of this module goes through the AUDIO bootloader --
@@ -262,6 +265,18 @@ class CpuProbe {
   // generating it is excluded from the measurement -- this measures the engine,
   // not the probe.
   //
+  // OVERRUN-PROOF since v11. The v10 image checksum -- three boot-time
+  // constants -- read back unstable, impossible values (one beacon above its
+  // field's encodable maximum), which convicted the CHANNEL: under sustained
+  // overrun the DMA IRQ's else-if always services TC, so buffer half 0 is
+  // never refreshed and the DAC interleaves every tone with a frozen, stale
+  // fragment. Two changes make the tone true at any load: phase advances by
+  // WALL CLOCK (DWT cycles), not by rendered samples, and each call rewrites
+  // BOTH halves of the DAC buffer, aligned to the true playhead read from the
+  // DMA counter. Report DURATIONS still stretch under overrun (the state
+  // machine ticks per rendered sample); the decoder classifies bursts and
+  // tones by relative duration, so only the FREQUENCY needs to be honest.
+  //
   // With no sections in use, AUX is a continuous tone at usage * 1000 Hz.
   // With sections, the readout time-multiplexes: for each report it emits
   // silence, an IDENTITY BEACON of (report + 1) short bursts, then ~1.6 s of
@@ -269,6 +284,11 @@ class CpuProbe {
   // sections, in index order. The beacon is what makes a multiplexed reading
   // decodable without trusting timing alone.
   void WriteReadout(Voice::Frame* frames, size_t size) {
+#if !PLAITS_CPU_PROBE_HOST_TEST
+    // Track the DMA buffer base: Fill() hands us alternating halves, and the
+    // lower of the two pointers is the start of the whole 2*size buffer.
+    if (dma_base_ == 0 || frames < dma_base_) dma_base_ = frames;
+#endif
     bool any_section = false;
     for (int i = 0; i < kMaxSections; ++i) {
       if (section_used_[i]) any_section = true;
@@ -296,18 +316,44 @@ class CpuProbe {
           tone_increment = hz / kSampleRate;
         }
       }
-      if (burst) {
-        phase_ += 2400.0f / kSampleRate;
+      current_hz_ = burst ? 2400.0f : tone_increment * kSampleRate;
+      frames[i].aux = 0;  // overwritten below on device; silent on host
+#if PLAITS_CPU_PROBE_HOST_TEST
+      // Host test: per-sample phase, single buffer -- the legacy behaviour the
+      // decode round-trip validates.
+      if (current_hz_ > 0.0f) {
+        phase_ += current_hz_ / kSampleRate;
         if (phase_ >= 1.0f) phase_ -= 1.0f;
         frames[i].aux = phase_ < 0.5f ? 16000 : -16000;
-      } else if (tone_increment > 0.0f) {
-        phase_ += tone_increment;
-        if (phase_ >= 1.0f) phase_ -= 1.0f;
-        frames[i].aux = phase_ < 0.5f ? 16000 : -16000;
-      } else {
-        frames[i].aux = 0;
+      }
+#endif
+    }
+#if !PLAITS_CPU_PROBE_HOST_TEST
+    // Wall-clock phase: correct frequency regardless of how late this call is.
+    const uint32_t now = DWT->CYCCNT;
+    phase_ += static_cast<float>(now - last_write_cycles_)
+        * (current_hz_ / static_cast<float>(F_CPU));
+    last_write_cycles_ = now;
+    phase_ -= static_cast<float>(static_cast<int>(phase_));
+    if (dma_base_ != 0) {
+      // Playhead from the DMA counter: 2 channels * 2 halves * size transfers.
+      const uint32_t total = 4u * static_cast<uint32_t>(size);
+      const uint32_t remaining =
+          *(volatile uint32_t*)(0x40020058u + 0x04u);  // DMA1 CNDTR5
+      const uint32_t played = (total - (remaining % total)) >> 1;
+      const size_t frames_total = 2u * size;
+      for (size_t k = 0; k < frames_total; ++k) {
+        const size_t idx = (played + k) % frames_total;
+        if (current_hz_ <= 0.0f) {
+          dma_base_[idx].aux = 0;
+          continue;
+        }
+        float ph = phase_ + current_hz_ * static_cast<float>(k) / kSampleRate;
+        ph -= static_cast<float>(static_cast<int>(ph));
+        dma_base_[idx].aux = ph < 0.5f ? 16000 : -16000;
       }
     }
+#endif
   }
 
   inline float usage() const { return usage_; }
@@ -488,6 +534,9 @@ class CpuProbe {
   uint32_t snap_voices_;
   uint32_t snap_calls_;
   uint32_t image_sum_;
+  Voice::Frame* dma_base_;
+  uint32_t last_write_cycles_;
+  float current_hz_;
   uint32_t guard_b_;
 
   DISALLOW_COPY_AND_ASSIGN(CpuProbe);
