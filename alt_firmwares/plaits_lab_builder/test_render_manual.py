@@ -284,3 +284,70 @@ class ContainerManualEndpointTest(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             container_server.render_manual_bytes("ab" * 32, {"slots": []})
+
+
+class ManualEndpointHeaderTest(unittest.TestCase):
+    """Drive the real HTTP handler on a loopback port. The endpoint had no
+    request-level test, which is how X-Plaits-Manual-Contract went on reporting
+    the image's env default ("1") long after the Worker had moved to 5."""
+
+    def post_manual(self, body: dict) -> tuple[int, dict[str, str], bytes]:
+        import json as json_module
+        import threading
+        import urllib.error
+        import urllib.request
+        from http.server import ThreadingHTTPServer
+
+        import container_server
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), container_server.Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            request = urllib.request.Request(
+                f"http://127.0.0.1:{server.server_address[1]}/manual",
+                data=json_module.dumps(body).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            try:
+                with urllib.request.urlopen(request, timeout=60) as response:
+                    return response.status, dict(response.headers), response.read()
+            except urllib.error.HTTPError as error:
+                return error.code, dict(error.headers), error.read()
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=5)
+
+    def recipe(self) -> dict:
+        return json.loads((FIXTURES / "audition_recipe.json").read_text(encoding="utf-8"))
+
+    @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
+    def test_the_header_echoes_the_contract_the_caller_rendered_under(self) -> None:
+        status, headers, body = self.post_manual(
+            {"manualKey": "ab" * 32, "recipe": self.recipe(), "manualContract": "5"},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(headers["X-Plaits-Manual-Contract"], "5")
+        self.assertTrue(body.startswith(b"%PDF-"))
+
+    @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
+    def test_a_caller_that_sends_no_contract_still_renders(self) -> None:
+        # A pre-2026-07-27 Worker against this image: the PDF must still come
+        # back, falling back to the env default rather than 400ing.
+        import container_server
+
+        status, headers, body = self.post_manual({"manualKey": "ab" * 32, "recipe": self.recipe()})
+        self.assertEqual(status, 200)
+        self.assertEqual(headers["X-Plaits-Manual-Contract"], container_server.MANUAL_CONTRACT_FALLBACK)
+        self.assertTrue(body.startswith(b"%PDF-"))
+
+    def test_a_contract_that_could_forge_a_header_is_rejected(self) -> None:
+        for bad in ["5\r\nX-Injected: 1", "", "x" * 33, 5, "contract 5"]:
+            with self.subTest(contract=bad):
+                status, _headers, body = self.post_manual(
+                    {"manualKey": "ab" * 32, "recipe": self.recipe(), "manualContract": bad},
+                )
+                self.assertEqual(status, 400)
+                self.assertIn(b"manual contract is invalid", body)

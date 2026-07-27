@@ -24,12 +24,21 @@ WORKSPACE = Path(os.environ.get("PLAITS_WORKSPACE", "/workspace")).resolve()
 BUILD_ROOT = Path(os.environ.get("PLAITS_BUILD_ROOT", "/tmp/plaits-builds")).resolve()
 SOURCE_REVISION = os.environ.get("PLAITS_SOURCE_REVISION", "development")
 BUILD_CONTRACT_VERSION = os.environ.get("PLAITS_BUILD_CONTRACT", "2")
-MANUAL_CONTRACT_VERSION = os.environ.get("PLAITS_MANUAL_CONTRACT", "1")
+# The manual contract is the WORKER's notion — it seeds the manual key, and the
+# container has no independent way to know it, so /manual takes it per request
+# and echoes it back. This env var is only the fallback for a caller that sends
+# none (a pre-2026-07-27 Worker against a newer image). It used to be the sole
+# source, which meant the header reported the image's default — "1" — while the
+# Worker had long since moved on, so anyone reading it was told the wrong thing.
+MANUAL_CONTRACT_FALLBACK = os.environ.get("PLAITS_MANUAL_CONTRACT", "1")
 TOOLCHAIN_ID = "gcc-arm-none-eabi-4.8-2013q4"
 TOOLCHAIN_BIN = os.environ.get("PLAITS_TOOLCHAIN_BIN", "/usr/local/arm-4.8.3/bin")
 MAX_REQUEST_BYTES = 32 * 1024
 MAX_BUILD_SECONDS = 12 * 60
 BUILD_KEY_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+# The contract is echoed into a response header, so it is held to a short
+# printable token rather than trusted verbatim — no CRLF, no header injection.
+MANUAL_CONTRACT_PATTERN = re.compile(r"^[0-9A-Za-z._-]{1,32}$")
 
 # Route the ARM compiler through ccache when it is installed. Only the three
 # recipe-dependent translation units (voice/plaits/ui) see the generated
@@ -434,6 +443,11 @@ class Handler(BaseHTTPRequestHandler):
             manual_key = payload.get("manualKey") if isinstance(payload, dict) else None
             if not isinstance(manual_key, str) or not BUILD_KEY_PATTERN.fullmatch(manual_key):
                 raise BuildError("invalid_request", "The manual key is invalid.")
+            manual_contract = payload.get("manualContract")
+            if manual_contract is None:
+                manual_contract = MANUAL_CONTRACT_FALLBACK
+            elif not isinstance(manual_contract, str) or not MANUAL_CONTRACT_PATTERN.fullmatch(manual_contract):
+                raise BuildError("invalid_request", "The manual contract is invalid.")
         except (json.JSONDecodeError, UnicodeDecodeError):
             self.send_json_error(BuildError("invalid_request", "The manual request is not valid JSON."), HTTPStatus.BAD_REQUEST)
             return
@@ -459,7 +473,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(pdf)))
         self.send_header("Content-Disposition", 'attachment; filename="plaits-palette-field-guide.pdf"')
         self.send_header("X-Plaits-Manual-Sha256", hashlib.sha256(pdf).hexdigest())
-        self.send_header("X-Plaits-Manual-Contract", MANUAL_CONTRACT_VERSION)
+        self.send_header("X-Plaits-Manual-Contract", manual_contract)
         self.end_headers()
         self.wfile.write(pdf)
 

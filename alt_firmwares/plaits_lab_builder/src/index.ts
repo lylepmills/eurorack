@@ -289,11 +289,15 @@ async function renderManualInContainer(
   container: ReturnType<typeof getContainer<FirmwareBuilder>>,
   manualKey: string,
   recipe: NormalizedRecipe,
+  manualContract: string,
 ): Promise<{ bytes: ArrayBuffer; sha256: string }> {
+  // The contract travels with the request because it is ours, not the image's:
+  // it seeds the manual key here, and the container only echoes it back on
+  // X-Plaits-Manual-Contract so that header describes the render that happened.
   const response = await container.fetch("http://container/manual", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ manualKey, recipe }),
+    body: JSON.stringify({ manualKey, recipe, manualContract }),
   });
   if (!response.ok || response.headers.get("Content-Type") !== "application/pdf") {
     const failure = await response.text().catch(() => "");
@@ -319,7 +323,7 @@ async function completeManual(
   if (existing) {
     return { status: "ready", manualKey, sha256: existing.customMetadata?.manualSha256 };
   }
-  const { bytes, sha256 } = await renderManualInContainer(container, manualKey, recipe);
+  const { bytes, sha256 } = await renderManualInContainer(container, manualKey, recipe, env.PLAITS_MANUAL_CONTRACT);
   await env.ARTIFACTS.put(manualArtifactKey(manualKey), bytes, {
     httpMetadata: { contentType: "application/pdf" },
     customMetadata: { manualSha256: sha256, manualContract: env.PLAITS_MANUAL_CONTRACT },

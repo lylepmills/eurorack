@@ -70,6 +70,15 @@ added to the key. Bump `PLAITS_MANUAL_CONTRACT` when the renderer's layout
 changes — or when the key's inputs change, so cached PDFs re-render (contract 5
 covers the FM-bank credits, and the chord-table fold that fixed guides served
 from cache with another recipe's LIGHT 1 row).
+
+The contract is the Worker's alone. It rides in the `POST /manual` body as
+`manualContract`, and the container echoes it on `X-Plaits-Manual-Contract` so
+that header describes the render that actually happened. The container's
+`PLAITS_MANUAL_CONTRACT` env var is now only the fallback for a caller that
+sends none; until 2026-07-27 it was the sole source, so the header reported the
+image default `1` while the Worker was on 5. Nothing consumes the header — the
+Worker records `env.PLAITS_MANUAL_CONTRACT` on the R2 object itself — so it is
+diagnostic, which is exactly why it has to be true.
 That checkpoint shipped in the July 19 rollout. It needed a new container image
 AND a Worker deploy, and because the firmware source had also changed since the
 deployed `schema5-20260717` image (the chord-table `ChordBank` rework moved the
