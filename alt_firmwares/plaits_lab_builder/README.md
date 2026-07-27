@@ -71,14 +71,19 @@ changes — or when the key's inputs change, so cached PDFs re-render (contract 
 covers the FM-bank credits, and the chord-table fold that fixed guides served
 from cache with another recipe's LIGHT 1 row).
 
-The contract is the Worker's alone. It rides in the `POST /manual` body as
-`manualContract`, and the container echoes it on `X-Plaits-Manual-Contract` so
-that header describes the render that actually happened. The container's
-`PLAITS_MANUAL_CONTRACT` env var is now only the fallback for a caller that
-sends none; until 2026-07-27 it was the sole source, so the header reported the
-image default `1` while the Worker was on 5. Nothing consumes the header — the
-Worker records `env.PLAITS_MANUAL_CONTRACT` on the R2 object itself — so it is
-diagnostic, which is exactly why it has to be true.
+The contract is the Worker's alone, and in source (`a0c0791`) it rides in the
+`POST /manual` body as `manualContract` for the container to echo on
+`X-Plaits-Manual-Contract`, so that header describes the render that actually
+happened; the container's `PLAITS_MANUAL_CONTRACT` env var is only the fallback
+for a caller that sends none. **NOT YET DEPLOYED** — the live image still reads
+that env var alone, which nothing sets, so production keeps reporting the image
+default `1` while the Worker is on 5. It waits for the next rollout on purpose:
+the fix is in the container, and shipping a container means a new image, a new
+`PLAITS_SOURCE_REVISION`, and a re-key of every cached artifact — too much churn
+for a header nothing consumes (the Worker records
+`env.PLAITS_MANUAL_CONTRACT` on the R2 object itself). Diagnostic, which is
+exactly why it has to be true — so fold it into the next image and drop this
+paragraph's warning.
 That checkpoint shipped in the July 19 rollout. It needed a new container image
 AND a Worker deploy, and because the firmware source had also changed since the
 deployed `schema5-20260717` image (the chord-table `ChordBank` rework moved the

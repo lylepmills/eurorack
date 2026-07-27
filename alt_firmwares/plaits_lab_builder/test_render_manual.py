@@ -263,10 +263,6 @@ class RenderManualTest(unittest.TestCase):
             self.assertTrue(output.read_bytes().startswith(b"%PDF-"))
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class ContainerManualEndpointTest(unittest.TestCase):
     @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
     def test_render_manual_bytes_is_deterministic_and_pdf(self) -> None:
@@ -351,3 +347,11 @@ class ManualEndpointHeaderTest(unittest.TestCase):
                 )
                 self.assertEqual(status, 400)
                 self.assertIn(b"manual contract is invalid", body)
+
+
+# Keep this LAST. It used to sit mid-file, above ContainerManualEndpointTest, so
+# `python3 test_render_manual.py` ran unittest.main() before the classes below
+# were defined and quietly collected only the 16 tests above it — a direct run
+# reported OK while skipping five, including every /manual endpoint test.
+if __name__ == "__main__":
+    unittest.main()
