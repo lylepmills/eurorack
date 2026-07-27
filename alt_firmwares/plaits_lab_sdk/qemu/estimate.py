@@ -83,7 +83,10 @@ def container_compile(sources: list[str], includes: list[str], defines: list[str
     return cmd
 
 
-def run_qemu(elf: Path, plugin: Path) -> tuple[int, int, int, int]:
+PC_RE = re.compile(r"PLAITS_QEMU_PC 0x([0-9a-f]+) (\d+) (\d+)")
+
+
+def run_qemu(elf: Path, plugin: Path) -> tuple[tuple[int, ...], dict[int, tuple[int, int]]]:
     result = subprocess.run(
         ["qemu-system-arm", "-M", "mps2-an386", "-cpu", "cortex-m4",
          "-nographic", "-no-reboot",
@@ -97,7 +100,64 @@ def run_qemu(elf: Path, plugin: Path) -> tuple[int, int, int, int]:
             f"QEMU produced no counts.\nstdout:\n{result.stdout[-2000:]}\n"
             f"stderr:\n{result.stderr[-2000:]}"
         )
-    return tuple(int(g) for g in match.groups())  # type: ignore[return-value]
+    pcs = {int(m.group(1), 16): (int(m.group(2)), int(m.group(3)))
+           for m in PC_RE.finditer(result.stderr)}
+    return tuple(int(g) for g in match.groups()), pcs
+
+
+def report_profile(symbols_path: Path, pc_lo: dict, pc_hi: dict, samples: int) -> None:
+    """Attribute the marginal PC histogram to functions.
+
+    The A/B subtraction cancels startup and Init, so what remains is the render
+    loop alone. Paired with the hardware probe's per-section cycles this gives a
+    per-FUNCTION cycles-per-instruction -- the number that says which code runs
+    slow, rather than leaving anyone to theorize about a whole engine."""
+    symbols = []
+    for line in symbols_path.read_text(encoding="utf-8", errors="replace").splitlines():
+        parts = line.split(None, 3)
+        if len(parts) == 4 and parts[2].lower() in ("t", "w"):
+            try:
+                symbols.append((int(parts[0], 16), int(parts[1], 16), parts[3]))
+            except ValueError:
+                continue
+    symbols.sort()
+
+    def function_of(addr: int) -> str:
+        lo, hi = 0, len(symbols) - 1
+        best = None
+        while lo <= hi:
+            mid = (lo + hi) // 2
+            if symbols[mid][0] <= addr:
+                best = symbols[mid]
+                lo = mid + 1
+            else:
+                hi = mid - 1
+        if best is None:
+            return "<unknown>"
+        start, size, name = best
+        if size and addr >= start + size + 32:
+            return "<unknown>"
+        return name
+
+    per_function: dict[str, list[float]] = {}
+    for addr in set(pc_lo) | set(pc_hi):
+        d_insn = pc_hi.get(addr, (0, 0))[0] - pc_lo.get(addr, (0, 0))[0]
+        d_vcmp = pc_hi.get(addr, (0, 0))[1] - pc_lo.get(addr, (0, 0))[1]
+        if d_insn <= 0 and d_vcmp <= 0:
+            continue
+        entry = per_function.setdefault(function_of(addr), [0.0, 0.0])
+        entry[0] += d_insn / samples
+        entry[1] += d_vcmp / samples
+
+    rows = sorted(per_function.items(), key=lambda item: -item[1][0])
+    total = sum(v[0] for _, v in rows)
+    print(f"\nper-function instruction counts (per sample, render loop only):")
+    print(f"{'insns':>8} {'vcmps':>7} {'share':>7}  function")
+    for name, (insns, vcmps) in rows:
+        if insns < 1.0:
+            continue
+        display = name if len(name) <= 76 else name[:73] + "..."
+        print(f"{insns:8.1f} {vcmps:7.1f} {100*insns/total:6.1f}%  {display}")
 
 
 def main() -> int:
@@ -118,6 +178,8 @@ def main() -> int:
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--sweep", action="store_true",
         help="measure several parameter positions and report the worst")
+    parser.add_argument("--profile", action="store_true",
+        help="per-function instruction histogram (single position)")
     parser.add_argument("--keep", action="store_true")
     args = parser.parse_args()
 
@@ -197,6 +259,11 @@ def main() -> int:
                      f"-DPLAITS_QEMU_NOTE={note}f",
                      f"-DPLAITS_QEMU_TRIGGER={2 if args.trigger == 'unpatched' else 0}"],
                     f"/output/h_{name}_{label}.elf", args.image, [])))
+        if args.profile:
+            # The symbol table is what turns PC buckets into function names.
+            commands.append(
+                "/usr/local/arm-4.8.3/bin/arm-none-eabi-nm -C -S -n "
+                f"/output/h_{positions[0][0]}_a.elf > /output/symbols.txt")
         docker = [
             "docker", "run", "--rm", "--platform", "linux/amd64",
             "--entrypoint", "sh",
@@ -216,8 +283,8 @@ def main() -> int:
         results = []
         samples = (args.blocks_b - args.blocks_a) * BLOCK_SIZE
         for name, harm, timb, macro, note in positions:
-            lo = run_qemu(out_dir / f"h_{name}_a.elf", plugin)
-            hi = run_qemu(out_dir / f"h_{name}_b.elf", plugin)
+            lo, pc_lo = run_qemu(out_dir / f"h_{name}_a.elf", plugin)
+            hi, pc_hi = run_qemu(out_dir / f"h_{name}_b.elf", plugin)
             d = [hi[i] - lo[i] for i in range(len(lo))]
             results.append({"position": name, "insns": d[0] / samples,
                             "flash": d[1] / samples, "ram": d[2] / samples,
@@ -226,6 +293,9 @@ def main() -> int:
                             "vcmps": d[6] / samples, "branches": d[7] / samples})
             if not args.quiet:
                 print(f"  {name:10} {d[0]/samples:8.1f} instructions/sample")
+
+        if args.profile:
+            report_profile(out_dir / "symbols.txt", pc_lo, pc_hi, samples)
 
     worst = max(results, key=lambda r: r["insns"])
     est = model.estimate(worst["insns"])

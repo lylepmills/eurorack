@@ -44,6 +44,18 @@ static uint64_t n_sqrt;
    against ~1-3 for everything else -- the costliest thing this core does. */
 static uint64_t n_vcmp;
 static uint64_t n_branch;
+
+/* PC histogram: executed instructions (and float compares) bucketed by address,
+   32 bytes per bucket over the low 4 MB code region. With the linker's symbol
+   table this becomes a per-FUNCTION instruction count -- and paired with the
+   hardware probe's per-section cycle counts, a per-function cycles-per-
+   instruction. That pairing is the arbiter aggregate counts cannot be: it says
+   which function's instructions run slow, instead of leaving an analyst to
+   guess why a whole engine does. */
+#define PC_SHIFT 5
+#define PC_BUCKETS (1 << 17)
+static uint64_t pc_insn[PC_BUCKETS];
+static uint64_t pc_vcmp[PC_BUCKETS];
 static uint64_t n_read_flash;
 static uint64_t n_read_ram;
 static uint64_t n_write;
@@ -51,6 +63,9 @@ static uint64_t n_write;
 static void vcpu_insn_exec(unsigned int cpu_index, void *udata)
 {
     n_insn++;
+    if (udata) {
+        ++*(uint64_t *)udata;
+    }
 }
 
 static void vcpu_div_exec(unsigned int cpu_index, void *udata)
@@ -66,6 +81,9 @@ static void vcpu_sqrt_exec(unsigned int cpu_index, void *udata)
 static void vcpu_vcmp_exec(unsigned int cpu_index, void *udata)
 {
     n_vcmp++;
+    if (udata) {
+        ++*(uint64_t *)udata;
+    }
 }
 
 static void vcpu_branch_exec(unsigned int cpu_index, void *udata)
@@ -90,8 +108,12 @@ static void vcpu_tb_trans(qemu_plugin_id_t id, struct qemu_plugin_tb *tb)
     size_t n = qemu_plugin_tb_n_insns(tb);
     for (size_t i = 0; i < n; i++) {
         struct qemu_plugin_insn *insn = qemu_plugin_tb_get_insn(tb, i);
+        uint64_t vaddr = qemu_plugin_insn_vaddr(insn);
+        uint64_t slot = vaddr >> PC_SHIFT;
+        void *insn_bucket = slot < PC_BUCKETS ? &pc_insn[slot] : NULL;
+        void *vcmp_bucket = slot < PC_BUCKETS ? &pc_vcmp[slot] : NULL;
         qemu_plugin_register_vcpu_insn_exec_cb(insn, vcpu_insn_exec,
-                                               QEMU_PLUGIN_CB_NO_REGS, NULL);
+                                               QEMU_PLUGIN_CB_NO_REGS, insn_bucket);
         /* Classify at TRANSLATION time -- once per instruction, not per
            execution -- so the extra counters cost nothing at run time. */
         char *disas = qemu_plugin_insn_disas(insn);
@@ -105,7 +127,7 @@ static void vcpu_tb_trans(qemu_plugin_id_t id, struct qemu_plugin_tb *tb)
             } else if (strncmp(disas, "vcmp", 4) == 0 ||
                        strncmp(disas, "vmrs", 4) == 0) {
                 qemu_plugin_register_vcpu_insn_exec_cb(insn, vcpu_vcmp_exec,
-                                                       QEMU_PLUGIN_CB_NO_REGS, NULL);
+                                                       QEMU_PLUGIN_CB_NO_REGS, vcmp_bucket);
             } else if (disas[0] == 'b' &&
                        (disas[1] == ' ' || disas[1] == '.' ||
                         strncmp(disas, "bne", 3) == 0 || strncmp(disas, "beq", 3) == 0 ||
@@ -132,6 +154,12 @@ static void plugin_exit(qemu_plugin_id_t id, void *p)
             "PLAITS_QEMU_COUNTS insns=%" PRIu64 " flash_reads=%" PRIu64
             " ram_reads=%" PRIu64 " writes=%" PRIu64 " divs=%" PRIu64 " sqrts=%" PRIu64 " vcmps=%" PRIu64 " branches=%" PRIu64 "\n",
             n_insn, n_read_flash, n_read_ram, n_write, n_div, n_sqrt, n_vcmp, n_branch);
+    for (uint64_t i = 0; i < PC_BUCKETS; ++i) {
+        if (pc_insn[i] || pc_vcmp[i]) {
+            fprintf(stderr, "PLAITS_QEMU_PC 0x%" PRIx64 " %" PRIu64 " %" PRIu64 "\n",
+                    i << PC_SHIFT, pc_insn[i], pc_vcmp[i]);
+        }
+    }
     fflush(stderr);
 }
 
