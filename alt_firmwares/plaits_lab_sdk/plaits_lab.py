@@ -1252,7 +1252,8 @@ STOCK_BENCH_ENGINES = (
 )
 
 
-def render_stock_bench_config(engine_ids: tuple[str, ...] = STOCK_BENCH_ENGINES) -> str:
+def render_stock_bench_config(engine_ids: tuple[str, ...] = STOCK_BENCH_ENGINES,
+                              flush_to_zero: bool = False) -> str:
     """Config for a multi-engine measurement firmware: the AUX cycle readout, but
     NOT the LED meter -- the normal display has to keep showing which engine is
     selected so a sweep through them can be identified."""
@@ -1277,6 +1278,7 @@ def render_stock_bench_config(engine_ids: tuple[str, ...] = STOCK_BENCH_ENGINES)
         )
         for item in selected
     )
+    ftz = 1 if flush_to_zero else 0
     count = len(selected)
     # Whole banks of eight, so the model knob walks them in a predictable order
     # and the bank colour tells you which half you are in.
@@ -1295,6 +1297,7 @@ def render_stock_bench_config(engine_ids: tuple[str, ...] = STOCK_BENCH_ENGINES)
 
 #define PLAITS_CPU_PROBE 1
 #define PLAITS_CPU_PROBE_LEDS 0
+#define PLAITS_CPU_PROBE_FTZ {ftz}
 #define PLAITS_ENGINE_COUNT {count}
 #define PLAITS_BANK_SIZES {{ {", ".join(str(v) for v in bank_sizes)} }}
 #define PLAITS_ENGINE_ROWS {{ {", ".join(str(v) for v in rows)} }}
@@ -1466,7 +1469,8 @@ def _arm_compile_native(package: dict[str, Any], args: argparse.Namespace, toolc
         build_root = Path(temp_dir) / "build"
         config = Path(temp_dir) / "engine_config.h"
         config.write_text(
-            render_stock_bench_config() if getattr(args, "stock_bench", False)
+            render_stock_bench_config(flush_to_zero=getattr(args, "ftz", False))
+            if getattr(args, "stock_bench", False)
             else render_local_hardware_config(package, cpu_probe=getattr(args, "cpu_probe", False)),
             encoding="utf-8")
         cppflags = f"-fno-exceptions -fno-rtti -I{package['source_root']} -include {config}"
@@ -1533,6 +1537,7 @@ def hardware_build_command(args: argparse.Namespace) -> int:
                 "--hardware", "--output", f"/output/{output.name}",
                 *(["--cpu-probe"] if getattr(args, "cpu_probe", False) else []),
                 *(["--stock-bench"] if getattr(args, "stock_bench", False) else []),
+                *(["--ftz"] if getattr(args, "ftz", False) else []),
                 "--toolchain", args.toolchain, "--native",
             ]
             result = subprocess.run(command, text=True, capture_output=True, check=False)
@@ -1859,6 +1864,8 @@ def build_parser() -> argparse.ArgumentParser:
     build_parser_command = subparsers.add_parser("build", help="build an unreviewed local hardware firmware")
     build_parser_command.add_argument("package")
     build_parser_command.add_argument("--hardware", action="store_true", required=True)
+    build_parser_command.add_argument("--ftz", action="store_true",
+        help="probe builds: enable FPU flush-to-zero (denormal test)")
     build_parser_command.add_argument("--stock-bench", action="store_true",
         help="build a multi-engine bench firmware (stock engines + AUX cycle readout)")
     build_parser_command.add_argument("--cpu-probe", action="store_true",

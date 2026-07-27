@@ -34,6 +34,13 @@ using namespace plaits;
 #ifndef PLAITS_QEMU_TIMBRE
 #define PLAITS_QEMU_TIMBRE 0.5f
 #endif
+// Pitch matters: a physical model's per-sample work can depend on it (delay
+// length, filter iterations), so an engine measured at one note may cost quite
+// differently at another. Fixing it at 48 is what made inharmonic-string look
+// like an outlier against a hardware sweep taken at a different pitch.
+#ifndef PLAITS_QEMU_NOTE
+#define PLAITS_QEMU_NOTE 48.0f
+#endif
 
 // Semihosting: the only way out of a bare-metal guest. bkpt 0xAB is the ARM
 // convention; QEMU implements it when started with -semihosting-config.
@@ -57,7 +64,7 @@ int main() {
 
   EngineParameters p;
   p.trigger = 0;
-  p.note = 48.0f;
+  p.note = PLAITS_QEMU_NOTE;
   p.timbre = PLAITS_QEMU_TIMBRE;
   p.morph = 0.5f;
   p.harmonics = PLAITS_QEMU_HARMONICS;

@@ -62,6 +62,10 @@ namespace plaits {
 #define PLAITS_CPU_PROBE_LEDS 1
 #endif
 
+#ifndef PLAITS_CPU_PROBE_FTZ
+#define PLAITS_CPU_PROBE_FTZ 0
+#endif
+
 // Full budget maps to this many Hz on the AUX readout.
 const float kCpuProbeFullScaleHz = 1000.0f;
 
@@ -72,7 +76,29 @@ class CpuProbe {
 
   // Must run once at startup. The cycle counter is part of the debug block, so
   // the trace unit has to be powered up before CYCCNT counts at all.
+  // Set FLUSH-TO-ZERO on the FPU (FPSCR bit 24) when PLAITS_CPU_PROBE_FTZ is on.
+  //
+  // The firmware enables the FPU but never touches FPSCR, so it runs in IEEE
+  // mode and handles denormals. Any resonator or delay line decaying toward
+  // silence drifts into the denormal range and STAYS there, and denormal
+  // operands cost this FPU many extra cycles -- a penalty QEMU cannot see,
+  // because it computes them correctly for free. inharmonic-string measured
+  // 6080 cycles/sample against ~1200 predicted from its instruction count;
+  // this is the test of whether that gap is denormals.
+  //
+  // Gated, so a probe build can measure the difference without changing what
+  // ships.
+  void SetFlushToZero() {
+#if PLAITS_CPU_PROBE_FTZ
+    uint32_t fpscr;
+    __asm volatile("vmrs %0, fpscr" : "=r"(fpscr));
+    fpscr |= (1u << 24);
+    __asm volatile("vmsr fpscr, %0" : : "r"(fpscr));
+#endif
+  }
+
   void Init() {
+    SetFlushToZero();
     CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
     DWT->CYCCNT = 0;
     DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;

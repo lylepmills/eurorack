@@ -90,13 +90,15 @@ def run_qemu(elf: Path, plugin: Path) -> tuple[int, int, int, int]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("package")
+    parser.add_argument("package", nargs="?")
+    parser.add_argument("--builtin", help="measure a stock catalog engine instead of a package")
     parser.add_argument("--image", default="plaits-lab-builder:local")
     parser.add_argument("--blocks-a", type=int, default=200)
     parser.add_argument("--blocks-b", type=int, default=400)
     parser.add_argument("--harmonics", type=float, default=0.5)
     parser.add_argument("--macro", type=float, default=0.5)
     parser.add_argument("--timbre", type=float, default=0.5)
+    parser.add_argument("--note", type=float, default=48.0)
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--keep", action="store_true")
     args = parser.parse_args()
@@ -104,7 +106,30 @@ def main() -> int:
     sys.path.insert(0, str(SDK_DIR))
     import plaits_lab  # noqa: E402
 
-    package = plaits_lab.load_package(args.package, autodeclare=True)
+    if args.builtin:
+        # Stock engines are described by the catalog, not a package directory.
+        entry, _ = plaits_lab.builtin_engine(args.builtin)
+        package = {
+            "repo_root": REPO_ROOT,
+            "source_root": REPO_ROOT / "plaits",
+            "manifest": {"source": entry["source"], "postProcessing": entry["postProcessing"]},
+            "source_files": [REPO_ROOT / f for f in entry["source"]["files"]],
+            "header": Path(entry["source"]["header"]),
+            "shared": entry.get("sharedModules", []),
+        }
+        units = plaits_lab.dedupe_units([
+            QEMU_DIR / "harness.cc",
+            *package["source_files"],
+            *plaits_lab.shared_module_sources(package["shared"], REPO_ROOT),
+            REPO_ROOT / "plaits/resources.cc",
+            REPO_ROOT / "stmlib/dsp/units.cc",
+            REPO_ROOT / "stmlib/utils/random.cc",
+        ])
+        header_define = entry["source"]["header"]
+    else:
+        package = plaits_lab.load_package(args.package, autodeclare=True)
+        units = None
+        header_define = None
     plugin = QEMU_DIR / "cycles_plugin.so"
     if not plugin.is_file():
         raise SystemExit(
@@ -115,7 +140,9 @@ def main() -> int:
     if shutil.which("qemu-system-arm") is None:
         raise SystemExit("qemu-system-arm not on PATH (brew install qemu)")
 
-    units = plaits_lab.engine_translation_units(package, QEMU_DIR / "harness.cc")
+    if units is None:
+        units = plaits_lab.engine_translation_units(package, QEMU_DIR / "harness.cc")
+        header_define = plaits_lab.engine_header_define(package)
     src_root = Path(package["source_root"])
 
     with tempfile.TemporaryDirectory(prefix="plaits-qemu-") as temp:
@@ -132,12 +159,13 @@ def main() -> int:
             cmd = container_compile(
                 mapped,
                 ["/workspace", "/contributor/src", "/qemu"],
-                [f'-DPLAITS_LAB_ENGINE_HEADER="{plaits_lab.engine_header_define(package)}"',
+                [f'-DPLAITS_LAB_ENGINE_HEADER="{header_define}"',
                  f'-DPLAITS_LAB_ENGINE_CLASS=plaits::{package["manifest"]["source"]["className"]}',
                  f"-DPLAITS_QEMU_BLOCKS={blocks}",
                  f"-DPLAITS_QEMU_HARMONICS={args.harmonics}f",
                  f"-DPLAITS_QEMU_MACRO={args.macro}f",
-                 f"-DPLAITS_QEMU_TIMBRE={args.timbre}f"],
+                 f"-DPLAITS_QEMU_TIMBRE={args.timbre}f",
+                 f"-DPLAITS_QEMU_NOTE={args.note}f"],
                 f"/output/harness_{label}.elf", args.image, [],
             )
             # The builder image's ENTRYPOINT is its build server, so it has to
@@ -173,7 +201,7 @@ def main() -> int:
     usage = cycles / BUDGET_CYCLES_PER_SAMPLE
 
     if args.quiet:
-        print(f"RESULT harmonics={args.harmonics} macro={args.macro} "
+        print(f"RESULT note={args.note} harmonics={args.harmonics} macro={args.macro} "
               f"insns={per(d_insn):.1f} flash={per(d_flash):.1f} "
               f"ram={per(d_ram):.1f} writes={per(d_write):.1f}")
         return 0
