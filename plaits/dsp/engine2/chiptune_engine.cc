@@ -54,7 +54,14 @@ const float kStereoVoicePan[kChordNumVoices] = {
 
 void ChiptuneEngine::Init(BufferAllocator* allocator) {
   bass_.Init();
-  for (int i = 0; i < kChordNumNotes; ++i) {
+  // voice_ holds kChordNumVoices (5) oscillators and Render() drives all of
+  // them; initializing only kChordNumNotes (4) left voice_[4] running on
+  // whatever was in its memory. On the module that is harmless — Voice lives in
+  // .bss, so the fifth oscillator starts zeroed, which is a valid phase state —
+  // but a host that stack-allocates an engine (the preview renderers) can hand
+  // it a garbage phase, and SuperSquareOscillator's transition loop only exits
+  // on a phase comparison, so it spins forever.
+  for (int i = 0; i < kChordNumVoices; ++i) {
     voice_[i].Init();
   }
   
