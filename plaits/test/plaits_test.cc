@@ -59,6 +59,7 @@
 #include "plaits/dsp/engine2/sideband_engine.h"
 #include "plaits/dsp/engine2/six_op_engine.h"
 #include "plaits/dsp/engine2/spectral_spiral_engine.h"
+#include "plaits/dsp/engine2/bowed_engine.h"
 #include "plaits/dsp/engine2/csaw_engine.h"
 #include "plaits/dsp/engine2/ring_mod_engine.h"
 #include "plaits/dsp/engine2/toy_engine.h"
@@ -2079,6 +2080,7 @@ void TestExperimentalEngines() {
   RenderAuditionEngine<ToyEngine>("13-toy.wav");
   RenderAuditionEngine<CSawEngine>("14-csaw.wav");
   RenderAuditionEngine<RingModEngine>("15-ring-mod.wav");
+  RenderAuditionEngine<BowedEngine>("16-bowed.wav");
   printf("Validating Glisson extremes...\n");
   fflush(stdout);
   ValidateExperimentalEngineExtremes<GlissonEngine>();
@@ -2108,6 +2110,7 @@ void TestExperimentalEngines() {
   ValidateExperimentalEngineExtremes<ToyEngine>();
   ValidateExperimentalEngineExtremes<CSawEngine>();
   ValidateExperimentalEngineExtremes<RingModEngine>();
+  ValidateExperimentalEngineExtremes<BowedEngine>();
   ValidateExperimentalControlResponse<LoopbackEngine>("Loopback");
   ValidateExperimentalControlResponse<LockstepEngine>("Lockstep");
   ValidateExperimentalControlResponse<TapfieldEngine>("Tapfield");
@@ -2123,6 +2126,7 @@ void TestExperimentalEngines() {
   ValidateExperimentalControlResponse<ToyEngine>("Toy");
   ValidateExperimentalControlResponse<CSawEngine>("CSaw");
   ValidateExperimentalControlResponse<RingModEngine>("Ring Mod");
+  ValidateExperimentalControlResponse<BowedEngine>("Bowed");
   printf("Validating stock fourth-macro midpoint...\n");
   fflush(stdout);
   ValidateStockMacroMidpoint();

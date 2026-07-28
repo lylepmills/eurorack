@@ -53,6 +53,7 @@
 #include "plaits/dsp/engine2/scanned_engine.h"
 #include "plaits/dsp/engine2/sideband_engine.h"
 #include "plaits/dsp/engine2/spectral_spiral_engine.h"
+#include "plaits/dsp/engine2/bowed_engine.h"
 #include "plaits/dsp/engine2/csaw_engine.h"
 #include "plaits/dsp/engine2/ring_mod_engine.h"
 #include "plaits/dsp/engine2/toy_engine.h"
@@ -147,6 +148,7 @@ int main() {
   bench<GendyEngine>("gendy");
   bench<ScannedEngine>("scanned");
   bench<PulsarEngine>("pulsar");
+  bench<BowedEngine>("bowed");
   bench<CSawEngine>("csaw");
   bench<RingModEngine>("ring-mod");
   bench<ToyEngine>("toy");

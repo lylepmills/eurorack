@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/bowed",
+  "catalogId": "bowed",
+  "version": "1.0.0",
+  "name": "Bowed",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "A bowed string waveguide with a stick-slip friction exciter, a movable bow and an adjustable instrument body.",
+  "family": "Physical",
+  "tags": ["braids", "waveguide", "physical", "string"],
+  "controls": [
+    { "id": "harmonics", "label": "Bow position", "description": "Moves the bow from near the bridge to well up the neck." },
+    { "id": "timbre", "label": "Bow pressure", "description": "Increases bow pressure from a thin whistle to a hard scrape." },
+    { "id": "morph", "label": "Nut damping", "description": "Opens the nut damping from tight and choked to loose and ringing." },
+    { "id": "macro", "label": "Body", "description": "Tilts the instrument body darker or brighter around the stock resonance." }
+  ],
+  "outputs": {
+    "main": "The bridge pickup through the instrument body.",
+    "aux": "The neck pickup through the same body filter."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/bowed_engine.h",
+    "files": ["plaits/dsp/engine2/bowed_engine.cc"],
+    "className": "BowedEngine"
+  },
+  "postProcessing": { "alreadyEnveloped": false, "outGain": -0.85, "auxGain": -0.85 },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids DigitalOscillator::RenderBowed (BOWD)"
+}

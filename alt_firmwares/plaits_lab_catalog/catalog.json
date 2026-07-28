@@ -335,6 +335,13 @@
       "controls": ["Detune 1", "Detune 2", "Depth", "Drive"], "outputs": ["Three-way ring product", "Carrier and first modulator"],
       "source": { "header": "plaits/dsp/engine2/ring_mod_engine.h", "className": "RingModEngine", "member": "ring_mod_engine_", "files": ["plaits/dsp/engine2/ring_mod_engine.cc"] },
       "postProcessing": { "alreadyEnveloped": false, "outGain": -1.5, "auxGain": -1.5 }
+    },
+    {
+      "id": "bowed", "packageId": "mutable-instruments/bowed", "name": "Bowed", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Physical",
+      "description": "A bowed string waveguide with a stick-slip friction exciter, a movable bow and an adjustable instrument body.", "tags": ["braids", "waveguide", "physical", "string"],
+      "controls": ["Bow position", "Bow pressure", "Nut damping", "Body"], "outputs": ["Bridge pickup", "Neck pickup"],
+      "source": { "header": "plaits/dsp/engine2/bowed_engine.h", "className": "BowedEngine", "member": "bowed_engine_", "files": ["plaits/dsp/engine2/bowed_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": -0.85, "auxGain": -0.85 }
     }
   ],
   "manuals": {
@@ -724,6 +731,15 @@
         "macro": "Drives the output shaper, from clean multiplication to hard saturation."
       },
       "trigger": "Realigns the three oscillator phases so each note starts alike."
+    },
+    "bowed": {
+      "controls": {
+        "harmonics": "Moves the bow from near the bridge to well up the neck.",
+        "timbre": "Increases bow pressure from a thin whistle to a hard scrape.",
+        "morph": "Opens the nut damping from tight and choked to loose and ringing.",
+        "macro": "Tilts the instrument body darker or brighter around the stock resonance."
+      },
+      "trigger": "Restarts the bow stroke and clears the string."
     }
   },
   "presets": {
