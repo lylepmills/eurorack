@@ -67,6 +67,7 @@
 #include "plaits/dsp/engine2/digital_modulation_engine.h"
 #include "plaits/dsp/engine2/saw_comb_engine.h"
 #include "plaits/dsp/engine2/vowel_fof_engine.h"
+#include "plaits/dsp/engine2/raw_fm_engine.h"
 #include "plaits/dsp/engine2/z_filter_engine.h"
 #include "plaits/dsp/engine2/string_machine_engine.h"
 #include "plaits/dsp/engine2/tapfield_engine.h"
@@ -2081,6 +2082,7 @@ void TestExperimentalEngines() {
   RenderAuditionEngine<RulefieldEngine>("10-rulefield.wav");
   RenderAuditionEngine<SpectralSpiralEngine>("11-spectral-spiral.wav");
   RenderAuditionEngine<ZFilterEngine>("12-z-filter.wav");
+  RenderAuditionEngine<RawFmEngine>("21-raw-fm.wav");
   RenderAuditionEngine<VowelFofEngine>("20-vowel-fof.wav");
   RenderAuditionEngine<SawCombEngine>("19-saw-comb.wav");
   RenderAuditionEngine<DigitalModulationEngine>("18-digital-modulation.wav");
@@ -2117,6 +2119,7 @@ void TestExperimentalEngines() {
   ValidateExperimentalEngineExtremes<DigitalModulationEngine>();
   ValidateExperimentalEngineExtremes<SawCombEngine>();
   ValidateExperimentalEngineExtremes<VowelFofEngine>();
+  ValidateExperimentalEngineExtremes<RawFmEngine>();
   ValidateExperimentalEngineExtremes<ZFilterEngine>();
   ValidateExperimentalEngineExtremes<ToyEngine>();
   ValidateExperimentalEngineExtremes<CSawEngine>();
@@ -2137,6 +2140,7 @@ void TestExperimentalEngines() {
   ValidateExperimentalControlResponse<DigitalModulationEngine>("Digital Modulation");
   ValidateExperimentalControlResponse<SawCombEngine>("Saw Comb");
   ValidateExperimentalControlResponse<VowelFofEngine>("Vowel FOF");
+  ValidateExperimentalControlResponse<RawFmEngine>("Raw FM");
   ValidateExperimentalControlResponse<ZFilterEngine>("Z Filter");
   ValidateExperimentalControlResponse<ToyEngine>("Toy");
   ValidateExperimentalControlResponse<CSawEngine>("CSaw");

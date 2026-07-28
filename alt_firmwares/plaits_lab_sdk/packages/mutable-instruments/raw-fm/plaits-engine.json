@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/raw-fm",
+  "catalogId": "raw-fm",
+  "version": "1.0.0",
+  "name": "Raw FM",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "Braids' three FM models on one axis: self-feedback, plain two-operator FM, and chaotic frequency feedback, unfiltered and unoversampled.",
+  "family": "FM",
+  "tags": [
+    "braids",
+    "fm",
+    "feedback",
+    "chaotic"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Ratio",
+      "description": "Steps the modulator ratio through the tuned intervals."
+    },
+    {
+      "id": "timbre",
+      "label": "Index",
+      "description": "Raises the modulation index linearly to a full cycle of deviation."
+    },
+    {
+      "id": "morph",
+      "label": "Character",
+      "description": "Moves from self-feedback through plain FM into chaotic wavetable feedback, which drops the modulator an octave."
+    },
+    {
+      "id": "macro",
+      "label": "Depth",
+      "description": "Sets how deeply the feedback path drives itself around the stock amount."
+    }
+  ],
+  "outputs": {
+    "main": "Carrier.",
+    "aux": "Modulator."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/raw_fm_engine.h",
+    "files": [
+      "plaits/dsp/engine2/raw_fm_engine.cc"
+    ],
+    "className": "RawFmEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": -0.45,
+    "auxGain": -0.45
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids RenderFm, RenderFeedbackFm and RenderChaoticFeedbackFm (FM, FBFM, WTFM)"
+}

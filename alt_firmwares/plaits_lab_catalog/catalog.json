@@ -370,6 +370,13 @@
       "controls": ["Brightness", "Register", "Vowel", "Formant tilt"], "outputs": ["Formant bank", "Upper-formant weighting"],
       "source": { "header": "plaits/dsp/engine2/vowel_fof_engine.h", "className": "VowelFofEngine", "member": "vowel_fof_engine_", "files": ["plaits/dsp/engine2/vowel_fof_engine.cc", "plaits/dsp/engine2/vowel_fof_data.cc"] },
       "postProcessing": { "alreadyEnveloped": false, "outGain": -3.8, "auxGain": -3.8 }
+    },
+    {
+      "id": "raw-fm", "packageId": "mutable-instruments/raw-fm", "name": "Raw FM", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "FM",
+      "description": "Braids' three FM models on one axis: self-feedback, plain two-operator FM, and chaotic frequency feedback, unfiltered and unoversampled.", "tags": ["braids", "fm", "feedback", "chaotic"],
+      "controls": ["Ratio", "Index", "Character", "Depth"], "outputs": ["Carrier", "Modulator"],
+      "source": { "header": "plaits/dsp/engine2/raw_fm_engine.h", "className": "RawFmEngine", "member": "raw_fm_engine_", "files": ["plaits/dsp/engine2/raw_fm_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": -0.45, "auxGain": -0.45 }
     }
   ],
   "manuals": {
@@ -804,6 +811,15 @@
         "macro": "Restores the formant amplitude balance the stock model leaves flat."
       },
       "trigger": "Restarts the internal envelope when TRIG is patched."
+    },
+    "raw-fm": {
+      "controls": {
+        "harmonics": "Steps the modulator ratio through the tuned intervals.",
+        "timbre": "Raises the modulation index linearly to a full cycle of deviation.",
+        "morph": "Moves from self-feedback through plain FM into chaotic wavetable feedback, which drops the modulator an octave.",
+        "macro": "Sets how deeply the feedback path drives itself around the stock amount."
+      },
+      "trigger": "Realigns the carrier and modulator so each note starts alike."
     }
   },
   "presets": {

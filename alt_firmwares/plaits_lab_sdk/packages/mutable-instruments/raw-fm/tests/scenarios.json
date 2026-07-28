@@ -1,0 +1,41 @@
+[
+  {
+    "id": "hero",
+    "name": "Character sweep at a rising index",
+    "durationSeconds": 4,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.24, 0.24],
+      "timbre": [0.1, 0.8],
+      "morph": [0.0, 1.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "plain",
+    "name": "Plain FM through the ratio ladder",
+    "durationSeconds": 3,
+    "note": 48,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.0, 1.0],
+      "timbre": [0.5, 0.5],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "chaotic",
+    "name": "Full depth in the chaotic region",
+    "durationSeconds": 2,
+    "note": 36,
+    "triggerHz": 2,
+    "controls": {
+      "harmonics": [0.47, 0.47],
+      "timbre": [0.9, 0.9],
+      "morph": [1.0, 1.0],
+      "macro": [0.5, 1.0]
+    }
+  }
+]
