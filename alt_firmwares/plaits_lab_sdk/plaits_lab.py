@@ -1630,7 +1630,14 @@ def api_call(base: str, path: str, *, token: str | None = None, method: str = "G
              content_type: str | None = None) -> dict[str, Any]:
     """One JSON API call. Raises PackageError with the server's own message."""
     data = body
-    headers = {"Accept": "application/json"}
+    # A real User-Agent is REQUIRED, not politeness: Cloudflare's bot
+    # protection 403s Python's default "Python-urllib/x.y" outright, which
+    # surfaces as an inexplicable failure against production while curl and
+    # local wrangler both work.
+    headers = {
+        "Accept": "application/json",
+        "User-Agent": f"plaits-lab/{SDK_VERSION} (+https://rubato.audio/plaits-palette)",
+    }
     if payload is not None:
         data = json.dumps(payload).encode("utf-8")
         headers["Content-Type"] = "application/json"
