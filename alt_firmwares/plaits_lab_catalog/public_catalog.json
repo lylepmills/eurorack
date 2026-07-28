@@ -1959,7 +1959,7 @@
         "Symbol staircase"
       ],
       "version": "1.0.0",
-      "digest": "sha256:ec6d749db9e9cfd52a0c9efbf9928cef86d247a6b54812c067c52937ef5a0094",
+      "digest": "sha256:fd9a8616025aa5c7cced5e447ba92f1b7ce3d228e229a24c2ceaecaadc7d8d80",
       "documentationDigest": "sha256:76ff0cca3dbaa7eccc97f7cce7f5569d5f9bf5d16c0ce7e668238f7435a63fdd",
       "manual": {
         "controls": {
@@ -1972,6 +1972,46 @@
       },
       "implementation": {
         "className": "DigitalModulationEngine"
+      }
+    },
+    {
+      "id": "saw-comb",
+      "packageId": "mutable-instruments/saw-comb",
+      "name": "Saw Comb",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Feedback",
+      "description": "A band-limited exciter through a comb whose pitch is decoupled from the played note, with genuinely bipolar feedback.",
+      "tags": [
+        "braids",
+        "comb",
+        "feedback",
+        "resonator"
+      ],
+      "controls": [
+        "Resonance",
+        "Comb pitch",
+        "Exciter",
+        "Loop tilt"
+      ],
+      "outputs": [
+        "Comb output",
+        "Second tap a fifth away"
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:e9f11fed3f0f2ba07ac4be102ecb6e40c6e6355484b63b25cc846e8aca34bff8",
+      "documentationDigest": "sha256:74d5139b7ea8408cd0135babf3ae82cc364b74ecf441ddbc63f52faba9ed7f58",
+      "manual": {
+        "controls": {
+          "harmonics": "Sweeps comb feedback from inverted through a single echo to ringing resonance.",
+          "timbre": "Detunes the comb up to five octaves either side of the played note.",
+          "morph": "Morphs the exciter from a bright saw to a narrow pulse.",
+          "macro": "Damps the feedback loop below noon and brightens it above."
+        },
+        "trigger": "Clears the comb line and restarts the exciter."
+      },
+      "implementation": {
+        "className": "SawCombEngine"
       }
     }
   ],
