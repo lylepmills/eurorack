@@ -1,0 +1,41 @@
+[
+  {
+    "id": "hero",
+    "name": "Model sweep with a cutoff climb",
+    "durationSeconds": 4,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.0, 1.0],
+      "timbre": [0.1, 0.7],
+      "morph": [0.2, 0.8],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "bend",
+    "name": "Burst envelope bend at the peaking model",
+    "durationSeconds": 3,
+    "note": 48,
+    "triggerHz": 4,
+    "controls": {
+      "harmonics": [0.375, 0.375],
+      "timbre": [0.35, 0.35],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 1.0]
+    }
+  },
+  {
+    "id": "phase-wrap",
+    "name": "Top of TIMBRE at a high note",
+    "durationSeconds": 2,
+    "note": 96,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.0, 1.0],
+      "timbre": [1.0, 1.0],
+      "morph": [0.5, 0.5],
+      "macro": [1.0, 1.0]
+    }
+  }
+]

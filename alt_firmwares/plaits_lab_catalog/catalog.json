@@ -307,6 +307,13 @@
       "controls": ["Source richness", "Shift spacing", "Feedback", "Shift direction"], "outputs": ["Forward spectral spiral", "Counter-shift projection"],
       "source": { "header": "plaits/dsp/engine2/spectral_spiral_engine.h", "className": "SpectralSpiralEngine", "member": "spectral_spiral_engine_", "files": ["plaits/dsp/engine2/spectral_spiral_engine.cc"] },
       "postProcessing": { "alreadyEnveloped": false, "outGain": 0.7, "auxGain": 0.7 }
+    },
+    {
+      "id": "z-filter", "packageId": "mutable-instruments/z-filter", "name": "Z Filter", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Subtractive",
+      "description": "Braids' four filter models in one slot: a windowed resonator burst rung against a polarity-flipped pulse train and its integral.", "tags": ["braids", "filter", "resonator", "subtractive"],
+      "controls": ["Model", "Cutoff", "Resonance", "Bend"], "outputs": ["Selected filter model", "Complementary model"],
+      "source": { "header": "plaits/dsp/engine2/z_filter_engine.h", "className": "ZFilterEngine", "member": "z_filter_engine_", "files": ["plaits/dsp/engine2/z_filter_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.8, "auxGain": 0.8 }
     }
   ],
   "manuals": {
@@ -660,6 +667,15 @@
         "macro": "Moves the shift direction from downward through stationary to upward."
       },
       "trigger": "Clears and rephases the complex feedback loop."
+    },
+    "z-filter": {
+      "controls": {
+        "harmonics": "Selects the lowpass, peaking, bandpass and highpass filter models.",
+        "timbre": "Sweeps the filter cutoff from below the note to ten octaves above it.",
+        "morph": "Balances the raw pulse against the resonant ring, peaking at noon.",
+        "macro": "Bends the burst envelope from the flat stock ramp toward a sharp percussive attack."
+      },
+      "trigger": "Restarts the internal envelope when TRIG is patched."
     }
   },
   "presets": {

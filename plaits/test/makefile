@@ -71,7 +71,8 @@ CC_FILES       = algorithms.cc \
 		voice.cc \
 		waveshaping_engine.cc \
 		wavetable_engine.cc \
-		wave_terrain_engine.cc
+		wave_terrain_engine.cc \
+		z_filter_engine.cc
 OBJ_FILES      = $(CC_FILES:.cc=.o)
 OBJS           = $(patsubst %,$(BUILD_DIR)%,$(OBJ_FILES)) $(STARTUP_OBJ)
 DEPS           = $(OBJS:.o=.d)
