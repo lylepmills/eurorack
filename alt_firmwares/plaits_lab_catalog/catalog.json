@@ -1660,7 +1660,10 @@
         "alreadyEnveloped": false,
         "outGain": 0.8,
         "auxGain": 0.8
-      }
+      },
+      "sharedModules": [
+        "chord-bank"
+      ]
     }
   ],
   "manuals": {
