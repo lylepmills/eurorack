@@ -248,8 +248,9 @@ void Ui::UpdateLEDs() {
 
 #if PLAITS_CPU_PROBE && PLAITS_CPU_PROBE_LEDS
   // A probe build's LEDs are a CPU meter, so an engine's cost is readable with
-  // nothing patched at all -- the AUX tone stays available for a precise
-  // reading, but you no longer have to give up an output to get a rough one.
+  // nothing patched at all and no output given up -- which is why this is the
+  // channel a contributor build ships. (PLAITS_CPU_PROBE_AUX adds the precise
+  // tone readout, at the cost of the engine's own AUX output.)
   // Each LED is one eighth of the audio callback's budget: lit green while the
   // engine fits, amber for the last quarter, and all eight blinking red once it
   // is over budget (the blink gets faster the further over it is).

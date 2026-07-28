@@ -20,16 +20,19 @@ direction; confirm on hardware before shipping.
 
 ## Reading the hardware probe
 
-**LEDs (no patching needed):** a bottom-up bar, one LED per eighth of budget,
+**LEDs (`--cpu-probe`, no patching and no output given up):** a bottom-up bar, one LED per eighth of budget,
 with the next LED's *brightness* showing the fraction (~1% resolution).
 Green below 62.5%, amber above, **all-red blinking above 90%** — red means
 the audio deadline is at risk in practice, calibrated against builds that
 audibly crunch. Aim for green with at most one amber.
 
-**AUX tone (a second, precise channel):** a contributor probe build plays a
-continuous tone on AUX at **usage × 1000 Hz** — tune against it or eyeball a
-tuner readout. The bench and validation firmwares (which instrument sections)
-switch AUX to a beacon format instead: each report is a burst count (which
+**AUX tone (a second, precise channel — `--cpu-probe-aux`):** the probe can also
+play a continuous tone on AUX at **usage × 1000 Hz** — tune against it or eyeball
+a tuner readout. It is opt-in because it *overwrites* the engine's own AUX
+output, so a model with a real second output cannot be heard as it ships while
+the tone is on; the LED meter costs you nothing, so reach for the tone when you
+want the exact number. The bench and validation firmwares (which instrument
+sections) switch AUX to a beacon format instead: each report is a burst count (which
 value), a fixed reference tone, and a value tone, with the value encoded
 twice — as the tones' frequency (2500 Hz + value) and as the
 value-to-reference **duration ratio**, which survives overload exactly

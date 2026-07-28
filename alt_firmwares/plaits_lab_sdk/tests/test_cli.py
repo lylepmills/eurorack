@@ -251,8 +251,8 @@ class PackageTests(unittest.TestCase):
         self.assertIn(borderline, ("WARN", "FAIL"))
 
     def test_cpu_probe_build_is_opt_in_and_off_by_default(self) -> None:
-        # The probe measures Voice::Render with the Cortex-M4 cycle counter and
-        # takes over AUX for its readout, so it must never appear unasked.
+        # The probe measures Voice::Render with the Cortex-M4 cycle counter, so
+        # it must never appear unasked.
         with tempfile.TemporaryDirectory() as temp_dir:
             pkg_dir = Path(temp_dir) / "probed"
             with redirect_stdout(io.StringIO()):
@@ -264,6 +264,35 @@ class PackageTests(unittest.TestCase):
                              plaits_lab.render_local_hardware_config(package))
             self.assertIn("#define PLAITS_CPU_PROBE 1",
                           plaits_lab.render_local_hardware_config(package, cpu_probe=True))
+
+    def test_cpu_probe_leaves_aux_alone_unless_asked(self) -> None:
+        # The two readout channels are separate flags. A contributor's probe is
+        # the LED meter: it costs them nothing, while the AUX tone OVERWRITES
+        # their engine's second output — so the tone only appears on request
+        # (or for memhunt, whose readout is the tone).
+        with tempfile.TemporaryDirectory() as temp_dir:
+            pkg_dir = Path(temp_dir) / "auxed"
+            with redirect_stdout(io.StringIO()):
+                plaits_lab.init_command(SimpleNamespace(
+                    output=str(pkg_dir), from_engine="blank", author="T",
+                    package_id="test-author/auxed", slug="auxed", name="Auxed"))
+            package = plaits_lab.load_package(str(pkg_dir))
+            render = plaits_lab.render_local_hardware_config
+
+            self.assertIn("#define PLAITS_CPU_PROBE_AUX 0",
+                          render(package, cpu_probe=True))
+            self.assertIn("#define PLAITS_CPU_PROBE_AUX 1",
+                          render(package, cpu_probe=True, cpu_probe_aux=True))
+            # --cpu-probe-aux is a probe build in its own right.
+            self.assertIn("#define PLAITS_CPU_PROBE 1",
+                          render(package, cpu_probe_aux=True))
+            # memhunt has no other channel to report on.
+            self.assertIn("#define PLAITS_CPU_PROBE_AUX 1",
+                          render(package, cpu_probe=True, memhunt=True))
+            # The bench firmware is the mirror image: tone, no LED meter.
+            bench = plaits_lab.render_stock_bench_config()
+            self.assertIn("#define PLAITS_CPU_PROBE_LEDS 0", bench)
+            self.assertIn("#define PLAITS_CPU_PROBE_AUX 1", bench)
 
     def test_cpu_reference_ratio_divides_package_cost_by_stock_cost(self) -> None:
         # The ratio is the whole point: absolute host timings can't tell you

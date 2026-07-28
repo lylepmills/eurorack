@@ -852,7 +852,7 @@ _CPU_HOST_CAVEAT = (
     "  pathologically expensive engines. For a real estimate run\n"
     "    qemu/estimate.py <package> --sweep\n"
     "  and before publishing, measure on the module itself:\n"
-    "    build --hardware --cpu-probe   (reads out on AUX and the LEDs)"
+    "    build --hardware --cpu-probe   (the LEDs become a CPU meter)"
 )
 
 
@@ -2020,7 +2020,9 @@ def render_stock_bench_config(engine_ids: tuple[str, ...] = STOCK_BENCH_ENGINES,
                               flush_to_zero: bool = False) -> str:
     """Config for a multi-engine measurement firmware: the AUX cycle readout, but
     NOT the LED meter -- the normal display has to keep showing which engine is
-    selected so a sweep through them can be identified."""
+    selected so a sweep through them can be identified. The two readout channels
+    are independent defines, and this build is the mirror image of a
+    contributor's (LEDs, no tone)."""
     selected = []
     for identifier in engine_ids:
         entry, _ = builtin_engine(identifier)
@@ -2061,6 +2063,7 @@ def render_stock_bench_config(engine_ids: tuple[str, ...] = STOCK_BENCH_ENGINES,
 
 #define PLAITS_CPU_PROBE 1
 #define PLAITS_CPU_PROBE_LEDS 0
+#define PLAITS_CPU_PROBE_AUX 1
 #define PLAITS_CPU_PROBE_FTZ {ftz}
 #define PLAITS_ENGINE_COUNT {count}
 #define PLAITS_BANK_SIZES {{ {", ".join(str(v) for v in bank_sizes)} }}
@@ -2080,17 +2083,29 @@ def render_stock_bench_config(engine_ids: tuple[str, ...] = STOCK_BENCH_ENGINES,
 
 def render_local_hardware_config(
     package: dict[str, Any], cpu_probe: bool = False, memhunt: bool = False,
+    cpu_probe_aux: bool = False,
 ) -> str:
     manifest = package["manifest"]
     source = manifest["source"]
     post = manifest["postProcessing"]
-    # A probe build measures Voice::Render with the Cortex-M4 cycle counter and
-    # reports the result on AUX; see plaits/cpu_probe.h. Emitted through the
-    # generated config rather than as a make flag so it travels into the
-    # containerised build with everything else.
-    cpu_probe_define = "#define PLAITS_CPU_PROBE 1\n" if cpu_probe else ""
-    if cpu_probe and memhunt:
-        cpu_probe_define += "#define PLAITS_CPU_PROBE_MEMHUNT 1\n"
+    # A probe build measures Voice::Render with the Cortex-M4 cycle counter; see
+    # plaits/cpu_probe.h. Emitted through the generated config rather than as a
+    # make flag so it travels into the containerised build with everything else.
+    #
+    # The measurement has two independent readout channels, and a contributor
+    # build takes only the LED meter: it costs nothing they need (a one-model
+    # firmware has nothing to select) and leaves their engine's AUX output
+    # audible. The AUX tone is the precise readout and the internal one -- it
+    # overwrites that output -- so it is opt-in, and memhunt, whose readout IS
+    # the tone, turns it on.
+    probe = cpu_probe or cpu_probe_aux
+    tone = cpu_probe_aux or (probe and memhunt)
+    cpu_probe_define = ""
+    if probe:
+        cpu_probe_define = "#define PLAITS_CPU_PROBE 1\n"
+        cpu_probe_define += f"#define PLAITS_CPU_PROBE_AUX {1 if tone else 0}\n"
+        if memhunt:
+            cpu_probe_define += "#define PLAITS_CPU_PROBE_MEMHUNT 1\n"
     custom = {
         "source": {
             "header": package["header"].name,
@@ -2234,8 +2249,11 @@ def _arm_compile_native(package: dict[str, Any], args: argparse.Namespace, toolc
         config.write_text(
             render_stock_bench_config(flush_to_zero=getattr(args, "ftz", False))
             if getattr(args, "stock_bench", False)
-            else render_local_hardware_config(package, cpu_probe=getattr(args, "cpu_probe", False),
-                                         memhunt=getattr(args, "memhunt", False)),
+            else render_local_hardware_config(
+                package,
+                cpu_probe=getattr(args, "cpu_probe", False),
+                memhunt=getattr(args, "memhunt", False),
+                cpu_probe_aux=getattr(args, "cpu_probe_aux", False)),
             encoding="utf-8")
         cppflags = f"-fno-exceptions -fno-rtti -I{package['source_root']} -include {config}"
         # Build only the package's OWN object(s): the makefile's $(BUILD_DIR)%.o
@@ -2300,6 +2318,7 @@ def hardware_build_command(args: argparse.Namespace) -> int:
                 "alt_firmwares/plaits_lab_sdk/plaits_lab.py", "build", "/contributor",
                 "--hardware", "--output", f"/output/{output.name}",
                 *(["--cpu-probe"] if getattr(args, "cpu_probe", False) else []),
+                *(["--cpu-probe-aux"] if getattr(args, "cpu_probe_aux", False) else []),
                 *(["--stock-bench"] if getattr(args, "stock_bench", False) else []),
                 *(["--ftz"] if getattr(args, "ftz", False) else []),
                 *(["--memhunt"] if getattr(args, "memhunt", False) else []),
@@ -2332,8 +2351,11 @@ def hardware_build_command(args: argparse.Namespace) -> int:
         config = Path(temp_dir) / "engine_config.h"
         config.write_text(
             render_stock_bench_config() if getattr(args, "stock_bench", False)
-            else render_local_hardware_config(package, cpu_probe=getattr(args, "cpu_probe", False),
-                                         memhunt=getattr(args, "memhunt", False)),
+            else render_local_hardware_config(
+                package,
+                cpu_probe=getattr(args, "cpu_probe", False),
+                memhunt=getattr(args, "memhunt", False),
+                cpu_probe_aux=getattr(args, "cpu_probe_aux", False)),
             encoding="utf-8")
         cppflags = f"-fno-exceptions -fno-rtti -I{package['source_root']} -include {config}"
         command = [
@@ -2659,9 +2681,11 @@ def build_parser() -> argparse.ArgumentParser:
     build_parser_command.add_argument("--stock-bench", action="store_true",
         help="build a multi-engine bench firmware (stock engines + AUX cycle readout)")
     build_parser_command.add_argument("--memhunt", action="store_true",
-        help="probe builds: readout carries only the watched address (writer hunt)")
+        help="probe builds: readout carries only the watched address (writer hunt); implies --cpu-probe-aux")
     build_parser_command.add_argument("--cpu-probe", action="store_true",
-        help="measure Voice::Render on-chip with the DWT cycle counter and report on AUX")
+        help="measure Voice::Render on-chip with the DWT cycle counter and meter it on the LEDs")
+    build_parser_command.add_argument("--cpu-probe-aux", action="store_true",
+        help="probe builds: also read out on AUX as a tone -- precise, but it takes over the AUX output")
     build_parser_command.add_argument("--output", required=True)
     build_parser_command.add_argument("--toolchain", default="/usr/local/arm-4.8.3")
     build_parser_command.add_argument("--docker-image", default="plaits-lab-builder:local")

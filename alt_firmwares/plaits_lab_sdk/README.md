@@ -216,11 +216,17 @@ the readout to trust when a build overruns.
 
 **3. `build --hardware --cpu-probe` — the measurement.** The Cortex-M4's own
 cycle counter wrapped around the real render call, in the real audio interrupt.
-The eight LEDs become a meter (one per eighth of budget, amber near the limit,
-blinking red once over), and AUX carries a square wave whose *frequency* is the
-answer — 1000 Hz means the whole budget, 600 Hz means 60%. Frequency rather than
-a voltage so the reading survives any gain or coupling between the module and
-whatever measures it. MAIN keeps your audio, so you can listen while measuring.
+The eight LEDs become a meter: one per eighth of budget, the next LED's
+brightness carrying the fraction, amber near the limit, blinking red once over.
+Nothing to patch and no output to give up — your engine plays out of MAIN and
+AUX exactly as it will ship, while the display tells you what it costs.
+
+Add `--cpu-probe-aux` when you want a number rather than a bar: AUX then carries
+a square wave whose *frequency* is the answer — 1000 Hz means the whole budget,
+600 Hz means 60%. Frequency rather than a voltage so the reading survives any
+gain or coupling between the module and whatever measures it. It overwrites the
+engine's own AUX output for as long as it is on, which is why it is opt-in; MAIN
+still keeps your audio.
 
 **Hardware is the authority.** Publication requires a probe measurement; the
 estimate is a pre-flight check, not a substitute.
