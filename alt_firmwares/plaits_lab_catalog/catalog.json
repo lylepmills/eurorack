@@ -363,6 +363,13 @@
       "controls": ["Resonance", "Comb pitch", "Exciter", "Loop tilt"], "outputs": ["Comb output", "Second tap a fifth away"],
       "source": { "header": "plaits/dsp/engine2/saw_comb_engine.h", "className": "SawCombEngine", "member": "saw_comb_engine_", "files": ["plaits/dsp/engine2/saw_comb_engine.cc"] },
       "postProcessing": { "alreadyEnveloped": false, "outGain": -0.85, "auxGain": -0.85 }
+    },
+    {
+      "id": "vowel-fof", "packageId": "mutable-instruments/vowel-fof", "name": "Vowel FOF", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Vocal",
+      "description": "Five very narrow filters sweeping five vowels across five vocal registers, with the formant balance the stock model leaves flat.", "tags": ["braids", "formant", "vocal", "vowel"],
+      "controls": ["Brightness", "Register", "Vowel", "Formant tilt"], "outputs": ["Formant bank", "Upper-formant weighting"],
+      "source": { "header": "plaits/dsp/engine2/vowel_fof_engine.h", "className": "VowelFofEngine", "member": "vowel_fof_engine_", "files": ["plaits/dsp/engine2/vowel_fof_engine.cc", "plaits/dsp/engine2/vowel_fof_data.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": -3.8, "auxGain": -3.8 }
     }
   ],
   "manuals": {
@@ -788,6 +795,15 @@
         "macro": "Damps the feedback loop below noon and brightens it above."
       },
       "trigger": "Clears the comb line and restarts the exciter."
+    },
+    "vowel-fof": {
+      "controls": {
+        "harmonics": "Tilts the excitation from a dark buzz to a bright breathy hiss.",
+        "timbre": "Steps the vocal register from bass through tenor to soprano.",
+        "morph": "Sweeps the vowel through the five phonemes.",
+        "macro": "Restores the formant amplitude balance the stock model leaves flat."
+      },
+      "trigger": "Restarts the internal envelope when TRIG is patched."
     }
   },
   "presets": {

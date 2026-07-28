@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/vowel-fof",
+  "catalogId": "vowel-fof",
+  "version": "1.0.0",
+  "name": "Vowel FOF",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "Five very narrow filters sweeping five vowels across five vocal registers, with the formant balance the stock model leaves flat.",
+  "family": "Vocal",
+  "tags": [
+    "braids",
+    "formant",
+    "vocal",
+    "vowel"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Brightness",
+      "description": "Tilts the excitation from a dark buzz to a bright breathy hiss."
+    },
+    {
+      "id": "timbre",
+      "label": "Register",
+      "description": "Steps the vocal register from bass through tenor to soprano."
+    },
+    {
+      "id": "morph",
+      "label": "Vowel",
+      "description": "Sweeps the vowel through the five phonemes."
+    },
+    {
+      "id": "macro",
+      "label": "Formant tilt",
+      "description": "Restores the formant amplitude balance the stock model leaves flat."
+    }
+  ],
+  "outputs": {
+    "main": "Formant bank.",
+    "aux": "Upper-formant weighting."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/vowel_fof_engine.h",
+    "files": [
+      "plaits/dsp/engine2/vowel_fof_engine.cc",
+      "plaits/dsp/engine2/vowel_fof_data.cc"
+    ],
+    "className": "VowelFofEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": -3.8,
+    "auxGain": -3.8
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids DigitalOscillator::RenderVowelFof (VFOF)"
+}
