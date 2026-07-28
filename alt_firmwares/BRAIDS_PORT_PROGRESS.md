@@ -136,7 +136,9 @@ unchanged. Declared in the header.
 **General rule for the rest of the port: assume a full second render path for
 AUX will not fit, and check with `--sweep` before designing one in.** The
 in-tree idiom is that AUX is a byproduct of the same computation
-(`reed_pipe`'s reed flow, `csaw`'s inverted discontinuity), not a second voice.
+(`reed_pipe`'s reed flow, `csaw`'s mirrored notch depth), not a second voice.
+`csaw` is the cheap case worth copying: OUT and AUX share the phase, the
+transition times and the BLEP values, and differ only in two step magnitudes.
 
 ### 3.7 A 15th registration step
 
