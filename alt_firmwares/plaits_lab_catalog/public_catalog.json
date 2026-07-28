@@ -1693,6 +1693,46 @@
       "implementation": {
         "className": "SpectralSpiralEngine"
       }
+    },
+    {
+      "id": "helix",
+      "packageId": "community/helix",
+      "name": "Helix",
+      "author": "Rubato Audio",
+      "origin": "Community",
+      "family": "Experimental",
+      "description": "A chord stacked across octaves on a Shepard helix, gliding endlessly up or down without ever changing register.",
+      "tags": [
+        "community",
+        "experimental",
+        "shepard",
+        "chord"
+      ],
+      "controls": [
+        "Chord",
+        "Glide",
+        "Fold",
+        "Spread"
+      ],
+      "outputs": [
+        "Folded voices (left in stereo)",
+        "Unfolded voices (right in stereo)"
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:624c2f307d47eade171aa0922b456cd2ace84e381204c3a3da36b3b04ecd8b34",
+      "documentationDigest": "sha256:ecc6f16b85c47ccdff7550e35d6bc719b06eac9bf5c341984fc8c02c905963a4",
+      "manual": {
+        "controls": {
+          "harmonics": "Selects the chord, voiced at every octave of the helix at once.",
+          "timbre": "Sets the glide: centred is still, either side sends the stack endlessly rising or falling.",
+          "morph": "Folds the summed voices, from clean through progressively harder wavefolding.",
+          "macro": "Sets how much of the helix you hear at once, from a tight chord to a wide cloud of octaves."
+        },
+        "trigger": "Strikes the low-pass gate while the helix keeps gliding underneath."
+      },
+      "implementation": {
+        "className": "HelixEngine"
+      }
     }
   ],
   "presets": {
