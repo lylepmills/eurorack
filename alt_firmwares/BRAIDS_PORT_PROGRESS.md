@@ -20,7 +20,7 @@ Branch: `claude/braids-engines-plaits-palette-je03ac` (both repos).
 | `csaw` | **landed** | 12% | 0.00 dB mean at two settings, 0.75 dB at a third |
 | `bowed` | **landed** | 37% | 3–5 dB; chaotic self-oscillator, see §3.10 |
 | `ring-mod` | **landed** | 69% | within 0.04 dB energy-weighted at four detunings |
-| `sub-oscillator` | not started | — | — |
+| `sub-oscillator` | **landed** | 28% | 0.23 / 0.42 dB against both source models |
 | `digital-modulation` | not started | — | — |
 | `saw-comb` | not started | — | — |
 | `vowel-fof` | not started | — | — |
@@ -169,7 +169,31 @@ otherwise, especially anywhere positional:
   commented out — a 256-step staircase inside the stick-slip loop, which is
   where the slip happens.
 
-### 3.9 Some engines cannot be matched spectrally, and that is not a defect
+### 3.9 Check the spec's DSP against the source before implementing it
+
+`sub-oscillator` is the clearest case. The spec designs it around a twin-ramp
+formulation (`out = 2p - pw - sq`, a `mu` control, per-sample
+`c = 0.5*mu*(1-pw)`) and spends a section resolving a pw-rate contradiction
+inside it. `MacroOscillator::RenderSub` does none of that — it is two
+AnalogOscillators and a `Mix`. Following the source and reusing the in-tree
+`VariableShapeOscillator` made the whole contradiction moot.
+
+The spec also mislocates MORPH's null: it says AUX is "silent at MORPH 0",
+but Braids' sub level is a **V** with its zero at the CENTRE — loudest at both
+ends, and never above an equal blend.
+
+Two implementation traps worth carrying forward:
+
+- **`VariableShapeOscillator`'s `waveshape` is TRIANGLE at 0, saw at 0.5,
+  square at 1.** Mapping a control across the full 0–1 range when you wanted
+  square→saw runs off into a triangle and reads as the port going dark.
+- **A narrow pulse carries a large DC term by construction**, and the SDK's
+  audio-health gate rejects it (>0.2). Braids leaves it and the spec chose to
+  document it, but it also thumps the LPG. A blocker an order of magnitude
+  below the engine's lowest note removes it without shaping the pulse — and
+  then the gains must go negative (R1).
+
+### 3.10 Some engines cannot be matched spectrally, and that is not a defect
 
 `bowed` is a nonlinear self-oscillator. The port's standard ~8-cent
 kCorrectedSampleRate offset is half a percent of a 434-sample loop at MIDI 45,
@@ -181,7 +205,7 @@ session chasing their last few dB. The oscillator engines (`z-filter`, `csaw`,
 `ring-mod`, `toy`) genuinely do match to a fraction of a dB, so the contrast
 is informative rather than an excuse.
 
-### 3.10 qemu undercounts divides
+### 3.11 qemu undercounts divides
 
 `qemu/estimate.py` models `cycles = A*instructions + B*flash_reads` with
 `COST_INSN = 1.0`. A VDIV is one instruction and about fourteen cycles on an
