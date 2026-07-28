@@ -1,0 +1,41 @@
+[
+  {
+    "id": "hero",
+    "name": "Resonance through the FIR comb into ringing",
+    "durationSeconds": 4,
+    "note": 48,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.0, 0.95],
+      "timbre": [0.4, 0.75],
+      "morph": [0.0, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "loop-gain",
+    "name": "Bright loop tilt at high resonance",
+    "durationSeconds": 3,
+    "note": 55,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.98, 0.98],
+      "timbre": [0.6, 0.6],
+      "morph": [0.2, 0.2],
+      "macro": [0.5, 1.0]
+    }
+  },
+  {
+    "id": "inverted",
+    "name": "Inverted feedback at a detuned comb",
+    "durationSeconds": 3,
+    "note": 36,
+    "triggerHz": 2,
+    "controls": {
+      "harmonics": [0.02, 0.02],
+      "timbre": [0.0, 1.0],
+      "morph": [0.8, 0.8],
+      "macro": [0.0, 0.0]
+    }
+  }
+]

@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/saw-comb",
+  "catalogId": "saw-comb",
+  "version": "1.0.0",
+  "name": "Saw Comb",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "A band-limited exciter through a comb whose pitch is decoupled from the played note, with genuinely bipolar feedback.",
+  "family": "Feedback",
+  "tags": [
+    "braids",
+    "comb",
+    "feedback",
+    "resonator"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Resonance",
+      "description": "Sweeps comb feedback from inverted through a single echo to ringing resonance."
+    },
+    {
+      "id": "timbre",
+      "label": "Comb pitch",
+      "description": "Detunes the comb up to five octaves either side of the played note."
+    },
+    {
+      "id": "morph",
+      "label": "Exciter",
+      "description": "Morphs the exciter from a bright saw to a narrow pulse."
+    },
+    {
+      "id": "macro",
+      "label": "Loop tilt",
+      "description": "Damps the feedback loop below noon and brightens it above."
+    }
+  ],
+  "outputs": {
+    "main": "Comb output.",
+    "aux": "Second tap a fifth away."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/saw_comb_engine.h",
+    "files": [
+      "plaits/dsp/engine2/saw_comb_engine.cc"
+    ],
+    "className": "SawCombEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": -0.85,
+    "auxGain": -0.85
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids MacroOscillator::RenderSawComb with DigitalOscillator::RenderComb"
+}

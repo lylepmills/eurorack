@@ -356,6 +356,13 @@
       "controls": ["Frame", "Symbol rate", "Shaping", "Payload"], "outputs": ["Modulated carrier", "Symbol staircase"],
       "source": { "header": "plaits/dsp/engine2/digital_modulation_engine.h", "className": "DigitalModulationEngine", "member": "digital_modulation_engine_", "files": ["plaits/dsp/engine2/digital_modulation_engine.cc"] },
       "postProcessing": { "alreadyEnveloped": false, "outGain": -0.55, "auxGain": -0.5 }
+    },
+    {
+      "id": "saw-comb", "packageId": "mutable-instruments/saw-comb", "name": "Saw Comb", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Feedback",
+      "description": "A band-limited exciter through a comb whose pitch is decoupled from the played note, with genuinely bipolar feedback.", "tags": ["braids", "comb", "feedback", "resonator"],
+      "controls": ["Resonance", "Comb pitch", "Exciter", "Loop tilt"], "outputs": ["Comb output", "Second tap a fifth away"],
+      "source": { "header": "plaits/dsp/engine2/saw_comb_engine.h", "className": "SawCombEngine", "member": "saw_comb_engine_", "files": ["plaits/dsp/engine2/saw_comb_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": -0.85, "auxGain": -0.85 }
     }
   ],
   "manuals": {
@@ -772,6 +779,15 @@
         "macro": "Sweeps the payload byte around the stock packet contents."
       },
       "trigger": "Restarts the packet from its preamble."
+    },
+    "saw-comb": {
+      "controls": {
+        "harmonics": "Sweeps comb feedback from inverted through a single echo to ringing resonance.",
+        "timbre": "Detunes the comb up to five octaves either side of the played note.",
+        "morph": "Morphs the exciter from a bright saw to a narrow pulse.",
+        "macro": "Damps the feedback loop below noon and brightens it above."
+      },
+      "trigger": "Clears the comb line and restarts the exciter."
     }
   },
   "presets": {
