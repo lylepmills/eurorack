@@ -285,7 +285,7 @@ void Ui::UpdateLEDs() {
       }
       if (full < kNumLEDs) {
         const float frac = scaled - static_cast<float>(full);
-        if (static_cast<int>(frac * 16.0f) > pwm_counter) {
+        if (static_cast<int>(frac * 16.0f) > static_cast<int>(pwm_counter_ & 15)) {
           leds_.set(kNumLEDs - 1 - full,
                     full >= kNumLEDs - 2 ? LED_COLOR_YELLOW : LED_COLOR_GREEN);
         }
