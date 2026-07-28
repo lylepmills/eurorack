@@ -21,15 +21,28 @@ Branch: `claude/braids-engines-plaits-palette-je03ac` (both repos).
 | `bowed` | **landed** | 37% | 3–5 dB; chaotic self-oscillator, see §3.10 |
 | `ring-mod` | **landed** | 69% | within 0.04 dB energy-weighted at four detunings |
 | `sub-oscillator` | **landed** | 28% | 0.23 / 0.42 dB against both source models |
-| `digital-modulation` | not started | — | — |
-| `saw-comb` | not started | — | — |
+| `digital-modulation` | **landed** | 18% | 0.00 dB at the stock frame; 0.09–0.45 dB across settings |
+| `saw-comb` | **landed** | 32% | 0.19 / 0.45 / 0.67 dB |
 | `vowel-fof` | not started | — | — |
 | `raw-fm` | not started (Lyle: build it, then he A/Bs) | — | — |
 | `triple` | not started (Lyle: build it, then he A/Bs) | — | — |
 | `fluted` | still gated on the §3.11 mode-tracking measurement | — | — |
 
-Not yet done: real `arm-none-eabi-size` flash measurements (§5 below), and the
-whole website side.
+**Remaining engines: `vowel-fof`, `raw-fm`, `triple`.** Notes for picking them
+up:
+
+- `vowel-fof` — the spec's headline finding is CONFIRMED in the source:
+  `out += svf_bp[i] * amplitudes[0] >> 17` reads `amplitudes[0]`, not
+  `amplitudes[i]`, so 100 of the 125 `formant_a_data` entries have been dead
+  since 2013. It also ends in `size -= 2`, so it IS a 48 kHz algorithm and all
+  three half-rate compensations the spec identifies are correctly droppable.
+  Needs 5 SVFs, ~500 B of vendored tables (`formant_f_data` and
+  `formant_a_data`, both [5][5][5] int16), an `Oscillator<SAW>` instantiation
+  and a Pattern-B stereo landing — the largest engine left.
+- `raw-fm` and `triple` — build them so Lyle can A/B, per his Q2/Q3 answer.
+
+Also not done: real `arm-none-eabi-size` flash measurements (§5 below), and
+the whole website side.
 
 ---
 
@@ -169,7 +182,24 @@ otherwise, especially anywhere positional:
   commented out — a 256-step staircase inside the stick-slip loop, which is
   where the slip happens.
 
-### 3.9 Check the spec's DSP against the source before implementing it
+### 3.9 The in-tree control-response test is a real gate, not a formality
+
+`ValidateExperimentalControlResponse` renders **1,024 blocks — about half a
+second** — and fails a control whose effect it cannot see in that window. It
+caught `digital-modulation`'s payload knob doing literally nothing: at a few
+tens of Hz of symbol rate half a second is ~13 symbols, and a linear frame law
+left the packet header 33 symbols long at noon.
+
+That is the SAME defect the spec moved frame length off MACRO to avoid — it
+had simply relocated to the other knob rather than being fixed. Reachability
+has two axes, the default knob position AND elapsed time, and the spec only
+reasoned about the first. An exponential frame law fixed it; HARMONICS = 1 is
+still Braids' 1,088 symbols exactly.
+
+**Any engine with a slow internal sequence needs its control law checked
+against that half-second window**, not just against its endpoints.
+
+### 3.10 Check the spec's DSP against the source before implementing it
 
 `sub-oscillator` is the clearest case. The spec designs it around a twin-ramp
 formulation (`out = 2p - pw - sq`, a `mu` control, per-sample
@@ -193,19 +223,21 @@ Two implementation traps worth carrying forward:
   below the engine's lowest note removes it without shaping the pulse — and
   then the gains must go negative (R1).
 
-### 3.10 Some engines cannot be matched spectrally, and that is not a defect
+### 3.11 Some engines cannot be matched spectrally, and that is not a defect
 
 `bowed` is a nonlinear self-oscillator. The port's standard ~8-cent
 kCorrectedSampleRate offset is half a percent of a 434-sample loop at MIDI 45,
 which is enough to settle the stick-slip system into a **different limit
 cycle**. Third-octave spectra sit 3–5 dB apart with every coefficient
 agreeing. Pitch, level and gross tilt track; bin-level agreement is not a
-meaningful target. `saw-comb` and `fluted` are the same class — do not spend a
-session chasing their last few dB. The oscillator engines (`z-filter`, `csaw`,
+meaningful target. `fluted` is likely the same class. **`saw-comb` turned out NOT to be** — it
+matched to 0.19–0.67 dB, because its loop is linear with a clip rather than a
+chaotic stick-slip system, so it does not wander into a different limit cycle.
+The distinction is chaotic-vs-linear feedback, not feedback-vs-not. The oscillator engines (`z-filter`, `csaw`,
 `ring-mod`, `toy`) genuinely do match to a fraction of a dB, so the contrast
 is informative rather than an excuse.
 
-### 3.11 qemu undercounts divides
+### 3.12 qemu undercounts divides
 
 `qemu/estimate.py` models `cycles = A*instructions + B*flash_reads` with
 `COST_INSN = 1.0`. A VDIV is one instruction and about fourteen cycles on an
