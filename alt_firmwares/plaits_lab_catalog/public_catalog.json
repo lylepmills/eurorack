@@ -2093,6 +2093,46 @@
       "implementation": {
         "className": "RawFmEngine"
       }
+    },
+    {
+      "id": "triple",
+      "packageId": "mutable-instruments/triple",
+      "name": "Triple",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Polyphonic",
+      "description": "Three oscillators with two continuously swept interval knobs, morphing together through square, saw, triangle and sine.",
+      "tags": [
+        "braids",
+        "detune",
+        "polyphonic",
+        "interval"
+      ],
+      "controls": [
+        "Spread",
+        "Interval",
+        "Waveform",
+        "Shape"
+      ],
+      "outputs": [
+        "Three-voice mix",
+        "Undetuned root voice"
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:02cd8b2002acff98d98141d6eeaee385cd84fb7d03f3b3df9fefbbff6feb0f09",
+      "documentationDigest": "sha256:aa32b300d63abf627ac7324a7dfb7aeca8da416a6b7c752cdba1d713536e4f71",
+      "manual": {
+        "controls": {
+          "harmonics": "Spreads the second voice through closely spaced and musical intervals.",
+          "timbre": "Spreads the third voice independently of the second.",
+          "morph": "Morphs all three voices from square through saw and triangle to sine.",
+          "macro": "Narrows the pulse and slope of all three voices below the stock symmetry."
+        },
+        "trigger": "Realigns all three oscillator phases."
+      },
+      "implementation": {
+        "className": "TripleEngine"
+      }
     }
   ],
   "presets": {
