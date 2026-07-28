@@ -28,6 +28,10 @@
 
 #include "plaits/dsp/dsp.h"
 #include "plaits/cpu_probe.h"
+
+#ifndef PLAITS_CPU_PROBE_SECTION_TOTAL
+#define PLAITS_CPU_PROBE_SECTION_TOTAL 0
+#endif
 #include "plaits/dsp/voice.h"
 #include "plaits/settings.h"
 #include "plaits/ui.h"
@@ -119,7 +123,15 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
       }
     }
     PLAITS_CPU_PROBE_BEGIN
+#if PLAITS_CPU_PROBE && PLAITS_CPU_PROBE_SECTION_TOTAL
+    // Validation builds only: registering a section switches the AUX readout
+    // from the continuous usage tone to the full two-tone beacon format.
+    cpu_probe.SectionBegin(0);
+#endif
     voice.Render(patch, modulations, (Voice::Frame*)(output), size);
+#if PLAITS_CPU_PROBE && PLAITS_CPU_PROBE_SECTION_TOTAL
+    cpu_probe.SectionEnd(0);
+#endif
     PLAITS_CPU_PROBE_END(size)
     PLAITS_CPU_PROBE_READOUT((Voice::Frame*)(output), size)
     PLAITS_CPU_PROBE_DISPLAY(ui)

@@ -26,12 +26,15 @@ Green below 62.5%, amber above, **all-red blinking above 90%** — red means
 the audio deadline is at risk in practice, calibrated against builds that
 audibly crunch. Aim for green with at most one amber.
 
-**AUX tone (precise numbers):** each report is a burst count (which value),
-a fixed reference tone, and a value tone. Two encodings ride together: the
-tones' frequency (2500 Hz + value), and the value-to-reference **duration
-ratio** — the ratio survives overload exactly, because everything stretches
-by the same factor. When the two disagree, trust the ratio; when in doubt,
-trust the LEDs.
+**AUX tone (a second, precise channel):** a contributor probe build plays a
+continuous tone on AUX at **usage × 1000 Hz** — tune against it or eyeball a
+tuner readout. The bench and validation firmwares (which instrument sections)
+switch AUX to a beacon format instead: each report is a burst count (which
+value), a fixed reference tone, and a value tone, with the value encoded
+twice — as the tones' frequency (2500 Hz + value) and as the
+value-to-reference **duration ratio**, which survives overload exactly
+because everything stretches by the same factor. When the two disagree,
+trust the ratio; when in doubt, trust the LEDs.
 
 ## What costs what (measured on this chip)
 
@@ -51,9 +54,12 @@ byte-identical at each step:
    computed once per block. (Helix: 3.7× cheaper.)
 2. **Split long accumulator chains** — four partial sums instead of one
    serial `sum +=` lets the FPU pipeline overlap independent work.
-3. **Refresh coefficients at half rate** — parameters move slowly; alternate
-   blocks can reuse the previous coefficients. Refreshing at 2 kHz instead of
-   4 kHz is inaudible and returned 22% of the whole budget.
+3. **Stagger slow work across blocks** — parameters move slowly, so refresh
+   half the coefficient set each block. This returned 22% of the whole
+   budget. Stagger, don't alternate: doing the *full* refresh every other
+   block halves the average but leaves the peak block as heavy as ever, and
+   **the audio deadline is per block** — the heavy blocks pop while the
+   average looks fine.
 
 And one measured non-lesson: replacing table lookups with polynomial
 arithmetic to "avoid memory" made things *slower*. Measure before believing
@@ -65,5 +71,10 @@ any cost intuition, including these.
   line sits at 90%, not 100%.
 - On a build that overruns, the tone *frequency* channel reads high; the
   duration-ratio channel and the LEDs stay honest.
-- Every probe build reports a boot-time checksum of its own flash image
-  (beacons 14–16), so a bad flash can't masquerade as a performance mystery.
+- Every bench/validation build reports a boot-time checksum of its own flash
+  image (the last three beacons), so a bad flash can't masquerade as a
+  performance mystery.
+- The whole instrument was validated end-to-end on a build that sits ~1% over
+  the deadline: the beacon channels, the LED bar, and the report-pacing
+  stretch agreed with each other, the image checksum decoded exactly, and the
+  overrun produced zero false diagnostics.
