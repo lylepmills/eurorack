@@ -157,6 +157,10 @@ $SDK check ./$PKG/my-engine --full --arm
 
 ### Will it run in real time?
 
+> The short version lives here; the full guide — meter semantics, the
+> measured cost table, and the optimization playbook with real numbers — is
+> [PERFORMANCE.md](PERFORMANCE.md).
+
 The audio callback gets roughly **1500 CPU cycles per sample** (72 MHz ÷ 48 kHz),
 and that covers everything — the low-pass gate, the output stage, the UI and the
 ADCs, not just your engine. Overrun it and the callback cannot finish a block in
