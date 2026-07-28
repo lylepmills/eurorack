@@ -15,7 +15,6 @@ However my alt firmware had several other features that I felt were still worthw
 ## Features of this alt firmware
 
 - **Aux crossfading.** - It's possible with this firmware to crossfade between the regular and aux models on the aux output, essentially giving you a fourth timbral dimension for each model. The crossfade can be controlled either manually by repurposing the frequency knob, or under CV control (or both).
-- **Fourth macro.** - Every model gains an optional fourth synthesis parameter, distinct from aux crossfading. It can be controlled either manually by repurposing the frequency knob, or under CV control by repurposing the MODEL input (or both). Its midpoint is neutral, so models sound unchanged until it is assigned and moved. See below for what it controls on each model.
 - **CV control of LPG parameters.** - The MODEL and LEVEL CV inputs can be repurposed (either both or individually) to put the colour and decay of the internal LPG under CV control.
 - **Suboscillator.** The aux model can be replaced by a square or sine wave suboscillator on the aux output. The square wave can be used to sync another oscillator with a sync input (like Tides), an oscilloscope, etc. This is fully compatible with aux crossfading, meaning you can blend the main model with a square or sine wave. There are also options for the suboscillator frequency to be either the same frequency as the main model, -1 octave, or -2 octaves.
 - **Alternate chord tables.** For the chord-based modes (the 7th green mode, and the 7th and 8th yellow modes), you can switch between the original table of 11 chords, or alternative chord tables by Jon Butler (17 chords) or Joe McMullen (18 chords). See below for more details on each chord table.
@@ -23,137 +22,31 @@ However my alt firmware had several other features that I felt were still worthw
 - **Easier manual control over decay.** - The frequency knob can be repurposed to more easily control the decay of the internal LPG, without having to hold down a button.
 - **More convenient model switching.** - In revision 1.2 of the official firmware, an alternate mode for switching models was introduced. This mode was the only way of accessing the third bank of models. My assumption is that anyone using this alt firmware wants to be able to freely access all three banks of synthesis models, so in this alternate firmware, that mode is now the default. Additionally there is a new navigation mode (an alternative to the alternative), whereby the left button switches between models within a bank and the right button switches banks.
 
-## Experimental synthesis models
-
-This development version replaces the three DX7 bank positions and Wave
-Terrain (the third through sixth yellow models) with four experimental engines.
-All four use the normal pitch, HARMONICS, TIMBRE, and MORPH controls. They also use an
-optional fourth macro, controlled either manually by repurposing the frequency
-knob, or under CV control by repurposing the MODEL input (or both).
-
-### Glisson
-
-- HARMONICS: pitch scatter
-- TIMBRE: number of overlapping grains
-- MORPH: downward chirps through static grains to upward chirps
-- Fourth macro: grain duration and trajectory curvature
-- OUT: selected chirp direction; AUX: counter-moving chirps
-- TRIG: restarts and re-randomizes the grain cloud
-
-### GENDY
-
-- HARMONICS: number of stochastic breakpoints (3 to 9)
-- TIMBRE: amplitude random-walk depth
-- MORPH: segment-duration random-walk depth
-- Fourth macro: stepped through linear to smooth interpolation
-- OUT: interpolated waveform; AUX: raw stepped waveform
-- TRIG: creates a new stochastic waveform
-
-### Scanned synthesis
-
-- HARMONICS: excitation width, stiffness, and alternating-mass inharmonicity
-- TIMBRE: excitation width, mass irregularity, and a warped gradient scan
-- MORPH: damping through increasingly strong nonlinear wavefolding
-- Fourth macro: speed of the slowly evolving physical system
-- OUT: scan of the mass positions; AUX: spatial derivative of that scan
-- TRIG: strikes the virtual system; with TRIG unpatched it is gently driven
-
-### Pulsar synthesis
-
-- HARMONICS: carrier formant, from the fundamental into tightly packed upper partials
-- TIMBRE: pulse width, from brief impulses to nearly continuous tone
-- MORPH: crossfades from one to four interleaved pulse clusters per cycle
-- Fourth macro: moves the pulse peak from an early pluck through symmetry to a late swell
-- OUT: primary pulse train; AUX: complementary, phase-offset pulse train
-- TRIG: restarts the pulsar cycle
-
-### Rounds 1 and 2 audition build
-
-A separate audition recipe contains eleven additional Rubato Lab prototypes:
-Loopback, Lockstep, Tapfield, Phase Weave, Sideband Bank, Attractor, Undertow,
-Reed Pipe, Phase Flock, Rulefield, and Spectral Spiral. The eight tonal models
-occupy the green bank and Tapfield, Attractor, and Rulefield begin the red bank;
-the rest of red and all of amber provide familiar comparison voices.
-
-The updater, complete bank order, control map, listening-render format, and
-known audition risks are documented in `alt_firmwares/PLAITS_LAB_AUDITION.md`.
-This does not change the default experimental layout described above.
-
-### Review build
-
-`alt_firmwares/plaits_lab_builder/review_recipe.json` is a focused re-review
-layout, distinct from the audition recipe above and with a different bank
-order. It front-loads the six engines under active review as the first six
-green-bank models, in order: Loopback, Lockstep, Reed Pipe, Phase Flock,
-Rulefield, and Spectral Spiral (Tapfield and Phase Weave fill out the green
-bank). Red holds the remaining experimental engines and amber holds stock
-comparison voices. Build it with the same `make wav` path as any other recipe;
-the six review models are green positions 1-6.
-
-## Fourth dimensions for stock models
-
-The optional fourth macro now extends every stock model. Its midpoint is exactly
-neutral, so these models retain their original sound unless the macro is
-assigned and moved away from noon. The controls are:
-
-### Yellow/orange bank
-
-- VA + VCF: oscillator/filter drive, from cleaner to more saturated
-- Phase Distortion: modulator ratio, from one octave down through unison to one octave up
-- Six-op FM (all three DX patch slots): modulator-network detuning, with universal darkening below noon and saturation above noon
-- Wave Terrain: Y-axis path offset, complementary to MORPH's X-axis path offset
-- String Machine: ensemble amount, from dry through the stock setting to fully wet
-- Chiptune: nine stepped register and inversion presets, with the center step stock
-
-### Green bank
-
-- Virtual Analog: oscillator balance, from saw toward square
-- Waveshaping: wavefolder symmetry, from negative through centered to positive bias
-- Two-op FM: continuous modulator detuning around the HARMONICS-selected ratio
-- Granular Formant: carrier bleed, from fully suppressed to fully exposed
-- Harmonic Oscillator: odd/even partial balance
-- Wavetable: smooth phase warping, creating new phase-distorted versions of each table
-- Chords: balance between the two internally grouped sets of chord voices
-- Speech: raw excitation through the stock voice to increasingly sharp spectral emphasis
-
-### Red bank
-
-- Swarm: particle-size dispersion, from tightly clustered to widely spread
-- Filtered Noise: independent multimode filter position, from low-pass to high-pass
-- Particle Noise: diffusion, from dry through the stock setting to a dense cloud
-- Inharmonic String: excitation duration, from short strike to long scrape
-- Modal Resonator: exciter resonance, from broad/noisy to sharply pitched
-- Analog Bass Drum: pitch-envelope punch, from restrained to exaggerated
-- Snare Drum: shell-mode inharmonicity, from compact to widely spread
-- Hi-hat: metallic oscillator spacing, from compact to widely spread
-
-There are 22 distinct DSP implementations for the 24 stock slots because the
-three DX patch positions share the same Six-op FM engine and fourth control.
-
 ## How to access calibration
 Calibration has been removed from the alt firmware to save space. If you need to recalibrate, simply reinstall the official firmware first. Your calibration settings will be preserved if you then switch back to this alt firmware.
 
 ## How to access the menu / change options
 To access the menu of options for the various alt functionalities, simply short-press both buttons at once. To exit the menu, again press both buttons at once.
 
-The menu is represented by the first seven lights. You can navigate between the
-menu items by pressing the left button, and you can switch the option for that
-item by pressing the right button. The current settings are represented by the
-color of the LED lights. In order, they represent the following.
+The menu is represented by lights for each option. You can navigate between the menu items by pressing the left button, and you can switch the option for that item by pressing the right button. The current settings are represented by the color of the LED lights. In order, they represent the following
 
-**Note if you are coming from an earlier build:** the menu was reordered in July
-2026 so the options you reach for most sit closest to the start of the walk, and
-a couple of settings moved to a different color on their light — most visibly,
-the fourth macro is now solid red rather than blinking green. Older writeups and
-videos will refer to the previous positions. Installing a build made after the
-reorder resets the menu once, to the starting options the build was made with;
-everything else (calibration, selected model, tuning) is preserved as usual.
+### First light - Frequency knob alt functionality (when frequency is locked i.e. in octave-switching mode)
+Green means octaves (as in the stock firmware), red means controlling decay, yellow means controlling aux crossfade
 
-### First light - Chord table option (chord mode only)
-Green means the original chord table, red means the alternate chord table by Jon
-Butler, yellow means the alternate chord table by Joe McMullen. A Plaits Lab
-build can carry up to nine tables: the fourth through sixth repeat those colors
-blinking, and the seventh through ninth repeat them blinking fast.
+### Second light - MODEL input alt functionality
+Green means model (as in the stock firmware), red means LPG colour (VCFA->VCA), yellow means aux crossfade
+
+### Third light - LEVEL input alt functionality
+Green means level (as in the stock firmware), red means decay of the internal envelope (if and only if TRIG is patched)
+
+### Fourth light - Aux suboscillator wave option
+Green means the regular aux model, red means a square wave subosc, yellow means a sine wave subosc
+
+### Fifth light - Aux suboscillator octave option
+Green means the +0 octaves (same frequency as the main model), red means -1 octave, yellow means -2 octaves. Note this will only have an effect if the suboscillator wave option is set to something other than the regular aux model.
+
+### Sixth light - Chord table option (chord mode only)
+Green means the original chord table, red means the alternate chord table by Jon Butler, yellow means the alternate chord table by Joe McMullen
 
 #### Original chords
 - Octave
@@ -209,48 +102,11 @@ With this table, instead of Frequency defining the root and Harmonics defining c
 - I maj7sus4/vii
 - V 7sus4
 
-### Second light - Aux output
-Green means the regular aux model, red means stereo (OUT and AUX become a true
-L/R pair on models built with a stereo render; the others keep their regular aux
-output), and yellow means a suboscillator — shaped and tuned by the third light.
-
-### Third light - Suboscillator
-Shape and octave in one setting. Solid colours are the square wave, the same
-three blinking are the sine: green +0 octaves (same frequency as the main
-model), red -1 octave, yellow -2 octaves; then blinking green, red and yellow
-for the sine at those same three octaves. This light only appears when the
-second light is set to a suboscillator — otherwise it has nothing to act on, so
-it stays dark and the left button walks straight past it.
-
-### Fourth light - Frequency knob alt functionality (when frequency is locked i.e. in octave-switching mode)
-Green means octaves (as in the stock firmware), red means controlling the fourth
-macro, yellow means controlling aux crossfade, and blinking green means
-controlling decay. When neither this nor the MODEL input is assigned to the
-fourth macro, it rests at its neutral midpoint.
-
-### Fifth light - MODEL input alt functionality
-Green means model (as in the stock firmware), red means the fourth macro, yellow means aux crossfade, and blinking green means LPG colour (VCFA->VCA). The fourth macro option does not require TRIG to be patched.
-
-### Sixth light - LEVEL input alt functionality
-Green means level (as in the stock firmware) and red means decay of the internal
-envelope. The red option applies if and only if TRIG is patched.
-
 ### Seventh light - Hold params on trigger
 Green means don't hold params upon receiving a trigger (as in the stock firmware), red means internally sample and hold the CV inputs for Timbre, Morph, Harmonics, Level and V/Oct whenever a trigger is received.
 
-### Firmware profile - Model navigation mode
-
-Model navigation is selected when creating a Plaits Lab firmware build and is
-not part of the module options menu. The linear mode uses the left button to go
-backward and the right button to go forward through all models. The banked mode
-uses the left button to switch banks and the right button to cycle within a
-bank.
-
-Plaits Lab builds can also include starting values for the seven menu options.
-Those values are applied once when a new option profile is installed. They
-remain editable from the module and persist normally after that first boot.
-Changing profiles preserves calibration, the selected model, tuning, and the
-other live module state.
+### Eighth light - Model navigation mode
+Green means the "alternative" navigation mode from the stock firmware, whereby the left button goes backward and the right button goes forward through the set of all models. Red means the "alternative alternative" navigation mode, where the left button cycles through models in a given bank, and the right button switches banks. Note the standard navigation mode from the official firmware is not available, since it doesn't allow access to the third bank and is therefore not very useful in my view.
 
 ## Technical notes
 The original Plaits firmware makes the most of its processor, and runs quite close to that processor's limits in terms of both the amount of code it can store, and the CPU load of that code (at least, in certain modes). Unlike earlier versions of this firmware, various efficiency improvements have been found that made the compromises I had to use in those earlier versions unnecessary. However it's worth noting that it's always possible there is some combination of settings I haven't discovered yet that will lead to CPU overload, which can lead to harsh aliasing sounds coming from the module. If you encounter such a situation, please take note of the settings you are using, the model you are using, and where you have all the knobs positioned, and send me a report (ideally with video), and I will try to make adjustments to avoid those kinds of problems going forward.
