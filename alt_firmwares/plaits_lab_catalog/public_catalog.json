@@ -1813,6 +1813,46 @@
       "implementation": {
         "className": "CSawEngine"
       }
+    },
+    {
+      "id": "ring-mod",
+      "packageId": "mutable-instruments/ring-mod",
+      "name": "Ring Mod",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Digital",
+      "description": "A carrier ring-modulated by two independently detuned sines, driven through a saturating shaper.",
+      "tags": [
+        "braids",
+        "ring modulation",
+        "sideband",
+        "digital"
+      ],
+      "controls": [
+        "Detune 1",
+        "Detune 2",
+        "Depth",
+        "Drive"
+      ],
+      "outputs": [
+        "Three-way ring product",
+        "Carrier and first modulator"
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:f10a3f944678f5049c4c8f3721d9b7255594c1eead9d5687b84c89c165904df1",
+      "documentationDigest": "sha256:34eb5e33ad1392c007d88317ded14aab73de07e66e9102e8253ebfc20d0ae612",
+      "manual": {
+        "controls": {
+          "harmonics": "Detunes the first modulator through harmonic and clangorous intervals.",
+          "timbre": "Detunes the second modulator, thickening the sideband cluster.",
+          "morph": "Fades from a bare carrier to full three-way ring modulation.",
+          "macro": "Drives the output shaper, from clean multiplication to hard saturation."
+        },
+        "trigger": "Realigns the three oscillator phases so each note starts alike."
+      },
+      "implementation": {
+        "className": "RingModEngine"
+      }
     }
   ],
   "presets": {
