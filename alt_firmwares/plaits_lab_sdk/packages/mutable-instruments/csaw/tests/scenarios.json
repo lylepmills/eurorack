@@ -1,0 +1,41 @@
+[
+  {
+    "id": "hero",
+    "name": "Notch depth against width",
+    "durationSeconds": 4,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.0, 1.0],
+      "timbre": [0.1, 0.9],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "tilt",
+    "name": "Tilt through the cancelled step",
+    "durationSeconds": 3,
+    "note": 48,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.2, 0.2],
+      "timbre": [0.5, 0.5],
+      "morph": [0.5, 0.5],
+      "macro": [0.0, 1.0]
+    }
+  },
+  {
+    "id": "bend-high",
+    "name": "Full bend at a high note",
+    "durationSeconds": 2,
+    "note": 88,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.8, 0.8],
+      "timbre": [0.05, 0.05],
+      "morph": [0.0, 1.0],
+      "macro": [1.0, 1.0]
+    }
+  }
+]
