@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/digital-modulation",
+  "catalogId": "digital-modulation",
+  "version": "1.0.0",
+  "name": "Digital Modulation",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "A carrier driven by a framed packet of dibits through a four-point constellation, with an openable frame.",
+  "family": "Digital",
+  "tags": [
+    "braids",
+    "modulation",
+    "packet",
+    "digital"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Frame",
+      "description": "Shortens the packet frame from a long header to a rapid burst."
+    },
+    {
+      "id": "timbre",
+      "label": "Symbol rate",
+      "description": "Raises the symbol rate from a slow stutter to a buzzing carrier."
+    },
+    {
+      "id": "morph",
+      "label": "Shaping",
+      "description": "Shapes the symbol transitions from hard steps to smooth glides."
+    },
+    {
+      "id": "macro",
+      "label": "Payload",
+      "description": "Sweeps the payload byte around the stock packet contents."
+    }
+  ],
+  "outputs": {
+    "main": "Modulated carrier.",
+    "aux": "Symbol staircase."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/digital_modulation_engine.h",
+    "files": [
+      "plaits/dsp/engine2/digital_modulation_engine.cc"
+    ],
+    "className": "DigitalModulationEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": -0.55,
+    "auxGain": -0.5
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids DigitalOscillator::RenderDigitalModulation (QPSK)"
+}

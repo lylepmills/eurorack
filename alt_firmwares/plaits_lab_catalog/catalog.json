@@ -349,6 +349,13 @@
       "controls": ["Shape", "Width", "Sub level", "Sub width"], "outputs": ["Main and sub mix", "Sub only"],
       "source": { "header": "plaits/dsp/engine2/sub_oscillator_engine.h", "className": "SubOscillatorEngine", "member": "sub_oscillator_engine_", "files": ["plaits/dsp/engine2/sub_oscillator_engine.cc"] },
       "postProcessing": { "alreadyEnveloped": false, "outGain": -0.45, "auxGain": -0.45 }
+    },
+    {
+      "id": "digital-modulation", "packageId": "mutable-instruments/digital-modulation", "name": "Digital Modulation", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Digital",
+      "description": "A carrier driven by a framed packet of dibits through a four-point constellation, with an openable frame.", "tags": ["braids", "modulation", "packet", "digital"],
+      "controls": ["Frame", "Symbol rate", "Shaping", "Payload"], "outputs": ["Modulated carrier", "Symbol staircase"],
+      "source": { "header": "plaits/dsp/engine2/digital_modulation_engine.h", "className": "DigitalModulationEngine", "member": "digital_modulation_engine_", "files": ["plaits/dsp/engine2/digital_modulation_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": -0.55, "auxGain": -0.5 }
     }
   ],
   "manuals": {
@@ -756,6 +763,15 @@
         "macro": "Narrows the sub oscillator's pulse below noon, leaving it square above."
       },
       "trigger": "Restarts the internal envelope when TRIG is patched."
+    },
+    "digital-modulation": {
+      "controls": {
+        "harmonics": "Shortens the packet frame from a long header to a rapid burst.",
+        "timbre": "Raises the symbol rate from a slow stutter to a buzzing carrier.",
+        "morph": "Shapes the symbol transitions from hard steps to smooth glides.",
+        "macro": "Sweeps the payload byte around the stock packet contents."
+      },
+      "trigger": "Restarts the packet from its preamble."
     }
   },
   "presets": {

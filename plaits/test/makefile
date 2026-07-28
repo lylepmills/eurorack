@@ -77,6 +77,7 @@ CC_FILES       = algorithms.cc \
 		sub_oscillator_engine.cc \
 		toy_engine.cc \
 		wave_terrain_engine.cc \
+		digital_modulation_engine.cc \
 		z_filter_engine.cc
 OBJ_FILES      = $(CC_FILES:.cc=.o)
 OBJS           = $(patsubst %,$(BUILD_DIR)%,$(OBJ_FILES)) $(STARTUP_OBJ)

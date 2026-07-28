@@ -1,0 +1,41 @@
+[
+  {
+    "id": "hero",
+    "name": "Frame shortening under a rising symbol rate",
+    "durationSeconds": 4,
+    "note": 48,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [1.0, 0.05],
+      "timbre": [0.3, 0.9],
+      "morph": [0.0, 0.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "payload",
+    "name": "Payload sweep on a short frame",
+    "durationSeconds": 3,
+    "note": 55,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.15, 0.15],
+      "timbre": [0.75, 0.75],
+      "morph": [0.0, 0.0],
+      "macro": [0.0, 1.0]
+    }
+  },
+  {
+    "id": "shaping",
+    "name": "Hard steps into smooth glides",
+    "durationSeconds": 3,
+    "note": 36,
+    "triggerHz": 1,
+    "controls": {
+      "harmonics": [0.1, 0.1],
+      "timbre": [0.5, 0.5],
+      "morph": [0.0, 1.0],
+      "macro": [0.7, 0.7]
+    }
+  }
+]

@@ -58,6 +58,7 @@
 #include "plaits/dsp/engine2/ring_mod_engine.h"
 #include "plaits/dsp/engine2/sub_oscillator_engine.h"
 #include "plaits/dsp/engine2/toy_engine.h"
+#include "plaits/dsp/engine2/digital_modulation_engine.h"
 #include "plaits/dsp/engine2/z_filter_engine.h"
 #include "plaits/dsp/engine2/string_machine_engine.h"
 #include "plaits/dsp/engine2/tapfield_engine.h"
@@ -154,6 +155,7 @@ int main() {
   bench<RingModEngine>("ring-mod");
   bench<SubOscillatorEngine>("sub-oscillator");
   bench<ToyEngine>("toy");
+  bench<DigitalModulationEngine>("digital-modulation");
   bench<ZFilterEngine>("z-filter");
   bench<LoopbackEngine>("loopback");
   bench<LockstepEngine>("lockstep");
