@@ -1693,6 +1693,46 @@
       "implementation": {
         "className": "SpectralSpiralEngine"
       }
+    },
+    {
+      "id": "z-filter",
+      "packageId": "mutable-instruments/z-filter",
+      "name": "Z Filter",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Subtractive",
+      "description": "Braids' four filter models in one slot: a windowed resonator burst rung against a polarity-flipped pulse train and its integral.",
+      "tags": [
+        "braids",
+        "filter",
+        "resonator",
+        "subtractive"
+      ],
+      "controls": [
+        "Model",
+        "Cutoff",
+        "Resonance",
+        "Bend"
+      ],
+      "outputs": [
+        "Selected filter model",
+        "Complementary model"
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:37135cdb7001543c8dac6582472cc7d4c3e5f8ff5ba03fc62c56696852423a35",
+      "documentationDigest": "sha256:7f0724de6d8ed5ed3320a067bf1c454b98daa0b92ecfbd340959c0386f7999dd",
+      "manual": {
+        "controls": {
+          "harmonics": "Selects the lowpass, peaking, bandpass and highpass filter models.",
+          "timbre": "Sweeps the filter cutoff from below the note to ten octaves above it.",
+          "morph": "Balances the raw pulse against the resonant ring, peaking at noon.",
+          "macro": "Bends the burst envelope from the flat stock ramp toward a sharp percussive attack."
+        },
+        "trigger": "Restarts the internal envelope when TRIG is patched."
+      },
+      "implementation": {
+        "className": "ZFilterEngine"
+      }
     }
   ],
   "presets": {
