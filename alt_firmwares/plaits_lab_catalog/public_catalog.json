@@ -1773,6 +1773,46 @@
       "implementation": {
         "className": "ToyEngine"
       }
+    },
+    {
+      "id": "csaw",
+      "packageId": "mutable-instruments/csaw",
+      "name": "CSaw",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Subtractive",
+      "description": "The emblematic Braids sawtooth, with a notch cut into the start of every cycle and a bendable ramp.",
+      "tags": [
+        "braids",
+        "sawtooth",
+        "analog",
+        "subtractive"
+      ],
+      "controls": [
+        "Depth",
+        "Width",
+        "Bend",
+        "Tilt"
+      ],
+      "outputs": [
+        "Notched sawtooth",
+        "Mirrored notch depth"
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:6c63cb6f5f3bbf6b90b64440bdbbac7cb77012ae2e04c3ed8e1efc1c9c5bd41d",
+      "documentationDigest": "sha256:94e3aec1ce82bb8e0fc6857124dac5eacbf343bdd83fb17aae2edfe102db28a8",
+      "manual": {
+        "controls": {
+          "harmonics": "Deepens the notch cut into each sawtooth cycle.",
+          "timbre": "Moves the notch from the start of the cycle toward its end.",
+          "morph": "Bends the sawtooth ramp from concave through straight to convex.",
+          "macro": "Tilts the notched segment, flattening the step at one extreme and doubling it at the other."
+        },
+        "trigger": "Restarts the internal envelope when TRIG is patched."
+      },
+      "implementation": {
+        "className": "CSawEngine"
+      }
     }
   ],
   "presets": {
