@@ -1794,10 +1794,15 @@ def upload_submission(bundle_path: Path, args: argparse.Namespace) -> int:
                     }})
     print(f"state          {sent.get('state', 'in-review')}")
     print()
-    print(f"Track it at {base}/plaits-palette/contribute")
-    print(f"To follow it in that page, paste this contributor token there:")
+    # Name the destination precisely, in the same words the page uses for it:
+    # "paste this somewhere over there" sends people hunting.
+    print("Your contributor token — the only thing identifying your submissions:")
     print(f"  {read_token()}")
-    print(f"(stored at {credentials_path()} — it identifies your submissions)")
+    print(f"  (stored at {credentials_path()}; `plaits-lab whoami --show` prints it again)")
+    print()
+    print(f"To follow this submission in a browser, open")
+    print(f"  {base}/plaits-palette/contribute")
+    print('and paste that token into "Follow a CLI submission" under step 9.')
     return 0
 
 
