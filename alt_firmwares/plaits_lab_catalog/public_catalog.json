@@ -2258,6 +2258,90 @@
       "implementation": {
         "className": "ScaleStackEngine"
       }
+    },
+    {
+      "id": "shakers",
+      "packageId": "stk/shakers",
+      "name": "Shakers",
+      "author": "Perry R. Cook and Gary P. Scavone",
+      "origin": "Community",
+      "family": "Percussion",
+      "description": "Sixteen shaken and scraped instruments from Perry Cook's PhISEM, which models the statistics of colliding objects rather than any one object's shape.",
+      "tags": [
+        "stk",
+        "phisem",
+        "percussion",
+        "shaker",
+        "stochastic",
+        "physical"
+      ],
+      "controls": [
+        "Instrument",
+        "Shake",
+        "Decay",
+        "Objects"
+      ],
+      "outputs": [
+        "The instrument",
+        "Bare collisions"
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:4d79a88c34871c8c6d021f2430b6978388329dba2d7d8b1a80f5dd7f0dedb3a3",
+      "documentationDigest": "sha256:6f271449555d5eac745c038c97a0ed05200db97cfa7407e482f385c10c438766",
+      "manual": {
+        "controls": {
+          "harmonics": "Steps through sixteen instruments, from a maraca through bells and gravel to a guiro.",
+          "timbre": "How hard it is being shaken. Energy is injected continuously, so it plays without a trigger.",
+          "morph": "How long the instrument keeps ringing after each collision, around its measured decay.",
+          "macro": "How many objects are inside, from a couple of large ones to a dense hiss of small ones."
+        },
+        "trigger": "One hard shake, or one pass of the stick for the guiro and wrench."
+      },
+      "implementation": {
+        "className": "ShakersEngine"
+      }
+    },
+    {
+      "id": "banded-waveguide",
+      "packageId": "stk/banded-waveguide",
+      "name": "Banded Waveguide",
+      "author": "Perry R. Cook and Gary P. Scavone",
+      "origin": "Community",
+      "family": "Physical",
+      "description": "A bowed bar, bowl or glass. Each mode gets its own waveguide loop, so a bow has a travelling wave to grip -- which a bank of resonators does not.",
+      "tags": [
+        "stk",
+        "bowed",
+        "bar",
+        "physical",
+        "waveguide",
+        "modal"
+      ],
+      "controls": [
+        "Material",
+        "Bow force",
+        "Bow speed",
+        "Ring"
+      ],
+      "outputs": [
+        "The instrument",
+        "Fundamental band"
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:181005548999f8538c5c6dc5908af315fb3288c80c749759c50222cca37160a9",
+      "documentationDigest": "sha256:b8070450aafdaebd0488356862adf87a6a2f3058ce3b8b0a32752231014f4a35",
+      "manual": {
+        "controls": {
+          "harmonics": "Selects the material: uniform bar, tuned bar, glass harmonica or Tibetan prayer bowl.",
+          "timbre": "Bow force, from a light steep grip to a broad heavy one that loosens the tone.",
+          "morph": "Bow speed. There is a best speed in the middle, as there is on a real instrument.",
+          "macro": "How long the bank rings once the bow lifts, from a dead bar to an almost endless bowl."
+        },
+        "trigger": "Strikes the bank instead of bowing it, exciting every mode at once."
+      },
+      "implementation": {
+        "className": "BandedWaveguideEngine"
+      }
     }
   ],
   "presets": {

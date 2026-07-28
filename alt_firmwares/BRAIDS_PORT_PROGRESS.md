@@ -464,3 +464,98 @@ And one of ours, caught by the in-tree audition gate rather than by review:
 indexes `lut_sine` out of bounds — a ~5.0 spike on OUT. Same defect the earlier
 review found in `z-filter`. **Any new use of `Sine()` with a computed argument
 needs a whole-period offset.**
+
+---
+
+## 8. Outside Mutable: the STK two (2026-07-28), and the one that was dropped
+
+First engines from outside the Mutable world. STK
+(`thestk/stk`, Perry Cook and Gary Scavone) is MIT — the variant adding a
+non-binding request to send modifications upstream — and it is by a wide margin
+the largest permissively-licensed body of instrument models anywhere: about
+twenty-five physical models against a Braids fork scene that has been dormant
+since 2020.
+
+| id | upstream | fills |
+|---|---|---|
+| `shakers` | STK `Shakers` (PhISEM) | 16 acoustic percussion instruments; the catalog had none |
+| `banded-waveguide` | STK `BandedWG` | a bowed BAR; the catalog strikes bars and bows strings |
+
+**The patent note STK's headers carry is spent.** Stanford's waveguide patent is
+US 4,984,276, filed 1989-09-27 and issued 1991-01-08; under the pre-1995 rule
+(later of 17 years from issue, 20 from filing) it expired no later than
+2009-09-27. It never applied to `shakers` at all — PhISEM has no waveguide.
+
+### `brass` was specced, written, and DROPPED. Do not re-attempt it as a port.
+
+STK's `Brass` does not sustain. Built standalone and measured across nine
+(sample rate, pitch) combinations, it produces sound in exactly one — 22050 Hz
+at 440 Hz — and is silent at its own default 44.1 kHz. At 48 kHz it emits a
+0.019-peak blip for the first 100 ms and then *exact* silence; with vibrato it
+passes the vibrato through at 0.0048 and still does not oscillate.
+
+The mechanism: the lip filter is an all-pole resonator with a DC gain near 50,
+so a steady mouth pressure drives the squared lip position past the model's
+clamp of 1.0, the valve pins fully open, the output becomes a constant, the DC
+blocker removes it, and the bore never fills. It works only as long as the ADSR
+attack transient is still ringing the lip.
+
+A faithful port reproduced this exactly — the control-response gate caught it as
+a MORPH difference of literally 0.000000. **The gap is still real** (the catalog
+has a reed and a bow and no lip, and a lip valve is not a reed: it can be tuned
+away from the bore, which is what lipping and overblowing are). But closing it
+means a redesign — a DC-zeroed bandpass lip with a static opening bias and a
+tuned drive — which would be a Rubato Lab engine after Cook, not an STK port,
+and should be scoped as such.
+
+### What the two shipped engines needed beyond transcription
+
+Four defects, all found by SWEEPING the engine rather than by ear or review.
+Worth generalising: STK's control mappings assume a MIDI controller and a
+player, and re-exposed as four Plaits knobs they leave large dead regions.
+
+1. **STK's resonators are un-normalised.** All-pole, numerator 1, peak gain
+   1/(1−r²) — spanning 1.6 to 125 across the sixteen shaker instruments. Cook's
+   per-instrument gains only partly offset it because STK assumes a downstream
+   master gain; his own commented-out debug line in `tick` checks for output
+   over 1.0. Normalise to unit peak, then the instrument's gain means its
+   loudness.
+2. **A bow has a minimum speed.** The bow table's grip falls off as the *fourth
+   power* of the bow-to-bar velocity difference, so below ~0.055 a ringing bar
+   is damped rather than driven. Upstream's 0.03 floor = silence over the bottom
+   fifth of the knob.
+3. **Bow force costs grip.** Upstream runs the friction slope to 1.0, silent
+   from ~0.6 of the knob up. Stop at 3.0 and compensate velocity for force.
+4. **A preset can be inaudible in a mode upstream never used it in.** The
+   uniform bar's pow(0.9, i+1) gains give a loop gain of 0.899 against the other
+   presets' 0.999 — 600× quieter *under a bow*. Upstream never hits it because
+   that preset defaults to being struck.
+
+**Sample-rate correction is mandatory for anything from STK**, and it is easy to
+miss because nothing breaks: every decay constant and filter radius is a raw
+per-sample number tuned at 44.1 kHz, so carried to 48 kHz they are all ~8.8%
+wrong *in the same direction*. Raise to the power 44100/48000; scale event
+probabilities by the same ratio. Frequencies are in Hz and need nothing.
+
+**The 16 KB arena is per-engine, not shared.** `Voice::Init` calls
+`allocator->Free()` before each engine's `Init`, so `banded-waveguide` can take
+10.5 KB of delay lines without costing anything else. This is what makes
+waveguide models affordable at all, and it is worth knowing before rejecting one
+on memory grounds.
+
+### Where the taxonomy is straining
+
+Both are `origin: "Community"`, matching the Braids-fork three: the enum is
+`Mutable Instruments | Rubato Lab | Community`, and Cook and Scavone are
+certainly not the first two. But the website's empty-state copy reads as
+*contributor submissions* ("Community models will appear here after source
+validation and hardware-budget checks are connected"), which two Princeton and
+McGill professors are not. Either the chip copy widens to "not authored here",
+or STK ports get badged Rubato Lab with STK in `author`/`upstream`. It is a
+one-line catalog edit either way, and better decided before more land.
+
+### Still blocked on the same two things
+
+Flash and the hardware CPU probe, exactly as in §5 and §7 — and the website
+catalog sync behind them, since `plaitsFlashBudget.test.ts` reds on any catalog
+engine without a measured cost. These two join the same leave-one-out batch.
