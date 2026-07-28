@@ -328,6 +328,13 @@
       "controls": ["Depth", "Width", "Bend", "Tilt"], "outputs": ["Notched sawtooth", "Mirrored notch depth"],
       "source": { "header": "plaits/dsp/engine2/csaw_engine.h", "className": "CSawEngine", "member": "csaw_engine_", "files": ["plaits/dsp/engine2/csaw_engine.cc"] },
       "postProcessing": { "alreadyEnveloped": false, "outGain": 0.73, "auxGain": 0.73 }
+    },
+    {
+      "id": "ring-mod", "packageId": "mutable-instruments/ring-mod", "name": "Ring Mod", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Digital",
+      "description": "A carrier ring-modulated by two independently detuned sines, driven through a saturating shaper.", "tags": ["braids", "ring modulation", "sideband", "digital"],
+      "controls": ["Detune 1", "Detune 2", "Depth", "Drive"], "outputs": ["Three-way ring product", "Carrier and first modulator"],
+      "source": { "header": "plaits/dsp/engine2/ring_mod_engine.h", "className": "RingModEngine", "member": "ring_mod_engine_", "files": ["plaits/dsp/engine2/ring_mod_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": -1.5, "auxGain": -1.5 }
     }
   ],
   "manuals": {
@@ -708,6 +715,15 @@
         "macro": "Tilts the notched segment, flattening the step at one extreme and doubling it at the other."
       },
       "trigger": "Restarts the internal envelope when TRIG is patched."
+    },
+    "ring-mod": {
+      "controls": {
+        "harmonics": "Detunes the first modulator through harmonic and clangorous intervals.",
+        "timbre": "Detunes the second modulator, thickening the sideband cluster.",
+        "morph": "Fades from a bare carrier to full three-way ring modulation.",
+        "macro": "Drives the output shaper, from clean multiplication to hard saturation."
+      },
+      "trigger": "Realigns the three oscillator phases so each note starts alike."
     }
   },
   "presets": {

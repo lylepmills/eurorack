@@ -72,6 +72,7 @@ CC_FILES       = algorithms.cc \
 		waveshaping_engine.cc \
 		wavetable_engine.cc \
 		csaw_engine.cc \
+		ring_mod_engine.cc \
 		toy_engine.cc \
 		wave_terrain_engine.cc \
 		z_filter_engine.cc
