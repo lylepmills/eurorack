@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "bees-in-the-trees/bytebeat",
+  "catalogId": "bytebeat",
+  "version": "1.0.0",
+  "name": "Bytebeat",
+  "author": "Tim Churches",
+  "origin": "Community",
+  "license": "MIT",
+  "description": "Four integer expressions read as audio, pitch-tracked and with an openable mask width. From Tim Churches' Bees-in-the-Trees firmware for Braids.",
+  "family": "Digital",
+  "tags": [
+    "braids",
+    "bees-in-the-trees",
+    "bytebeat",
+    "lo-fi",
+    "digital"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Term A",
+      "description": "Sets the first coefficient inside the expression, which mostly governs harmonic density."
+    },
+    {
+      "id": "timbre",
+      "label": "Term B",
+      "description": "Sets the second coefficient, which mostly governs how the pattern evolves over time."
+    },
+    {
+      "id": "morph",
+      "label": "Expression",
+      "description": "Selects one of four expressions, from the softest and most tonal to the harshest."
+    },
+    {
+      "id": "macro",
+      "label": "Mask width",
+      "description": "Opens the mask from two bits of the expression to twelve, past the stock eight."
+    }
+  ],
+  "outputs": {
+    "main": "The bytebeat stream.",
+    "aux": "The same expression at half the tick rate, a locked sub-octave."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/bytebeat_engine.h",
+    "files": [
+      "plaits/dsp/engine2/bytebeat_engine.cc"
+    ],
+    "className": "BytebeatEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": -0.9,
+    "auxGain": -0.9
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Bees-in-the-Trees DigitalOscillator::RenderBytebeat0..3 (timchurches/Mutated-Mutables)"
+}

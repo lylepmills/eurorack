@@ -69,6 +69,9 @@
 #include "plaits/dsp/engine2/vowel_fof_engine.h"
 #include "plaits/dsp/engine2/raw_fm_engine.h"
 #include "plaits/dsp/engine2/triple_engine.h"
+#include "plaits/dsp/engine2/bytebeat_engine.h"
+#include "plaits/dsp/engine2/diatonic_chord_engine.h"
+#include "plaits/dsp/engine2/scale_stack_engine.h"
 #include "plaits/dsp/engine2/z_filter_engine.h"
 #include "plaits/dsp/engine2/string_machine_engine.h"
 #include "plaits/dsp/engine2/tapfield_engine.h"
@@ -2084,6 +2087,9 @@ void TestExperimentalEngines() {
   RenderAuditionEngine<SpectralSpiralEngine>("11-spectral-spiral.wav");
   RenderAuditionEngine<ZFilterEngine>("12-z-filter.wav");
   RenderAuditionEngine<TripleEngine>("22-triple.wav");
+  RenderAuditionEngine<BytebeatEngine>("23-bytebeat.wav");
+  RenderAuditionEngine<DiatonicChordEngine>("24-diatonic-chord.wav");
+  RenderAuditionEngine<ScaleStackEngine>("25-scale-stack.wav");
   RenderAuditionEngine<RawFmEngine>("21-raw-fm.wav");
   RenderAuditionEngine<VowelFofEngine>("20-vowel-fof.wav");
   RenderAuditionEngine<SawCombEngine>("19-saw-comb.wav");
@@ -2123,6 +2129,9 @@ void TestExperimentalEngines() {
   ValidateExperimentalEngineExtremes<VowelFofEngine>();
   ValidateExperimentalEngineExtremes<RawFmEngine>();
   ValidateExperimentalEngineExtremes<TripleEngine>();
+  ValidateExperimentalEngineExtremes<BytebeatEngine>();
+  ValidateExperimentalEngineExtremes<DiatonicChordEngine>();
+  ValidateExperimentalEngineExtremes<ScaleStackEngine>();
   ValidateExperimentalEngineExtremes<ZFilterEngine>();
   ValidateExperimentalEngineExtremes<ToyEngine>();
   ValidateExperimentalEngineExtremes<CSawEngine>();
@@ -2145,6 +2154,9 @@ void TestExperimentalEngines() {
   ValidateExperimentalControlResponse<VowelFofEngine>("Vowel FOF");
   ValidateExperimentalControlResponse<RawFmEngine>("Raw FM");
   ValidateExperimentalControlResponse<TripleEngine>("Triple");
+  ValidateExperimentalControlResponse<BytebeatEngine>("Bytebeat");
+  ValidateExperimentalControlResponse<DiatonicChordEngine>("Diatonic Chord");
+  ValidateExperimentalControlResponse<ScaleStackEngine>("Scale Stack");
   ValidateExperimentalControlResponse<ZFilterEngine>("Z Filter");
   ValidateExperimentalControlResponse<ToyEngine>("Toy");
   ValidateExperimentalControlResponse<CSawEngine>("CSaw");

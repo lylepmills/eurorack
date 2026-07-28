@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "braids-renaissance/scale-stack",
+  "catalogId": "scale-stack",
+  "version": "1.0.0",
+  "name": "Scale Stack",
+  "author": "Tom Burns",
+  "origin": "Community",
+  "license": "MIT",
+  "description": "Five voices spaced an equal number of scale degrees apart, sweeping from cluster to wide chord without ever leaving the scale. From Braids Renaissance.",
+  "family": "Polyphonic",
+  "tags": [
+    "braids",
+    "braids renaissance",
+    "stack",
+    "polyphonic",
+    "scale",
+    "interval"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Span",
+      "description": "Sets the spacing between voices, from one scale degree up to sixteen."
+    },
+    {
+      "id": "timbre",
+      "label": "Spread",
+      "description": "Detunes the voices against each other, and folds them where the waveform is still a sine."
+    },
+    {
+      "id": "morph",
+      "label": "Waveform",
+      "description": "Morphs every voice from sine through triangle and saw to square."
+    },
+    {
+      "id": "macro",
+      "label": "Scale",
+      "description": "Selects the scale the stack is quantised to, which is what the spacing counts in."
+    }
+  ],
+  "outputs": {
+    "main": "The stack.",
+    "aux": "The root voice alone, as a pitch reference."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/scale_stack_engine.h",
+    "files": [
+      "plaits/dsp/engine2/scale_stack_engine.cc",
+      "plaits/dsp/engine2/scale_voices.cc"
+    ],
+    "className": "ScaleStackEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": -0.6,
+    "auxGain": -0.6
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids Renaissance DigitalOscillator::RenderStack (boourns/eurorack-renaissance)"
+}

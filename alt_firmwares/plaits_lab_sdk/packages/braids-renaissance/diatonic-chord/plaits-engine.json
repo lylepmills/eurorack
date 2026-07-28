@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "braids-renaissance/diatonic-chord",
+  "catalogId": "diatonic-chord",
+  "version": "1.0.0",
+  "name": "Diatonic Chord",
+  "author": "Tom Burns",
+  "origin": "Community",
+  "license": "MIT",
+  "description": "Chords stacked in scale degrees rather than fixed intervals, so the quality follows the played note. From Tom Burns' Braids Renaissance firmware.",
+  "family": "Polyphonic",
+  "tags": [
+    "braids",
+    "braids renaissance",
+    "chord",
+    "diatonic",
+    "polyphonic",
+    "scale"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Chord",
+      "description": "Steps through sixteen chord shapes, from triads up through elevenths and the suspended set."
+    },
+    {
+      "id": "timbre",
+      "label": "Spread",
+      "description": "Detunes the voices against each other, and folds them where the waveform is still a sine."
+    },
+    {
+      "id": "morph",
+      "label": "Waveform",
+      "description": "Morphs every voice from sine through triangle and saw to square."
+    },
+    {
+      "id": "macro",
+      "label": "Scale",
+      "description": "Selects the scale the chord is built from, which is what decides its quality."
+    }
+  ],
+  "outputs": {
+    "main": "The chord.",
+    "aux": "The root voice alone, as a pitch reference."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/diatonic_chord_engine.h",
+    "files": [
+      "plaits/dsp/engine2/diatonic_chord_engine.cc",
+      "plaits/dsp/engine2/scale_voices.cc"
+    ],
+    "className": "DiatonicChordEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": -0.65,
+    "auxGain": -0.65
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids Renaissance DigitalOscillator::RenderDiatonicChord (boourns/eurorack-renaissance)"
+}

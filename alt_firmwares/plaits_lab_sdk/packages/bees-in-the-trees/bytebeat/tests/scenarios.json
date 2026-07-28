@@ -1,0 +1,54 @@
+[
+  {
+    "id": "hero",
+    "name": "All four expressions at the stock mask width",
+    "durationSeconds": 4,
+    "note": 48,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.2, 0.8],
+      "timbre": [0.3, 0.7],
+      "morph": [0.0, 1.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "mask-sweep",
+    "name": "Mask width from two bits to twelve",
+    "durationSeconds": 3,
+    "note": 48,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.5, 0.5],
+      "morph": [0.1, 0.1],
+      "macro": [0.0, 1.0]
+    }
+  },
+  {
+    "id": "modulo-floor",
+    "name": "Expression 3 at the bottom of Term B, where upstream divided by zero",
+    "durationSeconds": 3,
+    "note": 43,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.4, 0.4],
+      "timbre": [0.0, 0.0],
+      "morph": [0.95, 0.95],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "tracking",
+    "name": "Two octaves of pitch tracking, retriggered",
+    "durationSeconds": 4,
+    "note": 36,
+    "triggerHz": 2,
+    "controls": {
+      "harmonics": [0.6, 0.6],
+      "timbre": [0.45, 0.45],
+      "morph": [0.4, 0.4],
+      "macro": [0.5, 0.5]
+    }
+  }
+]

@@ -384,6 +384,27 @@
       "controls": ["Spread", "Interval", "Waveform", "Shape"], "outputs": ["Three-voice mix", "Undetuned root voice"],
       "source": { "header": "plaits/dsp/engine2/triple_engine.h", "className": "TripleEngine", "member": "triple_engine_", "files": ["plaits/dsp/engine2/triple_engine.cc"] },
       "postProcessing": { "alreadyEnveloped": false, "outGain": -0.6, "auxGain": -0.6 }
+    },
+    {
+      "id": "bytebeat", "packageId": "bees-in-the-trees/bytebeat", "name": "Bytebeat", "author": "Tim Churches", "origin": "Community", "family": "Digital",
+      "description": "Four integer expressions read as audio, pitch-tracked and with an openable mask width. From Tim Churches' Bees-in-the-Trees firmware for Braids.", "tags": ["braids", "bees-in-the-trees", "bytebeat", "lo-fi", "digital"],
+      "controls": ["Term A", "Term B", "Expression", "Mask width"], "outputs": ["Bytebeat stream", "Same stream a sub-octave down"],
+      "source": { "header": "plaits/dsp/engine2/bytebeat_engine.h", "className": "BytebeatEngine", "member": "bytebeat_engine_", "files": ["plaits/dsp/engine2/bytebeat_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": -0.9, "auxGain": -0.9 }
+    },
+    {
+      "id": "diatonic-chord", "packageId": "braids-renaissance/diatonic-chord", "name": "Diatonic Chord", "author": "Tom Burns", "origin": "Community", "family": "Polyphonic",
+      "description": "Chords stacked in scale degrees rather than fixed intervals, so the quality follows the played note. From Tom Burns' Braids Renaissance firmware.", "tags": ["braids", "braids renaissance", "chord", "diatonic", "polyphonic", "scale"],
+      "controls": ["Chord", "Spread", "Waveform", "Scale"], "outputs": ["Chord", "Root voice"],
+      "source": { "header": "plaits/dsp/engine2/diatonic_chord_engine.h", "className": "DiatonicChordEngine", "member": "diatonic_chord_engine_", "files": ["plaits/dsp/engine2/diatonic_chord_engine.cc", "plaits/dsp/engine2/scale_voices.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": -0.65, "auxGain": -0.65 }
+    },
+    {
+      "id": "scale-stack", "packageId": "braids-renaissance/scale-stack", "name": "Scale Stack", "author": "Tom Burns", "origin": "Community", "family": "Polyphonic",
+      "description": "Five voices spaced an equal number of scale degrees apart, sweeping from cluster to wide chord without ever leaving the scale. From Braids Renaissance.", "tags": ["braids", "braids renaissance", "stack", "polyphonic", "scale", "interval"],
+      "controls": ["Span", "Spread", "Waveform", "Scale"], "outputs": ["Stack", "Root voice"],
+      "source": { "header": "plaits/dsp/engine2/scale_stack_engine.h", "className": "ScaleStackEngine", "member": "scale_stack_engine_", "files": ["plaits/dsp/engine2/scale_stack_engine.cc", "plaits/dsp/engine2/scale_voices.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": -0.6, "auxGain": -0.6 }
     }
   ],
   "manuals": {
@@ -836,6 +857,33 @@
         "macro": "Narrows the pulse and slope of all three voices below the stock symmetry."
       },
       "trigger": "Realigns all three oscillator phases."
+    },
+    "bytebeat": {
+      "controls": {
+        "harmonics": "Sets the first coefficient inside the expression, which mostly governs its harmonic density.",
+        "timbre": "Sets the second coefficient, which mostly governs how the pattern evolves over time.",
+        "morph": "Selects one of four expressions, from the softest and most tonal to the harshest.",
+        "macro": "Opens the mask from two bits of the expression to twelve, past the stock eight."
+      },
+      "trigger": "Restarts the stream past the silent opening of the expressions."
+    },
+    "diatonic-chord": {
+      "controls": {
+        "harmonics": "Steps through sixteen chord shapes, from triads up through elevenths and the suspended set.",
+        "timbre": "Detunes the voices against each other, and folds them where the waveform is still a sine.",
+        "morph": "Morphs every voice from sine through triangle and saw to square.",
+        "macro": "Selects the scale the chord is built from, which is what decides its quality."
+      },
+      "trigger": "Realigns every voice so a struck chord starts the same way each time."
+    },
+    "scale-stack": {
+      "controls": {
+        "harmonics": "Sets the spacing between voices, from one scale degree up to sixteen.",
+        "timbre": "Detunes the voices against each other, and folds them where the waveform is still a sine.",
+        "morph": "Morphs every voice from sine through triangle and saw to square.",
+        "macro": "Selects the scale the stack is quantised to, which is what the spacing counts in."
+      },
+      "trigger": "Realigns every voice so a struck stack starts the same way each time."
     }
   },
   "presets": {

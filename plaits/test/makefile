@@ -83,6 +83,10 @@ CC_FILES       = algorithms.cc \
 		vowel_fof_engine.cc \
 		raw_fm_engine.cc \
 		triple_engine.cc \
+		bytebeat_engine.cc \
+		scale_voices.cc \
+		diatonic_chord_engine.cc \
+		scale_stack_engine.cc \
 		z_filter_engine.cc
 OBJ_FILES      = $(CC_FILES:.cc=.o)
 OBJS           = $(patsubst %,$(BUILD_DIR)%,$(OBJ_FILES)) $(STARTUP_OBJ)
