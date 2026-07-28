@@ -19,7 +19,7 @@ Branch: `claude/braids-engines-plaits-palette-je03ac` (both repos).
 | `toy` | **landed** | 35% | within 0.42 dB mean, ≤9 cents |
 | `csaw` | **landed** | 12% | 0.00 dB mean at two settings, 0.75 dB at a third |
 | `bowed` | not started | — | — |
-| `ring-mod` | not started | — | — |
+| `ring-mod` | **landed** | 69% | within 0.04 dB energy-weighted at four detunings |
 | `sub-oscillator` | not started | — | — |
 | `digital-modulation` | not started | — | — |
 | `saw-comb` | not started | — | — |
@@ -140,7 +140,29 @@ in-tree idiom is that AUX is a byproduct of the same computation
 `csaw` is the cheap case worth copying: OUT and AUX share the phase, the
 transition times and the BLEP values, and differ only in two step magnitudes.
 
-### 3.7 A 15th registration step
+### 3.7 Two more Braids fixed-point behaviours that are audible
+
+Both found on `ring-mod`, both likely to recur:
+
+- **A phase offset formed from a zeroed stored phase.** `RenderTripleRingMod`
+  builds its carrier phase as `phase_ + (1 << 30)` on entry and unwinds it on
+  exit, so from a zeroed state the carrier starts a quarter cycle AHEAD of the
+  modulators. It is invisible everywhere except the one setting where the
+  detunes meet and all three oscillators would otherwise collapse into one.
+- **Knob quantization that never reaches zero.** Detune is
+  `(parameter_ - 16384) >> 2` in 1/128-semitone units — an arithmetic shift,
+  so a floor. At the knob centre it lands on −1, not 0, so the hardware beats
+  very slowly at "unison" where a smooth float detune phase-locks into a
+  static waveform. Reproduce the quantization; it is the sound.
+
+### 3.8 qemu undercounts divides
+
+`qemu/estimate.py` models `cycles = A*instructions + B*flash_reads` with
+`COST_INSN = 1.0`. A VDIV is one instruction and about fourteen cycles on an
+M4, so a divide-heavy engine reads optimistic. `ring-mod` carries two divides
+per sub-sample; treat its 69 % as a floor, not a number.
+
+### 3.9 A 15th registration step
 
 The spec's 14-step per-engine checklist misses
 `alt_firmwares/plaits_lab_builder/test_generate_engine_config.py`, which pins
@@ -162,7 +184,12 @@ GPL v3 while the DSP around it is MIT).
   `parameter_[0]`/`[1]` map to different port knobs per engine, so they are
   passed explicitly (args 9 and 10) rather than assumed.
 - `compare.py` — reports f0 by autocorrelation and a third-octave band
-  envelope. **Do not use bin-by-bin spectral correlation**: two renders a
+  envelope, **energy-weighted**. The weighting is not cosmetic: a sparse
+  spectrum (ring-mod, and later digital-modulation / raw-fm / triple) shifted
+  by the port's +5 cents puts a sideband in a neighbouring bin, which reads as
+  −60 dB on a band holding 0.001 % of the signal. Unweighted, ring-mod scored
+  13 dB "MISMATCH" while its centroid and RMS matched to three figures.
+  **Do not use bin-by-bin spectral correlation** either: two renders a
   fraction of a hertz apart decorrelate completely while sounding identical,
   which reads as a catastrophic mismatch and sent the first z-filter A/B
   chasing a bug that was not there.
