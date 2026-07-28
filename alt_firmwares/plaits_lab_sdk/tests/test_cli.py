@@ -539,9 +539,11 @@ class PackageTests(unittest.TestCase):
             self.assertEqual(loaded["manifest"]["packageType"], "community")
 
             bundle = Path(temp_dir) / "bright-wave.zip"
+            # --bundle-only: this test is about the zip the gauntlet produces,
+            # not about uploading it. Without it, submit runs its real upload.
             plaits_lab.submit_command(SimpleNamespace(
                 package=str(package), output=str(bundle), compiler=None,
-                native=True, docker_image="unused",
+                native=True, docker_image="unused", bundle_only=True,
             ))
             with zipfile.ZipFile(bundle) as archive:
                 submission = json.loads(archive.read("submission.json"))
@@ -914,9 +916,12 @@ class PackageTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             package = self._community_package(temp_dir, "bundled")
             out_zip = Path(temp_dir) / "dist" / "bundled.zip"
+            # bundle_only on the OUTER call keeps this test off the network; the
+            # inner container's own --bundle-only is asserted below and is not
+            # the same thing.
             args = SimpleNamespace(package=str(package["directory"]), compiler=None,
                                    output=str(out_zip), docker_image="img:test",
-                                   native=False)
+                                   native=False, bundle_only=True)
             real_probe = plaits_lab.host_sanitizers_available
             plaits_lab.host_sanitizers_available = lambda _compiler: False
             try:
@@ -926,10 +931,14 @@ class PackageTests(unittest.TestCase):
 
         # The zip has to come back out, so /output is the one writable mount and
         # the container is told to write there under the caller's chosen name.
+        # The inner run BUILDS ONLY: it has no credentials and no terminal to
+        # confirm at, and if it reached the upload the package would be
+        # submitted twice — once from the container, once from out here.
         self.assertIn(f"{out_zip.resolve().parent}:/output", cmd)
         self.assertEqual(
-            cmd[-5:],
-            ["submit", "/contributor", "--output", "/output/bundled.zip", "--native"])
+            cmd[-6:],
+            ["submit", "/contributor", "--output", "/output/bundled.zip",
+             "--native", "--bundle-only"])
 
     def test_native_never_delegates_to_docker(self) -> None:
         # --native is what the SDK passes to ITSELF inside the container. If it
