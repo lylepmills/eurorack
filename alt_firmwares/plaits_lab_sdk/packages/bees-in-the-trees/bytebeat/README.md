@@ -20,8 +20,13 @@ structure — a whole pattern rather than a waveform, and it is the only engine
 here where the note you play sets the *clock* of a generative process instead of
 the pitch of a tone.
 
-It is also the cheapest engine in the port by a wide margin: **0.29× `triple`**
-and **0.05× `two-op-fm`** on the host bench.
+It is also the cheapest engine in the port by a wide margin on the host
+bench. Treat that only as a "not pathologically expensive" signal: `cpu_bench`
+blesses within-engine ratios (stereo/mono, unroll on/off) as
+architecture-robust, NOT engine-to-engine ones, and it is right to. `two-op-fm`
+measures 5.4x `triple` on this host while `triple`'s qemu estimate is 52% of
+the hardware budget -- if that ratio carried, a stock shipping engine would sit
+at 280%. qemu and the hardware probe are the authorities.
 
 ## Three deliberate divergences from upstream
 

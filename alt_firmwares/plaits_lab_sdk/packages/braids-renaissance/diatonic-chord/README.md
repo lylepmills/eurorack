@@ -83,5 +83,7 @@ offset the negative half of every waveform indexes `lut_sine` out of bounds —
 a ~5.0 spike on OUT. The in-tree audition gate caught exactly that during this
 port; it is the same defect the earlier review found in `z-filter`.
 
-Host CPU: **0.96× `triple`**, 0.18× `two-op-fm`. `scale_voices.cc` is shared with
-`scale-stack`, so the second of the two costs materially less than the first.
+Host CPU is close to `triple`'s, which is a smoke signal and not a budget --
+see `bytebeat`'s README for why engine-to-engine host ratios do not carry to
+the hardware. `scale_voices.cc` is shared with `scale-stack`, so the second of
+the two costs materially less than the first.

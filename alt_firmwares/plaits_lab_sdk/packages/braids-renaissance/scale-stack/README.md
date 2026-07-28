@@ -53,4 +53,5 @@ voice bank. Those notes live in that engine's README.
 Braids' `kStackSize` was 6 but `RenderStack` only ever filled five voices; five
 is what this ports.
 
-Host CPU: **0.97× `triple`**, 0.18× `two-op-fm`.
+Host CPU is close to `triple`'s -- a smoke signal, not a budget; see
+`diatonic-chord`'s README.

@@ -66,6 +66,8 @@
 #include "plaits/dsp/engine2/bytebeat_engine.h"
 #include "plaits/dsp/engine2/diatonic_chord_engine.h"
 #include "plaits/dsp/engine2/scale_stack_engine.h"
+#include "plaits/dsp/engine2/shakers_engine.h"
+#include "plaits/dsp/engine2/banded_waveguide_engine.h"
 #include "plaits/dsp/engine2/z_filter_engine.h"
 #include "plaits/dsp/engine2/string_machine_engine.h"
 #include "plaits/dsp/engine2/tapfield_engine.h"
@@ -170,6 +172,8 @@ int main() {
   bench<BytebeatEngine>("bytebeat");
   bench<DiatonicChordEngine>("diatonic-chord");
   bench<ScaleStackEngine>("scale-stack");
+  bench<ShakersEngine>("shakers");
+  bench<BandedWaveguideEngine>("banded-waveguide");
   bench<ZFilterEngine>("z-filter");
   bench<LoopbackEngine>("loopback");
   bench<LockstepEngine>("lockstep");

@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "stk/banded-waveguide",
+  "catalogId": "banded-waveguide",
+  "version": "1.0.0",
+  "name": "Banded Waveguide",
+  "author": "Perry R. Cook and Gary P. Scavone",
+  "origin": "Community",
+  "license": "MIT",
+  "description": "A bowed bar, bowl or glass. Each mode gets its own waveguide loop, so a bow has a travelling wave to grip -- which a bank of resonators does not.",
+  "family": "Physical",
+  "tags": ["stk", "bowed", "bar", "physical", "waveguide", "modal"],
+  "controls": [
+    { "id": "harmonics", "label": "Material", "description": "Selects the material: uniform bar, tuned bar, glass harmonica or Tibetan prayer bowl." },
+    { "id": "timbre", "label": "Bow force", "description": "Bow force, from a light steep grip to a broad heavy one that loosens the tone." },
+    { "id": "morph", "label": "Bow speed", "description": "Bow speed. There is a best speed in the middle, as there is on a real instrument." },
+    { "id": "macro", "label": "Ring", "description": "How long the bank rings once the bow lifts, from a dead bar to an almost endless bowl." }
+  ],
+  "outputs": {
+    "main": "The instrument.",
+    "aux": "The fundamental band alone, as a pitch reference."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/banded_waveguide_engine.h",
+    "files": ["plaits/dsp/engine2/banded_waveguide_engine.cc"],
+    "className": "BandedWaveguideEngine"
+  },
+  "postProcessing": { "alreadyEnveloped": false, "outGain": -1.0, "auxGain": 0.8 },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "STK BandedWG (Essl and Cook banded waveguides), thestk/stk"
+}

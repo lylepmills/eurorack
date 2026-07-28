@@ -72,6 +72,8 @@
 #include "plaits/dsp/engine2/bytebeat_engine.h"
 #include "plaits/dsp/engine2/diatonic_chord_engine.h"
 #include "plaits/dsp/engine2/scale_stack_engine.h"
+#include "plaits/dsp/engine2/shakers_engine.h"
+#include "plaits/dsp/engine2/banded_waveguide_engine.h"
 #include "plaits/dsp/engine2/z_filter_engine.h"
 #include "plaits/dsp/engine2/string_machine_engine.h"
 #include "plaits/dsp/engine2/tapfield_engine.h"
@@ -2090,6 +2092,8 @@ void TestExperimentalEngines() {
   RenderAuditionEngine<BytebeatEngine>("23-bytebeat.wav");
   RenderAuditionEngine<DiatonicChordEngine>("24-diatonic-chord.wav");
   RenderAuditionEngine<ScaleStackEngine>("25-scale-stack.wav");
+  RenderAuditionEngine<ShakersEngine>("26-shakers.wav");
+  RenderAuditionEngine<BandedWaveguideEngine>("27-banded-waveguide.wav");
   RenderAuditionEngine<RawFmEngine>("21-raw-fm.wav");
   RenderAuditionEngine<VowelFofEngine>("20-vowel-fof.wav");
   RenderAuditionEngine<SawCombEngine>("19-saw-comb.wav");
@@ -2132,6 +2136,8 @@ void TestExperimentalEngines() {
   ValidateExperimentalEngineExtremes<BytebeatEngine>();
   ValidateExperimentalEngineExtremes<DiatonicChordEngine>();
   ValidateExperimentalEngineExtremes<ScaleStackEngine>();
+  ValidateExperimentalEngineExtremes<ShakersEngine>();
+  ValidateExperimentalEngineExtremes<BandedWaveguideEngine>();
   ValidateExperimentalEngineExtremes<ZFilterEngine>();
   ValidateExperimentalEngineExtremes<ToyEngine>();
   ValidateExperimentalEngineExtremes<CSawEngine>();
@@ -2157,6 +2163,8 @@ void TestExperimentalEngines() {
   ValidateExperimentalControlResponse<BytebeatEngine>("Bytebeat");
   ValidateExperimentalControlResponse<DiatonicChordEngine>("Diatonic Chord");
   ValidateExperimentalControlResponse<ScaleStackEngine>("Scale Stack");
+  ValidateExperimentalControlResponse<ShakersEngine>("Shakers");
+  ValidateExperimentalControlResponse<BandedWaveguideEngine>("Banded Waveguide");
   ValidateExperimentalControlResponse<ZFilterEngine>("Z Filter");
   ValidateExperimentalControlResponse<ToyEngine>("Toy");
   ValidateExperimentalControlResponse<CSawEngine>("CSaw");
