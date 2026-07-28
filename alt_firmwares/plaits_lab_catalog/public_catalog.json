@@ -2342,6 +2342,48 @@
       "implementation": {
         "className": "BandedWaveguideEngine"
       }
+    },
+    {
+      "id": "brass",
+      "packageId": "rubato/brass",
+      "name": "Brass",
+      "author": "Lyle Mills, after Perry R. Cook and Gary P. Scavone",
+      "origin": "Rubato Lab",
+      "family": "Physical",
+      "description": "A lip-reed brass instrument. Breath makes it speak, and the lip knob climbs the bore's harmonic series the way a bugle player does.",
+      "tags": [
+        "brass",
+        "lip",
+        "physical",
+        "waveguide",
+        "wind",
+        "stk"
+      ],
+      "controls": [
+        "Lip",
+        "Breath",
+        "Bell",
+        "Slide"
+      ],
+      "outputs": [
+        "Mouthpiece",
+        "Valve buzz"
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:5dc7346cfe8648ca751771598f917b239d9351a111ff78497ddbdef1a7fe691e",
+      "documentationDigest": "sha256:2e29a5c351344ffc48f40b4f77ba746e400eacfd525d93fade7817afddf2f980",
+      "manual": {
+        "controls": {
+          "harmonics": "Lip tension. Climbs the bore's partials -- unison, fifth, octave, tenth, twelfth -- and bends each one sharp as it rises.",
+          "timbre": "Breath pressure. Below the threshold the instrument does not speak, exactly as a real one does not.",
+          "morph": "Bell size, from a stopped horn that barely sustains to an open one that rings and overblows easily.",
+          "macro": "Slide. Detunes the bore against the lips, which is where the growl and the split note come from."
+        },
+        "trigger": "Empties the bore and resets the lips so each note starts the same way."
+      },
+      "implementation": {
+        "className": "BrassEngine"
+      }
     }
   ],
   "presets": {

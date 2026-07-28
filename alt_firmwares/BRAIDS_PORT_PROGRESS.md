@@ -588,7 +588,11 @@ which is the main reason a waveguide bow sounds synthetic. Noise on the
 *velocity* (not the output) modulates the friction curve, so it colours the
 attack rather than sitting on top as hiss.
 
-### brass -- STILL NOT BUILT, and here is exactly how far it got
+### brass -- BUILT (2026-07-28). The account below is how, kept because the
+### findings generalise to any waveguide work.
+
+Attempt 5 speaks, tunes and plays. What follows is the failure trail plus the
+six things that fixed it.
 
 Four structured attempts, all measured. Do not start from scratch; start from
 attempt 4, which was close.
@@ -612,16 +616,37 @@ attempt 4, which was close.
    The failure is gain staging only -- the window between "does not speak" and
    "runs away into the clip" was narrower than the grid resolution used.
 
-**Where to resume.** Attempt 4's prototype is the one to rebuild. The open
-question is bounding the flow term: the lip opening was clamped at `3*x0` but
-the runaway comes through `u = opening * sqrt(|pd|)` with `pd` unbounded, so the
-next thing to try is clamping `pd` (physical: mouth pressure cannot exceed what
-the player supplies) and searching `zc` an order of magnitude finer near where
-oscillation starts. A sweep of threshold-of-oscillation vs mouth pressure would
-locate that window directly instead of grid-searching blind.
+5. **The junction was wrong in all four.** `p_plus = p_minus + Zc*u` with
+   `p = p_plus + p_minus`, and the VALVE reads the total junction pressure --
+   not the reflected wave. Fixing that alone turned chaos into locking.
 
-**Scope honestly.** This is a Rubato Lab engine after Cook, not an STK port, and
-it is DSP research rather than transcription. The gap it fills is real and still
-open: the catalog has a reed (`reed-pipe`) and a bow (`bowed`) and no lip, and a
-lip valve is not a reed -- it is outward-striking and can be tuned *away* from
-the bore, which is what lipping and overblowing are.
+**The six findings, all measured, all reusable:**
+
+1. **Junction form** (above). Feeding a valve from the reflected wave decouples
+   the feedback that makes it lock to a bore at all.
+2. **A non-inverting loop needs an in-loop DC blocker.** Settled with a passive
+   probe: inverting rings at fs/2L, non-inverting at fs/L, and non-inverting
+   *without* the blocker rings at 0 Hz. Attempt 3 had only been ringing up DC,
+   which is why adding the blocker looked like it broke a working model.
+3. **A hard nonlinearity destroys mode selection.** Lips slamming shut every
+   cycle generate a full harmonic series and the fundamental wins every time,
+   whatever the lip is tuned to. Opening and stiffening the valve is what lets
+   the lip resonance decide.
+4. **Lock zones are narrow: partial n captures for lip/f_bore in
+   [0.90n, 1.01n].** About 40% of a linear lip sweep is silent, so the control
+   must map to a PARTIAL INDEX and place the lip inside the zone. Zones widen
+   with mouth pressure, so the softest playing sets the safe placement.
+5. **Partial 1 misbehaves** -- always sharp, erratic zone, exactly as a real
+   pedal tone does. Tune the bore an octave down and start at partial 2.
+6. **The lip pulls the pitch sharp by `-4.8 + 67.2/n` cents.** One partial
+   sounds at a time, so null it per partial. Final: mean 6.3 cents, worst 25.8,
+   ~1% cracks over 312 points.
+
+**Two more for any future waveguide engine.** The output tap is the MOUTHPIECE,
+not the bell -- the radiated signal is physically correct and slides 30 dB
+across the keyboard, while mouthpiece pressure is flat to 0.7 dB. And **both
+taps must be DC-blocked**: blowing makes a steady flow as well as an
+oscillation, and the unblocked tap measured RMS 27923 against DC 26548. It
+passed the audition and control-response gates, neither of which looks at DC.
+**Consider adding a DC check to the in-tree gates** -- `check --full` catches it
+per scenario, but `plaits_test` does not, and this would have shipped.
