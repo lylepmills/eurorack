@@ -17,7 +17,7 @@ Branch: `claude/braids-engines-plaits-palette-je03ac` (both repos).
 |---|---|---:|---|
 | `z-filter` | **landed** | 62% | all 4 models within 0.05 dB AC RMS, +5 cents |
 | `toy` | **landed** | 35% | within 0.42 dB mean, ≤9 cents |
-| `csaw` | not started | — | — |
+| `csaw` | **landed** | 12% | 0.00 dB mean at two settings, 0.75 dB at a third |
 | `bowed` | not started | — | — |
 | `ring-mod` | not started | — | — |
 | `sub-oscillator` | not started | — | — |
