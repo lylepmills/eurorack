@@ -1,115 +1,29 @@
 # Plaits
 
+**This firmware has been replaced by [Plaits
+Palette](https://rubato.audio/plaits-palette).**
+
+Plaits Palette is a free browser tool that builds you a custom Plaits firmware.
+Choose the model in each of the module's slots — the 24 stock models plus a set
+of new ones — arrange them across the banks, load the chord tables you want, set
+the firmware options, and it compiles an audio-installable WAV for you.
+
+Everything this alt firmware did is in there, now as choices you make before you
+build rather than a fixed set: aux crossfading, the square/sine suboscillator,
+CV control of the LPG, alternate chord tables, hold-on-trigger, and the
+reassignable FREQUENCY knob and MODEL/LEVEL inputs. All of it stays editable
+from the module afterward, exactly as it was here.
+
+The documentation moved into the tool. Every option is explained where you set
+it, every model documents what its four controls do and what OUT, AUX and TRIG
+give you, and each build comes with a field guide for the palette you chose.
+
 [discussion](https://llllllll.co/t/mutable-instruments-alt-firmwares/63936)
 
-[download](https://github.com/lylepmills/eurorack/raw/master/alt_firmwares/plaits_20231210.wav)
-
-*update 12/11/23: there has been a minor revision to remove the effect of the envelope on the aux output when using it as a suboscillator, to simplify its use as a sync output. if aux crossfade is enabled while the aux output is a suboscillator, then it will once again be enveloped*
-
-*update 9/1/23: this is a new version of the alt firmware built on top of version 1.2 of the official firmware, with some new options and a new interaction model for frequency locking*
-
-The Plaits alt firmware extends the base firmware with several additional features accessed through a menu. Originally, this alt firmware was created primarily around the idea of allowing frequency locking. However in revision 1.2 of the official firmware, Émelie incorporated the frequency locking idea elegantly into her official firmware with the addition of the octave-switching mode to the frequency range selector. As such it was no longer necessary to use this alt firmware to get frequency locking behavior.
-
-However my alt firmware had several other features that I felt were still worthwhile, so in August 2023 I revised it to use Émelie's approach to frequency locking as well as incorporating the rest of the updates from revision 1.2, while retaining some of the other features I had added, and adding a couple of new ones as well.
-
-## Features of this alt firmware
-
-- **Aux crossfading.** - It's possible with this firmware to crossfade between the regular and aux models on the aux output, essentially giving you a fourth timbral dimension for each model. The crossfade can be controlled either manually by repurposing the frequency knob, or under CV control (or both).
-- **CV control of LPG parameters.** - The MODEL and LEVEL CV inputs can be repurposed (either both or individually) to put the colour and decay of the internal LPG under CV control.
-- **Suboscillator.** The aux model can be replaced by a square or sine wave suboscillator on the aux output. The square wave can be used to sync another oscillator with a sync input (like Tides), an oscilloscope, etc. This is fully compatible with aux crossfading, meaning you can blend the main model with a square or sine wave. There are also options for the suboscillator frequency to be either the same frequency as the main model, -1 octave, or -2 octaves.
-- **Alternate chord tables.** For the chord-based modes (the 7th green mode, and the 7th and 8th yellow modes), you can switch between the original table of 11 chords, or alternative chord tables by Jon Butler (17 chords) or Joe McMullen (18 chords). See below for more details on each chord table.
-- **Hold parameters on trigger.** - It is possible to internally sample and hold the CV inputs for Timbre, Morph, Harmonics, Level and V/Oct whenever a trigger is received.
-- **Easier manual control over decay.** - The frequency knob can be repurposed to more easily control the decay of the internal LPG, without having to hold down a button.
-- **More convenient model switching.** - In revision 1.2 of the official firmware, an alternate mode for switching models was introduced. This mode was the only way of accessing the third bank of models. My assumption is that anyone using this alt firmware wants to be able to freely access all three banks of synthesis models, so in this alternate firmware, that mode is now the default. Additionally there is a new navigation mode (an alternative to the alternative), whereby the left button switches between models within a bank and the right button switches banks.
-
-## How to access calibration
-Calibration has been removed from the alt firmware to save space. If you need to recalibrate, simply reinstall the official firmware first. Your calibration settings will be preserved if you then switch back to this alt firmware.
-
-## How to access the menu / change options
-To access the menu of options for the various alt functionalities, simply short-press both buttons at once. To exit the menu, again press both buttons at once.
-
-The menu is represented by lights for each option. You can navigate between the menu items by pressing the left button, and you can switch the option for that item by pressing the right button. The current settings are represented by the color of the LED lights. In order, they represent the following
-
-### First light - Frequency knob alt functionality (when frequency is locked i.e. in octave-switching mode)
-Green means octaves (as in the stock firmware), red means controlling decay, yellow means controlling aux crossfade
-
-### Second light - MODEL input alt functionality
-Green means model (as in the stock firmware), red means LPG colour (VCFA->VCA), yellow means aux crossfade
-
-### Third light - LEVEL input alt functionality
-Green means level (as in the stock firmware), red means decay of the internal envelope (if and only if TRIG is patched)
-
-### Fourth light - Aux suboscillator wave option
-Green means the regular aux model, red means a square wave subosc, yellow means a sine wave subosc
-
-### Fifth light - Aux suboscillator octave option
-Green means the +0 octaves (same frequency as the main model), red means -1 octave, yellow means -2 octaves. Note this will only have an effect if the suboscillator wave option is set to something other than the regular aux model.
-
-### Sixth light - Chord table option (chord mode only)
-Green means the original chord table, red means the alternate chord table by Jon Butler, yellow means the alternate chord table by Joe McMullen
-
-#### Original chords
-- Octave
-- Fifth
-- Sus4
-- Minor
-- Minor 7th
-- Minor 9th
-- Minor 11th
-- 69
-- Major 9th
-- Major 7th
-- Major
-
-#### Alternate chords 1 (by Jon Butler)
-Organized (from full-CCW to full-CW) into neutral, minor, major, and colour chords
-- Octave
-- Fifth
-- Minor
-- Minor 7th
-- Minor 9th
-- Minor 11th
-- Major
-- Major 7th
-- Major 9th
-- Sus4
-- 69
-- 6th
-- 10th (Spread maj7)
-- Dominant 7th
-- Dominant 7th (b9)
-- Half Diminished
-- Fully Diminished
-
-#### Alternate chords 2 (by Joe McMullen)
-With this table, instead of Frequency defining the root and Harmonics defining chord type, Frequency defines the key and Harmonics defines the scale position the chord is built from, meaning the root you hear on the aux output shifts around. Note that chord voicings are also more spread out by default with this table. See [this writeup from Joe](https://github.com/lylepmills/eurorack/blob/master/alt_firmwares/README.md#disastrous-peace) for more info. If that doesn't make sense, don't worry, just use your ears!
-- iv 6/9
-- iio 7sus4
-- VII 6
-- v m11
-- III add4
-- i addb13
-- VI add#11
-- iv m6
-- iio
-- viio
-- V 7
-- iii add b9
-- I maj7
-- vi m9
-- IV maj9
-- ii m7
-- I maj7sus4/vii
-- V 7sus4
-
-### Seventh light - Hold params on trigger
-Green means don't hold params upon receiving a trigger (as in the stock firmware), red means internally sample and hold the CV inputs for Timbre, Morph, Harmonics, Level and V/Oct whenever a trigger is received.
-
-### Eighth light - Model navigation mode
-Green means the "alternative" navigation mode from the stock firmware, whereby the left button goes backward and the right button goes forward through the set of all models. Red means the "alternative alternative" navigation mode, where the left button cycles through models in a given bank, and the right button switches banks. Note the standard navigation mode from the official firmware is not available, since it doesn't allow access to the third bank and is therefore not very useful in my view.
-
-## Technical notes
-The original Plaits firmware makes the most of its processor, and runs quite close to that processor's limits in terms of both the amount of code it can store, and the CPU load of that code (at least, in certain modes). Unlike earlier versions of this firmware, various efficiency improvements have been found that made the compromises I had to use in those earlier versions unnecessary. However it's worth noting that it's always possible there is some combination of settings I haven't discovered yet that will lead to CPU overload, which can lead to harsh aliasing sounds coming from the module. If you encounter such a situation, please take note of the settings you are using, the model you are using, and where you have all the knobs positioned, and send me a report (ideally with video), and I will try to make adjustments to avoid those kinds of problems going forward.
+*The last standalone build is still available if you want it —
+[plaits_20231210.wav](https://github.com/lylepmills/eurorack/raw/master/alt_firmwares/plaits_20231210.wav)
+— but it is no longer updated, and the options menu it describes is documented
+in this page's history rather than here.*
 
 # Rings
 
