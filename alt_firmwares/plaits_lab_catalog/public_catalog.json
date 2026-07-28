@@ -1853,6 +1853,46 @@
       "implementation": {
         "className": "RingModEngine"
       }
+    },
+    {
+      "id": "bowed",
+      "packageId": "mutable-instruments/bowed",
+      "name": "Bowed",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Physical",
+      "description": "A bowed string waveguide with a stick-slip friction exciter, a movable bow and an adjustable instrument body.",
+      "tags": [
+        "braids",
+        "waveguide",
+        "physical",
+        "string"
+      ],
+      "controls": [
+        "Bow position",
+        "Bow pressure",
+        "Nut damping",
+        "Body"
+      ],
+      "outputs": [
+        "Bridge pickup",
+        "Neck pickup"
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:b37b30efef39897c4f9b03590b5ef920e120cebc8dc9ca8c0d7d83acce743b98",
+      "documentationDigest": "sha256:b913cb9025a1b2ed2dee10c5c3c5f6e724a61c84404be673ed659bcdc981b08b",
+      "manual": {
+        "controls": {
+          "harmonics": "Moves the bow from near the bridge to well up the neck.",
+          "timbre": "Increases bow pressure from a thin whistle to a hard scrape.",
+          "morph": "Opens the nut damping from tight and choked to loose and ringing.",
+          "macro": "Tilts the instrument body darker or brighter around the stock resonance."
+        },
+        "trigger": "Restarts the bow stroke and clears the string."
+      },
+      "implementation": {
+        "className": "BowedEngine"
+      }
     }
   ],
   "presets": {
