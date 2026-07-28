@@ -1,0 +1,41 @@
+[
+  {
+    "id": "hero",
+    "name": "Square through saw over a swept sub",
+    "durationSeconds": 4,
+    "note": 40,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.0, 1.0],
+      "timbre": [0.1, 0.8],
+      "morph": [0.0, 1.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "sub-null",
+    "name": "Through the sub null at noon",
+    "durationSeconds": 3,
+    "note": 36,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.3, 0.3],
+      "timbre": [0.4, 0.4],
+      "morph": [0.2, 0.8],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "narrow-sub",
+    "name": "Narrowed sub at the low octave",
+    "durationSeconds": 2,
+    "note": 48,
+    "triggerHz": 3,
+    "controls": {
+      "harmonics": [0.6, 0.6],
+      "timbre": [0.9, 0.9],
+      "morph": [0.0, 0.0],
+      "macro": [0.0, 0.5]
+    }
+  }
+]

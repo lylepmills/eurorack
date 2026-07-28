@@ -342,6 +342,13 @@
       "controls": ["Bow position", "Bow pressure", "Nut damping", "Body"], "outputs": ["Bridge pickup", "Neck pickup"],
       "source": { "header": "plaits/dsp/engine2/bowed_engine.h", "className": "BowedEngine", "member": "bowed_engine_", "files": ["plaits/dsp/engine2/bowed_engine.cc"] },
       "postProcessing": { "alreadyEnveloped": false, "outGain": -0.85, "auxGain": -0.85 }
+    },
+    {
+      "id": "sub-oscillator", "packageId": "mutable-instruments/sub-oscillator", "name": "Sub Osc", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Subtractive",
+      "description": "A shaped main oscillator against a square sub one or two octaves down, loudest at both ends of the sub control.", "tags": ["braids", "sub", "oscillator", "subtractive"],
+      "controls": ["Shape", "Width", "Sub level", "Sub width"], "outputs": ["Main and sub mix", "Sub only"],
+      "source": { "header": "plaits/dsp/engine2/sub_oscillator_engine.h", "className": "SubOscillatorEngine", "member": "sub_oscillator_engine_", "files": ["plaits/dsp/engine2/sub_oscillator_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": -0.45, "auxGain": -0.45 }
     }
   ],
   "manuals": {
@@ -740,6 +747,15 @@
         "macro": "Tilts the instrument body darker or brighter around the stock resonance."
       },
       "trigger": "Restarts the bow stroke and clears the string."
+    },
+    "sub-oscillator": {
+      "controls": {
+        "harmonics": "Morphs the main oscillator from a square to a variable saw.",
+        "timbre": "Sets pulse width, from symmetric down to a thin sliver.",
+        "morph": "Adds the sub two octaves down below noon and one octave down above it, with none at noon.",
+        "macro": "Narrows the sub oscillator's pulse below noon, leaving it square above."
+      },
+      "trigger": "Restarts the internal envelope when TRIG is patched."
     }
   },
   "presets": {

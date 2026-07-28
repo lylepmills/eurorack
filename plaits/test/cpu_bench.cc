@@ -56,6 +56,7 @@
 #include "plaits/dsp/engine2/bowed_engine.h"
 #include "plaits/dsp/engine2/csaw_engine.h"
 #include "plaits/dsp/engine2/ring_mod_engine.h"
+#include "plaits/dsp/engine2/sub_oscillator_engine.h"
 #include "plaits/dsp/engine2/toy_engine.h"
 #include "plaits/dsp/engine2/z_filter_engine.h"
 #include "plaits/dsp/engine2/string_machine_engine.h"
@@ -151,6 +152,7 @@ int main() {
   bench<BowedEngine>("bowed");
   bench<CSawEngine>("csaw");
   bench<RingModEngine>("ring-mod");
+  bench<SubOscillatorEngine>("sub-oscillator");
   bench<ToyEngine>("toy");
   bench<ZFilterEngine>("z-filter");
   bench<LoopbackEngine>("loopback");
