@@ -4,21 +4,26 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
 import re
+import secrets
 import shutil
 import struct
 import subprocess
 import sys
 import tempfile
+import textwrap
 import time
 import wave
 import zipfile
 from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import urllib.error
+import urllib.request
 from urllib.parse import urlparse
 from pathlib import Path
 from typing import Any
@@ -1543,21 +1548,301 @@ def add_zip_file(archive: zipfile.ZipFile, name: str, data: bytes) -> None:
     archive.writestr(info, data)
 
 
+# --- Contributor identity and submission upload -----------------------------
+#
+# A contributor is a bearer token and nothing else: the server stores only
+# SHA-256(token) as the owner of a submission, which is what lets you check,
+# re-download or withdraw your own drafts. The token is minted HERE rather than
+# in the browser so a first submission needs no web visit at all; the
+# contributor center accepts the same token pasted in, and `login` accepts one
+# from a browser that got there first.
+#
+# It lives in a USER-level config file, never inside a package: package files
+# are zipped into the bundle and eventually vendored into a public repo, and
+# one identity should span all of your packages anyway.
+
+DEFAULT_API_BASE = "https://rubato.audio"
+TOKEN_MIN, TOKEN_MAX = 32, 256
+
+
+def credentials_path() -> Path:
+    """The per-user credential file, on each platform's own config path."""
+    override = os.environ.get("PLAITS_LAB_CONFIG_DIR")
+    if override:
+        return Path(override).expanduser() / "credentials.json"
+    if sys.platform == "win32":
+        base = os.environ.get("APPDATA")
+        root = Path(base) if base else Path.home() / "AppData/Roaming"
+    elif sys.platform == "darwin":
+        root = Path.home() / "Library/Application Support"
+    else:
+        base = os.environ.get("XDG_CONFIG_HOME")
+        root = Path(base) if base else Path.home() / ".config"
+    return root / "plaits-lab/credentials.json"
+
+
+def read_token() -> str | None:
+    path = credentials_path()
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    token = data.get("token") if isinstance(data, dict) else None
+    return token if isinstance(token, str) and token else None
+
+
+def write_token(token: str) -> Path:
+    require(TOKEN_MIN <= len(token) <= TOKEN_MAX,
+            f"a contributor token must be {TOKEN_MIN}-{TOKEN_MAX} characters")
+    path = credentials_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    # Written 0600 where the OS has POSIX modes; opened O_CREAT|O_WRONLY|O_TRUNC
+    # so the mode applies at creation rather than after a readable window.
+    descriptor = os.open(path, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+        json.dump({"token": token}, handle, indent=2)
+        handle.write("\n")
+    return path
+
+
+def ensure_token() -> str:
+    token = read_token()
+    if token:
+        return token
+    # Same shape the contributor center mints, from the CSPRNG.
+    token = f"{secrets.token_hex(16)}-{secrets.token_hex(16)}"
+    write_token(token)
+    return token
+
+
+def token_fingerprint(token: str) -> str:
+    """First 8 hex of the owner hash the server stores — safe to show."""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()[:8]
+
+
+def api_base(args: argparse.Namespace) -> str:
+    base = getattr(args, "api", None) or os.environ.get("PLAITS_LAB_API") or DEFAULT_API_BASE
+    return base.rstrip("/")
+
+
+def api_call(base: str, path: str, *, token: str | None = None, method: str = "GET",
+             payload: Any = None, body: bytes | None = None,
+             content_type: str | None = None) -> dict[str, Any]:
+    """One JSON API call. Raises PackageError with the server's own message."""
+    data = body
+    headers = {"Accept": "application/json"}
+    if payload is not None:
+        data = json.dumps(payload).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+    elif content_type:
+        headers["Content-Type"] = content_type
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    if data is not None:
+        # The API requires a bounded Content-Length; urllib sets it for bytes.
+        headers["Content-Length"] = str(len(data))
+    request = urllib.request.Request(f"{base}{path}", data=data, headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(request, timeout=120) as response:
+            return json.loads(response.read().decode("utf-8") or "{}")
+    except urllib.error.HTTPError as error:
+        detail = ""
+        try:
+            body_json = json.loads(error.read().decode("utf-8"))
+            detail = body_json.get("error", {}).get("message", "")
+        except (ValueError, OSError):
+            pass
+        raise PackageError(
+            f"{method} {path} failed ({error.code}){': ' + detail if detail else ''}"
+        ) from error
+    except urllib.error.URLError as error:
+        raise PackageError(
+            f"could not reach {base}: {error.reason}. The bundle is built and can be "
+            f"uploaded later, or from the contributor center."
+        ) from error
+
+
+def multipart_body(fields: dict[str, str], filename: str, file_bytes: bytes) -> tuple[bytes, str]:
+    """Encode one file plus text fields as multipart/form-data."""
+    boundary = f"----plaits-lab-{secrets.token_hex(16)}"
+    parts: list[bytes] = []
+    for name, value in fields.items():
+        parts.append(
+            f"--{boundary}\r\nContent-Disposition: form-data; name=\"{name}\"\r\n\r\n"
+            f"{value}\r\n".encode("utf-8")
+        )
+    parts.append(
+        f"--{boundary}\r\nContent-Disposition: form-data; name=\"bundle\"; "
+        f"filename=\"{filename}\"\r\nContent-Type: application/zip\r\n\r\n".encode("utf-8")
+    )
+    parts.append(file_bytes)
+    parts.append(f"\r\n--{boundary}--\r\n".encode("utf-8"))
+    return b"".join(parts), f"multipart/form-data; boundary={boundary}"
+
+
+def bundle_claims(bundle_path: Path) -> dict[str, Any]:
+    """Read what the built bundle itself claims — the same bytes the server
+    verifies, so the upload never asserts anything the zip does not contain."""
+    with zipfile.ZipFile(bundle_path) as archive:
+        try:
+            submission = json.loads(archive.read("submission.json").decode("utf-8"))
+            manifest_bytes = archive.read("package/plaits-engine.json")
+        except KeyError as error:
+            raise PackageError(
+                f"{bundle_path.name} is not a plaits-lab submission bundle ({error})"
+            ) from error
+    manifest = json.loads(manifest_bytes.decode("utf-8"))
+    return {
+        "packageId": str(manifest["id"]),
+        "version": str(manifest["version"]),
+        "digest": str(submission["digest"]),
+        "manifest": manifest_bytes.decode("utf-8"),
+        "license": str(manifest.get("license", "unknown")),
+        "author": str(manifest.get("author", "")),
+    }
+
+
+def confirm_submission(claims: dict[str, Any], contract: dict[str, Any],
+                       bundle_path: Path, args: argparse.Namespace) -> dict[str, str]:
+    """The loud step. Returns the affirmation to send, or raises."""
+    size_kb = bundle_path.stat().st_size / 1024.0
+    print()
+    print("=" * 72)
+    print("  SUBMITTING TO RUBATO AUDIO — this leaves your machine")
+    print("=" * 72)
+    print(f"  package   {claims['packageId']} {claims['version']}")
+    print(f"  license   {claims['license']}")
+    print(f"  digest    {claims['digest']}")
+    print(f"  bundle    {bundle_path.name} ({size_kb:.0f} KB) — full source + preview renders")
+    print()
+    print("  Your engine's SOURCE is uploaded for maintainer review. If it is")
+    print("  published it is compiled into firmware that other people flash.")
+    print()
+    for line in textwrap.wrap(contract["text"], 68):
+        print(f"  {line}")
+    print("=" * 72)
+    print()
+
+    author = (args.author or "").strip()
+    contact = (args.contact or "").strip()
+    interactive = sys.stdin.isatty() and not args.yes
+    if interactive:
+        default_author = author or claims["author"]
+        prompt = f"Rights holder [{default_author}]: " if default_author else "Rights holder: "
+        author = input(prompt).strip() or default_author
+        if not contact:
+            contact = input("Contact (optional, blank to stay anonymous): ").strip()
+    require(author, "a rights holder is required — pass --author, or answer the prompt")
+
+    if args.yes:
+        print(f"--yes given: submitting as {author}.")
+        return {"author": author, "contact": contact}
+    require(sys.stdin.isatty(),
+            "submitting needs a terminal to confirm — pass --yes with --author to "
+            "submit non-interactively, or --bundle-only to just build the zip")
+    typed = input('Type "submit" to send it, anything else to stop: ').strip()
+    require(typed == "submit", "not submitted — the bundle is built and unchanged")
+    return {"author": author, "contact": contact}
+
+
+def upload_submission(bundle_path: Path, args: argparse.Namespace) -> int:
+    base = api_base(args)
+    claims = bundle_claims(bundle_path)
+
+    status = api_call(base, "/api/contributors/status")
+    if not status.get("intakeEnabled"):
+        raise PackageError(
+            f"community intake is not open at {base} right now. The bundle is built "
+            f"at {bundle_path} — keep it and submit when intake reopens."
+        )
+    contract = status.get("affirmation") or {}
+    require(contract.get("version") and contract.get("text"),
+            "the server did not offer an affirmation contract to agree to")
+
+    affirmation = confirm_submission(claims, contract, bundle_path, args)
+    token = ensure_token()
+
+    body, content_type = multipart_body(
+        {
+            "packageId": claims["packageId"],
+            "version": claims["version"],
+            "digest": claims["digest"],
+            "manifest": claims["manifest"],
+        },
+        bundle_path.name,
+        bundle_path.read_bytes(),
+    )
+    print("uploading…", flush=True)
+    created = api_call(base, "/api/contributors/submissions", token=token, method="POST",
+                       body=body, content_type=content_type)
+    submission_id = str(created["id"])
+    print(f"draft created  {submission_id}")
+
+    sent = api_call(base, f"/api/contributors/submissions/{submission_id}/submit",
+                    token=token, method="POST", payload={"affirmation": {
+                        "agreed": True,
+                        "version": contract["version"],
+                        "author": affirmation["author"],
+                        "contact": affirmation["contact"],
+                    }})
+    print(f"state          {sent.get('state', 'in-review')}")
+    print()
+    print(f"Track it at {base}/plaits-palette/contribute")
+    print(f"To follow it in that page, paste this contributor token there:")
+    print(f"  {read_token()}")
+    print(f"(stored at {credentials_path()} — it identifies your submissions)")
+    return 0
+
+
+def login_command(args: argparse.Namespace) -> int:
+    """Adopt a token minted by the contributor center, so both agree."""
+    token = (args.token or "").strip()
+    if not token:
+        require(sys.stdin.isatty(), "pass --token when not running in a terminal")
+        token = input("Contributor token (from the contributor center): ").strip()
+    path = write_token(token)
+    print(f"stored contributor token {token_fingerprint(token)}… at {path}")
+    return 0
+
+
+def whoami_command(args: argparse.Namespace) -> int:
+    token = read_token()
+    path = credentials_path()
+    if not token:
+        print(f"no contributor token yet ({path})")
+        print("one is minted on your first `plaits-lab submit`, or run `plaits-lab login`.")
+        return 0
+    print(f"contributor {token_fingerprint(token)}…  ({path})")
+    if args.show:
+        print(token)
+    else:
+        print("run with --show to print the token itself (it identifies your submissions)")
+    return 0
+
+
 def submit_command(args: argparse.Namespace) -> int:
     package = load_package(args.package)
-    output = Path(args.output).resolve()
+    default_name = f"{package['manifest'].get('catalogId', 'package')}.plaits-package.zip"
+    output = Path(args.output or default_name).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     # A bundle is only accepted if it passed the sanitizers, so submit builds one
     # in the builder image when the host cannot. The output directory is the one
     # writable mount; the container writes the zip straight into it, and the
     # digest it records is identical to a host-built one (package_content_digest
     # orders on POSIX relative paths, so it does not vary by platform).
+    #
+    # The inner run BUILDS ONLY (--bundle-only): it has no credentials and no
+    # terminal to confirm at, and letting it reach the upload would submit twice
+    # — once from the container, once from here. Uploading is the outer
+    # process's job, after the container hands back a bundle.
     if not args.native and not host_sanitizers_available(args.compiler):
-        return run_sanitized_in_docker(
+        run_sanitized_in_docker(
             package, args, "submit",
-            ["submit", "/contributor", "--output", f"/output/{output.name}", "--native"],
+            ["submit", "/contributor", "--output", f"/output/{output.name}",
+             "--native", "--bundle-only"],
             extra_mounts=["-v", f"{output.parent}:/output"],
         )
+        return finish_submit(output, args)
     with tempfile.TemporaryDirectory(prefix="plaits-lab-submit-") as temp_dir:
         preview_dir = Path(temp_dir) / "previews"
         preview_dir.mkdir()
@@ -1602,7 +1887,16 @@ def submit_command(args: argparse.Namespace) -> int:
             add_zip_file(archive, "submission.json", (json.dumps(submission, indent=2) + "\n").encode("utf-8"))
     print(f"created draft submission {output}")
     print(f"package digest {submission['digest']}")
-    return 0
+    return finish_submit(output, args)
+
+
+def finish_submit(output: Path, args: argparse.Namespace) -> int:
+    """Upload the built bundle, unless the caller only wanted the zip."""
+    if args.bundle_only:
+        print("--bundle-only: not submitted. Upload it with `plaits-lab submit` again, "
+              "or from the contributor center.")
+        return 0
+    return upload_submission(output, args)
 
 
 def cpp_bool(value: bool) -> str:
@@ -2266,13 +2560,32 @@ def build_parser() -> argparse.ArgumentParser:
     render_parser.add_argument("--compiler")
     render_parser.set_defaults(handler=render_command)
 
-    submit_parser = subparsers.add_parser("submit", help="validate and bundle an immutable draft submission")
+    submit_parser = subparsers.add_parser(
+        "submit", help="check, bundle, and submit the package for review")
     submit_parser.add_argument("package")
-    submit_parser.add_argument("--output", required=True)
+    submit_parser.add_argument("--output", help="where to write the bundle "
+                               "(default: <catalogId>.plaits-package.zip)")
     submit_parser.add_argument("--compiler")
     submit_parser.add_argument("--docker-image", default="plaits-lab-builder:local")
+    submit_parser.add_argument("--bundle-only", action="store_true",
+                               help="build the bundle and stop, without submitting")
+    submit_parser.add_argument("--author", help="the rights holder to record on the affirmation")
+    submit_parser.add_argument("--contact", help="optional contact for questions about the model")
+    submit_parser.add_argument("--yes", action="store_true",
+                               help="skip the typed confirmation (requires --author)")
+    submit_parser.add_argument("--api", help=argparse.SUPPRESS)
     submit_parser.add_argument("--native", action="store_true", help=argparse.SUPPRESS)
     submit_parser.set_defaults(handler=submit_command)
+
+    login_parser = subparsers.add_parser(
+        "login", help="store a contributor token minted by the contributor center")
+    login_parser.add_argument("--token")
+    login_parser.set_defaults(handler=login_command)
+
+    whoami_parser = subparsers.add_parser(
+        "whoami", help="show which contributor identity this machine submits as")
+    whoami_parser.add_argument("--show", action="store_true", help="print the token itself")
+    whoami_parser.set_defaults(handler=whoami_command)
 
     build_parser_command = subparsers.add_parser("build", help="build an unreviewed local hardware firmware")
     build_parser_command.add_argument("package")

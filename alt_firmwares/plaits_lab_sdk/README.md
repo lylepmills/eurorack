@@ -118,7 +118,7 @@ patched trigger, so sustained engines respond to Strike too.
 
 ```sh
 $SDK check ./$PKG/my-engine --full
-$SDK submit ./$PKG/my-engine --output ./my-engine.plaits-package.zip
+$SDK submit ./$PKG/my-engine
 ```
 
 Full checks enforce the manifest, licensing (see above — LICENSE text, rights
@@ -128,6 +128,16 @@ scenario, measure CPU cost against a stock engine (see below), and reject
 invalid duration, silent output, or excessive DC. The
 bundle contains the exact source, deterministic preview WAVs, content digest,
 and per-scenario peak/RMS/DC/silence/realtime metrics.
+
+`submit` runs those same checks, then shows you exactly what is about to
+leave your machine — package, license, digest, bundle size, and the ownership
+affirmation — and uploads only after you type `submit` to confirm. Add
+`--bundle-only` to stop at the zip and upload it from the contributor center
+instead, or `--yes --author "…"` to submit non-interactively. Your identity is
+a token minted on first submit and kept in a per-user config file (`$SDK
+whoami` shows which, `--show` prints it); paste it into the contributor center
+to follow your submissions in the browser, or `$SDK login` to adopt one that
+page already made.
 
 Both of those commands need a compiler that can link the sanitizers. MinGW-w64
 — the usual Windows toolchain — ships no sanitizer runtime, so there the SDK
