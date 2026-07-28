@@ -1933,6 +1933,46 @@
       "implementation": {
         "className": "SubOscillatorEngine"
       }
+    },
+    {
+      "id": "digital-modulation",
+      "packageId": "mutable-instruments/digital-modulation",
+      "name": "Digital Modulation",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Digital",
+      "description": "A carrier driven by a framed packet of dibits through a four-point constellation, with an openable frame.",
+      "tags": [
+        "braids",
+        "modulation",
+        "packet",
+        "digital"
+      ],
+      "controls": [
+        "Frame",
+        "Symbol rate",
+        "Shaping",
+        "Payload"
+      ],
+      "outputs": [
+        "Modulated carrier",
+        "Symbol staircase"
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:ec6d749db9e9cfd52a0c9efbf9928cef86d247a6b54812c067c52937ef5a0094",
+      "documentationDigest": "sha256:76ff0cca3dbaa7eccc97f7cce7f5569d5f9bf5d16c0ce7e668238f7435a63fdd",
+      "manual": {
+        "controls": {
+          "harmonics": "Shortens the packet frame from a long header to a rapid burst.",
+          "timbre": "Raises the symbol rate from a slow stutter to a buzzing carrier.",
+          "morph": "Shapes the symbol transitions from hard steps to smooth glides.",
+          "macro": "Sweeps the payload byte around the stock packet contents."
+        },
+        "trigger": "Restarts the packet from its preamble."
+      },
+      "implementation": {
+        "className": "DigitalModulationEngine"
+      }
     }
   ],
   "presets": {
