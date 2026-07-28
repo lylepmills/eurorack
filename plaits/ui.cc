@@ -271,17 +271,24 @@ void Ui::UpdateLEDs() {
         }
       }
     } else {
-      int lit = static_cast<int>(usage * static_cast<float>(kNumLEDs) + 0.5f);
-      if (lit > kNumLEDs) lit = kNumLEDs;
-      // Always show something, so "running but nearly free" is distinct from
-      // "not running at all".
-      if (lit < 1 && usage > 0.0f) lit = 1;
-      for (int i = 0; i < lit; ++i) {
-        // Fills bottom-up, so the bar rises as the engine gets more expensive.
-        // Colour keys off the LEVEL (i), not the physical LED, so the top two
-        // eighths of the scale are always the amber ones.
+      // Fills bottom-up; colour keys off the LEVEL (i), not the physical LED,
+      // so the top two eighths of the scale are always the amber ones. The
+      // first PARTIAL eighth shows as the next LED's brightness: 16-level PWM
+      // on the fractional part, so the bar reads to ~1% instead of in eight
+      // discrete steps.
+      const float scaled = usage * static_cast<float>(kNumLEDs);
+      int full = static_cast<int>(scaled);
+      if (full > kNumLEDs) full = kNumLEDs;
+      for (int i = 0; i < full; ++i) {
         leds_.set(kNumLEDs - 1 - i,
                   i >= kNumLEDs - 2 ? LED_COLOR_YELLOW : LED_COLOR_GREEN);
+      }
+      if (full < kNumLEDs) {
+        const float frac = scaled - static_cast<float>(full);
+        if (static_cast<int>(frac * 16.0f) > pwm_counter) {
+          leds_.set(kNumLEDs - 1 - full,
+                    full >= kNumLEDs - 2 ? LED_COLOR_YELLOW : LED_COLOR_GREEN);
+        }
       }
     }
     leds_.Write();
