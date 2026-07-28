@@ -314,6 +314,13 @@
       "controls": ["Model", "Cutoff", "Resonance", "Bend"], "outputs": ["Selected filter model", "Complementary model"],
       "source": { "header": "plaits/dsp/engine2/z_filter_engine.h", "className": "ZFilterEngine", "member": "z_filter_engine_", "files": ["plaits/dsp/engine2/z_filter_engine.cc"] },
       "postProcessing": { "alreadyEnveloped": false, "outGain": 0.8, "auxGain": 0.8 }
+    },
+    {
+      "id": "toy", "packageId": "mutable-instruments/toy", "name": "Toy", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Bitwise",
+      "description": "A bit-mangled phase ramp read through a sample-and-hold clock that can free-run or lock to the played note.", "tags": ["braids", "bitwise", "lo-fi", "digital"],
+      "controls": ["Mangle", "Crush", "Clock", "Fold"], "outputs": ["Decimated stream", "Unfiltered, aliased stream"],
+      "source": { "header": "plaits/dsp/engine2/toy_engine.h", "className": "ToyEngine", "member": "toy_engine_", "files": ["plaits/dsp/engine2/toy_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": -0.85, "auxGain": -0.85 }
     }
   ],
   "manuals": {
@@ -676,6 +683,15 @@
         "macro": "Bends the burst envelope from the flat stock ramp toward a sharp percussive attack."
       },
       "trigger": "Restarts the internal envelope when TRIG is patched."
+    },
+    "toy": {
+      "controls": {
+        "harmonics": "Sweeps the bit-mangling operand from clean tone to shattered noise.",
+        "timbre": "Raises the sample-and-hold rate from a coarse stutter to smooth.",
+        "morph": "Moves the sample-hold clock from free-running to locked to the played note.",
+        "macro": "Biases the fold operand, shifting which harmonics the mangler keeps."
+      },
+      "trigger": "Restarts the sample-hold clock and the mangler state."
     }
   },
   "presets": {

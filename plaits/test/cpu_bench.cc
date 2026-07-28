@@ -53,6 +53,7 @@
 #include "plaits/dsp/engine2/scanned_engine.h"
 #include "plaits/dsp/engine2/sideband_engine.h"
 #include "plaits/dsp/engine2/spectral_spiral_engine.h"
+#include "plaits/dsp/engine2/toy_engine.h"
 #include "plaits/dsp/engine2/z_filter_engine.h"
 #include "plaits/dsp/engine2/string_machine_engine.h"
 #include "plaits/dsp/engine2/tapfield_engine.h"
@@ -144,6 +145,7 @@ int main() {
   bench<GendyEngine>("gendy");
   bench<ScannedEngine>("scanned");
   bench<PulsarEngine>("pulsar");
+  bench<ToyEngine>("toy");
   bench<ZFilterEngine>("z-filter");
   bench<LoopbackEngine>("loopback");
   bench<LockstepEngine>("lockstep");

@@ -1,0 +1,41 @@
+[
+  {
+    "id": "hero",
+    "name": "Mangle sweep under a coarsening clock",
+    "durationSeconds": 4,
+    "note": 48,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.0, 0.9],
+      "timbre": [0.9, 0.15],
+      "morph": [0.0, 0.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "clock-lock",
+    "name": "Free-running clock into note-locked",
+    "durationSeconds": 3,
+    "note": 55,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.45, 0.45],
+      "timbre": [0.35, 0.35],
+      "morph": [0.0, 1.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "fold",
+    "name": "Fold bias across the macro",
+    "durationSeconds": 3,
+    "note": 36,
+    "triggerHz": 3,
+    "controls": {
+      "harmonics": [0.7, 0.7],
+      "timbre": [0.25, 0.25],
+      "morph": [0.5, 0.5],
+      "macro": [0.0, 1.0]
+    }
+  }
+]

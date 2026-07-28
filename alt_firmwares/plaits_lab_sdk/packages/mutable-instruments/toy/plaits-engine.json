@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/toy",
+  "catalogId": "toy",
+  "version": "1.0.0",
+  "name": "Toy",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "A bit-mangled phase ramp read through a sample-and-hold clock that can free-run or lock to the played note.",
+  "family": "Bitwise",
+  "tags": ["braids", "bitwise", "lo-fi", "digital"],
+  "controls": [
+    { "id": "harmonics", "label": "Mangle", "description": "Sweeps the bit-mangling operand from clean tone to shattered noise." },
+    { "id": "timbre", "label": "Crush", "description": "Raises the sample-and-hold rate from a coarse stutter to smooth." },
+    { "id": "morph", "label": "Clock", "description": "Moves the sample-hold clock from free-running to locked to the played note." },
+    { "id": "macro", "label": "Fold", "description": "Biases the fold operand, shifting which harmonics the mangler keeps." }
+  ],
+  "outputs": {
+    "main": "The decimated and reconstruction-filtered stream.",
+    "aux": "The same mangler with no reconstruction filter, aliasing intact."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/toy_engine.h",
+    "files": ["plaits/dsp/engine2/toy_engine.cc"],
+    "className": "ToyEngine"
+  },
+  "postProcessing": { "alreadyEnveloped": false, "outGain": -0.85, "auxGain": -0.85 },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids DigitalOscillator::RenderToy (TOY*)"
+}

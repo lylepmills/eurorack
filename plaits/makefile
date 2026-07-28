@@ -103,7 +103,8 @@ PLAITS_STEREO_MODELS = \
   LOOPBACK:loopback_engine LOCKSTEP:lockstep_engine TAPFIELD:tapfield_engine \
   PHASE_WEAVE:phase_weave_engine SIDEBAND_BANK:sideband_engine \
   UNDERTOW:undertow_engine REED_PIPE:reed_pipe_engine \
-  PHASE_FLOCK:phase_flock_engine RULEFIELD:rulefield_engine
+  PHASE_FLOCK:phase_flock_engine RULEFIELD:rulefield_engine \
+  TOY:toy_engine
 define _plaits_stereo_rule
 $(BUILD_DIR)$(word 2,$(subst :, ,$(1))).o: CPPFLAGS += $$(if $$(filter 0,$$(PLAITS_STEREO_$(word 1,$(subst :, ,$(1))))),-DPLAITS_STEREO_$(word 1,$(subst :, ,$(1)))=0)
 endef

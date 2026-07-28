@@ -155,6 +155,7 @@ def classify_link_failure(log: str) -> tuple[str, str] | None:
 # engines whose out/aux is already a stereo pair at ~0 cost are absent — they are
 # never gated. Keep this in sync with PLAITS_STEREO_MODELS in plaits/makefile.
 STEREO_MACROS = {
+    "toy": "TOY",
     "virtual-analog": "VIRTUAL_ANALOG",
     "waveshaping": "WAVESHAPING",
     "two-op-fm": "TWO_OP_FM",
