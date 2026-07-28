@@ -2013,6 +2013,46 @@
       "implementation": {
         "className": "SawCombEngine"
       }
+    },
+    {
+      "id": "vowel-fof",
+      "packageId": "mutable-instruments/vowel-fof",
+      "name": "Vowel FOF",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Vocal",
+      "description": "Five very narrow filters sweeping five vowels across five vocal registers, with the formant balance the stock model leaves flat.",
+      "tags": [
+        "braids",
+        "formant",
+        "vocal",
+        "vowel"
+      ],
+      "controls": [
+        "Brightness",
+        "Register",
+        "Vowel",
+        "Formant tilt"
+      ],
+      "outputs": [
+        "Formant bank",
+        "Upper-formant weighting"
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:eed70e864ce748413562e4460c563674b26782b18df9e4e0938e1d34aab08553",
+      "documentationDigest": "sha256:c6bb521ba1dcecf6cd7fe3158fae1f7b9288886732d0a3686549530bf7db5f7e",
+      "manual": {
+        "controls": {
+          "harmonics": "Tilts the excitation from a dark buzz to a bright breathy hiss.",
+          "timbre": "Steps the vocal register from bass through tenor to soprano.",
+          "morph": "Sweeps the vowel through the five phonemes.",
+          "macro": "Restores the formant amplitude balance the stock model leaves flat."
+        },
+        "trigger": "Restarts the internal envelope when TRIG is patched."
+      },
+      "implementation": {
+        "className": "VowelFofEngine"
+      }
     }
   ],
   "presets": {
