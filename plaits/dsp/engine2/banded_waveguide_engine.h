@@ -72,6 +72,13 @@ const int kBandedWgDelaySize5 = 156;
 // STK's fixed bandpass pole radius, 1 - pi*32/fs.
 const float kBandedWgBandwidth = 32.0f;
 
+// Bow noise, which upstream has none of. A real bow's grip is granular -- rosin
+// catching and releasing thousands of times a second -- and a perfectly smooth
+// bow velocity is the main reason a waveguide bow sounds synthetic. This is
+// applied to the velocity rather than added to the output, so it modulates the
+// friction curve and colours the attack instead of sitting on top as hiss.
+const float kBandedWgBowNoise = 0.14f;
+
 // The loop gain ceiling. The bandpasses are peak-normalised and the delays are
 // lossless, so the loop gain IS this number: at 1.0 the engine oscillates on
 // its own.

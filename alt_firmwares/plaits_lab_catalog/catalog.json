@@ -407,14 +407,14 @@
       "postProcessing": { "alreadyEnveloped": false, "outGain": -0.6, "auxGain": -0.6 }
     },
     {
-      "id": "shakers", "packageId": "stk/shakers", "name": "Shakers", "author": "Perry R. Cook and Gary P. Scavone", "origin": "Community", "family": "Percussion",
+      "id": "shakers", "packageId": "rubato/shakers", "name": "Shakers", "author": "Lyle Mills, after Perry R. Cook and Gary P. Scavone", "origin": "Rubato Lab", "family": "Percussion",
       "description": "Sixteen shaken and scraped instruments from Perry Cook's PhISEM, which models the statistics of colliding objects rather than any one object's shape.", "tags": ["stk", "phisem", "percussion", "shaker", "stochastic", "physical"],
       "controls": ["Instrument", "Shake", "Decay", "Objects"], "outputs": ["The instrument", "Bare collisions"],
       "source": { "header": "plaits/dsp/engine2/shakers_engine.h", "className": "ShakersEngine", "member": "shakers_engine_", "files": ["plaits/dsp/engine2/shakers_engine.cc"] },
       "postProcessing": { "alreadyEnveloped": true, "outGain": 0.8, "auxGain": 0.8 }
     },
     {
-      "id": "banded-waveguide", "packageId": "stk/banded-waveguide", "name": "Banded Waveguide", "author": "Perry R. Cook and Gary P. Scavone", "origin": "Community", "family": "Physical",
+      "id": "banded-waveguide", "packageId": "rubato/banded-waveguide", "name": "Banded Waveguide", "author": "Lyle Mills, after Perry R. Cook and Gary P. Scavone", "origin": "Rubato Lab", "family": "Physical",
       "description": "A bowed bar, bowl or glass. Each mode gets its own waveguide loop, so a bow has a travelling wave to grip -- which a bank of resonators does not.", "tags": ["stk", "bowed", "bar", "physical", "waveguide", "modal"],
       "controls": ["Material", "Bow force", "Bow speed", "Ring"], "outputs": ["The instrument", "Fundamental band"],
       "source": { "header": "plaits/dsp/engine2/banded_waveguide_engine.h", "className": "BandedWaveguideEngine", "member": "banded_waveguide_engine_", "files": ["plaits/dsp/engine2/banded_waveguide_engine.cc"] },

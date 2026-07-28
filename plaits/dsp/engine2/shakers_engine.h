@@ -73,6 +73,16 @@ const float kShakersWrenchRatchetDelta = 0.00015f;
 // Water drop resonators sweep upward as each drop is born.
 const float kShakersWaterFreqSweep = 1.0001f;
 
+// LEVEL MATCHING, and it is the difference between an instrument selector and a
+// hazard. Measured across the shake/decay/object space, the sixteen instruments
+// span 46 dB as upstream tunes them -- a cabasa is 12.7 dB above the mean and a
+// water drop 33.5 dB below it -- because STK expects each to be used on its own
+// with its own mixer fader, not swept under one knob. Each preset carries a
+// measured makeup gain toward this target, clamped to [0.15, 20] so the two
+// sparsest are lifted as far as their crest factor allows rather than being
+// slammed. Worst remaining deviation 6.5 dB, from 46.
+const float kShakersLevelTarget = 0.035f;
+
 struct ShakerPreset {
   const char* name;
   int num_resonances;
@@ -95,6 +105,8 @@ struct ShakerPreset {
   // 0 shake, 1 ratchet, 2 water.
   uint8_t mechanism;
   float ratchet_delta;
+  // Measured level-matching gain. See the note on kShakersLevelTarget.
+  float makeup;
 };
 
 extern const ShakerPreset kShakerPresets[kShakersNumInstruments];

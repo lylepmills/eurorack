@@ -1,7 +1,13 @@
 # Banded Waveguide
 
-Essl and Cook's banded waveguides, from
-[The Synthesis ToolKit](https://github.com/thestk/stk)'s `BandedWG`. A bowed bar.
+A bowed bar, built on Essl and Cook's banded waveguides from
+[The Synthesis ToolKit](https://github.com/thestk/stk)'s `BandedWG`.
+
+**This is an adaptation, not a port.** Three of upstream's four control ranges
+measured as partly silent when re-exposed as Plaits knobs, one of its four
+materials was inaudible under a bow, and its bow has no noise at all. All four
+are fixed below. Nobody arrives at this engine with expectations from the
+original, so it is tuned to be played rather than to match.
 
 Each mode of a stiff object gets its own delay loop closed by a bandpass at that
 mode's frequency. Because every mode is a travelling wave rather than a filter,
@@ -42,7 +48,7 @@ the lowest note times the smallest mode ratio in any preset. Sized for A1
 which comes to about 10.5 KB of the voice's 16,384-byte arena. Notes below A1
 fold up by octaves rather than allocating for a register no bar or bowl occupies.
 
-## Three ranges were retuned against measurement
+## Four things were fixed against measurement
 
 Upstream's control mappings assume a MIDI controller, a sustain pedal and a
 player. Swept as four Plaits knobs they leave large dead regions, all three found
@@ -66,6 +72,12 @@ measured **600× quieter** than its neighbours. Upstream never hits this because
 a uniform bar defaults to being *struck*, and a struck bar wants exactly that
 damping. Presets are now normalised so the fundamental always sees the full loop
 gain and only the relative damping between modes is the preset's.
+
+**Bow noise (new).** Upstream's bow is perfectly smooth, which is the main
+reason a waveguide bow sounds synthetic — a real bow's grip is granular, rosin
+catching and releasing thousands of times a second. Noise is applied to the bow
+*velocity* rather than added to the output, so it modulates the friction curve
+and colours the attack instead of sitting on top as hiss.
 
 Upstream also makes bow speed zero mean "pluck instead of bow", on a sustain
 pedal. Here the pluck moves to the trigger, where a struck bar belongs anyway,

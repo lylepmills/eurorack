@@ -1,8 +1,15 @@
 # Shakers
 
-Perry Cook's **PhISEM** — Physically Informed Stochastic Event Modeling — from
-[The Synthesis ToolKit](https://github.com/thestk/stk). Sixteen instruments in
-one slot.
+Sixteen instruments in one slot, built on Perry Cook's **PhISEM** — Physically
+Informed Stochastic Event Modeling — from
+[The Synthesis ToolKit](https://github.com/thestk/stk).
+
+**This is an adaptation, not a port.** STK's resonators are unnormalised and its
+sixteen instruments span 46 dB, because STK expects each to be used on its own
+behind its own fader. Under one selector knob that is a hazard rather than a
+feature, so the resonators are normalised and every instrument carries a
+measured makeup gain. Nobody arrives at this engine with expectations from the
+original, so it is tuned to be played rather than to match.
 
 PhISEM does not model an instrument's geometry. It models the *statistics* of
 many small objects colliding inside a container: a shake energy that decays
@@ -50,7 +57,7 @@ in real time and shakes 8.8% denser. Decays and radii are raised to the power
 44100/48000 and the object count is scaled by the same ratio. The frequencies
 were always in Hz and need none.
 
-## The resonators are normalised, and that is a change
+## The resonators are normalised, and the instruments level-matched
 
 Upstream's resonators are all-pole with a numerator of 1, so their peak gain is
 about 1/(1−r²) — from 1.6 for a sekere's r=0.6 to **125** for an angklung's
@@ -59,9 +66,15 @@ spans 6 to 62, because STK expects a master gain downstream. His own
 commented-out debug line in `tick` is a check for the output exceeding 1.0.
 
 The audition gate here caught it as a 4.09 spike on sleigh bells. Each resonator
-is normalised to unit peak instead, which is what lets sixteen instruments sit
-at comparable levels on one engine and leaves each instrument's gain meaning
+is normalised to unit peak instead, which leaves each instrument's gain meaning
 what it reads as — its intended loudness.
+
+That alone does not level the selector. Measured across the shake/decay/object
+space, the sixteen still spanned **46 dB** — a cabasa 12.7 dB above the mean, a
+water drop 33.5 dB below it. Each preset now carries a measured makeup gain
+toward a common target, clamped to [0.15, 20] so the two sparsest are lifted as
+far as their crest factor allows rather than slammed. **Worst remaining
+deviation: 6.5 dB, and thirteen of the sixteen land inside 0.7 dB.**
 
 ## Controls
 

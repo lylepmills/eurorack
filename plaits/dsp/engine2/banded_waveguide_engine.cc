@@ -245,7 +245,10 @@ void BandedWaveguideEngine::Render(
       const int read = (delay_write_[k] + 1) % delay_length_[k];
       velocity_input_ += loop_gain * delay_line_[k][read];
     }
-    float input = bow_velocity - velocity_input_;
+    // Granular bow grip -- see kBandedWgBowNoise.
+    const float bowed_velocity = bow_velocity *
+        (1.0f + kBandedWgBowNoise * (2.0f * Random::GetFloat() - 1.0f));
+    float input = bowed_velocity - velocity_input_;
     input *= BowTable(input, slope);
     input /= static_cast<float>(num_modes_);
 
