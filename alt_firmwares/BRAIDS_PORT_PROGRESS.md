@@ -543,19 +543,85 @@ probabilities by the same ratio. Frequencies are in Hz and need nothing.
 waveguide models affordable at all, and it is worth knowing before rejecting one
 on memory grounds.
 
-### Where the taxonomy is straining
+### Taxonomy: SETTLED as Rubato Lab
 
-Both are `origin: "Community"`, matching the Braids-fork three: the enum is
-`Mutable Instruments | Rubato Lab | Community`, and Cook and Scavone are
-certainly not the first two. But the website's empty-state copy reads as
-*contributor submissions* ("Community models will appear here after source
-validation and hardware-budget checks are connected"), which two Princeton and
-McGill professors are not. Either the chip copy widens to "not authored here",
-or STK ports get badged Rubato Lab with STK in `author`/`upstream`. It is a
-one-line catalog edit either way, and better decided before more land.
+Both are `origin: "Rubato Lab"`, packages under `rubato/`, author
+"Lyle Mills, after Perry R. Cook and Gary P. Scavone", with STK's copyright and
+licence carried unchanged.
+
+Lyle's reasoning, and it is the right cut: nobody in the modular community
+arrives at these with prior expectations, unlike Bees-in-the-Trees and Braids
+Renaissance, which people have used for years and expect to behave a certain
+way. That frees these two to be *adapted* rather than matched -- and once
+adapted they are more Rubato than Community, which resolves the strain instead
+of papering over it. `Community` keeps meaning what the website's copy already
+implies.
+
+Practical rule that falls out: **an engine whose upstream is widely used stays
+Community and stays faithful; an engine whose upstream nobody here has heard of
+becomes Rubato Lab and gets tuned to be played.**
 
 ### Still blocked on the same two things
 
 Flash and the hardware CPU probe, exactly as in §5 and §7 — and the website
 catalog sync behind them, since `plaitsFlashBudget.test.ts` reds on any catalog
 engine without a measured cost. These two join the same leave-one-out batch.
+
+
+---
+
+## 9. Adaptations after the rebadge (2026-07-28)
+
+Both STK engines were measured and adjusted rather than left faithful, per §8's
+taxonomy rule.
+
+**shakers -- level-matched.** The instrument selector spanned **46 dB**
+(cabasa +12.7, water drops -33.5 against the mean), because STK expects each
+instrument on its own fader rather than swept under one knob. Per-preset makeup
+gains measured across the shake/decay/object space, clamped to [0.15, 20] so
+the sparsest are lifted as far as their crest factor allows. Worst remaining
+deviation 6.5 dB; thirteen of sixteen inside 0.7 dB. Re-measure and re-bake if
+the resonator normalisation or the energy model ever changes.
+
+**banded-waveguide -- bow noise.** Upstream's bow velocity is perfectly smooth,
+which is the main reason a waveguide bow sounds synthetic. Noise on the
+*velocity* (not the output) modulates the friction curve, so it colours the
+attack rather than sitting on top as hiss.
+
+### brass -- STILL NOT BUILT, and here is exactly how far it got
+
+Four structured attempts, all measured. Do not start from scratch; start from
+attempt 4, which was close.
+
+1. **Faithful port of STK Brass.** Silent, because upstream is (see §8).
+2. **DC-zeroed bandpass lip + mixing scattering** (`out = area*mouth +
+   (1-area)*bore`). Oscillates, but chaotically and at a frequency independent
+   of the bore -- the mixing form is not a scattering junction and has no
+   mechanism locking it to the delay.
+3. **STK Clarinet's reed-table topology, non-inverting for a brass harmonic
+   series.** A passive-loop diagnostic proved the waveguide itself correct
+   (inverting rings at fs/2L, non-inverting at fs/L). But a non-inverting loop
+   parks on its DC mode, so it needs an in-loop DC blocker -- and *with* the DC
+   blocker the reed table has no oscillation mechanism at all, because the
+   linear loop gain `|refl| * reflect * |lowpass|` is always below 1. It only
+   ever "worked" by ringing up DC.
+4. **Mass-spring lip valve + Bernoulli flow into a DC-blocked non-inverting
+   waveguide.** THIS IS THE RIGHT STRUCTURE. Confirmed by measurement: the
+   oscillation frequency tracks the bore length (MACRO sweep moved the ratio
+   0.89 -> 0.32) and tracks 1V/oct across the keyboard at a constant ratio.
+   The failure is gain staging only -- the window between "does not speak" and
+   "runs away into the clip" was narrower than the grid resolution used.
+
+**Where to resume.** Attempt 4's prototype is the one to rebuild. The open
+question is bounding the flow term: the lip opening was clamped at `3*x0` but
+the runaway comes through `u = opening * sqrt(|pd|)` with `pd` unbounded, so the
+next thing to try is clamping `pd` (physical: mouth pressure cannot exceed what
+the player supplies) and searching `zc` an order of magnitude finer near where
+oscillation starts. A sweep of threshold-of-oscillation vs mouth pressure would
+locate that window directly instead of grid-searching blind.
+
+**Scope honestly.** This is a Rubato Lab engine after Cook, not an STK port, and
+it is DSP research rather than transcription. The gap it fills is real and still
+open: the catalog has a reed (`reed-pipe`) and a bow (`bowed`) and no lip, and a
+lip valve is not a reed -- it is outward-striking and can be tuned *away* from
+the bore, which is what lipping and overblowing are.

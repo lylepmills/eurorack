@@ -2261,10 +2261,10 @@
     },
     {
       "id": "shakers",
-      "packageId": "stk/shakers",
+      "packageId": "rubato/shakers",
       "name": "Shakers",
-      "author": "Perry R. Cook and Gary P. Scavone",
-      "origin": "Community",
+      "author": "Lyle Mills, after Perry R. Cook and Gary P. Scavone",
+      "origin": "Rubato Lab",
       "family": "Percussion",
       "description": "Sixteen shaken and scraped instruments from Perry Cook's PhISEM, which models the statistics of colliding objects rather than any one object's shape.",
       "tags": [
@@ -2286,8 +2286,8 @@
         "Bare collisions"
       ],
       "version": "1.0.0",
-      "digest": "sha256:4d79a88c34871c8c6d021f2430b6978388329dba2d7d8b1a80f5dd7f0dedb3a3",
-      "documentationDigest": "sha256:6f271449555d5eac745c038c97a0ed05200db97cfa7407e482f385c10c438766",
+      "digest": "sha256:54b6706d58a794d82d7a92c6fd544469aa302018e1601e4e127e79cdf044e525",
+      "documentationDigest": "sha256:f0c6c15bdf5d15709bfd25509aaaf85904edce5ddd456854944c0dc03840d028",
       "manual": {
         "controls": {
           "harmonics": "Steps through sixteen instruments, from a maraca through bells and gravel to a guiro.",
@@ -2303,10 +2303,10 @@
     },
     {
       "id": "banded-waveguide",
-      "packageId": "stk/banded-waveguide",
+      "packageId": "rubato/banded-waveguide",
       "name": "Banded Waveguide",
-      "author": "Perry R. Cook and Gary P. Scavone",
-      "origin": "Community",
+      "author": "Lyle Mills, after Perry R. Cook and Gary P. Scavone",
+      "origin": "Rubato Lab",
       "family": "Physical",
       "description": "A bowed bar, bowl or glass. Each mode gets its own waveguide loop, so a bow has a travelling wave to grip -- which a bank of resonators does not.",
       "tags": [
@@ -2328,8 +2328,8 @@
         "Fundamental band"
       ],
       "version": "1.0.0",
-      "digest": "sha256:181005548999f8538c5c6dc5908af315fb3288c80c749759c50222cca37160a9",
-      "documentationDigest": "sha256:b8070450aafdaebd0488356862adf87a6a2f3058ce3b8b0a32752231014f4a35",
+      "digest": "sha256:7a0e18978492e4149146b1f3c6c80a3baa7ee9d5deee617c015dbb1dac4550b8",
+      "documentationDigest": "sha256:20ba6a01cbd2d09c7ba1cc5ae16e32d1b182b6e92c5b58398aac8467bc546423",
       "manual": {
         "controls": {
           "harmonics": "Selects the material: uniform bar, tuned bar, glass harmonica or Tibetan prayer bowl.",
