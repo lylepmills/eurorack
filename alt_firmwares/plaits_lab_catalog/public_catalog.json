@@ -1718,9 +1718,12 @@
         "Folded voices (left in stereo)",
         "Unfolded voices (right in stereo)"
       ],
+      "sharedModules": [
+        "chord-bank"
+      ],
       "version": "1.0.0",
-      "digest": "sha256:624c2f307d47eade171aa0922b456cd2ace84e381204c3a3da36b3b04ecd8b34",
-      "documentationDigest": "sha256:ecc6f16b85c47ccdff7550e35d6bc719b06eac9bf5c341984fc8c02c905963a4",
+      "digest": "sha256:9344383471c77f8735c6f3d5b55379c57331aff28748e3b567d6d2f3894930c1",
+      "documentationDigest": "sha256:a5fb0648fccec8d5ff6222c1fc945d45de10384c43e77c2274183318f04cbf6d",
       "manual": {
         "controls": {
           "harmonics": "Selects the chord, voiced at every octave of the helix at once.",
