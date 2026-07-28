@@ -18,7 +18,7 @@ Branch: `claude/braids-engines-plaits-palette-je03ac` (both repos).
 | `z-filter` | **landed** | 62% | all 4 models within 0.05 dB AC RMS, +5 cents |
 | `toy` | **landed** | 35% | within 0.42 dB mean, ≤9 cents |
 | `csaw` | **landed** | 12% | 0.00 dB mean at two settings, 0.75 dB at a third |
-| `bowed` | not started | — | — |
+| `bowed` | **landed** | 37% | 3–5 dB; chaotic self-oscillator, see §3.10 |
 | `ring-mod` | **landed** | 69% | within 0.04 dB energy-weighted at four detunings |
 | `sub-oscillator` | not started | — | — |
 | `digital-modulation` | not started | — | — |
@@ -155,7 +155,33 @@ Both found on `ring-mod`, both likely to recur:
   very slowly at "unison" where a smooth float detune phase-locks into a
   static waveform. Reproduce the quantization; it is the sound.
 
-### 3.8 qemu undercounts divides
+### 3.8 Braids' knob and table QUANTIZATION is repeatedly the sound
+
+Three times now, reproducing an integer step that looked like a rounding
+detail was what closed an A/B gap. Assume quantization is audible until shown
+otherwise, especially anywhere positional:
+
+- `ring-mod` detune, `(parameter_ - 16384) >> 2` — never reaches zero, so the
+  hardware beats at "unison" where float phase-locks.
+- `bowed` bow position, `6 + (COLOR >> 9)` over 256 — bow position sets a comb
+  null, so a 2 % error moves the null a whole harmonic.
+- `bowed` friction, read at an **integer** index with the interpolating call
+  commented out — a 256-step staircase inside the stick-slip loop, which is
+  where the slip happens.
+
+### 3.9 Some engines cannot be matched spectrally, and that is not a defect
+
+`bowed` is a nonlinear self-oscillator. The port's standard ~8-cent
+kCorrectedSampleRate offset is half a percent of a 434-sample loop at MIDI 45,
+which is enough to settle the stick-slip system into a **different limit
+cycle**. Third-octave spectra sit 3–5 dB apart with every coefficient
+agreeing. Pitch, level and gross tilt track; bin-level agreement is not a
+meaningful target. `saw-comb` and `fluted` are the same class — do not spend a
+session chasing their last few dB. The oscillator engines (`z-filter`, `csaw`,
+`ring-mod`, `toy`) genuinely do match to a fraction of a dB, so the contrast
+is informative rather than an excuse.
+
+### 3.10 qemu undercounts divides
 
 `qemu/estimate.py` models `cycles = A*instructions + B*flash_reads` with
 `COST_INSN = 1.0`. A VDIV is one instruction and about fourteen cycles on an
@@ -179,7 +205,13 @@ GPL v3 while the DSP around it is MIT).
 - `braids_ref.cc` — renders any Braids model at its native 96 kHz with linear
   parameter sweeps, then decimates to 48 kHz through the **same**
   `[0.25, 0.5, 0.25]` kernel the ports use, so the comparison is not
-  confounded by a different anti-imaging filter.
+  confounded by a different anti-imaging filter. **For a `size -= 2` model,
+  set `BRAIDS_REF_DROP=1` instead**: those write 96 kHz through a 2× linear
+  interpolator, so the odd samples ARE the 48 kHz algorithm and taking them
+  recovers Braids exactly. The default kernel composes with that interpolator
+  into `(u[k] + u[k-1])/2` — a 2-tap average, −3.0 dB at 12 kHz — which
+  silently darkens the REFERENCE and will send you hunting a filter bug in
+  the port that is really in the harness.
 - `ab.sh` — renders both sides at matched controls and compares. Braids'
   `parameter_[0]`/`[1]` map to different port knobs per engine, so they are
   passed explicitly (args 9 and 10) rather than assumed.
