@@ -131,9 +131,10 @@ and per-scenario peak/RMS/DC/silence/realtime metrics.
 
 `submit` runs those same checks, then shows you exactly what is about to
 leave your machine — package, license, digest, bundle size, and the ownership
-affirmation — and uploads only after you type `submit` to confirm. Add
-`--bundle-only` to stop at the zip and upload it from the contributor center
-instead, or `--yes --author "…"` to submit non-interactively. Your identity is
+affirmation — and uploads only after you type `submit` to confirm. It is the
+only way to submit: the contributor center follows submissions, it does not
+accept them. Add `--bundle-only` to build the zip without sending it (to look
+inside, or for CI), or `--yes --author "…"` to submit non-interactively. Your identity is
 a token minted on first submit and kept in a per-user config file (`$SDK
 whoami` shows which, `--show` prints it); paste it into the contributor center
 to follow your submissions in the browser, or `$SDK login` to adopt one that

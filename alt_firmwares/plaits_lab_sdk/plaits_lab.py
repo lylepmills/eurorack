@@ -1554,8 +1554,8 @@ def add_zip_file(archive: zipfile.ZipFile, name: str, data: bytes) -> None:
 # SHA-256(token) as the owner of a submission, which is what lets you check,
 # re-download or withdraw your own drafts. The token is minted HERE rather than
 # in the browser so a first submission needs no web visit at all; the
-# contributor center accepts the same token pasted in, and `login` accepts one
-# from a browser that got there first.
+# contributor center accepts the same token pasted in to FOLLOW submissions,
+# and `login` adopts an existing identity on a second machine.
 #
 # It lives in a USER-level config file, never inside a package: package files
 # are zipped into the bundle and eventually vendored into a public repo, and
@@ -1625,6 +1625,15 @@ def api_base(args: argparse.Namespace) -> str:
     return base.rstrip("/")
 
 
+class ApiError(PackageError):
+    """A failed API call, carrying the status so a caller can recover from it."""
+
+    def __init__(self, message: str, status: int, code: str = "") -> None:
+        super().__init__(message)
+        self.status = status
+        self.code = code
+
+
 def api_call(base: str, path: str, *, token: str | None = None, method: str = "GET",
              payload: Any = None, body: bytes | None = None,
              content_type: str | None = None) -> dict[str, Any]:
@@ -1653,19 +1662,21 @@ def api_call(base: str, path: str, *, token: str | None = None, method: str = "G
         with urllib.request.urlopen(request, timeout=120) as response:
             return json.loads(response.read().decode("utf-8") or "{}")
     except urllib.error.HTTPError as error:
-        detail = ""
+        detail, code = "", ""
         try:
             body_json = json.loads(error.read().decode("utf-8"))
             detail = body_json.get("error", {}).get("message", "")
+            code = body_json.get("error", {}).get("code", "")
         except (ValueError, OSError):
             pass
-        raise PackageError(
-            f"{method} {path} failed ({error.code}){': ' + detail if detail else ''}"
+        raise ApiError(
+            f"{method} {path} failed ({error.code}){': ' + detail if detail else ''}",
+            error.code, code,
         ) from error
     except urllib.error.URLError as error:
         raise PackageError(
-            f"could not reach {base}: {error.reason}. The bundle is built and can be "
-            f"uploaded later, or from the contributor center."
+            f"could not reach {base}: {error.reason}. The bundle is already built, so "
+            f"re-running submit once you are back online skips straight to uploading it."
         ) from error
 
 
@@ -1746,7 +1757,7 @@ def confirm_submission(claims: dict[str, Any], contract: dict[str, Any],
         return {"author": author, "contact": contact}
     require(sys.stdin.isatty(),
             "submitting needs a terminal to confirm — pass --yes with --author to "
-            "submit non-interactively, or --bundle-only to just build the zip")
+            "submit non-interactively, or --bundle-only to build the zip without sending it")
     typed = input('Type "submit" to send it, anything else to stop: ').strip()
     require(typed == "submit", "not submitted — the bundle is built and unchanged")
     return {"author": author, "contact": contact}
@@ -1760,7 +1771,7 @@ def upload_submission(bundle_path: Path, args: argparse.Namespace) -> int:
     if not status.get("intakeEnabled"):
         raise PackageError(
             f"community intake is not open at {base} right now. The bundle is built "
-            f"at {bundle_path} — keep it and submit when intake reopens."
+            f"at {bundle_path} — keep it and run submit again when intake reopens."
         )
     contract = status.get("affirmation") or {}
     require(contract.get("version") and contract.get("text"),
@@ -1780,10 +1791,30 @@ def upload_submission(bundle_path: Path, args: argparse.Namespace) -> int:
         bundle_path.read_bytes(),
     )
     print("uploading…", flush=True)
-    created = api_call(base, "/api/contributors/submissions", token=token, method="POST",
-                       body=body, content_type=content_type)
-    submission_id = str(created["id"])
-    print(f"draft created  {submission_id}")
+    try:
+        created = api_call(base, "/api/contributors/submissions", token=token, method="POST",
+                           body=body, content_type=content_type)
+        submission_id = str(created["id"])
+        print(f"draft created  {submission_id}")
+    except ApiError as error:
+        # Submitting is two calls — upload, then send to review — so a network
+        # blip between them leaves a draft this package/version can never
+        # re-upload (the pair is unique). Adopt that draft and finish it rather
+        # than stranding the contributor on a version bump.
+        if error.status != 409:
+            raise
+        mine = api_call(base, "/api/contributors/submissions", token=token)
+        draft = next((row for row in mine.get("submissions", [])
+                      if row.get("packageId") == claims["packageId"]
+                      and row.get("version") == claims["version"]
+                      and row.get("state") == "draft"), None)
+        if not draft:
+            raise PackageError(
+                f"{claims['packageId']} {claims['version']} has already been submitted. "
+                f"Bump the version in plaits-engine.json to submit a revision."
+            ) from error
+        submission_id = str(draft["id"])
+        print(f"resuming the draft left by an interrupted submit  {submission_id}")
 
     sent = api_call(base, f"/api/contributors/submissions/{submission_id}/submit",
                     token=token, method="POST", payload={"affirmation": {
@@ -1807,11 +1838,12 @@ def upload_submission(bundle_path: Path, args: argparse.Namespace) -> int:
 
 
 def login_command(args: argparse.Namespace) -> int:
-    """Adopt a token minted by the contributor center, so both agree."""
+    """Reuse one contributor identity elsewhere — a second machine, a rebuilt
+    one, or the token an older contributor-center visit already made."""
     token = (args.token or "").strip()
     if not token:
         require(sys.stdin.isatty(), "pass --token when not running in a terminal")
-        token = input("Contributor token (from the contributor center): ").strip()
+        token = input("Contributor token (`plaits-lab whoami --show` on the other machine): ").strip()
     path = write_token(token)
     print(f"stored contributor token {token_fingerprint(token)}… at {path}")
     return 0
@@ -1905,8 +1937,9 @@ def submit_command(args: argparse.Namespace) -> int:
 def finish_submit(output: Path, args: argparse.Namespace) -> int:
     """Upload the built bundle, unless the caller only wanted the zip."""
     if args.bundle_only:
-        print("--bundle-only: not submitted. Upload it with `plaits-lab submit` again, "
-              "or from the contributor center.")
+        print("--bundle-only: not submitted. Run `plaits-lab submit` without it to send "
+              "this package for review — submitting is the CLI's job, there is no "
+              "browser upload.")
         return 0
     return upload_submission(output, args)
 
@@ -2580,7 +2613,7 @@ def build_parser() -> argparse.ArgumentParser:
     submit_parser.add_argument("--compiler")
     submit_parser.add_argument("--docker-image", default="plaits-lab-builder:local")
     submit_parser.add_argument("--bundle-only", action="store_true",
-                               help="build the bundle and stop, without submitting")
+                               help="build the bundle without submitting (to inspect it, or for CI)")
     submit_parser.add_argument("--author", help="the rights holder to record on the affirmation")
     submit_parser.add_argument("--contact", help="optional contact for questions about the model")
     submit_parser.add_argument("--yes", action="store_true",
@@ -2590,7 +2623,7 @@ def build_parser() -> argparse.ArgumentParser:
     submit_parser.set_defaults(handler=submit_command)
 
     login_parser = subparsers.add_parser(
-        "login", help="store a contributor token minted by the contributor center")
+        "login", help="submit as an existing contributor identity (e.g. on a second machine)")
     login_parser.add_argument("--token")
     login_parser.set_defaults(handler=login_command)
 
