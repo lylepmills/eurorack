@@ -23,13 +23,13 @@ Branch: `claude/braids-engines-plaits-palette-je03ac` (both repos).
 | `sub-oscillator` | **landed** | 28% | 0.23 / 0.42 dB against both source models |
 | `digital-modulation` | **landed** | 18% | 0.00 dB at the stock frame; 0.09–0.45 dB across settings |
 | `saw-comb` | **landed** | 32% | 0.19 / 0.45 / 0.67 dB |
-| `vowel-fof` | not started | — | — |
-| `raw-fm` | not started (Lyle: build it, then he A/Bs) | — | — |
-| `triple` | not started (Lyle: build it, then he A/Bs) | — | — |
+| `vowel-fof` | **landed** | 72% | 1.96–2.29 dB |
+| `raw-fm` | **landed** | 15% | 0.05 / 0.13 / 0.02 dB across all three source models |
+| `triple` | **landed** | 52% | 0.24 / 0.25 / 0.03 / 0.02 dB across all four source models |
 | `fluted` | still gated on the §3.11 mode-tracking measurement | — | — |
 
-**Remaining engines: `vowel-fof`, `raw-fm`, `triple`.** Notes for picking them
-up:
+**ALL ELEVEN ENGINES ARE LANDED.** What remains is measurement and the
+website, not DSP. Notes kept for reference:
 
 - `vowel-fof` — the spec's headline finding is CONFIRMED in the source:
   `out += svf_bp[i] * amplitudes[0] >> 17` reads `amplitudes[0]`, not
@@ -39,9 +39,9 @@ up:
   Needs 5 SVFs, ~500 B of vendored tables (`formant_f_data` and
   `formant_a_data`, both [5][5][5] int16), an `Oscillator<SAW>` instantiation
   and a Pattern-B stereo landing — the largest engine left.
-- `raw-fm` and `triple` — build them so Lyle can A/B, per his Q2/Q3 answer.
+- `raw-fm` and `triple` are built and ready for the Q2/Q3 A/B.
 
-Also not done: real `arm-none-eabi-size` flash measurements (§5 below), and
+Still not done: real `arm-none-eabi-size` flash measurements (§5 below), and
 the whole website side.
 
 ---
@@ -237,7 +237,21 @@ The distinction is chaotic-vs-linear feedback, not feedback-vs-not. The oscillat
 `ring-mod`, `toy`) genuinely do match to a fraction of a dB, so the contrast
 is informative rather than an excuse.
 
-### 3.12 qemu undercounts divides
+### 3.12 `Sine()` reads BELOW the table for a negative phase
+
+`Sine()` is `InterpolateWrap`, whose `index -= (int32_t)index` truncates
+TOWARD ZERO — so it wraps positive arguments and indexes **before** `lut_sine`
+for negative ones. Any engine doing phase modulation can reach a negative
+argument: `raw-fm` hits −0.25 (carrier phase 0, plus the wav_sine 0.75 offset,
+minus a full cycle of deviation) and the in-tree audition caught it as a 6e12
+sample. Add a whole-cycle positive offset to every phase handed to `Sine`;
+`InterpolateWrap` discards the extra cycles, so it is free.
+
+Related: Braids accumulates phase in a **uint32**, which wraps at any
+magnitude. A float phase with a single-subtract wrap does not, so any feedback
+path that can drive an increment past 1.0 needs that increment clamped.
+
+### 3.13 qemu undercounts divides
 
 `qemu/estimate.py` models `cycles = A*instructions + B*flash_reads` with
 `COST_INSN = 1.0`. A VDIV is one instruction and about fourteen cycles on an
