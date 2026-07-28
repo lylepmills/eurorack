@@ -9,6 +9,7 @@
 #include <algorithm>
 
 #include "stmlib/dsp/dsp.h"
+#include "stmlib/dsp/units.h"
 
 #include "plaits/dsp/oscillator/sine_oscillator.h"
 
@@ -78,11 +79,16 @@ void DigitalModulationEngine::Render(
       kDigitalModulationSymbolRange * (1.0f - parameters.timbre);
   const float symbol_increment = NoteToFrequency(symbol_note);
 
-  // HARMONICS scales the whole packet. The preamble and both sync words keep
-  // their proportion of it, so the structure survives at every frame length
-  // and HARMONICS = 1 is Braids' packet exactly.
-  const float frame = kDigitalModulationMinFrame + parameters.harmonics * \
-      (kDigitalModulationStockFrame - kDigitalModulationMinFrame);
+  // HARMONICS scales the whole packet; the preamble and both sync words keep
+  // their proportion of it, so the structure survives at every frame length.
+  // The law is EXPONENTIAL, not linear. Braids' header is 64 of 1,088 symbols, and the
+  // port keeps that proportion -- so a linear frame law leaves the header
+  // tens of symbols long across most of the knob, and at a few tens of Hz of
+  // symbol rate the payload is seconds away. Everything interesting lives at
+  // short frames, so the knob should spend its travel there: HARMONICS = 1 is
+  // still Braids' 1,088 exactly, but noon is ~187 rather than 560.
+  const float frame = kDigitalModulationMinFrame * \
+      SemitonesToRatio(parameters.harmonics * kDigitalModulationFrameSpan);
   const float frame_scale = frame / kDigitalModulationStockFrame;
   const int preamble_end = static_cast<int>(
       kDigitalModulationPreamble * frame_scale) + 1;

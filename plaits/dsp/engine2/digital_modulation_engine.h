@@ -45,6 +45,9 @@ const float kDigitalModulationRadius = 23100.0f / 32768.0f;
 // Braids' packet: preamble to 32, sync words to 48 and 64, payload to 1,088.
 const float kDigitalModulationStockFrame = 1088.0f;
 const float kDigitalModulationMinFrame = 32.0f;
+// 12 * log2(1088/32): the frame span expressed in semitones so the mapping
+// can use SemitonesToRatio rather than a libm exponential.
+const float kDigitalModulationFrameSpan = 61.05f;
 const float kDigitalModulationPreamble = 32.0f;
 const float kDigitalModulationSyncA = 48.0f;
 const float kDigitalModulationSyncB = 64.0f;
