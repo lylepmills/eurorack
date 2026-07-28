@@ -419,6 +419,13 @@
       "controls": ["Material", "Bow force", "Bow speed", "Ring"], "outputs": ["The instrument", "Fundamental band"],
       "source": { "header": "plaits/dsp/engine2/banded_waveguide_engine.h", "className": "BandedWaveguideEngine", "member": "banded_waveguide_engine_", "files": ["plaits/dsp/engine2/banded_waveguide_engine.cc"] },
       "postProcessing": { "alreadyEnveloped": false, "outGain": -1.0, "auxGain": 0.8 }
+    },
+    {
+      "id": "brass", "packageId": "rubato/brass", "name": "Brass", "author": "Lyle Mills, after Perry R. Cook and Gary P. Scavone", "origin": "Rubato Lab", "family": "Physical",
+      "description": "A lip-reed brass instrument. Breath makes it speak, and the lip knob climbs the bore's harmonic series the way a bugle player does.", "tags": ["brass", "lip", "physical", "waveguide", "wind", "stk"],
+      "controls": ["Lip", "Breath", "Bell", "Slide"], "outputs": ["Mouthpiece", "Valve buzz"],
+      "source": { "header": "plaits/dsp/engine2/brass_engine.h", "className": "BrassEngine", "member": "brass_engine_", "files": ["plaits/dsp/engine2/brass_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": -1.0, "auxGain": 0.8 }
     }
   ],
   "manuals": {
@@ -916,6 +923,15 @@
         "macro": "How long the bank rings once the bow lifts, from a dead bar to an almost endless bowl."
       },
       "trigger": "Strikes the bank instead of bowing it, exciting every mode at once."
+    },
+    "brass": {
+      "controls": {
+        "harmonics": "Lip tension. Climbs the bore's partials -- unison, fifth, octave, tenth, twelfth -- and bends each one sharp as it rises.",
+        "timbre": "Breath pressure. Below the threshold the instrument does not speak, exactly as a real one does not.",
+        "morph": "Bell size, from a stopped horn that barely sustains to an open one that rings and overblows easily.",
+        "macro": "Slide. Detunes the bore against the lips, which is where the growl and the split note come from."
+      },
+      "trigger": "Empties the bore and resets the lips so each note starts the same way."
     }
   },
   "presets": {

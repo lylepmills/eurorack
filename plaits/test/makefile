@@ -89,6 +89,7 @@ CC_FILES       = algorithms.cc \
 		scale_stack_engine.cc \
 		shakers_engine.cc \
 		banded_waveguide_engine.cc \
+		brass_engine.cc \
 		z_filter_engine.cc
 OBJ_FILES      = $(CC_FILES:.cc=.o)
 OBJS           = $(patsubst %,$(BUILD_DIR)%,$(OBJ_FILES)) $(STARTUP_OBJ)

@@ -74,6 +74,7 @@
 #include "plaits/dsp/engine2/scale_stack_engine.h"
 #include "plaits/dsp/engine2/shakers_engine.h"
 #include "plaits/dsp/engine2/banded_waveguide_engine.h"
+#include "plaits/dsp/engine2/brass_engine.h"
 #include "plaits/dsp/engine2/z_filter_engine.h"
 #include "plaits/dsp/engine2/string_machine_engine.h"
 #include "plaits/dsp/engine2/tapfield_engine.h"
@@ -2094,6 +2095,7 @@ void TestExperimentalEngines() {
   RenderAuditionEngine<ScaleStackEngine>("25-scale-stack.wav");
   RenderAuditionEngine<ShakersEngine>("26-shakers.wav");
   RenderAuditionEngine<BandedWaveguideEngine>("27-banded-waveguide.wav");
+  RenderAuditionEngine<BrassEngine>("28-brass.wav");
   RenderAuditionEngine<RawFmEngine>("21-raw-fm.wav");
   RenderAuditionEngine<VowelFofEngine>("20-vowel-fof.wav");
   RenderAuditionEngine<SawCombEngine>("19-saw-comb.wav");
@@ -2138,6 +2140,7 @@ void TestExperimentalEngines() {
   ValidateExperimentalEngineExtremes<ScaleStackEngine>();
   ValidateExperimentalEngineExtremes<ShakersEngine>();
   ValidateExperimentalEngineExtremes<BandedWaveguideEngine>();
+  ValidateExperimentalEngineExtremes<BrassEngine>();
   ValidateExperimentalEngineExtremes<ZFilterEngine>();
   ValidateExperimentalEngineExtremes<ToyEngine>();
   ValidateExperimentalEngineExtremes<CSawEngine>();
@@ -2165,6 +2168,7 @@ void TestExperimentalEngines() {
   ValidateExperimentalControlResponse<ScaleStackEngine>("Scale Stack");
   ValidateExperimentalControlResponse<ShakersEngine>("Shakers");
   ValidateExperimentalControlResponse<BandedWaveguideEngine>("Banded Waveguide");
+  ValidateExperimentalControlResponse<BrassEngine>("Brass");
   ValidateExperimentalControlResponse<ZFilterEngine>("Z Filter");
   ValidateExperimentalControlResponse<ToyEngine>("Toy");
   ValidateExperimentalControlResponse<CSawEngine>("CSaw");

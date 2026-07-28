@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "rubato/brass",
+  "catalogId": "brass",
+  "version": "1.0.0",
+  "name": "Brass",
+  "author": "Lyle Mills, after Perry R. Cook and Gary P. Scavone",
+  "origin": "Rubato Lab",
+  "license": "MIT",
+  "description": "A lip-reed brass instrument. Breath makes it speak, and the lip knob climbs the bore's harmonic series the way a bugle player does.",
+  "family": "Physical",
+  "tags": ["brass", "lip", "physical", "waveguide", "wind", "stk"],
+  "controls": [
+    { "id": "harmonics", "label": "Lip", "description": "Lip tension. Climbs the bore's partials, and bends each one sharp as it rises." },
+    { "id": "timbre", "label": "Breath", "description": "Breath pressure. Below the threshold the instrument does not speak, as a real one does not." },
+    { "id": "morph", "label": "Bell", "description": "Bell size, from a stopped horn that barely sustains to an open one that overblows easily." },
+    { "id": "macro", "label": "Slide", "description": "Detunes the bore against the lips, which is where the growl and the split note come from." }
+  ],
+  "outputs": {
+    "main": "The pressure inside the mouthpiece.",
+    "aux": "The valve flow -- the buzz that drives it."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/brass_engine.h",
+    "files": ["plaits/dsp/engine2/brass_engine.cc"],
+    "className": "BrassEngine"
+  },
+  "postProcessing": { "alreadyEnveloped": false, "outGain": -1.0, "auxGain": 0.8 },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "After STK Brass (Cook's TBone/HosePlayer); redesigned because upstream does not sustain"
+}
