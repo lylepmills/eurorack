@@ -262,9 +262,14 @@ void Ui::UpdateLEDs() {
   // those over would make the probe build untestable.
   if (mode_ == UI_MODE_NORMAL) {
     const float usage = cpu_usage_;
-    if (usage > 1.0f) {
-      // Over budget: blink everything red, faster the worse it is.
-      const int shift = usage > 2.0f ? 5 : (usage > 1.5f ? 6 : 7);
+    // The red line sits at 90%, not 100%: this meter brackets Voice::Render
+    // only, and the UI poll, watchdog and readout ride the same interrupt
+    // OUTSIDE the bracket. Hardware-calibrated: an engine reading 87-100%
+    // here (4-octave Helix) audibly crunches, while 62-75% (3-octave) has
+    // real margin. Above 90% the deadline is at risk in practice.
+    if (usage > 0.9f) {
+      // Deadline at risk: blink everything red, faster the worse it is.
+      const int shift = usage > 1.8f ? 5 : (usage > 1.2f ? 6 : 7);
       if ((pwm_counter_ >> shift) & 1) {
         for (int i = 0; i < kNumLEDs; ++i) {
           leds_.set(i, LED_COLOR_RED);
@@ -279,15 +284,17 @@ void Ui::UpdateLEDs() {
       const float scaled = usage * static_cast<float>(kNumLEDs);
       int full = static_cast<int>(scaled);
       if (full > kNumLEDs) full = kNumLEDs;
+      // Amber from 62.5% up: the top three eighths are where un-bracketed
+      // ISR overhead starts to matter.
       for (int i = 0; i < full; ++i) {
         leds_.set(kNumLEDs - 1 - i,
-                  i >= kNumLEDs - 2 ? LED_COLOR_YELLOW : LED_COLOR_GREEN);
+                  i >= kNumLEDs - 3 ? LED_COLOR_YELLOW : LED_COLOR_GREEN);
       }
       if (full < kNumLEDs) {
         const float frac = scaled - static_cast<float>(full);
         if (static_cast<int>(frac * 16.0f) > static_cast<int>(pwm_counter_ & 15)) {
           leds_.set(kNumLEDs - 1 - full,
-                    full >= kNumLEDs - 2 ? LED_COLOR_YELLOW : LED_COLOR_GREEN);
+                    full >= kNumLEDs - 3 ? LED_COLOR_YELLOW : LED_COLOR_GREEN);
         }
       }
     }
