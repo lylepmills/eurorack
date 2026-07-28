@@ -11,6 +11,7 @@ were measured. The baseline replaces Speech with a DUPLICATE of an engine
 already present (duplicate slots collapse to one instance), so the baseline
 carries 23 distinct engines and each measurement carries those 23 plus one.
 """
+import hashlib
 import json
 import sys
 
@@ -29,7 +30,9 @@ NEW = ['z-filter', 'toy', 'csaw', 'bowed', 'ring-mod', 'sub-oscillator',
 def measure(tag, engine_id):
     recipe = json.loads(json.dumps(BASE))
     recipe['slots'][SPEECH] = engine_id
-    payload = {'buildKey': 'sweep' + tag.replace('-', ''), 'recipe': recipe}
+    # The build key is a 64-hex content address, not a free-form label.
+    key = hashlib.sha256(json.dumps(recipe, sort_keys=True).encode()).hexdigest()
+    payload = {'buildKey': key, 'recipe': recipe}
     try:
         elf_dir, _ = cs.build_firmware(payload)
     except Exception as error:  # noqa: BLE001 - report and continue the sweep

@@ -41,6 +41,57 @@ website, not DSP. Notes kept for reference:
   and a Pattern-B stereo landing — the largest engine left.
 - `raw-fm` and `triple` are built and ready for the Q2/Q3 A/B.
 
+### Website registration points — the handoff's list is about HALF of them
+
+Every one of these was found by a FAILING TEST, not by the documentation. The
+test suite is the real contract here; §9 of the handoff is not.
+
+1. `catalog.generated.json` + `plaits-pins.json` — `sync-plaits-catalog.mjs`
+2. `plaits-engine-sources.generated.json` — `gen-plaits-engine-sources.mjs`
+   *(not in the handoff)*
+3. `flash-budget.ts` — real measurements, now via
+   `alt_firmwares/plaits_lab_builder/flash_sweep.py`
+4. `previews.generated.json` + the mp3s — `render-previews.mjs`, **and**
+   `scripts/plaits-previews/render_previews.cc`, which keeps its own
+   HARDCODED engine list (includes, a mono `Emit<>` and a stereo `Emit<>`
+   per engine). *(not in the handoff, and it needs a C++ edit, not a script
+   run)*
+
+No changes were needed to `engines.ts`, `PlaitsEditor.tsx` or
+`plaits-palette.css`: with `origin: "Mutable Instruments"` and no `artwork`
+field these fall through the existing fallbacks, and the Lab slot counter
+keys off `origin === "Rubato Lab"` so they do not disturb it.
+
+### Measured ARM flash — real, replacing every estimate
+
+Swept 2026-07-28 against a local builder container built from `dc1650c14`,
+leave-one-out into Speech's slot in the stock-24 context. Baseline 181,216 B.
+
+| engine | measured | spec estimate |
+|---|---:|---:|
+| raw-fm | 880 | 1,450 |
+| digital-modulation | 1,200 | 1,620 |
+| toy | 1,232 | 1,520 |
+| csaw | 1,392 | 1,400 |
+| z-filter | 1,712 | 2,200 |
+| ring-mod | 1,872 | 1,700 |
+| sub-oscillator | 2,256 | 1,300 |
+| saw-comb | 2,496 | 3,000 |
+| vowel-fof | 2,640 | 3,100 |
+| bowed | 2,928 | 2,400 |
+| triple | 3,408 | 2,800 |
+| **total** | **22,016** | 22,490 |
+
+The spec's AGGREGATE was within 2 %. Its PER-ENGINE numbers ranged −39 % to
++74 %, so treat §1 as a ranking and never as a budget.
+
+**Two traps when re-running the sweep.** The builder image bakes the firmware
+source in (`COPY . /workspace`), so `docker build` it AFTER the engines land
+or every new engine fails with a missing header while the baseline builds
+fine — a local rehearsal of the exact deploy-ordering hazard. And the image
+has an ENTRYPOINT, so the sweep needs `--entrypoint python3` or the command
+becomes arguments to the HTTP server and sits idle forever.
+
 Still not done: real `arm-none-eabi-size` flash measurements (§5 below), and
 the whole website side.
 
