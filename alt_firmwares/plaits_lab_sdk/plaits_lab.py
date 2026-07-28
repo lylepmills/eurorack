@@ -1586,8 +1586,14 @@ def submit_command(args: argparse.Namespace) -> int:
         with zipfile.ZipFile(output, "w") as archive:
             # Same POSIX-relative ordering as package_content_digest, so a bundle
             # built on Windows lays its entries out identically to one built here.
+            # Same exclusion as package_content_digest: the reserved
+            # .plaits-lab/ scratch directory is LOCAL state, so it must not
+            # ride into the bundle either. Carrying a file the digest does not
+            # cover would let un-reviewed content reach a vendored package,
+            # and intake rejects such a bundle outright.
             for path in sorted(
-                (item for item in package["directory"].rglob("*") if item.is_file()),
+                (item for item in package["directory"].rglob("*")
+                 if item.is_file() and ".plaits-lab" not in item.parts),
                 key=lambda item: item.relative_to(package["directory"]).as_posix(),
             ):
                 add_zip_file(archive, f"package/{path.relative_to(package['directory']).as_posix()}", path.read_bytes())
