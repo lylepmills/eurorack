@@ -162,7 +162,8 @@ def builtin_engine(identifier: str) -> tuple[dict[str, Any], dict[str, Any]]:
     by_package = {item["packageId"]: engine_id for engine_id, item in catalog.items()}
     engine_id = identifier if identifier in catalog else by_package.get(identifier)
     if not engine_id:
-        raise PackageError(f"unknown built-in model {identifier!r}; run `plaits-lab catalog`")
+        raise PackageError(f"unknown built-in model {identifier!r}; "
+                           f"run `{cli_invocation()} catalog`")
     return catalog[engine_id], public[engine_id]
 
 
@@ -211,7 +212,8 @@ def validate_shared_modules(module_ids: Any) -> list[str]:
     require(len(module_ids) == len(set(module_ids)), "sharedModules must be unique")
     for module_id in module_ids:
         require(module_id in registry,
-                f"unknown shared module {module_id!r}; run `plaits-lab modules`")
+                f"unknown shared module {module_id!r}; "
+                f"run `{cli_invocation()} modules`")
     return module_ids
 
 
@@ -1337,7 +1339,10 @@ def init_command(args: argparse.Namespace) -> int:
     (output / "LICENSE").write_text(license_file_text(spdx, license_notices), encoding="utf-8")
     (output / "README.md").write_text(
         f"# {name}\n\nA Plaits Lab community engine package.\n\n"
-        f"Run `plaits-lab check .` and `plaits-lab render . --output preview.wav` from this directory.\n",
+        # NOT cli_invocation() here: this README is written INTO the package
+        # and published, so it must not bake in the author's own checkout path.
+        f"From your eurorack checkout:\n\n"
+        f"    python3 alt_firmwares/plaits_lab_sdk/plaits_lab.py check <path-to-this-package> --full\n",
         encoding="utf-8",
     )
     load_package(str(output))
@@ -1563,6 +1568,17 @@ def add_zip_file(archive: zipfile.ZipFile, name: str, data: bytes) -> None:
 
 DEFAULT_API_BASE = "https://rubato.audio"
 TOKEN_MIN, TOKEN_MAX = 32, 256
+
+
+def cli_invocation() -> str:
+    """How this tool was actually invoked, e.g.
+    "python3 alt_firmwares/plaits_lab_sdk/plaits_lab.py".
+
+    There is no `plaits-lab` on anyone's PATH — the README defines it as a
+    shell alias and prose uses it as the tool's name — so any command this
+    program PRINTS has to spell out the real invocation, or it is not
+    runnable for the person reading it."""
+    return f"python3 {sys.argv[0]}"
 
 
 def credentials_path() -> Path:
@@ -1829,7 +1845,8 @@ def upload_submission(bundle_path: Path, args: argparse.Namespace) -> int:
     # "paste this somewhere over there" sends people hunting.
     print("Your contributor token — the only thing identifying your submissions:")
     print(f"  {read_token()}")
-    print(f"  (stored at {credentials_path()}; `plaits-lab whoami --show` prints it again)")
+    print(f"  (stored at {credentials_path()};"
+          f" `{cli_invocation()} whoami --show` prints it again)")
     print()
     print(f"To follow this submission in a browser, open")
     print(f"  {base}/plaits-palette/contribute")
@@ -1843,7 +1860,8 @@ def login_command(args: argparse.Namespace) -> int:
     token = (args.token or "").strip()
     if not token:
         require(sys.stdin.isatty(), "pass --token when not running in a terminal")
-        token = input("Contributor token (`plaits-lab whoami --show` on the other machine): ").strip()
+        token = input(f"Contributor token (`{cli_invocation()} whoami --show` "
+                      f"on the other machine): ").strip()
     path = write_token(token)
     print(f"stored contributor token {token_fingerprint(token)}… at {path}")
     return 0
@@ -1854,7 +1872,8 @@ def whoami_command(args: argparse.Namespace) -> int:
     path = credentials_path()
     if not token:
         print(f"no contributor token yet ({path})")
-        print("one is minted on your first `plaits-lab submit`, or run `plaits-lab login`.")
+        print(f"one is minted on your first `{cli_invocation()} submit`, "
+              f"or run `{cli_invocation()} login`.")
         return 0
     print(f"contributor {token_fingerprint(token)}…  ({path})")
     if args.show:
@@ -1937,9 +1956,9 @@ def submit_command(args: argparse.Namespace) -> int:
 def finish_submit(output: Path, args: argparse.Namespace) -> int:
     """Upload the built bundle, unless the caller only wanted the zip."""
     if args.bundle_only:
-        print("--bundle-only: not submitted. Run `plaits-lab submit` without it to send "
-              "this package for review — submitting is the CLI's job, there is no "
-              "browser upload.")
+        print(f"--bundle-only: not submitted. Run `{cli_invocation()} submit "
+              f"{args.package}` without it to send this package for review — "
+              f"submitting is the CLI's job, there is no browser upload.")
         return 0
     return upload_submission(output, args)
 
