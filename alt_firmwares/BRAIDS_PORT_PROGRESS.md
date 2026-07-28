@@ -387,3 +387,80 @@ for both landed engines) proves the ARM build, not the size.
   clean; `check --arm` and `qemu/estimate.py --sweep` both work locally.
 - `compare.py` needs numpy — the system python3 has none. Use
   `~/Desktop/claude/rubato-audio/plugins/just_play/.venv-bundler/bin/python3`.
+
+---
+
+## 7. The Community three (2026-07-28) — landed, unmeasured
+
+Not part of the twelve. These come from OTHER people's Braids firmwares and are
+the first engines in the catalog with `origin: "Community"`, seeding that
+category. Branch `claude/open-source-synth-models-hp0o6y`, off this one.
+
+| id | upstream | author | models |
+|---|---|---|---:|
+| `bytebeat` | Bees-in-the-Trees (`timchurches/Mutated-Mutables`) | Tim Churches | 4 |
+| `diatonic-chord` | Braids Renaissance (`boourns/eurorack-renaissance`) | Tom Burns | 5 |
+| `scale-stack` | Braids Renaissance | Tom Burns | 5 |
+
+Both upstreams are MIT. Bees carries Churches' copyright line beside Gillet's in
+every file he touched; Renaissance's README licenses its STM32F code MIT, but
+**its new files carry no per-file header** — worth a one-line confirmation from
+Tom Burns before this ships publicly. He is reachable and commercial
+(burns.ca).
+
+**Renaissance's SAM speech models are deliberately not ported.** SAM is
+proprietary to SoftVoice, Inc.; every circulating port descends from a
+reverse-engineering whose own README says it "cannot be put under any specific
+open source software license". Wrong risk for a firmware distributed under the
+LLC with a checkout attached.
+
+### What is verified, and what is not
+
+Verified in the cloud container: `plaits_test` (audition render, extremes, and
+the control-response gate on all four controls of all three engines);
+`validate_catalog.py` ok at 53; `plaits_lab.py check --full` clean on all three,
+including the licence check that LICENSE text and per-file SPDX tags agree;
+`sync_public_catalog.sh` regenerated; builder generator suite 48 green; SDK
+suite 57 green.
+
+Host CPU, ratios only (the file header is right that absolute ns mean nothing):
+`bytebeat` 0.29× triple, `diatonic-chord` 0.96×, `scale-stack` 0.97×. Stock
+`chords` is 1.78× triple, `two-op-fm` 5.4×.
+
+**Not verified — same gaps as §5, same reasons.** No ARM toolchain, no Docker,
+no qemu, no hardware in the container: flash cost, `qemu/estimate.py --sweep`,
+and the `build --hardware --cpu-probe` that publication requires. These three
+belong in the same leave-one-out batch as the twelve.
+
+### Website side is blocked on exactly that
+
+`website/src/lib/plaitsFlashBudget.test.ts` asserts *every catalog engine has a
+measured flash cost*, so syncing the catalog snapshot before the sweep reds
+`npm test`. Do the sweep first, extend `engineFlashBytes`, then sync.
+
+Good news found while checking: the Community path on the website is already
+built, not a stub — the origin filter chip, the `Community` label mapping, the
+solid identity chip for engines with no drawn symbol, and a dashed
+`.flash-chip.is-approx` ring for unmeasured community engines all exist
+already. `engines.ts` maps `origin === "Community"` to the `community` tone
+without an edit. So registration should be the flash numbers plus a colour
+choice, not new UI.
+
+### Two upstream defect classes worth carrying forward
+
+Both readmes have the full argument; the short version, because it generalises:
+
+1. **Renaissance's chord offsets are consumed cumulatively but written as
+   absolute scale degrees.** `RenderStack` pre-accumulates its own spans and
+   then `renderChord` accumulates them again; every label in `diatonic_chords`
+   only parses as absolute. The port does the intended thing. If anyone ever
+   wants the shipped-Renaissance voicings, that is a *different engine*.
+2. **Two divisions by zero and an out-of-bounds row read** across the two
+   firmwares, all reachable from a knob. Assume a dormant alt firmware has not
+   been fuzzed.
+
+And one of ours, caught by the in-tree audition gate rather than by review:
+`Sine()` is documented safe "for phase >= 0.0f", and a bipolar signal fed to it
+indexes `lut_sine` out of bounds — a ~5.0 spike on OUT. Same defect the earlier
+review found in `z-filter`. **Any new use of `Sine()` with a computed argument
+needs a whole-period offset.**
