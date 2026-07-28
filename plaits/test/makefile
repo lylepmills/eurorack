@@ -82,6 +82,7 @@ CC_FILES       = algorithms.cc \
 		vowel_fof_data.cc \
 		vowel_fof_engine.cc \
 		raw_fm_engine.cc \
+		triple_engine.cc \
 		z_filter_engine.cc
 OBJ_FILES      = $(CC_FILES:.cc=.o)
 OBJS           = $(patsubst %,$(BUILD_DIR)%,$(OBJ_FILES)) $(STARTUP_OBJ)

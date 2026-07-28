@@ -62,6 +62,7 @@
 #include "plaits/dsp/engine2/saw_comb_engine.h"
 #include "plaits/dsp/engine2/vowel_fof_engine.h"
 #include "plaits/dsp/engine2/raw_fm_engine.h"
+#include "plaits/dsp/engine2/triple_engine.h"
 #include "plaits/dsp/engine2/z_filter_engine.h"
 #include "plaits/dsp/engine2/string_machine_engine.h"
 #include "plaits/dsp/engine2/tapfield_engine.h"
@@ -162,6 +163,7 @@ int main() {
   bench<SawCombEngine>("saw-comb");
   bench<VowelFofEngine>("vowel-fof");
   bench<RawFmEngine>("raw-fm");
+  bench<TripleEngine>("triple");
   bench<ZFilterEngine>("z-filter");
   bench<LoopbackEngine>("loopback");
   bench<LockstepEngine>("lockstep");

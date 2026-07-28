@@ -1,0 +1,41 @@
+[
+  {
+    "id": "hero",
+    "name": "Two intervals opening under a waveform morph",
+    "durationSeconds": 4,
+    "note": 40,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.5, 0.78],
+      "timbre": [0.5, 0.28],
+      "morph": [0.0, 1.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "unison",
+    "name": "Unison pinned at both interval knobs centred",
+    "durationSeconds": 3,
+    "note": 48,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.5, 0.5],
+      "morph": [0.25, 0.25],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "shape",
+    "name": "Narrowed pulse across the macro",
+    "durationSeconds": 3,
+    "note": 36,
+    "triggerHz": 2,
+    "controls": {
+      "harmonics": [0.62, 0.62],
+      "timbre": [0.38, 0.38],
+      "morph": [0.0, 0.0],
+      "macro": [0.5, 1.0]
+    }
+  }
+]

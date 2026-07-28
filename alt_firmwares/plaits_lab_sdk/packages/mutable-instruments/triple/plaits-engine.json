@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/triple",
+  "catalogId": "triple",
+  "version": "1.0.0",
+  "name": "Triple",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "Three oscillators with two continuously swept interval knobs, morphing together through square, saw, triangle and sine.",
+  "family": "Polyphonic",
+  "tags": [
+    "braids",
+    "detune",
+    "polyphonic",
+    "interval"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Spread",
+      "description": "Spreads the second voice through closely spaced and musical intervals."
+    },
+    {
+      "id": "timbre",
+      "label": "Interval",
+      "description": "Spreads the third voice independently of the second."
+    },
+    {
+      "id": "morph",
+      "label": "Waveform",
+      "description": "Morphs all three voices from square through saw and triangle to sine."
+    },
+    {
+      "id": "macro",
+      "label": "Shape",
+      "description": "Narrows the pulse and slope of all three voices below the stock symmetry."
+    }
+  ],
+  "outputs": {
+    "main": "Three-voice mix.",
+    "aux": "Undetuned root voice."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/triple_engine.h",
+    "files": [
+      "plaits/dsp/engine2/triple_engine.cc"
+    ],
+    "className": "TripleEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": -0.6,
+    "auxGain": -0.6
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids MacroOscillator::RenderTriple (square, saw, triangle, sine x3)"
+}

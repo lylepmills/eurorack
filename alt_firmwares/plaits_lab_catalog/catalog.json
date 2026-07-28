@@ -377,6 +377,13 @@
       "controls": ["Ratio", "Index", "Character", "Depth"], "outputs": ["Carrier", "Modulator"],
       "source": { "header": "plaits/dsp/engine2/raw_fm_engine.h", "className": "RawFmEngine", "member": "raw_fm_engine_", "files": ["plaits/dsp/engine2/raw_fm_engine.cc"] },
       "postProcessing": { "alreadyEnveloped": false, "outGain": -0.45, "auxGain": -0.45 }
+    },
+    {
+      "id": "triple", "packageId": "mutable-instruments/triple", "name": "Triple", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Polyphonic",
+      "description": "Three oscillators with two continuously swept interval knobs, morphing together through square, saw, triangle and sine.", "tags": ["braids", "detune", "polyphonic", "interval"],
+      "controls": ["Spread", "Interval", "Waveform", "Shape"], "outputs": ["Three-voice mix", "Undetuned root voice"],
+      "source": { "header": "plaits/dsp/engine2/triple_engine.h", "className": "TripleEngine", "member": "triple_engine_", "files": ["plaits/dsp/engine2/triple_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": -0.6, "auxGain": -0.6 }
     }
   ],
   "manuals": {
@@ -820,6 +827,15 @@
         "macro": "Sets how deeply the feedback path drives itself around the stock amount."
       },
       "trigger": "Realigns the carrier and modulator so each note starts alike."
+    },
+    "triple": {
+      "controls": {
+        "harmonics": "Spreads the second voice through closely spaced and musical intervals.",
+        "timbre": "Spreads the third voice independently of the second.",
+        "morph": "Morphs all three voices from square through saw and triangle to sine.",
+        "macro": "Narrows the pulse and slope of all three voices below the stock symmetry."
+      },
+      "trigger": "Realigns all three oscillator phases."
     }
   },
   "presets": {
