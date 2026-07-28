@@ -1,202 +1,222 @@
 # Braids → Plaits Palette engine port — handoff to a local session
 
-**Status:** design/spec complete (see companion spec), implementation NOT started.
+**Status:** design + spec complete. Implementation NOT started.
 **Written:** 2026-07-28, from a Claude Code *cloud* session that lacked the
-toolchain to do the implementation properly.
+toolchain to implement it properly.
 **Pick this up in a LOCAL session** (Lyle's Mac), where the ARM toolchain,
-Docker, qemu, and hardware are available.
+Docker, qemu and hardware are available.
 
-Branches already created and pushed, same name in both repos:
+**The spec is `BRAIDS_PORT_SPEC.md`** next to this file (same content at
+`alt_firmwares/BRAIDS_PORT_SPEC.md` in eurorack) — 12 engine specifications,
+18 cross-cutting rules, build order, rejected candidates, risks. This file is
+the orientation layer; the spec is the work.
 
 | Repo | Branch | Contains |
 |---|---|---|
-| `lylepmills/rubato-audio` | `claude/braids-engines-plaits-palette-je03ac` | this handoff + the port spec |
-| `lylepmills/eurorack` | `claude/braids-engines-plaits-palette-je03ac` | branched off `master` @ `92895b7`, no changes yet |
+| `lylepmills/rubato-audio` | `claude/braids-engines-plaits-palette-je03ac` | this handoff + the spec |
+| `lylepmills/eurorack` | `claude/braids-engines-plaits-palette-je03ac` | same two docs under `alt_firmwares/`; branched off `master` @ `92895b7`, no engine code yet |
 
 ---
 
-## 1. What was decided (Lyle, this session)
+## 1. What was decided
 
-1. **Scope: port the ~15 non-redundant Braids models now.** The Braids models
-   that Plaits already refines (HARM, PLUK, BELL, DRUM, KICK, SNAR, CYMB, VOWL,
-   ZLPF/BP/HP, BUZZ, MORPH, the saw/square pair, WTBL/WMAP/WLIN, NOIS, CLKN,
-   TWNQ, PRTC, CLOU, SAW SWARM) are **phase 2** — revisit once the first batch
-   is in users' hands and the OG-vs-refined demand is real rather than assumed.
-2. **Firmware lands in `lylepmills/eurorack`**, pushed to the branch above —
-   not delivered as a patch.
+1. **Port the Braids models Plaits does not already refine.** The models it
+   does refine (HARM, PLUK, BELL, DRUM, KICK, SNAR, CYMB, VOWL, BUZZ, MORPH,
+   the saw/square pair, WTBL/WMAP/WLIN, NOIS, CLKN, TWNQ, PRTC, CLOU, SAW
+   SWARM) are **phase 2** — revisit once the first batch is in users' hands and
+   OG-vs-refined demand is real rather than assumed.
+2. **Firmware lands in `lylepmills/eurorack`** on the branch above.
 
-## 2. Why this is being handed off
+Design then narrowed the candidate list to **12 engines covering 19 Braids
+models** — 9 unconditional, 3 gated on a decision or a measurement, 2 dropped.
 
-The cloud container can host-compile and render audio, but **cannot**:
+## 2. The engines
+
+**Unconditional nine — 18,240 B estimated (17.8 KB)**
+
+| id | Braids ancestry | Est. flash |
+|---|---|---:|
+| `z-filter` | ZLPF, ZPKF, ZBPF, ZHPF (4 models) | 2,200 B |
+| `bowed` | BOWD | 2,400 B |
+| `toy` | TOY* | 1,520 B |
+| `csaw` | CSAW | 1,400 B |
+| `sub-oscillator` | SUB↓, SUB↑ (2 models) | 1,300 B |
+| `ring-mod` | RING | 1,700 B |
+| `digital-modulation` | QPSK | 1,620 B |
+| `vowel-fof` | VFOF | 3,100 B |
+| `saw-comb` | saw → comb | 3,000 B |
+
+**Gated three — 6,850 B.** `raw-fm` (FM/FBFM/WTFM — 3 of its 4 knobs replicate
+`two-op-fm`, so it needs your A/B), `fluted` (gated on a mode-tracking
+measurement, §3.11), `triple` (4 models — reachable today via user
+`PLAITS_CHORD_CENTS` tables + `virtual-analog` detune + `swarm`, so the unique
+offer is the gesture, not the sound).
+
+**Dropped, with source citations (§7).** `vosim` — the exact topology of the
+shipped `granular-formant` (`grain_engine.cc:66-78`); the only unreachable
+content is an absolute rather than ratio second formant, which is a re-macro of
+an existing engine, not a slot. `wave-paraphonic` — duplicates `ChordEngine`'s
+upper MORPH half, was the most expensive candidate (~6.5–7 KB realistic), and
+its headline anti-aliasing claim is false (`cutoff` saturates above 375 Hz, so
+both filters are inert).
+
+**Every flash number above is an estimate, not a measurement.** See §4.
+
+## 3. Why this is being handed off
+
+The cloud container host-compiles and renders audio fine, but **cannot**:
 
 - compile for ARM (`arm-none-eabi-gcc` absent; the SDK's ARM path needs the
-  `plaits-lab-builder:local` Docker image and there is no Docker daemon),
-- therefore **cannot measure flash** — and flash is the binding constraint here
-  (stock-24 already sits ~688 B under the 224 KB region),
+  `plaits-lab-builder:local` Docker image, and there is no Docker daemon),
+- therefore **cannot measure flash**,
 - run `alt_firmwares/plaits_lab_sdk/qemu/estimate.py` for CPU cycles (no qemu),
 - measure on hardware (`build --hardware --cpu-probe`),
-- audition anything in real Live / on a real module.
+- audition anything on a module or in Live.
 
-Every flash and CPU number in the spec is therefore an **estimate benchmarked
-against measured comparables**, not a measurement. Treat them as ordering
-hints, not budget truth.
+The design work did not need any of that. The implementation does.
 
-## 3. Environment the local session needs
+## 4. Flash framing — corrected
+
+An earlier framing in this file said these engines are "swap-ins" against
+stock-24's ~688 B of headroom. That is only half right, and the half that
+matters is the other one:
+
+- **The builder compiles per recipe.** Growing the catalog from 39 to 51
+  engines costs **zero flash** in any recipe that does not select them. Adding
+  these engines does not consume anyone's budget.
+- **Only preset membership is zero-sum** — a preset is exactly 24 or 32 slots,
+  and stock-24 genuinely sits ~688 B under the 224 KB region.
+
+So the catalog can absorb all twelve. The spec therefore recommends
+**catalog-only for now, no preset changes**, until Wave 1 produces one real
+`arm-none-eabi-size` number to calibrate against (§8 Q4).
+
+## 5. Environment for the local session
 
 ```sh
-# firmware (the port target)
-git clone https://github.com/lylepmills/eurorack ~/Code/eurorack   # if not already present
+git clone https://github.com/lylepmills/eurorack ~/Code/eurorack   # if absent
 cd ~/Code/eurorack
 git checkout claude/braids-engines-plaits-palette-je03ac
-git submodule update --init --recursive        # REQUIRED — a fresh worktree/clone
-                                               # has no submodules and every
-                                               # compile-based SDK test then dies
-                                               # on stmlib/dsp/units.cc
+git submodule update --init --recursive     # REQUIRED — a fresh clone/worktree has
+                                            # no submodules and every compile-based
+                                            # SDK test then dies on stmlib/dsp/units.cc
 
-# upstream Braids source, for reference while porting
 git clone --depth 1 https://github.com/pichenettes/eurorack /tmp/braids-upstream
-```
 
-Plus, for the ARM half:
-
-```sh
 docker build --platform linux/amd64 -t plaits-lab-builder:local \
-  -f Dockerfile.plaits-builder .
+  -f Dockerfile.plaits-builder .          # for the ARM half
 ```
 
-## 4. The verification loop — PROVEN WORKING in the cloud session
+## 6. Verification loop — PROVEN WORKING
 
-This was run end to end against an existing engine (`glisson`) and all of it
-passed, so the loop itself is not in question:
+Run end to end in the cloud session against `glisson`; all of it passed, so the
+loop itself is not in question:
 
 ```sh
-cd <eurorack>
 python3 alt_firmwares/plaits_lab_catalog/validate_catalog.py
 #   -> "catalog ok: 39 immutable packages"
-
-python3 alt_firmwares/plaits_lab_sdk/plaits_lab.py catalog          # list engines
+python3 alt_firmwares/plaits_lab_sdk/plaits_lab.py catalog
 python3 alt_firmwares/plaits_lab_sdk/plaits_lab.py init /tmp/probe --from glisson --author "…"
 python3 alt_firmwares/plaits_lab_sdk/plaits_lab.py check /tmp/probe --full
 #   -> metadata/licensing, host compilation, sanitizer execution + audio health
-#      (peak / RMS / DC per scenario), and a host CPU smoke test stated as a
-#      ratio against stock two-op-fm
+#      (peak / RMS / DC per scenario), host CPU as a ratio against two-op-fm
 python3 alt_firmwares/plaits_lab_sdk/plaits_lab.py render /tmp/probe \
   --scenario hero --output /tmp/probe.wav
 ```
 
-Locally, add the two steps the cloud could not run:
+Locally, add the two the cloud could not run:
 
 ```sh
-python3 alt_firmwares/plaits_lab_sdk/plaits_lab.py check <pkg> --arm   # needs Docker image
-python3 alt_firmwares/plaits_lab_sdk/qemu/estimate.py <pkg> --sweep    # CPU, with error band
+python3 alt_firmwares/plaits_lab_sdk/plaits_lab.py check <pkg> --arm
+python3 alt_firmwares/plaits_lab_sdk/qemu/estimate.py <pkg> --sweep
 ```
 
-`check --full` prints its own warning worth heeding: **host timing does not
-predict hardware cost**, and publication requires a real hardware measurement
-via `build --hardware --cpu-probe`.
+`check --full` warns, correctly, that **host timing does not predict hardware
+cost**; publication requires `build --hardware --cpu-probe`.
 
-## 5. The authoring contract (verified by reading the source)
+## 7. Authoring contract (verified against the source)
 
 Engines are **in-tree**, like the 15 Rubato Lab engines — not SDK packages.
-`alt_firmwares/plaits_lab_sdk/packages/` holds only two reference examples
-(`rubato/pulsar`, `mutable-instruments/virtual-analog`); the real engines live
-in `plaits/dsp/engine/` (stock) and `plaits/dsp/engine2/` (Plaits 1.2 + Lab).
+`alt_firmwares/plaits_lab_sdk/packages/` holds only two reference examples.
 
-Files touched to add one engine:
+Per engine: `plaits/dsp/engine2/<name>_engine.{h,cc}` subclassing
+`plaits::Engine`; a `PLAITS_STEREO_<ID>` gate in
+`plaits/dsp/engine/stereo_config.h` (macro name = catalog id upper-cased,
+`-` → `_`); the `engines[]` entry plus its `manuals` entry in
+`alt_firmwares/plaits_lab_catalog/catalog.json`.
 
-- `plaits/dsp/engine2/<name>_engine.h` / `.cc` — subclass `plaits::Engine`:
-  `Init(stmlib::BufferAllocator*)`, `Reset()`, `LoadUserData(const uint8_t*)`,
-  `Render(const EngineParameters&, float* out, float* aux, size_t, bool* already_enveloped)`,
-  and `stereo_capable()` returning the engine's `PLAITS_STEREO_<ID>` macro.
-- `plaits/dsp/engine/stereo_config.h` — add the `PLAITS_STEREO_<ID>` gate
-  (default 1; the hosted builder passes `=0` per object to dead-strip it).
-  Macro name = catalog id upper-cased with `-` → `_`.
-- `alt_firmwares/plaits_lab_catalog/catalog.json` — the `engines[]` entry
-  (`id`, `packageId`, `name`, `author`, `origin`, `family`, `description`,
-  `tags`, `controls[4]`, `outputs[2]`, `source.{header,className,member,files}`,
-  `postProcessing.{alreadyEnveloped,outGain,auxGain}`) and the matching
-  `manuals` entry (`controls.{harmonics,timbre,morph,macro}` + `trigger`).
-- `alt_firmwares/plaits_lab_catalog/shared_modules.json` — only if the engine
-  shares code with another.
+Digests are content-addressed by `validate_catalog.py`: `package_digest` hashes
+the catalog record minus `digest` plus the bytes of every declared source file;
+`documentation_digest` hashes the record minus `source`/`postProcessing` plus
+the manual. **Any source edit changes the digest**, and engine digests are in
+the hosted builder's allowlist — firmware image and website catalog snapshot
+must roll together.
 
-Digests are content-addressed and recomputed by `validate_catalog.py`:
-`package_digest` hashes the catalog record (minus `digest`) plus the bytes of
-every declared source file; `documentation_digest` hashes the record minus
-`source`/`postProcessing`, plus the manual. **Any source edit changes the
-digest**, and engine digests are part of the hosted builder's allowlist — so
-the firmware image and the website catalog snapshot must roll together.
+Two helpers to use rather than reinvent (`plaits/dsp/engine/engine.h`):
+`ApplyMacro(stock, min, max, macro)` for the fourth macro, and
+`StereoPanGains()` for equal-power pan.
 
-Two helpers to use rather than reinvent, both in `plaits/dsp/engine/engine.h`:
+**Correction to an earlier assumption in this file:** the port was initially
+specced with `origin: "Braids"`. That is invalid —
+`alt_firmwares/plaits_lab_sdk/engine-package.schema.json:36` constrains
+`origin` to the enum `Mutable Instruments | Rubato Lab | Community`. The spec
+defaults to `Rubato Lab` / `rubato/<id>` with MIT dual copyright (Émilie Gillet
+plus the port's own line); **§8 Q1 is your call, and it must be uniform across
+all twelve.** Any distinct "Braids" badge is then a website-side presentation
+choice, not a catalog value.
 
-- `ApplyMacro(stock, min, max, macro)` — the fourth-macro mapping. `macro=0.5`
-  returns exactly `stock`, so the original Braids sound sits at the centre
-  detent. Every port's fourth macro should go through this.
-- `StereoPanGains(position, &l, &r)` — equal-power pan built on `stmlib::Sqrt`
-  (compiles to a bare `VSQRT`; the firmware links no libm `sqrtf`).
+## 8. What the adversarial review caught
 
-## 6. The porting hazards that drove the design
+Worth knowing, because it says how much the per-engine text was corrected —
+the specs as written are already fixed for all of this:
 
-- **Braids runs at 96 kHz** (`braids.cc`: `sys.Init(F_CPU / 96000 - 1, true)`);
-  **Plaits runs at 48 kHz.** A naive port therefore aliases *more* than the
-  original. Every engine in the spec carries an explicit anti-aliasing decision;
-  "accept it, that's the model's character" is a legitimate answer for CSAW and
-  TOY* but has to be a decision, not an oversight. High-index feedback FM
-  (FBFM/WTFM) is the risky end.
-- **Flash is the binding constraint**, not CPU. Measured comparables to
-  benchmark against: Rubato Lab engines run 1,008–3,392 B; stock runs 1,344 B
-  (two-op FM) to 23,216 B (speech). A Braids model that drags in a large
-  `braids/resources.cc` table is the classic estimate-buster — check hard
-  whether Plaits already carries an equivalent table.
-- **Licensing is clean.** Braids is MIT (Émilie Gillet). Ports carry her
-  copyright plus the port's own line. The SDK's license allowlist (MIT,
-  BSD-2/3-Clause, ISC) exists because everything is statically linked into one
-  distributed firmware image; MIT is fine.
+- **Seven of fourteen designs claimed "bounded ±1.0, no limiter needed" while
+  mandating a DC blocker.** `voice.h` shows a *positive* gain bypasses
+  `stmlib::Limiter` entirely and goes to `Clip16`. Concrete hard clips fixed:
+  WTFM at 1.27, QPSK AUX at −1.4.
+- Three correctness blockers: `z-filter` unwrapped float phase → out-of-bounds
+  `lut_sine` read at index ~500,000; `bowed` delay underflow from ~MIDI 85 that
+  neither in-tree test would have caught; `saw-comb` net HF loop gain 1.083 > 1
+  → self-oscillation.
+- `SoftLimit` is unbounded (must be `SoftClip`); make-up gain goes *inside* the
+  clip; one design's `NoteToFrequency` formula was wrong by fs²; `size -= 2`
+  is what distinguishes 48 kHz from 96 kHz Braids functions (the source of
+  Fluted's 37-cent pitch error).
 
-## 7. Website side (`lylepmills/rubato-audio`) — mapped, not yet written
+## 9. Website side (`lylepmills/rubato-audio`) — mapped, not written
 
-The catalog the site serves is a **generated, hash-pinned snapshot** of the
-firmware repo. It moves only via:
+The catalog the site serves is a generated, hash-pinned snapshot:
 
 ```sh
 cd website && node scripts/sync-plaits-catalog.mjs --repo ~/Code/eurorack --ref <rev>
 ```
 
-and the deployed builder image must be built from the same revision — a
-snapshot ahead of the builder breaks live builds for every engine whose digest
-changed.
+The deployed builder image must be built from the same revision — a snapshot
+ahead of the builder breaks live builds for every engine whose digest changed.
 
-Files needing edits once the engines exist:
+Files to edit once engines exist: `engines.ts` (origin/tone/colour/label — see
+the §7 correction), `PlaitsEditor.tsx` (origin filter chips ~1888, the two
+label mappings ~1896 and ~1932, the Lab slot count ~635),
+`plaits-palette.css` (`artwork-<tone>`), `flash-budget.ts` (`engineFlashBytes`
++ `engineStereoBytes` + `stereoToggleableEngineIds` — **real ARM measurements,
+taken the documented leave-one-out way**; `plaitsFlashBudget.test.ts` fails on
+drift), `plaitsCatalog.test.ts` (sha256 pin), `plaits-pins.json` (rewritten by
+the sync script).
 
-- `src/components/plaits-palette/engines.ts` — add `"Braids"` to the
-  `EngineOrigin` union, a matching `EngineTone`, an entry in `artworkOrder`, a
-  colour, and the badge label (currently `origin === "Rubato Lab" ? "LABS" : …`).
-- `src/components/plaits-palette/PlaitsEditor.tsx` — the origin filter chips
-  (~line 1888), the two origin label mappings (~1896 and ~1932), and the
-  Rubato-Lab slot count (~635) if Braids engines should count separately.
-- `src/components/plaits-palette/plaits-palette.css` — the `artwork-<tone>` class.
-- `src/components/plaits-palette/flash-budget.ts` — `engineFlashBytes` entries
-  (and `engineStereoBytes` / `stereoToggleableEngineIds` where applicable).
-  **These must be real ARM measurements**, taken the documented leave-one-out
-  way against the live builder; `src/lib/plaitsFlashBudget.test.ts` fails if the
-  catalog and the table drift apart.
-- `src/lib/plaitsCatalog.test.ts` — sha256 pin of `catalog.generated.json`.
-- `src/components/plaits-palette/plaits-pins.json` — rewritten by the sync script.
+## 10. Build order (spec §5)
 
-Also worth doing, and cheap: a **"Braids Classics" preset** alongside stock /
-experimental / Stereo Dreams / Empty in `engines.ts`. Twenty-four slots of the
-OG models is a much stronger hook than the engines scattered through a catalog
-of 50+.
+`z-filter` alone first — 4 models in one slot, no feedback, no DC blocker,
+establishes the 14-step template → then `bowed`, `toy`, `csaw`, `ring-mod` in
+parallel → then `sub-oscillator`, `digital-modulation`, `saw-comb` → then the
+gated three. **Pattern-B stereo landings must serialise** (`toy`, `vowel-fof`,
+`triple` share three files).
 
-## 8. Open items for the local session
+## 11. Open questions for you (spec §8)
 
-1. Implement the engines per the spec, one at a time, running
-   `check --full` + `render` after each.
-2. `check --arm` and `qemu/estimate.py --sweep` on each — the numbers this
-   session could not produce. Expect the spec's flash estimates to move.
-3. Audition on hardware. The specs are argued from source, not from listening;
-   the "zhuzh" parameter ranges in particular want ears on them.
-4. Re-measure the flash table and roll the builder image + website catalog
-   snapshot together.
-5. Decide whether Braids ports get their own catalog origin/badge (the spec
-   assumes `origin: "Braids"`, `author: "Émilie Gillet"`, `packageId
-   braids/<id>`) or fold in under Mutable Instruments.
+1. **Attribution** — see the §7 correction. Must be uniform.
+2. **Ship `raw-fm`?** 3 of 4 knobs replicate `two-op-fm`. A/B it yourself.
+3. **Ship `triple`?** Largely reachable today by other means.
+4. **Preset evictions** — zero-sum, and unanswerable until Wave 1 gives one
+   real `arm-none-eabi-size` number. Recommendation: catalog-only for now.
+5. **`bowed`'s residual octave fold** (17.2 Hz vs Braids' 11.4 Hz) — accept, or
+   spend 4–8 KB of the 16 KB arena.
