@@ -124,7 +124,7 @@ superseded: `csaw` 1,392 → 1,344, `ring-mod` 1,872 → 1,680, `vowel-fof`
 2,640 → 2,704. The other eight are unchanged. **A DSP change re-costs the
 engine** — re-sweep after any of them, not just after adding an engine.
 
-### Measured stereo delta — five Pattern-B ports, and `toy` costs NOTHING
+### Measured stereo delta — six Pattern-B ports, and `toy` costs NOTHING
 
 Container built from the branch head. That matters for layering the numbers
 onto the website: the head CONTAINS the deployed re-calibration revision
@@ -139,16 +139,25 @@ lands at 182,448, exactly the baseline 181,216 plus toy's 1,232 mono marginal).
 | engine | stereo delta |
 |---|---:|
 | toy | **−144** |
+| digital-modulation | 48 |
 | bowed | 112 |
-| csaw | 208 |
+| csaw | 240 |
 | ring-mod | 272 |
 | vowel-fof | 496 |
 
 `toy` shipped as the only Pattern-B port; `bowed`, `csaw`, `ring-mod` and
 `vowel-fof` joined it in `c84a06a`, which gave each a distinct mono AUX voice
-and therefore a second render path worth gating. All five are in the builder's
-`STEREO_MACROS` and in the website's `stereoToggleableEngineIds`; the remaining
-six are Pattern A and want no entry.
+and therefore a second render path worth gating, and `digital-modulation` when
+its stereo render was fixed. All six are in the builder's `STEREO_MACROS` and in
+the website's `stereoToggleableEngineIds`; the remaining five are Pattern A and
+want no entry.
+
+**These move under you.** The set went 1 → 5 → 6 in a single day, and `csaw`'s
+delta moved 208 → 240 between two sweeps hours apart, so re-sweep at the head
+you are actually shipping rather than trusting a number from earlier in the
+branch. `plaitsStereoControls.test.ts` now asserts every engine with a build
+macro HAS an `engineStereoBytes` entry, which turns "a new Pattern-B engine
+landed uncosted" from something you have to notice into a failing test.
 
 **⚠ The measurement is silently meaningless if the engine is not IN the
 palette.** Enabling `PLAITS_STEREO_<X>` for an engine no slot references links
@@ -300,7 +309,7 @@ missing-submodule guard.
    **It widened twice while being fixed.** `toy` was the only Pattern-B port
    when this item was written; `c84a06a` added `bowed`, `csaw`, `ring-mod` and
    `vowel-fof`, and the `digital-modulation` stereo fix added a sixth. Those
-   five DO cost flash and were genuinely uncosted. All six are now measured, in
+   five DO cost flash (48–496 B) and were genuinely uncosted. All six are now measured, in
    `engineStereoBytes` and in `stereoToggleableEngineIds`; the mono marginals
    the AUX rework moved are re-swept too, since a DSP change re-costs an engine.
 
