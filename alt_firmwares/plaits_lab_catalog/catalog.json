@@ -2248,15 +2248,15 @@
       "id": "helix",
       "packageId": "community/helix",
       "name": "Helix",
-      "author": "Rubato Audio",
-      "origin": "Community",
-      "family": "Experimental",
+      "author": "Lyle Mills",
+      "origin": "Rubato Lab",
+      "family": "Chords",
       "description": "A chord stacked across octaves on a Shepard helix, gliding endlessly up or down without ever changing register.",
       "tags": [
-        "community",
-        "experimental",
         "shepard",
-        "chord"
+        "chord",
+        "drone",
+        "glide"
       ],
       "controls": [
         "Chord",
@@ -2283,7 +2283,10 @@
       },
       "sharedModules": [
         "chord-bank"
-      ]
+      ],
+      "artwork": {
+        "color": "#5796E4"
+      }
     }
   ],
   "manuals": {
