@@ -249,6 +249,8 @@ target.
 | July 27, 2026 (custom-bank naming in the bank map, manual contract 6) | `94e84165ea2a` | `rev-94e84165ea2a` |
 | July 28, 2026 (Helix — first community engine) | `b9e1671a09f4` | `rev-b9e1671a09f4` |
 | July 28, 2026 (Helix 0.2.0 — metadata + contributor colour) | `d43bb37fa88d` | `rev-d43bb37fa88d` |
+| July 28, 2026 (AUX rework allowlist regen) | `2782e70be79c` | `rev-2782e70be79c` |
+| July 29, 2026 (schema 14, optional calibration procedure, manual contract 7) | `9e04ca2bf0d5` | `rev-9e04ca2bf0d5` |
 
 Three consequences a rollback has that a forward deploy does not:
 
