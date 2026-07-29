@@ -19,12 +19,27 @@ sys.path.insert(0, '/work/alt_firmwares/plaits_lab_builder')
 import container_server as cs
 
 BASE = json.load(open('/work/alt_firmwares/plaits_lab_builder/default_recipe.json'))
+# The slots MUST be the catalog's stock-24 preset, not default_recipe.json's own
+# list. They differ: the default recipe carries glisson/gendy/scanned/pulsar
+# where stock-24 carries the three DX7 banks and wave-terrain, which is about
+# 24.6 KB of six-op core and factory patches. flash-budget.ts's marginals were
+# all measured in the stock-24 context, and a marginal only means anything
+# against the context it was measured in -- code shared with an engine that is
+# present is already paid for, so the same engine measures differently in a
+# palette that lacks its neighbours. Measuring in the wrong base is silent: the
+# builds succeed and the numbers look plausible.
+_CATALOG = json.load(open('/work/alt_firmwares/plaits_lab_catalog/catalog.json'))
+BASE['slots'] = list(_CATALOG['presets']['stock'])
 SPEECH = BASE['slots'].index('speech')
 # The duplicate that stands in for Speech in the baseline.
 FILLER = 'virtual-analog'
 
-NEW = ['z-filter', 'toy', 'csaw', 'bowed', 'ring-mod', 'sub-oscillator',
-       'digital-modulation', 'saw-comb', 'vowel-fof', 'raw-fm', 'triple']
+# Engines to measure. Override from the command line so a re-measure of a
+# handful of new engines does not need the image rebuilt:
+#   python3 flash_sweep.py brass shakers bytebeat
+NEW = sys.argv[1:] or [
+    'z-filter', 'toy', 'csaw', 'bowed', 'ring-mod', 'sub-oscillator',
+    'digital-modulation', 'saw-comb', 'vowel-fof', 'raw-fm', 'triple']
 
 
 def measure(tag, engine_id):
@@ -58,9 +73,34 @@ def measure(tag, engine_id):
     return total
 
 
+# CONTROLS: engines whose marginal flash-budget.ts already records. They are
+# measured in the same pair as the new engines, so if they reproduce their
+# published values the method and the base line up and the new numbers can be
+# trusted as if measured against the deployed builder. This is the same check
+# the Helix measurement used (Speech re-measured 23,296 against a published
+# 23,312 -- a 16 B agreement). If a control does NOT reproduce, stop: the
+# toolchain or the base moved, and every new marginal is being compared against
+# a different baseline than the rest of the table.
+CONTROLS = {'speech': 23_312, 'reed-pipe': 2_000, 'spectral-spiral': 2_064}
+
 base = measure('BASELINE(dup)', FILLER)
 if base is None:
     sys.exit(1)
+print('--- controls (expect the published value) ---', flush=True)
+drift = False
+for engine_id, published in CONTROLS.items():
+    total = measure(engine_id, engine_id)
+    if total is None:
+        drift = True
+        continue
+    got = total - base
+    delta = got - published
+    print('  %-18s %7d  published %7d  delta %+d%s'
+          % (engine_id, got, published, delta,
+             '   <-- DRIFT' if abs(delta) > 64 else ''), flush=True)
+    if abs(delta) > 64:
+        drift = True
+
 print('--- marginal cost, bytes ---', flush=True)
 results = {}
 for engine_id in NEW:
@@ -68,3 +108,8 @@ for engine_id in NEW:
     if total is not None:
         results[engine_id] = total - base
 print(json.dumps(results, indent=2), flush=True)
+if drift:
+    print('\nA CONTROL DRIFTED. Do not paste these into flash-budget.ts until '
+          'the base is reconciled -- the whole table would be inconsistent.',
+          flush=True)
+    sys.exit(2)

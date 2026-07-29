@@ -10,6 +10,7 @@
 #include <cmath>
 
 #include "stmlib/dsp/dsp.h"
+#include "stmlib/dsp/units.h"
 #include "stmlib/utils/random.h"
 
 namespace plaits {
@@ -87,8 +88,11 @@ void BrassEngine::Render(
   // which is where the growl and the split multiphonic come from. It is not a
   // tuning control and will not stay in tune.
   const float slide = 0.5f + parameters.macro;
+  // SemitonesToRatio, not powf: the firmware is bare-metal and libm's powf
+  // pulls in __errno, which does not link (helix_engine.cc has the full note).
+  // Cents/100 is semitones, and the LUT is exact enough for a pull this small.
   float length = kSampleRate / bore_frequency *
-      powf(2.0f, pull_cents / 1200.0f) * slide;
+      SemitonesToRatio(pull_cents * 0.01f) * slide;
   CONSTRAIN(length, 8.0f, float(kBrassDelaySize - 2));
 
   const float actual_bore = kSampleRate / length;
@@ -171,8 +175,10 @@ void BrassEngine::Render(
     }
 
     // Bernoulli flow through the opening.
+    // stmlib::Sqrt is one VSQRT instruction on the M4F; sqrtf is a libm call
+    // that both fails to link here (__errno) and costs far more per sample.
     const float flow = opening *
-        (delta >= 0.0f ? sqrtf(delta) : -sqrtf(-delta));
+        (delta >= 0.0f ? Sqrt(delta) : -Sqrt(-delta));
 
     const float p_plus = p_minus + kBrassBoreImpedance * flow;
     junction_ = p_plus + p_minus;

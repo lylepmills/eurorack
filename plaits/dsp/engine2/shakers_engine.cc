@@ -10,7 +10,9 @@
 #include <cmath>
 
 #include "stmlib/dsp/dsp.h"
+#include "stmlib/dsp/units.h"
 #include "stmlib/utils/random.h"
+#include "plaits/dsp/oscillator/sine_oscillator.h"
 
 namespace plaits {
 
@@ -98,8 +100,45 @@ enum ShakerMechanism {
   SHAKER_MECHANISM_WATER = 2
 };
 
+// The firmware is bare-metal, so libm's powf/logf/cosf cannot link -- they pull
+// in __errno (helix_engine.cc carries the full note, and this engine reached a
+// flash sweep before anyone tried to link it for the target). Only a log2 is
+// missing: Exp2Safe covers exp2 and the sine LUT covers cos. Same minimax
+// polynomial helix uses, and the same reason for a polynomial over a rational
+// -- VDIV is multi-cycle and not pipelined on this core.
+inline float FastLog2(float x) {
+  union { float f; uint32_t i; } u = { x };
+  const float e = static_cast<float>((u.i >> 23) & 0xFFu) - 127.0f;
+  u.i = (u.i & 0x007FFFFFu) | 0x3F800000u;   // mantissa -> [1, 2)
+  const float m = u.f;
+  return e + (-1.7417939f + (2.8212026f + (-1.4699568f
+             + (0.44717955f - 0.056570851f * m) * m) * m) * m);
+}
+
+// cos(2*pi*x) from the shared sine LUT. Sine(t) is sin(2*pi*t), so this is
+// Sine(x + 0.25). Callers pass f/kSampleRate with f constrained to
+// (0, 0.49*kSampleRate], so the argument stays inside (0.25, 0.74] -- Sine is
+// only documented safe for a non-negative phase, and a bipolar argument indexes
+// lut_sine out of bounds.
+inline float CosTwoPi(float x) {
+  return Sine(x + 0.25f);
+}
+
 // Rate-corrects a per-sample decay or filter radius from 44.1 kHz to 48 kHz so
 // its time constant, not its per-sample value, is preserved.
+//
+// This needs FAR more precision than a pitch conversion does, and that is not
+// obvious. The coefficients run to 0.9999, where ln(c) is -1e-4 -- so an
+// approximation with 1e-4 of ABSOLUTE error, which is perfectly good for a
+// pitch ratio, carries 100% error here and rewrites the decay time of the
+// instrument. FastLog2 and the SemitonesToRatio LUT are both in that class;
+// using them cost 20-40 dB across the selector and was caught only by
+// re-measuring levels.
+//
+// Both series below are exact where it matters (c near 1, y near 0) and are
+// evaluated at most a few times per instrument change, so the extra terms are
+// free. ln via atanh: ln(c) = 2*atanh(z), z = (c-1)/(c+1), which for the
+// coefficients in this table keeps |z| <= 0.25 and converges fast.
 inline float RateCorrect(float coefficient) {
   if (coefficient <= 0.0f) {
     return 0.0f;
@@ -107,7 +146,14 @@ inline float RateCorrect(float coefficient) {
   if (coefficient >= 1.0f) {
     return 1.0f;
   }
-  return powf(coefficient, kShakersReferenceRate / kSampleRate);
+  const float z = (coefficient - 1.0f) / (coefficient + 1.0f);
+  const float z2 = z * z;
+  const float ln_c = 2.0f * z *
+      (1.0f + z2 * (1.0f / 3.0f + z2 * (0.2f + z2 * (1.0f / 7.0f))));
+  const float y = kShakersReferenceRate / kSampleRate * ln_c;
+  // exp(y) for y in about [-0.5, 0]; terms to y^6 hold ~1e-6 over that range.
+  return 1.0f + y * (1.0f + y * (0.5f + y * (1.0f / 6.0f + y *
+      (1.0f / 24.0f + y * (1.0f / 120.0f + y * (1.0f / 720.0f))))));
 }
 
 inline float Noise() {
@@ -218,7 +264,9 @@ void ShakersEngine::Render(
   // MACRO is upstream's object-count control verbatim, and its own mapping
   // already puts the measured value at the detent: at 0.5 this is baseObjects.
   num_objects_ = 2.0f * parameters.macro * p.num_objects + 1.1f;
-  current_gain_ = logf(num_objects_) * p.gain / num_objects_;
+  // ln(x) = log2(x) * ln(2)
+  current_gain_ = FastLog2(num_objects_) * 0.69314718f * p.gain /
+      num_objects_;
   // 48 kHz gives 8.8% more chances per second for a collision than the rate
   // these counts were tuned at, so the threshold is scaled to hold the
   // real-time density.
@@ -238,7 +286,7 @@ void ShakersEngine::Render(
   for (int i = 0; i < p.num_resonances; ++i) {
     float f = frequency_[i] * note_ratio_;
     CONSTRAIN(f, 1.0f, 0.49f * kSampleRate);
-    a1_[i] = -2.0f * radius_[i] * cosf(2.0f * float(M_PI) * f / kSampleRate);
+    a1_[i] = -2.0f * radius_[i] * CosTwoPi(f / kSampleRate);
     a2_[i] = radius_[i] * radius_[i];
   }
 
@@ -321,7 +369,7 @@ void ShakersEngine::Render(
             float f = water_frequency_[k] * note_ratio_;
             CONSTRAIN(f, 1.0f, 0.49f * kSampleRate);
             a1_[k] = -2.0f * radius_[k] *
-                cosf(2.0f * float(M_PI) * f / kSampleRate);
+                CosTwoPi(f / kSampleRate);
           } else {
             gain_[k] = 0.0f;
           }
@@ -340,7 +388,7 @@ void ShakersEngine::Render(
                   (1.0f + p.vary_factor * Noise());
               CONSTRAIN(f, 1.0f, 0.49f * kSampleRate);
               a1_[k] = -2.0f * radius_[k] *
-                  cosf(2.0f * float(M_PI) * f / kSampleRate);
+                  CosTwoPi(f / kSampleRate);
             }
           }
         }
