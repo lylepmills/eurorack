@@ -9,14 +9,24 @@ spec; where the two conflict, this file is the one with numbers behind it.**
 
 Branch: `claude/braids-engines-plaits-palette-je03ac` (both repos).
 
-**This file is MIRRORED — edit both copies in the same change.** It lives at
-`eurorack:alt_firmwares/BRAIDS_PORT_PROGRESS.md` and at
-`rubato-audio:BRAIDS_PORT_PROGRESS.md`, because the work spans both repos and
-either side needs the whole picture. Nothing enforces the mirror, so it drifts
-silently: on 2026-07-28 the two had diverged in OPPOSITE directions — one repo's
-session closed open item 1 in its copy, another closed item 3 in the other, and
-each copy still listed the other's item as open. If you close an item, close it
-in both; `diff` the two before trusting either.
+**THIS FILE IS THE SOURCE. Edit it here.** It is mirrored into
+`rubato-audio:BRAIDS_PORT_PROGRESS.md` — the work spans both repos and either
+side needs the whole picture — but that copy is now **generated**, opens with a
+DO-NOT-EDIT banner, and is overwritten by:
+
+```
+rubato-audio$ shared/coord/sync-braids-progress.sh --repo <this-checkout>
+rubato-audio$ shared/coord/sync-braids-progress.sh --check   # verify only
+```
+
+Run the sync in the same change that edits this file, so the two land together.
+
+The mirror used to be hand-kept, and it drifted silently: on 2026-07-28 the two
+copies had diverged 245 lines in OPPOSITE directions — one repo's session closed
+open item 1 in its copy, another closed items 3/4 in the other, and each copy
+still listed the other's as open. Neither was a superset, so **both actively
+misled about what was still open**. Asking people to remember two copies did not
+work; generating one from the other is the fix.
 
 ---
 
