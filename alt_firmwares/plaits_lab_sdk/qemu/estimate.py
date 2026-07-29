@@ -175,6 +175,8 @@ def main() -> int:
     # with nothing in TRIG -- the calibration condition. patched-idle = 0.
     parser.add_argument("--trigger", choices=("unpatched", "patched-idle"),
                         default="unpatched")
+    parser.add_argument("--stereo", action="store_true",
+        help="measure the stereo (OUT/AUX as L/R) render path instead of mono")
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--sweep", action="store_true",
         help="measure several parameter positions and report the worst")
@@ -257,7 +259,8 @@ def main() -> int:
                      f"-DPLAITS_QEMU_MACRO={macro}f",
                      f"-DPLAITS_QEMU_TIMBRE={timb}f",
                      f"-DPLAITS_QEMU_NOTE={note}f",
-                     f"-DPLAITS_QEMU_TRIGGER={2 if args.trigger == 'unpatched' else 0}"],
+                     f"-DPLAITS_QEMU_TRIGGER={2 if args.trigger == 'unpatched' else 0}",
+                     f"-DPLAITS_QEMU_STEREO={1 if args.stereo else 0}"],
                     f"/output/h_{name}_{label}.elf", args.image, [])))
         if args.profile:
             # The symbol table is what turns PC buckets into function names.

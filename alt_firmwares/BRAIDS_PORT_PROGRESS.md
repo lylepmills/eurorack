@@ -177,6 +177,18 @@ missing-submodule guard.
    genuinely DIFFERENT voice. Worth exploring whether any of the eleven could
    carry a meaningful distinct AUX for parity. Open design question, not a
    defect.
+   **→ Explored and costed in `BRAIDS_PORT_AUX_PROPOSAL.md`; awaiting Lyle's
+   decision before any engine code moves.** Short version: the conflict between
+   "a useful second output" and "a good right channel" is real, and twelve
+   stock engines already resolve it by rendering the two modes SEPARATELY off
+   `parameters.stereo` and dropping the mono AUX voice in stereo — ten of these
+   eleven collapse both modes into one render, which no stock engine does. Six
+   of the eleven are already at or above the real stock bar; four are worth
+   changing (`ring-mod` at −17 points of CPU, `bowed`, `csaw`, `vowel-fof`);
+   `z-filter` is a genuine no. Two defects fell out on the way: `csaw`'s OUT
+   and AUX are bit-identical at HARMONICS noon (measured, so its stereo image
+   collapses to mono there), and `digital-modulation`'s `stereo_capable()`
+   comment describes an I/Q split the code does not do.
 
 6. **`fluted` is still gated** on the §3.11 mode-tracking measurement, to be run
    BEFORE writing code. If MORPH below noon does not track f0, drop the engine

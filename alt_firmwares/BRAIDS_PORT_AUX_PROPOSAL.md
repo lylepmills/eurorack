@@ -1,0 +1,422 @@
+# AUX designs for the eleven Braids ports — proposal
+
+Answers open item 5 of `BRAIDS_PORT_PROGRESS.md` ("AUX designs are all
+stereo-split shaped"). Nothing here is implemented; this is the design
+argument plus measured CPU, to be decided before any code lands.
+
+Branch: `claude/braids-engines-plaits-palette-je03ac`. `PROGRESS §N` refers to
+`BRAIDS_PORT_PROGRESS.md`; this document's own sections are called parts.
+Measurements: `qemu/estimate.py --sweep`, local `plaits-lab-builder:local`,
+all eleven baselines re-run and reproduced to within a point of PROGRESS §1.
+
+---
+
+## 1. The tension, and why it is already settled in the tree
+
+The brief was to resolve, before designing anything, whether OUT and AUX can
+serve two masters — two independently patched mono outputs, and an L/R pair —
+or whether a genuinely different AUX voice necessarily makes a poor right
+channel.
+
+**It does make a poor right channel. And the firmware already knows that.**
+
+`Patch::aux_output_option` (voice.h:154) is a global module setting with three
+values: `0` the engine's own aux model, `1` stereo, `2` suboscillator.
+`voice.cc:193` turns option 1 into `parameters.stereo` and hands it to the
+engine, but only for engines reporting `stereo_capable()`. So an engine is
+free to render **two different things and pick per block**. The two masters
+were never meant to share one render.
+
+Every stock engine with a stereo mode uses that freedom the same way: it keeps
+a distinct AUX voice for mono and **drops it entirely** in stereo, building
+the L/R pair out of OUT's own constituents instead.
+
+| stock engine | mono AUX | in stereo |
+|---|---|---|
+| `virtual-analog` | monster-sync oscillator | dropped; the two constituent oscillators pan apart |
+| `granular-formant` | Z-oscillator | dropped; the two grainlets pan apart |
+| `wavetable` | 5-bit bitcrush of OUT | dropped; a second 8-point read half a wave-cycle away |
+| `waveshaping` | sine/overtone blend of `lut_fold_2` | dropped; the two folder tables pan to 0.25 / 0.75 |
+| `harmonic` | 8 organ harmonics | **not rendered**; the 24 harmonics spread by index |
+| `swarm` | swarm of sines | **not rendered**; the sawtooths spread by detune |
+| `inharmonic-string` | raw exciter bus | **not rendered**; the three strings pan round-robin |
+| `modal-resonator` | raw exciter | **not sent to AUX**; even/odd modes lean L/R |
+| `particle-noise` | raw random pulses | **not sent to AUX**; particles pan to fixed positions |
+| `chords` | inversion subset, boosted | boost dropped; each note pans by voice position |
+| `filtered-noise` | sum of both sources through BPs | second source through an identical multimode filter |
+| `speech` | the secondary formant path | MACRO mix replaced by an equal-power pan of the two paths |
+
+Twelve engines, twelve times the same answer. There is no case in the tree of
+a mono AUX voice being reused as a right channel.
+
+**So the anomaly is not that the eleven Braids AUX designs are "stereo partner
+shaped." It is that ten of the eleven collapse the two modes into a single
+render, which no stock engine does.** Ten of them hardcode `stereo_capable() {
+return true; }` with no `parameters.stereo` branch and no `PLAITS_STEREO_<X>`
+entry in `stereo_config.h` — one render serving both masters, which is exactly
+the compromise the stock firmware refuses to make. `toy` is the sole exception
+and already has the split (`toy_engine.cc:123`, `:140`).
+
+### What the split costs
+
+- **CPU: nothing.** The branches are mutually exclusive, so per-block cost is
+  `max(mono, stereo)`, not the sum. A distinct AUX voice only has to fit
+  *instead of* the current partner. This is the point that makes the whole
+  question tractable given PROGRESS §3.6 — the "no second render path" rule
+  was about rendering AUX **in addition to** its partner, and a Pattern B
+  branch never does that.
+- **Flash: the real price.** Both branches are compiled in. Mitigated by the
+  existing per-engine gate: a recipe that leaves an engine in mono gets
+  `-DPLAITS_STEREO_<X>=0` and the stereo branch is dead-stripped. Measure with
+  `flash_sweep.py` before committing; none of the four changes below adds a
+  new algorithm, only a second combination of state already computed.
+- **RAM: whatever the second voice needs is permanent**, since both branches
+  live in one object. Three of the four proposals below *free* state.
+
+---
+
+## 2. Two gaps in the measurement rig, found on the way
+
+**`harness.cc:83` pins `p.stereo = false`.** Every CPU number in PROGRESS §1
+is the mono path. For the ten Pattern-A engines that is the same code either
+way, so those numbers stand unchanged. For `toy` it means the reported 35%
+**excludes its entire stereo branch** — a second hold counter, a second
+downsampler accumulate and a second DC blocker *per sub-sample*, i.e. most of
+the inner loop again. That pairs with open item 3, which already notes `toy`'s
+stereo *flash* is uncosted; the CPU is uncosted too.
+
+A `--stereo` flag (`PLAITS_QEMU_STEREO`, four lines in `harness.cc` +
+`estimate.py`) closes this, and is a prerequisite for measuring any Pattern B
+engine. Prototyped in this session's scratch worktree, it puts **`toy`'s
+stereo path at 248.5 instructions/sample — 48% of budget, against the 35% the
+table reports.** A thirteen-point gap that nothing in the tooling could
+previously see, on the one engine the table already describes as split.
+
+**`harness.cc:78` pins `p.morph = 0.5f`, and `SWEEP_POSITIONS` never moves
+it.** The sweep varies harmonics, timbre, macro and note only. Several of
+these engines put their most expensive state on MORPH: `raw-fm`'s WTFM chaotic
+branch, `triple`'s sine region (three extra `Sine()` reads per sample),
+`sub-oscillator`'s sub level, `toy`'s clock tracking. So "worst case" is a
+worst case over four of five axes. Not urgent, but it means a MORPH-gated cost
+can hide — and `ring-mod` already has an explicit `modulated = depth > 0.001f`
+fast path that the sweep can never exercise the expensive side of, because
+`depth` *is* MORPH.
+
+---
+
+## 3. Where the eleven actually sit
+
+The premise of open item 5 is that most Plaits engines give AUX a genuinely
+different voice. Measured against the actual stock inventory above, that bar
+is lower than it sounds. Of sixteen stock engine classes, six carry a second
+*voice* (`virtual-analog`, `granular-formant`, `two-op-fm` and the three
+drums), seven carry a variant of the same voice, and three carry a raw
+exciter.
+
+Judged against that real bar rather than an idealised one:
+
+| engine | current AUX | verdict |
+|---|---|---|
+| `sub-oscillator` | bare sub at full level | **at bar** — literally `two-op-fm`'s design |
+| `raw-fm` | the modulator sine | **at bar** — the operator you cannot otherwise hear |
+| `digital-modulation` | the symbol staircase | **above bar** — nothing stock emits a control signal |
+| `toy` | unfiltered/aliased copy | **at bar** — literally `wavetable`'s bitcrush AUX |
+| `saw-comb` | a comb tap a fifth up | **at bar** — a different comb pitch is a different note |
+| `triple` | the undetuned root | **at bar** — comparable to `chords`' inversion subset |
+| `bowed` | neck pickup | **below** — same string, same body filter, moved |
+| `csaw` | mirrored notch depth | **below** — OUT with one knob moved |
+| `ring-mod` | carrier × mod 1 | **below** — reachable from OUT by turning MORPH down |
+| `vowel-fof` | reversed formant weighting | **below** — a second weighting of one sum |
+| `z-filter` | the complementary model | **below, but no alternative exists** (part 4 below) |
+
+Six are already at or above parity. Four are worth changing. One is a genuine
+no.
+
+---
+
+## 4. Per-engine proposals
+
+Costs are `estimate.py --sweep` worst-case instructions/sample and the tool's
+budget percentage. "Prototype" numbers come from a throwaway patch in a
+scratch worktree that replaces the current AUX with the candidate; nothing is
+committed to the branch. All eleven baselines were re-run first and reproduce
+PROGRESS §1 to within a point.
+
+**Read the deltas this way.** Under Pattern B the *stereo* branch keeps
+today's render, so today's number becomes the stereo cost and the prototype
+number becomes the mono cost. Peak cost is `max(mono, stereo)` — and since all
+four candidates measure *cheaper* than what they replace, **peak CPU is
+unchanged in every case** and mono mode gets cheaper. No proposal here spends
+CPU.
+
+| engine | baseline (= stereo after) | prototype (= mono after) | mono delta |
+|---|---:|---:|---:|
+| `csaw` | 60.1 / 12% | 59.3 / 11% | −0.8 |
+| `bowed` | 190.3 / 37% | 177.3 / 34% | −13.0 |
+| `ring-mod` | 358.5 / 69% | 271.4 / **52%** | **−87.1** |
+| `vowel-fof` | 376.3 / 72% | 366.2 / 70% | −10.1 |
+| `toy` (already split) | 180.3 / 35% mono | 248.5 / **48%** stereo | *(unmeasured until now)* |
+
+### bowed — CHANGE. Mono AUX = the bow exciter.
+
+Current AUX runs the neck tap through *its own copy of the same body filter* —
+the same string, the same resonator, a different pickup position. That is a
+stereo partner by construction and nothing else.
+
+Proposal: mono AUX carries `new_velocity`, the stick-slip friction output,
+before the string and the body. Precedent is unambiguous —
+`inharmonic-string`, `modal-resonator` and `particle-noise` all put the raw
+exciter on AUX, and all three drop it in stereo. It is different in kind
+rather than in placement: a dry, pitchless scrape you can patch into something
+else, against a resonated bowed string on OUT.
+
+Cost: **177.3 / 34%**, against a 190.3 / 37% baseline — 13.0 instructions per
+sample cheaper. The change removes a two-pole body biquad and a one-pole tilt
+filter per sample, and frees `body_aux_y0_`, `body_aux_y1_`,
+`tilt_state_aux_`.
+
+Stereo branch: keep bridge/neck exactly as it is. It is a good L/R pair; the
+argument is only that it is a poor second *voice*.
+
+Risk: the exciter's level tracks pressure and bow velocity rather than sitting
+near the string's operating point, so `post_processing_settings.aux_gain`
+needs re-deriving and the SDK audio-health gate needs re-running on it.
+
+### csaw — CHANGE. Mono AUX = a variable-width pulse off the same transitions.
+
+Current AUX is the same waveform with the notch depth taken from the mirrored
+HARMONICS position. Two problems.
+
+It is OUT with one knob moved — the weakest of the eleven by some distance.
+
+And because the mirror is exact, `target_depth == target_depth_aux` at
+HARMONICS noon, and so does the DC term that travels with it. **Measured on a
+host build: at HARMONICS 0.50, `max|out − aux|` is exactly `0.000e+00` across
+300 blocks at an output RMS of 0.46 — the two jacks are bit-identical. At 0.40
+and 0.60 the difference is 0.142.** So the stereo image collapses to mono at
+the centre of the knob, and a mono patcher gets one signal on two jacks there.
+`saw-comb` explicitly guards against exactly this failure (it inverts the tap
+ratio rather than clamping both taps together, "which would collapse the
+stereo image to mono at the bottom of TIMBRE"); `csaw` does not.
+
+Proposal: mono AUX carries a variable-width pulse — `+1` on the saw segment,
+`−1` on the plateau — BLEP'd off the *same two transitions* OUT already
+computes, with its duty-dependent mean removed at block rate (one subtract, no
+DC blocker, no state). Saw on OUT and PWM square on AUX is the oldest dual-VCO
+pairing there is, and TIMBRE already sweeps the duty.
+
+Cost: **59.3 / 11%**, against a 60.1 / 12% baseline — 0.8 instructions per
+sample, i.e. a wash. A square has no slope discontinuity, so both
+integrated-BLEP pairs disappear, but that is most of what there was to save.
+
+I expected the `plateau_slope_aux` divide to go with them and it does not:
+measured divides are 1.40/sample before and 1.38 after. GCC already sinks both
+plateau-slope computations into the transition branches where they are used,
+so at ~523 Hz they cost about 0.01 divides per sample each, not one. The
+divide budget here is `phase_/pw`, `(phase_ − pw)/(1 − pw)` and the BLEP
+fractions, none of which this change touches. **Take csaw on the musical
+argument and the noon-collapse fix; there is no CPU argument.**
+
+Stereo branch: keep the mirrored notch, and fix the noon collapse separately —
+it is a defect regardless of what happens to mono AUX.
+
+Risk: none material. `csaw` has more CPU headroom than any other engine in the
+port.
+
+### ring-mod — CHANGE. Mono AUX = modulator 1 as a bare sine.
+
+Current AUX is `carrier × mod1` against OUT's `carrier × mod1 × mod2`. The two
+outputs are two points on one knob: turn MORPH down and OUT walks toward AUX.
+
+Proposal: mono AUX carries `SineNoWrap(modulator_phase_)` — modulator 1 alone,
+at note + detune 1. Its increment is clamped to MIDI 128 (13.29 kHz, the
+`kRingModMaxPitch` ceiling), comfortably under Nyquist at 48 kHz, so it needs
+**neither the shaper nor the halfband**.
+
+Cost: **271.4 / 52%**, against a 358.5 / 69% baseline — **87.1 instructions
+per sample, seventeen points of budget.** By far the largest CPU move
+available anywhere in the port. It drops one `Overdrive` per sub-sample and
+the entire 15-tap `Decimate` per output sample, and frees the 64-byte
+`history_aux_`.
+
+And the measured divide count goes **4.00 → 2.00 per sample**, exactly halved:
+`Overdrive` is `SoftLimit(2x)`, a Padé form carrying one divide. PROGRESS
+§3.13 says to treat 69% as a floor precisely because qemu prices a VDIV at one
+instruction where an M4 spends about fourteen. Carrying that correction
+through, the real figures are roughly **73% → 54%** rather than 69% → 52%.
+This is the one change in the port that buys headroom back on the number the
+progress doc says to distrust, and it buys a lot of it.
+
+Stereo branch: keep the 3-way/2-way pair.
+
+Risk, stated plainly: a bare sine is a thin AUX voice, and this is the weakest
+*musical* case of the four changes. It earns its place on the CPU argument as
+much as the parity one. If the sine reads as too plain in listening, the
+fallback is `mod1 × mod2` without the carrier (the difference-tone bed), which
+is more interesting but needs the decimator back and therefore gives up most
+of the saving.
+
+### vowel-fof — CHANGE, with a caveat. Mono AUX = the glottal source.
+
+Current AUX is the same five SVF taps summed under the reversed formant
+weighting — a second weighting of one sum, closest in the tree to `harmonic`'s
+24-vs-8 or `waveshaping`'s two folder tables.
+
+Proposal: mono AUX carries the excitation ahead of the bank — the saw
+crossfaded to noise by HARMONICS, at one neutral noise makeup computed at
+block rate. Precedent is the same raw-exciter trio as `bowed`, and it is the
+natural sibling of `speech`, whose AUX is its secondary path.
+
+Cost: **366.2 / 70%**, against a 376.3 / 72% baseline — 10.1 instructions per
+sample, two points, on the engine with the least headroom in the port. It
+drops five multiply-accumulates and five array reads per sample and adds about
+three ops.
+
+Caveat, because it decides this one: at HARMONICS 0 the source is a bare saw,
+which is a thin AUX voice, and the reversed weighting is at least always
+*vocal*. Two points of budget is real but it is not the seventeen `ring-mod`
+returns, so the CPU argument does not break the tie on its own. **This is the
+one of the four I would put to a listening test rather than just land** — and
+keeping is entirely defensible.
+
+Stereo branch: keep the two weightings.
+
+### z-filter — KEEP. There is no alternative that does not collide with OUT.
+
+This is the genuine no, and it is worth stating why rather than just
+declining.
+
+The engine has exactly two constituents: the windowed sine-resonator burst
+(`saw_tri_signal`) and the pulse-or-integrator (`square_signal`). OUT is a
+MORPH-controlled crossfade between precisely those two, with `balance = 1 −
+|2·morph − 1|`. So:
+
+- AUX = the resonator burst collides with OUT at **both ends** of MORPH, where
+  balance is 0.
+- AUX = the pulse/integrator collides with OUT at the **centre**, where
+  balance is 1.
+
+The complementary filter model is the only second signal available here that
+is never equal to OUT anywhere in the knob's travel. It also already survived
+the CPU fight documented in PROGRESS §3.6 (94% from its own resonator pair,
+62% sharing OUT's phases). Leave it.
+
+### sub-oscillator — KEEP. It already meets the bar.
+
+AUX is the bare sub at full level, deliberately not blend-scaled. This is
+stock `two-op-fm`'s AUX design essentially verbatim ("sub-oscillator, half
+frequency"). It has its own pitch, its own waveform and its own
+MACRO-controlled pulse width, and the "full level, not mix-scaled" call in the
+header is exactly the decision that makes it a voice rather than a partner — a
+mix-scaled sub would vanish at MORPH noon, which is where anyone would look
+for it.
+
+Nothing to do.
+
+### raw-fm — KEEP.
+
+AUX is the modulator sine: the operator you cannot otherwise hear, at a
+quantized ratio to the carrier, already computed for OUT and therefore free.
+Same reasoning as `sub-oscillator`; same stock precedent.
+
+Nothing to do.
+
+### digital-modulation — KEEP the mono AUX. FIX the stereo render and the comment.
+
+The mono AUX — the symbol staircase — is **above** the stock bar, not below
+it. Nothing in the stock palette emits a control signal; this is a stepped LFO
+whose rate is TIMBRE and whose pattern is the packet structure, becoming a
+voice only at high TIMBRE and mid-to-high pitch. That is more distinct than
+most stock AUX designs.
+
+Two things are wrong, both on the stereo side:
+
+1. **The `stereo_capable()` comment describes code that does not exist.** It
+   says "Pattern A: I on one side, Q on the other … each channel peaks at
+   0.705 against the mono 0.997, so stereo is ~3 dB quieter (R13)". The render
+   is `out[i] = shaped_i_ * in_phase + shaped_q_ * quadrature` and `aux[i] =
+   dc_aux_out_`, the DC-blocked staircase (`digital_modulation_engine.cc:148`,
+   `:158`). Note the arithmetic in that comment is right *for the design it
+   describes* — R·√2 mono against R per channel really is 3 dB. It is right
+   about a render this engine does not do.
+2. **The actual stereo render is a DC-blocked stepped LFO hard right.** Of all
+   eleven, this is the one whose stereo behaviour is genuinely bad.
+
+The fix is the I/Q pair the comment already describes, and it is *cheaper*
+than what runs now: `in_phase` and `quadrature` are both computed every sample
+already, so the stereo branch becomes one multiply per channel instead of two
+multiplies and an add, and skips the staircase's DC blocker entirely. This is
+the one place in the port where Pattern B is needed for the **stereo** side
+rather than the mono one.
+
+### triple — KEEP.
+
+AUX is the undetuned root voice alone: a clean pitch reference against a
+beating three-voice mix, free because voice 0 is rendered regardless.
+Comparable to stock `chords` (all notes on OUT, the inversion subset on AUX).
+
+One alternative worth naming and not forcing: AUX could carry the **two
+detuned voices without the root** — equally free, and arguably more distinct
+(pure beating with no fundamental under it). That is a taste call for a
+listening test, not a correctness argument. My weak preference is to leave it;
+the clean root is the more *useful* of the two, and usefulness is what AUX is
+for.
+
+### toy — KEEP the shape. Measure the cost.
+
+`toy` is the only one of the eleven that already does this correctly: mono AUX
+is the same stream with no reconstruction filter (matching stock `wavetable`'s
+bitcrush AUX exactly), and stereo replaces it with a second hold clock 2.93%
+fast. It is the worked example for the other four.
+
+What is missing is numbers. Its 35% is the mono path only, because the harness
+pins `p.stereo = false`. Measured with the `--stereo` flag, its stereo path is
+**248.5 instructions/sample, 48% of budget** — thirteen points above the
+figure PROGRESS §1 reports for it, and its true peak. Still comfortable, but
+the table should carry both numbers rather than the smaller one.
+
+This is also the clearest evidence for the whole proposal: a Pattern B
+engine's two branches really do cost materially differently, which is why the
+split is what lets a distinct AUX voice exist at all.
+
+---
+
+## 5. What I would do, in order
+
+1. **Land the harness `--stereo` flag** (`PLAITS_QEMU_STEREO`). Small, and
+   nothing else here can be costed without it. Add `toy`'s stereo number to
+   PROGRESS §1 next to its mono one; the table currently reports one path and
+   implies two.
+2. **Fix `digital-modulation`.** The stale `stereo_capable()` comment is a
+   documentation defect on a shipped engine, and the I/Q stereo render it
+   describes is both correct and nearly free. Independent of everything else
+   here.
+3. **Fix `csaw`'s HARMONICS-noon stereo collapse.** Also independent of the
+   AUX question, and the same class of bug `saw-comb` already guards against.
+4. **Convert `ring-mod` to Pattern B.** Seventeen measured points of budget
+   (roughly nineteen once the VDIV correction is applied), on the engine
+   PROGRESS §3.13 singles out as reading optimistically. Worth doing for the
+   CPU alone even if the parity argument were thrown out. Wants a listening
+   pass on the bare-sine AUX before it lands — that is the weakest musical
+   case of the four.
+5. **Convert `bowed`.** Clean parity win, three points cheaper, three floats
+   of state freed, and the raw exciter is the best-precedented AUX design in
+   the tree.
+6. **Convert `csaw`** — but on the musical argument only. The measured CPU
+   change is a wash and the doc above says so.
+7. **Take `vowel-fof` to a listening test.** Two points is not enough to
+   decide it on CPU, and the reversed weighting has a real virtue the glottal
+   source lacks: it is always vocal.
+8. Leave `z-filter`, `sub-oscillator`, `raw-fm`, `saw-comb`, `triple` and
+   `toy`'s design alone.
+
+Each conversion needs a `PLAITS_STEREO_<X>` entry in `stereo_config.h` so the
+new stereo branch can be dead-stripped by recipes that do not enable it — the
+ten Pattern-A engines have no entry today, which is correct while there is no
+second branch to strip and wrong the moment there is.
+
+Flash is the one cost this proposal does not have numbers for. Run
+`flash_sweep.py` over the four converted engines before committing; none adds
+a new algorithm, only a second combination of state already computed, so the
+delta should be small — but PROGRESS §1's own table is the reason not to guess
+(the spec's per-engine flash estimates ranged −39% to +74%).
