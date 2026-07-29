@@ -2342,6 +2342,49 @@
       "implementation": {
         "className": "BrassEngine"
       }
+    },
+    {
+      "id": "helix",
+      "packageId": "community/helix",
+      "name": "Helix",
+      "author": "Rubato Audio",
+      "origin": "Community",
+      "family": "Experimental",
+      "description": "A chord stacked across octaves on a Shepard helix, gliding endlessly up or down without ever changing register.",
+      "tags": [
+        "community",
+        "experimental",
+        "shepard",
+        "chord"
+      ],
+      "controls": [
+        "Chord",
+        "Glide",
+        "Fold",
+        "Spread"
+      ],
+      "outputs": [
+        "Folded voices (left in stereo)",
+        "Unfolded voices (right in stereo)"
+      ],
+      "sharedModules": [
+        "chord-bank"
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:9344383471c77f8735c6f3d5b55379c57331aff28748e3b567d6d2f3894930c1",
+      "documentationDigest": "sha256:a5fb0648fccec8d5ff6222c1fc945d45de10384c43e77c2274183318f04cbf6d",
+      "manual": {
+        "controls": {
+          "harmonics": "Selects the chord, voiced at every octave of the helix at once.",
+          "timbre": "Sets the glide: centred is still, either side sends the stack endlessly rising or falling.",
+          "morph": "Folds the summed voices, from clean through progressively harder wavefolding.",
+          "macro": "Sets how much of the helix you hear at once, from a tight chord to a wide cloud of octaves."
+        },
+        "trigger": "Strikes the low-pass gate while the helix keeps gliding underneath."
+      },
+      "implementation": {
+        "className": "HelixEngine"
+      }
     }
   ],
   "presets": {
