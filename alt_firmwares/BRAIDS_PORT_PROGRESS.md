@@ -26,10 +26,13 @@ Branch: `claude/braids-engines-plaits-palette-je03ac` (both repos).
 | `vowel-fof` | **landed** | 72% | 1.96–2.29 dB |
 | `raw-fm` | **landed** | 15% | 0.05 / 0.13 / 0.02 dB across all three source models |
 | `triple` | **landed** | 52% | 0.24 / 0.25 / 0.03 / 0.02 dB across all four source models |
-| `fluted` | still gated on the §3.11 mode-tracking measurement | — | — |
+| `fluted` | **DROPPED** — §3.11 gate measured and failed, see §3.16 | — | — |
 
-**ALL ELEVEN ENGINES ARE LANDED.** What remains is measurement and the
-website, not DSP. Notes kept for reference:
+**ALL ELEVEN ENGINES ARE LANDED, and the twelfth is dropped.** The §3.11 gate
+was run before any `fluted` code was written; it failed, and the spec's own
+instruction was to drop rather than patch around it. So the port is **eleven
+engines, final**. What remains is measurement and the website, not DSP. Notes
+kept for reference:
 
 - `vowel-fof` — the spec's headline finding is CONFIRMED in the source:
   `out += svf_bp[i] * amplitudes[0] >> 17` reads `amplitudes[0]`, not
@@ -190,9 +193,10 @@ missing-submodule guard.
    collapses to mono there), and `digital-modulation`'s `stereo_capable()`
    comment describes an I/Q split the code does not do.
 
-6. **`fluted` is still gated** on the §3.11 mode-tracking measurement, to be run
-   BEFORE writing code. If MORPH below noon does not track f0, drop the engine
-   rather than patch around it.
+6. ~~**`fluted` is still gated**~~ **DONE — measured, failed, dropped.** See
+   §3.16. No `fluted` code was ever written. Nothing downstream needs doing:
+   the engine never entered the catalog, so there is no registration, preview,
+   flash or builder entry to unwind.
 
 7. **Deploy** — builder image from the branch head FIRST, then the site. Engine
    digests are the builder's allowlist. The site already surfaces "Builder
@@ -430,6 +434,80 @@ a genuinely different VOICE rather than a stereo partner — see open item 5.
 The spec's 14-step per-engine checklist misses
 `alt_firmwares/plaits_lab_builder/test_generate_engine_config.py`, which pins
 `len(CATALOG)`. It has to move with every engine or the builder suite fails.
+
+### 3.16 `fluted`: the §3.11 gate was measured and FAILED — engine dropped
+
+Run 2026-07-28, before any engine code. Instrument and every script:
+`experimental/fluted_gate/`. The instrument was validated first by rendering
+Braids' own FLUT and reproducing the known chaotic detuning across COLOR
+(measured 1.53 / 1.02 / 1.04 / 4.49 / 2.51 against the cited study's 1.50 /
+3.47 / 1.01 / 2.44 / 2.48 — same scatter, same character).
+
+**The claim under test:** *"below noon (2 harmonics) only the fundamental
+survives and the pipe tunes reliably."* It is false, and it is not close.
+
+**At the spec's own coefficients** (in-loop DC blocker = Braids' 0.99 @ 96 kHz
+rate-corrected to 0.98 @ 48 kHz, which is fix #2's answer), MORPH below noon
+tuned **0 of 25** HARMONICS × MACRO settings at *every* note from MIDI 36 to
+60, and at most 5/25 above it. 2,000 renders; 13% in tune overall. The engine
+either fails to oscillate at all — the low notes at MORPH ≈ 0, where the
+reflection is darkest, which is the exact opposite of "only the fundamental
+survives" — or it locks to 3× or 5× f0.
+
+**It is a real mode hop, not a bright fundamental.** Where the peak sits at
+3 × f0, the played note measures **41 to 55 dB below** the loudest partial and
+the surviving partials are 3, 6, 9 × f0 — harmonics of 3f0, with nothing at f0
+or 2f0. The period is genuinely wrong. (`period.py`; this is the check that
+separates "in tune but bright" from "playing a different note", and it has to
+be made explicitly — a dominant-partial number alone cannot tell them apart.)
+
+**Best case available, and it still fails.** Moving the in-loop DC blocker to
+0.999 (8 Hz) — a change beyond the spec's eight fixes — recovers a lot, and
+one setting (HARMONICS 0.5, MACRO 0.75) is in tune 40/40 below noon. But that
+is one point in the control space, not the control space:
+
+- **HARMONICS transposes the engine.** At the best MACRO / DC blocker,
+  HARMONICS 0.00–0.13 sits **+7 semitones**, 0.83–1.00 sits **+16 semitones**,
+  and only 12–17 of 25 knob positions hold pitch, the ends failing identically
+  at every note. It is deterministic, not noise-driven (three breath-noise
+  seeds agree everywhere except one bistable point).
+- **MORPH transposes it too**, which is the gate's actual question. Give the
+  design *both* fixes — 8 Hz blocker *and* HARMONICS pre-restricted to its
+  in-tune window — and 78–82% of (note × HARMONICS × MORPH) holds pitch, with
+  the failures being **+22 and +26 semitone** jumps that MORPH triggers
+  mid-travel, at a boundary that moves with the note. E.g. MIDI 60 at
+  HARMONICS 0.20: in tune to MORPH 0.2, then +22 semitones from 0.3 up.
+
+**Mechanism.** The bore-only loop *cannot* self-oscillate: the bore write takes
+`reflection >> 1`, capping its round-trip gain at |H|/2 ≤ 0.5. So the
+oscillation is set by the **jet** path, whose delay is 48/256…79/256 of the
+total — and that fraction is HARMONICS. Sliding it slides the whole mode
+family, so the played note is only reachable near the middle of the knob. This
+is also why the cited study's scatter appeared **across the COLOR sweep**:
+COLOR *is* the jet fraction. The detuning was never MORPH's doing.
+
+**On the spec's topology objection: right verdict, wrong arithmetic.** §3.11
+predicted the survivor would be a **sub-f0** mode near 0.31–0.36 f0, the third
+member of the bore-only series. That series is not available at all (the ½
+above), and every mode measured is **super-f0** — 1.5×, 2.5×, 3.5×, 4×. The
+conclusion "MORPH does the opposite of what the design claims" stands; the
+named mechanism does not.
+
+Two by-products worth keeping:
+
+- Braids' `lut_flute_body_filter` works out to a nearly constant **8.8–13.2
+  harmonics of the note** across the keyboard (13.2 at MIDI 43 → 8.8 at MIDI
+  79), so the port's "corner in harmonics" MORPH really was the right
+  generalisation of it, and Braids' own fixed setting sits at MORPH ≈ 0.27 —
+  *below noon*, in the region the claim says is reliable. Braids is famously
+  not, and the measurement reproduces that.
+- **`DigitalOscillatorShape` is NOT the `fn_table_` index.** `fn_table_` is
+  indexed by `MacroOscillatorShape - MACRO_OSC_SHAPE_TRIPLE_RING_MOD`; the
+  `DigitalOscillatorShape` enum is in a different order, so
+  `set_shape(OSC_SHAPE_FLUTED)` silently renders **Snare**. It cost an hour
+  here, presenting as "FLUT does not sustain" (one loud block, then decay to a
+  DC value of 10). Anything driving `DigitalOscillator` directly is exposed;
+  drive `MacroOscillator` with a `MACRO_OSC_SHAPE_*`.
 
 ---
 

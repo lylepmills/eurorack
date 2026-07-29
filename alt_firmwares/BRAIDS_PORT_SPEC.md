@@ -29,6 +29,11 @@ applied or explicitly deferred to Lyle with a reason. Two engines are dropped (�
 
 Twelve engines survive, covering **19 Braids models**. Nine are unconditional; three are gated.
 
+> **Outcome (2026-07-28): eleven shipped, `fluted` dropped.** Q2 and Q3 were
+> answered "build both, A/B after" and `raw-fm` / `triple` landed. `fluted`'s
+> §3.11 measurement was run before any code was written; it failed. Details and
+> numbers: `BRAIDS_PORT_PROGRESS.md` §3.16.
+
 | # | id | Name | Braids ancestry | Family | Est. flash | Verdict |
 |---|----|------|-----------------|--------|-----------:|---------|
 | 1 | `z-filter` | Z Filter | ZLPF, ZPKF, ZBPF, ZHPF (4 models) | Subtractive | 2,200 B | **Build first** — best value in the set |
@@ -41,7 +46,7 @@ Twelve engines survive, covering **19 Braids models**. Nine are unconditional; t
 | 8 | `vowel-fof` | Vowel FOF | VFOF | Vocal | 3,100 B | Build — after 5 correctness fixes |
 | 9 | `saw-comb` | Saw Comb | (saw → comb hybrid) | Feedback | 3,000 B | Build |
 | 10 | `raw-fm` | Raw FM | FM, FBFM, WTFM (3 models) | FM | 1,450 B | **Gated** — Lyle go/no-go, §8 Q2 |
-| 11 | `fluted` | Fluted | FLUT | Physical | 2,600 B | **Gated** — on a measurement, §3.11 |
+| ~~11~~ | ~~`fluted`~~ | ~~Fluted~~ | ~~FLUT~~ | ~~Physical~~ | — | **DROPPED** — §3.11 gate measured 2026-07-28 and FAILED |
 | 12 | `triple` | Triple | ⌐⌐x3, saw x3, /\x3, SIx3 (4 models) | Polyphonic | 2,800 B | **Gated** — Lyle duplication call, §8 Q3 |
 
 **Unconditional nine: 18,240 B (17.8 KB). All twelve: 25,090 B (24.5 KB).** See §6 for what that means.
@@ -1334,7 +1339,23 @@ const float depth = ApplyMacro(kRawFmStockDepth, 0.0f, 1.0f, parameters.macro);
 
 ---
 
-### 3.11 `fluted` — **Fluted** (Physical) — **GATED on a measurement**
+### 3.11 `fluted` — **Fluted** (Physical) — **GATE FAILED, ENGINE DROPPED**
+
+> **RESOLVED 2026-07-28: the gate below was measured and the engine is dropped.**
+> No `fluted` code was written; the source files named here do not exist.
+> MORPH below noon does not track f0. At the coefficients this section itself
+> specifies, **0 of 25** HARMONICS × MACRO settings tuned at any note from MIDI
+> 36 to 60, and where the peak sits at 3 × f0 the played note measures 41–55 dB
+> down — a real mode hop, not a bright fundamental. Pitch turns out to be set by
+> the **jet** delay, i.e. by HARMONICS, which transposes the engine by up to +16
+> semitones across its own travel; MORPH adds +22/+26 semitone jumps mid-travel
+> even after the most generous fixes. The topology objection below reached the
+> right verdict by the wrong arithmetic — the surviving modes are super-f0, not
+> the sub-f0 bore-only series it predicts, because the bore-only loop cannot
+> self-oscillate at all (`reflection >> 1` caps its round-trip gain at ½).
+> Full numbers: `BRAIDS_PORT_PROGRESS.md` §3.16. Instrument:
+> `experimental/fluted_gate/`. **Everything below is kept as the record of what
+> was asked and why; none of it is live work.**
 
 **Braids ancestry:** FLUT — `DigitalOscillator::RenderFluted` (`:1367`).
 
@@ -1634,7 +1655,7 @@ edit; subsequent Pattern-B engines (`vowel-fof`, `triple`) must rebase on it, be
 |---|---|
 | `vowel-fof` | none technical; land after `toy` (Pattern B) |
 | `raw-fm` | **§8 Q2** — Lyle go/no-go |
-| `fluted` | **§3.11 measurement** — WASM mode-tracking probe **before** any code |
+| ~~`fluted`~~ | **RESOLVED — gate measured 2026-07-28 and FAILED; engine dropped.** See §3.11. |
 | `triple` | **§8 Q3** — Lyle duplication call; land after `toy` and `vowel-fof` (Pattern B) |
 
 ### Per-engine definition of done
@@ -1683,6 +1704,9 @@ wants icons later, that is a separate pass (PNG in two repos).
 | Unconditional nine | 18,240 | 17.8 |
 | Gated three (`raw-fm`, `fluted`, `triple`) | 6,850 | 6.7 |
 | **All twelve** | **25,090** | **24.5** |
+
+> Superseded: `fluted` was dropped and the other eleven were measured on real
+> ARM at **22,016 B** total. See `BRAIDS_PORT_PROGRESS.md` §1.
 
 **All twelve numbers are UNMEASURED estimates.** `estimatedFlashBytes` is not a schema field anywhere
 in the repo, there is no in-tree per-engine flash table, and the "1008-3392 B Lab band" cited by two
@@ -1926,7 +1950,7 @@ declared, permanent deviation from a "fidelity-first" engine and you may feel di
 |---|---|---|---|
 | R-1 | **Every flash number is unmeasured.** No ARM toolchain, no Docker, no qemu in the analysis container. If the estimates are 40 % low, the preset arithmetic in §6 is wrong. | High | Wave 1 (`z-filter`) produces the first real `arm-none-eabi-size` delta. **Recalibrate all twelve against it before Q4.** |
 | R-2 | **Host CPU numbers are worthless** and two designs already reasoned from them backwards (R12). `check --full` once reported "0.6×" for an engine at **281 % of budget**. | High | `qemu/estimate.py --sweep` (±14 %) before merge, `build --hardware --cpu-probe` before release. Budget is ~1500 cycles/sample **including** LPG, output stage, UI and ADCs. |
-| R-3 | **`fluted`'s mode-locking gate may fail**, in which case the engine has no reason to exist. | Medium | Gate is explicit (§3.11): measure in `plaits_lab.py dev` **before writing code**. If it fails, drop — do not patch. |
+| R-3 | ~~**`fluted`'s mode-locking gate may fail**~~ **IT DID.** Measured 2026-07-28 before any code; MORPH below noon does not track f0. | — | **Realised.** Engine dropped, per this row's own mitigation. `BRAIDS_PORT_PROGRESS.md` §3.16. |
 | R-4 | **Pattern-B stereo drift is four-way** and three engines (`toy`, `vowel-fof`, `triple`) each touch the same three shared files. Precedent for how bad it gets: `container_server._recipe_is_stereo` spelled `== 3` inline after the options menu moved stereo to 1, so **stereo recipes compiled every engine mono AND sine-subosc recipes paid ~26 KB for an unreachable path.** | Medium | Serialise Pattern-B landings (§5). Add a checklist assertion per engine that all four files agree. |
 | R-5 | **`saw-comb` HF self-oscillation.** The originally specified compensation leaves net HF loop gain 1.083 > 1 (§3.9). | Medium | Corrected formula + block-rate clamp + a mandated numeric sweep of loop gain over MACRO × HARMONICS before merge. |
 | R-6 | **`bowed` delay underflow escapes both in-tree tests** (extremes uses note 60, control-response note 48; the bug bites from ~MIDI 85). | Medium | Explicit clamp + a mandated MIDI 96 / HARMONICS 0 regression scenario (§5 step 14). |
