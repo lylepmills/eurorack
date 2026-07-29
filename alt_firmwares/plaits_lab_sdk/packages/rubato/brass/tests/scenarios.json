@@ -1,14 +1,152 @@
 [
-  { "id": "hero", "name": "Lipping up the harmonic series", "durationSeconds": 6, "note": 45, "triggerHz": 0,
-    "controls": { "harmonics": [0.0, 1.0], "timbre": [0.6, 0.6], "morph": [0.5, 0.5], "macro": [0.5, 0.5] } },
-  { "id": "threshold", "name": "Breath from below the speaking threshold to full", "durationSeconds": 4, "note": 50, "triggerHz": 0,
-    "controls": { "harmonics": [0.2, 0.2], "timbre": [0.0, 1.0], "morph": [0.5, 0.5], "macro": [0.5, 0.5] } },
-  { "id": "bell", "name": "Stopped horn opening out", "durationSeconds": 4, "note": 55, "triggerHz": 0,
-    "controls": { "harmonics": [0.4, 0.4], "timbre": [0.7, 0.7], "morph": [0.0, 1.0], "macro": [0.5, 0.5] } },
-  { "id": "slide", "name": "The slide, where the growl and the split note live", "durationSeconds": 4, "note": 45, "triggerHz": 0,
-    "controls": { "harmonics": [0.35, 0.35], "timbre": [0.65, 0.65], "morph": [0.45, 0.45], "macro": [0.0, 1.0] } },
-  { "id": "tongued", "name": "Repeated attacks, bore emptied each time", "durationSeconds": 5, "note": 52, "triggerHz": 2,
-    "controls": { "harmonics": [0.2, 0.6], "timbre": [0.7, 0.7], "morph": [0.55, 0.55], "macro": [0.5, 0.5] } },
-  { "id": "register", "name": "Two octaves apart at the same lip setting", "durationSeconds": 4, "note": 36, "triggerHz": 0,
-    "controls": { "harmonics": [0.5, 0.5], "timbre": [0.6, 0.6], "morph": [0.5, 0.5], "macro": [0.5, 0.5] } }
+  {
+    "id": "hero",
+    "name": "Lipping up the harmonic series",
+    "durationSeconds": 6,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [
+        0.0,
+        1.0
+      ],
+      "timbre": [
+        0.6,
+        0.6
+      ],
+      "morph": [
+        0.5,
+        0.5
+      ],
+      "macro": [
+        0.5,
+        0.5
+      ]
+    }
+  },
+  {
+    "id": "threshold",
+    "name": "Breath from below the speaking threshold to full",
+    "durationSeconds": 4,
+    "note": 50,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [
+        0.2,
+        0.2
+      ],
+      "timbre": [
+        0.0,
+        1.0
+      ],
+      "morph": [
+        0.5,
+        0.5
+      ],
+      "macro": [
+        0.5,
+        0.5
+      ]
+    }
+  },
+  {
+    "id": "bell",
+    "name": "Stopped horn opening out",
+    "durationSeconds": 4,
+    "note": 55,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [
+        0.4,
+        0.4
+      ],
+      "timbre": [
+        0.7,
+        0.7
+      ],
+      "morph": [
+        0.0,
+        1.0
+      ],
+      "macro": [
+        0.5,
+        0.5
+      ]
+    }
+  },
+  {
+    "id": "buzz",
+    "name": "Lip barely fluttering to properly buzzing",
+    "durationSeconds": 4,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [
+        0.35,
+        0.35
+      ],
+      "timbre": [
+        0.75,
+        0.75
+      ],
+      "morph": [
+        0.45,
+        0.45
+      ],
+      "macro": [
+        0.0,
+        1.0
+      ]
+    }
+  },
+  {
+    "id": "tongued",
+    "name": "Repeated attacks, bore emptied each time",
+    "durationSeconds": 5,
+    "note": 52,
+    "triggerHz": 2,
+    "controls": {
+      "harmonics": [
+        0.2,
+        0.6
+      ],
+      "timbre": [
+        0.7,
+        0.7
+      ],
+      "morph": [
+        0.55,
+        0.55
+      ],
+      "macro": [
+        0.5,
+        0.5
+      ]
+    }
+  },
+  {
+    "id": "register",
+    "name": "Two octaves apart at the same lip setting",
+    "durationSeconds": 4,
+    "note": 36,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [
+        0.5,
+        0.5
+      ],
+      "timbre": [
+        0.6,
+        0.6
+      ],
+      "morph": [
+        0.5,
+        0.5
+      ],
+      "macro": [
+        0.5,
+        0.5
+      ]
+    }
+  }
 ]

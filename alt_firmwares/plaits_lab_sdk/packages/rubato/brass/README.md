@@ -120,9 +120,34 @@ carries a lot of energy, absent at ordinary breath.
 HARMONICS is lip tension and it is the reason the engine exists: it climbs the
 bore's partials and bends each one sharp as it rises. TIMBRE is breath pressure,
 and below the oscillation threshold the instrument correctly does not speak.
-MORPH is bell size. MACRO is the slide, centred at 1.0 — it detunes the bore
-against the lips, which is where the growl and the split note come from; it is
-not a tuning control and will not stay in tune.
+MORPH is bell size. MACRO is the buzz — how far the lips swing into closure
+each cycle. It replaced a slide control that detuned the bore against the lips;
+the slide made a good growl but left the instrument out of tune, and buzz is the
+quality players actually reach for.
+
+**The buzz direction is the opposite of the obvious one.** Closing the valve
+down does not buzz: a small opening passes a small flow, the lip barely swings,
+and closure *falls* — 1.4% of the cycle at a rest opening of 0.10, against 1.9%
+at the 0.60 default. Buzz comes from DRIVE. Open the valve further, pass more
+flow, and the lip swings hard enough to slam shut. Across MACRO's range closure
+goes 1.5% → 5.8% and energy above the 4th harmonic rises about 20 dB, and it
+gets *louder* toward the top, as a real horn does when you lean on it.
+
+MACRO's midpoint is the shipped instrument, bit-identical — deliberate, because
+MACRO is Plaits' fourth control and rests at its midpoint whenever the menu is
+not set to expose it.
+
+The top of the range stops short with real margin, because finding 3's cliff is
+just above it: one notch further and the level is 11 dB down, and a little past
+that the model stops selecting partials at all. Widening it means re-running a
+HARMONICS staircase — and comparing against the *shipped* setting in the same
+harness, because an 8-segment sweep shows dropouts at every setting including
+the default, which looks like a defect and is not one.
+
+Steepening (see above) was tried on MACRO first and measured well — 35 dB of
+range — but it is the wrong axis. It brightens the *bore*, and brightness is not
+buzz; the lip stays near-sinusoidal however bright the tube gets. It is fixed at
+its shipped value.
 
 OUT is the mouthpiece. AUX is the valve flow, the buzz that drives it.
 

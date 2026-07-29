@@ -125,6 +125,8 @@ const float kBrassPullScale = 67.2f;
 // choice -- at zeta 0.12 the model does not oscillate at all.
 const float kBrassLipZeta = 0.04f;
 const float kBrassLipStiffness = 3.0f;
+// The valve's rest opening at MACRO 0.5. MACRO scales it over [0.5, 1.5] of
+// this, i.e. 0.30 to 0.90 -- see the buzz mapping in Render.
 const float kBrassRestOpening = 0.60f;
 const float kBrassMaxOpening = 1.80f;
 const float kBrassBoreImpedance = 0.15f;
@@ -153,6 +155,10 @@ const float kBrassNoiseGain = 0.02f;
 // alt_firmwares/research/brass_lip/brassiness.cc -- at this setting the energy
 // above the 4th harmonic rises about 28 dB at full breath while soft playing
 // moves under 0.5 dB, and the HARMONICS staircase and tuning are unchanged.
+// Fixed, not a control. Steepening was tried on MACRO first and measured well
+// -- 35 dB of range -- but it is the wrong AXIS: it brightens the bore, and
+// brightness is not buzz. Buzz is the lip closing, which is what MACRO drives
+// now (see Render). This value stays where it shipped.
 const float kBrassSteepening = 112.0f;
 
 // The steepening can never displace the read pointer by more than this fraction

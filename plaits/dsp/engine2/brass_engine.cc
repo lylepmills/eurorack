@@ -84,15 +84,11 @@ void BrassEngine::Render(
   // Null the lip's pitch pull for the partial actually sounding.
   const float pull_cents = kBrassPullOffset +
       kBrassPullScale / static_cast<float>(partial);
-  // MACRO is the slide, centred at 1.0 -- it detunes the bore against the lip,
-  // which is where the growl and the split multiphonic come from. It is not a
-  // tuning control and will not stay in tune.
-  const float slide = 0.5f + parameters.macro;
   // SemitonesToRatio, not powf: the firmware is bare-metal and libm's powf
   // pulls in __errno, which does not link (helix_engine.cc has the full note).
   // Cents/100 is semitones, and the LUT is exact enough for a pull this small.
   float length = kSampleRate / bore_frequency *
-      SemitonesToRatio(pull_cents * 0.01f) * slide;
+      SemitonesToRatio(pull_cents * 0.01f);
   CONSTRAIN(length, 8.0f, float(kBrassDelaySize - 2));
 
   const float actual_bore = kSampleRate / length;
@@ -115,6 +111,35 @@ void BrassEngine::Render(
   CONSTRAIN(damp, 0.02f, 0.90f);
 
   const float read_offset = length;
+
+  // MACRO is the buzz: how far the lips swing into closure each cycle. It is
+  // the valve's rest opening, and it is the difference between a soft flutter
+  // and a real mouthpiece buzz.
+  //
+  // The direction is the opposite of the obvious one, and it was measured
+  // rather than reasoned. Closing the valve DOWN does not buzz -- a small
+  // opening passes a small flow, so the lip barely swings and closure FALLS
+  // (1.4% of the cycle at 0.10, against 1.9% at the 0.60 default). Buzz comes
+  // from DRIVE: open the valve further, pass more flow, and the lip swings hard
+  // enough to slam shut. Measured across this range, closure goes 1.5% -> 5.8%
+  // and the energy above the 4th harmonic rises about 20 dB.
+  //
+  // 0.5 is the value the engine shipped with, deliberately: MACRO is Plaits'
+  // FOURTH control and rests at its midpoint whenever the menu is not set to
+  // expose it, so the default instrument has to be -- and is bit-identical to
+  // -- the one at 0.5.
+  //
+  // The top stops at 0.90 with real margin, because finding 3's cliff is just
+  // above it: at a rest opening of 1.00 the level is already 11 dB down, and by
+  // 1.10 the model has stopped selecting partials altogether (flat staircase,
+  // 65 Hz, near-silent). Do not widen this without re-running a HARMONICS
+  // staircase -- and compare it against the SHIPPED value in the same harness,
+  // because an 8-segment sweep shows dropouts at every setting including the
+  // default, which reads as a defect and is not one.
+  // Expressed as a scale on kBrassRestOpening rather than as bare numbers, so
+  // the default and the knob cannot drift apart: 0.5 lands exactly on it.
+  const float rest_opening =
+      kBrassRestOpening * (0.5f + parameters.macro);
 
   // The steepening displacement is bounded by the bore length, not by a fixed
   // number of samples: a short bore has less room before the read pointer would
@@ -163,7 +188,7 @@ void BrassEngine::Render(
         - 2.0f * kBrassLipZeta * lip_w * lip_v_;
     lip_x_ += lip_v_;
 
-    float opening = kBrassRestOpening + lip_x_;
+    float opening = rest_opening + lip_x_;
     if (opening < 0.0f) {
       // Lips closed: no flow, and they stop rather than keep travelling.
       opening = 0.0f;
