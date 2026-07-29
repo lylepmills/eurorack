@@ -201,13 +201,20 @@ inside the model's own ~350 B residuals — would only make the meter read
 permissively. The entry exists so the measurement is on record rather than the
 engine looking merely overlooked.
 
-**Three traps when re-running the sweep.** The builder image bakes the firmware
-source in (`COPY . /workspace`), so `docker build` it AFTER the engines land
-or every new engine fails with a missing header while the baseline builds
-fine — a local rehearsal of the exact deploy-ordering hazard. The image
-has an ENTRYPOINT, so the sweep needs `--entrypoint python3` or the command
-becomes arguments to the HTTP server and sits idle forever. And a FRESH
-worktree has no submodule content — `git submodule update --init stmlib
+**Four traps when re-running the sweep.** On an Apple-silicon box, `docker
+build` needs an explicit `--platform linux/amd64`. The Dockerfile does `dpkg
+--add-architecture i386` and installs `libc6:i386` / `libstdc++6:i386` for the
+32-bit ARM toolchain; none of those exist for arm64, so a default build dies
+at the apt step with a bare `exit code: 100` that names no package and reads
+like a network failure. The image on this machine is already amd64 (every
+`docker run` prints the platform-mismatch warning), so the flag only makes the
+build agree with the image that was working all along. The builder image bakes
+the firmware source in (`COPY . /workspace`), so `docker build` it AFTER the
+engines land or every new engine fails with a missing header while the
+baseline builds fine — a local rehearsal of the exact deploy-ordering hazard.
+The image has an ENTRYPOINT, so the sweep needs `--entrypoint python3` or the
+command becomes arguments to the HTTP server and sits idle forever. And a
+FRESH worktree has no submodule content — `git submodule update --init stmlib
 stm_audio_bootloader` before the `docker build`, or it stops at the
 missing-submodule guard.
 
