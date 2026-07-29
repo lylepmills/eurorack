@@ -27,7 +27,7 @@
   },
   {
     "id": "scales",
-    "name": "The same seventh chord through all eight scales",
+    "name": "The same seventh chord through all sixteen scales",
     "durationSeconds": 4,
     "note": 45,
     "triggerHz": 0,

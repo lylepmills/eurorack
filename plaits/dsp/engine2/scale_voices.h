@@ -16,9 +16,15 @@
 // knob position gives Cmaj7 on the tonic and Am7 on the sixth.
 //
 // Plaits has no quantizer and no scale setting, so the scale ships with the
-// engine and MACRO selects it. Eight are enough to cover the gesture, and the
-// last two are the interesting ones: in a pentatonic or whole-tone scale a
-// "third" is not a third, and the chord shapes bend accordingly.
+// engine and MACRO selects it. This prototype bank keeps the original eight
+// positions and adds five strongly contrasting 12-TET scales plus three
+// genuinely microtonal scales from Braids. In a pentatonic, whole-tone, or
+// microtonal scale a "third" is not a 12-TET third, and the chord shapes bend
+// accordingly.
+//
+// SCALE PITCHES USE BRAIDS' 1/128-SEMITONE UNITS. Keeping the source precision
+// is what makes the raga-derived scales genuinely microtonal; an int8 semitone
+// table silently rounds away the feature this prototype is meant to audition.
 //
 // THE ROOT IS C. Braids resolved the scale against the quantizer's own root;
 // here degree 0 is the nearest scale tone at or below the played note measured
@@ -38,9 +44,11 @@
 
 namespace plaits {
 
-const int kScaleVoicesNumScales = 8;
+const int kScaleVoicesNumScales = 16;
 const int kScaleVoicesMaxDegrees = 7;
 const int kScaleVoicesMaxVoices = 6;
+const int kScaleVoicesUnitsPerSemitone = 128;
+const int kScaleVoicesUnitsPerOctave = 12 * kScaleVoicesUnitsPerSemitone;
 
 // Widest reach either engine asks for: `scale-stack` at its top span places its
 // last voice 4 * 16 = 64 degrees up, which in a pentatonic scale is nearly 13
@@ -61,11 +69,11 @@ const float kScaleVoicesMaxFoldDrive = 4.0f;
 const float kScaleVoicesMaxVoiceFrequency = 0.45f;
 
 struct Scale {
-  const int8_t* semitones;
+  const int16_t* pitches;
   int num_degrees;
 };
 
-// The eight MACRO positions, in order.
+// The sixteen MACRO positions, in order.
 extern const Scale kScaleVoicesScales[kScaleVoicesNumScales];
 
 // Resolves a played note onto the scale: returns the index of the nearest

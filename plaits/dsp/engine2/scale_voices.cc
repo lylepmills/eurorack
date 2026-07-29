@@ -22,14 +22,25 @@ using namespace stmlib;
 
 namespace {
 
-const int8_t kMajor[] = { 0, 2, 4, 5, 7, 9, 11 };
-const int8_t kNaturalMinor[] = { 0, 2, 3, 5, 7, 8, 10 };
-const int8_t kDorian[] = { 0, 2, 3, 5, 7, 9, 10 };
-const int8_t kMixolydian[] = { 0, 2, 4, 5, 7, 9, 10 };
-const int8_t kHarmonicMinor[] = { 0, 2, 3, 5, 7, 8, 11 };
-const int8_t kMelodicMinor[] = { 0, 2, 3, 5, 7, 9, 11 };
-const int8_t kMajorPentatonic[] = { 0, 2, 4, 7, 9 };
-const int8_t kWholeTone[] = { 0, 2, 4, 6, 8, 10 };
+// Values are copied from Braids' quantizer_scales.h and remain in its native
+// 1/128-semitone pitch units. The first eight preserve the shipped bank order;
+// the remainder are the Phase 0 listening set.
+const int16_t kMajor[] = { 0, 256, 512, 640, 896, 1152, 1408 };
+const int16_t kNaturalMinor[] = { 0, 256, 384, 640, 896, 1024, 1280 };
+const int16_t kDorian[] = { 0, 256, 384, 640, 896, 1152, 1280 };
+const int16_t kMixolydian[] = { 0, 256, 512, 640, 896, 1152, 1280 };
+const int16_t kHarmonicMinor[] = { 0, 256, 384, 640, 896, 1024, 1408 };
+const int16_t kMelodicMinor[] = { 0, 256, 384, 640, 896, 1152, 1408 };
+const int16_t kMajorPentatonic[] = { 0, 256, 512, 896, 1152 };
+const int16_t kWholeTone[] = { 0, 256, 512, 768, 1024, 1280 };
+const int16_t kBluesMinor[] = { 0, 384, 640, 768, 896, 1280 };
+const int16_t kJapanese[] = { 0, 128, 640, 896, 1024 };
+const int16_t kGamelan[] = { 0, 128, 384, 896, 1024 };
+const int16_t kGypsy[] = { 0, 256, 384, 768, 896, 1024, 1408 };
+const int16_t kArabian[] = { 0, 128, 512, 640, 896, 1024, 1408 };
+const int16_t kBhairav[] = { 0, 115, 494, 637, 899, 1014, 1393 };
+const int16_t kYaman[] = { 0, 261, 522, 783, 899, 1160, 1421 };
+const int16_t kBairagi[] = { 0, 115, 637, 899, 1275 };
 
 // One-sided PolyBLEP. `t` is the phase, `dt` the per-sample increment.
 inline float PolyBlep(float t, float dt) {
@@ -91,6 +102,14 @@ const Scale kScaleVoicesScales[kScaleVoicesNumScales] = {
   { kMelodicMinor, 7 },
   { kMajorPentatonic, 5 },
   { kWholeTone, 6 },
+  { kBluesMinor, 6 },
+  { kJapanese, 5 },
+  { kGamelan, 5 },
+  { kGypsy, 7 },
+  { kArabian, 7 },
+  { kBhairav, 7 },
+  { kBairagi, 5 },
+  { kYaman, 7 },
 };
 
 float ScaleDegreeToNote(int degree, int scale) {
@@ -103,7 +122,9 @@ float ScaleDegreeToNote(int degree, int scale) {
     index += s.num_degrees;
     --octave;
   }
-  return static_cast<float>(octave * 12 + s.semitones[index]);
+  const int pitch = octave * kScaleVoicesUnitsPerOctave + s.pitches[index];
+  return static_cast<float>(pitch) /
+      static_cast<float>(kScaleVoicesUnitsPerSemitone);
 }
 
 int QuantizeToScale(float note, int scale, float* residual) {

@@ -2107,7 +2107,56 @@ void ValidateSixOpBankSwitch() {
   }
 }
 
+void ValidateScaleVoiceBank() {
+  for (int scale = 0; scale < kScaleVoicesNumScales; ++scale) {
+    const Scale& definition = kScaleVoicesScales[scale];
+    if (definition.num_degrees < 1 ||
+        definition.num_degrees > kScaleVoicesMaxDegrees) {
+      fprintf(stderr, "Scale %d has an invalid degree count\n", scale);
+      abort();
+    }
+    if (definition.pitches[0] != 0) {
+      fprintf(stderr, "Scale %d does not start at its root\n", scale);
+      abort();
+    }
+    float previous = ScaleDegreeToNote(0, scale);
+    for (int degree = 1; degree < definition.num_degrees; ++degree) {
+      const float note = ScaleDegreeToNote(degree, scale);
+      if (!isfinite(note) || note <= previous || note >= 12.0f) {
+        fprintf(stderr, "Scale %d has an invalid degree at %d\n", scale, degree);
+        abort();
+      }
+      previous = note;
+    }
+    if (fabsf(ScaleDegreeToNote(definition.num_degrees, scale) - 12.0f) >
+        1e-6f) {
+      fprintf(stderr, "Scale %d does not wrap at one octave\n", scale);
+      abort();
+    }
+  }
+
+  // Bhairav is the first microtonal scale in the prototype bank. Pin its 115
+  // unit second so a later "simplification" back to integer semitones cannot
+  // silently erase the feature this bank exists to audition.
+  const int kBhairavScale = 13;
+  const float bhairav_second = 115.0f /
+      static_cast<float>(kScaleVoicesUnitsPerSemitone);
+  if (fabsf(ScaleDegreeToNote(1, kBhairavScale) - bhairav_second) > 1e-6f) {
+    fprintf(stderr, "Bhairav lost its 1/128-semitone tuning\n");
+    abort();
+  }
+  float residual = 0.0f;
+  if (QuantizeToScale(bhairav_second, kBhairavScale, &residual) != 1 ||
+      fabsf(residual) > 1e-6f) {
+    fprintf(stderr, "The scale quantizer does not preserve a microtonal degree\n");
+    abort();
+  }
+}
+
 void TestExperimentalEngines() {
+  printf("Validating the shared scale bank...\n");
+  fflush(stdout);
+  ValidateScaleVoiceBank();
   printf("Validating selectable chord tables...\n");
   fflush(stdout);
   BufferAllocator chord_allocator(ram_block, sizeof(ram_block));
