@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import re
@@ -151,10 +152,77 @@ def web_catalog(catalog: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+DIGESTS_PATH = Path(__file__).with_name("digests.json")
+
+
+def current_digests(catalog: dict[str, Any]) -> dict[str, str]:
+    return {
+        engine["id"]: package_digest(engine)
+        for engine in catalog["engines"]
+    }
+
+
+def digest_drift(catalog: dict[str, Any]) -> tuple[list[str], list[str], list[str]]:
+    """Engines whose digest moved, plus those added and removed.
+
+    package_digest hashes the catalog record AND the raw bytes of
+    source.header and every source.file -- so editing a COMMENT in an engine's
+    header moves it, and the engine stops matching what the builder shipped.
+    Nothing detected that until 2026-07: validate_catalog recomputes digests on
+    export and never compares them to anything, so eight shipped engines were
+    invalidated by comment corrections without a single check failing.
+
+    digests.json is the committed snapshot that makes it visible. A moved
+    digest is not automatically wrong -- it is exactly what landing a real fix
+    looks like -- but it MUST be deliberate, because it means the builder needs
+    a rollout before the website can serve that engine.
+    """
+    if not DIGESTS_PATH.exists():
+        return [], [], []
+    recorded = json.loads(DIGESTS_PATH.read_text(encoding="utf-8"))
+    current = current_digests(catalog)
+    moved = sorted(k for k in recorded.keys() & current.keys()
+                   if recorded[k] != current[k])
+    added = sorted(current.keys() - recorded.keys())
+    removed = sorted(recorded.keys() - current.keys())
+    return moved, added, removed
+
+
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--check-digests", action="store_true",
+                        help="fail if any engine's digest drifted from digests.json")
+    parser.add_argument("--snapshot-digests", action="store_true",
+                        help="rewrite digests.json from the current sources")
+    arguments = parser.parse_args()
+
     catalog = load_catalog()
     validate_catalog(catalog)
     print(f"catalog ok: {len(catalog['engines'])} immutable packages")
+
+    if arguments.snapshot_digests:
+        DIGESTS_PATH.write_text(
+            json.dumps(current_digests(catalog), indent=2, sort_keys=True) + "\n",
+            encoding="utf-8")
+        print(f"digests snapshotted: {DIGESTS_PATH.name}")
+        return
+
+    if arguments.check_digests:
+        moved, added, removed = digest_drift(catalog)
+        if not DIGESTS_PATH.exists():
+            raise SystemExit(f"{DIGESTS_PATH.name} is missing; run --snapshot-digests")
+        for engine_id in moved:
+            print(f"  DRIFT  {engine_id}: digest moved -- needs a builder rollout")
+        for engine_id in added:
+            print(f"  new    {engine_id}")
+        for engine_id in removed:
+            print(f"  gone   {engine_id}")
+        if moved:
+            raise SystemExit(
+                f"{len(moved)} shipped engine(s) no longer match digests.json. "
+                "If the change was deliberate, re-run with --snapshot-digests "
+                "and roll the builder.")
+        print("digests match the snapshot")
 
 
 if __name__ == "__main__":

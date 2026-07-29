@@ -231,11 +231,16 @@ def main() -> int:
             # run_scenario applies the catalog's out_gain, which is a headroom
             # choice for the Plaits voice and not a property of the ported
             # algorithm. Undo it so the AC RMS figure describes the ENGINE.
-            # A negative gain means voice.h routes the engine through
-            # stmlib::Limiter (SPEC R1) — that path is non-linear, so the level
-            # comparison stops being meaningful and is reported as such.
+            #
+            # In the FIRMWARE a negative gain routes the engine through
+            # stmlib::Limiter (voice.h, SPEC R1). The host renderer does not:
+            # render_model.cc:110-111 applies fabs(out_gain) and nothing else.
+            # So this compensation is exact, the comparison stays linear, and
+            # the limiter is simply outside what this harness measures — which
+            # is worth knowing, because an engine that relies on the limiter to
+            # stay bounded will look clean here and clip on hardware.
             out_gain = float(package["manifest"]["postProcessing"]["outGain"])
-            limited = out_gain < 0.0
+            limiter_untested = out_gain < 0.0
             if out_gain:
                 port = [s / abs(out_gain) for s in port]
 
@@ -265,9 +270,10 @@ def main() -> int:
             print(f"  {case_id:<20} {case.get('name', '')}")
             print(f"    AC RMS {results['ac_rms_delta_db']:+6.2f} dB   "
                   f"pitch {pitch:>14}   spectrum {spectrum:>9}")
-            if limited:
-                print("    note   out_gain is negative, so the render passed "
-                      "through the limiter; the level figure is not linear")
+            if limiter_untested:
+                print("    note   out_gain is negative, so the firmware routes "
+                      "this engine through the limiter; the host render does "
+                      "not, so that path is unmeasured here")
 
             if arguments.bands and bands:
                 for band in bands:
