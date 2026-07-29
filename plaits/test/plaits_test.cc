@@ -1342,6 +1342,57 @@ void RenderExperimentalEngine(const char* name) {
   }
 }
 
+// A steady offset on a tap is inaudible on a development machine and invisible
+// to the finite/bounds and control-response gates, but it reaches a module as a
+// fat DC shift with the tone buried in it. Brass measured OUT at RMS 27923
+// against a DC component of 26548 before its taps were blocked, and passed both
+// of the other gates. The threshold matches the SDK's per-scenario check in
+// plaits_lab.py (abs(mean) <= 0.2 over a signal that runs to about +/-1), so a
+// built-in engine and a packaged one are held to the same standard.
+const float kMaxAuditionDcOffset = 0.2f;
+
+int audition_dc_failures = 0;
+
+void CheckAuditionDcOffset(
+    const char* name, double out_sum, double aux_sum, size_t frames) {
+  const float out_dc = static_cast<float>(out_sum / static_cast<double>(frames));
+  const float aux_dc = static_cast<float>(aux_sum / static_cast<double>(frames));
+  const bool out_bad = fabsf(out_dc) > kMaxAuditionDcOffset;
+  const bool aux_bad = fabsf(aux_dc) > kMaxAuditionDcOffset;
+  printf(
+      "  %-28s OUT DC %+.5f   AUX DC %+.5f%s\n",
+      name,
+      out_dc,
+      aux_dc,
+      (out_bad || aux_bad) ? "   <-- EXCESSIVE" : "");
+  fflush(stdout);
+  if (out_bad || aux_bad) {
+    fprintf(
+        stderr,
+        "%s has excessive DC offset (OUT %+.5f, AUX %+.5f; limit %.2f) — "
+        "center each tap around zero, typically with a DC blocker on the tap "
+        "rather than by trimming the signal that feeds it\n",
+        name,
+        out_dc,
+        aux_dc,
+        kMaxAuditionDcOffset);
+    ++audition_dc_failures;
+  }
+}
+
+// Reported after every audition render rather than at the first offender, so
+// one run shows the whole picture instead of hiding later engines behind an
+// early abort.
+void ReportAuditionDcFailures() {
+  if (audition_dc_failures) {
+    fprintf(
+        stderr,
+        "%d audition render(s) exceeded the DC limit — see above\n",
+        audition_dc_failures);
+    abort();
+  }
+}
+
 // A listening render with one clearly isolated control sweep per four-second
 // segment. MAIN is the left channel and AUX is the right channel.
 template<typename T>
@@ -1361,6 +1412,10 @@ void RenderAuditionEngine(const char* name) {
   p.note = 48.0f;
   p.accent = 0.8f;
   p.chord_set_option = 0;
+
+  double out_sum = 0.0;
+  double aux_sum = 0.0;
+  size_t summed_frames = 0;
 
   for (size_t frame = 0; frame < kTotalFrames; frame += kAudioBlockSize) {
     const size_t segment = frame / kSegmentFrames;
@@ -1406,9 +1461,13 @@ void RenderAuditionEngine(const char* name) {
             aux[i]);
         abort();
       }
+      out_sum += out[i];
+      aux_sum += aux[i];
     }
+    summed_frames += kAudioBlockSize;
     wav_writer.Write(out, aux, kAudioBlockSize);
   }
+  CheckAuditionDcOffset(name, out_sum, aux_sum, summed_frames);
 }
 
 template<typename T>
@@ -2105,6 +2164,7 @@ void TestExperimentalEngines() {
   RenderAuditionEngine<RingModEngine>("15-ring-mod.wav");
   RenderAuditionEngine<BowedEngine>("16-bowed.wav");
   RenderAuditionEngine<SubOscillatorEngine>("17-sub-oscillator.wav");
+  ReportAuditionDcFailures();
   printf("Validating Glisson extremes...\n");
   fflush(stdout);
   ValidateExperimentalEngineExtremes<GlissonEngine>();
