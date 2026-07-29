@@ -9,7 +9,7 @@
   "author": "Emilie Gillet",
   "origin": "Mutable Instruments",
   "license": "MIT",
-  "description": "Braids' three FM models on one axis: self-feedback, plain two-operator FM, and chaotic frequency feedback, unfiltered and unoversampled.",
+  "description": "Braids' three FM models on one axis: self-feedback, plain two-operator FM, and chaotic frequency feedback. The ancestor of Two-op FM, sharing its ratio quantizer and feedback axis, but run raw: no oversampling, and free to alias.",
   "family": "FM",
   "tags": [
     "braids",

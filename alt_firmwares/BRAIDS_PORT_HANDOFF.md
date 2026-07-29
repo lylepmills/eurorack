@@ -1,9 +1,14 @@
 # Braids → Plaits Palette engine port — handoff to a local session
 
-**Status:** design + spec complete. Implementation NOT started.
+**Status: SUPERSEDED. All eleven engines are implemented, measured and landed.**
+Read `BRAIDS_PORT_PROGRESS.md` first — it carries the resolved decisions, the
+measured flash and CPU numbers, the corrections this document and the spec got
+wrong, and the remaining open work. This file is kept for the original
+orientation and cross-repo map only; where the two disagree, PROGRESS wins.
+
 **Written:** 2026-07-28, from a Claude Code *cloud* session that lacked the
 toolchain to implement it properly.
-**Pick this up in a LOCAL session** (Lyle's Mac), where the ARM toolchain,
+**Picked up in a LOCAL session** (Lyle's Mac), where the ARM toolchain,
 Docker, qemu and hardware are available.
 
 **The spec is `BRAIDS_PORT_SPEC.md`** next to this file (same content at

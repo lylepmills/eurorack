@@ -151,11 +151,18 @@ def classify_link_failure(log: str) -> tuple[str, str] | None:
 
 # Catalog id -> the PLAITS_STEREO_<MACRO> that gates that engine's stereo render
 # code (see plaits/dsp/engine/stereo_config.h and the makefile). The three DX7
-# banks share the six-op engine, so they map to one macro. The five declare-only
-# engines whose out/aux is already a stereo pair at ~0 cost are absent — they are
-# never gated. Keep this in sync with PLAITS_STEREO_MODELS in plaits/makefile.
+# banks share the six-op engine, so they map to one macro. The remaining
+# declare-only engines — the Braids ports whose out/aux is already a stereo pair
+# at ~0 cost — are absent, and are never gated. Keep this in sync with
+# PLAITS_STEREO_MODELS in plaits/makefile; test_container_server.py pins the two
+# lists against each other.
 STEREO_MACROS = {
     "toy": "TOY",
+    "bowed": "BOWED",
+    "csaw": "CSAW",
+    "ring-mod": "RING_MOD",
+    "vowel-fof": "VOWEL_FOF",
+    "digital-modulation": "DIGITAL_MODULATION",
     "virtual-analog": "VIRTUAL_ANALOG",
     "waveshaping": "WAVESHAPING",
     "two-op-fm": "TWO_OP_FM",
