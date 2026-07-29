@@ -85,12 +85,44 @@ leave-one-out into Speech's slot in the stock-24 context. Baseline 181,216 B.
 The spec's AGGREGATE was within 2 %. Its PER-ENGINE numbers ranged −39 % to
 +74 %, so treat §1 as a ranking and never as a budget.
 
-**Two traps when re-running the sweep.** The builder image bakes the firmware
+### Measured stereo delta — `toy` costs NOTHING, and the sign is real
+
+`flash_sweep.py --stereo` differences two builds identical but for the recipe's
+`stereoEngines` list (both `auxOutput: "stereo"`, so whatever the stereo aux
+option itself costs cancels — and it costs nothing: the all-mono stereo arm
+lands at 182,448, exactly the baseline 181,216 plus toy's 1,232 mono marginal).
+
+`toy` is the only Pattern-B port, so it was the only one that could cost
+anything. It measures **−144 bytes** — compiling the stereo path makes the
+firmware SMALLER. That is not a mismeasurement:
+
+- Object-level diff moves exactly ONE object, `toy_engine.o` (1,200 → 1,052),
+  and within it exactly one symbol, `ToyEngine::Render`. That is precisely the
+  object the makefile's `-DPLAITS_STEREO_TOY=0` rule targets, so the isolation
+  is clean and the cause is gcc 4.8 codegen: the runtime `parameters.stereo`
+  branch compiles tighter than the specialised mono-only body it replaces.
+- It is palette-INDEPENDENT — `toy_engine.cc` reads no `engine_config.h`, and
+  the delta is −144 on both a 3-engine palette and stock-24.
+
+Controls validate the harness: `harmonic` and `glisson` re-measure at 2,576 and
+416 against published production values of 2,592 and 432 — both exactly 16 B
+low, a consistent revision offset rather than noise.
+
+The website records this as `0`, not `−144`: `engineStereoBytes`' contract is a
+non-negative marginal (its test asserts it), and banking a 144 B saving — well
+inside the model's own ~350 B residuals — would only make the meter read
+permissively. The entry exists so the measurement is on record rather than the
+engine looking merely overlooked.
+
+**Three traps when re-running the sweep.** The builder image bakes the firmware
 source in (`COPY . /workspace`), so `docker build` it AFTER the engines land
 or every new engine fails with a missing header while the baseline builds
-fine — a local rehearsal of the exact deploy-ordering hazard. And the image
+fine — a local rehearsal of the exact deploy-ordering hazard. The image
 has an ENTRYPOINT, so the sweep needs `--entrypoint python3` or the command
-becomes arguments to the HTTP server and sits idle forever.
+becomes arguments to the HTTP server and sits idle forever. And a FRESH
+worktree has no submodule content — `git submodule update --init stmlib
+stm_audio_bootloader` before the `docker build`, or it stops at the
+missing-submodule guard.
 
 **Open work, in the order it should be picked up:**
 
@@ -120,8 +152,14 @@ becomes arguments to the HTTP server and sits idle forever.
    `two-op-fm`, `vowel-fof` to `speech`. `triple` is OVERLAP with
    `chords`/`swarm`, a different claim that should read differently.
 
-3. **`engineStereoBytes` has no entry for `toy`**, the one Pattern-B engine
-   here, so its stereo delta is uncosted. Needs a sweep pass.
+3. ~~**`engineStereoBytes` has no entry for `toy`**~~ — **DONE 2026-07-28.**
+   Swept with `flash_sweep.py --stereo`; the delta is −144 B (toy's stereo path
+   compiles SMALLER), recorded on the website as `0`. See the measured-stereo
+   section above for the object-level proof and the controls. Note this closes
+   the FLASH question only — whether the ten Pattern-A ports belong in
+   `alwaysStereoEngineIds` (they are in neither that set nor
+   `stereoToggleableEngineIds`, so the editor shows them no stereo button at
+   all) is item 1's business, not this one's.
 
 4. **`render_previews.cc` should read the catalog** rather than carry its own
    hardcoded list. Design already worked out: `render-previews.mjs` reads the
