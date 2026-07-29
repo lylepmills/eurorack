@@ -1719,7 +1719,7 @@
         "Complementary model"
       ],
       "version": "1.0.0",
-      "digest": "sha256:37135cdb7001543c8dac6582472cc7d4c3e5f8ff5ba03fc62c56696852423a35",
+      "digest": "sha256:c8df5da8b0645443d903da9daaaadae88ca47f814a9289a69e9c888af707653a",
       "documentationDigest": "sha256:7f0724de6d8ed5ed3320a067bf1c454b98daa0b92ecfbd340959c0386f7999dd",
       "manual": {
         "controls": {
@@ -1759,7 +1759,7 @@
         "Unfiltered, aliased stream"
       ],
       "version": "1.0.0",
-      "digest": "sha256:7fc3dac8b988902b86466cb3dd21f459d3718e52e25e7900c42610dab83da1a1",
+      "digest": "sha256:ddaa9db2c9f8522a827a81388327525ce01c0ed8d8aad3f5c8144a3d3d0997ca",
       "documentationDigest": "sha256:3ba83a255c7d095fb5b32860f436d8d9b0e195151b37bcb62ee2b6274d89362a",
       "manual": {
         "controls": {
@@ -1839,7 +1839,7 @@
         "Carrier and first modulator"
       ],
       "version": "1.0.0",
-      "digest": "sha256:440ab7413a46adc83480edc5ea409b460531c7d778aa185a8307bcff9a95eded",
+      "digest": "sha256:9df1f4eae3d0b1c3ab747eaf25685d8f19fce6d953c6bda70a9bc4a39b9b279a",
       "documentationDigest": "sha256:34eb5e33ad1392c007d88317ded14aab73de07e66e9102e8253ebfc20d0ae612",
       "manual": {
         "controls": {
@@ -1852,6 +1852,938 @@
       },
       "implementation": {
         "className": "RingModEngine"
+      }
+    },
+    {
+      "id": "fold",
+      "packageId": "mutable-instruments/fold",
+      "name": "Fold",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Waveshaping",
+      "description": "Braids' two wavefolders crossfaded against each other, the sine one saturating where the triangle one keeps folding. The model Plaits' waveshaping engine descends from, with the second curve it left behind.",
+      "tags": [
+        "braids",
+        "wavefolder",
+        "waveshaping",
+        "harmonics"
+      ],
+      "controls": [
+        "Blend",
+        "Fold",
+        "Symmetry",
+        "Drive"
+      ],
+      "outputs": [
+        "Crossfaded pair",
+        "Complementary crossfade"
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:577de7dcc57eadda33f5e64ad7a6659b611022363c33b628586e1eb5e14dcc08",
+      "documentationDigest": "sha256:c2133bab9a950fcf69a1ac5650f92c9ed53d4b52e055e710dbb3f7f28f503b92",
+      "manual": {
+        "controls": {
+          "harmonics": "Crossfades from the sine folder, which saturates, to the triangle folder, which keeps folding.",
+          "timbre": "Sets how hard both folders are driven, from a barely bent wave to the module's full depth.",
+          "morph": "Offsets the wave into one half of the folder, adding the even harmonics a symmetric source cannot make.",
+          "macro": "Pushes the folders past the depth the module stops at, or holds them back below it."
+        },
+        "trigger": "Restarts the oscillator phase so each note folds from the same point."
+      },
+      "implementation": {
+        "className": "FoldEngine"
+      }
+    },
+    {
+      "id": "buzz",
+      "packageId": "mutable-instruments/buzz",
+      "name": "Buzz",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Digital",
+      "description": "Braids' two unison-tuned band-limited pulse trains, summed. Harmonic count comes from a wavetable zone lookup, not a live additive sum, so the sweep is a flat spectrum with a hard cutoff moving through it, not a shaped one.",
+      "tags": [
+        "braids",
+        "pulse",
+        "wavetable",
+        "detune",
+        "buzz"
+      ],
+      "controls": [
+        "Detune",
+        "Buzz",
+        "Spread",
+        "Reach"
+      ],
+      "outputs": [
+        "The two voices summed, or the first voice alone in stereo.",
+        "The two voices' difference, or the second voice alone in stereo."
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:1262479413d8cf4e4ca28780d86410c166078201687909f4d180cd32d58fedfa",
+      "documentationDigest": "sha256:affbeb15eb6b61fc63522c218c83250634b40c90ea90cd0e3a68ef79d307c89d",
+      "manual": {
+        "controls": {
+          "harmonics": "Detunes the second voice from unison, within whatever reach MACRO sets.",
+          "timbre": "Sweeps harmonic count upward from a bare sine to the fullest stack the module holds for that note.",
+          "morph": "Offsets the second voice's harmonic content away from the first, zero at noon.",
+          "macro": "Widens the detune past the module's own sub-semitone ceiling, up to an octave apart."
+        },
+        "trigger": "Restarts the engine."
+      },
+      "implementation": {
+        "className": "BuzzEngine"
+      }
+    },
+    {
+      "id": "dual-sync",
+      "packageId": "mutable-instruments/dual-sync",
+      "name": "Dual Sync",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Subtractive",
+      "description": "Braids' two hard-sync models in one engine: a master oscillator syncs a slave swept up to 64 semitones above it, crossfaded against it. Virtual Analog's sync square shares one knob with pulse width and gain, and has no balance.",
+      "tags": [
+        "braids",
+        "sync",
+        "oscillator",
+        "analog"
+      ],
+      "controls": [
+        "Balance",
+        "Interval",
+        "Shape",
+        "Reset"
+      ],
+      "outputs": [
+        "The master and slave crossfaded at Balance.",
+        "The complementary crossfade, always favouring the side MAIN does not."
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:65c4a4d0bd0ae4f019e4434a7c17ac8434ff3ec4dc5ab77135b07db09408211c",
+      "documentationDigest": "sha256:ff57bbcd5399d2697df84b71ad86ee7256371cad2a34a04259b4ce1f92abcd21",
+      "manual": {
+        "controls": {
+          "harmonics": "Crossfades from the master oscillator alone to the synced slave alone.",
+          "timbre": "Sets how far above the master the synced slave sits, from unison to just under 64 semitones.",
+          "morph": "Runs from the module's sync square to its sync saw, and through the blend between them that the module has no path to.",
+          "macro": "Moves where in its own cycle the slave restarts on each sync pulse; the module always restarts it at the beginning."
+        },
+        "trigger": "Restarts the engine."
+      },
+      "implementation": {
+        "className": "DualSyncEngine"
+      }
+    },
+    {
+      "id": "granular-cloud",
+      "packageId": "mutable-instruments/granular-cloud",
+      "name": "Granular Cloud",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Granular",
+      "description": "Braids' asynchronous grain cloud: four windowed sine grains respawning on a coin flip, each taking a fresh random pitch. Where Granular Formant stays locked to a carrier, this one scatters until the pitch is gone.",
+      "tags": [
+        "braids",
+        "granular",
+        "grains",
+        "stochastic",
+        "cloud"
+      ],
+      "controls": [
+        "Scatter",
+        "Grain",
+        "Shape",
+        "Density"
+      ],
+      "outputs": [
+        "The four grains summed, as the module sums them.",
+        "The cloud's amplitude on one steady tone at the played pitch: the grain rhythm without the scatter."
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:8ba7e6ca92d4dd7257aa81a89a52842b5355331afc4f5d7c222fc78416312e3e",
+      "documentationDigest": "sha256:7bf5a8be6b46a035294ea971bc01265b98236a83dca905687e18934221a164e7",
+      "manual": {
+        "controls": {
+          "harmonics": "Widens the random pitch each grain takes when it respawns, from unison to a cloud with no pitch left.",
+          "timbre": "Sets grain length, from long overlapping windows down to short ones that respawn far more often.",
+          "morph": "Slides where the grain window peaks, from a reversed swell through the module's symmetric window to a struck grain.",
+          "macro": "Sets how readily a finished grain respawns, from a sputtering cloud full of gaps up to four voices that never leave one."
+        },
+        "trigger": "Restarts the engine."
+      },
+      "implementation": {
+        "className": "GranularCloudEngine"
+      }
+    },
+    {
+      "id": "morph",
+      "packageId": "mutable-instruments/morph",
+      "name": "Morph",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Virtual analog",
+      "description": "Braids' one-knob walk from triangle through saw to a narrowing pulse, into a low-pass that tracks the note and a tanh fuzz. Virtual analog shares the waveforms and has neither.",
+      "tags": [
+        "braids",
+        "analog",
+        "morph",
+        "fuzz"
+      ],
+      "controls": [
+        "Fuzz",
+        "Shape",
+        "Tone",
+        "Drive"
+      ],
+      "outputs": [
+        "The filtered and fuzzed voice.",
+        "The same morph oscillator dry, with neither the filter nor the fuzz on it."
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:1155c28da49eb31bfed5c1f23116fceae4607fa01d128c3a8763aec441ac45d8",
+      "documentationDigest": "sha256:e8eb735e777d020a53fd5844c0a68850549404ba9e3b3b10d7b3778754130b4c",
+      "manual": {
+        "controls": {
+          "harmonics": "Closes the low-pass onto the note while raising the fuzz from dry to wet, welded as the module welds them.",
+          "timbre": "Walks one oscillator from triangle through saw to square, then narrows the square into a pulse.",
+          "morph": "Offsets the low-pass five octaves either side of where Fuzz put it -- the coupling the module cannot undo.",
+          "macro": "Gain into the overdrive, from a soft saturation up to a hard clip. The module welds it at unity."
+        },
+        "trigger": "Restarts the engine."
+      },
+      "implementation": {
+        "className": "MorphEngine"
+      }
+    },
+    {
+      "id": "noise-bank",
+      "packageId": "mutable-instruments/noise-bank",
+      "name": "Noise Bank",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Noise",
+      "description": "Braids' three noise models in one slot: noise through a resonant filter, two resonant peaks, and a sample-and-hold whose random sequence loops into a pitched buzz.",
+      "tags": [
+        "braids",
+        "noise",
+        "resonator",
+        "sample and hold"
+      ],
+      "controls": [
+        "Model",
+        "Colour",
+        "Shape",
+        "Drive"
+      ],
+      "outputs": [
+        "The selected model.",
+        "Its complement: the notch, the difference of the two peaks, or a second independent sequence."
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:f7c2d229e17f6c2e0fd6468b95455bed0165134b92e46a97aceb08e6e62a3c9f",
+      "documentationDigest": "sha256:e381a1a03446586b64c0fc846f28a24b1047a8997f2b62d24113dc9b3d5baf4c",
+      "manual": {
+        "controls": {
+          "harmonics": "Selects filtered noise, twin peaks, or clocked noise.",
+          "timbre": "Resonance for the two filtered models; loop length of the random sequence for the clocked one.",
+          "morph": "Lowpass to bandpass to highpass, the second peak's interval, or the number of sample-and-hold levels.",
+          "macro": "Pushes the output through the module's overdrive shaper, or backs it out into the clean part of the curve."
+        },
+        "trigger": "Restarts the engine."
+      },
+      "implementation": {
+        "className": "NoiseBankEngine"
+      }
+    },
+    {
+      "id": "particle-burst",
+      "packageId": "mutable-instruments/particle-burst",
+      "name": "Particle Burst",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Noise",
+      "description": "Braids' PRTC: three fixed-interval resonant filters, a chord above the note, re-struck by a shared decaying noise burst at a random rate. Plaits' particle-noise scatters six particles around one pitch instead -- a cloud, not a chord.",
+      "tags": [
+        "braids",
+        "particle",
+        "resonator",
+        "noise",
+        "percussive"
+      ],
+      "controls": [
+        "Scatter",
+        "Density",
+        "Chord width",
+        "Decay"
+      ],
+      "outputs": [
+        "The three resonant filters, summed.",
+        "Mono: the raw decaying-noise burst before filtering. Stereo: a second, fully independent filter bank and RNG stream, for genuinely decorrelated left and right bursts."
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:00d9e0d0c37a3a98104f0ae76ef98d981b6e588a1ee08f0861c1f7d8127cea56",
+      "documentationDigest": "sha256:7a13ae09951c3ffb850354b0438dc247c45af48426ff4eb5a0b3515d82629e62",
+      "manual": {
+        "controls": {
+          "harmonics": "Jitters each filter around its own fixed interval; the lowest one jitters about three quarters as far as the other two.",
+          "timbre": "Sets how often a burst fires, from a few sparse ticks a second to a dense rattle.",
+          "morph": "Scales the three filters' fixed intervals from unison, through the module's own voicing, to double the spread.",
+          "macro": "Reshapes the burst envelope from a short tick, through the module's fixed length, to a long bloom."
+        },
+        "trigger": "Restarts the engine."
+      },
+      "implementation": {
+        "className": "ParticleBurstEngine"
+      }
+    },
+    {
+      "id": "saw-square",
+      "packageId": "mutable-instruments/saw-square",
+      "name": "Saw Square",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Subtractive",
+      "description": "Braids' variable saw and variable square, driven from one shared TIMBRE knob that opens one as it closes the other, crossfaded by COLOR. Virtual Analog runs the same pair of waveforms independently; this is the coupled, single-knob version.",
+      "tags": [
+        "braids",
+        "saw",
+        "square",
+        "oscillator"
+      ],
+      "controls": [
+        "Blend",
+        "Shape",
+        "Phase",
+        "Square Level"
+      ],
+      "outputs": [
+        "The crossfaded pair.",
+        "The complementary crossfade, always favouring the waveform MAIN does not."
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:44769419fe5366a64784211d6d6340cf0ae35c2422dac6ed1a4111e5a1313e9e",
+      "documentationDigest": "sha256:965a60847ca5f3e25c16441e918b93212d0c7fa653a3d3dc4e72defd05f77c5f",
+      "manual": {
+        "controls": {
+          "harmonics": "Crossfades from the saw to the attenuated square.",
+          "timbre": "Opens the saw's pulse width as it narrows the square's, or the reverse -- one knob, two waveforms.",
+          "morph": "Offsets the square's phase against the saw's -- the module's two oscillators are always locked together.",
+          "macro": "Braids fixes the square at 58% of full level; this sweeps that attenuation from silent to unattenuated."
+        },
+        "trigger": "Restarts the engine."
+      },
+      "implementation": {
+        "className": "SawSquareEngine"
+      }
+    },
+    {
+      "id": "saw-swarm",
+      "packageId": "mutable-instruments/saw-swarm",
+      "name": "Saw Swarm",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Subtractive",
+      "description": "Braids' seven-voice detuned sawtooth chorus, soft-clipped and carved by a resonant filter tracking the note. A fixed chorus, not the granular cloud Plaits' own Swarm engine is, and deliberately raw, aliasing sawtooths.",
+      "tags": [
+        "braids",
+        "sawtooth",
+        "detune",
+        "filter",
+        "digital"
+      ],
+      "controls": [
+        "Color",
+        "Detune",
+        "Filter",
+        "Resonance"
+      ],
+      "outputs": [
+        "The filtered swarm at the dialed-in Filter position.",
+        "The same swarm through the mirrored filter position, always the tap MAIN is not favouring."
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:bbe25bd88cebe810a2a413691050379d8b6087f6ed8d08b15ca4f9f7f6bf1256",
+      "documentationDigest": "sha256:45d716b39594a8f00adb943fa090d2b60fb53964bcb2fd083298669f956ed9d0",
+      "manual": {
+        "controls": {
+          "harmonics": "The filter's cutoff: on the note a third of the way up, closing below that twice as fast as it opens above.",
+          "timbre": "Spreads the seven saws apart in pitch, from unison to a wide, wavering chorus.",
+          "morph": "Sweeps the same filter's response from lowpass, through the module's own highpass at center, to bandpass.",
+          "macro": "The filter's resonance, fixed in the module -- calmer below center, a controlled peak above it."
+        },
+        "trigger": "Restarts the engine."
+      },
+      "implementation": {
+        "className": "SawSwarmEngine"
+      }
+    },
+    {
+      "id": "vowel",
+      "packageId": "mutable-instruments/vowel",
+      "name": "Vowel",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Vocal",
+      "description": "Braids' table-driven vowel synthesiser: three formants read at sixteen steps a cycle, gated by a ramp that restarts every pitch period, through a tanh shaper. The stepped ancestor of Speech's SAM mode.",
+      "tags": [
+        "braids",
+        "formant",
+        "vocal",
+        "vowel"
+      ],
+      "controls": [
+        "Spread",
+        "Shift",
+        "Vowel",
+        "Grain"
+      ],
+      "outputs": [
+        "The shaped formant stack.",
+        "The same stack ahead of the overdrive."
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:e98de5f53922bb2f1ef9fda0c9c3d2bf0b9df2372475ed1f04c89e730ba16afd",
+      "documentationDigest": "sha256:0c3d7d92ff89da388bc80e2c7ed56276abb97884d078c6f8d1fe044dfe7d8fe1",
+      "manual": {
+        "controls": {
+          "harmonics": "Pulls the upper two formants toward the first or pushes them apart, past the vowels in the module's list.",
+          "timbre": "Scales all three formants together, from a large vocal tract to a small one.",
+          "morph": "Walks the nine phoneme frames, crossfading between neighbours.",
+          "macro": "Shortens or stretches the burst inside each pitch period, from a tight grain to a ramp still open at the reset."
+        },
+        "trigger": "Restarts the engine."
+      },
+      "implementation": {
+        "className": "VowelEngine"
+      }
+    },
+    {
+      "id": "harmonics",
+      "packageId": "mutable-instruments/harmonics",
+      "name": "Harmonics",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Additive",
+      "description": "Braids' twelve-partial additive stack, with two Lorentzian bumps sliding over the harmonic series. Its integer amplitude slew gates quiet partials out entirely, which is the grain the Plaits harmonic engine's float smoothing does not have.",
+      "tags": [
+        "braids",
+        "additive",
+        "partials",
+        "formant"
+      ],
+      "controls": [
+        "Colour",
+        "Peak",
+        "Spread",
+        "Width"
+      ],
+      "outputs": [
+        "The twelve partials under both bumps.",
+        "The same stack with Peak reflected, so it holds the end of the series MAIN does not."
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:1d070fbb6b4c00b8dac9401a1dcecaea4f81f56a51046be96e90787a692d3a3e",
+      "documentationDigest": "sha256:df5305a57231f4ae30a23acd8a2fb6555961efbddc2699aacba2d89584c396e2",
+      "manual": {
+        "controls": {
+          "harmonics": "Braids' COLOR, welded as the module has it: the bumps narrow toward both ends while the second one grows.",
+          "timbre": "Slides the first bump from the fundamental to the twelfth partial; the second follows at half that index plus six.",
+          "morph": "Moves the second bump off the module's fixed relation, six partials either way. Centre is Braids.",
+          "macro": "Scales the bump width around whatever Colour chose, so the two stop sharing a knob. Noon is Braids."
+        },
+        "trigger": "Restarts the engine."
+      },
+      "implementation": {
+        "className": "HarmonicsEngine"
+      }
+    },
+    {
+      "id": "vosim",
+      "packageId": "mutable-instruments/vosim",
+      "name": "VOSIM",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Vocal",
+      "description": "Braids' VOSM: two sine formants under a bell window the played note restarts. Both formant pitches are absolute and set independently, reaching pairs Granular Formant's ratio control cannot, and the 2:1 balance is a knob.",
+      "tags": [
+        "braids",
+        "vosim",
+        "formant",
+        "grain"
+      ],
+      "controls": [
+        "Formant 2",
+        "Formant 1",
+        "Window",
+        "Balance"
+      ],
+      "outputs": [
+        "The grain train at the set balance.",
+        "The same grain train with the balance mirrored, favouring the formant MAIN does not."
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:5d485690eb0ff58a0bab98eca529ac463bb66590da928ddd68773a7cfedd9fd4",
+      "documentationDigest": "sha256:6914d83d436606a99116135b96f7fa028d0f3da3a2e0ddfceb3c1d195e13163d",
+      "manual": {
+        "controls": {
+          "harmonics": "The second formant's pitch, also absolute and set independently of the first.",
+          "timbre": "The first formant's pitch, absolute rather than tracking the note.",
+          "morph": "Sets how much of each cycle the bell spends opening: a narrow spike, the module's one sixteenth, or half.",
+          "macro": "Shifts weight between the two formants, from formant 2 alone to formant 1 alone. The detent is the module's fixed 2:1."
+        },
+        "trigger": "Restarts the engine."
+      },
+      "implementation": {
+        "className": "VosimEngine"
+      }
+    },
+    {
+      "id": "plucked",
+      "packageId": "mutable-instruments/plucked",
+      "name": "Plucked",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Physical",
+      "description": "Braids' PLUK: three round-robin Karplus-Strong voices, a noise burst dropped into a resonant loop per strike. Inharmonic-string is the same round robin with a far more elaborate model; this keeps PLUK's own stochastic damping instead.",
+      "tags": [
+        "braids",
+        "karplus-strong",
+        "pluck",
+        "string",
+        "percussive"
+      ],
+      "controls": [
+        "Pluck",
+        "Damping",
+        "Spread",
+        "Stretch"
+      ],
+      "outputs": [
+        "All three round-robin voices, summed.",
+        "Mono: the raw noise excitation only, silent between strikes. Stereo: dropped in favour of panning each voice to a fixed round-robin position."
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:0ee39db214a8b42d9905bf1c0b10621381d58173e7dffe03e3aef43b11d3befa",
+      "documentationDigest": "sha256:8401c69e8c31e0950fc66dbc3d9a2092533286a044ccc2bfe62a0ad2988f53f7",
+      "manual": {
+        "controls": {
+          "harmonics": "How much of one string period gets struck with noise, from a narrow flick to most of the cycle.",
+          "timbre": "Below noon, extra muting under the decay. Above noon, random skipped filter passes stretch and detune it toward metal.",
+          "morph": "Offsets each round-robin voice by a fixed interval, building a small chord. Unison, the module, at noon.",
+          "macro": "How far Damping's random detuning reaches: off at the bottom, the module's ceiling at noon, past it above."
+        },
+        "trigger": "Restarts the engine."
+      },
+      "implementation": {
+        "className": "PluckedEngine"
+      }
+    },
+    {
+      "id": "blown",
+      "packageId": "mutable-instruments/blown",
+      "name": "Blown",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Physical modelling",
+      "description": "Braids' blown bore: one delay line closed by an inverting reflection, driven by a clipped reed and a breath pressure the noise rides on. Its tone filter sits outside the loop, so the body colour and the pipe are separate controls.",
+      "tags": [
+        "braids",
+        "physical",
+        "waveguide",
+        "wind"
+      ],
+      "controls": [
+        "Body",
+        "Focus",
+        "Blow",
+        "Reed"
+      ],
+      "outputs": [
+        "The bore heard through the body filter, which is what the module emits.",
+        "Mono: the raw bore pressure, before the body filter. Stereo: a second pickup 0.62 of the way down the same bore, through its own copy of the body filter, so the two channels are one standing wave heard at two points."
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:1de6fb879a1120e4b422cfc9c36f783a041636781927dbd42bb497fe41689300",
+      "documentationDigest": "sha256:03a18ea8128659fbe824b076e0383426ca854baa7b840407f6c706d14cb5738d",
+      "manual": {
+        "controls": {
+          "harmonics": "Braids' COLOR: the corner of the body filter the bore is heard through. Its live travel narrows with the note.",
+          "timbre": "Braids' TIMBRE: how much noise rides on the breath. Low is turbulent, airy and quiet; high is steady and loud.",
+          "morph": "Mouth pressure, which Braids welds at 0.8. Down for an under-blown pipe, up to drive the reed into its clip.",
+          "macro": "The reed's rest offset, which Braids welds at 0.7. Down for a loose reed, up for one pinned open most of the cycle."
+        },
+        "trigger": "Restarts the engine."
+      },
+      "implementation": {
+        "className": "BlownEngine"
+      }
+    },
+    {
+      "id": "struck-bell",
+      "packageId": "mutable-instruments/struck-bell",
+      "name": "Struck Bell",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Additive",
+      "description": "Braids' BELL: eleven fixed inharmonic partials, additively synthesised and struck once per trigger, sharing one decay curve and one odd/even detune. A fixed hand-tuned voicing, not a stretched-harmonic formula.",
+      "tags": [
+        "braids",
+        "bell",
+        "additive",
+        "percussive",
+        "struck",
+        "inharmonic"
+      ],
+      "controls": [
+        "Detune",
+        "Decay",
+        "Brightness",
+        "Decay spread"
+      ],
+      "outputs": [
+        "The eleven-partial sum. Tracks the module's own output closely; tests/ab.json carries the measured figures.",
+        "Mono: the five highest partials alone, a bright fast-decaying companion voice. Stereo: a second, independently detuned eleven-partial render sharing the same amplitude envelope, for a wide chorused bell."
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:1eded112568ac337864eebe630998536d69570a53d20eac7b9878447b8bdb91d",
+      "documentationDigest": "sha256:846dd12f1e7b0fa20bf9051bc91d3cfd20c543d4a57022fa7e3917fd9c8e37bd",
+      "manual": {
+        "controls": {
+          "harmonics": "Spreads alternate partials apart around the module's own fixed ratios: every other one up, the rest down.",
+          "timbre": "Blends the module's two decay tables, short at 0 to long near the top; past about 98% the bell drones forever.",
+          "morph": "Tilts each partial's strike amplitude by position: soft mallet toward 0, the module's amplitudes at noon, hard toward 1.",
+          "macro": "Sets how much faster high partials decay than low: uniform toward 0, the module's spread at noon, exaggerated toward 1."
+        },
+        "trigger": "Restarts the engine."
+      },
+      "implementation": {
+        "className": "StruckBellEngine"
+      }
+    },
+    {
+      "id": "struck-drum",
+      "packageId": "mutable-instruments/struck-drum",
+      "name": "Struck Drum",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Additive",
+      "description": "Braids' DRUM: six fixed partials struck once per trigger. Two are ring-modulated by lowpass-filtered noise instead of played straight -- a different mechanism from a resonator excited by noise.",
+      "tags": [
+        "braids",
+        "drum",
+        "additive",
+        "percussive",
+        "struck",
+        "noise"
+      ],
+      "controls": [
+        "Color",
+        "Decay",
+        "Spread",
+        "Decay spread"
+      ],
+      "outputs": [
+        "The six-partial mix. Tracks the module's own output closely; tests/ab.json carries the measured figures.",
+        "Mono: the two noise-ring-modulated partials alone, without the direct tone or the harmonics sum. Stereo: a second, independently-filtered noise realization for the right channel, sharing the same tonal partials as the left."
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:fd84ef4baf46046d42b875c67c42cac7112511c8eedaa4331869094fd668e041",
+      "documentationDigest": "sha256:65aab70f996077b94b1aa30db54d38ffa46b367e023cbfcf31ffffd4770f9a87",
+      "manual": {
+        "controls": {
+          "harmonics": "The noise's cutoff, the six-partial harmonics level, and a two-voice noise crossfade, coupled as the module does.",
+          "timbre": "Blends between the module's two decay tables; past about 98% the drum drones and never loses energy.",
+          "morph": "Scales the six fixed partial ratios together, from unison at 0 through the module's own voicing at noon to double at 1.",
+          "macro": "How much faster high partials decay than low: uniform toward 0, the module's own spread at noon, exaggerated toward 1."
+        },
+        "trigger": "Restarts the engine."
+      },
+      "implementation": {
+        "className": "StruckDrumEngine"
+      }
+    },
+    {
+      "id": "kick",
+      "packageId": "mutable-instruments/kick",
+      "name": "Kick",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Drums",
+      "description": "Braids' self-enveloping kick: two decaying pulses into a bandpass that jumps up in pitch for a brief click, then self-brightens. A different mechanism from Plaits' own analog-bass-drum, which clicks with FM rather than a retuned filter.",
+      "tags": [
+        "braids",
+        "drum",
+        "kick",
+        "percussion"
+      ],
+      "controls": [
+        "Tone",
+        "Decay",
+        "Balance",
+        "Punch"
+      ],
+      "outputs": [
+        "The self-enveloped kick.",
+        "The raw excitation pulses, before the resonator, soft-clipped."
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:c4e9aef059e7db31e8ae4d0913307fd9fe22977107a43cf867ee3f9b6615f3ed",
+      "documentationDigest": "sha256:54d87d810fb12519140ca3a85f20fb60a96d71730d6e638894310de75b8aaed8",
+      "manual": {
+        "controls": {
+          "harmonics": "The output filter's brightness -- Braids' COLOR, applied after the resonator.",
+          "timbre": "The resonator's decay -- Braids' TIMBRE. Turning it up lengthens the boom toward near-self-oscillation.",
+          "morph": "Crossfades the two excitation pulses. Centred is native level; the ends fade one out to just click or just thump.",
+          "macro": "Scales the self-brightening dynamic filter modulation around the module's one fixed amount, from off to 4x."
+        },
+        "trigger": "Restarts the engine."
+      },
+      "implementation": {
+        "className": "KickEngine"
+      }
+    },
+    {
+      "id": "snare",
+      "packageId": "mutable-instruments/snare",
+      "name": "Snare",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Drums",
+      "description": "Braids' SNAR: two decaying pulses into two fixed-interval tonal resonators, and a decaying noise burst into a third, high resonator, all self-enveloping and summed. A note strikes shorter the higher it is played.",
+      "tags": [
+        "braids",
+        "drum",
+        "snare",
+        "percussion",
+        "noise"
+      ],
+      "controls": [
+        "Snap",
+        "Tone",
+        "Snap balance",
+        "Spread"
+      ],
+      "outputs": [
+        "The full self-enveloping mix.",
+        "The snap resonator alone, soft-clipped."
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:e3fe5763e6e824496942591783e338a95c7fc83fca314614450f4a58457736db",
+      "documentationDigest": "sha256:dea4844f0033ccb898d64d472f5b41b1376ccc7f1de51cad707b894b8800998e",
+      "manual": {
+        "controls": {
+          "harmonics": "The noise burst's peak level, and past noon, how long both the snap and the tone ring.",
+          "timbre": "Balances the two tonal resonators, which sound at the note itself and an octave above it.",
+          "morph": "Crossfades the tonal sum against the snap resonator. Centred is the module's own unweighted sum.",
+          "macro": "Widens the interval between the two tonal resonators: unison at 0, the module's octave at noon, two at 1."
+        },
+        "trigger": "Restarts the engine."
+      },
+      "implementation": {
+        "className": "SnareEngine"
+      }
+    },
+    {
+      "id": "cymbal",
+      "packageId": "mutable-instruments/cymbal",
+      "name": "Cymbal",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Drums",
+      "description": "Braids' CYMBAL: six square oscillators through a resonant bandpass, crossfaded against clocked noise through a resonant highpass. Free-running, not self-enveloping.",
+      "tags": [
+        "braids",
+        "cymbal",
+        "hihat",
+        "noise",
+        "metallic"
+      ],
+      "controls": [
+        "Color",
+        "Tone",
+        "Spread",
+        "Resonance"
+      ],
+      "outputs": [
+        "The crossfaded pair, Braids' own signal.",
+        "Mono: the complementary crossfade, always favouring the side MAIN does not. Stereo: a second, independent raw-noise stream and a small opposing offset on Color."
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:1f180439278fc98378b0c99c8e3d5c1efefc31c96be73bc969868df743ecba59",
+      "documentationDigest": "sha256:78c459781c274768478fd338172d4203b775589e2ba2070882f239c535508bf6",
+      "manual": {
+        "controls": {
+          "harmonics": "Crossfades from the resonant metallic noise to the resonant raw noise, the module's own COLOR.",
+          "timbre": "Sets the cutoff shared by both filters, from a dull thud to an open, bright hiss.",
+          "morph": "Scales the five detuned partials' distance from the root, from unison to double the module's own spread.",
+          "macro": "Scales both filters' resonance around the module's fixed setting, from damped and dull to near-ringing."
+        },
+        "trigger": "Restarts the engine."
+      },
+      "implementation": {
+        "className": "CymbalEngine"
+      }
+    },
+    {
+      "id": "wave-scan",
+      "packageId": "mutable-instruments/wave-scan",
+      "name": "Wave Scan",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Wavetable",
+      "description": "Braids' three wavetable models in one slot, over its own 256-wave 8-bit bank: 20 named banks, a 16x16 interpolated map, and a curated line with a phase-domain crush.",
+      "tags": [
+        "braids",
+        "wavetable",
+        "scanning",
+        "lo-fi"
+      ],
+      "controls": [
+        "Model",
+        "Scan",
+        "Shape",
+        "Snap"
+      ],
+      "outputs": [
+        "The scanned readout.",
+        "Its complement: the adjacent wave, the opposite corner of the map cell, or the other end of the crush."
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:00b8877c4c50eb7b8b1a189d803205b3003eebcc1634cda6237b78e6e262d688",
+      "documentationDigest": "sha256:314a59aceba9ffe8883b1dffa46836639befa04b6c4dbb83bc41474e9fe36451",
+      "manual": {
+        "controls": {
+          "harmonics": "Selects the banks, the 16x16 map, or the curated line.",
+          "timbre": "Position within the bank, along the map's X axis, or along the line.",
+          "morph": "Which of the 20 banks, the map's Y axis, or the line's four-zone crush.",
+          "macro": "Steps the scan between whole waves above noon, blurs it into their sum below; Braids exactly at the detent."
+        },
+        "trigger": "Restarts the engine."
+      },
+      "implementation": {
+        "className": "WaveScanEngine"
+      }
+    },
+    {
+      "id": "wave-paraphonic",
+      "packageId": "mutable-instruments/wave-paraphonic",
+      "name": "Wave Paraphonic",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Polyphonic",
+      "description": "Braids' four wavetable voices tuned to a chord, over its own 33-wave scan line and 17-row chord list. Adds a per-voice wave fan and a continuous interval scaler, neither of which Chords has.",
+      "tags": [
+        "braids",
+        "wavetable",
+        "chord",
+        "paraphonic"
+      ],
+      "controls": [
+        "Chord",
+        "Wave",
+        "Fan",
+        "Spread"
+      ],
+      "outputs": [
+        "The four voices summed, as the module has them.",
+        "The root voice on its own, undetuned."
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:53b3b027c63c8153b0bc6c0ecd3c095a05171a36362a35dff438e048dd9dfa43",
+      "documentationDigest": "sha256:1da860a3876deb87567c23ff3a5ce3728b841faf766e163b006a832f14e3a520",
+      "manual": {
+        "controls": {
+          "harmonics": "Braids' 17-row chord list: sub-semitone unisons, then triads, wide voicings, and octave stacks at the top.",
+          "timbre": "Scans the 33-wave line all four voices read, crossfading between neighbours.",
+          "morph": "Offsets each voice further along the scan line, so the four read different waves.",
+          "macro": "Scales every chord interval, from a unison at zero to double width. Braids' voicing at noon."
+        },
+        "trigger": "Restarts the engine."
+      },
+      "implementation": {
+        "className": "WaveParaphonicEngine"
+      }
+    },
+    {
+      "id": "fluted",
+      "packageId": "mutable-instruments/fluted",
+      "name": "Fluted",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Physical modelling",
+      "description": "A jet flute derived from Braids' FLUT: a bore and a jet delay line sharing one loop, driven by an asymmetric cubic jet and a breath the noise multiplies. It overblows into a higher register, as the module does.",
+      "tags": [
+        "braids",
+        "physical",
+        "waveguide",
+        "wind"
+      ],
+      "controls": [
+        "Embouchure",
+        "Air",
+        "Blow",
+        "Body"
+      ],
+      "outputs": [
+        "The bore pressure at the far end, which is what the module emits.",
+        "A second tap halfway along the same bore \u2014 level-matched to the main output but decorrelated from it, so in stereo the two channels are one standing wave heard at two points."
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:7460166ec18a7e4c0b9e5b5965cb907a9df740d41d12a1c89302ac0036043071",
+      "documentationDigest": "sha256:6f9bc2094881c16acb669fdf324d840d9ecb64808a1574546a237fc3fc8e9389",
+      "manual": {
+        "controls": {
+          "harmonics": "Braids' COLOR: splits one fixed loop length between jet and bore. Moves the embouchure without moving the pitch.",
+          "timbre": "Braids' TIMBRE: breath turbulence, 51% depth down to 1%. Backwards, as the module's is: low airy, high steady.",
+          "morph": "Breath pressure, welded at twice the envelope in Braids. Under- or over-blow the pipe until it changes register.",
+          "macro": "The bore's damping, which Braids ties rigidly to the note and gives no knob. Down for a dark pipe, up for a bright one."
+        },
+        "trigger": "Restarts the engine."
+      },
+      "implementation": {
+        "className": "FlutedEngine"
+      }
+    },
+    {
+      "id": "question-mark",
+      "packageId": "mutable-instruments/question-mark",
+      "name": "Question Mark",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Noise",
+      "description": "Braids' hidden model, reachable on the module only with the marquee set to \"49\": a Morse transmitter keying a sine over a drifting noise bed, through a squared-distortion stage.",
+      "tags": [
+        "braids",
+        "morse",
+        "easter-egg",
+        "noise",
+        "radio"
+      ],
+      "controls": [
+        "Static",
+        "Speed",
+        "Bed",
+        "Grit"
+      ],
+      "outputs": [
+        "The transmission, the module's own signal.",
+        "Mono: the keyed carrier alone, before the bed and the distortion. Stereo: a second full transmission whose noise draws come from an independent generator, so the tone stays centred and the bed opens out."
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:5c7fe0f268c7f7223b0d486fe25140c486fb41b2682e8b9b7f5d91c4fa53484b",
+      "documentationDigest": "sha256:60a4cf087d19ba07e3676d36ab3a8c63f7d3d7bd6f38cd8f2c450212ea58ea36",
+      "manual": {
+        "controls": {
+          "harmonics": "The module's own COLOR: the noise bed's floor and the distortion depth together, as one knob.",
+          "timbre": "The keying rate, from a 123 ms dit to a 37 ms one \u2014 the module's own TIMBRE.",
+          "morph": "The noise level on its own, from a bare keyed tone to well past the module's loudest bed.",
+          "macro": "The squared distortion on its own, from a clean sum to twice the module's depth."
+        },
+        "trigger": "Restarts the engine."
+      },
+      "implementation": {
+        "className": "QuestionMarkEngine"
       }
     },
     {
@@ -1879,7 +2811,7 @@
         "Neck pickup"
       ],
       "version": "1.0.0",
-      "digest": "sha256:ed3e38c4de99f009c59bae1f1b829b86e113bce4750d76afdcc72a37c0aea007",
+      "digest": "sha256:67e186f1ae4412159ec3b7fb289be38df3d81028f8c4fe6258d53ab2575cc665",
       "documentationDigest": "sha256:b913cb9025a1b2ed2dee10c5c3c5f6e724a61c84404be673ed659bcdc981b08b",
       "manual": {
         "controls": {
@@ -1919,7 +2851,7 @@
         "Sub only"
       ],
       "version": "1.0.0",
-      "digest": "sha256:dcc57e15c9e80f872b6bc4011c782c6926309257fa46f429c22c0dc5e825b87f",
+      "digest": "sha256:41c06037a7e5709b25074c9b763932aae9787e4fcf55946dee4c18e86dd27417",
       "documentationDigest": "sha256:45012e3dfe937d6f147a1a3d1fbbe118e1931f9f87b664c4163d8613dff75c61",
       "manual": {
         "controls": {
@@ -1999,7 +2931,7 @@
         "Second tap a fifth away"
       ],
       "version": "1.0.0",
-      "digest": "sha256:e9f11fed3f0f2ba07ac4be102ecb6e40c6e6355484b63b25cc846e8aca34bff8",
+      "digest": "sha256:e295c9c2e6881091298201469c06db08b703bcaac1bbaa7db8f316e561ad377f",
       "documentationDigest": "sha256:74d5139b7ea8408cd0135babf3ae82cc364b74ecf441ddbc63f52faba9ed7f58",
       "manual": {
         "controls": {
@@ -2119,7 +3051,7 @@
         "Undetuned root voice"
       ],
       "version": "1.0.0",
-      "digest": "sha256:02cd8b2002acff98d98141d6eeaee385cd84fb7d03f3b3df9fefbbff6feb0f09",
+      "digest": "sha256:ea56e2b1543c1bec775bbb7c8d7cf50fa35bc7a0a300f055e138e4fb180fa18c",
       "documentationDigest": "sha256:aa32b300d63abf627ac7324a7dfb7aeca8da416a6b7c752cdba1d713536e4f71",
       "manual": {
         "controls": {
@@ -2328,7 +3260,7 @@
         "Valve buzz"
       ],
       "version": "1.0.0",
-      "digest": "sha256:6ba04af9a132c2cb4e8a710ef0928cb5da3cf47ba1aa24fd8d9717794405491e",
+      "digest": "sha256:23bc3ad729f941f84d86e33909785e28a99fa6efec2dee8558e0650c10e853b9",
       "documentationDigest": "sha256:2e29a5c351344ffc48f40b4f77ba746e400eacfd525d93fade7817afddf2f980",
       "manual": {
         "controls": {
