@@ -23,11 +23,11 @@ using namespace stmlib;
 
 namespace {
 
-// 95-tap halfband, Kaiser window beta = 12, cutoff at half the 96 kHz internal
+// 47-tap halfband, Kaiser window beta = 12, cutoff at half the 96 kHz internal
 // rate, DC gain normalised to 1. Generated -- not typed -- from
 //
 //   ideal[n] = n ? sin(pi*n/2) / (pi*n) : 0.5      (n = -47..47)
-//   h[n]     = ideal[n] * kaiser(95, 12)[n], zeroed at even n != 0,
+//   h[n]     = ideal[n] * kaiser(47, 12)[n], zeroed at even n != 0,
 //   h       /= sum(h)
 //
 // which is the standard halfband construction; the even-n zeros are exact by
@@ -35,9 +35,9 @@ namespace {
 // here plus the separate centre tap are ever summed.
 //
 // Response computed from these coefficients: -0.000 dB at 18 kHz, +0.000 dB at
-// 20 kHz, -0.30 dB at 22 kHz, -1.81 dB at 23 kHz, -6.02 dB at 24 kHz (the
-// halfband symmetry point), -14.52 dB at 25 kHz, -29.30 dB at 26 kHz,
-// -118 dB at 28 kHz. The reference renderer's 127-tap Blackman-Harris sinc
+// 20 kHz, -1.86 dB at 22 kHz, -3.52 dB at 23 kHz, -6.02 dB at 24 kHz (the
+// halfband symmetry point), -9.54 dB at 25 kHz, -14.28 dB at 26 kHz,
+// -28.51 dB at 28 kHz. The reference renderer's 127-tap Blackman-Harris sinc
 // reads -0.05, -1.06, -6.02, -18.76, -45.10 at the same points, so the two
 // decimators differ by 4.2 dB at 25 kHz and 15.8 dB at 26 kHz and by under
 // 0.8 dB everywhere below 23 kHz.
@@ -57,15 +57,12 @@ namespace {
 // path is lut_oscillator_increments, behind ComputePhaseIncrement, and the
 // port replaces that with plaits::NoteToFrequency (SPEC R6); the A/B's pitch
 // figures are what check that substitution.
-const float kHalfbandCenter = 0.4999999358f;
+const float kHalfbandCenter = 0.4999997483f;
 
 const float kHalfbandTaps[kDualSyncHalfbandPairs] = {
-  -0.0000003574f, +0.0000026707f, -0.0000092626f, +0.0000243978f,
-  -0.0000548863f, +0.0001109176f, -0.0002069542f, +0.0003626398f,
-  -0.0006036865f, +0.0009627341f, -0.0014802323f, +0.0022055046f,
-  -0.0031983245f, +0.0045316437f, -0.0062966682f, +0.0086125712f,
-  -0.0116454822f, +0.0156469271f, -0.0210364440f, +0.0285967157f,
-  -0.0400053702f, +0.0596444311f, -0.1036465508f, +0.3174830978f
+  -0.0000007304f, +0.0000198297f, -0.0001196836f, +0.0004564988f,
+  -0.0013417914f, +0.0033070347f, -0.0071726082f, +0.0141749919f,
+  -0.0263829328f, +0.0483750742f, -0.0961859865f, +0.3148704295f
 };
 
 // Braids' square is `phase < pw ? 0 : 32767` and its saw is `phase >> 17`,
@@ -272,9 +269,9 @@ void DualSyncEngine::Render(
       decimator_write_ = (decimator_write_ + 1) & (kDualSyncDecimatorSize - 1);
     }
 
-    // Straight FIR over the 95 samples ending at the one just written, oldest
+    // Straight FIR over the 47 samples ending at the one just written, oldest
     // first: sum(h[j] * x[base + j]). Every odd j is identically zero in a
-    // halfband except the centre, so the loop touches only the 24 symmetric
+    // halfband except the centre, so the loop touches only the 12 symmetric
     // pairs and the centre is taken separately. Group delay is the filter's
     // 47 internal samples, i.e. 23.5 output samples -- a fixed latency, which
     // is why it does not show up anywhere in the A/B.

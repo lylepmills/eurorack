@@ -145,16 +145,23 @@
 //     deviation 3.03e-5, which is 0.99 LSB of 32767, worst at index 10. The
 //     256 zeros past the window are the gate `e < 1`.
 //
-// MEASURED. Across the seven cases in tests/ab.json: AC RMS within 0.15 dB,
+// MEASURED. Across the seven cases in tests/ab.json: AC RMS within 0.18 dB,
 // spectrum within 0.30 dB, and the two cases where an f0 exists at all read
 // +0.1 and -0.3 cents once the R6 correction is applied. Every band below
-// 1.3 kHz that carries 1% or more of the render's energy is inside 0.22 dB.
-// The near-empty bands are not: at pitched-high, where 95% of the energy sits
-// in one band at 320-640 Hz, the 40-160 Hz bands hold 0.1-0.2% each and read
-// 4.5 to 5.2 dB low, and pitched-mid and scatter-full read 0.4-0.5 dB low
-// below 160 Hz. Those are sparse-band statistics on a stochastic render, not
-// a systematic error, and they are far too small to move the energy-weighted
-// figure. The residual that carries any energy at all is above 2.5 kHz, in
+// 1.3 kHz that carries 1% or more of the render's energy is inside 0.22 dB,
+// with one sparse exception (scatter-full's 20-40 Hz band, 2.0% of energy,
+// reads -0.41 dB). The near-empty bands are the noisiest: pitched-mid reads
+// 0.4-0.5 dB low below 160 Hz, and scatter-full and stock-mid stay under
+// 0.2 dB there. pitched-high used to be the worst of these -- 4.5 to 5.2 dB
+// low across its 40-160 Hz bands, which hold 0.1-0.2% each of a render where
+// 95% of the energy sits in one band at 320-640 Hz -- until the wav_sine DC
+// pedestal below was reproduced: that low-frequency floor is exactly what a
+// grain-envelope-modulated DC term generates, and reproducing it collapsed
+// the error there to 0.29-0.37 dB, a 4.2-4.9 dB improvement in those three
+// bands specifically (see the declared-deviations entry below for the full
+// before/after). Those bands are still too small a fraction of the render to
+// move the energy-weighted figure on their own. The residual that carries any
+// energy at all is above 2.5 kHz, in
 // bands holding 0.3-0.4% each, where the port reads up to 24 dB LOW (6 to
 // 24 dB on stock-mid and scatter-full; 1 to 4 dB on the long-grain cases) --
 // and that is not a decimator difference. It was traced rather than assumed:
@@ -191,12 +198,33 @@
 //   - the carrier is Plaits' interpolated sine LUT rather than Braids'
 //     Interpolate824 over wav_sine, held as float rather than int16, so the
 //     port does not reproduce Braids' per-sample quantisation of the grain.
-//     Nor its DC: wav_sine is not a unit -cos. waveforms.py builds it with
-//     scale(center=True) over a 257-point array whose first and last entries
-//     are both the minimum, so the mean it subtracts is off by one sample and
-//     the table lands as 32639 * -cos(2*pi*phase) + 127 -- a +0.39% offset and
-//     0.03 dB of level, against this port's exact unit sine. Under the grain
-//     window that offset is a windowed DC term about 45 dB down.
+//     That residual is the traced HF floor above (up to 24 dB) and is
+//     deliberately not chased further -- it is quantisation noise, not part
+//     of the model.
+//   - wav_sine's amplitude and DC ARE reproduced (not a declared deviation,
+//     noted here because the first draft of this port got it wrong twice).
+//     wav_sine is not a unit -cos: fitted directly against the table
+//     extracted from braids/resources.cc, it is 32638 * -cos(2*pi*i/256) +
+//     127 (max residual 1 LSB of 32768) -- a -0.0343 dB level and a
+//     +127/32768 DC pedestal on every sample. (An earlier hand-derived guess
+//     here read 32639 from waveforms.py's scale(center=True) logic; the
+//     direct fit is the one that was implemented and is authoritative.) This
+//     feeds only a linear sum -- BraidsSine(g->phase) * envelope * grain gain,
+//     summed over the four grains -- into a CONSTRAIN(mono, -1, 1) ceiling
+//     that the reduced amplitude makes marginally LESS likely to reach, not
+//     more, so there is no wavefolder/waveshaper/feedback path for the
+//     pedestal to bias; this is not the port's `wav_sine is -cos, not sin`
+//     quarter-cycle deviation, which stays declared and unaffected. It was
+//     measured anyway, deterministically (same seed, same call sequence, so
+//     the delta is the change alone, not reseed noise): reproducing the
+//     amplitude and pedestal moved AC RMS by a uniform -0.034 to -0.035 dB in
+//     all seven ab.json cases, exactly the amplitude's own -0.0343 dB, and
+//     landed six of the seven closer to zero error (stock-mid was already
+//     negative and moved 0.03 dB further, still nowhere near its 0.5 dB
+//     tolerance). The pedestal's own signature -- a low-frequency term
+//     windowed by the grain envelope -- shows in the near-empty low bands:
+//     pitched-high's 40-160 Hz error fell from 4.5-5.2 dB low to 0.29-0.37 dB
+//     (see MEASURED above). KEPT on that evidence.
 //   - Braids truncates the phase increment before scaling the pitch offset
 //     (`phase_increment_ >> 8`, line 2032); the port scales in float. The
 //     offset differs by at most one part in 2^24 of itself.

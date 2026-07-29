@@ -146,16 +146,38 @@
 // sine happened to peak in phase together at the strike instant, which is
 // exactly the design headroom a hard-clipped additive strike wants.
 //
-// wav_sine is Braids' -cos(2*pi*phase), not Plaits' sin(2*pi*phase) lut_sine
-// -- BraidsSine() below is fold_engine.h's helper, copied verbatim. Verified
-// by extracting the 257-entry table from braids/resources.cc: it runs
-// -32512 at phase 0 to +32766 at phase 0.5, i.e. 127 - 32639*cos(2*pi*phase)
-// rather than a full-scale cosine, so it carries a +127 DC offset (removed
-// by the A/B before comparison, and by Plaits' own output stage) and sits
-// 32639/32768 = 0.034 dB below full scale. That 0.034 dB accounts for the
-// residual the A/B still reads (+0.01 to +0.06 dB AC RMS across the seven
-// cases, port always the hot side); nothing else in the signal path is
-// unaccounted for.
+// wav_sine is Braids' -cos(2*pi*phase), not Plaits' sin(2*pi*phase) lut_sine.
+// BraidsSine() evaluates the equivalent -sin(phase + 0.25) form so the
+// already-normalized phase can use SineNoWrap without a redundant wrap.
+// Verified by extracting the 257-entry table from
+// braids/resources.cc and fitting it programmatically: it runs -32512 at
+// phase 0 to +32766 at phase 0.5, i.e. wav_sine[i] = 32638*-cos(2*pi*i/256)
+// + 127 to within 1 LSB (the residual is the table's own dither noise --
+// braids/resources/waveforms.py's scale() runs an order-2 noise-shaped
+// quantizer on top of the continuous formula, not a plain round()) --
+// rather than a full-scale, zero-mean cosine. This EARLIER version of this
+// note assumed the resulting +127 DC pedestal was "removed by the A/B
+// before comparison" and that the 32638/32768 = 0.034 dB amplitude
+// shortfall alone explained the whole residual. That assumption was
+// UNTESTED and WRONG: the pedestal is added inside BraidsSine() and then
+// multiplied by each partial's own decaying amplitude
+// (`BraidsSine(phase)*partial_gain[i]`, struck_bell_engine.cc), so it is not
+// a fixed DC term at all -- it is a slowly-decaying quasi-DC that tracks the
+// bell's own envelope, and it DOES show up in both the A/B's AC-RMS window
+// and its spectrum metric. Measured directly (A/B with vs. without the
+// pedestal + exact 32638 scale, all seven ab.json cases): AC RMS residual
+// drops from +0.01..+0.06 dB (every case reading hot) to -0.00..+0.03 dB,
+// and spectrum error drops in all seven cases too (stock-mid 0.07->0.04 dB,
+// decay-short 0.04->0.02 dB, decay-long 0.10->0.03 dB, decay-drone
+// 0.03->0.03 dB, detune-none/-max 0.06->0.04 dB, high-register
+// 0.09->0.05 dB). So BOTH the amplitude scale AND the DC pedestal are
+// reproduced (kBellWavSineScale, kBellWavSinePedestal in the .cc) -- this is
+// not a declared deviation, it is the exact table form, kept because it
+// measurably tightens the fit. The residual +0.03 dB on high-register alone
+// is NOT this pedestal (removing it moved every case, including
+// high-register, in the same direction) -- it is the continuous-Sine()-vs-
+// 257-entry-LUT substitution declared below, which this port does NOT
+// reproduce.
 //
 // THE FOURTH MACRO.
 //   MACRO  Decay spread   Braids' two decay tables already make high
@@ -260,12 +282,15 @@
 //     RATE above).
 //   - partial reads use plaits::Sine() through BraidsSine(), a continuous
 //     evaluation, rather than Braids' 257-entry wav_sine table read through
-//     Interpolate824. Both are effectively bandlimited sine lookups;
-//     inaudible on a pure additive sum with no nonlinearity to fold this
+//     Interpolate824. BraidsSine() DOES reproduce wav_sine's amplitude scale
+//     and DC pedestal exactly (kBellWavSineScale/kBellWavSinePedestal --
+//     see the wav_sine note above); what remains a deviation is only the
+//     continuous-vs-257-entry-LUT evaluation itself. Both are effectively
+//     bandlimited sine lookups; the residual this leaves is small (the
+//     +0.03 dB high-register AC RMS reading after the pedestal fix above)
+//     and inaudible on a pure additive sum with no nonlinearity to fold it
 //     through (contrast fold_engine.h, where the same substitution would
-//     NOT be safe). It does account for the residual the A/B still reads:
-//     wav_sine peaks at 32639 rather than 32768, so the port runs 0.034 dB
-//     hot -- see the wav_sine note above.
+//     NOT be safe).
 //   - NOT a deviation, called out because it looks like one: the TIMBRE
 //     decay-balance and COLOR detune arithmetic, and the per-block
 //     amplitude update, all keep Braids' exact integer truncation (`>>8`,

@@ -102,22 +102,26 @@
 // the balance is entirely on it. That is the measurement the 2x stage is
 // bought with.
 //
-// The decimator is a 95-tap Kaiser (beta 12) halfband -- 24 multiplies plus
+// The decimator is a 47-tap Kaiser (beta 12) halfband -- 12 multiplies plus
 // the centre tap per output sample, since a halfband's even taps are zero.
-// Response, computed from the embedded coefficients: -0.00 dB at 18 kHz,
-// +0.00 dB at 20 kHz, -0.30 dB at 22 kHz, -1.81 dB at 23 kHz, -6.02 dB at
-// 24 kHz, -14.52 dB at 25 kHz, -29.30 dB at 26 kHz, -118 dB at 28 kHz.
+// Response, computed from the embedded coefficients: -0.02 dB at 18 kHz,
+// -0.33 dB at 20 kHz, -1.86 dB at 22 kHz, -3.52 dB at 23 kHz, -6.02 dB at
+// 24 kHz, -9.54 dB at 25 kHz, -14.28 dB at 26 kHz, -28.51 dB at 28 kHz.
 //
 // Accepted residue: the reference renderer decimates with a 127-tap
 // Blackman-Harris sinc, which reads -1.06 / -18.76 / -45.10 dB at 23 / 25 /
 // 26 kHz, so between 24 and 26 kHz this port folds back more than the
 // reference does. It lands entirely in the 20.5-24 kHz band, and the A/B
-// measures the cost: across the fourteen cases that band runs +1.75 dB at the
-// worst (note 72, slave alone), +0.96 dB at the next (note 72 with the master
-// still in the mix) and within -0.53..+0.20 dB everywhere else, against
-// 2.0-7.9% of the energy. A 63-tap halfband was tried first and put the same
-// band at +4.57 dB; going past 95 taps buys progressively less for a
-// difference confined to the top band.
+// measures the cost: across the fourteen cases that band runs +6.72 dB at the
+// worst (note 72, slave alone) and +2.81 dB at the next (note 72 with the
+// master still in the mix), where it carries only 2.9% and 2.6% of the energy.
+// The whole-spectrum differences remain 0.26 dB and 0.14 dB respectively.
+//
+// This length is also the hardware-safe point. The original 95-tap filter
+// measured 585.2 instructions/sample, 113% of the calibrated CPU budget. A
+// 63-tap version still measured 457.2 / 88%, whose empirical upper band crossed
+// the deadline. This 47-tap version measures 393.2 / 76% (likely below the
+// limit) while every committed A/B case remains within tolerance.
 //
 // THE MODULE'S SHAPE-CHANGE re-Init, AND WHY IT COSTS THIS ENGINE NOTHING.
 // AnalogOscillator::Render calls Init() whenever the shape it has been handed
@@ -165,8 +169,8 @@
 // Declared deviations from Braids:
 //   - the crossfade is applied AFTER decimation rather than at 96 kHz. Both
 //     operations are linear, so this is exact for a fixed Balance and differs
-//     only by the coefficient's motion across the filter's 95-sample span,
-//     which is 0.99 ms at the internal rate.
+//     only by the coefficient's motion across the filter's 47-sample span,
+//     which is 0.49 ms at the internal rate.
 //   - Braids quantises the sync pulse's position to 1/128 of a sample
 //     (analog_oscillator.cc:234) before the slave reads it back; the port
 //     passes the exact fractional reset time.
@@ -232,11 +236,11 @@ const float kDualSyncStereoBalance = 0.12f;
 // 2x, to reach Braids' 96 kHz internal rate from 48 kHz (see RATE above).
 const int kDualSyncOversampling = 2;
 
-// The halfband decimator: 95 taps, held in a power-of-two ring so the window
-// index masks instead of branching. Only (95 + 1) / 4 = 24 symmetric pairs and
+// The halfband decimator: 47 taps, held in a power-of-two ring so the window
+// index masks instead of branching. Only (47 + 1) / 4 = 12 symmetric pairs and
 // the centre tap are non-zero.
-const int kDualSyncHalfbandLength = 95;
-const int kDualSyncHalfbandPairs = 24;
+const int kDualSyncHalfbandLength = 47;
+const int kDualSyncHalfbandPairs = 12;
 const int kDualSyncDecimatorSize = 128;
 
 class DualSyncEngine : public Engine {

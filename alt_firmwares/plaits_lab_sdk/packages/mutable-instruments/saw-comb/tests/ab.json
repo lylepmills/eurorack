@@ -1,8 +1,8 @@
 {
   "shape": "SAW_COMB",
-  "note": "Braids' SAW_COMB has exactly two axes. TIMBRE is parameter_[0] and it is the COMB PITCH: digital_oscillator.cc:248 reads `pitch_ + ((parameter_[0] - 16384) >> 1)`, i.e. -64..+64 semitones about the played note, so it maps to the engine's TIMBRE. COLOR is parameter_[1] and it is the FEEDBACK: digital_oscillator.cc:261-263 forms `(parameter_[1] << 1) - 32768` and warps it through ws_moderate_overdrive, so it is bipolar and it maps to the engine's HARMONICS. MACRO sits at 0.5 in every case -- ApplyMacro(0.0, 0.6, -0.6, macro) returns tilt 0 at noon, which is Braids' flat loop. MORPH sits at 0.0, NOT at noon: saw_comb_engine.cc:127-128 sets waveshape = 0.5 + 0.5*morph and pw = 0.5 - 0.25*morph, and VariableShapeOscillator is a plain saw at waveshape 0.5 with pw 0.5, so MORPH 0 is the AnalogOscillator OSC_SHAPE_SAW exciter of macro_oscillator.cc:366-369 and MORPH 0.5 is a half-square at 37.5% duty, which the module cannot make. SPEC R11 allows this (MORPH has no detent), but it does mean noon is not stock on this engine. The morph-noon-not-stock case at the end exists only to pin that number; it is deliberately off-axis and is not a fidelity claim.",
-  "auditNote": "AUDITED 2026-07-29 by an independent pass. Findings folded back in: (a) two cases were ADDED -- comb-clamp-highest and comb-clamp-highest-res -- because no case in the original file reached a played note high enough for the module's comb-pitch ceiling (ComputeDelay, digital_oscillator.cc:74-76, MIDI 128) to engage, and the port has no such ceiling. That corner is off by nearly an octave of comb pitch and by ~30% of the reference's energy, and it was the largest unmeasured deviation in the engine. (b) res-ringing's justification was FACTUALLY WRONG about the module's maximum feedback and has been rewritten: ws_moderate_overdrive tops out at 32728, not 32766, so the module's loop is sub-unity and the port's is exactly unity. (c) The engine header's DECLARED DEVIATIONS block is accurate on its own three points and is NOT restated here, but note that saw_comb_engine.h is hashed into package_digest (plaits_lab_catalog/validate_catalog.py:31-37), so the header edit that added that block has already moved this engine's published digest; nothing further was written to it by this pass, and these corrections live here and in README.md instead.",
-  "tolerances": "Tolerances are set to what the SHIPPED engine achieves, not to the ~1 dB / ~1.5 dB / ~1 cent target. Every case looser than the target is loose for one of two measured, reported reasons, both of which are undeclared deviations in the DSP rather than tolerance slop. (1) COMB PITCH QUANTISATION. Braids smooths the comb pitch with the integer recursion `filtered_pitch = (15 * filtered_pitch + pitch) >> 4` (digital_oscillator.cc:250-252) in 1/128-semitone units. Because `>> 4` floors, every f in [p-15, p] is a fixed point, so rising from the Init() state of 0 the filter STALLS 15 LSB = 11.72 cents FLAT of the requested comb pitch and stays there. The engine's float one-pole (saw_comb_engine.cc:89) converges exactly, so its comb sits 11.72 cents sharp of the module's and its delay is 0.680% short. Measured directly: at note 45 / TIMBRE noon the module's effective comb delay is 879.05 samples @96 kHz where ComputeDelay returns 873.12; the port's is 873.1-equivalent. Consequence: the module has a comb null on the 70th harmonic (7.7 kHz at note 45) that the port does not have at all. (2) OUTPUT CLIPPER. Braids ends with `CLIP(out)` (digital_oscillator.cc:278), a hard clip at full scale; the engine ends with SoftClip (saw_comb_engine.cc:151-152), which is SoftLimit below +-3 and therefore attenuates everywhere -- SoftLimit(1.0) = 0.778. Rebuilding the engine in a scratch tree with only these two lines reverted moves the stock case from AC RMS -1.25 dB / spectrum 1.10 dB / 5-10 kHz +10.18 dB to AC RMS -0.00 dB / spectrum 0.39 dB / 5-10 kHz -0.27 dB, with every band from 80 Hz to 10 kHz inside 0.5 dB. Neither line is changed here.",
+  "note": "Braids' SAW_COMB has exactly two axes. TIMBRE is parameter_[0] and it is the COMB PITCH: digital_oscillator.cc:248 reads `pitch_ + ((parameter_[0] - 16384) >> 1)`, i.e. -64..+64 semitones about the played note, so it maps to the engine's TIMBRE. COLOR is parameter_[1] and it is the FEEDBACK: digital_oscillator.cc:261-263 forms `(parameter_[1] << 1) - 32768` and warps it through ws_moderate_overdrive, so it is bipolar and it maps to the engine's HARMONICS. MACRO sits at 0.5 in every case -- ApplyMacro(0.0, 0.6, -0.6, macro) returns tilt 0 at noon, which is Braids' flat loop. MORPH sits at 0.0, NOT at noon: saw_comb_engine.cc sets waveshape = 0.5 + 0.5*morph and pw = 0.5 - 0.25*morph, and VariableShapeOscillator is a plain saw at waveshape 0.5 with pw 0.5, so MORPH 0 is the AnalogOscillator OSC_SHAPE_SAW exciter of macro_oscillator.cc:366-369 while MORPH 0.5 is a half-square at 37.5% duty, which the module cannot make. SPEC R11 allows this (MORPH has no detent), but it does mean noon is not stock on this engine. The morph-noon-not-stock case at the end exists only to pin that number; it is deliberately off-axis and is not a fidelity claim.",
+  "auditNote": "CORRECTNESS PASS 2026-07-29. An earlier audit DECLARED four deviations and deliberately left the DSP alone; this pass FIXED them, and every tolerance below was re-derived from what the engine now achieves. What changed in the engine -- all of it reproducing quantised Braids arithmetic that a closed form had smoothed away, which is this campaign's recurring defect class: (1) the comb-pitch smoother is now Braids' integer recursion `(15 * filtered_pitch + pitch) >> 4` in 1/128-semitone units, whose floor makes every value in [p-15, p] a fixed point, so rising from the 0 Init() memsets it STALLS 15 LSB = 11.72 cents FLAT of its target -- verified at exactly -15 LSB for every case pitch in this file, where the port's float pole converged exactly and so ran 11.72 cents sharp for the life of every note; (2) the comb pitch now carries ComputeDelay's ceiling of kHighestNote - kOctave = 16384 = MIDI 128 (digital_oscillator.cc:73-76), which the port had no equivalent of; (3) the feedback warp is now ws_moderate_overdrive's own generator rather than a normalised SoftLimit, so the maximum feedback is the module's truncated 32728/32768 = 0.998779 and the loop DECAYS, where the port's was exactly 1.0 and marginally stable; (4) the output clipper is hard, as `CLIP(out)` (digital_oscillator.cc:278) is, not SoftClip; (5) a trigger no longer resets anything, because Braids' SAW_COMB is inert under a strike -- MacroOscillator::Strike reaches DigitalOscillator::Strike, which only sets strike_, and RenderComb never reads it -- and the smoother is seeded to Braids' own 0 rather than a fixed MIDI 48. Seven cases were ADDED to cover regimes nothing here reached: the three unvisited corners of the two-axis space, the comb-pitch ceiling both 16 LSB UNDER its knee and 19 semitones PAST it, a TIMBRE sweep that crosses it, and a second triggered case at a note BELOW the old fixed seed. Every added case moves materially between the old engine and this one -- corner-low-high 4.43 -> 0.48 dB, comb-ceiling-deep 3.30 -> 0.80 dB, trigger-low 1.82 -> 0.20 dB -- so none of them is decoration. VERIFICATION PASS, same day: a SIXTH clamp was found missing and fixed. Braids clamps its own pitch_ to [0, kHighestNote] in DigitalOscillator::Render (digital_oscillator.cc:120-124) BEFORE dispatching to RenderComb, so the note the TIMBRE offset applies to is already pinned at MIDI 0 from below; the port applied the offset to Plaits' raw note, which reaches -119 (voice.cc:265), and so ran its comb up to an octave flat of the module's under a downward pitch CV. The eighth added case, low-note-clamp, covers it: 0.54 -> 0.05 dB. Nothing at or above MIDI 36 moves, so no other case in this file changed by a hundredth of a dB.",
+  "tolerances": "Tolerances are set to what the engine NOW achieves, with roughly 1.4x headroom on the small numbers. Exactly ONE number in this file is looser than it was before the correctness pass: morph-noon-not-stock's acRmsDb, 1.0 -> 2.5. That case is the deliberately off-axis MORPH diagnostic, it is not a fidelity claim, and its level grew because the port stopped soft-clipping -- SoftClip had been pulling 1.25 dB off everything, so +2.21 dB is the honest size of the half-square-vs-saw difference and +0.76 dB was the understated one. Every other tolerance in the file was TIGHTENED. Twenty-one of the twenty-three cases sit under 1.2 dB spectrum and under 0.6 dB AC RMS, inside the guide's ~1 dB / ~1 cent / ~1.5 dB target; every case carries a cents tolerance, including the two that could not before, and every one of those is inside 0.5 cents except low-note-clamp, whose 5.2 is a documented estimator artefact rather than a pitch error (see its own note). Three sit outside the spectrum target, each for a measured reason. (1) res-inverted, at 2.93 dB, is the deep-cancellation corner: HARMONICS 0 gives g = -32766/32768 = -0.999939, a Q around 16,000, and TIMBRE noon lays the comb's null ladder over the exciter's own harmonics. What the reference outputs there is the RESIDUAL of a >30 dB cancellation -- 26% of its energy sits in 5-10 kHz, which reads -5.4 dB -- and at that null depth a sub-LSB difference in the fractional-delay interpolator is worth several dB of it. Its sibling res-ringing, the same |g| to four places but POSITIVE, so the peaks land on the harmonics rather than the nulls, reads 0.24 dB in this same file: that is the evidence this is null-residual sensitivity and not a feedback-path error. (2) res-low-detuned at 1.16 dB is the same effect an order of magnitude weaker (g = -0.918, Q around 12). (3) morph-noon-not-stock is deliberately off-axis and is not a fidelity claim; see its own note. TESTED AND REJECTED as an explanation for res-inverted: tuning the comb delay to absolute 48 kHz instead of to Plaits' kCorrectedSampleRate, which would put the comb at Braids' exact Hz but 4.61 cents out of tune with the port's OWN note. That made everything worse -- stock 0.40 -> 1.53 dB, comb-low-open 0.45 -> 2.86 dB, res-inverted 2.93 -> 3.76 dB -- confirming that the comb's tuning relative to the note, which both sides get exactly right, is what governs these cases, and that the global 4.61-cent transposition the port shares with every other ported engine is not the residual here.",
   "cases": [
     {
       "id": "stock",
@@ -11,8 +11,8 @@
       "note": 45,
       "braids": {"p1": 0.5, "p2": 0.5},
       "engine": {"timbre": 0.5, "harmonics": 0.5, "morph": 0.0, "macro": 0.5},
-      "tolerance": {"acRmsDb": 1.5, "cents": 1.0, "spectrumDb": 1.3},
-      "why": "The comb sits on the played note and the feedback is ~0, so this is the pure FIR comb the README describes: 0.5*dry plus one echo, audible, not silent. It is also the case the comb-pitch quantiser hurts most, because the module's 11.72-cent stall puts its comb null on the 70th harmonic while the port's exact delay puts no null anywhere. That is the +10.18 dB in 5-10 kHz (3.6% of energy). The -1.25 dB AC RMS is the SoftClip: the reference peaks at 1.000 and the port at 0.775 = SoftLimit(1.0)."
+      "tolerance": {"acRmsDb": 0.15, "cents": 0.3, "spectrumDb": 0.55},
+      "why": "The comb sits on the played note and the feedback is ~0, so this is the pure FIR comb the README describes: 0.5*dry plus one echo, audible, not silent. It is the case the comb-pitch quantiser hurt most -- the module's 11.72-cent stall puts a ~33 dB null on the 70th harmonic, 7.7 kHz here, and the port's exactly-converged pole put no null anywhere, worth +10.18 dB in 5-10 kHz. Now that the port stalls with it that band reads -0.62 dB and the case is 0.40. AC RMS went -1.25 -> -0.01 dB when the output clipper stopped being SoftClip."
     },
     {
       "id": "comb-lowest",
@@ -21,8 +21,8 @@
       "note": 45,
       "braids": {"p1": 0.0, "p2": 0.5},
       "engine": {"timbre": 0.0, "harmonics": 0.5, "morph": 0.0, "macro": 0.5},
-      "tolerance": {"acRmsDb": 0.9, "cents": 1.0, "spectrumDb": 1.0},
-      "why": "Bottom of the TIMBRE axis. comb_note = 45 - 64 = -19, so both sides run into their delay clamp -- Braids at 8192 taps @96 kHz (digital_oscillator.cc:256-258), the port at kSawCombDelaySize-2 = 4094 @48 kHz. This is the case that proves the README's 'clamps below MIDI ~70 just as it does on hardware' claim, and it is the tightest case in the file precisely because a clamped delay is identical on both sides and the quantiser stall cannot move it."
+      "tolerance": {"acRmsDb": 0.4, "cents": 0.3, "spectrumDb": 1.0},
+      "why": "Bottom of the TIMBRE axis. comb_note = 45 - 64 = -19, below the MIDI -16 at which Braids' ComputeDelay shifts by a NEGATIVE count and returns 0 -- which its own `delay_ptr + 2*kCombDelayLength - 0` then reads as a full-line 8,192-tap delay. The port clamps to its own full line, 4,096 taps at 48 kHz, the same 85.33 ms; that clamp was widened from 4,094 in this pass so the two land on the same delay rather than two taps apart. This is the case that proves the README's 'clamps below MIDI ~70 just as it does on hardware' claim."
     },
     {
       "id": "comb-low-open",
@@ -31,8 +31,8 @@
       "note": 84,
       "braids": {"p1": 0.0, "p2": 0.5},
       "engine": {"timbre": 0.0, "harmonics": 0.5, "morph": 0.0, "macro": 0.5},
-      "tolerance": {"acRmsDb": 0.6, "cents": 1.0, "spectrumDb": 4.0},
-      "why": "The same TIMBRE end, above the MIDI ~70 knee, so the delay is live rather than clamped: comb_note = 20 = 25.96 Hz = 1849 taps. 4.0 dB spectrum is far outside the target and is the comb-pitch quantiser at its worst: 11.72 cents on a 1849-tap delay is a 12.6-tap offset, so the two combs' null ladders are half a null out of step by ~1.3 kHz and stay interleaved for the rest of the band. The energy-weighted mean is 3.57 dB with individual bands at +4.49 and -6.25 dB, and the sign alternates band to band, which is the signature of interleaved nulls rather than a level or bandwidth error."
+      "tolerance": {"acRmsDb": 0.35, "cents": 0.3, "spectrumDb": 0.6},
+      "why": "The same TIMBRE end, above the MIDI ~70 knee, so the delay is live rather than clamped: comb_note = 19.875 = 25.8 Hz, about 1,857 taps at 48 kHz. This was the clearest read on the comb-pitch quantiser -- 11.72 cents on a 1,857-tap delay is a 12.6-tap offset, which put the two null ladders half a null out of step from ~1.3 kHz upward and left an alternating +4.49 / -6.25 dB band pattern at 3.57 dB overall. Reproducing the stall takes it to 0.45 dB, with every band carrying real energy inside 1.19 dB."
     },
     {
       "id": "comb-highest",
@@ -41,8 +41,8 @@
       "note": 45,
       "braids": {"p1": 1.0, "p2": 0.5},
       "engine": {"timbre": 1.0, "harmonics": 0.5, "morph": 0.0, "macro": 0.5},
-      "tolerance": {"acRmsDb": 1.5, "cents": 1.0, "spectrumDb": 1.2},
-      "why": "Top of the TIMBRE axis: comb_note = 45 + 64 = 109, a 17-tap delay. Together with comb-lowest this pins the direction and the full +-64 semitone span; a sign error or a halved range would put this case tens of dB out rather than 1 dB. AC RMS is the SoftClip again, at the same -1.27 dB as the stock case. NOTE: at note 45 the top of TIMBRE is comb_note 109, which is BELOW the module's comb-pitch ceiling, so this case cannot see the clamp deviation -- see comb-clamp-highest."
+      "tolerance": {"acRmsDb": 0.15, "cents": 0.3, "spectrumDb": 0.45},
+      "why": "Top of the TIMBRE axis at a played note LOW enough that the comb-pitch ceiling does not engage: comb_note = 108.875, an ~10.9-tap delay at 4.4 kHz. Together with comb-lowest this pins the direction and the full +-64 semitone span; a sign error or a halved range would put this case tens of dB out rather than under 1 dB. The ceiling itself is covered by comb-ceiling-knee and comb-ceiling-deep."
     },
     {
       "id": "comb-clamp-highest",
@@ -51,18 +51,18 @@
       "note": 84,
       "braids": {"p1": 1.0, "p2": 0.5},
       "engine": {"timbre": 1.0, "harmonics": 0.5, "morph": 0.0, "macro": 0.5},
-      "tolerance": {"acRmsDb": 1.0, "cents": 1.0, "spectrumDb": 2.4},
-      "why": "ADDED 2026-07-29 BY THE AUDIT PASS, because nothing in this file reached this corner. `comb-highest` runs TIMBRE 1 at note 45, where comb_note = 109 and both sides are free-running; here comb_note = 84 + 64 = 148 and the two sides diverge by nearly an OCTAVE. Braids' ComputeDelay opens with `if (midi_pitch >= kHighestNote - kOctave) midi_pitch = kHighestNote - kOctave` (digital_oscillator.cc:74-76), and for the DigitalOscillator kHighestNote is 140*128 and kOctave is 12*128, so the comb pitch CEILINGS at 16384 = MIDI 128 = 7.2236 taps @96 kHz = 13.29 kHz. saw_comb_engine.cc has no equivalent: its only ceiling is CONSTRAIN(delay, 2.0f, ...) at line 95, which does not bind until MIDI ~150, so at TIMBRE 1 on note 84 the port's comb sits at 21.15 kHz. Measured: 10.24-20.48 kHz reads -8.18 dB while carrying 19.1% of the reference's energy, and 5.12-10.24 kHz reads +3.85 dB. This is a REPORTED, UNFIXED DSP deviation, not tolerance slop -- 2.4 dB is where the shipped engine sits, and it is reachable by any played note above MIDI 64 with TIMBRE toward its top."
+      "tolerance": {"acRmsDb": 0.25, "cents": 0.4, "spectrumDb": 0.65},
+      "why": "comb_note = 84 + 64 = 148, which Braids' ComputeDelay pins at kHighestNote - kOctave = 16384 = MIDI 128 = 13.29 kHz (digital_oscillator.cc:73-76). The port had no such ceiling and put its comb at 21.15 kHz, nearly an octave up: 10.24-20.48 kHz read -8.18 dB while carrying 19.1% of the reference's energy, and the case sat at 2.22 dB. With the ceiling reproduced it is 0.49 dB and that band reads -2.07 dB."
     },
     {
       "id": "comb-clamp-highest-res",
-      "name": "DIAGNOSTIC: the same ceiling with the comb resonant",
+      "name": "The same ceiling with the comb resonant",
       "seconds": 3,
       "note": 84,
       "braids": {"p1": 1.0, "p2": 0.9},
       "engine": {"timbre": 1.0, "harmonics": 0.9, "morph": 0.0, "macro": 0.5},
-      "tolerance": {"acRmsDb": 1.6, "spectrumDb": 4.5},
-      "why": "ADDED 2026-07-29 BY THE AUDIT PASS. The same missing ceiling as comb-clamp-highest, with HARMONICS at 0.9 so the comb has a resonant PEAK rather than shallow nulls, which is what makes the size of the deviation unmissable: 4.27 dB spectrum, with 10.24-20.48 kHz at -13.19 dB carrying 21.7% of the reference's energy and 5.12-10.24 kHz at -7.67 dB carrying 8.1%. Roughly 30% of the module's energy sits in a resonance the port does not have, because the module's comb is pinned at 13.29 kHz and the port's is at 21.15 kHz. 4.5 dB is FAR outside the ~1.5 dB target and is NOT a fidelity claim -- it is a pinned number holding a reported defect at a fixed value so a fix can be measured. No cents tolerance: a 13-21 kHz ring against a 1046 Hz saw is inharmonic and the autocorrelation estimator is not usable, exactly as in high-note."
+      "tolerance": {"acRmsDb": 0.25, "cents": 0.8, "spectrumDb": 1.05},
+      "why": "The same ceiling with HARMONICS at 0.9, so the comb has a resonant PEAK rather than shallow nulls -- which is what made the size of the old deviation unmissable: 4.27 dB, with 10.24-20.48 kHz at -13.19 dB carrying 21.7% of the reference's energy, i.e. roughly 30% of the module's output sitting in a resonance the port did not have. Now 0.86 dB. It also carries a cents tolerance for the first time: with both combs pinned at 13.29 kHz the autocorrelation estimator locks the 1046 Hz saw fundamental on both sides, where before the port's 21 kHz ring defeated it."
     },
     {
       "id": "res-inverted",
@@ -71,8 +71,8 @@
       "note": 45,
       "braids": {"p1": 0.5, "p2": 0.0},
       "engine": {"timbre": 0.5, "harmonics": 0.0, "morph": 0.0, "macro": 0.5},
-      "tolerance": {"acRmsDb": 2.8, "cents": 1.0, "spectrumDb": 4.2},
-      "why": "Bottom of the COLOR axis. This is the case that proves the feedback is genuinely BIPOLAR and not a 0..1 resonance: `(parameter_[1] << 1) - 32768` is -32768 here, so the loop inverts. 4.2 dB spectrum: with |g| near 1 the comb is a resonator, not an FIR comb, so the 11.72-cent comb-pitch error moves sharp resonant peaks rather than shallow nulls -- the 5-10 kHz band carries 26.2% of the reference's energy and reads -10.06 dB because the module has a resonance there that the port puts elsewhere. The -2.53 dB AC RMS is the worst level error in the file and is SoftClip acting on a resonantly-boosted signal."
+      "tolerance": {"acRmsDb": 1.5, "cents": 0.3, "spectrumDb": 3.2},
+      "why": "Bottom of the COLOR axis, and the loosest case in the file at 2.93 dB. It proves the feedback is genuinely BIPOLAR: `(parameter_[1] << 1) - 32768` is -32768 here, the table returns -32766, and the loop inverts. It is loose because it is the deep-cancellation corner -- see the file's tolerances note. |g| = 0.999939 gives a Q around 16,000 and TIMBRE noon lays the comb's null ladder over the exciter's own harmonics, so what the reference outputs is the residual of a >30 dB cancellation and a sub-LSB difference in the fractional-delay interpolator is worth several dB of it. res-ringing, the same |g| to four places but positive, reads 0.24 dB. The fix still moved this case from 3.76 to 2.93 dB and its level from -2.53 to -1.26 dB."
     },
     {
       "id": "res-ringing",
@@ -81,8 +81,8 @@
       "note": 45,
       "braids": {"p1": 0.5, "p2": 1.0},
       "engine": {"timbre": 0.5, "harmonics": 1.0, "morph": 0.0, "macro": 0.5},
-      "tolerance": {"acRmsDb": 1.0, "cents": 1.0, "spectrumDb": 2.8},
-      "why": "Top of the COLOR axis. CORRECTED 2026-07-29: an earlier revision of this file said Braids' warped knob reaches g = 32766/32768 and that BOTH loops sit at unity. It does not, and they do not. `resonance` is 32766 only BEFORE the warp; Interpolate88 then reads ws_moderate_overdrive at index 65534, and that table's last two entries are 32728, 32728 (braids/resources.cc) -- so the module's maximum feedback is 32728/32768 = 0.99878 and its loop DECAYS. The port's WarpResonance(1.0) = 1.016129 * SoftLimit(2.0) = 1.0000 exactly, so the port's loop is marginally stable and does not. That is a real, unreported deviation of the same class as the comb-pitch floor: a truncated table entry reproduced as its closed form. It is the reason the two HF bands above 2.5 kHz (5.0% of energy combined) read +14 dB -- the port's ring builds to an equilibrium set only by its in-loop clip while the module's is bounded by a real sub-unity pole -- and it is why 2.8 dB is not a tolerance a fix would tighten by hand-waving. The fundamental band, 36.8% of the energy, matches to -0.07 dB."
+      "tolerance": {"acRmsDb": 0.15, "cents": 0.5, "spectrumDb": 0.35},
+      "why": "Top of the COLOR axis, and the case that pins the feedback CEILING. `resonance` is 32766 only BEFORE the warp; Interpolate88 then reads ws_moderate_overdrive at index 65534, and that table's last two entries are both 32728, because its generator sets x[-1] = x[-2] before scaling. So the module's maximum feedback is 32728/32768 = 0.998779 and its loop DECAYS. A normalised SoftLimit reached exactly 1.0 and did not: the port's ring built to an equilibrium set only by its in-loop clip, which put both bands above 2.5 kHz at +14 dB and the case at 2.42 dB. Reproducing the generator takes it to 0.24 dB with no band past 1.5 dB."
     },
     {
       "id": "res-high",
@@ -91,8 +91,8 @@
       "note": 45,
       "braids": {"p1": 0.75, "p2": 0.85},
       "engine": {"timbre": 0.75, "harmonics": 0.85, "morph": 0.0, "macro": 0.5},
-      "tolerance": {"acRmsDb": 0.9, "cents": 1.0, "spectrumDb": 1.3},
-      "why": "Strongly resonant but short of the unity corner, and off the TIMBRE detent, so it exercises both axes together in the region a player actually uses. Passes near the target."
+      "tolerance": {"acRmsDb": 0.15, "cents": 0.3, "spectrumDb": 0.4},
+      "why": "Strongly resonant but short of the unity corner, and off the TIMBRE detent, so it exercises both axes together in the region a player actually uses. 1.06 -> 0.27 dB."
     },
     {
       "id": "res-low-detuned",
@@ -101,8 +101,8 @@
       "note": 60,
       "braids": {"p1": 0.25, "p2": 0.15},
       "engine": {"timbre": 0.25, "harmonics": 0.15, "morph": 0.0, "macro": 0.5},
-      "tolerance": {"acRmsDb": 1.7, "cents": 1.0, "spectrumDb": 2.1},
-      "why": "The negative-but-not-extreme quadrant, on the other side of noon from res-high and at a different note, so a swap of the two Braids parameters cannot survive this case together with res-high. Loose for the same comb-pitch reason: at comb_note = 60 - 32 = 28 the delay is 594 taps and 11.72 cents is a 4-tap offset."
+      "tolerance": {"acRmsDb": 0.2, "cents": 0.4, "spectrumDb": 1.4},
+      "why": "The negative-but-not-extreme quadrant, on the other side of noon from res-high and at a different note, so a swap of the two Braids parameters cannot survive this case together with res-high. At 1.16 dB it is the second-loosest case, for a weaker version of res-inverted's reason: g = -0.918 still puts nulls rather than peaks against the drive, at a Q around 12 rather than 16,000. The residual is in the two top bands (5-10 kHz -2.25 dB, 10-20 kHz -4.37 dB, 29% of the energy between them); everything from 160 Hz to 5 kHz is inside 0.4 dB."
     },
     {
       "id": "timbre-sweep",
@@ -111,8 +111,68 @@
       "note": 60,
       "braids": {"p1": [0.0, 1.0], "p2": 0.5},
       "engine": {"timbre": [0.0, 1.0], "harmonics": 0.5, "morph": 0.0, "macro": 0.5},
-      "tolerance": {"acRmsDb": 1.2, "cents": 1.5, "spectrumDb": 1.0},
-      "why": "The whole comb-pitch axis in one render, which averages the per-null disagreement away and so measures the axis MAPPING rather than its fine structure: 0.73 dB. An inverted or rescaled TIMBRE would not average out."
+      "tolerance": {"acRmsDb": 0.2, "cents": 0.3, "spectrumDb": 0.8},
+      "why": "The whole comb-pitch axis in one render, which averages the per-null disagreement away and so measures the axis MAPPING rather than its fine structure. An inverted or rescaled TIMBRE would not average out. It also exercises the smoother IN MOTION rather than at its stall -- a sweep never settles -- so it is the case that would catch the integer recursion being run at the wrong block rate."
+    },
+    {
+      "id": "timbre-sweep-high",
+      "name": "TIMBRE swept 0 to 1 through the ceiling",
+      "seconds": 4,
+      "note": 84,
+      "braids": {"p1": [0.0, 1.0], "p2": 0.5},
+      "engine": {"timbre": [0.0, 1.0], "harmonics": 0.5, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.25, "cents": 0.4, "spectrumDb": 0.75},
+      "why": "ADDED 2026-07-29. The same sweep two octaves up, so it CROSSES the comb-pitch ceiling partway: comb_note reaches MIDI 128 at TIMBRE 0.844 and is pinned from there to the top. Nothing else in the file exercises the ceiling engaging while the smoother is still moving, which is the one place a disagreement between the ceiling and the smoother would show as a glitch rather than as a steady offset."
+    },
+    {
+      "id": "comb-ceiling-knee",
+      "name": "Comb 16 LSB under the ceiling",
+      "seconds": 3,
+      "note": 96,
+      "braids": {"p1": 0.75, "p2": 0.5},
+      "engine": {"timbre": 0.75, "harmonics": 0.5, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.4, "cents": 0.4, "spectrumDb": 0.95},
+      "why": "ADDED 2026-07-29. The BOUNDARY of the comb-pitch ceiling from below: note 96 with parameter_[0] = 24575 gives a target of 16383 and a stalled pitch of 16368, sixteen LSB under the 16384 the ceiling pins to. The ceiling must NOT engage here. Paired with comb-ceiling-deep this is what distinguishes a correct ceiling from one placed an octave, a semitone or a single LSB wrong -- a clamp tested only far past its knee cannot tell those apart."
+    },
+    {
+      "id": "comb-ceiling-deep",
+      "name": "Comb 19 semitones past the ceiling",
+      "seconds": 3,
+      "note": 96,
+      "braids": {"p1": 0.9, "p2": 0.5},
+      "engine": {"timbre": 0.9, "harmonics": 0.5, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.4, "cents": 0.4, "spectrumDb": 1.0},
+      "why": "ADDED 2026-07-29. The other side of that boundary, and the deepest excursion past it in the file: the requested comb pitch is MIDI 147.2 and the module pins it at 128. The unclamped port read 3.30 dB here; it now reads 0.80. Note 96 is also the highest played note in the file, so this doubles as the top of the note range."
+    },
+    {
+      "id": "corner-low-low",
+      "name": "TIMBRE 0 with HARMONICS 0",
+      "seconds": 3,
+      "note": 84,
+      "braids": {"p1": 0.0, "p2": 0.0},
+      "engine": {"timbre": 0.0, "harmonics": 0.0, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.2, "cents": 0.4, "spectrumDb": 0.85},
+      "why": "ADDED 2026-07-29. The file covered each axis at both ends but never the two ends TOGETHER, so a bug that only shows when both are extreme had nowhere to appear. Note 84 keeps the comb off its bottom clamp and the delay live: comb_note = 19.875, about 1,857 taps, running at |g| = 0.999939. 1.79 -> 0.67 dB."
+    },
+    {
+      "id": "corner-low-high",
+      "name": "TIMBRE 0 with HARMONICS 1",
+      "seconds": 3,
+      "note": 84,
+      "braids": {"p1": 0.0, "p2": 1.0},
+      "engine": {"timbre": 0.0, "harmonics": 1.0, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.7, "cents": 0.3, "spectrumDb": 0.65},
+      "why": "ADDED 2026-07-29, and the single largest mover of the seven added cases: 4.43 -> 0.48 dB. A long, live 1,857-tap delay at the feedback ceiling is where the difference between a loop that decays at 0.998779 and one sitting at exactly 1.0 compounds hardest, because it combines the most round trips per second with the least loss per round trip."
+    },
+    {
+      "id": "corner-high-high",
+      "name": "TIMBRE 1 with HARMONICS 1",
+      "seconds": 3,
+      "note": 60,
+      "braids": {"p1": 1.0, "p2": 1.0},
+      "engine": {"timbre": 1.0, "harmonics": 1.0, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.15, "cents": 0.4, "spectrumDb": 0.6},
+      "why": "ADDED 2026-07-29. The last unvisited corner: an ~4.6-tap comb at 10.5 kHz ringing at the feedback ceiling. comb_note = 123.875 sits just under the MIDI 128 ceiling, so this tests the top of TIMBRE WITHOUT the clamp; the clamped version of the same corner is comb-clamp-highest-res."
     },
     {
       "id": "harmonics-sweep",
@@ -121,8 +181,8 @@
       "note": 60,
       "braids": {"p1": 0.5, "p2": [0.0, 1.0]},
       "engine": {"timbre": 0.5, "harmonics": [0.0, 1.0], "morph": 0.0, "macro": 0.5},
-      "tolerance": {"acRmsDb": 1.3, "cents": 1.0, "spectrumDb": 1.8},
-      "why": "The whole feedback axis, inverted through FIR comb to ringing, in one render. The two sub-80 Hz bands read -22 to -24 dB and carry 1.4% of the energy between them: that is the subsonic wander a comb with positive feedback and no DC blocker parks in its line, which the header discusses -- both sides have it, at different amplitudes, because the in-loop clip is the only thing bounding it and the two clippers differ. It is below the 20 Hz band edge in musical terms and is not what this case is measuring."
+      "tolerance": {"acRmsDb": 0.15, "cents": 0.4, "spectrumDb": 0.55},
+      "why": "The whole feedback axis, inverted through FIR comb to ringing, in one render. It used to read 1.54 dB with the two sub-80 Hz bands at -22 to -24 dB -- the subsonic wander a comb with positive feedback and no DC blocker parks in its line, bounded on each side only by its own clipper, and the two clippers differed. With both clippers hard it is 0.39 dB and those bands are inside 0.15 dB."
     },
     {
       "id": "high-note",
@@ -131,19 +191,40 @@
       "note": 84,
       "braids": {"p1": 0.65, "p2": 0.7},
       "engine": {"timbre": 0.65, "harmonics": 0.7, "morph": 0.0, "macro": 0.5},
-      "tolerance": {"acRmsDb": 1.5, "spectrumDb": 1.0},
-      "why": "No cents tolerance, deliberately. comb_note = 84 + 19.2 = 103.2 is a 15-tap delay ringing at ~3.2 kHz against a 1046 Hz saw, so the strongest periodicity in the signal is inharmonic with the note; ab_compare's autocorrelation locks the reference to 1046.0 Hz and the port to 262.3 Hz, a pure octave-quadrupling artefact of the estimator rather than a pitch error. Every other case in the file reads inside 0.7 cents, which is where the R5 rate check actually lives."
+      "tolerance": {"acRmsDb": 0.7, "cents": 0.5, "spectrumDb": 1.0},
+      "why": "comb_note = 103.078, an ~15-tap delay ringing at ~3.2 kHz against a 1046 Hz saw. This case used to carry NO cents tolerance: the strongest periodicity in the port's output was inharmonic with the note, and ab_compare's autocorrelation locked the reference to 1046.0 Hz and the port to 262.3 Hz -- a 2399-cent octave-quadrupling artefact of the estimator. Both sides now read inside 0.2 cents and it carries a real tolerance, because the port's comb is where the module's is."
     },
     {
       "id": "trigger-transient",
-      "name": "DIAGNOSTIC: the port's per-note reset has no counterpart in the module",
+      "name": "Repeated triggers -- the module is inert under a strike",
       "seconds": 3,
       "note": 84,
       "triggerHz": 2,
       "braids": {"p1": 0.5, "p2": 0.5},
       "engine": {"timbre": 0.5, "harmonics": 0.5, "morph": 0.0, "macro": 0.5},
-      "tolerance": {"acRmsDb": 1.8, "cents": 1.0, "spectrumDb": 1.0},
-      "why": "ADDED 2026-07-29 BY THE AUDIT PASS. Every other case in this file runs triggerHz 0, so nothing here exercised saw_comb_engine.cc:79-81 -- and Braids' SAW_COMB is the right control, because MacroOscillator::Strike() reaches DigitalOscillator::Strike(), which only sets strike_, and RenderComb never reads it. The module is therefore COMPLETELY INERT under a trigger, and any difference here is the port's alone. READ THE BANDS, NOT THE HEADLINE: the energy-weighted figure is 0.48 dB only because the affected bands carry 0.0% of the reference's energy. `--bands` shows 20-40 Hz +22.40 dB, 40-80 Hz +25.70 dB, 320-640 Hz +23.72 dB against a module that has essentially nothing there. That is the port's per-note reset -- the R15 delay-line clear, the exciter_.Init() phase reset, and in particular `comb_pitch_ = 48.0f` (line 59), which at note 84 forces a 36-semitone comb glide at the start of every note through a 4 ms pole. The line clear is deliberate and defended in Reset()'s own comment; the FIXED 48.0 seed is not, and is the avoidable part. The 1.0 dB spectrum tolerance holds the headline where it is; it is deliberately NOT a claim that this case is clean."
+      "tolerance": {"acRmsDb": 0.2, "cents": 0.7, "spectrumDb": 0.55},
+      "why": "Braids' SAW_COMB is the right control for a trigger case, because it does NOTHING: MacroOscillator::Strike reaches DigitalOscillator::Strike, which only sets strike_, and RenderComb never reads it. So any difference here was the port's alone -- and there was one. READ THE BANDS: the old headline was 0.48 dB only because the affected bands carried 0.0% of the reference's energy, while `--bands` showed 20-40 Hz +22.40 dB, 40-80 Hz +25.70 dB and 320-640 Hz +23.72 dB against a module with essentially nothing there. That was the port's per-note Reset() -- the delay-line clear, the exciter phase reset, and above all `comb_pitch_ = 48.0f`, which at note 84 forced a 36-semitone comb glide at the start of every note. The trigger reset is gone; those three bands now read -6.97, -9.37 and -8.02 dB, i.e. the port is if anything QUIETER than the module in bands where neither has anything, and the case is 0.39."
+    },
+    {
+      "id": "trigger-low",
+      "name": "Repeated triggers below the old fixed seed",
+      "seconds": 3,
+      "note": 36,
+      "triggerHz": 3,
+      "braids": {"p1": 0.5, "p2": 0.7},
+      "engine": {"timbre": 0.5, "harmonics": 0.7, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.15, "cents": 0.3, "spectrumDb": 0.3},
+      "why": "ADDED 2026-07-29, and the tightest case in the file at 0.20 dB. trigger-transient sits ABOVE the old MIDI 48 seed, so its per-note glide ran upward; this one sits twelve semitones BELOW it, so the same bug glided DOWNWARD, and at a resonance high enough (HARMONICS 0.7) for the glide to ring rather than pass. On the old engine it read 1.82 dB and -1.45 dB AC RMS. A future reinstatement of a per-trigger reset, in EITHER direction, fails here first."
+    },
+    {
+      "id": "low-note-clamp",
+      "name": "Played note below MIDI 0, comb at the top of TIMBRE",
+      "seconds": 3,
+      "note": -12,
+      "braids": {"p1": 1.0, "p2": 0.85},
+      "engine": {"timbre": 1.0, "harmonics": 0.85, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.12, "cents": 5.2, "spectrumDb": 0.12},
+      "why": "ADDED 2026-07-29 BY THE VERIFICATION PASS, because nothing in this file went below MIDI 36 and the note the comb offsets from is CLAMPED on the module. DigitalOscillator::Render pins its own pitch_ to [0, kHighestNote] before dispatching to RenderComb (digital_oscillator.cc:120-124), so at note -12 with TIMBRE 1 the module's comb sits at 0 + 8191 = MIDI 63.99 while an unclamped port put it at -1536 + 8191 = MIDI 51.99 -- an octave flat. Plaits' note reaches -119 (voice.cc:265), so this is reachable with any downward pitch CV. On the engine as the correctness pass left it this read 0.54 dB with 160-320 Hz at +6.09 dB, the port's misplaced comb resonance; with the clamp reproduced it is 0.05 dB and no band is past 0.1 dB except the shared HF exciter deficit. THE 5.2-CENT TOLERANCE IS AN ESTIMATOR ARTEFACT, NOT A PITCH ERROR: below about MIDI 24 the fundamental is under 9 Hz, ab_compare's autocorrelation has no resolvable fundamental and locks onto the comb period instead, where its lag resolution is coarser than the 4.61-cent kCorrectedSampleRate transposition it is correcting for -- so both sides read the same raw lag and the corrected figure shows the full -4.6. Verified as an artefact by rendering the same settings at notes 0, 12 and 24, where the clamp does nothing and the reading is still -4.6."
     },
     {
       "id": "morph-noon-not-stock",
@@ -152,8 +233,8 @@
       "note": 45,
       "braids": {"p1": 0.5, "p2": 0.5},
       "engine": {"timbre": 0.5, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
-      "tolerance": {"acRmsDb": 1.0, "cents": 1.0, "spectrumDb": 2.1},
-      "why": "DELIBERATELY OFF-AXIS -- this is not a fidelity claim, it is a pinned number. Identical to the stock case except MORPH is at noon, which gives waveshape 0.75 and pw 0.375: a half-square exciter at 37.5% duty, not the module's saw. Spectrum goes 1.10 -> 1.86 dB and the 320-1280 Hz bands go from -0.8 to -2.9 dB, so a user who leaves MORPH at its centre position is a measurable distance from Braids. Kept so that the claim is re-runnable with one command."
+      "tolerance": {"acRmsDb": 2.5, "cents": 0.3, "spectrumDb": 2.1},
+      "why": "DELIBERATELY OFF-AXIS -- not a fidelity claim but a pinned number, and its are the only loose tolerances in the file that do not describe a defect. Identical to the stock case except MORPH is at noon, which gives waveshape 0.75 and pw 0.375: a half-square exciter at 37.5% duty, not the module's saw. The +2.21 dB AC RMS is the honest size of that difference now that the port no longer soft-clips its output; the old +0.76 dB understated it, because SoftClip was quietly pulling 1.25 dB off everything. Kept so the claim stays re-runnable with one command."
     }
   ]
 }

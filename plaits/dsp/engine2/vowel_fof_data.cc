@@ -2,7 +2,8 @@
 // Copyright 2026 Lyle Mills.
 // SPDX-License-Identifier: MIT
 //
-// Braids' formant tables, vendored. 5 vowels x 5 registers x 5 formants.
+// Braids' formant tables, vendored verbatim in Braids' own index order:
+// 5 registers x 5 vowels x 5 formants, register OUTERMOST.
 //
 // NOT shared with NaiveSpeechSynth, which holds the same grid: its uint8
 // quantisation carries about half a semitone of centre error, and these

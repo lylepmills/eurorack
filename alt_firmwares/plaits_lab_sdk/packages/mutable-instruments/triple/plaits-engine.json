@@ -47,7 +47,8 @@
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/triple_engine.h",
     "files": [
-      "plaits/dsp/engine2/triple_engine.cc"
+      "plaits/dsp/engine2/triple_engine.cc",
+      "plaits/dsp/engine2/triple_engine_data.cc"
     ],
     "className": "TripleEngine"
   },

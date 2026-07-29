@@ -32,12 +32,20 @@ namespace {
 // engine has not measured.
 const float kBraidsSinePhaseOffset = 0.75f;
 
+// wav_sine is also not unit-amplitude or zero-mean: fitted against the table
+// extracted from braids/resources.cc, it is 32638 * -cos(2*pi*i/256) + 127
+// (max residual 1 LSB of 32768), a -0.0343 dB level and a +127/32768 DC
+// pedestal on every sample. Measured below with and without reproducing it;
+// see the declared-deviation note at the end of this file for the verdict.
+const float kBraidsSineAmplitude = 32638.0f / 32768.0f;
+const float kBraidsSineDc = 127.0f / 32768.0f;
+
 inline float BraidsSine(float phase) {
   phase += kBraidsSinePhaseOffset;
   if (phase >= 1.0f) {
     phase -= 1.0f;
   }
-  return Sine(phase);
+  return Sine(phase) * kBraidsSineAmplitude + kBraidsSineDc;
 }
 
 // Braids' lut_granular_envelope is hanning(257) * 32767 followed by 256 zeros

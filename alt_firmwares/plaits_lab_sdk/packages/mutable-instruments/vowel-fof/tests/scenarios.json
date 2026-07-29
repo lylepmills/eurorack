@@ -6,10 +6,22 @@
     "note": 45,
     "triggerHz": 0,
     "controls": {
-      "harmonics": [0.0, 0.25],
-      "timbre": [0.0, 1.0],
-      "morph": [0.0, 1.0],
-      "macro": [0.5, 0.5]
+      "harmonics": [
+        0.0,
+        0.25
+      ],
+      "timbre": [
+        0.0,
+        1.0
+      ],
+      "morph": [
+        0.0,
+        1.0
+      ],
+      "macro": [
+        0.5,
+        0.5
+      ]
     }
   },
   {
@@ -19,23 +31,47 @@
     "note": 48,
     "triggerHz": 0,
     "controls": {
-      "harmonics": [0.1, 0.1],
-      "timbre": [0.25, 0.25],
-      "morph": [0.5, 0.5],
-      "macro": [0.5, 1.0]
+      "harmonics": [
+        0.1,
+        0.1
+      ],
+      "timbre": [
+        0.25,
+        0.25
+      ],
+      "morph": [
+        0.5,
+        0.5
+      ],
+      "macro": [
+        0.5,
+        1.0
+      ]
     }
   },
   {
     "id": "whisper",
-    "name": "Full breath at a high register",
+    "name": "Full breath on a closed vowel",
     "durationSeconds": 2,
     "note": 60,
     "triggerHz": 0,
     "controls": {
-      "harmonics": [0.0, 1.0],
-      "timbre": [0.9, 0.9],
-      "morph": [0.3, 0.3],
-      "macro": [0.5, 0.5]
+      "harmonics": [
+        0.0,
+        1.0
+      ],
+      "timbre": [
+        0.9,
+        0.9
+      ],
+      "morph": [
+        0.3,
+        0.3
+      ],
+      "macro": [
+        0.5,
+        0.5
+      ]
     }
   },
   {
@@ -45,10 +81,22 @@
     "note": 33,
     "triggerHz": 0,
     "controls": {
-      "harmonics": [0.0, 0.0],
-      "timbre": [0.0, 1.0],
-      "morph": [1.0, 0.0],
-      "macro": [0.0, 0.0]
+      "harmonics": [
+        0.0,
+        0.0
+      ],
+      "timbre": [
+        0.0,
+        1.0
+      ],
+      "morph": [
+        1.0,
+        0.0
+      ],
+      "macro": [
+        0.0,
+        0.0
+      ]
     }
   }
 ]

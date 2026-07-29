@@ -1,79 +1,168 @@
 {
   "shape": "DIGITAL_MODULATION",
-  "note": "Braids has exactly two knobs here: parameter_[0] (p1, TIMBRE) is the symbol rate (digital_oscillator.cc:2192-2193, pitch_ - 1536 + ((parameter_[0]-32767)>>3); parameter_[0] is CONSTRAIN(...,0,32767) in braids.cc:223 -- not the full int16 range -- so the term is always <= 0 and the note only ever moves DOWN from the octave-down centre, matching kDigitalModulationSymbolOffset/-Range). p2 (COLOR) is parameter_[1], the payload byte the packet's one-pole filter chases (digital_oscillator.cc:2217-2219, filter_state=(filter_state*3+parameter_[1])>>2, data_byte=filter_state>>7; sign of the port's kDigitalModulationPayloadPole=0.75). HARMONICS (frame length) and MORPH (symbol-transition shaping) are new -- Braids' frame is hardwired to 1088 symbols (digital_oscillator.cc:2207, 64+4*256) and its constellation switches are always hard steps -- so every case pins them to the values that collapse the port back onto exactly what Braids does: HARMONICS=1.0 (the engine's own header/README: 'HARMONICS = 1 is still Braids' 1,088 exactly') and MORPH=0.0 (hard steps, no glide). Those are NOT noon/0.5 like a typical spare macro -- 0.5 is a sound Braids cannot make (a 187-symbol frame with no frame-length knob to reach it), so pinning to 0.5 here would be the same class of mistake the fourth-macro convention exists to avoid, just aimed the other way. TIMBRE and MACRO get both-ends coverage below (payload-low/-high, timbre-low/-high); HARMONICS/MORPH do not, by the same logic that keeps them off csaw/fold's swept axes -- moving them is a sound Braids cannot make at all, not just a corner of one it can.  Cents tolerance is dropped from every case except pitch-check: ab_compare.autocorrelation_f0 carries a real, non-trivial, note-dependent bias at these notes -- verified directly by feeding it a mathematically exact synthetic sine (no engine involved): a pure 110.000 Hz tone at this harness's own window size (rate*0.25 = 12000 samples, i.e. ~27.5 cycles at 110 Hz) measures back at 110.294 Hz (+4.6 cents), while 220 Hz and 440 Hz measure back within 0.002 cents. TIMBRE and COLOR/MACRO both need a slow-enough symbol rate to keep the preamble/sync/payload regions inside a render of a few seconds, which pins these cases to low notes (36-45) where the estimator is demonstrably unreliable -- so pitch-check exists purely to give one case a note (A4) and a short, preamble-only window where the estimator is trustworthy, and it passes. Direct math (ComputePhaseIncrement against braids/resources.cc's lut_oscillator_increments, and NoteToFrequency against kCorrectedSampleRate) confirms the carrier itself is correct well beyond 1 cent at every note used here -- see the DSP-mapping doc alongside this file.",
+  "note": "Braids has exactly two knobs here: parameter_[0] (p1, TIMBRE) is the symbol rate (digital_oscillator.cc:2192-2193, pitch_ - 1536 + ((parameter_[0]-32767)>>3); parameter_[0] is CONSTRAIN(...,0,32767) in braids.cc:223 -- not the full int16 range -- so the term is always <= 0 and the note only ever moves DOWN from the octave-down centre, matching kDigitalModulationSymbolOffset/-Range). p2 (COLOR) is parameter_[1], the payload byte the packet's one-pole filter chases (digital_oscillator.cc:2217-2219, filter_state=(filter_state*3+parameter_[1])>>2, data_byte=filter_state>>7 -- the port runs those same integers, entering the knob through ToBraidsParameter, so MACRO's detent is the module's noon byte 127 and not a rounded 128; the payload filter also starts from 0 on a Reset(), which is where DigitalOscillator::Init()'s memset of state_ leaves it). HARMONICS (frame length) and MORPH (symbol-transition shaping) are new -- Braids' frame is hardwired to 1088 symbols (digital_oscillator.cc:2207, 64+4*256) and its constellation switches are always hard steps -- so every case pins them to the values that collapse the port back onto exactly what Braids does: HARMONICS=1.0 (the engine's own header/README: 'HARMONICS = 1 is still Braids' 1,088 exactly' -- VERIFIED against stmlib's actual SemitonesToRatio, whose truncated 1/256-semitone LUT index returns 1087.83 for the full span rather than exp2's 1088.03, so the engine's boundaries land on 32/48/64/1088 and the dibit stream diffs to zero through the header and across the frame wrap; deriving them from exp2 instead reports a spurious one-group shift) and MORPH=0.0 (hard steps, no glide). Those are NOT noon/0.5 like a typical spare macro -- 0.5 is a sound Braids cannot make (a 187-symbol frame with no frame-length knob to reach it), so pinning to 0.5 here would be the same class of mistake the fourth-macro convention exists to avoid, just aimed the other way. TIMBRE and MACRO get both-ends coverage below (payload-low/-high, timbre-low/-high); HARMONICS/MORPH do not, by the same logic that keeps them off csaw/fold's swept axes -- moving them is a sound Braids cannot make at all, not just a corner of one it can.  Cents tolerance is dropped from every case except pitch-check: ab_compare.autocorrelation_f0 carries a real, non-trivial, note-dependent bias at these notes -- verified directly by feeding it a mathematically exact synthetic sine (no engine involved): a pure 110.000 Hz tone at this harness's own window size (rate*0.25 = 12000 samples, i.e. ~27.5 cycles at 110 Hz) measures back at 110.294 Hz (+4.6 cents), while 220 Hz and 440 Hz measure back within 0.002 cents. TIMBRE and COLOR/MACRO both need a slow-enough symbol rate to keep the preamble/sync/payload regions inside a render of a few seconds, which pins these cases to low notes (36-45) where the estimator is demonstrably unreliable -- so pitch-check exists purely to give one case a note (A4) and a short, preamble-only window where the estimator is trustworthy, and it passes. Direct math (ComputePhaseIncrement against braids/resources.cc's lut_oscillator_increments, and NoteToFrequency against kCorrectedSampleRate) confirms the carrier itself is correct well beyond 1 cent at every note used here -- see the DSP-mapping doc alongside this file. The strike-restart case is note 72 / TIMBRE 1.0 / 4 Hz because at anything slower the packet never leaves its preamble between strikes and the case measures NOTHING about the strike: at the settings it carried through 1.0.0 (note 45, TIMBRE 0.6, 2 Hz) only ~16 symbols elapse per strike period, so data_byte is 0x00 either way and BOTH renders came out byte-identical to timbre-low's (verified by md5 on both the Braids and the port side, and the Braids reference renders bit-identically for p1 = 0.0/0.3/0.6/1.0 at --trigger-hz 2). At note 72 / TIMBRE 1.0 the symbol rate is 261.6 Hz, so ~65 symbols elapse per 4 Hz period and the strike interrupts a PAYLOAD byte -- which is the whole content of the deviation the header declares. Measured discrimination: 0.19 dB with the shipped behaviour (strike resets the symbol count only, as Braids does) against 0.33 dB with data_byte_ also zeroed. Tolerances are unchanged from 1.0.0.",
   "cases": [
     {
       "id": "pitch-check",
       "name": "A4, short window entirely inside the preamble -- the one case where autocorrelation_f0 is trustworthy",
       "seconds": 1.5,
       "note": 69,
-      "braids": {"p1": 0.0, "p2": 0.5},
-      "engine": {"timbre": 0.0, "harmonics": 1.0, "morph": 0.0, "macro": 0.5},
-      "tolerance": {"acRmsDb": 1.0, "cents": 1.0, "spectrumDb": 1.5}
+      "braids": {
+        "p1": 0.0,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.0,
+        "harmonics": 1.0,
+        "morph": 0.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
     },
     {
       "id": "stock",
       "name": "Mid symbol rate, mid payload",
       "seconds": 3,
       "note": 45,
-      "braids": {"p1": 0.5, "p2": 0.5},
-      "engine": {"timbre": 0.5, "harmonics": 1.0, "morph": 0.0, "macro": 0.5},
-      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.5}
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 1.0,
+        "morph": 0.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
     },
     {
       "id": "timbre-low",
       "name": "TIMBRE at 0 -- slowest symbol rate, stays inside the preamble",
       "seconds": 3,
       "note": 45,
-      "braids": {"p1": 0.0, "p2": 0.5},
-      "engine": {"timbre": 0.0, "harmonics": 1.0, "morph": 0.0, "macro": 0.5},
-      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.5}
+      "braids": {
+        "p1": 0.0,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.0,
+        "harmonics": 1.0,
+        "morph": 0.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
     },
     {
       "id": "timbre-high",
       "name": "TIMBRE at 1 -- fastest symbol rate the octave-down centre reaches",
       "seconds": 2,
       "note": 45,
-      "braids": {"p1": 1.0, "p2": 0.5},
-      "engine": {"timbre": 1.0, "harmonics": 1.0, "morph": 0.0, "macro": 0.5},
-      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.5}
+      "braids": {
+        "p1": 1.0,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 1.0,
+        "harmonics": 1.0,
+        "morph": 0.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
     },
     {
       "id": "payload-low",
       "name": "COLOR/MACRO at 0 -- payload byte target 0x00",
       "seconds": 4,
       "note": 45,
-      "braids": {"p1": 0.85, "p2": 0.0},
-      "engine": {"timbre": 0.85, "harmonics": 1.0, "morph": 0.0, "macro": 0.0},
-      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.5}
+      "braids": {
+        "p1": 0.85,
+        "p2": 0.0
+      },
+      "engine": {
+        "timbre": 0.85,
+        "harmonics": 1.0,
+        "morph": 0.0,
+        "macro": 0.0
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
     },
     {
       "id": "payload-high",
       "name": "COLOR/MACRO at 1 -- payload byte target 0xff",
       "seconds": 4,
       "note": 45,
-      "braids": {"p1": 0.85, "p2": 1.0},
-      "engine": {"timbre": 0.85, "harmonics": 1.0, "morph": 0.0, "macro": 1.0},
-      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.5}
+      "braids": {
+        "p1": 0.85,
+        "p2": 1.0
+      },
+      "engine": {
+        "timbre": 0.85,
+        "harmonics": 1.0,
+        "morph": 0.0,
+        "macro": 1.0
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
     },
     {
       "id": "sync-region",
       "name": "A slower symbol rate held just long enough to cross both sync words",
       "seconds": 6,
       "note": 40,
-      "braids": {"p1": 0.35, "p2": 0.5},
-      "engine": {"timbre": 0.35, "harmonics": 1.0, "morph": 0.0, "macro": 0.5},
-      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.5}
+      "braids": {
+        "p1": 0.35,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.35,
+        "harmonics": 1.0,
+        "morph": 0.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
     },
     {
       "id": "strike-restart",
-      "name": "Repeated strikes restart the packet at the preamble; carrier phase runs free",
+      "name": "Strikes that land PAST the header, so the byte in flight is a real one -- the packet restarts at its preamble, the carrier, payload filter and byte run free",
       "seconds": 3,
-      "note": 45,
-      "triggerHz": 2,
-      "braids": {"p1": 0.6, "p2": 0.5},
-      "engine": {"timbre": 0.6, "harmonics": 1.0, "morph": 0.0, "macro": 0.5},
-      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.5}
+      "note": 72,
+      "triggerHz": 4,
+      "braids": {
+        "p1": 1.0,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 1.0,
+        "harmonics": 1.0,
+        "morph": 0.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
     }
   ]
 }

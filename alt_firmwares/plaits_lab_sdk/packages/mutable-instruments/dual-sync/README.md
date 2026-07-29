@@ -66,7 +66,7 @@ A 2-sample polyBLEP leaves a residue whose position depends on the rate it runs
 at: at 96 kHz most of it sits above 24 kHz, where the reference renderer's
 decimator removes it, and at 48 kHz the same residue folds back into the
 audible band. So the port runs 2x to reach the module's 96 kHz internal rate
-and decimates through a 95-tap Kaiser halfband.
+and decimates through a 47-tap Kaiser halfband.
 
 Measured as non-harmonic energy against total, the port sits within 0.3 dB of
 the module at every setting measured (-46.4 dB against -46.7 dB at the stock
@@ -76,6 +76,11 @@ on it, so the oversampling is worth between 8 and 21 dB depending on where the
 knobs are. The full table, and the accepted residue between 24 and 26 kHz where
 this filter is shallower than the reference's 127-tap one, are in the header
 comment of `plaits/dsp/engine2/dual_sync_engine.h`.
+
+The filter length is set by the hardware budget, not guesswork. The earlier
+95-tap version measured 113% of the calibrated CPU budget and the 63-tap
+version's uncertainty band still crossed the deadline. This one measures 76%;
+the worst committed A/B case remains only 0.26 dB apart over the whole spectrum.
 
 ## The one Braids behaviour this port leaves out
 

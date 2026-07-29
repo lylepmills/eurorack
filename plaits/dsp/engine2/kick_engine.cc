@@ -177,7 +177,7 @@ void KickEngine::Render(
 
     const float resonance_domain = resonance_modulation.Next();
     const float damp_from_resonance =
-        2.0f * (1.0f - powf(resonance_domain, 0.25f));
+        2.0f * (1.0f - Sqrt(Sqrt(resonance_domain)));
     const float damp_from_freq_ceiling = 2.0f / f - f * 0.5f;
     float damp = damp_from_resonance < damp_from_freq_ceiling
         ? damp_from_resonance : damp_from_freq_ceiling;

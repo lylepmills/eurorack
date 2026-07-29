@@ -24,19 +24,12 @@ namespace {
 // zero a quarter of the way through, so it is -cos(2*pi*phase); Plaits' starts
 // at 0 and is sin(2*pi*phase). A quarter cycle apart.
 //
-// Here every partial reads the SAME table at phase * (i + 1), so all twelve
-// share the convention and the choice does not move the magnitude spectrum or
-// the RMS -- but it does move the waveform and therefore the peak. Under -cos
-// all twelve partials align at phase 0 and the sum reaches the normalizer's
-// full scale, which is the bound the positive output gain rests on (SPEC R1).
-// Under sin they would align at a quarter cycle in and cancel differently.
-const float kBraidsSinePhaseOffset = 0.75f;
-
-inline float BraidsSine(float phase) {
-  // InterpolateWrap is safe for any phase >= 0, which is what the harmonic
-  // multiply produces (up to 12.75 here).
-  return Sine(phase + kBraidsSinePhaseOffset);
-}
+// All partials share this convention, so it does not move the magnitude
+// spectrum or RMS -- but it does move the waveform and therefore the peak.
+// Under -cos all twelve partials align at phase 0 and the sum reaches the
+// normalizer's full scale, which is the bound the positive output gain rests
+// on (SPEC R1). Under sin they would align at a quarter cycle in and cancel
+// differently. Render() obtains -cos(n * phase) from a cosine recurrence.
 
 // Braids' ToParameter equivalent: the module's knobs arrive as int16 0..32767
 // and the width computation at digital_oscillator.cc:936-939 quantises hard
@@ -183,8 +176,22 @@ void HarmonicsEngine::Render(
 
     float sum = 0.0f;
     float sum_aux = 0.0f;
+
+    // All twelve oscillators are integer harmonics of the same phase. One
+    // cosine lookup and the Chebyshev recurrence
+    //
+    //   cos((n + 1)x) = 2 cos(x) cos(nx) - cos((n - 1)x)
+    //
+    // therefore produces the same -cos convention as
+    // BraidsSine(phase_ * (i + 1)) without twelve independent wrapped table
+    // reads. Resetting the recurrence from the fundamental on every sample
+    // prevents error from accumulating over time.
+    const float cosine_1 = Sine(phase_ + 0.25f);
+    const float two_cosine_1 = 2.0f * cosine_1;
+    float cosine_previous = 1.0f;
+    float cosine = cosine_1;
     for (int i = 0; i < kHarmonicsNumPartials; ++i) {
-      const float partial = BraidsSine(phase_ * static_cast<float>(i + 1));
+      const float partial = -cosine;
       sum += partial * static_cast<float>(amplitude_[i]);
       sum_aux += partial * static_cast<float>(amplitude_aux_[i]);
 
@@ -196,6 +203,11 @@ void HarmonicsEngine::Render(
       // remove the gate the model is partly made of.
       amplitude_[i] += (target[i] - amplitude_[i]) >> 8;
       amplitude_aux_[i] += (target_aux[i] - amplitude_aux_[i]) >> 8;
+
+      const float cosine_next =
+          two_cosine_1 * cosine - cosine_previous;
+      cosine_previous = cosine;
+      cosine = cosine_next;
     }
 
     // The amplitudes sum to at most 32768 by construction (:954-959), so this

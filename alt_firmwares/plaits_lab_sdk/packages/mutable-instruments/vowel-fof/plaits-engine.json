@@ -25,23 +25,23 @@
     },
     {
       "id": "timbre",
-      "label": "Register",
-      "description": "Steps the vocal register from bass through tenor to soprano."
+      "label": "Vowel",
+      "description": "Sweeps the vowel through the five phonemes: /a/, /e/, /i/, /o/, /u/."
     },
     {
       "id": "morph",
-      "label": "Vowel",
-      "description": "Sweeps the vowel through the five phonemes."
+      "label": "Register",
+      "description": "Steps the vocal register from bass through tenor, countertenor and alto to soprano."
     },
     {
       "id": "macro",
       "label": "Formant tilt",
-      "description": "Restores the formant amplitude balance the stock model leaves flat."
+      "description": "Restores the formant amplitude balance the stock model leaves flat. Centred is flat, exactly as hardware."
     }
   ],
   "outputs": {
     "main": "Formant bank.",
-    "aux": "Upper-formant weighting."
+    "aux": "Glottal source, level-matched to the main output only near mid register; upper-formant weighting in stereo."
   },
   "source": {
     "root": "../../../../..",

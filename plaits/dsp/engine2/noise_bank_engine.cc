@@ -190,7 +190,7 @@ inline float SvfCutoffAt(int note) {
 inline float SvfDampAt(int index) {
   const float resonance = static_cast<float>(index) /
       kNoiseBankResonanceDivisor;
-  return 2.0f * (1.0f - sqrtf(sqrtf(resonance)));
+  return 2.0f * (1.0f - Sqrt(Sqrt(resonance)));
 }
 
 inline float Lerp(float a, float b, float t) {
@@ -319,7 +319,7 @@ void NoiseBankEngine::Render(
     const float damp_a = SvfDampAt(damp_integral);
     const float damp_b = SvfDampAt(damp_integral + 1);
     const float damp = Lerp(damp_a, damp_b, damp_fractional);
-    const float scale = Lerp(sqrtf(damp_a * 0.5f), sqrtf(damp_b * 0.5f),
+    const float scale = Lerp(Sqrt(damp_a * 0.5f), Sqrt(damp_b * 0.5f),
                              damp_fractional);
 
     // :1855. A level normalization, not a rate constant.

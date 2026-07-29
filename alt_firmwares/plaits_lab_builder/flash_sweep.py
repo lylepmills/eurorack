@@ -14,6 +14,9 @@ carries 23 distinct engines and each measurement carries those 23 plus one.
 Two modes:
 
   (no args)          the MONO marginal sweep above -- engineFlashBytes.
+  --light [ids...]   the same sweep with all three DX7 banks removed from both
+                     arms, for engines too large to link in the stock context.
+                     The controls must still match before using the result.
   --stereo [ids...]  the per-engine STEREO delta -- engineStereoBytes.
 
 The stereo mode differences two builds that are identical except for the
@@ -51,10 +54,20 @@ SPEECH = BASE['slots'].index('speech')
 # The duplicate that stands in for Speech in the baseline.
 FILLER = 'virtual-analog'
 
+ARGV = sys.argv[1:]
+LIGHT = bool(ARGV and ARGV[0] == '--light')
+if LIGHT:
+    ARGV = ARGV[1:]
+    # The three banks share one six-op core and factory patch resources. Drop
+    # all three in both measurement arms to make enough room for an oversized
+    # candidate without changing any source shared by the Braids ports.
+    for bank in ('dx7-bank-a', 'dx7-bank-b', 'dx7-bank-c'):
+        BASE['slots'][BASE['slots'].index(bank)] = FILLER
+
 # Engines to measure. Override from the command line so a re-measure of a
 # handful of new engines does not need the image rebuilt:
 #   python3 flash_sweep.py brass shakers bytebeat
-NEW = sys.argv[1:] or [
+NEW = ARGV or [
     'z-filter', 'toy', 'csaw', 'bowed', 'ring-mod', 'sub-oscillator',
     'digital-modulation', 'saw-comb', 'vowel-fof', 'raw-fm', 'triple']
 
@@ -233,7 +246,6 @@ def stereo_sweep(engine_ids):
 
 
 if __name__ == '__main__':
-    argv = sys.argv[1:]
-    if argv and argv[0] == '--stereo':
-        sys.exit(stereo_sweep(argv[1:] or STEREO_DEFAULT))
+    if ARGV and ARGV[0] == '--stereo':
+        sys.exit(stereo_sweep(ARGV[1:] or STEREO_DEFAULT))
     sys.exit(mono_sweep())

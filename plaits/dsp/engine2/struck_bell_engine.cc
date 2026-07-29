@@ -22,15 +22,26 @@ namespace {
 
 // Braids' wav_sine is -cos(2*pi*phase), not Plaits' sin(2*pi*phase)
 // lut_sine (verified: wav_sine peaks -32512 at phase 0, +32766 at phase
-// 0.5). Copied verbatim from fold_engine.cc.
-const float kBraidsSinePhaseOffset = 0.75f;
+// 0.5). Phase-shift copied verbatim from fold_engine.cc; the amplitude
+// scale and DC pedestal below are struck-bell-specific -- see the wav_sine
+// note in the header for the measurement that keeps them.
+// wav_sine[i] = 32638 * -cos(2*pi*i/256) + 127, fit programmatically against
+// the real 257-entry table (braids/resources.cc:1461) to within 1 LSB (the
+// residual is the table's own dither noise -- braids/resources/waveforms.py's
+// scale() runs an order-2 noise-shaped quantizer, not a plain round()). Ran
+// the A/B with and without this: WITH it, AC RMS residual drops from
+// +0.01..+0.06 dB (every case hot) to -0.00..+0.03 dB, and spectrum error
+// drops in all seven cases (e.g. decay-long 0.10 -> 0.03 dB) -- kept; see the
+// header for the full before/after table.
+const float kBellWavSineScale = 32638.0f / 32768.0f;
+const float kBellWavSinePedestal = 127.0f / 32768.0f;
 
 inline float BraidsSine(float phase) {
-  phase += kBraidsSinePhaseOffset;
-  if (phase >= 1.0f) {
-    phase -= 1.0f;
-  }
-  return Sine(phase);
+  // -cos(x) is -sin(x + pi/2). SineNoWrap is safe below phase 1.25, and
+  // phase is always in [0, 1), so this expresses Braids' convention without
+  // a wrap branch in each of the eleven per-sample reads.
+  return -SineNoWrap(phase + 0.25f) * kBellWavSineScale
+      + kBellWavSinePedestal;
 }
 
 }  // namespace

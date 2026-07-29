@@ -108,9 +108,9 @@
 // ALWAYS kBlockSize = 24 samples at 96 kHz (braids.cc:57,276) = 250 us of
 // wall-clock time, and Plaits' own kBlockSize is 12 samples at 48 kHz
 // (plaits/dsp/dsp.h:51) -- the SAME 250 us. `size == 12` therefore needs no
-// correction; an atypical call size (kMaxBlockSize = 24, used by this SDK's
-// CPU/flash tooling) generalises via `powf(decay, size / 12.0f)`, copying
-// bell's kBellBlockSamples pattern as kStruckDrumBlockSamples below.
+// correction; a larger caller block takes the corresponding number of whole
+// integer-truncating decay steps, copying bell's kBellBlockSamples pattern as
+// kStruckDrumBlockSamples below.
 //
 // TABLE VERIFICATION. `lut_svf_cutoff` (braids/resources.cc:114-224, 257
 // uint16 entries) reproduces from braids/resources/lookup_tables.py:98-101 --
@@ -199,18 +199,42 @@
 // direction: there the floor forced an exact zero, here it forces an exact
 // offset.
 //
-// wav_sine is Braids' -cos(2*pi*phase), not Plaits' sin(2*pi*phase) lut_sine
-// (resources.cc:1461-1462, whose first entry is -32512, i.e. -1). The
-// BraidsSine() helper in the .cc is fold_engine.cc's, copied verbatim (also
-// carried by struck_bell_engine.cc). Reading it through `plaits::Sine()`
-// rather than Braids' own 257-entry table read is safe by the same
-// reasoning struck-bell's header gives: a small continuous-vs-table
-// difference in a partial's instantaneous value is LINEAR here too --
-// summed directly for the harmonics term, and MULTIPLIED by an independent
-// filtered-noise sample for the two ring-modulated partials. Ring
-// modulation is not a nonlinear waveshaper; it does not fold a table-read
-// error into new harmonic content the way fold_engine.h's shaper does, so
-// there is nothing for the substitution to distort.
+// wav_sine is NOT a unit-amplitude, zero-mean -cos(2*pi*phase) -- fitted
+// programmatically against braids/resources.cc's 256-entry table (:1461 on),
+// wav_sine[i] = 32638 * -cos(2*pi*i/256) + 127 (max residual 1 LSB, e.g.
+// entry 0 = 32638*-1+127 = -32511 against the table's -32512). Two real
+// deviations from unity: the table runs 20*log10(32638/32768) = -0.0343 dB
+// quiet, and carries a +127/32768 = +0.00388 DC pedestal on every sample.
+// Both are reproduced in BraidsSine() (kBraidsSineAmplitude/
+// kBraidsSineDcOffset in the .cc), on top of the quarter-cycle offset that
+// helper already carried (copied from fold_engine.cc). struck_bell_engine.cc
+// carries the identical scale/pedestal on its own BraidsSine() (its header
+// records the same fit and a comparable measured win in its own, purely
+// linear, six-partial sum), which is corroborating evidence that the win
+// below is the amplitude term doing the work in both engines, not something
+// specific to drum's ring-modulated path. Only the table's own 1-LSB
+// read-vs-formula residual is not reproduced, the same class of deviation
+// already declared below for the per-sample output-mix truncations.
+//
+// This partial feeds TWO different paths here, unlike bell's purely linear
+// one, so the fix could not be assumed inert and had to be measured:
+// partial[0] and the six-partial harmonics_sum are LINEAR (summed directly
+// into the output, Render():291,295), but partial[1] and partial[3] are
+// MULTIPLIED by the filtered-noise state lp2_ (ring modulation,
+// Render():291-293) -- exactly the kind of nonlinear interaction where a DC
+// pedestal in one factor can leak a scaled copy of the OTHER factor's own
+// spectrum into the output. Measured effect of adding both the amplitude
+// scale and the DC pedestal together: full-band AC RMS improved by a
+// consistent 0.03-0.04 dB in every one of the six A/B cases -- moving the
+// port from a uniform "reads hot" bias (+0.01 to +0.04 dB) to within +-0.02
+// dB of the reference (see A/B NOTES) -- which matches the amplitude term's
+// predicted -0.0345 dB alone to within the harness's 0.01 dB rounding.
+// Energy-weighted spectrum and the tracked pitch case moved by <=0.01 dB /
+// 0 cents, so the ring-modulated DC-pedestal leak this port worried about is
+// not separately measurable at this harness's precision. Net: KEPT, on the
+// evidence of the amplitude term alone -- the DC pedestal rides along
+// because it costs nothing to also get right, not because it moved a
+// number by itself.
 //
 // THE FOURTH MACRO.
 //   MORPH  Spread        DRUM's six partial ratios (kDrumPartials, in
@@ -298,23 +322,26 @@
 // not a byte-for-byte copy of it. The mono render (the one tests/ab.json
 // compares) carries no offset at all.
 //
-// A/B NOTES. Full-band AC RMS is +0.01 to +0.04 dB across all six cases,
-// energy-weighted spectrum 0.05-0.16 dB. The band carrying the fundamental
-// matches within 0.2 dB in every case (80-160 Hz at note 45, where it holds
-// 64-90% of the energy; 320-640 Hz at note 72, where it holds 75%), and no
-// band holding more than 4% of a case's energy is off by more than 0.4 dB.
-// What is left is confined to the sparse top bands, where the two renders
-// disagree in BOTH directions -- decay-fast and high-register read up to
-// +3.6 and +8.8 dB there, stock-mid and color-bright up to -3.7 and -4.4 dB.
-// Neither direction is a level error in the algorithm: those bands hold
-// 0.0-0.3% of the energy, and they are where a native-48 kHz render and a
-// 96 kHz render halfband-decimated to 48 kHz (render_braids_model.cc's
-// 127-tap windowed-sinc) are least alike, since the reference's content up
-// there is decimator residue and the port's is the sine bank's own numerical
-// floor. The one band above 640 Hz that carries real energy is
-// high-register's 640-1280 Hz (16.6%), and it matches to -0.13 dB. The same
-// pattern is in fold's, particle-burst's and struck-bell's own A/B tables.
-// See tests/ab.json for the cents-tolerance note.
+// A/B NOTES. Full-band AC RMS is -0.02 to +0.01 dB across all six cases
+// (before the wav_sine amplitude/pedestal fix above: +0.01 to +0.04 dB,
+// every case reading uniformly hot), energy-weighted spectrum 0.05-0.17 dB.
+// The band carrying the fundamental matches within 0.2 dB in every case
+// (80-160 Hz at note 45, where it holds 64-90% of the energy; 320-640 Hz at
+// note 72, where it holds 75%). What is left is confined to the sparse top
+// bands, where the two renders disagree in BOTH directions -- decay-fast and
+// high-register read up to +4.3 and +9.2 dB there, stock-mid and
+// color-bright up to -3.7 and -3.6 dB. Neither direction is a level error in
+// the algorithm: those bands hold 0.0-0.3% of the energy (one exception:
+// high-register's 1280-2560 Hz holds 4.3% and still reads -1.37 dB, present
+// before this fix too and unchanged by it), and they are where a native-
+// 48 kHz render and a 96 kHz render halfband-decimated to 48 kHz
+// (render_braids_model.cc's 127-tap windowed-sinc) are least alike, since
+// the reference's content up there is decimator residue and the port's is
+// the sine bank's own numerical floor. The one band above 640 Hz that
+// carries real energy is high-register's 640-1280 Hz (16.6%), and it
+// matches to -0.13 dB. The same pattern is in fold's, particle-burst's and
+// struck-bell's own A/B tables. See tests/ab.json for the cents-tolerance
+// note.
 //
 // Declared deviations from Braids:
 //   - the intra-block linear "fade" ramp (:1037-1038,1059-1060, smoothing
@@ -331,8 +358,10 @@
 //     reproduction fold, particle-burst and struck-bell all declare for
 //     their own 48 kHz-inner functions).
 //   - partial reads use `plaits::Sine()` through `BraidsSine()` rather than
-//     Braids' own 257-entry `wav_sine` table read through `Interpolate824`
-//     (see wav_sine note above for why this is safe here).
+//     Braids' own 256-entry `wav_sine` table read through `Interpolate824`;
+//     BraidsSine() DOES reproduce the table's amplitude scale and DC
+//     pedestal exactly (see the wav_sine note above), so what remains
+//     declared here is only the table's own 1-LSB fit residual.
 //   - the noise source is `stmlib::Random::GetSample()`, the SAME generator
 //     Braids' own `Random::GetSample()` wraps (both are stmlib), but an
 //     independent stream -- no attempt is made to reproduce Braids' exact
@@ -413,9 +442,9 @@ const float kStruckDrumPitchCorrection = 0.046105f;
 // 96 kHz (braids.cc:57,276) = 250 us of wall-clock time, which the decay
 // multiplier above is calibrated to. Plaits' own kBlockSize is 12 samples at
 // 48 kHz (plaits/dsp/dsp.h:51) -- the SAME 250 us -- so `size == 12` needs
-// no correction; see RATE above for the general `size / kStruckDrumBlockSamples`
-// exponent used otherwise. Copied from struck_bell_engine.h's identical
-// kBellBlockSamples.
+// no correction; larger calls take one integer-truncating decay step per
+// elapsed 12 samples. Copied from struck_bell_engine.h's identical
+// kBellBlockSamples treatment.
 const float kStruckDrumBlockSamples = 12.0f;
 
 // braids/resources.cc:114-224, entries 0-128 of lut_svf_cutoff (see TABLE
@@ -495,9 +524,9 @@ class StruckDrumEngine : public Engine {
   // Braids' RAW (un-normalised, +-32768) integer scale and floored every
   // stage, every sample, exactly as its `>> 15` does -- see NOISE-CHAIN
   // TRUNCATION above; divided by 32768.0f only at the point of use.
-  float lp0_[2];
-  float lp1_[2];
-  float lp2_[2];
+  int32_t lp0_[2];
+  int32_t lp1_[2];
+  int32_t lp2_[2];
 
   bool ever_struck_;
 

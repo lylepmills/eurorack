@@ -73,6 +73,11 @@ port reads −85.5 / −87.5 / −87.1 dB on the three note-45 A/B renders again
 the module's −79.1 / −88.5 / −80.7 dB — at or below the module everywhere
 measured.
 
+The twelve integer harmonics are generated from one cosine-table read per
+sample with the standard harmonic recurrence, restarted each sample. This
+reduced the calibrated hardware estimate from 113% to 74% of the CPU budget;
+all seven reference A/B cases remain within their declared tolerances.
+
 ## What the A/B measures
 
 Six of the seven cases in `tests/ab.json` — both ends of TIMBRE, three points

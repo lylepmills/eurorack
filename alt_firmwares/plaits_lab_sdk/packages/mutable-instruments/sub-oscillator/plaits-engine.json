@@ -13,8 +13,8 @@
   "family": "Subtractive",
   "tags": ["braids", "sub", "oscillator", "subtractive"],
   "controls": [
-    { "id": "harmonics", "label": "Shape", "description": "Morphs the main oscillator from a square to a variable saw." },
-    { "id": "timbre", "label": "Width", "description": "Sets pulse width, from symmetric down to a thin sliver." },
+    { "id": "harmonics", "label": "Shape", "description": "Crossfades the main oscillator between a square and a variable saw, off one shared phase." },
+    { "id": "timbre", "label": "Width", "description": "Closes the square's pulse and, at the saw end, drives its two ramps apart into an octave-up double ramp." },
     { "id": "morph", "label": "Sub level", "description": "Adds the sub two octaves down below noon and one octave down above it, with none at noon." },
     { "id": "macro", "label": "Sub width", "description": "Narrows the sub oscillator's pulse below noon, leaving it square above." }
   ],

@@ -48,36 +48,34 @@
 // Declared deviations from Braids:
 //   - int8 writes FLOOR and SATURATE (R8). Braids floors and WRAPS; wrap
 //     inside a feedback loop is a stability hazard with no analogue to its
-//     int32 accumulator bounds.
-//   - lut_bowing_friction (2,018 B) is replaced by min(1, 1/(d+0.75)^4),
-//     which is the curve the table holds: exact at both ends (32768 at d=0,
-//     64 at d=4). Flash, not speed -- a table lookup is not slower here.
-//     Braids' table is that curve FLOORED to integers, so this closed form
-//     reads up to one LSB high, worst +1.48% relative at index 253 where the
-//     entry is 66 and the exact value 66.97. Rebuilding this file with the
-//     floor restored moves every point of the 36-point note x COLOR x TIMBRE
-//     grid below by less than 0.06 dB, so it is a real but inaudible
-//     quantisation loss, not the one that matters (see KNOWN DEFECT).
+//     int32 accumulator bounds. Measured cost: rebuilding this file with
+//     Braids' wrap restored moves every point of the 36-point note x COLOR x
+//     TIMBRE grid by less than 0.06 dB.
+//   - lut_bowing_friction (2,018 B) is replaced by the curve the table holds,
+//     min(1, 1/(d+0.75)^4), FLOORED to 1/32768ths exactly as the table is.
+//     Verified entry by entry: floor matches all 257, round matches only 137.
+//     Flash, not speed -- a table lookup is not slower here -- and the values
+//     now match the table at 255 of the 256 indices the engine can reach,
+//     against up to one LSB high at many of them before. Index 27 alone still
+//     reads one LSB high (table 17374, closed form 17375): a float32 rounding
+//     artefact of evaluating 1/(d+0.75)^4 right on a floor boundary, 1/32768
+//     of full scale and so 256x below the int8 line grid.
 //   - lut_bowing_envelope (1,504 B) is replaced by three line segments. The
 //     table's 600-step rise is linear to under one LSB and its tail is
 //     constant; the 120-step decay between them is within 0.17% (measured:
 //     0.978 LSB worst on the rise, and 10.8 LSB of 6553 at BOTH ends of the
 //     decay -- the segment spans 599..720 where the table decays 600..719,
-//     so it runs low at the start and high at the finish).
-//   - the bridge tap is CLAMPED rather than allowed to go degenerate. In
-//     Braids a bridge delay under one sample wraps the modulo and reads
-//     1024 samples back instead; from MIDI 84.5 upward at HARMONICS 0
-//     that is what the model actually does, and it is not worth reproducing.
-//     Note the clamp floor is TWO samples, not one, so it engages from
-//     MIDI 72.9 upward at HARMONICS 0 -- a full octave below the point Braids
-//     goes degenerate, and over that octave Braids' tap is a perfectly valid
-//     1..2 samples that the port lengthens. It is applied AFTER neck_delay
-//     has been taken from delay (bowed_engine.cc:142-146), so it lengthens
-//     the whole loop rather than moving the tap within it, and the note runs
-//     FLAT over that octave: 0.4 cents at MIDI 73, 36.3 cents at MIDI 84.
-//     The A/B corner is dead on both sides (-61 dBFS against -40), so nothing
-//     audible turns on it, but the deviation is wider than "where Braids goes
-//     degenerate" implies.
+//     so it runs low at the start and high at the finish). This is the one
+//     table not floored to the integer grid; at 1/32768 it sits 256x below
+//     the int8 line quantisation that dominates the loop.
+//   - the bridge tap is CLAMPED rather than allowed to go degenerate, at a
+//     floor of ONE sample -- which is exactly where Braids goes degenerate.
+//     Below one sample the integral part of the tap is zero and Braids' read
+//     wraps its modulo to a sample 1024 back instead; that is what the module
+//     does from MIDI 84.46 upward at HARMONICS 0, and it is not worth
+//     reproducing. The clamp is applied BEFORE neck_delay is taken from delay
+//     (bowed_engine.cc:161-168), so it moves the tap within the loop instead
+//     of lengthening the loop, and the note does not run flat.
 //   - the output stage is re-derived. Braids' `(out + previous) >> 1` then
 //     `out` is a 2x linear-interpolating UPSAMPLER writing 96 kHz, not a
 //     filter; its baseband effect is -1.4 dB at 12 kHz. Re-implementing it
@@ -95,44 +93,91 @@
 // system that is enough to settle into a neighbouring limit cycle, so
 // sample- or bin-level agreement is not a meaningful target for this engine.
 //
-// It is now measured rather than asserted: tests/ab.json in the package runs
+// It is measured rather than asserted: tests/ab.json in the package runs
 // sixteen cases through ab_engine.py, sweeping both ends of both Braids axes,
-// four notes, a re-strike, and the octave fold. Where the model agrees, it
-// agrees more closely than this comment used to claim -- pitch inside
-// +-2 cents after the kCorrectedSampleRate correction (not 8), and
-// octave-band spectra 0.22 to 3.19 dB apart (not 3-5), with level running
-// +4.10 dB at stock, which is the declared 1.6x make-up almost exactly. Nine
-// cases agree, SIX FAIL on the defect below, and high-bridge-clamp declares no
-// tolerance because both sides are dead there.
+// four notes, a re-strike, and the octave fold. ALL FIFTEEN CASES THAT DECLARE
+// A TOLERANCE AGREE (high-bridge-clamp declares none and still counts as
+// neither -- both sides are dead there). Level runs -2.88 to +4.89 dB against
+// Braids, against a declared 1.6x (+4.08 dB) make-up; octave-band spectra sit
+// 0.05 to 2.01 dB apart; pitch stays inside +-3 cents after the
+// kCorrectedSampleRate correction.
 //
-// KNOWN DEFECT, NOT A DECLARED DEVIATION (found by that A/B, 2026-07; left
-// unfixed pending a decision, because a fix moves the package digest).
-// Braids' fractional-delay read is `Mix(a, b, frac) << 8`
-// (digital_oscillator.cc:1247), and stmlib::Mix (stmlib/utils/dsp.h:86)
-// returns an int16 -- so the interpolation between the two delay-line taps is
-// QUANTISED to whole int8 counts, 1/128 of full scale, before the shift. This
-// port interpolates in float (bowed_engine.cc:190). That truncation is a loss
-// term inside the feedback loop, and it is what lets Braids' bow SLIP.
+// Residual worth knowing, found re-running a wider grid than ab.json samples:
+// at note 60 / TIMBRE 0.4 / COLOR 0.5 -- a point no case visits -- the port
+// settles an OCTAVE above Braids and its octave-band spectrum reads 4.5-6.0 dB,
+// past this package's own 4.0 dB figure, where the pre-fix port read 1.6-1.7.
+// It is the neighbouring-limit-cycle effect described above rather than a
+// regression in kind: the same knife edge exists pre-fix one COLOR step away
+// (note 60 / TIMBRE 0.4 / COLOR 0.45, an octave BELOW), and over the 36-point
+// grid the fix takes the points past 4 dB of spectrum from four to one and the
+// worst from 10.7 dB to 4.5.
 //
-// SCOPE, measured -- and wider than "the low-TIMBRE end". Braids is BISTABLE
-// along TIMBRE rather than uniformly quiet at the light-bow end: at note 45,
-// COLOR 0.5 it renders -44.1 / -18.4 / -41.3 / -19.1 / -18.0 / -15.1 / -13.2 /
-// -10.3 dBFS at TIMBRE 0 / .1 / .2 / .3 / .4 / .5 / .7 / 1, collapsing in
-// bands (TIMBRE 0 to .075 and .175 to .225) and bowing normally between them.
-// The port is flat across that axis, -14.2 to -7.5 dBFS, so it misses every
-// collapse. It also misses collapses at MID and HIGH bow force elsewhere on
-// the grid: over 36 points (notes 24/45/60 x COLOR 0/.5/1 x TIMBRE
-// .25/.4/.5/.75) the port breaks the A/B's 5 dB tolerance at 13 of them, worst
-// at note 24 / TIMBRE 0.5 / COLOR 0.0, where Braids slips to -49.1 dBFS and
-// the port sustains -11.9 (+37.2 dB).
+// FIXED 2026-07 (the fix that moved the package digest; wave 1 shipped with
+// this defect and it is the reason the builder was rolled out). Braids'
+// fractional-delay read is `Mix(a, b, frac) << 8` (digital_oscillator.cc:1247)
+// against int8 line storage, and stmlib::Mix (stmlib/utils/dsp.h:86) is
+// `(a * (65535 - balance) + b * balance) >> 16` returning an int16 -- so the
+// interpolation between the two delay-line taps is FLOORED to whole int8
+// counts, 1/128 of full scale, before the shift. This port used to interpolate
+// in float. That truncation is a loss term inside the stick-slip feedback
+// loop, and it is what lets the bow SLIP; without it the model has no slip
+// regime at all. MixInt8 in bowed_engine.cc reproduces the integer expression.
 //
-// ISOLATION. Rebuilding THIS FILE with only the Mix truncation restored (the
-// exact integer `(a*(65535-bal) + b*bal) >> 16`) moves note 45 / TIMBRE 0 from
-// -14.21 to -39.96 dBFS against Braids' -44.08, and brings all 36 grid points
-// into -2.8 to +5.5 dB, i.e. back inside the declared 1.6x make-up. Rebuilding
-// it with Braids' int8 WRAP instead of saturation, or with the friction curve
-// floored to Braids' integer table, moves every one of those points by less
-// than 0.06 dB. The truncation is the whole of it.
+// WHAT THAT CHANGES FOR A PATCH ALREADY USING THIS ENGINE. Braids is BISTABLE
+// along TIMBRE -- it collapses into a near-silent slipping regime in bands
+// (at note 45, COLOR 0.5: TIMBRE 0 to .075 and .175 to .225) and bows normally
+// between them -- and it also collapses at MID bow force on low notes near the
+// bridge. The shipped port was FLAT across all of that, -14.2 to -7.5 dBFS, so
+// it played a full-level note at every setting. It now collapses where the
+// module collapses: at note 45 / COLOR 0.5 / TIMBRE 0 it renders -41.4 dBFS
+// where it used to render -14.2 (Braids -44.1), and at note 24 / COLOR 0 /
+// TIMBRE 0.5 it renders -46.4 where it used to render -11.9 (Braids -49.1).
+// SO: an existing patch parked in one of those bands will go from a sustained
+// full-level bowed tone to a thin near-silent whistle -- about 30 dB quieter,
+// which reads as the note dropping out. That is the module's own behaviour and
+// the reason its control copy says "from a thin whistle to a hard scrape", but
+// it is an audible change, not a rounding difference, and a patch sitting in a
+// collapse band will need TIMBRE moved off it.
+//
+// AND IT IS NOT ONLY THE BANDS -- do not read the paragraph above as "quiet
+// corners change, everything else is the same". The truncation is a loss term
+// in the loop everywhere, so ordinary bowing settings move too, by up to about
+// 5.5 dB and in BOTH directions. Measured, port level before -> after at 3 s,
+// at points where Braids bows normally and nothing collapses:
+//   note 45 / TIMBRE .75 / COLOR .5 (the `firm-pressure` case, Braids -16.4):
+//       -8.5 -> -14.0 dBFS, 5.5 dB QUIETER
+//   note 60 / TIMBRE .4  / COLOR 1  (the `mid-neck` case,      Braids -17.5):
+//       -9.2 -> -13.9 dBFS, 4.8 dB QUIETER
+//   note 60 / TIMBRE .5  / COLOR 1                            (Braids -11.9):
+//      -12.9 ->  -8.7 dBFS, 4.3 dB LOUDER
+//   note 24 / TIMBRE .4  / COLOR 0                            (Braids -19.5):
+//      -13.0 -> -16.3 dBFS, 3.3 dB quieter
+// In every one of those the port moved TOWARD Braids -- that is the point of
+// the fix -- but a user hears a patch that changed level by half its perceived
+// loudness, not a rounding difference. The cases that move least are the ones
+// nearest stock. Of the sixteen: SEVEN move under 0.7 dB (stock 0.32,
+// pressure-light 0.39, bow-at-bridge 0.13, bow-up-neck 0.62, corner-light-neck
+// 0.39, low 0.33, high-clean 0.26); retrigger moves 1.0 and octave-fold 1.6;
+// mid-neck 4.8 and firm-pressure 5.5; and the five collapse or dead corners
+// move 19 to 33 dB.
+//
+// Two smaller quantisation corrections landed with it, both measured at under
+// 0.4 dB on every A/B case EXCEPT high-bridge-clamp, which the clamp change
+// carries from +7.96 dB level / 12.69 dB spectrum to +3.45 dB / 0.62 dB (both
+// sides are dead there, so that is two residuals converging, not a fidelity
+// gain worth quoting): the friction curve is now floored to the table's
+// integer grid, and the bridge-tap clamp dropped from two samples to one. The
+// clamp change is audible in one narrow place -- between MIDI 72.9 and 84.5 at
+// HARMONICS 0 the engine used to run flat, by up to 36 cents at MIDI 84, and
+// now tracks. Anyone who tuned a patch by ear against that flatness will find
+// it in tune. Keep the size of that in proportion, though: the clamp only
+// engaged with the bow hard against the bridge at the top of the keyboard
+// (HARMONICS must be at 0 for the 72.9 figure; by HARMONICS 0.1 the old clamp
+// did not engage below MIDI 85), and Braids renders -44 to -61 dBFS across
+// that whole corner. So a patch parked there is one the Mix fix ALSO drops by
+// 20-30 dB -- measured at note 82 / TIMBRE 1 / HARMONICS 0, port -22.6 ->
+// -49.6 dBFS while its pitch error went -33.5 -> +3.8 cents. The note going
+// nearly silent is what a user will notice there; the tuning is the footnote.
 
 #ifndef PLAITS_DSP_ENGINE2_BOWED_ENGINE_H_
 #define PLAITS_DSP_ENGINE2_BOWED_ENGINE_H_

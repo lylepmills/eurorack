@@ -31,9 +31,23 @@ inline float ConstellationQ(int dibit) {
   return (dibit == 0 || dibit == 3) ? 1.0f : -1.0f;
 }
 
-// Braids' wav_sine is -cos, a quarter period behind lut_sine.
+// Braids' wav_sine, verbatim: fitted against braids/resources.cc's 257-entry
+// table (least-squares against -cos(2*pi*i/256), max residual 1.68 LSB, i.e.
+// the table's own int16 quantization noise, not a modeling error), it is
+// 32639 * -cos(2*pi*x) + 127 -- NOT the unit-amplitude, zero-mean -cos this
+// used to compute.
 inline float BraidsSine(float phase) {
-  return Sine(phase + 0.75f);
+  return (32639.0f / 32768.0f) * Sine(phase + 0.75f) + (127.0f / 32768.0f);
+}
+
+// Braids' ToParameter equivalent: the payload knob arrives as an int16
+// 0..32767 (braids.cc:219-224 CONSTRAIN) and the packet reads only its top 8
+// bits, so the port has to enter the same integer or it transmits a different
+// byte. See the header's PAYLOAD IS AN INTEGER PIPELINE note.
+inline int32_t ToBraidsParameter(float normalized) {
+  int32_t value = static_cast<int32_t>(normalized * 32767.0f);
+  CONSTRAIN(value, 0, 32767);
+  return value;
 }
 
 }  // namespace
@@ -46,7 +60,14 @@ void DigitalModulationEngine::Init(BufferAllocator* allocator) {
 void DigitalModulationEngine::Reset() {
   phase_ = 0.0f;
   symbol_phase_ = 0.0f;
-  payload_filter_ = kDigitalModulationStockPayload;
+  // Braids' DigitalModulationState lives in the `state_` union that
+  // DigitalOscillator::Init() memsets (digital_oscillator.h:246-247), and
+  // Init() runs on every shape change (digital_oscillator.cc:110-115) -- the
+  // same cadence at which Plaits calls Reset() on an engine switch
+  // (voice.cc:179). So a fresh selection ALWAYS starts with filter_state 0 and
+  // climbs to the knob from there; seeding the noon byte instead would fake a
+  // packet Braids never transmits.
+  payload_filter_ = 0;
   symbol_count_ = 0;
   data_byte_ = 0;
   shaped_i_ = 0.0f;
@@ -64,10 +85,13 @@ void DigitalModulationEngine::Render(
   *already_enveloped = false;
 
   if (parameters.trigger & TRIGGER_RISING_EDGE) {
-    // Braids' strike resets the symbol count only: the packet restarts from
-    // its preamble while the carrier runs on.
+    // Braids' strike resets the symbol count ONLY (digital_oscillator.cc:
+    // 2196-2199): the packet restarts from its preamble while the carrier, the
+    // payload filter AND the byte in flight all run on. Counts 1, 2 and 3 take
+    // the shift branch, so the three symbols after a strike are the remnant of
+    // whatever byte was being transmitted, and the preamble's 0x00 only latches
+    // at count 4. Zeroing data_byte_ here would silence those three.
     symbol_count_ = 0;
-    data_byte_ = 0;
   }
 
   const float carrier_increment = NoteToFrequency(parameters.note);
@@ -87,6 +111,17 @@ void DigitalModulationEngine::Render(
   // symbol rate the payload is seconds away. Everything interesting lives at
   // short frames, so the knob should spend its travel there: HARMONICS = 1 is
   // still Braids' 1,088 exactly, but noon is ~187 rather than 560.
+  //
+  // The +1 on each boundary is a floor so the shortest frames still carry a
+  // preamble group, and at HARMONICS = 1 it is ALSO exactly Braids. Do not
+  // "correct" it away from an exp2 calculation: stmlib's SemitonesToRatio is a
+  // LUT with a TRUNCATED 1/256-semitone fractional index, so the full span
+  // returns 1087.83, not exp2's 1088.03. The unbiased ints are therefore
+  // 31/47/63/1087 and the +1 lands them on 32/48/64/1088 -- Braids' literals at
+  // digital_oscillator.cc:2205-2215 (frame 64 + 4 * 256). Measured, and the
+  // dibit streams diff to zero through the header and across the frame wrap.
+  // Only multiples of 4 ever reach these comparisons, so a boundary is really a
+  // GROUP index and 31 and 32 select the same groups either way.
   const float frame = kDigitalModulationMinFrame * \
       SemitonesToRatio(parameters.harmonics * kDigitalModulationFrameSpan);
   const float frame_scale = frame / kDigitalModulationStockFrame;
@@ -98,9 +133,10 @@ void DigitalModulationEngine::Render(
       kDigitalModulationSyncB * frame_scale) + 1;
   const int frame_end = static_cast<int>(frame) + 1;
 
-  // MACRO sweeps the payload byte around Braids' mid value.
-  const float payload = ApplyMacro(
-      kDigitalModulationStockPayload, 0.0f, 255.0f, parameters.macro);
+  // MACRO is Braids' COLOR knob, and it enters the packet as an int16 the
+  // filter chases -- NOT as a float byte. The detent is the module's noon, so
+  // it lands on 16383 >> 7 = 127 rather than a rounded 128.
+  const int32_t payload = ToBraidsParameter(parameters.macro);
 
   // MORPH shapes the symbol transitions. At zero the constellation points are
   // hard steps, which is Braids; above it they glide.
@@ -129,9 +165,14 @@ void DigitalModulationEngine::Render(
         } else if (symbol_count_ < sync_b_end) {
           data_byte_ = 0xcc;
         } else {
-          payload_filter_ += (payload - payload_filter_) * \
-              (1.0f - kDigitalModulationPayloadPole);
-          data_byte_ = static_cast<int>(payload_filter_) & 0xff;
+          // Braids' payload one-pole, verbatim: an int32 accumulator, a 3/4
+          // pole taken as an arithmetic >>2 (which FLOORS, so the climb lags a
+          // float pole and parks one to three LSB short of the knob), and a
+          // >>7 that keeps only the top 8 bits. The byte IS the dibit
+          // sequence, so a one-LSB difference here is a different
+          // transmission, not a rounding error.
+          payload_filter_ = (payload_filter_ * 3 + payload) >> 2;
+          data_byte_ = static_cast<uint8_t>(payload_filter_ >> 7);
         }
       } else {
         // Shift out the dibit just transmitted.

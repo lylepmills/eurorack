@@ -155,8 +155,13 @@
 // 0.988 in the engine domain, and |DC| stays at or below 0.00005.
 //
 // Declared deviations from Braids:
-//   - the sine is Plaits' 512-entry lut_sine read as -cos (see BraidsSine in
-//     the .cc), not Braids' wav_sine. wav_sine reproduces EXACTLY as
+//   - the sine is Plaits' 512-entry lut_sine read once for the fundamental,
+//     with -cos(n*x) generated for the remaining partials by the exact
+//     harmonic cosine recurrence in the .cc, not Braids' wav_sine.
+//     Re-starting that recurrence every sample bounds numerical error and
+//     reduces the calibrated hardware estimate from 587.4 instructions /
+//     sample (113% of budget) to 384.4 (74%); the full A/B suite remains
+//     inside tolerance. wav_sine reproduces EXACTLY as
 //     round(-32639 * cos(2*pi*i/256) + 127) to within 2 LSB across all 257
 //     entries -- the residual is the order-2 dither its generator applies
 //     (braids/resources/waveforms.py:87-98); a 256-point DFT of one full
@@ -168,6 +173,32 @@
 //     which is an artefact of `scale(center=True)` averaging a 257-entry array
 //     over a 256-sample period. The port's table is also 512 entries against
 //     Braids' 256, so its linear-interpolation error is smaller.
+//     MEASURED, not assumed: the sine feeds only a linear sum here (:187-189,
+//     the twelve partials are weighted by amplitude_[i]/amplitude_aux_[i] and
+//     added; there is no wavefolder, waveshaper, clipper, comparator, or
+//     feedback path anywhere in this engine, and Voice::Render carries no
+//     downstream DC blocker for this engine's output either -- so nothing
+//     downstream removes the pedestal, it would just ride through as a static
+//     offset). Reproducing wav_sine exactly (amplitude 32639/32768 -- 32638
+//     fits the table equally well and is indistinguishable under its own
+//     dither -- plus the +127/32768 pedestal folded per-partial as
+//     [target_amplitude-weighted sum]*127/32768^2, matching :973-974's
+//     `sine(phase)*amplitude[i] >> 15` exactly) was implemented and re-run
+//     through `ab_engine.py --bands` across all seven tests/ab.json cases.
+//     Every top-line AC RMS, pitch, and energy-weighted spectrum number was
+//     UNCHANGED to the reported precision (one case, colour-narrow, showed a
+//     0.2->0.1 cent pitch wobble, inside the tracker's existing 0.0-0.2 cent
+//     noise floor on that case, not attributable to the pedestal). The only
+//     per-band movement was in bands carrying 0.0% of signal energy (FFT
+//     leakage into empty near-DC bins), consistent with the algebra: the
+//     pedestal is `(sum_i target_amplitude[i]) * 127/32768^2`, bounded by
+//     127/32768 = 0.00388 of full scale, added identically to every sample
+//     regardless of phase -- literally DC, which an AC-RMS/spectrum harness
+//     cannot see and which does not push the output past the +/-1 CONSTRAIN
+//     (SPEC R1's 0.996 bound + 0.00388 stays under 1.0, so it does not even
+//     add a clip). Reverted rather than kept, per the no-churn-on-unmeasurable-
+//     change rule: the port keeps the unit zero-mean sine (kHarmonicsSineAmplitude,
+//     no DC term) and this note stands as the record of the measurement.
 //   - the per-partial `>> 15` truncation at :973 is not reproduced; the port
 //     accumulates the partial sum in float. Braids' floor there costs up to
 //     one LSB per partial per sample, i.e. below -68 dB of the twelve-partial

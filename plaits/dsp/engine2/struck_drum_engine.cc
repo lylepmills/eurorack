@@ -22,17 +22,28 @@ using namespace stmlib;
 
 namespace {
 
-// Braids' wav_sine is -cos(2*pi*phase), not Plaits' sin(2*pi*phase)
-// lut_sine. Copied verbatim from fold_engine.cc (also carried by
-// struck_bell_engine.cc).
+// Braids' wav_sine is not a unit-amplitude, zero-mean -cos(2*pi*phase) --
+// fitted programmatically against braids/resources.cc's 256-entry table,
+// wav_sine[i] = 32638 * -cos(2*pi*i/256) + 127 (max residual 1 LSB, e.g.
+// entry 0 = 32638*-1+127 = -32511 against the table's -32512). Two
+// deviations from unity: the table runs -0.0343 dB quiet (32638/32768 =
+// 0.99609, not 1.0) and carries a +127/32768 = +0.00388 DC pedestal on
+// every sample. Both are reproduced here, in addition to the quarter-cycle
+// offset fold_engine.cc's BraidsSine() helper already carried (also used by
+// struck_bell_engine.cc, which is unit-amplitude/zero-mean and so does not
+// need this pedestal -- see that engine's own header for why).
 const float kBraidsSinePhaseOffset = 0.75f;
+const float kBraidsSineAmplitude = 32638.0f / 32768.0f;
+const float kBraidsSineDcOffset = 127.0f / 32768.0f;
 
 inline float BraidsSine(float phase) {
   phase += kBraidsSinePhaseOffset;
   if (phase >= 1.0f) {
     phase -= 1.0f;
   }
-  return Sine(phase);
+  // phase is explicitly wrapped above, so avoid Sine()'s redundant wrap in
+  // each per-sample partial read.
+  return SineNoWrap(phase) * kBraidsSineAmplitude + kBraidsSineDcOffset;
 }
 
 // digital_oscillator.cc:1029, Interpolate824(lut_svf_cutoff, cutoff << 16):
@@ -41,15 +52,15 @@ inline float BraidsSine(float phase) {
 // returns a truncated uint16, so both are reproduced here: the returned
 // coefficient is Braids' own raw Q15 integer, NOT a continuous float. See
 // the header's TABLE VERIFICATION and NOISE-CHAIN TRUNCATION notes.
-inline float SvfCutoffCoefficient(float cutoff) {
+inline int32_t SvfCutoffCoefficient(float cutoff) {
   CONSTRAIN(cutoff, 0.0f, 32767.0f);
   const int cutoff_integer = static_cast<int>(cutoff);
   const int integral = cutoff_integer >> 8;
   const int fraction = cutoff_integer & 0xff;
-  const float a = static_cast<float>(kStruckDrumSvfCutoffTable[integral]);
-  const float b = static_cast<float>(kStruckDrumSvfCutoffTable[integral + 1]);
+  const int32_t a = kStruckDrumSvfCutoffTable[integral];
+  const int32_t b = kStruckDrumSvfCutoffTable[integral + 1];
   // `a + ((b - a) * (fraction << 8) >> 16)`, i.e. a truncating interpolation.
-  return a + floorf((b - a) * static_cast<float>(fraction) / 256.0f);
+  return a + ((b - a) * fraction >> 8);
 }
 
 // digital_oscillator.cc:1050-1052, one stage of the noise lowpass:
@@ -57,13 +68,14 @@ inline float SvfCutoffCoefficient(float cutoff) {
 // including for negative products, so the increment is biased down by half a
 // unit on average and each stage settles at a NEGATIVE offset of roughly
 // 16384/f raw units rather than at zero -- see the header's NOISE-CHAIN
-// TRUNCATION note. Both `state` and `input` are Braids' raw (un-normalised)
-// integer scale; the product is taken in double because it reaches ~8e8,
-// well past float's exact-integer range, and it feeds a floor().
-inline float NoisePoleStep(float state, float input, float coefficient) {
-  const double delta = (static_cast<double>(input) - static_cast<double>(state))
-      * static_cast<double>(coefficient);
-  return state + static_cast<float>(std::floor(delta / 32768.0));
+// TRUNCATION note. Keeping state, input, coefficient and product in Braids'
+// raw integer domain is exact and avoids software-emulated double arithmetic
+// in the per-sample loop on Cortex-M4.
+inline int32_t NoisePoleStep(
+    int32_t state,
+    int32_t input,
+    int32_t coefficient) {
+  return state + ((input - state) * coefficient >> 15);
 }
 
 }  // namespace
@@ -161,27 +173,30 @@ void StruckDrumEngine::Render(
       mean_decay /= static_cast<float>(kNumStruckDrumPartials);
 
       // One Braids call is always 250 us of wall-clock time
-      // (kStruckDrumBlockSamples in the header); generalise to whatever
-      // `size` this call actually spans. size == 12 is the common
-      // real-time case and needs no power at all.
-      const bool unit_block =
-          (size == static_cast<size_t>(kStruckDrumBlockSamples));
-      const float blocks =
-          static_cast<float>(size) / kStruckDrumBlockSamples;
+      // (kStruckDrumBlockSamples in the header). A larger caller block takes
+      // the corresponding number of whole integer-truncating decay steps;
+      // collapsing them into powf() would change the intermediate floors and
+      // pull in a libm routine the production firmware cannot link.
+      const size_t block_samples =
+          static_cast<size_t>(kStruckDrumBlockSamples);
+      size_t steps = (size + block_samples / 2) / block_samples;
+      if (steps < 1) {
+        steps = 1;
+      }
 
       for (size_t i = 0; i < kNumStruckDrumPartials; ++i) {
         float adjusted = mean_decay + (block_decay[i] - mean_decay) * spread;
         CONSTRAIN(adjusted, 0.0f, 1.0f);
-        const float multiplier =
-            unit_block ? adjusted : powf(adjusted, blocks);
-        // digital_oscillator.cc:1011-1012, `amp[i] * decay >> 16`
-        // truncates the STATE, not just the coefficient -- see THE
-        // AMPLITUDE STATE IS ALSO INTEGER-TRUNCATED in the header. The
-        // +5e-4f nudge guards against a float product landing a hair
-        // under the true integer (e.g. 270.99997 instead of 271.0) and
-        // flooring one unit low; it is three orders of magnitude below
-        // the 1.0-unit boundary this floor actually needs to resolve.
-        amplitude_[i] = floorf(amplitude_[i] * multiplier + 5e-4f);
+        for (size_t n = 0; n < steps; ++n) {
+          // digital_oscillator.cc:1011-1012, `amp[i] * decay >> 16`
+          // truncates the STATE, not just the coefficient -- see THE
+          // AMPLITUDE STATE IS ALSO INTEGER-TRUNCATED in the header. The
+          // +5e-4f nudge guards against a float product landing a hair
+          // under the true integer (e.g. 270.99997 instead of 271.0) and
+          // flooring one unit low; it is three orders of magnitude below
+          // the 1.0-unit boundary this floor actually needs to resolve.
+          amplitude_[i] = floorf(amplitude_[i] * adjusted + 5e-4f);
+        }
       }
     }
   }
@@ -201,7 +216,7 @@ void StruckDrumEngine::Render(
       (parameters.note + kStruckDrumPitchCorrection) * 128.0f;
   const float color_shifted = floorf(color16 / 4.0f);  // >> 2
   const float cutoff = pitch128 - 12.0f * 128.0f + color_shifted;
-  const float noise_coefficient = SvfCutoffCoefficient(cutoff);
+  const int32_t noise_coefficient = SvfCutoffCoefficient(cutoff);
 
   // digital_oscillator.cc:1033.
   const float harmonics_gain = (color16 < kStruckDrumHarmonicsGainThreshold
@@ -223,8 +238,8 @@ void StruckDrumEngine::Render(
 
   // Per-channel mix weights (see the header's MIX WEIGHTS and OUT/AUX
   // stereo notes). [0] = mono/left, [1] = right (stereo only).
-  float mix1[2];
-  float mix2[2];
+  float mix1[2] = { 0.0f, 0.0f };
+  float mix2[2] = { 0.0f, 0.0f };
   {
     float gain_norm = noise_mode_gain_norm -
         (stereo ? kStruckDrumStereoBlend : 0.0f);
@@ -257,8 +272,8 @@ void StruckDrumEngine::Render(
     for (int channel = 0; channel < num_channels; ++channel) {
       // Braids' raw integer scale throughout (digital_oscillator.cc:1043-1052),
       // truncated every stage exactly as its `>> 15` does.
-      float noise = static_cast<float>(Random::GetSample());
-      CONSTRAIN(noise, -16384.0f, 16384.0f);
+      int32_t noise = Random::GetSample();
+      CONSTRAIN(noise, -16384, 16384);
       lp0_[channel] = NoisePoleStep(lp0_[channel], noise, noise_coefficient);
       lp1_[channel] = NoisePoleStep(lp1_[channel], lp0_[channel],
                                     noise_coefficient);

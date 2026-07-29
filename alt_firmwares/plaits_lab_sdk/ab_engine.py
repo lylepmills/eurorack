@@ -67,6 +67,12 @@ REPO_ROOT = SDK_DIR.parents[1]
 # R5 rate-constant errors this metric exists to catch, and those are whole
 # semitones, not cents.
 CORRECTED_SAMPLE_RATE_CENTS = 1200.0 * __import__("math").log2(48000.0 / 47872.34)
+# render_model writes 16-bit PCM, so even unity gain can clip an otherwise valid
+# pre-Voice engine signal (for example, a DC-centred narrow pulse reaches nearly
+# +/-2). Keep eightfold headroom in the file, then undo this strictly linear
+# scale after reading it. At 1/8 scale the PCM quantization floor remains more
+# than 70 dB below full-scale engine output.
+LINEAR_RENDER_GAIN = 0.125
 BRAIDS_RENDERER = REPO_ROOT / "braids" / "test" / "render_braids_model"
 BRAIDS_MAKEFILE = REPO_ROOT / "braids" / "test" / "makefile.render"
 
@@ -142,7 +148,13 @@ def render_engine(package: dict, renderer: Path, case: dict, output: Path) -> No
             for name in ("harmonics", "timbre", "morph", "macro")
         },
     }
-    plaits_lab.run_scenario(package, renderer, scenario, output)
+    # A/B fidelity describes the engine itself, before Voice applies the
+    # catalog's output gain or limiter. Render with fixed linear headroom rather
+    # than the catalog gain: WavWriter clips first, so applying outGain and
+    # dividing it back out later is not reversible.
+    plaits_lab.run_scenario(
+        package, renderer, scenario, output,
+        out_gain=LINEAR_RENDER_GAIN, aux_gain=LINEAR_RENDER_GAIN)
 
 
 def check_tolerance(results: dict, tolerance: dict) -> list[str]:
@@ -228,21 +240,16 @@ def main() -> int:
             reference, rate_a = ab_compare.read_wav(str(reference_wav))
             port, rate_b = ab_compare.read_wav(str(engine_wav))
 
-            # run_scenario applies the catalog's out_gain, which is a headroom
-            # choice for the Plaits voice and not a property of the ported
-            # algorithm. Undo it so the AC RMS figure describes the ENGINE.
-            #
-            # In the FIRMWARE a negative gain routes the engine through
-            # stmlib::Limiter (voice.h, SPEC R1). The host renderer does not:
-            # render_model.cc:110-111 applies fabs(out_gain) and nothing else.
-            # So this compensation is exact, the comparison stays linear, and
-            # the limiter is simply outside what this harness measures — which
-            # is worth knowing, because an engine that relies on the limiter to
-            # stay bounded will look clean here and clip on hardware.
+            # Undo render_engine's fixed headroom. This is an exactly linear
+            # scale applied before WavWriter, unlike the catalog gain that used
+            # to clip the 16-bit file before this division.
+            port = [sample / LINEAR_RENDER_GAIN for sample in port]
+
+            # The result is the engine's output before Voice applies the
+            # catalog gain or limiter. The limiter remains outside this harness
+            # by design.
             out_gain = float(package["manifest"]["postProcessing"]["outGain"])
             limiter_untested = out_gain < 0.0
-            if out_gain:
-                port = [s / abs(out_gain) for s in port]
 
             length = min(len(reference), len(port))
             reference, port = reference[:length], port[:length]

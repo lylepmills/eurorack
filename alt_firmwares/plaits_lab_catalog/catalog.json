@@ -2798,7 +2798,7 @@
       ],
       "outputs": [
         "Comb output",
-        "Second tap a fifth away"
+        "Second comb tap a fifth below"
       ],
       "source": {
         "header": "plaits/dsp/engine2/saw_comb_engine.h",
@@ -2830,13 +2830,13 @@
       ],
       "controls": [
         "Brightness",
-        "Register",
         "Vowel",
+        "Register",
         "Formant tilt"
       ],
       "outputs": [
         "Formant bank",
-        "Upper-formant weighting"
+        "Glottal source; upper-formant weighting in stereo"
       ],
       "source": {
         "header": "plaits/dsp/engine2/vowel_fof_engine.h",
@@ -2920,7 +2920,8 @@
         "className": "TripleEngine",
         "member": "triple_engine_",
         "files": [
-          "plaits/dsp/engine2/triple_engine.cc"
+          "plaits/dsp/engine2/triple_engine.cc",
+          "plaits/dsp/engine2/triple_engine_data.cc"
         ]
       },
       "postProcessing": {
@@ -3809,11 +3810,11 @@
     "vowel-fof": {
       "controls": {
         "harmonics": "Tilts the excitation from a dark buzz to a bright breathy hiss.",
-        "timbre": "Steps the vocal register from bass through tenor to soprano.",
-        "morph": "Sweeps the vowel through the five phonemes.",
-        "macro": "Restores the formant amplitude balance the stock model leaves flat."
+        "timbre": "Sweeps the vowel through the five phonemes.",
+        "morph": "Steps the vocal register from bass through tenor to soprano.",
+        "macro": "Restores the formant amplitude balance the stock model leaves flat. Centred is flat, exactly as hardware."
       },
-      "trigger": "Restarts the internal envelope when TRIG is patched."
+      "trigger": "Re-inits the filter bank when TRIG is patched. There is no internal envelope; the model itself ignores TRIG on this shape."
     },
     "raw-fm": {
       "controls": {

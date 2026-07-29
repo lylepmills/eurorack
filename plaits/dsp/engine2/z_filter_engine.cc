@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "stmlib/stmlib.h"
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/dsp/parameter_interpolator.h"
 
@@ -22,14 +23,37 @@ using namespace stmlib;
 namespace {
 
 // Braids' wav_sine and Plaits' lut_sine DO NOT SHARE A PHASE ORIGIN.
-// wav_sine[0] = -32512, [64] = 126, [128] = 32766 -- it is -cos(2*pi*x), a
-// quarter period behind lut_sine, which starts at 0.0 and rises. Reading a
-// Braids phase straight through Sine() therefore renders every resonator 90
-// degrees out, which sounds plausible in isolation and is completely wrong
-// against hardware. sin(2*pi*(x - 0.25)) == Sine(x + 0.75), and InterpolateWrap
-// folds the argument back, so the offset is free.
+// wav_sine[0] = -32512, [64] = 126, [128] = 32766 -- it is a quarter period
+// behind lut_sine, which starts at 0.0 and rises. Reading a Braids phase
+// straight through Sine() therefore renders every resonator 90 degrees out,
+// which sounds plausible in isolation and is completely wrong against
+// hardware. sin(2*pi*(x - 0.25)) == Sine(x + 0.75), and InterpolateWrap folds
+// the argument back, so the offset is free.
+//
+// It is the PHASE only. The table's AMPLITUDE and OFFSET are BraidsSineFixed's
+// job -- see below.
 inline float BraidsSine(float phase) {
   return Sine(phase + 0.75f);
+}
+
+// wav_sine as Braids actually stores it. Fitted programmatically against all
+// 257 entries of braids/resources.cc: wav_sine[i] == 32639 * -cos(2*pi*i/256)
+// + 127 to within 1.7 LSB. It is NOT a unit sine -- it carries a -0.034 dB
+// gain and, decisively, a +127 LSB (+0.00388 full-scale) DC OFFSET on every
+// sample. That offset is what drives the pulse integrator below into its
+// rails; reading a zero-mean sine there is what cost this engine 5.70 dB.
+//
+// Interpolate824 (stmlib/utils/dsp.h:94) returns `a + ((b - a) * frac >> 16)`,
+// an arithmetic shift, so the table read FLOORS. The bias of 32768 makes the
+// argument non-negative, which turns the truncating cast into a floor without
+// a call into libm. It is the same ~-0.5 LSB bias, not the same operation:
+// Interpolate824 floors only the interpolation delta it adds to an exact int16
+// table entry, while this floors the whole ideal value read from a 512-point
+// LUT. The two differ by under 2 LSB in 32768, which is why the loop still
+// measures identical to the reference at 96 kHz.
+inline int32_t BraidsSineFixed(float phase) {
+  return static_cast<int32_t>(
+      BraidsSine(phase) * 32639.0f + (32768.0f + 127.0f)) - 32768;
 }
 
 // The burst envelope raised to a power between 1 and 4, without libm. The
@@ -87,7 +111,7 @@ void ZFilterEngine::Reset() {
   previous_half_ = false;
   modulator_phase_ = 0.0f;
   square_phase_ = 0.0f;
-  integrator_ = 0.0f;
+  integrator_ = 0;
   // Braids memsets its resonator state, so the polarity latch starts LOW. Only
   // the sync/trigger handler raises it.
   polarity_ = false;
@@ -108,7 +132,7 @@ void ZFilterEngine::Render(
     previous_half_ = false;
     modulator_phase_ = 0.0f;
     square_phase_ = 0.0f;
-    integrator_ = 0.0f;
+    integrator_ = 0;
     polarity_ = true;
   }
 
@@ -213,25 +237,51 @@ void ZFilterEngine::Render(
         double_saw = BendWindow(double_saw, bend_weights);
       }
 
-      const float carrier = BraidsSine(modulator_phase_);
-      const float square_carrier = BraidsSine(square_phase_);
+      // The windowed resonator carries wav_sine's gain and offset too. It is
+      // -48 dB there and measures nothing on its own, but it is Braids'
+      // arithmetic and it is one multiply-add.
+      const float carrier =
+          static_cast<float>(BraidsSineFixed(modulator_phase_)) * \
+          (1.0f / 32768.0f);
 
-      float pulse = square_carrier * double_saw;
+      // THE PULSE PATH RUNS IN FIXED POINT, because its integrator's
+      // equilibrium is set by quantisation and not by the ideal signal.
+      // Braids (digital_oscillator.cc:379-385):
+      //
+      //   uint16_t double_saw = ~(phase_ >> 15);
+      //   int32_t pulse = (square_carrier * double_saw) >> 16;
+      //   if (polarity) pulse = -pulse;
+      //   square_integrator += (pulse * integrator_gain) >> 16;
+      //   CLIP(square_integrator)
+      //
+      // with integrator_gain = modulator_phase_increment >> 14, which over a
+      // 32-bit phase is floor(mod_increment * 2^18). Every one of those steps
+      // matters: square_carrier's +127 offset survives the multiply as a DC
+      // term that the polarity latch flips every half carrier cycle, the two
+      // arithmetic shifts floor, and CLIP rectifies the result against both
+      // rails. Run it in floats and the accumulator simply never gets there.
+      const uint16_t double_saw_fixed =
+          static_cast<uint16_t>(double_saw * 65535.0f);
+      const uint16_t integrator_gain =
+          static_cast<uint16_t>(mod_increment * 262144.0f);
+      const int32_t square_carrier = BraidsSineFixed(square_phase_);
+
+      int32_t pulse_fixed =
+          (square_carrier * static_cast<int32_t>(double_saw_fixed)) >> 16;
       if (polarity_) {
-        pulse = -pulse;
+        pulse_fixed = -pulse_fixed;
       }
+      integrator_ += (pulse_fixed * static_cast<int32_t>(integrator_gain)) >> 16;
+      CLIP(integrator_)
 
-      // Braids' `square_integrator += (pulse * integrator_gain) >> 16` with
-      // integrator_gain = increment >> 14 is exactly a gain of 4 * increment
-      // in normalized floats. The increment is read per sub-sample, not per
-      // block, so the integrator tracks the glide the way Braids' does.
-      integrator_ += pulse * 4.0f * mod_increment;
-      CONSTRAIN(integrator_, -1.0f, 1.0f);
+      const float pulse = static_cast<float>(pulse_fixed) * (1.0f / 32768.0f);
+      const float integrator =
+          static_cast<float>(integrator_) * (1.0f / 32768.0f);
 
       out_sub[s] = CombineModel(
-          filter_type, carrier, window, pulse, integrator_, balance);
+          filter_type, carrier, window, pulse, integrator, balance);
       aux_sub[s] = CombineModel(
-          aux_filter_type, carrier, window, pulse, integrator_, balance);
+          aux_filter_type, carrier, window, pulse, integrator, balance);
     }
 
     // [0.25, 0.5, 0.25] decimation to the output rate: a null at 48 kHz for

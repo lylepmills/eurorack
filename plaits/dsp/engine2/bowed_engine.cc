@@ -34,13 +34,32 @@ inline int8_t QuantizeToInt8(float value) {
   return static_cast<int8_t>(quantized);
 }
 
+// Braids' fractional-delay read, reproduced exactly. digital_oscillator.cc:1247
+// is `Mix(a, b, frac) << 8` against int8 line storage, and stmlib::Mix
+// (stmlib/utils/dsp.h:86) is `(a * (65535 - balance) + b * balance) >> 16`
+// returning an int16 -- so the interpolation between the two taps is FLOORED to
+// whole int8 counts, 1/128 of full scale, before the shift. That truncation is
+// a loss term inside the stick-slip feedback loop, and it is what lets the bow
+// SLIP; interpolating in float here removes the slip regime entirely.
+inline int32_t MixInt8(int32_t a, int32_t b, uint32_t balance) {
+  const int32_t b_int = static_cast<int32_t>(balance);
+  // Arithmetic >> on a negative value floors, which is what Braids relies on.
+  return (a * (65535 - b_int) + b * b_int) >> 16;
+}
+
 // lut_bowing_friction, which holds min(1, 1/(d + 0.75)^4) on an axis of
-// d = index/64: exactly 32768 at d = 0 and exactly 64 at d = 4.
+// d = index/64: exactly 32768 at d = 0 and exactly 64 at d = 4. The table is
+// that curve FLOORED to 1/32768ths (verified at all 257 entries), so the floor
+// is reproduced rather than the table shipped.
 inline float BowingFriction(float d) {
   const float g = d + 0.75f;
   const float g2 = g * g;
-  const float friction = 1.0f / (g2 * g2);
-  return friction > 1.0f ? 1.0f : friction;
+  float friction = 1.0f / (g2 * g2);
+  if (friction > 1.0f) {
+    friction = 1.0f;
+  }
+  const int32_t quantized = static_cast<int32_t>(friction * 32768.0f);
+  return static_cast<float>(quantized) * (1.0f / 32768.0f);
 }
 
 // lut_bowing_envelope as three line segments: a 600-step linear rise to the
@@ -139,18 +158,30 @@ void BowedEngine::Render(
     bridge_delay *= 0.5f;
     ++guard;
   }
+  // Read(d) is only meaningful for d >= 1: below that the integral part is
+  // zero and the read wraps a whole line back, which is exactly what Braids
+  // does from MIDI 84.5 upward at HARMONICS 0. Clamp the TAP at one sample,
+  // and take the neck delay from the CLAMPED value so the total loop -- and
+  // therefore the pitch -- is unchanged.
+  CONSTRAIN(bridge_delay, 1.0f, static_cast<float>(kBowedBridgeLength - 4));
   float neck_delay = delay - bridge_delay;
-  // Read(d) is only meaningful for d >= 1. Braids lets a sub-sample bridge
-  // tap wrap its modulo and read a whole line back instead; clamp instead.
-  CONSTRAIN(bridge_delay, 2.0f, static_cast<float>(kBowedBridgeLength - 4));
   CONSTRAIN(neck_delay, 4.0f, static_cast<float>(kBowedNeckLength - 4));
 
   const uint32_t bridge_integral = static_cast<uint32_t>(bridge_delay);
-  const float bridge_fractional = bridge_delay - \
-      static_cast<float>(bridge_integral);
   const uint32_t neck_integral = static_cast<uint32_t>(neck_delay);
-  const float neck_fractional = neck_delay - \
-      static_cast<float>(neck_integral);
+  // Braids carries the delays as 16.16 and its interpolation balance is the
+  // low word (`bridge_delay & 0xffff`), a uint16 -- so the balance is on the
+  // same 1/65536 grid here.
+  uint32_t bridge_balance = static_cast<uint32_t>(
+      (bridge_delay - static_cast<float>(bridge_integral)) * 65536.0f);
+  uint32_t neck_balance = static_cast<uint32_t>(
+      (neck_delay - static_cast<float>(neck_integral)) * 65536.0f);
+  if (bridge_balance > 65535) {
+    bridge_balance = 65535;
+  }
+  if (neck_balance > 65535) {
+    neck_balance = 65535;
+  }
 
   // TIMBRE is Braids' `172 - (parameter_[0] >> 8)`, also an integer, in
   // [45, 172] and scaled by 1/32.
@@ -178,19 +209,20 @@ void BowedEngine::Render(
     const uint32_t neck_read = \
         (delay_pointer_ + 2 * kBowedNeckLength - neck_integral);
 
-    const float bridge_a = static_cast<float>(
-        bridge_line_[bridge_read & (kBowedBridgeLength - 1)]);
-    const float bridge_b = static_cast<float>(
-        bridge_line_[(bridge_read - 1) & (kBowedBridgeLength - 1)]);
-    const float neck_a = static_cast<float>(
-        neck_line_[neck_read & (kBowedNeckLength - 1)]);
-    const float neck_b = static_cast<float>(
-        neck_line_[(neck_read - 1) & (kBowedNeckLength - 1)]);
+    const int32_t bridge_a = \
+        bridge_line_[bridge_read & (kBowedBridgeLength - 1)];
+    const int32_t bridge_b = \
+        bridge_line_[(bridge_read - 1) & (kBowedBridgeLength - 1)];
+    const int32_t neck_a = neck_line_[neck_read & (kBowedNeckLength - 1)];
+    const int32_t neck_b = neck_line_[(neck_read - 1) & (kBowedNeckLength - 1)];
 
-    const float bridge_value = (bridge_a + \
-        (bridge_b - bridge_a) * bridge_fractional) * (1.0f / 128.0f);
-    const float nut_value = (neck_a + \
-        (neck_b - neck_a) * neck_fractional) * (1.0f / 128.0f);
+    // Braids' `Mix(a, b, frac) << 8`: the tap read is quantised back to whole
+    // int8 counts before it re-enters the loop. 1/128 of full scale here is
+    // that `<< 8` against Braids' 32768-per-unit accumulator.
+    const float bridge_value = static_cast<float>(
+        MixInt8(bridge_a, bridge_b, bridge_balance)) * (1.0f / 128.0f);
+    const float nut_value = static_cast<float>(
+        MixInt8(neck_a, neck_b, neck_balance)) * (1.0f / 128.0f);
 
     bridge_lp_ = kBowedBridgeLpGain * bridge_value + \
         kBowedBridgeLpPole * bridge_lp_;

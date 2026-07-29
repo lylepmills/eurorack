@@ -1465,16 +1465,19 @@ def scenario_by_id(package: dict[str, Any], scenario_id: str) -> dict[str, Any]:
 
 def run_scenario(
     package: dict[str, Any], renderer: Path, scenario: dict[str, Any], output: Path,
+    *, out_gain: float | None = None, aux_gain: float | None = None,
 ) -> float:
     controls = scenario["controls"]
     post = package["manifest"]["postProcessing"]
+    render_out_gain = post["outGain"] if out_gain is None else out_gain
+    render_aux_gain = post["auxGain"] if aux_gain is None else aux_gain
     command = [
         str(renderer), str(output), str(scenario["durationSeconds"]), str(scenario["note"]),
         str(controls["harmonics"][0]), str(controls["harmonics"][1]),
         str(controls["timbre"][0]), str(controls["timbre"][1]),
         str(controls["morph"][0]), str(controls["morph"][1]),
         str(controls["macro"][0]), str(controls["macro"][1]),
-        str(scenario["triggerHz"]), str(post["outGain"]), str(post["auxGain"]),
+        str(scenario["triggerHz"]), str(render_out_gain), str(render_aux_gain),
     ]
     started = time.monotonic()
     result = subprocess.run(

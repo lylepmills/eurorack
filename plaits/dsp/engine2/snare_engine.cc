@@ -53,7 +53,7 @@ inline float SvfDamp(float resonance_domain) {
   // lookup_tables.py:101-104's resonance term. The frequency-ceiling clamp
   // term is omitted -- it never binds for this engine's resonance codes,
   // verified against the real table; see the header's TABLES note.
-  float damp = 2.0f * (1.0f - powf(resonance_domain, 0.25f));
+  float damp = 2.0f * (1.0f - Sqrt(Sqrt(resonance_domain)));
   if (damp > 2.0f) {
     damp = 2.0f;
   }

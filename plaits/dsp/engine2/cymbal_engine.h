@@ -180,8 +180,9 @@
 // stmlib::NaiveSvf, whose only accurate coefficient path
 // (`set_f_q<FREQUENCY_EXACT>`) is a fixed `1/resonance` damp mapping that
 // cannot hold Braids' two REALIZED damp constants above. `sinf` is called
-// directly (`<cmath>`), matching kick_engine.cc's own `sinf(...)`/`powf(...)`
-// -- not routed through `plaits::Sine()`.
+// directly (`<cmath>`), matching kick_engine.cc's own coefficient path; the
+// fourth root there uses stmlib::Sqrt so it stays one instruction per root on
+// Cortex-M4 rather than pulling in bare-metal-incompatible libm `powf`.
 //
 // PITCH. Only the six-oscillator ROOT frequency tracks the played note
 // (`note = (40 << 7) + (pitch_ >> 1)`, digital_oscillator.cc:2468 -- 40

@@ -21,12 +21,12 @@
     {
       "id": "harmonics",
       "label": "Resonance",
-      "description": "Sweeps comb feedback from inverted through a single echo to ringing resonance."
+      "description": "Sweeps comb feedback from inverted through a single echo to a ringing resonance that still decays."
     },
     {
       "id": "timbre",
       "label": "Comb pitch",
-      "description": "Detunes the comb up to five octaves either side of the played note."
+      "description": "Detunes the comb up to 64 semitones either side of the note; the upward end stops at MIDI 128."
     },
     {
       "id": "morph",
@@ -41,7 +41,7 @@
   ],
   "outputs": {
     "main": "Comb output.",
-    "aux": "Second tap a fifth away."
+    "aux": "Second comb tap a fifth below the main one."
   },
   "source": {
     "root": "../../../../..",

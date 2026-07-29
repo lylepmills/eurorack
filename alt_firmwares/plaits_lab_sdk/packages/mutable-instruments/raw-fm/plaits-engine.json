@@ -9,7 +9,7 @@
   "author": "Emilie Gillet",
   "origin": "Mutable Instruments",
   "license": "MIT",
-  "description": "Braids' three FM models on one axis: self-feedback, plain two-operator FM, and chaotic frequency feedback. The ancestor of Two-op FM, sharing its ratio quantizer and feedback axis, but run raw: no oversampling, and free to alias.",
+  "description": "Braids' three FM models on one axis: self-feedback, plain two-operator FM, and chaotic frequency feedback. The ancestor of Two-op FM, sharing its ratio quantizer and feedback axis, run raw: unfiltered feedback, no oversampling.",
   "family": "FM",
   "tags": [
     "braids",
@@ -21,12 +21,12 @@
     {
       "id": "harmonics",
       "label": "Ratio",
-      "description": "Steps the modulator ratio through the tuned intervals."
+      "description": "Steps the modulator ratio through the tuned intervals. The modulator saturates once note plus ratio hits 116."
     },
     {
       "id": "timbre",
       "label": "Index",
-      "description": "Raises the modulation index linearly to a full cycle of deviation."
+      "description": "Raises the modulation index linearly to a full cycle. Below noon pitch tames it, -1.5625% per semitone over 72."
     },
     {
       "id": "morph",

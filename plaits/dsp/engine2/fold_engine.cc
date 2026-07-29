@@ -133,24 +133,41 @@ inline float Triangle(float phase) {
   return 4.0f * t - 1.0f;
 }
 
-// Braids' wav_sine is NOT Plaits' lut_sine. It starts at -32512 and reaches
-// zero a quarter of the way through, so it is -cos(2*pi*phase); Plaits'
-// starts at 0 and is sin(2*pi*phase). A quarter cycle apart.
+// Braids' wav_sine is NOT Plaits' lut_sine, and not just in phase.
 //
-// For a linear oscillator that is inaudible. Into a wavefolder it is not: the
-// folder's lobes land at different points of the cycle, and the sine folder is
-// then summed against a triangle folder whose phase did not move, so the
-// crossfade produces a different waveform at every blend setting. The first
-// A/B of this engine measured 8.6 dB of spectral difference at shallow fold,
-// which is what that looks like from the outside.
+// Phase: wav_sine starts at -32512 and reaches zero a quarter of the way
+// through, so it is -cos(2*pi*phase); Plaits' lut_sine starts at 0 and is
+// sin(2*pi*phase). A quarter cycle apart.
+//
+// Amplitude and DC: fitted against braids/resources.cc (max residual 1 LSB
+// across all 256 entries), wav_sine[i] = 32638 * -cos(2*pi*i/256) + 127. It
+// is neither unit amplitude (-0.0343 dB quiet) nor zero mean (a +127/32768
+// pedestal on every sample).
+//
+// For a linear oscillator all three are inaudible. Into a wavefolder they are
+// not: the folder's lobes land at different points of the cycle and are
+// driven from a different operating point, and the sine folder is then
+// crossfaded against a triangle folder that carries none of this, so the
+// blend produces a different waveform at every setting. The first A/B of this
+// engine, phase only, measured 8.6 dB of spectral difference at shallow fold.
+// Adding the amplitude/DC terms on top of the phase fix measured a further
+// improvement -- spectrumDb dropped on every case that touches the sine
+// folder (stock-mid 0.18->0.07 dB, shallow 0.10->0.05 dB, deep 0.19->0.10 dB,
+// blend-sine -- the sine folder alone -- 0.33->0.07 dB, guard-band
+// 1.06->0.99 dB) and was unchanged, as a control, on blend-triangle (the
+// triangle folder alone, which never touches wav_sine): 0.14->0.14 dB. Kept.
 const float kBraidsSinePhaseOffset = 0.75f;
+const float kBraidsSineAmplitude = 32638.0f / 32768.0f;
+const float kBraidsSineDcPedestal = 127.0f / 32768.0f;
 
 inline float BraidsSine(float phase) {
   phase += kBraidsSinePhaseOffset;
   if (phase >= 1.0f) {
     phase -= 1.0f;
   }
-  return Sine(phase);
+  // phase is explicitly wrapped above, so avoid Sine()'s redundant wrap in
+  // each of the four oversampled reads.
+  return SineNoWrap(phase) * kBraidsSineAmplitude + kBraidsSineDcPedestal;
 }
 
 // The depth guard, expressed as a gain that falls from 1 to 0 over `span`

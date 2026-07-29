@@ -56,7 +56,24 @@ that: it read every A/B case hot by up to +0.86 dB, and the COLOR-0 case's
 excess grew with window length (+1.61 dB over two hits, +2.32 dB over
 eight) in a way that looks like RNG divergence but is entirely
 deterministic. The port carries the chain in Braids' raw integer scale and
-floors it, which brings the suite to +0.01…+0.04 dB.
+floors it, which brought the suite to +0.01…+0.04 dB (every case still
+reading uniformly hot).
+
+## A third detail: Braids' sine table is not unit-amplitude or zero-mean
+
+Braids' `wav_sine` fits `32638 * -cos(2*pi*i/256) + 127` (to within 1 LSB),
+not a plain `-cos`: the table runs 0.0343 dB quiet and carries a +127/32768
+DC pedestal on every sample. Two of this engine's six partials are
+ring-modulated by filtered noise (not just summed), so a DC term in one
+factor of that multiply could in principle leak the noise's own spectrum
+into the output — the port could not assume this was inert and had to
+measure it. Reproducing both the scale and the pedestal brought the suite
+from +0.01…+0.04 dB (every case hot, matching the amplitude term's
+predicted -0.0345 dB almost exactly) to -0.02…+0.01 dB, with no measurable
+move in spectrum error or pitch — so the win is the amplitude term; the
+ring-modulated leak this port worried about did not show up at this
+harness's precision. See `struck_drum_engine.h`'s wav_sine note for the
+full figures.
 
 ## Rate
 
@@ -68,8 +85,8 @@ run at 48 kHz — the port runs both at Plaits' native 48 kHz directly. The
 per-call decay/cutoff/gain values are calibrated to Braids' fixed 250 us
 block (kBlockSize=24 @ 96 kHz), which is the SAME wall-clock duration as
 Plaits' own kBlockSize=12 @ 48 kHz, so no further rate conversion is needed
-there either; an atypical call size generalises via
-`powf(decay, size / 12.0f)`, copied from struck-bell's identical mechanism.
+there either; a larger call takes one integer-truncating decay step per elapsed
+12 samples, copied from struck-bell's identical mechanism.
 
 Both copyright lines are carried in `LICENSE` and in each source file;
 declared deviations are listed in the header comment of

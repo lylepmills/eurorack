@@ -21,12 +21,15 @@ using namespace stmlib;
 
 namespace {
 
-// Braids' InterpolateFormantParameter: bilinear across the vowel x register
-// grid, per formant.
+// Braids' InterpolateFormantParameter: bilinear across the register x vowel
+// grid, per formant. The tables are vendored in Braids' own
+// [register][vowel][formant] order, so x -- the OUTER index -- is the REGISTER
+// and y is the vowel, exactly as `InterpolateFormantParameter(table,
+// parameter_[1], parameter_[0], i)` reads them on hardware.
 inline float InterpolateFormant(
-    const int16_t* table, float vowel, float voice_register, int formant) {
-  const float x = vowel * static_cast<float>(kVowelFofGridSize - 1);
-  const float y = voice_register * static_cast<float>(kVowelFofGridSize - 1);
+    const int16_t* table, float voice_register, float vowel, int formant) {
+  const float x = voice_register * static_cast<float>(kVowelFofGridSize - 1);
+  const float y = vowel * static_cast<float>(kVowelFofGridSize - 1);
   int xi = static_cast<int>(x);
   int yi = static_cast<int>(y);
   CONSTRAIN(xi, 0, kVowelFofGridSize - 2);
@@ -47,10 +50,10 @@ inline float InterpolateFormant(
   return ab + (cd - ab) * yf;
 }
 
-// One formant of the bank: excite, run the Chamberlin SVF, return the limited
-// bandpass tap. Factored out only so the two aux-mode loops below cannot drift
-// apart -- it is `inline` and both call sites expand it, so the split costs
-// flash for a second copy but nothing at run time.
+// One formant of the bank: excite, run the Chamberlin SVF, return the bandpass
+// tap. Factored out only so the two aux-mode loops below cannot drift apart --
+// it is `inline` and both call sites expand it, so the split costs flash for a
+// second copy but nothing at run time.
 inline float RenderFormant(
     int k,
     float saw,
@@ -67,12 +70,15 @@ inline float RenderFormant(
   const float hp = notch - svf_lp[k];
   svf_bp[k] += f * hp;
   CONSTRAIN(svf_bp[k], -1.0f, 1.0f);
-  // Limit BEFORE the output scale. Braids drives at full scale and CLIPs its
-  // state every sample; scaling first and limiting after makes the limiter a
-  // no-op exactly where hardware is clipping hardest. Declared deviation:
-  // Braids clips the STATE inside the resonant loop, so at Q = 64 these states
-  // stay bounded where the port's only bounds the tap.
-  return SoftClip(svf_bp[k]);
+  // The two CONSTRAINs above ARE Braids' two `CLIP(...)`s: the state is bounded
+  // to +-1 inside the resonant loop, every sample, at full scale. Braids then
+  // reads that clipped state straight into the sum (`out += svf_bp[i] *
+  // amplitudes[0] >> 17`) with no saturator, so there is none here either. An
+  // earlier revision returned SoftClip(svf_bp[k]) on top of the CONSTRAIN,
+  // which is a second nonlinearity the module does not have; it attenuates
+  // well inside full scale (-0.6 dB at 0.5, -2.2 dB at 1.0) and cost 0.6-1.3 dB
+  // of level.
+  return svf_bp[k];
 }
 
 }  // namespace
@@ -110,12 +116,17 @@ void VowelFofEngine::Render(
   // amplitudes[0] read does on hardware.
   const float tilt = ApplyMacro(0.0f, -0.5f, 1.0f, parameters.macro);
 
+  const bool stereo = PLAITS_STEREO_VOWEL_FOF && parameters.stereo;
+
   float f[kVowelFofNumFormants];
+  float raw_amplitude[kVowelFofNumFormants];
   float amplitude[kVowelFofNumFormants];
+  float amplitude_aux[kVowelFofNumFormants];
   float noise_makeup[kVowelFofNumFormants];
 
   for (int i = 0; i < kVowelFofNumFormants; ++i) {
-    // MORPH is the vowel and TIMBRE the register, matching speech_engine.
+    // MORPH is the REGISTER (the tables' outer index) and TIMBRE the VOWEL,
+    // exactly as `parameter_[1]` / `parameter_[0]` read them in Braids.
     const float note = InterpolateFormant(
         kVowelFofFrequency, parameters.morph, parameters.timbre, i) *
         (1.0f / 128.0f);
@@ -129,6 +140,7 @@ void VowelFofEngine::Render(
     const float raw = InterpolateFormant(
         kVowelFofAmplitude, parameters.morph, parameters.timbre, i) *
         (1.0f / 16384.0f);
+    raw_amplitude[i] = raw;
     // Linear interpolation between flat (Braids) and the table's own balance.
     amplitude[i] = 1.0f + (raw - 1.0f) * tilt;
 
@@ -139,7 +151,19 @@ void VowelFofEngine::Render(
 
   const float breath = parameters.harmonics;
 
-  const bool stereo = PLAITS_STEREO_VOWEL_FOF && parameters.stereo;
+  // The stereo AUX weighting is the table's own balance REVERSED, at full
+  // strength, and it does NOT depend on MACRO. That independence is the whole
+  // point: `tilt` is exactly 0.0f at the detent (ApplyMacro returns `stock +
+  // (max - stock) * (amount - 1)` with amount exactly 1 there), so an earlier
+  // revision that scaled the reversal by `tilt` made L and R bit-identical in
+  // the state the voice ships in -- a stereo engine that was mono by default.
+  // OUT is untouched by any of this, so switching aux mode never changes it.
+  if (stereo) {
+    for (int i = 0; i < kVowelFofNumFormants; ++i) {
+      amplitude_aux[i] = kVowelFofStereoMakeup *
+          raw_amplitude[kVowelFofNumFormants - 1 - i];
+    }
+  }
 
   // Mono AUX carries the source that drives the bank, so it needs ONE noise
   // makeup rather than the per-formant ones -- there is no formant to level it
@@ -170,7 +194,9 @@ void VowelFofEngine::Render(
   // in the port. Keep the two loops separate.
   if (stereo) {
     for (size_t i = 0; i < size; ++i) {
-      const float saw = excitation[i] * kVowelFofExcitationScale;
+      // Braids' unipolar 0..1 saw. Plaits' Oscillator builds the same 0..1 saw
+      // and emits `2 * this_sample - 1`, so this undoes exactly that.
+      const float saw = kVowelFofExcitationScale * (excitation[i] + 1.0f);
 
       noise_state_ = noise_state_ * 1664525u + 1013904223u;
       const float noise = static_cast<float>(noise_state_ >> 9) * \
@@ -182,7 +208,7 @@ void VowelFofEngine::Render(
         const float tap = RenderFormant(
             k, saw, noise, noise_makeup[k], breath, f[k], svf_lp_, svf_bp_);
         sum += tap * amplitude[k];
-        sum_aux += tap * amplitude[kVowelFofNumFormants - 1 - k];
+        sum_aux += tap * amplitude_aux[k];
       }
 
       out[i] = kVowelFofOutputScale * sum;
@@ -190,7 +216,13 @@ void VowelFofEngine::Render(
     }
   } else {
     for (size_t i = 0; i < size; ++i) {
-      const float saw = excitation[i] * kVowelFofExcitationScale;
+      // `source` is the DC-free form, which is what AUX wants -- a DC offset on
+      // an output is a headroom loss and nothing else. `saw` adds the offset
+      // back to recover Braids' unipolar 0..1 saw for the bank, where the DC is
+      // load-bearing (it is what parks the lowpass state in its clipping
+      // region).
+      const float source = excitation[i] * kVowelFofExcitationScale;
+      const float saw = source + kVowelFofExcitationScale;
 
       noise_state_ = noise_state_ * 1664525u + 1013904223u;
       const float noise = static_cast<float>(noise_state_ >> 9) * \
@@ -209,7 +241,7 @@ void VowelFofEngine::Render(
       // (inharmonic-string, modal-resonator, particle-noise), and the natural
       // sibling of speech, whose AUX is its secondary path.
       aux[i] = kVowelFofSourceGain * \
-          (saw + (noise * source_makeup - saw) * breath);
+          (source + (noise * source_makeup - source) * breath);
     }
   }
 }

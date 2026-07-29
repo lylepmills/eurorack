@@ -106,6 +106,7 @@ CC_FILES       = algorithms.cc \
 		vowel_fof_data.cc \
 		vowel_fof_engine.cc \
 		raw_fm_engine.cc \
+		triple_engine_data.cc \
 		triple_engine.cc \
 		bytebeat_engine.cc \
 		scale_voices.cc \

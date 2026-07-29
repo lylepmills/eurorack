@@ -992,6 +992,24 @@ class PackageTests(unittest.TestCase):
         # and the rest of the environment survives, or the compiler/PATH is lost
         self.assertIn("PATH", {k.upper(): v for k, v in captured["env"].items()})
 
+    def test_scenario_gain_can_be_overridden_for_linear_measurement(self) -> None:
+        captured: dict[str, list[str]] = {}
+        real_run = plaits_lab.subprocess.run
+        plaits_lab.subprocess.run = lambda cmd, **kw: (
+            captured.__setitem__("cmd", cmd)
+            or SimpleNamespace(returncode=0, stdout="", stderr=""))
+        try:
+            plaits_lab.run_scenario(
+                {"manifest": {"postProcessing": {"outGain": -3.8, "auxGain": 2.4}}},
+                Path("renderer"),
+                {"id": "ab", "durationSeconds": 1, "note": 48, "triggerHz": 0,
+                 "controls": {k: [0.0, 1.0] for k in
+                              ("harmonics", "timbre", "morph", "macro")}},
+                Path("out.wav"), out_gain=1.0, aux_gain=1.0)
+        finally:
+            plaits_lab.subprocess.run = real_run
+        self.assertEqual(captured["cmd"][-2:], ["1.0", "1.0"])
+
     def test_contributor_source_cannot_allocate(self) -> None:
         # The premise that makes disabling LSan lossless: an engine that heap
         # allocates is rejected by policy long before it is ever compiled.

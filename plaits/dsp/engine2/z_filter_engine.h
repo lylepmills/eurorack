@@ -17,79 +17,83 @@
 // Measured against Braids by a committed, rerunnable A/B --
 // plaits_lab_sdk/packages/mutable-instruments/z-filter/tests/ab.json, run with
 // `python3 ab_engine.py packages/mutable-instruments/z-filter --bands`. It
-// covers both ends of both Braids axes on all four shapes. 28 of its 30 cases
-// are within tolerance: below the cutoff clamp, AC RMS within 0.26 dB (0.33 dB
-// on `lp-cutoff-sweep`, whose sweep reaches the clamp) and octave bands within
-// 0.82 dB, pitch within +0.8 cents after the kCorrectedSampleRate correction.
+// covers both ends of both Braids axes on all four shapes. ALL 30 CASES are
+// within tolerance. Below the cutoff clamp, AC RMS is within 0.11 dB and the
+// octave bands within 0.34 dB, pitch within +0.8 cents after the
+// kCorrectedSampleRate correction. At the clamp the figures are the decimator
+// and are itemised below.
 // (An earlier version of this comment claimed 0.05 dB / 0.26 dB "third-octave"
 // agreement for all four models; that figure came from a harness that no
 // longer exists, is not what the committed A/B measures, and the band metric
 // is per OCTAVE. It also said 26 of 28 -- the file has 30 cases.)
 //
+// THE PULSE INTEGRATOR RUNS IN FIXED POINT, and has to. Braids' wav_sine is
+// not a sine: fitted programmatically against all 257 entries of
+// braids/resources.cc it is exactly 32639 * -cos(2*pi*x) + 127 (max residual
+// 1.7 LSB) -- a -0.034 dB gain and a +127 LSB (+0.00388 full-scale) DC OFFSET
+// on every sample. square_carrier carries that offset into `pulse`, `pulse` is
+// integrated at a gain of 4 * mod_increment per sample, and the polarity latch
+// flips its sign every half carrier cycle, so the offset ALONE ramps the
+// accumulator into both rails once per half cycle whenever the cutoff is high
+// and the note is low. Reading a zero-mean lut_sine there, and accumulating in
+// float, is what shipped in wave 1: the integrator never reached a rail, and
+// LP and PK measured 5.70 dB and 4.82 dB down in AC RMS with 3.49 dB and
+// 4.44 dB of band spread (ab.json `lp-integrator-corner` /
+// `pk-integrator-corner`, which used to fail on purpose and now pass at
+// -0.20 dB / 0.74 dB and -0.52 dB / 0.96 dB).
+//
+// So the whole square path is now Braids' arithmetic rather than its idealised
+// value: BraidsSineFixed() reproduces wav_sine's gain and its +127 offset, and
+// carries the same ~-0.5 LSB downward bias as Interpolate824's arithmetic
+// shift -- it does not reproduce that shift operation-for-operation, since
+// Interpolate824 floors only the interpolation delta it adds to an exact table
+// entry while this floors the whole ideal value, but the two differ by under
+// 2 LSB and the loop measures identical (see the 96 kHz check below);
+// double_saw is quantised to the
+// uint16 Braids builds with `~(phase_ >> 15)`; integrator_gain is the uint16
+// `modulator_phase_increment >> 14`; both `>> 16`s are arithmetic shifts that
+// floor; and the accumulator is an int32 rectified by stmlib's CLIP against
+// both rails. The windowed-resonator carrier carries wav_sine's gain and
+// offset too -- worth nothing on its own (-48 dB) but it is what Braids reads.
+//
+// Verified by replaying the fixed loop at 96 kHz, so the decimator below is
+// out of the comparison, against native 96 kHz reference renders: AC RMS
+// +0.000 dB and octave bands 0.00 dB at `lp-cutoff-max`, `pk-cutoff-max`,
+// `lp-integrator-corner` and `pk-integrator-corner`. The residual the 48 kHz
+// A/B still prints is therefore the decimator and nothing in the loop. The
+// integer replica used for that check reproduces the reference renderer
+// sample-for-sample (0 mismatches in 288000 samples).
+//
+// Two earlier readings of this defect are recorded here because both are
+// wrong and both are plausible. It is NOT the arithmetic-shift floor at
+// digital_oscillator.cc:384 and the CLIP that rectifies its drift: restoring
+// that floor alone, in the bit-exact replica, leaves LP at -5.25 dB and
+// reaches the rail 98 times against Braids' 8213. And it is NOT the
+// decimator: `bp-integrator-control` is the same note, cutoff and MORPH on a
+// model with no integrator and reads -1.71 dB with its bands flat to 0.37 dB,
+// which is the decimator figure and nothing else.
+//
 // Declared deviations from Braids:
 //   - lut_sine is read at 512 points/period against Braids' 257-entry wav_sine
 //     at an 8-bit index (256 points/period). Cleaner interpolation, not
-//     identical. This is only the RESOLUTION difference between the two tables
-//     -- their gain and offset differ too, which is not a deviation but the
-//     defect recorded below.
-//   - at the top of TIMBRE every model reads 1.5 to 1.7 dB quieter than the
-//     reference. That is this file's 3-tap decimator, not the algorithm: its
+//     identical. Resolution only -- the table's GAIN and OFFSET are now
+//     reproduced (see BraidsSineFixed in the .cc).
+//   - at the top of TIMBRE every model reads quieter than the reference --
+//     0.6 dB (lp-cutoff-max) to 1.7 dB (hp-high-note), with the four models'
+//     own ceiling cases at -0.56, -1.15, -1.64 and -1.55 dB for LP, PK, BP and
+//     HP. That is this file's 3-tap decimator, not the algorithm: its
 //     response is cos^2(pi*f/96000), which is -1.70 dB at the 13.28 kHz the
 //     pitch clamp puts the modulator at, and BP and HP -- which have no
-//     integrator -- read -1.67 dB there with their spectra flat to 0.38 dB.
-//     The same decimator also ADDS energy: its stopband is not the harness's
-//     127-tap sinc, so images land 1.4 to 1.7 dB high across 320 Hz - 5 kHz in
-//     that corner (~5% of the energy). Decimating BOTH sides with this 3-tap
-//     filter collapses the whole band table to within 0.05 dB, which is what
-//     shows the excess is the decimator and nothing in the loop.
-//
-// KNOWN DEFECT, not a deviation -- do not read the numbers above as covering
-// it. THIS FILE'S SINE IS NOT BRAIDS' SINE. Braids reads wav_sine, which is
-// exactly 32639 * -cos(2*pi*x) + 127 (fitted to +-1.7 LSB over all 257
-// entries): a -0.034 dB gain and, decisively, a +127 LSB (+0.00388 full-scale)
-// DC OFFSET. BraidsSine() below reproduces the PHASE of that table and none of
-// its offset, because plaits' lut_sine is a zero-mean unit sine. square_carrier
-// carries that offset into `pulse`, `pulse` is integrated at a gain of
-// 4 * mod_increment per sample, and the polarity latch flips its sign every
-// half carrier cycle -- so on hardware the offset alone ramps the integrator
-// into BOTH rails once per half cycle whenever the cutoff is high and the note
-// is low. This port's integrator never gets there. On LP and PK, with the
-// balance near noon and the cutoff high, that is 5.70 dB of AC RMS and 3.49 dB
-// across octave bands (ab.json `lp-integrator-corner` and
-// `pk-integrator-corner`, which fail on purpose). It is the integrator and not
-// the decimator: `bp-integrator-control` is the same note, cutoff and MORPH on
-// a model with no integrator and passes at -1.67 dB / 0.38 dB.
-//
-// (The comment above BraidsSine in the .cc quotes wav_sine[0] = -32512 and
-// [64] = 126 and then calls the table "-cos(2*pi*x)". Those two numbers ARE
-// the gain and the offset -- the table is not -cos(2*pi*x). That comment is
-// about the PHASE ORIGIN, and on the phase origin it is right: the port's
-// Sine(phase + 0.75) is exactly -cos(2*pi*phase).)
-//
-// The DC the defect leaves behind runs the opposite way to what an earlier
-// version of this comment claimed ("-0.05 against -0.25"). Measured on the
-// committed A/B's own renders of `lp-integrator-corner`, with out_gain
-// divided back out: Braids -0.0035, this port -0.049. Braids has LESS residual
-// DC, because it saturates SYMMETRICALLY against both rails; the port, which
-// never reaches either, keeps the offset-free integrator's own average.
-//
-// Measured in a replica of both inner loops that reproduces the committed
-// reference renderer's AC RMS to six decimals at three settings (LP MIDI 24
-// and 45, PK MIDI 24). Against that reference, at MIDI 24 / top of TIMBRE /
-// MORPH at noon, over 288000 sub-samples (3 s at 96 kHz):
-//   - this file as shipped:            LP -5.02 dB / 3.77 dB bands, 2 clips
-//   - + wav_sine's DC offset only:     LP +0.01 dB / 0.02 dB bands, 8253 clips
-//   - Braids itself:                                               8213 clips
-// PK behaves the same way (-3.53 dB / 5.15 dB -> +0.02 dB / 0.02 dB). The
-// earlier reading of this defect -- that it is Braids' arithmetic-shift FLOOR
-// at digital_oscillator.cc:384 and the CLIP that rectifies its drift -- does
-// not survive the same test: restoring that floor alone makes LP WORSE
-// (-5.20 dB) and reaches the rail 98 times, not 8213. The floor is real and
-// biases the accumulator by -0.5 LSB/sample, but it is a hundredth of the
-// effect. BP and HP are unaffected at every setting tested, because neither
-// reads the integrator; the offset costs them nothing measurable (+0.03 dB).
-// A fix is a DSP change and therefore a digest move and a builder rollout, so
-// it is not this pass's to make.
+//     integrator -- read -1.64 and -1.55 dB there with their spectra flat to
+//     0.36 dB. The same decimator also ADDS energy: its stopband is not the
+//     harness's 127-tap sinc, so images land high across 320 Hz - 5 kHz in
+//     that corner, which is the 0.70 to 0.96 dB of band spread the four
+//     clamped cases print. Running the loop at 96 kHz against a native 96 kHz
+//     reference collapses all of it to 0.00 dB.
+//   - the phase accumulators and the windowing arithmetic stay in float; only
+//     the pulse/integrator path is fixed point, because that is the only place
+//     the quantisation sets an equilibrium rather than adding a rounding
+//     error.
 //
 // Not a deviation, contrary to an earlier version of this comment: Braids'
 // `window * (carrier + 32768)` does overflow int32 (on ~18% of samples), but
@@ -105,6 +109,63 @@
 //     Running a second set of phases measured at 94% of the CPU budget under
 //     qemu/estimate.py; sharing them costs ~5 operations and lands near half
 //     that. OUT, the model the user selected, is unaffected: it is Braids'.
+//
+// WHAT AN EXISTING PATCH WILL SOUND LIKE AFTER THIS FIX. This is an audible
+// change wherever the integrator is in the mix -- on OUT that is LP and PK, on
+// AUX it is the BP and HP selections, whose complements ARE LP and PK (see the
+// last bullet; that is where the biggest change of all lands). Not a rounding
+// change. Measured OLD LOOP against NEW LOOP
+// directly, both at 96 kHz so the decimator is out of it, TIMBRE at the top
+// and MORPH at the balance peak:
+//
+//        note 24   note 36   note 48   note 60
+//   LP   +5.03 dB  +2.89 dB  +1.28 dB  +0.56 dB
+//   PK   +3.48 dB  +1.23 dB  +0.65 dB  +0.21 dB
+//
+//   - LP and PK gain BODY. Their square_signal is the integrator, and the
+//     integrator now saturates against both rails instead of hovering near
+//     zero, so the low end goes from thin to the squared-off, hard-limited
+//     buzz the module makes. A bass patch mixed to sit under something else
+//     will now be too loud and want its level pulled back by a few dB.
+//   - The character changes with it, not just the level: a rectified
+//     accumulator is a square-ish waveform carrying the burst's rhythm, where
+//     the float one was a small smooth ramp. The A/B's band table at that
+//     corner moved by 3.49 dB (LP) and 4.44 dB (PK) across the whole
+//     spectrum, not in one band.
+//   - It is continuous, not a corner case -- see the table -- and it fades
+//     with MORPH: at note 24 the change is +0.69 dB at MORPH 0.1, +1.05 dB at
+//     0.9, and -0.01 dB at either end, where balance excludes the integrator
+//     from the mix entirely.
+//   - It does NOT go away at the bottom of TIMBRE, and the reason is not
+//     "the effect scales with the integrator gain". A low cutoff does shrink
+//     the gain, but it also puts the modulator BELOW the carrier, so the DC
+//     still walks the accumulator into a rail long before the polarity latch
+//     flips: in the bit-exact replica Braids clips 5832 to 7867 times per
+//     96000 sub-samples at TIMBRE 0, where the wave-1 loop clipped 0 times.
+//     What is small there is the LEVEL change, not the change. Through the
+//     harness at TIMBRE 0 / MORPH 0.5 the LP level moves +0.18 / +0.30 /
+//     +0.51 dB at notes 24 / 48 / 72 and PK under +0.1 dB, while LP's
+//     octave-band agreement with Braids goes from 0.83 dB to 0.02 dB at note
+//     24 and 1.14 dB to 0.07 dB at note 48. A cutoff-down LP patch therefore
+//     changes TIMBRE at roughly constant level, rather than not changing.
+//   - BP and HP are unchanged in character ON OUT -- neither combination reads
+//     the integrator -- but their AUX is not. AUX runs the complementary
+//     model, so a BP selection's AUX is PK and an HP selection's AUX is LP,
+//     and both read the same integrator off the selected model's phases.
+//     Measured old loop against new loop at 96 kHz, TIMBRE at the top, MORPH
+//     at the balance peak:
+//
+//               note 24   note 36   note 48   note 60
+//       AUX of HP  +7.41 dB  +3.51 dB  +2.62 dB  +1.56 dB
+//       AUX of BP  +2.61 dB  +1.36 dB  +0.63 dB  +0.23 dB
+//
+//     The HP row is the LARGEST change this fix makes anywhere -- larger than
+//     the +5.03 dB on LP's own OUT -- so a patch that takes BP or HP from OUT
+//     and its complement from AUX is affected as much as an LP or PK patch,
+//     and a patch using AUX alone on HP is affected more.
+//     Every model, on both outputs, is now 0.034 dB quieter, because the
+//     resonator carries wav_sine's true 32639 amplitude rather than a unit
+//     one. That is inaudible on its own and it is what the module does.
 
 #ifndef PLAITS_DSP_ENGINE2_Z_FILTER_ENGINE_H_
 #define PLAITS_DSP_ENGINE2_Z_FILTER_ENGINE_H_
@@ -152,7 +213,9 @@ class ZFilterEngine : public Engine {
 
   float modulator_phase_;
   float square_phase_;
-  float integrator_;
+  // Braids' `int32_t square_integrator`, kept in its own int16-count units.
+  // See the .cc: its equilibrium is a quantisation effect, not a signal one.
+  int32_t integrator_;
   bool polarity_;
 
   // 3-tap [0.25, 0.5, 0.25] decimator history: the last sub-sample of the
