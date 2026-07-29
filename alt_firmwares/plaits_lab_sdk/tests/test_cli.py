@@ -251,8 +251,8 @@ class PackageTests(unittest.TestCase):
         self.assertIn(borderline, ("WARN", "FAIL"))
 
     def test_cpu_probe_build_is_opt_in_and_off_by_default(self) -> None:
-        # The probe measures Voice::Render with the Cortex-M4 cycle counter and
-        # takes over AUX for its readout, so it must never appear unasked.
+        # The probe measures Voice::Render with the Cortex-M4 cycle counter, so
+        # it must never appear unasked.
         with tempfile.TemporaryDirectory() as temp_dir:
             pkg_dir = Path(temp_dir) / "probed"
             with redirect_stdout(io.StringIO()):
@@ -264,6 +264,35 @@ class PackageTests(unittest.TestCase):
                              plaits_lab.render_local_hardware_config(package))
             self.assertIn("#define PLAITS_CPU_PROBE 1",
                           plaits_lab.render_local_hardware_config(package, cpu_probe=True))
+
+    def test_cpu_probe_leaves_aux_alone_unless_asked(self) -> None:
+        # The two readout channels are separate flags. A contributor's probe is
+        # the LED meter: it costs them nothing, while the AUX tone OVERWRITES
+        # their engine's second output — so the tone only appears on request
+        # (or for memhunt, whose readout is the tone).
+        with tempfile.TemporaryDirectory() as temp_dir:
+            pkg_dir = Path(temp_dir) / "auxed"
+            with redirect_stdout(io.StringIO()):
+                plaits_lab.init_command(SimpleNamespace(
+                    output=str(pkg_dir), from_engine="blank", author="T",
+                    package_id="test-author/auxed", slug="auxed", name="Auxed"))
+            package = plaits_lab.load_package(str(pkg_dir))
+            render = plaits_lab.render_local_hardware_config
+
+            self.assertIn("#define PLAITS_CPU_PROBE_AUX 0",
+                          render(package, cpu_probe=True))
+            self.assertIn("#define PLAITS_CPU_PROBE_AUX 1",
+                          render(package, cpu_probe=True, cpu_probe_aux=True))
+            # --cpu-probe-aux is a probe build in its own right.
+            self.assertIn("#define PLAITS_CPU_PROBE 1",
+                          render(package, cpu_probe_aux=True))
+            # memhunt has no other channel to report on.
+            self.assertIn("#define PLAITS_CPU_PROBE_AUX 1",
+                          render(package, cpu_probe=True, memhunt=True))
+            # The bench firmware is the mirror image: tone, no LED meter.
+            bench = plaits_lab.render_stock_bench_config()
+            self.assertIn("#define PLAITS_CPU_PROBE_LEDS 0", bench)
+            self.assertIn("#define PLAITS_CPU_PROBE_AUX 1", bench)
 
     def test_cpu_reference_ratio_divides_package_cost_by_stock_cost(self) -> None:
         # The ratio is the whole point: absolute host timings can't tell you
@@ -461,7 +490,7 @@ class PackageTests(unittest.TestCase):
 
     def test_authoritative_catalog_exposes_every_forkable_model(self) -> None:
         catalog, public = plaits_lab.load_builtin_catalog()
-        self.assertEqual(len(catalog), 39)
+        self.assertEqual(len(catalog), 40)
         self.assertEqual(set(catalog), set(public))
         self.assertTrue(all(item["digest"].startswith("sha256:") for item in public.values()))
 
@@ -510,9 +539,11 @@ class PackageTests(unittest.TestCase):
             self.assertEqual(loaded["manifest"]["packageType"], "community")
 
             bundle = Path(temp_dir) / "bright-wave.zip"
+            # --bundle-only: this test is about the zip the gauntlet produces,
+            # not about uploading it. Without it, submit runs its real upload.
             plaits_lab.submit_command(SimpleNamespace(
                 package=str(package), output=str(bundle), compiler=None,
-                native=True, docker_image="unused",
+                native=True, docker_image="unused", bundle_only=True,
             ))
             with zipfile.ZipFile(bundle) as archive:
                 submission = json.loads(archive.read("submission.json"))
@@ -885,9 +916,12 @@ class PackageTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             package = self._community_package(temp_dir, "bundled")
             out_zip = Path(temp_dir) / "dist" / "bundled.zip"
+            # bundle_only on the OUTER call keeps this test off the network; the
+            # inner container's own --bundle-only is asserted below and is not
+            # the same thing.
             args = SimpleNamespace(package=str(package["directory"]), compiler=None,
                                    output=str(out_zip), docker_image="img:test",
-                                   native=False)
+                                   native=False, bundle_only=True)
             real_probe = plaits_lab.host_sanitizers_available
             plaits_lab.host_sanitizers_available = lambda _compiler: False
             try:
@@ -897,10 +931,14 @@ class PackageTests(unittest.TestCase):
 
         # The zip has to come back out, so /output is the one writable mount and
         # the container is told to write there under the caller's chosen name.
+        # The inner run BUILDS ONLY: it has no credentials and no terminal to
+        # confirm at, and if it reached the upload the package would be
+        # submitted twice — once from the container, once from out here.
         self.assertIn(f"{out_zip.resolve().parent}:/output", cmd)
         self.assertEqual(
-            cmd[-5:],
-            ["submit", "/contributor", "--output", "/output/bundled.zip", "--native"])
+            cmd[-6:],
+            ["submit", "/contributor", "--output", "/output/bundled.zip",
+             "--native", "--bundle-only"])
 
     def test_native_never_delegates_to_docker(self) -> None:
         # --native is what the SDK passes to ITSELF inside the container. If it

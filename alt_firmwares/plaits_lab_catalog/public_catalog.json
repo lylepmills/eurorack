@@ -1695,6 +1695,52 @@
       }
     },
     {
+      "id": "helix",
+      "packageId": "community/helix",
+      "name": "Helix",
+      "author": "Lyle Mills",
+      "origin": "Rubato Lab",
+      "family": "Chords",
+      "description": "A chord stacked across octaves on a Shepard helix, gliding endlessly up or down without ever changing register.",
+      "tags": [
+        "shepard",
+        "chord",
+        "drone",
+        "glide"
+      ],
+      "controls": [
+        "Chord",
+        "Glide",
+        "Fold",
+        "Spread"
+      ],
+      "outputs": [
+        "Folded voices (left in stereo)",
+        "Unfolded voices (right in stereo)"
+      ],
+      "sharedModules": [
+        "chord-bank"
+      ],
+      "artwork": {
+        "color": "#5796E4"
+      },
+      "version": "1.0.0",
+      "digest": "sha256:2cd10af1d76b9c93dd3d605cf3be87b4223252843c4a2d705bffd789510bf124",
+      "documentationDigest": "sha256:d4eae528ac4358656c87e19e629d50852940b6419b8eb93c5251dc6af022ef5a",
+      "manual": {
+        "controls": {
+          "harmonics": "Selects the chord, voiced at every octave of the helix at once.",
+          "timbre": "Sets the glide: centred is still, either side sends the stack endlessly rising or falling.",
+          "morph": "Folds the summed voices, from clean through progressively harder wavefolding.",
+          "macro": "Sets how much of the helix you hear at once, from a tight chord to a wide cloud of octaves."
+        },
+        "trigger": "Strikes the low-pass gate while the helix keeps gliding underneath."
+      },
+      "implementation": {
+        "className": "HelixEngine"
+      }
+    },
+    {
       "id": "z-filter",
       "packageId": "mutable-instruments/z-filter",
       "name": "Z Filter",

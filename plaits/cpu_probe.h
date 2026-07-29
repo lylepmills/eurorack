@@ -25,12 +25,28 @@
 // So measure the real thing: the Cortex-M4's DWT cycle counter, wrapped around
 // the real Voice::Render, inside the real audio interrupt.
 //
-// READOUT. The AUX output becomes a square wave whose FREQUENCY carries the
+// READOUT, in two independent channels -- PLAITS_CPU_PROBE_LEDS and
+// PLAITS_CPU_PROBE_AUX, either of which can be built without the other.
+//
+// LEDS. The eight LEDs become a bottom-up bar, one per eighth of budget, with
+// the next LED's brightness carrying the fraction (~1% resolution); see
+// Ui::UpdateLEDs. It costs nothing but the engine-select display, which a
+// one-model probe firmware has no use for anyway -- nothing is patched, no
+// output is given up, and the reading is visible while you play. This is the
+// channel a contributor measures with.
+//
+// AUX. The AUX output becomes a square wave whose FREQUENCY carries the
 // measurement: 1000 Hz means the engine consumed the entire budget, 600 Hz means
 // 60% of it, 1300 Hz means it is over by a third. Frequency rather than a DC
 // level so the reading survives any gain, offset or AC coupling between the
 // module and whatever measures it -- an audio interface, a tuner, a scope. MAIN
 // still carries the engine's audio, so you can listen while you measure.
+//
+// The AUX channel is the precise one, and the expensive one: it OVERWRITES the
+// engine's own AUX output, so a model with a real second output cannot be heard
+// as it ships while the tone is on. It is also the only channel that can carry
+// per-section reports or a memhunt readout, which is why the bench, validation
+// and memhunt firmwares take it. It is off unless a build asks for it.
 //
 // This header compiles to NOTHING unless PLAITS_CPU_PROBE is set, so shipping
 // builds are byte-identical (asserted by the SDK's build tests).
@@ -80,6 +96,18 @@ namespace plaits {
 #define PLAITS_CPU_PROBE_LEDS 1
 #endif
 
+// ...and the tone is separable from the meter, which is the direction that
+// matters for contributors: their probe build should read out without costing
+// them the output their model may need. Opt-in, so the default probe leaves
+// AUX alone.
+#ifndef PLAITS_CPU_PROBE_AUX
+#define PLAITS_CPU_PROBE_AUX 0
+#endif
+
+#if !PLAITS_CPU_PROBE_LEDS && !PLAITS_CPU_PROBE_AUX
+#error "PLAITS_CPU_PROBE with neither readout channel: nothing would report."
+#endif
+
 #ifndef PLAITS_CPU_PROBE_FTZ
 #define PLAITS_CPU_PROBE_FTZ 0
 #endif
@@ -94,6 +122,11 @@ namespace plaits {
 // into memory it does not own; see the v3/v4 investigation.
 #ifndef PLAITS_CPU_PROBE_MEMHUNT
 #define PLAITS_CPU_PROBE_MEMHUNT 0
+#endif
+
+#if PLAITS_CPU_PROBE_MEMHUNT && !PLAITS_CPU_PROBE_AUX
+// The memhunt readout IS the tone -- the LED bar cannot carry a raw halfword.
+#error "PLAITS_CPU_PROBE_MEMHUNT needs PLAITS_CPU_PROBE_AUX."
 #endif
 
 // Full budget maps to this many Hz on the AUX readout.
@@ -568,7 +601,13 @@ class CpuProbe {
 #define PLAITS_CPU_PROBE_INIT cpu_probe.Init();
 #define PLAITS_CPU_PROBE_BEGIN cpu_probe.Begin();
 #define PLAITS_CPU_PROBE_END(size) cpu_probe.End(size);
+#if PLAITS_CPU_PROBE_AUX
 #define PLAITS_CPU_PROBE_READOUT(frames, size) cpu_probe.WriteReadout(frames, size);
+#else
+// No tone: the block leaves the audio callback exactly as the engine wrote it,
+// so AUX still carries the model's own second output.
+#define PLAITS_CPU_PROBE_READOUT(frames, size)
+#endif
 #define PLAITS_CPU_PROBE_DISPLAY(ui) (ui).DisplayCpuUsage(cpu_probe.usage());
 
 #else

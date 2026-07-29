@@ -248,8 +248,9 @@ void Ui::UpdateLEDs() {
 
 #if PLAITS_CPU_PROBE && PLAITS_CPU_PROBE_LEDS
   // A probe build's LEDs are a CPU meter, so an engine's cost is readable with
-  // nothing patched at all -- the AUX tone stays available for a precise
-  // reading, but you no longer have to give up an output to get a rough one.
+  // nothing patched at all and no output given up -- which is why this is the
+  // channel a contributor build ships. (PLAITS_CPU_PROBE_AUX adds the precise
+  // tone readout, at the cost of the engine's own AUX output.)
   // Each LED is one eighth of the audio callback's budget: lit green while the
   // engine fits, amber for the last quarter, and all eight blinking red once it
   // is over budget (the blink gets faster the further over it is).
@@ -262,26 +263,40 @@ void Ui::UpdateLEDs() {
   // those over would make the probe build untestable.
   if (mode_ == UI_MODE_NORMAL) {
     const float usage = cpu_usage_;
-    if (usage > 1.0f) {
-      // Over budget: blink everything red, faster the worse it is.
-      const int shift = usage > 2.0f ? 5 : (usage > 1.5f ? 6 : 7);
+    // The red line sits at 90%, not 100%: this meter brackets Voice::Render
+    // only, and the UI poll, watchdog and readout ride the same interrupt
+    // OUTSIDE the bracket. Hardware-calibrated: an engine reading 87-100%
+    // here (4-octave Helix) audibly crunches, while 62-75% (3-octave) has
+    // real margin. Above 90% the deadline is at risk in practice.
+    if (usage > 0.9f) {
+      // Deadline at risk: blink everything red, faster the worse it is.
+      const int shift = usage > 1.8f ? 5 : (usage > 1.2f ? 6 : 7);
       if ((pwm_counter_ >> shift) & 1) {
         for (int i = 0; i < kNumLEDs; ++i) {
           leds_.set(i, LED_COLOR_RED);
         }
       }
     } else {
-      int lit = static_cast<int>(usage * static_cast<float>(kNumLEDs) + 0.5f);
-      if (lit > kNumLEDs) lit = kNumLEDs;
-      // Always show something, so "running but nearly free" is distinct from
-      // "not running at all".
-      if (lit < 1 && usage > 0.0f) lit = 1;
-      for (int i = 0; i < lit; ++i) {
-        // Fills bottom-up, so the bar rises as the engine gets more expensive.
-        // Colour keys off the LEVEL (i), not the physical LED, so the top two
-        // eighths of the scale are always the amber ones.
+      // Fills bottom-up; colour keys off the LEVEL (i), not the physical LED,
+      // so the top two eighths of the scale are always the amber ones. The
+      // first PARTIAL eighth shows as the next LED's brightness: 16-level PWM
+      // on the fractional part, so the bar reads to ~1% instead of in eight
+      // discrete steps.
+      const float scaled = usage * static_cast<float>(kNumLEDs);
+      int full = static_cast<int>(scaled);
+      if (full > kNumLEDs) full = kNumLEDs;
+      // Amber from 62.5% up: the top three eighths are where un-bracketed
+      // ISR overhead starts to matter.
+      for (int i = 0; i < full; ++i) {
         leds_.set(kNumLEDs - 1 - i,
-                  i >= kNumLEDs - 2 ? LED_COLOR_YELLOW : LED_COLOR_GREEN);
+                  i >= kNumLEDs - 3 ? LED_COLOR_YELLOW : LED_COLOR_GREEN);
+      }
+      if (full < kNumLEDs) {
+        const float frac = scaled - static_cast<float>(full);
+        if (static_cast<int>(frac * 16.0f) > static_cast<int>(pwm_counter_ & 15)) {
+          leds_.set(kNumLEDs - 1 - full,
+                    full >= kNumLEDs - 3 ? LED_COLOR_YELLOW : LED_COLOR_GREEN);
+        }
       }
     }
     leds_.Write();

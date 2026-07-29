@@ -22,7 +22,11 @@ class GenerateEngineConfigTest(unittest.TestCase):
         return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
 
     def test_catalog_matches_the_approved_product_catalog(self) -> None:
-        self.assertEqual(len(CATALOG), 50)
+        # 40 from master (39 + helix) plus the 11 Braids ports. NOTE: master's
+        # own value was left at 39 when helix landed, so this assertion was
+        # already failing there before the merge — bumping it here fixes that
+        # too. It is a hardcoded count, so it must move with every engine.
+        self.assertEqual(len(CATALOG), 51)
 
     def test_legacy_recipes_receive_the_stable_default_option_profile(self) -> None:
         # Also the value PLAITS_BUILD_OPTIONS_PROFILE_ID carries in
