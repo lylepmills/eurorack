@@ -2286,7 +2286,7 @@
         "Bare collisions"
       ],
       "version": "1.0.0",
-      "digest": "sha256:d4a38ebb1f93bd93f277feb892508870fa57c6f438ebb9aa22b2d8e6a1aa6ea1",
+      "digest": "sha256:4963d6a85e7b662e3911cc9fbd4f776791f4de1bf4aa9f236b230b1e9cb307e8",
       "documentationDigest": "sha256:349a4181a3118a092a81b6d4bc347b7ca42bf075253ee6caa7f5a185cc84b468",
       "manual": {
         "controls": {
@@ -2328,7 +2328,7 @@
         "Valve buzz"
       ],
       "version": "1.0.0",
-      "digest": "sha256:ff00e8660828d33748616355584922d16f600f7f1609fb29dda3fe428bafee3f",
+      "digest": "sha256:6ba04af9a132c2cb4e8a710ef0928cb5da3cf47ba1aa24fd8d9717794405491e",
       "documentationDigest": "sha256:2e29a5c351344ffc48f40b4f77ba746e400eacfd525d93fade7817afddf2f980",
       "manual": {
         "controls": {
