@@ -50,7 +50,7 @@ Implemented in this checkpoint:
   audible macro response, and distinct/responding DX banks
 - An AMD64 Docker/devcontainer toolchain that works on Apple Silicon
 - Flash-size recovery by size-optimizing non-audio UI/settings objects
-- A Plaits Lab SDK v0 with blank/fork scaffolding for all 39 catalog models,
+- A Plaits Lab SDK v0 with blank/fork scaffolding for all 50 catalog models,
   sanitizer/audio validation, hot-reloading browser previews, deterministic
   submissions, and unreviewed local ARM builds
 - One authoritative content-addressed package catalog generating the editor
@@ -408,7 +408,7 @@ rather than treating any figure here as an expected value.
 
 ## Personalized manual prototype
 
-The authoritative package catalog now includes manual prose for all 39 models.
+The authoritative package catalog now includes manual prose for all 50 models.
 It receives a documentation digest independent of the executable package
 digest, so editing user-facing text does not invalidate saved firmware recipes.
 
@@ -434,7 +434,7 @@ downloads — no combined ZIP. Details in
 
 Still open:
 
-1. Give all 39 model descriptions a final editorial/listening review and
+1. Give all 50 model descriptions a final editorial/listening review and
    re-check the rendered Letter pages after any catalog wording change.
 
 (The manual rollout that used to sit at the top of this list shipped July 19,
