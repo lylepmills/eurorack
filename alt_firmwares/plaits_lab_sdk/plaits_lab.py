@@ -361,6 +361,9 @@ def autodeclare_shared_modules(paths: list[Path], declared: list[str]) -> list[s
     return added
 
 
+HEX_COLOR_PATTERN = re.compile(r"#[0-9a-fA-F]{6}")
+
+
 def load_package(package_arg: str, autodeclare: bool = False) -> dict[str, Any]:
     package_dir = Path(package_arg).resolve()
     manifest_path = package_dir / "plaits-engine.json"
@@ -372,11 +375,23 @@ def load_package(package_arg: str, autodeclare: bool = False) -> dict[str, Any]:
         "name", "author", "origin", "license", "description", "family", "tags",
         "controls", "outputs", "source", "postProcessing", "scenarios",
     }
-    optional = {"upstream", "forkedFrom", "sharedModules"}
+    optional = {"upstream", "forkedFrom", "sharedModules", "artwork"}
     require(required <= set(manifest), f"manifest is missing {sorted(required - set(manifest))}")
     require(set(manifest) <= required | optional,
             f"manifest has unsupported fields {sorted(set(manifest) - required - optional)}")
     require(manifest["schemaVersion"] == 1, "schemaVersion must be 1")
+    # The colour a contributor picks for their model. It used to live only in
+    # the browser's localStorage, so it never reached the package and every
+    # community engine rendered in the catalog's grey fallback — the choice was
+    # decorative. Carrying it here is what makes it survive submission.
+    if "artwork" in manifest:
+        artwork = manifest["artwork"]
+        require(isinstance(artwork, dict) and set(artwork) <= {"color"},
+                "artwork may only contain a color")
+        if "color" in artwork:
+            require(isinstance(artwork["color"], str)
+                    and HEX_COLOR_PATTERN.fullmatch(artwork["color"]) is not None,
+                    "artwork color must be a #RRGGBB hex string")
     require(manifest["sdk"] == SDK_VERSION, f"sdk must be {SDK_VERSION}")
     require(manifest["packageType"] in {"builtin-reference", "community"},
             "packageType must be builtin-reference or community")
@@ -1316,6 +1331,7 @@ def init_command(args: argparse.Namespace) -> int:
         "name": name,
         "author": args.author,
         "origin": "Community",
+        **({"artwork": {"color": args.color}} if getattr(args, "color", None) else {}),
         "license": spdx,
         "description": description,
         "family": family,
@@ -2625,6 +2641,7 @@ def build_parser() -> argparse.ArgumentParser:
     init_parser.add_argument("--package-id")
     init_parser.add_argument("--slug")
     init_parser.add_argument("--name")
+    init_parser.add_argument("--color", help="the model's colour in the palette editor, #RRGGBB")
     init_parser.set_defaults(handler=init_command)
 
     check_parser = subparsers.add_parser("check", help="validate and compile an engine package")
