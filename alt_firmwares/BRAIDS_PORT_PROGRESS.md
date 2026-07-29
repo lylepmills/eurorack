@@ -446,10 +446,14 @@ missing-submodule guard.
    **Two follow-ups this leaves open.** (a) `previews.generated.json` is a UNION
    of two renders and its `sourceRevision` says so verbatim — a re-render from
    the merged head collapses it back to single-revision provenance. (b) The
-   local `npm test` cannot run: `website/package.json` pins `devEngines.runtime`
-   to node 24.15.0 with `onFail: error` and this machine has 24.18.0. That pin
-   predates this work and is on main too; the suites were run directly with
-   `node --test` instead.
+   local `npm test` could not run: `website/package.json` pinned
+   `devEngines.runtime` to node 24.15.0 with `onFail: error` and this machine
+   has 24.18.0, so the suites were run directly with `node --test`. **Fixed
+   2026-07-28** — `devEngines` is now a `^24.15.0` / `^11.12.1` range, which
+   still hard-blocks a wrong MAJOR while letting a forward patch through. The
+   deploy pins (`.nvmrc`, `engines`, `wrangler.toml`, CI) are untouched and
+   still exact; `devEngines` is a local-dev guard only. `npm test` now runs:
+   274 passing.
 
 
 ---
