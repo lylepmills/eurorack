@@ -1,4 +1,4 @@
-// Copyright 2026 Rubato Audio.
+// Copyright 2026 Lyle Mills.
 // SPDX-License-Identifier: MIT
 
 #include "plaits/dsp/engine2/helix_engine.h"
