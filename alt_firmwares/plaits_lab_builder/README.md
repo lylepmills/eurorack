@@ -136,13 +136,13 @@ the useful proof case because it combines all three built-in DX banks with all
 four Rubato engines, which the former stock/experimental compile switch could
 not express.
 
-Verified mixed-recipe output at source revision `af5eaeb0f5b0`:
+Verified mixed-recipe output at source revision `0c0c0f3ef835`:
 
 - ARM text: 201,600 bytes
 - ARM data: 48 bytes
-- BSS: 27,824 bytes
-- Binary SHA-256: `88a6ee83b578642a3bfdc9c66d97ef47010d1eed9476af064b682595656fb825`
-- WAV SHA-256: `b8f37dd9f4518e91ee6ae3245f9d46fdad2d3b75d4859305bd951c9f7048d7ef`
+- BSS: 27,840 bytes
+- Binary SHA-256: `32b14a031c5c9bb0e6a4cecefae84cfde35e8373c79b1ce7b03df967adab0028`
+- WAV SHA-256: `dddddb7f1400b8733a5c76f6a579c2c99eaf6b8568445650b944a97e8c1e3eed`
 
 Measured by submitting `mixed_build_request.json` to the image under test. The
 same request gave 201,344 / 48 / 27,824 at `720d1406e87b` (binary `695eb862…`,
@@ -211,7 +211,7 @@ system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-d43bb37fa88d` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-0c0c0f3ef835` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a
 new image, wait for `wrangler containers list` to report `ready` before smoke
@@ -251,6 +251,7 @@ target.
 | July 28, 2026 (Helix 0.2.0 — metadata + contributor colour) | `d43bb37fa88d` | `rev-d43bb37fa88d` |
 | July 28, 2026 (AUX rework allowlist regen) | `2782e70be79c` | `rev-2782e70be79c` |
 | July 29, 2026 (schema 14, optional calibration procedure, manual contract 7) | `9e04ca2bf0d5` | `rev-9e04ca2bf0d5` |
+| July 29, 2026 (complete Braids inventory, corrected A/B and hardware validation) | `0c0c0f3ef835` | `rev-0c0c0f3ef835` |
 
 Three consequences a rollback has that a forward deploy does not:
 
