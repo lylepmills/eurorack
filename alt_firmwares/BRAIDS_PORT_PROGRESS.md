@@ -642,6 +642,13 @@ attempt 4, which was close.
    sounds at a time, so null it per partial. Final: mean 6.3 cents, worst 25.8,
    ~1% cracks over 312 points.
 
+**The harness is committed** at `alt_firmwares/research/brass_lip/` -- the
+model, nine experiments, and a README saying which question each one answers.
+`passive_loop.cc` is the one to run first whenever a self-oscillating model goes
+quiet: it isolates the waveguide from the valve, and it is what settled findings
+1 and 2. `zones.cc` is the one that mattered most -- every control-mapping
+decision came out of its Arnold-tongue table.
+
 **Two more for any future waveguide engine.** The output tap is the MOUTHPIECE,
 not the bell -- the radiated signal is physically correct and slides 30 dB
 across the keyboard, while mouthpiece pressure is flat to 0.7 dB. And **both
