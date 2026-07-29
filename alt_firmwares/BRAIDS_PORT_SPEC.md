@@ -1,6 +1,14 @@
 # Braids → Plaits Palette port: consolidated implementation specification
 
-**Status:** implementation-ready, pending the five open questions in §8.
+**Status: IMPLEMENTED, and superseded in places.** All eleven engines are
+landed; the five open questions in §8 are resolved. **Read
+`BRAIDS_PORT_PROGRESS.md` alongside this** — measurement contradicted several
+claims here, and PROGRESS is the one with numbers behind it. Known-wrong in
+this document: §2 R5's table lists `RenderDigitalFilter` as `size -= 2`
+(it has none — it is 96 kHz); §3.5 designs `sub-oscillator` around a twin-ramp
+formulation Braids does not use; §3.8 calls vowel-fof's amplitudes semitone
+attenuations (they are linear); and §1's flash estimates are superseded by real
+measurements that ran −39 % to +74 % against them per engine.
 **Date:** 2026-07-28
 **Scope:** merges five design groups (analog-core, feedback-fm, physical, formant, hybrid) and their
 adversarial critiques into one plan. Every `needs-changes` requirement from every critique has been
