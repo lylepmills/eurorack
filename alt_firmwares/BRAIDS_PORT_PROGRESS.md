@@ -201,20 +201,13 @@ inside the model's own ~350 B residuals — would only make the meter read
 permissively. The entry exists so the measurement is on record rather than the
 engine looking merely overlooked.
 
-**Four traps when re-running the sweep.** On an Apple-silicon box, `docker
-build` needs an explicit `--platform linux/amd64`. The Dockerfile does `dpkg
---add-architecture i386` and installs `libc6:i386` / `libstdc++6:i386` for the
-32-bit ARM toolchain; none of those exist for arm64, so a default build dies
-at the apt step with a bare `exit code: 100` that names no package and reads
-like a network failure. The image on this machine is already amd64 (every
-`docker run` prints the platform-mismatch warning), so the flag only makes the
-build agree with the image that was working all along. The builder image bakes
-the firmware source in (`COPY . /workspace`), so `docker build` it AFTER the
-engines land or every new engine fails with a missing header while the
-baseline builds fine — a local rehearsal of the exact deploy-ordering hazard.
-The image has an ENTRYPOINT, so the sweep needs `--entrypoint python3` or the
-command becomes arguments to the HTTP server and sits idle forever. And a
-FRESH worktree has no submodule content — `git submodule update --init stmlib
+**Three traps when re-running the sweep.** The builder image bakes the firmware
+source in (`COPY . /workspace`), so `docker build` it AFTER the engines land
+or every new engine fails with a missing header while the baseline builds
+fine — a local rehearsal of the exact deploy-ordering hazard. The image
+has an ENTRYPOINT, so the sweep needs `--entrypoint python3` or the command
+becomes arguments to the HTTP server and sits idle forever. And a FRESH
+worktree has no submodule content — `git submodule update --init stmlib
 stm_audio_bootloader` before the `docker build`, or it stops at the
 missing-submodule guard.
 
@@ -407,19 +400,49 @@ missing-submodule guard.
    digests are the builder's allowlist. The site already surfaces "Builder
    update required" on its own when they disagree.
 
-8. **Merge `origin/main` into this branch before deploying** — the branch is
-   long-lived and main has moved under it. Found 2026-07-28: the branch was
-   still carrying the pre-`94e84165` flash table, so merging it would have
-   silently REVERTED the re-calibration on main — including
-   `flashSafetyMarginBytes` 192 → 512, which would have made the buildable
-   DEFAULT palette read "over" (the margin must stay under stock-24's headroom,
-   now 272 B, was 688). `flash-budget.ts` and its test anchors have since been
-   rebased onto main's values (rubato-audio `f1ecbead`), but that fixed ONE
-   file. Nothing else on the branch has been checked against main, and the
-   catalog snapshot here is still pre-`helix` — which is exactly why the branch
-   tests stayed green while the table was wrong. **The branch cannot self-
-   diagnose this: its own suite passes.** Do the merge, then re-run the website
-   tests, before item 7's deploy.
+8. ~~**Merge `origin/main` into this branch before deploying**~~ — **DONE
+   2026-07-28**, both repos. The branch was long-lived and main had moved under
+   it: it still carried the pre-`94e84165` flash table, so merging would have
+   silently REVERTED the re-calibration — including `flashSafetyMarginBytes`
+   192 → 512, which would have made the buildable DEFAULT palette read "over"
+   (the margin must stay under stock-24's headroom, now 272 B, was 688). **The
+   branch could not self-diagnose it: its own suite passed throughout**, because
+   its catalog snapshot was also pre-`helix`.
+
+   Order matters and is cross-repo: **eurorack first, then the website**, because
+   the site's catalog snapshot is GENERATED from the firmware repo. Merging
+   `origin/master` into the eurorack branch gave a catalog holding both `helix`
+   (from master) and the eleven ports; only then can the website regenerate a
+   51-engine snapshot. Regenerating from the un-merged eurorack branch would have
+   silently DROPPED `helix`.
+
+   How the conflicts resolved, for the next time:
+   - `catalog.json` / `public_catalog.json` / `previews.generated.json` —
+     conflicts were pure FORMATTING (master reformatted to expanded JSON) plus
+     disjoint additions. No shared engine differed. Rebuilt as a programmatic
+     union rather than hand-merged.
+   - `catalog.generated.json` / `plaits-pins.json` /
+     `plaits-engine-sources.generated.json` — REGENERATED from the merged
+     eurorack head (`sync-plaits-catalog.mjs`, `gen-plaits-engine-sources.mjs`),
+     never hand-resolved. 51 engines, 51 measured, no gaps either way.
+   - `render_previews.cc` — took the branch's generated `PREVIEW_ENGINE_LIST`
+     (item 4) over master's hardcoded list; being catalog-driven it picks up
+     `helix` on its own.
+   - `test_generate_engine_config.py` — its hardcoded `len(CATALOG)` is 51 now.
+     Note master's own value was left at 39 against a 40-engine catalog when
+     `helix` landed, so that assertion was ALREADY failing on master; this fixes
+     it in passing.
+
+   Verified after: merged firmware still builds in the container and reproduces
+   the same flash numbers; 274 website tests pass.
+
+   **Two follow-ups this leaves open.** (a) `previews.generated.json` is a UNION
+   of two renders and its `sourceRevision` says so verbatim — a re-render from
+   the merged head collapses it back to single-revision provenance. (b) The
+   local `npm test` cannot run: `website/package.json` pins `devEngines.runtime`
+   to node 24.15.0 with `onFail: error` and this machine has 24.18.0. That pin
+   predates this work and is on main too; the suites were run directly with
+   `node --test` instead.
 
 
 ---
