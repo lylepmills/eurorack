@@ -535,8 +535,16 @@ existing ordering constraint, not a new one.
 
 ### Still open
 
-- **Flash is unmeasured for these four.** Run `flash_sweep.py --stereo` per
-  engine. `vowel-fof` in particular now carries two copies of its sample loop.
+- ~~Flash is unmeasured for these four.~~ **Measured 2026-07-28**, and it is
+  small: `vowel-fof` +496 B (it carries two copies of its sample loop),
+  `ring-mod` +272, `csaw` +240, `bowed` +112, `digital-modulation` +48, `toy`
+  −144. About 1.2 KB across all six, against the port's 22 KB — and the
+  per-engine gate strips it for builds that leave an engine in mono. Controls
+  reproduced to ±16 B (`harmonic` 2,576 vs 2,560, `glisson` 416 vs 432), inside
+  the ±32 B quantization the table documents. Recorded in the website's
+  `engineStereoBytes`. Still due, as `flash-budget.ts` notes: a re-sweep in the
+  full production pass at the DEPLOYED revision — these were measured in a local
+  container.
 - **The listening test on `vowel-fof`'s glottal source still stands.** It is
   the one change whose case was never CPU (one point of mono), and a bare saw
   at HARMONICS 0 is a thin AUX voice against a weighting that is always vocal.

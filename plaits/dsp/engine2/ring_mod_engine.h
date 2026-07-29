@@ -31,8 +31,8 @@
 // OUT with a knob moved (turn MORPH down and the old AUX walks into OUT).
 // Because its increment is clamped to 13.29 kHz it is under Nyquist at the
 // output rate, so it skips the shaper AND the halfband entirely: the mono path
-// costs 271 instructions/sample against the stereo path's 358, and carries two
-// divides per sample rather than four.
+// costs 309.6 instructions/sample against the stereo path's 357.6 -- 60% of
+// budget against 69% -- and carries two divides per sample rather than four.
 //
 // In stereo OUT/AUX become L/R and AUX reverts to carrier times modulator 1,
 // at matched gain and the same scale -- a bare sine would be a poor right

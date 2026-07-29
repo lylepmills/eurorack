@@ -208,7 +208,15 @@ inside the model's own ~350 B residuals — would only make the meter read
 permissively. The entry exists so the measurement is on record rather than the
 engine looking merely overlooked.
 
-**Three traps when re-running the sweep.** The builder image bakes the firmware
+**Four traps when re-running the sweep.** On an Apple-silicon box, `docker
+build` needs an explicit `--platform linux/amd64`. The Dockerfile does `dpkg
+--add-architecture i386` and installs `libc6:i386` / `libstdc++6:i386` for the
+32-bit ARM toolchain; none of those exist for arm64, so a default build dies
+at the apt step with a bare `exit code: 100` that names no package and reads
+like a network failure. The image is already amd64 — every `docker run`
+against it prints the platform-mismatch warning — so the flag only makes the
+build agree with the image that had been working all along, which is why this
+stayed invisible until someone rebuilt it. The builder image bakes the firmware
 source in (`COPY . /workspace`), so `docker build` it AFTER the engines land
 or every new engine fails with a missing header while the baseline builds
 fine — a local rehearsal of the exact deploy-ordering hazard. The image
@@ -395,8 +403,11 @@ missing-submodule guard.
    bend offset, which `BendSegment` being affine in bend makes provably
    collapse-free everywhere.
 
-   Still open: flash unmeasured for the six Pattern B ports
-   (`flash_sweep.py --stereo`), and a listening test on `vowel-fof`'s source.
+   Flash for the six is measured (see the stereo-delta section above): about
+   1.2 KB across all of them, `vowel-fof` the largest at +496 B. Still open: a
+   listening test on `vowel-fof`'s glottal source — the one change whose case
+   was never CPU, and a bare saw at HARMONICS 0 is a thin AUX voice against a
+   weighting that is always vocal.
 
 6. ~~**`fluted` is still gated**~~ **DONE — measured, failed, dropped.** See
    §3.16. No `fluted` code was ever written. Nothing downstream needs doing:
@@ -830,7 +841,7 @@ g++ -O2 -w -I$REPO /tmp/braids-ref/braids_ref.cc \
 
 ---
 
-## 5. Flash — still unmeasured, and how to measure it
+## 5. Flash — measured locally; the production sweep is still due
 
 `website/src/components/plaits-palette/flash-budget.ts` documents the method:
 a **leave-one-out sweep against the LIVE builder**, replacing one slot of
@@ -838,9 +849,14 @@ stock-24 with a duplicate of an already-present engine and reading the
 text/data delta. It must be done in the full stock context, and the deployed
 builder must be built from the same revision as the catalog snapshot.
 
-That is a deploy-gated batch job, so it is deliberately left until every
-engine has landed rather than run per engine. `check --arm` (which does pass
-for both landed engines) proves the ARM build, not the size.
+That is a deploy-gated batch job, so it was deliberately left until every
+engine had landed rather than run per engine. `check --arm` (which passes for
+all eleven) proves the ARM build, not the size.
+
+Both sweeps have since been run against a LOCAL container — the mono marginals
+in the table above, and the per-engine stereo deltas in the section above that.
+What is still outstanding is the production pass: those numbers were not folded
+in at the deployed revision, which `flash-budget.ts` records as due.
 
 ---
 
