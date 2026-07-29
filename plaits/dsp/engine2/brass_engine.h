@@ -135,6 +135,31 @@ const float kBrassReflection = 0.995f;
 // not, which is part of why its Brass does not speak.
 const float kBrassNoiseGain = 0.02f;
 
+// Nonlinear wave propagation. In a real bore the compression phase of a
+// large-amplitude wave travels faster than the rarefaction, so the wavefront
+// steepens toward a shock as it runs down the tube. That is the physical source
+// of brass brightness, and the reason a horn gets brighter the harder it is
+// blown rather than merely louder.
+//
+// The valve cannot supply this. A hard valve nonlinearity generates a full
+// harmonic series but destroys partial selection (the lips slam shut every
+// cycle and the fundamental wins whatever the lip is tuned to), which is why
+// the valve here is deliberately gentle -- and a gentle valve is why the model
+// spoke and played but did not buzz.
+//
+// Expressed as an amplitude-dependent propagation DELAY rather than an in-loop
+// waveshaper, on purpose: a timing change cannot alter the loop gain, so it
+// cannot break the passivity the whole model rests on. Measured in
+// alt_firmwares/research/brass_lip/brassiness.cc -- at this setting the energy
+// above the 4th harmonic rises about 28 dB at full breath while soft playing
+// moves under 0.5 dB, and the HARMONICS staircase and tuning are unchanged.
+const float kBrassSteepening = 112.0f;
+
+// The steepening can never displace the read pointer by more than this fraction
+// of the bore, so a transient cannot drive it past the write pointer or off the
+// end of the buffer.
+const float kBrassSteepeningLimit = 0.25f;
+
 class BrassEngine : public Engine {
  public:
   BrassEngine() { }
@@ -160,6 +185,7 @@ class BrassEngine : public Engine {
   float lip_v_;
 
   float bell_lp_;
+  float prev_arriving_;
   float junction_;
   float dc_x1_;
   float dc_y1_;

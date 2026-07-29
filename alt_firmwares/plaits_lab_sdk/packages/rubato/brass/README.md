@@ -86,6 +86,35 @@ Measured before blocking, OUT read RMS 27923 against a DC component of 26548 —
 and it passed the audition and control-response gates, which do not look at DC.
 It would have reached a module as a fat offset with a tone buried in it.
 
+**The buzz comes from the bore, not the lip.** A gentle valve is what lets lip
+tension select a partial at all, and a gentle valve makes few upper harmonics —
+so the first version spoke and played and tuned, and did not sound like brass.
+The brightness cannot be taken from the valve without giving back the mode
+selection that was the hard part.
+
+In a real instrument it does not come from the valve either. The compression
+phase of a large-amplitude wave travels faster than the rarefaction, so the
+wavefront steepens toward a shock as it runs down the tube; that is the physical
+source of brassiness, and the reason a horn brightens when it is blown harder
+rather than just getting louder. It is a property of the *bore*, so adding it
+leaves the valve alone.
+
+It is implemented as an amplitude-dependent propagation **delay** rather than a
+waveshaper in the loop. That is deliberate: a timing change cannot alter the
+loop gain, so it cannot break the passivity everything else rests on, where an
+in-loop waveshaper can do both. Measured
+(`alt_firmwares/research/brass_lip/brassiness.cc`): energy above the 4th
+harmonic rises up to **30 dB** at full breath while soft playing moves under
+0.5 dB — expression rather than a fixed tilt, which is what a static filter
+would have given. The HARMONICS staircase is unchanged and tuning is unchanged
+to within a few cents.
+
+The coefficient is a taste setting inside a measured safe range. Pushed far
+past the shipped value the pitch starts to flatten (about 20 cents at 3x) and
+the open-bell setting loses level, because the steepening pulls the loop off
+resonance. Below it the brightening becomes uneven — audible where the bore
+carries a lot of energy, absent at ordinary breath.
+
 ## Controls
 
 HARMONICS is lip tension and it is the reason the engine exists: it climbs the

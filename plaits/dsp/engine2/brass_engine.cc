@@ -30,6 +30,7 @@ void BrassEngine::Reset() {
   lip_x_ = 0.0f;
   lip_v_ = 0.0f;
   bell_lp_ = 0.0f;
+  prev_arriving_ = 0.0f;
   junction_ = 0.0f;
   dc_x1_ = 0.0f;
   dc_y1_ = 0.0f;
@@ -111,8 +112,24 @@ void BrassEngine::Render(
 
   const float read_offset = length;
 
+  // The steepening displacement is bounded by the bore length, not by a fixed
+  // number of samples: a short bore has less room before the read pointer would
+  // overtake the write pointer.
+  const float steepening_limit = kBrassSteepeningLimit * read_offset;
+
   for (size_t i = 0; i < size; ++i) {
-    float read_position = static_cast<float>(delay_write_) - read_offset;
+    // Nonlinear propagation: a high-pressure wave arrives early. Driven by the
+    // previous arriving sample rather than the current one, which would be
+    // circular -- one sample of lag against a bore hundreds of samples long.
+    float steepening = kBrassSteepening * prev_arriving_;
+    if (steepening > steepening_limit) {
+      steepening = steepening_limit;
+    } else if (steepening < -steepening_limit) {
+      steepening = -steepening_limit;
+    }
+
+    float read_position =
+        static_cast<float>(delay_write_) - (read_offset - steepening);
     while (read_position < 0.0f) {
       read_position += static_cast<float>(kBrassDelaySize);
     }
@@ -122,6 +139,7 @@ void BrassEngine::Render(
     const int b = (integral + 1) % kBrassDelaySize;
     const float arriving = delay_line_[a] +
         (delay_line_[b] - delay_line_[a]) * fractional;
+    prev_arriving_ = arriving;
 
     // The bell: what it does not reflect, it radiates.
     bell_lp_ += damp * (arriving - bell_lp_);
