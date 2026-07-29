@@ -9,10 +9,11 @@
 
 import os
 import subprocess
-import sys
 import numpy as np
 
 SP = os.path.dirname(os.path.abspath(__file__))
+# <repo>/alt_firmwares/experimental/fluted_gate/ -> <repo>
+REPO = os.path.abspath(os.path.join(SP, "..", "..", ".."))
 PROBE = os.path.join(SP, "fluted_probe")
 SR = 48000.0
 CORRECTED = 47872.34

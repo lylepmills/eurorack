@@ -240,7 +240,7 @@ with (`grain_engine.cc`, `fm_engine.cc`, and eight more) **and kept
 are the same situation: Émilie's algorithm plus a Rubato fourth macro. So they
 are treated exactly like Plaits rather than differently from it.
 
-Uniform across all twelve:
+Uniform across all eleven:
 
 ```
 origin:    "Mutable Instruments"
@@ -463,10 +463,10 @@ The spec's 14-step per-engine checklist misses
 ### 3.16 `fluted`: the §3.11 gate was measured and FAILED — engine dropped
 
 Run 2026-07-28, before any engine code. Instrument and every script:
-`experimental/fluted_gate/`. The instrument was validated first by rendering
-Braids' own FLUT and reproducing the known chaotic detuning across COLOR
-(measured 1.53 / 1.02 / 1.04 / 4.49 / 2.51 against the cited study's 1.50 /
-3.47 / 1.01 / 2.44 / 2.48 — same scatter, same character).
+`experimental/fluted_gate/`. The instrument was validated first (`validate.py`)
+by rendering Braids' own FLUT and reproducing the known chaotic detuning across
+COLOR (measured 1.53 / 1.02 / 1.04 / 4.49 / 2.51 against the cited study's
+1.50 / 3.47 / 1.01 / 2.44 / 2.48 — same scatter, same character).
 
 **The claim under test:** *"below noon (2 harmonics) only the fundamental
 survives and the pipe tunes reliably."* It is false, and it is not close.
