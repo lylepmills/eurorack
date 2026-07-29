@@ -1,0 +1,76 @@
+{
+  "shape": "QUESTION_MARK",
+  "note": "RenderQuestionMark has no BEGIN_INTERPOLATE_PARAMETER_N macro anywhere, so the trap fold_engine.h documents cannot arise: both knobs are read straight off the array. parameter_[0] (TIMBRE) is the keying speed and nothing else (digital_oscillator.cc:2252), so p1 maps to the engine's TIMBRE; parameter_[1] (COLOR) sets BOTH the noise bed's floor (:2253) and the squared-distortion depth (:2296), so p2 maps to HARMONICS, which keeps that pair welded exactly as the module has it. Both axes are covered at both ends -- p1 at 0.0/0.5/1.0 and p2 at 0.0/0.5/1.0 -- plus a high register where the noise's 4*f0 ring modulator (:2292) runs near Nyquist. A SEVENTH case, `pitch-ceiling`, is a guard rather than a sound: DigitalOscillator::ComputePhaseIncrement saturates its argument at kPitchTableStart - 1 (digital_oscillator.cc:51-53), so the module's carrier stops rising at MIDI 127.9921875 = 13.28 kHz however far the pitch CV goes, and plaits::NoteToFrequency's own CONSTRAIN stops eight semitones higher. At note 135 the reference plays 13281 Hz; an engine that took Plaits' ceiling instead plays 19965 Hz, and this case then reads -1.96 dB AC RMS and 1.17 dB spectrum, failing both. With Braids' ceiling it reads -0.83 dB and 0.56 dB. Its band figures are wider than the six in-range cases (+0.66 to +1.12 dB from 40 Hz to 10.24 kHz, +1.51 dB above 20.48 kHz) because at note 135 the 10.24-20.48 kHz band holds 64.7% of the energy on its own and reads +0.31 dB, while every other band carries 0.1-3.4%; the wide numbers are the low-level bed compared where there is barely any signal. The two paragraphs of band residues below describe the SIX in-range cases only. MORPH and MACRO sit at 0.5 in every case, where Bed is the module's own noise level and Grit is the module's own `distorted * parameter_[1] >> 15` exactly (ApplyMacro returns its stock argument at the midpoint), so each case is the module and not an extrapolation of it. triggerHz is 0 everywhere: a trigger restarts the transmission from the lead-in (:2241-2248), and the reference renderer's own --trigger-hz 0 strikes once at t=0, so both sides run one continuous pass of the message. The windows are 8 s rather than 3 because the noise bed's intensity is an unbounded random walk that starts near silence at strike and drifts up over seconds (:2280); 3 s would compare only the quiet opening of it. NO `cents` TOLERANCE IS DECLARED ON ANY CASE, and this is not the usual 'the estimator is awkward on noisy material' caveat -- there is nothing here for it to be right about. The model is a sine gated on and off with long silences between symbols over a broadband bed; there is no continuous f0, and ab_compare's autocorrelator runs on a fixed 0.25 s window at the middle of the file, which may land on a mark, on a space, or across a boundary. It duly reports -0.8, -4.6, -2.1, +10.6 and +455.0 cents and 'no f0' across the seven cases, i.e. it is reading the window it happened to get. Declaring a tolerance over that would be a coin toss, and widening one to cover +10.6 would be exactly the move the guide forbids. What the cents figure exists to catch -- an R5 rate-constant error -- is instead checked directly and much more sharply, by predicting the keying grid from the symbol table and finding it in both renders: 57 predicted gate edges over the first 7.5 s, all 57 found on both sides to the same 2.0 ms detector offset, and the two carrier envelopes correlating 0.9913-0.9995 at zero lag across the six in-range cases with no drift between the first and last quarter of the window (see question_mark_engine.h A/B NOTES). A symbol clock built on a mis-transferred 96 kHz constant would be an octave out on the tick length and would fail that on the first symbol. Two band-level residuals are declared rather than hidden. (1) 20-80 Hz reads -0.9 to -4.6 dB over 3.5-6.5% of the energy in five cases and +0.31 dB in the sixth -- static-low, where COLOR 0 switches the distortion off. That is the engine's DC blocker, and static-low is the control that proves it: no distortion, no DC, no deficit. ab_compare removes only the global mean, so the reference keeps its keying-driven offset, and a 2048-point Hann frame puts a frame's DC into bins 0-2, which is those two bands. Rebuilt with the blocker off the same cases read 0.10-0.29 dB overall and 0.00 dB at 20-40 Hz. The blocker stays: Braids puts that DC out of the module and a Plaits engine should not. (2) 20.48-24 kHz runs +0.59 to +1.21 dB over 7.7-8.8% of the energy, the 2-tap box decimator folding back what the clip and the squared distortion put above 24 kHz. Everything between 80 Hz and 20.48 kHz -- 81 to 94% of the energy -- is within 0.8 dB in every case, and inside 0.55 dB in four of the six; the two exceptions are static-low and high-register, at 320-640 Hz (-0.80 and +0.77 dB, over 1.9% and 2.1% of the energy) and, for high-register, 160-320 Hz too (+0.75 dB over 1.0%). All seven pass at the guide's standard 1.0 dB targets with nothing widened.",
+  "cases": [
+    {
+      "id": "stock-mid",
+      "name": "Stock speed and static",
+      "seconds": 8,
+      "note": 45,
+      "triggerHz": 0,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.0}
+    },
+    {
+      "id": "speed-fast",
+      "name": "TIMBRE at 1: the fastest keying, 37.5 ms per dit",
+      "seconds": 8,
+      "note": 45,
+      "triggerHz": 0,
+      "braids": {"p1": 1.0, "p2": 0.5},
+      "engine": {"timbre": 1.0, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.0}
+    },
+    {
+      "id": "speed-slow",
+      "name": "TIMBRE at 0: the slowest keying, 122.8 ms per dit",
+      "seconds": 8,
+      "note": 45,
+      "triggerHz": 0,
+      "braids": {"p1": 0.0, "p2": 0.5},
+      "engine": {"timbre": 0.0, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.0}
+    },
+    {
+      "id": "static-low",
+      "name": "COLOR at 0: the bed at its floor and the distortion switched off",
+      "seconds": 8,
+      "note": 45,
+      "triggerHz": 0,
+      "braids": {"p1": 0.7, "p2": 0.0},
+      "engine": {"timbre": 0.7, "harmonics": 0.0, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.0}
+    },
+    {
+      "id": "static-high",
+      "name": "COLOR at 1: the highest bed floor and the distortion at full depth",
+      "seconds": 8,
+      "note": 45,
+      "triggerHz": 0,
+      "braids": {"p1": 0.7, "p2": 1.0},
+      "engine": {"timbre": 0.7, "harmonics": 1.0, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.0}
+    },
+    {
+      "id": "high-register",
+      "name": "A high carrier, where the 4x ring modulator runs near Nyquist",
+      "seconds": 8,
+      "note": 78,
+      "triggerHz": 0,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.0}
+    },
+    {
+      "id": "pitch-ceiling",
+      "name": "Past Braids' pitch ceiling: the carrier must stop rising at MIDI 128",
+      "seconds": 8,
+      "note": 135,
+      "triggerHz": 0,
+      "braids": {"p1": 0.7, "p2": 0.0},
+      "engine": {"timbre": 0.7, "harmonics": 0.0, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.0}
+    }
+  ]
+}

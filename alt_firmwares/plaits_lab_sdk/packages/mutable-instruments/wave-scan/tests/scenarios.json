@@ -1,0 +1,93 @@
+[
+  {
+    "id": "hero",
+    "name": "Scanning the male-voice bank end to end",
+    "durationSeconds": 4,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.0, 0.0],
+      "timbre": [0.0, 1.0],
+      "morph": [0.0, 0.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "banks",
+    "name": "Walking the 20 banks at a fixed position",
+    "durationSeconds": 5,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.0, 0.0],
+      "timbre": [0.35, 0.35],
+      "morph": [0.0, 1.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "map-diagonal",
+    "name": "Crossing the 16x16 map corner to corner",
+    "durationSeconds": 5,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.0, 1.0],
+      "morph": [0.0, 1.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "line-scan",
+    "name": "The curated line, smoothed",
+    "durationSeconds": 5,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [1.0, 1.0],
+      "timbre": [0.0, 0.98],
+      "morph": [0.45, 0.45],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "line-crush",
+    "name": "The line's four crush zones, bottom to top",
+    "durationSeconds": 5,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [1.0, 1.0],
+      "timbre": [0.4, 0.4],
+      "morph": [0.0, 1.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "snap",
+    "name": "The digital bank swept, stepped from wave to wave instead of morphed",
+    "durationSeconds": 4,
+    "note": 48,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.0, 0.0],
+      "timbre": [0.0, 1.0],
+      "morph": [0.7, 0.7],
+      "macro": [1.0, 1.0]
+    }
+  },
+  {
+    "id": "blur",
+    "name": "The map cell blurred into the average of its four waves",
+    "durationSeconds": 4,
+    "note": 40,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.5, 0.5],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.0]
+    }
+  }
+]

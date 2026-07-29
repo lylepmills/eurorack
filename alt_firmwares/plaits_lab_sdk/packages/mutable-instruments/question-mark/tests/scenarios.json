@@ -1,0 +1,80 @@
+[
+  {
+    "id": "hero",
+    "name": "The transmission at the module's own settings, keying speeding up",
+    "durationSeconds": 8,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.0, 1.0],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "static-sweep",
+    "name": "COLOR's welded pair, clean bed and no grit through to both at full",
+    "durationSeconds": 8,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.0, 1.0],
+      "timbre": [0.7, 0.7],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "bare-tone",
+    "name": "Bed at zero: the message with no atmosphere, which the module cannot do",
+    "durationSeconds": 6,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.9, 0.9],
+      "morph": [0.0, 0.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "bed-open",
+    "name": "Bed alone, silence up to past the module's loudest",
+    "durationSeconds": 6,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.3, 0.3],
+      "timbre": [0.7, 0.7],
+      "morph": [0.0, 1.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "grit-alone",
+    "name": "Grit alone at a low Static, clean through to twice the module's depth",
+    "durationSeconds": 6,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.2, 0.2],
+      "timbre": [0.7, 0.7],
+      "morph": [0.5, 0.5],
+      "macro": [0.0, 1.0]
+    }
+  },
+  {
+    "id": "retriggered",
+    "name": "A trigger restarts the transmission from the lead-in",
+    "durationSeconds": 4,
+    "note": 57,
+    "triggerHz": 1,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [1.0, 1.0],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  }
+]

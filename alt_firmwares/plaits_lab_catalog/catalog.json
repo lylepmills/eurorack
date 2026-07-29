@@ -1910,6 +1910,34 @@
       "postProcessing": { "alreadyEnveloped": false, "outGain": 1.0, "auxGain": 1.0 }
     },
     {
+      "id": "wave-scan", "packageId": "mutable-instruments/wave-scan", "name": "Wave Scan", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Wavetable",
+      "description": "Braids' three wavetable models in one slot, over its own 256-wave 8-bit bank: 20 named banks, a 16x16 interpolated map, and a curated line with a phase-domain crush.", "tags": ["braids", "wavetable", "scanning", "lo-fi"],
+      "controls": ["Model", "Scan", "Shape", "Snap"], "outputs": ["The scanned readout.", "Its complement: the adjacent wave, the opposite corner of the map cell, or the other end of the crush."],
+      "source": { "header": "plaits/dsp/engine2/wave_scan_engine.h", "className": "WaveScanEngine", "member": "wave_scan_engine_", "files": ["plaits/dsp/engine2/wave_scan_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": -1.0, "auxGain": -1.0 }
+    },
+    {
+      "id": "wave-paraphonic", "packageId": "mutable-instruments/wave-paraphonic", "name": "Wave Paraphonic", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Polyphonic",
+      "description": "Braids' four wavetable voices tuned to a chord, over its own 33-wave scan line and 17-row chord list. Adds a per-voice wave fan and a continuous interval scaler, neither of which Chords has.", "tags": ["braids", "wavetable", "chord", "paraphonic"],
+      "controls": ["Chord", "Wave", "Fan", "Spread"], "outputs": ["The four voices summed, as the module has them.", "The root voice on its own, undetuned."],
+      "source": { "header": "plaits/dsp/engine2/wave_paraphonic_engine.h", "className": "WaveParaphonicEngine", "member": "wave_paraphonic_engine_", "files": ["plaits/dsp/engine2/wave_paraphonic_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.8, "auxGain": 0.8 }
+    },
+    {
+      "id": "fluted", "packageId": "mutable-instruments/fluted", "name": "Fluted", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Physical modelling",
+      "description": "A jet flute derived from Braids' FLUT: a bore and a jet delay line sharing one loop, driven by an asymmetric cubic jet and a breath the noise multiplies. It overblows into a higher register, as the module does.", "tags": ["braids", "physical", "waveguide", "wind"],
+      "controls": ["Embouchure", "Air", "Blow", "Body"], "outputs": ["The bore pressure at the far end, which is what the module emits.", "A second tap halfway along the same bore \u2014 level-matched to the main output but decorrelated from it, so in stereo the two channels are one standing wave heard at two points."],
+      "source": { "header": "plaits/dsp/engine2/fluted_engine.h", "className": "FlutedEngine", "member": "fluted_engine_", "files": ["plaits/dsp/engine2/fluted_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": -0.8, "auxGain": -0.8 }
+    },
+    {
+      "id": "question-mark", "packageId": "mutable-instruments/question-mark", "name": "Question Mark", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Noise",
+      "description": "Braids' hidden model, reachable on the module only with the marquee set to \"49\": a Morse transmitter keying a sine over a drifting noise bed, through a squared-distortion stage.", "tags": ["braids", "morse", "easter-egg", "noise", "radio"],
+      "controls": ["Static", "Speed", "Bed", "Grit"], "outputs": ["The transmission, the module's own signal.", "Mono: the keyed carrier alone, before the bed and the distortion. Stereo: a second full transmission whose noise draws come from an independent generator, so the tone stays centred and the bed opens out."],
+      "source": { "header": "plaits/dsp/engine2/question_mark_engine.h", "className": "QuestionMarkEngine", "member": "question_mark_engine_", "files": ["plaits/dsp/engine2/question_mark_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": -0.7, "auxGain": -0.7 }
+    },
+    {
       "id": "bowed",
       "packageId": "mutable-instruments/bowed",
       "name": "Bowed",
@@ -2978,6 +3006,42 @@
         "timbre": "Sets the cutoff shared by both filters, from a dull thud to an open, bright hiss.",
         "morph": "Scales the five detuned partials' distance from the root, from unison to double the module's own spread.",
         "macro": "Scales both filters' resonance around the module's fixed setting, from damped and dull to near-ringing."
+      },
+      "trigger": "Restarts the engine."
+    },
+    "wave-scan": {
+      "controls": {
+        "harmonics": "Selects the banks, the 16x16 map, or the curated line.",
+        "timbre": "Position within the bank, along the map's X axis, or along the line.",
+        "morph": "Which of the 20 banks, the map's Y axis, or the line's four-zone crush.",
+        "macro": "Steps the scan between whole waves above noon, blurs it into their sum below; Braids exactly at the detent."
+      },
+      "trigger": "Restarts the engine."
+    },
+    "wave-paraphonic": {
+      "controls": {
+        "harmonics": "Braids' 17-row chord list: sub-semitone unisons, then triads, wide voicings, and octave stacks at the top.",
+        "timbre": "Scans the 33-wave line all four voices read, crossfading between neighbours.",
+        "morph": "Offsets each voice further along the scan line, so the four read different waves.",
+        "macro": "Scales every chord interval, from a unison at zero to double width. Braids' voicing at noon."
+      },
+      "trigger": "Restarts the engine."
+    },
+    "fluted": {
+      "controls": {
+        "harmonics": "Braids' COLOR: splits one fixed loop length between jet and bore. Moves the embouchure without moving the pitch.",
+        "timbre": "Braids' TIMBRE: breath turbulence, 51% depth down to 1%. Backwards, as the module's is: low airy, high steady.",
+        "morph": "Breath pressure, welded at twice the envelope in Braids. Under- or over-blow the pipe until it changes register.",
+        "macro": "The bore's damping, which Braids ties rigidly to the note and gives no knob. Down for a dark pipe, up for a bright one."
+      },
+      "trigger": "Restarts the engine."
+    },
+    "question-mark": {
+      "controls": {
+        "harmonics": "The module's own COLOR: the noise bed's floor and the distortion depth together, as one knob.",
+        "timbre": "The keying rate, from a 123 ms dit to a 37 ms one \u2014 the module's own TIMBRE.",
+        "morph": "The noise level on its own, from a bare keyed tone to well past the module's loudest bed.",
+        "macro": "The squared distortion on its own, from a clean sum to twice the module's depth."
       },
       "trigger": "Restarts the engine."
     },

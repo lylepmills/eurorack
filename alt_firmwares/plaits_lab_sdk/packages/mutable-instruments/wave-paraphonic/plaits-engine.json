@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/wave-paraphonic",
+  "catalogId": "wave-paraphonic",
+  "version": "1.0.0",
+  "name": "Wave Paraphonic",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "Braids' four wavetable voices tuned to a chord, over its own 33-wave scan line and 17-row chord list. Adds a per-voice wave fan and a continuous interval scaler, neither of which Chords has.",
+  "family": "Polyphonic",
+  "tags": [
+    "braids",
+    "wavetable",
+    "chord",
+    "paraphonic"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Chord",
+      "description": "Braids' 17-row chord list: sub-semitone unisons, then triads, wide voicings, and octave stacks at the top."
+    },
+    {
+      "id": "timbre",
+      "label": "Wave",
+      "description": "Scans the 33-wave line all four voices read, crossfading between neighbours."
+    },
+    {
+      "id": "morph",
+      "label": "Fan",
+      "description": "Offsets each voice further along the scan line, so the four read different waves."
+    },
+    {
+      "id": "macro",
+      "label": "Spread",
+      "description": "Scales every chord interval, from a unison at zero to double width. Braids' voicing at noon."
+    }
+  ],
+  "outputs": {
+    "main": "The four voices summed, as the module has them.",
+    "aux": "The root voice on its own, undetuned."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/wave_paraphonic_engine.h",
+    "files": [
+      "plaits/dsp/engine2/wave_paraphonic_engine.cc"
+    ],
+    "className": "WaveParaphonicEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": 0.8,
+    "auxGain": 0.8
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids DigitalOscillator::RenderWaveParaphonic"
+}

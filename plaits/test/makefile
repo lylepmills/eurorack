@@ -73,6 +73,10 @@ CC_FILES       = algorithms.cc \
 		waveshaping_engine.cc \
 		wavetable_engine.cc \
 		bowed_engine.cc \
+		question_mark_engine.cc \
+		fluted_engine.cc \
+		wave_paraphonic_engine.cc \
+		wave_scan_engine.cc \
 		cymbal_engine.cc \
 		snare_engine.cc \
 		kick_engine.cc \

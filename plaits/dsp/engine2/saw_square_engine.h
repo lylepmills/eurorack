@@ -111,6 +111,22 @@
 //     3.7 dB spectrum against the module (tests/ab.json `clamp-square`).
 //     Matches the guard built into VariableSawOscillator /
 //     VariableShapeOscillator, which every Plaits oscillator relies on.
+//   - Braids' shape-change re-Init is not reproduced. AnalogOscillator::Render
+//     calls Init() when shape_ != previous_shape_ (analog_oscillator.cc:75-78),
+//     and Init() resets pitch_ to 60 << 7 (analog_oscillator.h:77) AFTER
+//     RenderSawSquare has already called set_pitch -- so the module's very
+//     first 24-sample block renders at MIDI 60 rather than the played note,
+//     and the phase error that leaves persists for the life of the note:
+//     24 * (f60 - fnote) / 96000 cycles, small near MIDI 60 and larger in
+//     either direction away from it. This port renders the played note from
+//     sample 0. It costs nothing measurable HERE because in this model the
+//     quirk is common-mode: macro_oscillator.cc:136-137 changes BOTH
+//     oscillators' shapes on the same first Render, so both re-Init in the
+//     same block and the pair stays in exact relative lock -- verified by
+//     cross-correlation, zero samples of relative offset between the
+//     reference's saw-alone and square-alone renders (tests/ab.json). An
+//     absolute phase offset shared by both oscillators moves neither AC RMS
+//     nor the magnitude spectrum.
 //   - the two oscillators are float polyBLEP rather than Braids' int16
 //     fixed-point BLEP (R8): voiced reproduction, not bit-identical.
 //   - AUX did not exist in Braids' SAW_SQUARE (mono-only algorithm); it is

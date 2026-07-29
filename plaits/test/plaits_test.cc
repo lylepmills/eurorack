@@ -60,6 +60,10 @@
 #include "plaits/dsp/engine2/six_op_engine.h"
 #include "plaits/dsp/engine2/spectral_spiral_engine.h"
 #include "plaits/dsp/engine2/bowed_engine.h"
+#include "plaits/dsp/engine2/question_mark_engine.h"
+#include "plaits/dsp/engine2/fluted_engine.h"
+#include "plaits/dsp/engine2/wave_paraphonic_engine.h"
+#include "plaits/dsp/engine2/wave_scan_engine.h"
 #include "plaits/dsp/engine2/cymbal_engine.h"
 #include "plaits/dsp/engine2/snare_engine.h"
 #include "plaits/dsp/engine2/kick_engine.h"
@@ -2180,6 +2184,10 @@ void TestExperimentalEngines() {
   RenderAuditionEngine<CSawEngine>("14-csaw.wav");
   RenderAuditionEngine<RingModEngine>("15-ring-mod.wav");
   RenderAuditionEngine<BowedEngine>("16-bowed.wav");
+  RenderAuditionEngine<QuestionMarkEngine>("51-question-mark.wav");
+  RenderAuditionEngine<FlutedEngine>("50-fluted.wav");
+  RenderAuditionEngine<WaveParaphonicEngine>("49-wave-paraphonic.wav");
+  RenderAuditionEngine<WaveScanEngine>("48-wave-scan.wav");
   RenderAuditionEngine<CymbalEngine>("47-cymbal.wav");
   RenderAuditionEngine<SnareEngine>("46-snare.wav");
   RenderAuditionEngine<KickEngine>("45-kick.wav");
@@ -2241,6 +2249,10 @@ void TestExperimentalEngines() {
   ValidateExperimentalEngineExtremes<CSawEngine>();
   ValidateExperimentalEngineExtremes<RingModEngine>();
   ValidateExperimentalEngineExtremes<BowedEngine>();
+  ValidateExperimentalEngineExtremes<QuestionMarkEngine>();
+  ValidateExperimentalEngineExtremes<FlutedEngine>();
+  ValidateExperimentalEngineExtremes<WaveParaphonicEngine>();
+  ValidateExperimentalEngineExtremes<WaveScanEngine>();
   ValidateExperimentalEngineExtremes<CymbalEngine>();
   ValidateExperimentalEngineExtremes<SnareEngine>();
   ValidateExperimentalEngineExtremes<KickEngine>();
@@ -2287,6 +2299,10 @@ void TestExperimentalEngines() {
   ValidateExperimentalControlResponse<CSawEngine>("CSaw");
   ValidateExperimentalControlResponse<RingModEngine>("Ring Mod");
   ValidateExperimentalControlResponse<BowedEngine>("Bowed");
+  ValidateExperimentalControlResponse<QuestionMarkEngine>("Question Mark");
+  ValidateExperimentalControlResponse<FlutedEngine>("Fluted");
+  ValidateExperimentalControlResponse<WaveParaphonicEngine>("Wave Paraphonic");
+  ValidateExperimentalControlResponse<WaveScanEngine>("Wave Scan");
   ValidateExperimentalControlResponse<CymbalEngine>("Cymbal");
   ValidateExperimentalControlResponse<SnareEngine>("Snare");
   ValidateExperimentalControlResponse<KickEngine>("Kick");

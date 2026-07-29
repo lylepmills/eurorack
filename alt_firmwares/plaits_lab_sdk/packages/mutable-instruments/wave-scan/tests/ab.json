@@ -1,0 +1,253 @@
+{
+  "note": "Three Braids shapes share this slot, so every case names its own. HARMONICS is the model selector, not a Braids axis: 0.0 = WAVETABLES, 0.5 = WAVE_MAP, 1.0 = WAVE_LINE. Braids' TIMBRE (p1) maps to the engine's TIMBRE and its COLOR (p2) to MORPH. MACRO (Snap) is the only added axis and sits at its detent in every case, where SnapBalance is the identity and the scan crossfade is Braids' own -- so each case is an A/B of the sound the module makes, not of a nearby one. Every model is covered at both ends of both Braids axes, plus the block-rate machinery none of the static cases exercises: wtbl-bank-sweep drives the +/-64-count bank hysteresis through all 20 banks, wmap-diagonal crosses every cell of the 16x16 map, and wlin-scan-sweep runs the `(3 * smoothed + (p0 << 1)) >> 2` scan smoother and the per-block de-zipper crossfade together. Two measurement notes. (1) WLIN's TIMBRE stops at 0.98, not 1.0: Braids reads `wave_line[(scan >> 10) + 1]` on a 64-entry table, so above TIMBRE 0.9844 the reference renderer reads past the end of the array and the comparison would be against whatever the linker put there. 0.98 puts the scan on entries 62 and 63, the last legal pair. (2) A cents tolerance is declared on every case but wlin-high-note, where ab_compare's autocorrelation slips an octave -- see that case's own note.",
+  "cases": [
+    {
+      "id": "wtbl-mid",
+      "shape": "WAVETABLES",
+      "name": "Wavetables, mid bank and mid scan",
+      "seconds": 2,
+      "note": 45,
+      "braids": { "p1": 0.5, "p2": 0.5 },
+      "engine": { "harmonics": 0.0, "timbre": 0.5, "morph": 0.5, "macro": 0.5 },
+      "tolerance": { "acRmsDb": 1.0, "cents": 1.5, "spectrumDb": 1.5 }
+    },
+    {
+      "id": "wtbl-scan-low",
+      "shape": "WAVETABLES",
+      "name": "Wavetables, first bank, bottom of the scan",
+      "seconds": 2,
+      "note": 45,
+      "braids": { "p1": 0.0, "p2": 0.0 },
+      "engine": { "harmonics": 0.0, "timbre": 0.0, "morph": 0.0, "macro": 0.5 },
+      "tolerance": { "acRmsDb": 1.0, "cents": 1.5, "spectrumDb": 1.5 }
+    },
+    {
+      "id": "wtbl-scan-high",
+      "shape": "WAVETABLES",
+      "name": "Wavetables, first bank, top of the scan",
+      "seconds": 2,
+      "note": 45,
+      "braids": { "p1": 1.0, "p2": 0.0 },
+      "engine": { "harmonics": 0.0, "timbre": 1.0, "morph": 0.0, "macro": 0.5 },
+      "tolerance": { "acRmsDb": 1.0, "cents": 1.5, "spectrumDb": 1.5 }
+    },
+    {
+      "id": "wtbl-bank-top",
+      "shape": "WAVETABLES",
+      "name": "Wavetables, top bank -- bell, only 4 steps long",
+      "seconds": 2,
+      "note": 45,
+      "braids": { "p1": 0.5, "p2": 1.0 },
+      "engine": { "harmonics": 0.0, "timbre": 0.5, "morph": 1.0, "macro": 0.5 },
+      "tolerance": { "acRmsDb": 1.0, "cents": 1.5, "spectrumDb": 1.5 }
+    },
+    {
+      "id": "wtbl-short-bank",
+      "shape": "WAVETABLES",
+      "name": "Wavetables, an 8-step bank (piano)",
+      "seconds": 2,
+      "note": 45,
+      "braids": { "p1": 0.5, "p2": 0.575 },
+      "engine": { "harmonics": 0.0, "timbre": 0.5, "morph": 0.575, "macro": 0.5 },
+      "tolerance": { "acRmsDb": 1.0, "cents": 1.5, "spectrumDb": 1.5 },
+      "note_": "num_steps is 16 for most banks but 8 here and 4 for `bell`, and it multiplies the wave pointer -- so it changes both which pair of waves the scan lands on and how fast it travels. A port that assumed a uniform 16 would land on a different wave at every position but 0."
+    },
+    {
+      "id": "wtbl-bank-sweep",
+      "shape": "WAVETABLES",
+      "name": "Wavetables, sweeping all 20 banks under the hysteresis",
+      "seconds": 4,
+      "note": 45,
+      "braids": { "p1": 0.35, "p2": [0.0, 1.0] },
+      "engine": { "harmonics": 0.0, "timbre": 0.35, "morph": [0.0, 1.0], "macro": 0.5 },
+      "tolerance": { "acRmsDb": 1.0, "cents": 1.5, "spectrumDb": 1.5 },
+      "note_": "The only case that exercises the +/-64-count hysteresis on the bank knob (digital_oscillator.cc:1531). It crosses all 20 banks over the render and each crossing is a hard cut between unrelated waveforms, so it is also the case most sensitive to the two sides choosing a different bank at any moment."
+    },
+    {
+      "id": "wtbl-high-note",
+      "shape": "WAVETABLES",
+      "name": "Wavetables two octaves up",
+      "seconds": 2,
+      "note": 72,
+      "braids": { "p1": 0.35, "p2": 0.35 },
+      "engine": { "harmonics": 0.0, "timbre": 0.35, "morph": 0.35, "macro": 0.5 },
+      "tolerance": { "acRmsDb": 1.0, "cents": 1.5, "spectrumDb": 1.5 }
+    },
+    {
+      "id": "wmap-mid",
+      "shape": "WAVE_MAP",
+      "name": "Wave map, centre",
+      "seconds": 2,
+      "note": 45,
+      "braids": { "p1": 0.5, "p2": 0.5 },
+      "engine": { "harmonics": 0.5, "timbre": 0.5, "morph": 0.5, "macro": 0.5 },
+      "tolerance": { "acRmsDb": 1.0, "cents": 1.5, "spectrumDb": 1.5 }
+    },
+    {
+      "id": "wmap-origin",
+      "shape": "WAVE_MAP",
+      "name": "Wave map, origin corner",
+      "seconds": 2,
+      "note": 45,
+      "braids": { "p1": 0.0, "p2": 0.0 },
+      "engine": { "harmonics": 0.5, "timbre": 0.0, "morph": 0.0, "macro": 0.5 },
+      "tolerance": { "acRmsDb": 1.0, "spectrumDb": 1.5 },
+      "note_": "No cents tolerance here, for the opposite reason to wlin-high-note: this corner is too CLEAN for the estimator, not too rich. wt_map[0] is wave 176, whose even harmonics are exactly zero and whose third is 59.2 dB below the fundamental -- a sine, to within a part in 900. The autocorrelation of a 110 Hz sine has a peak 435 samples wide, so fitting a parabola across three integer lags to find it is ill-conditioned, and ab_compare reports 110.294 Hz for a reference that is actually at 110.010 Hz -- a +4.5-cent error on the REFERENCE side, which then shows up as the port reading -2.9 cents. Measured instead by Gaussian interpolation on the peak of a 65536-point Hann spectrum, which is exact for a windowed sinusoid, the reference is 110.0097 Hz and the port 110.2871 Hz: +4.36 cents raw, -0.25 cents once the corrected-sample-rate offset is taken out. In tune, and the tolerance is dropped rather than widened. The other four map cases all carry it and read within 0.5 cents."
+    },
+    {
+      "id": "wmap-x",
+      "shape": "WAVE_MAP",
+      "name": "Wave map, X end",
+      "seconds": 2,
+      "note": 45,
+      "braids": { "p1": 1.0, "p2": 0.0 },
+      "engine": { "harmonics": 0.5, "timbre": 1.0, "morph": 0.0, "macro": 0.5 },
+      "tolerance": { "acRmsDb": 1.0, "cents": 1.5, "spectrumDb": 1.5 }
+    },
+    {
+      "id": "wmap-y",
+      "shape": "WAVE_MAP",
+      "name": "Wave map, Y end",
+      "seconds": 2,
+      "note": 45,
+      "braids": { "p1": 0.0, "p2": 1.0 },
+      "engine": { "harmonics": 0.5, "timbre": 0.0, "morph": 1.0, "macro": 0.5 },
+      "tolerance": { "acRmsDb": 1.0, "cents": 1.5, "spectrumDb": 1.5 },
+      "note_": "X and Y are not interchangeable and this pair proves the port did not swap them: X drives the OUTER Mix (:1604) and Y the INNER Crossfade (:1602-1603), so on a bilinear cell whose four corners are four unrelated waves the two ends read as different sounds."
+    },
+    {
+      "id": "wmap-far",
+      "shape": "WAVE_MAP",
+      "name": "Wave map, far corner",
+      "seconds": 2,
+      "note": 45,
+      "braids": { "p1": 1.0, "p2": 1.0 },
+      "engine": { "harmonics": 0.5, "timbre": 1.0, "morph": 1.0, "macro": 0.5 },
+      "tolerance": { "acRmsDb": 1.0, "cents": 1.5, "spectrumDb": 1.5 }
+    },
+    {
+      "id": "wmap-diagonal",
+      "shape": "WAVE_MAP",
+      "name": "Wave map, diagonal sweep across every cell",
+      "seconds": 4,
+      "note": 45,
+      "braids": { "p1": [0.0, 1.0], "p2": [0.0, 1.0] },
+      "engine": { "harmonics": 0.5, "timbre": [0.0, 1.0], "morph": [0.0, 1.0], "macro": 0.5 },
+      "tolerance": { "acRmsDb": 1.0, "cents": 1.5, "spectrumDb": 1.5 }
+    },
+    {
+      "id": "wmap-low-note",
+      "shape": "WAVE_MAP",
+      "name": "Wave map at MIDI 24",
+      "seconds": 2,
+      "note": 24,
+      "braids": { "p1": 0.6, "p2": 0.3 },
+      "engine": { "harmonics": 0.5, "timbre": 0.6, "morph": 0.3, "macro": 0.5 },
+      "tolerance": { "acRmsDb": 1.0, "cents": 1.5, "spectrumDb": 1.5 }
+    },
+    {
+      "id": "wlin-color-min",
+      "shape": "WAVE_LINE",
+      "name": "Wave line, COLOR at zero -- fully crushed",
+      "seconds": 2,
+      "note": 45,
+      "braids": { "p1": 0.4, "p2": 0.0 },
+      "engine": { "harmonics": 1.0, "timbre": 0.4, "morph": 0.0, "macro": 0.5 },
+      "tolerance": { "acRmsDb": 1.0, "cents": 1.5, "spectrumDb": 1.5 }
+    },
+    {
+      "id": "wlin-zone0",
+      "shape": "WAVE_LINE",
+      "name": "Wave line, inside the bottom crush zone",
+      "seconds": 2,
+      "note": 45,
+      "braids": { "p1": 0.4, "p2": 0.1 },
+      "engine": { "harmonics": 1.0, "timbre": 0.4, "morph": 0.1, "macro": 0.5 },
+      "tolerance": { "acRmsDb": 1.0, "cents": 1.5, "spectrumDb": 1.5 }
+    },
+    {
+      "id": "wlin-zone1",
+      "shape": "WAVE_LINE",
+      "name": "Wave line, second zone",
+      "seconds": 2,
+      "note": 45,
+      "braids": { "p1": 0.4, "p2": 0.35 },
+      "engine": { "harmonics": 1.0, "timbre": 0.4, "morph": 0.35, "macro": 0.5 },
+      "tolerance": { "acRmsDb": 1.0, "cents": 1.5, "spectrumDb": 1.5 },
+      "note_": "The four zones exist only because `balance = parameter_[1] << 3` (:1642) overflows the uint16_t argument of Mix, so each quarter of COLOR sweeps the blend 0..1 again against a different pair of signals. Reading that shift as a plain 0..1 knob would put every one of these four cases on the wrong pair, which is why all four are here."
+    },
+    {
+      "id": "wlin-zone2",
+      "shape": "WAVE_LINE",
+      "name": "Wave line, third zone",
+      "seconds": 2,
+      "note": 45,
+      "braids": { "p1": 0.4, "p2": 0.6 },
+      "engine": { "harmonics": 1.0, "timbre": 0.4, "morph": 0.6, "macro": 0.5 },
+      "tolerance": { "acRmsDb": 1.0, "cents": 1.5, "spectrumDb": 1.5 }
+    },
+    {
+      "id": "wlin-zone3",
+      "shape": "WAVE_LINE",
+      "name": "Wave line, top crush zone -- 64-step against 16-step",
+      "seconds": 2,
+      "note": 45,
+      "braids": { "p1": 0.4, "p2": 0.95 },
+      "engine": { "harmonics": 1.0, "timbre": 0.4, "morph": 0.95, "macro": 0.5 },
+      "tolerance": { "acRmsDb": 1.0, "cents": 1.5, "spectrumDb": 1.5 }
+    },
+    {
+      "id": "wlin-color-max",
+      "shape": "WAVE_LINE",
+      "name": "Wave line, COLOR at full",
+      "seconds": 2,
+      "note": 45,
+      "braids": { "p1": 0.4, "p2": 1.0 },
+      "engine": { "harmonics": 1.0, "timbre": 0.4, "morph": 1.0, "macro": 0.5 },
+      "tolerance": { "acRmsDb": 1.0, "cents": 1.5, "spectrumDb": 1.5 }
+    },
+    {
+      "id": "wlin-scan-low",
+      "shape": "WAVE_LINE",
+      "name": "Wave line, bottom of the scan",
+      "seconds": 2,
+      "note": 45,
+      "braids": { "p1": 0.0, "p2": 0.5 },
+      "engine": { "harmonics": 1.0, "timbre": 0.0, "morph": 0.5, "macro": 0.5 },
+      "tolerance": { "acRmsDb": 1.0, "cents": 1.5, "spectrumDb": 1.5 }
+    },
+    {
+      "id": "wlin-scan-high",
+      "shape": "WAVE_LINE",
+      "name": "Wave line, last legal pair on the line",
+      "seconds": 2,
+      "note": 45,
+      "braids": { "p1": 0.98, "p2": 0.5 },
+      "engine": { "harmonics": 1.0, "timbre": 0.98, "morph": 0.5, "macro": 0.5 },
+      "tolerance": { "acRmsDb": 1.0, "cents": 1.5, "spectrumDb": 1.5 },
+      "note_": "0.98 rather than 1.0 deliberately. The smoothed scan settles a few counts under (p1 << 1), so TIMBRE 0.98 puts `scan >> 10` on 62 and Braids reads wave_line[62] and [63] -- the top of the table. Anything above 0.9844 makes the module read wave_line[64], one past a 64-entry array, and the reference would be measuring the linker's layout rather than the model."
+    },
+    {
+      "id": "wlin-scan-sweep",
+      "shape": "WAVE_LINE",
+      "name": "Wave line, sweeping the scan with the smoother and de-zipper running",
+      "seconds": 4,
+      "note": 45,
+      "braids": { "p1": [0.0, 0.98], "p2": 0.45 },
+      "engine": { "harmonics": 1.0, "timbre": [0.0, 0.98], "morph": 0.45, "macro": 0.5 },
+      "tolerance": { "acRmsDb": 1.0, "cents": 1.5, "spectrumDb": 1.5 },
+      "note_": "The case that tests the two block-rate constants at once. The scan smoother is `(3 * smoothed + (parameter_[0] << 1)) >> 2` run ONCE per render block, and the de-zipper crossfade restarts each block and ramps by `32768 / size` per internal sub-sample -- both are per-BLOCK, not per-sample. They transfer unchanged only because Braids' 24-sample block at 96 kHz and Plaits' 12-sample block at 48 kHz are both 4000 blocks per second; on any other block rate the scan would lag differently and the de-zipper would ramp at a different speed."
+    },
+    {
+      "id": "wlin-high-note",
+      "shape": "WAVE_LINE",
+      "name": "Wave line two octaves up, deep in the crush",
+      "seconds": 2,
+      "note": 72,
+      "braids": { "p1": 0.6, "p2": 0.8 },
+      "engine": { "harmonics": 1.0, "timbre": 0.6, "morph": 0.8, "macro": 0.5 },
+      "tolerance": { "acRmsDb": 1.0, "spectrumDb": 1.5 },
+      "note_": "The one case with no cents tolerance, and the reason is the estimator, not the engine. At MIDI 72 inside the 64-step/16-step crush zone this signal puts 36% of its energy above 5 kHz, and ab_compare's autocorrelation reports 523.04 Hz for the reference and 262.32 Hz for the port -- an exact factor of two, i.e. it took the peak at lag 2T on one side and lag T on the other. The two signals do not disagree about pitch: measured on an 8192-point spectrum, the 261.6 Hz component sits 81.2 dB below the fundamental on the reference and 74.4 dB below it on the port, so neither has a sub-octave to hear, and the per-band deltas are within 0.24 dB across the 95% of the energy above 320 Hz. Re-running the same estimator with its lag range floored at 400 Hz, so it cannot reach 2T at all, gives 523.04 Hz against 524.69 Hz -- +0.86 cents corrected, in tune. Widening the cents tolerance to cover 1199 cents would make the metric meaningless, so it is dropped here and kept tight everywhere else; wtbl-high-note holds the MIDI 72 pitch check for the shared phase accumulator, at +0.4 cents."
+    }
+  ]
+}

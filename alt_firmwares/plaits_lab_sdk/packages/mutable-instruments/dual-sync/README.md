@@ -77,6 +77,25 @@ knobs are. The full table, and the accepted residue between 24 and 26 kHz where
 this filter is shallower than the reference's 127-tap one, are in the header
 comment of `plaits/dsp/engine2/dual_sync_engine.h`.
 
+## The one Braids behaviour this port leaves out
+
+`AnalogOscillator::Render` re-runs `Init()` whenever the shape it is handed
+changes, and `Init()` resets the pitch to MIDI 60 after `RenderDualSync` has
+already set the played note. So the first time SQUARE_SYNC is selected, both
+oscillators render one 24-sample block at MIDI 60 and carry the resulting phase
+error for the rest of the note. That is the module, not the test harness, and
+the port does not reproduce it.
+
+It costs nothing measurable here, which is worth saying with numbers rather
+than assuming. SAW_SYNC never triggers it at all — its shape is the one the
+module's zero-initialised oscillator already holds, so nothing changes and
+`Init()` never runs. SQUARE_SYNC does trigger it, on both oscillators, but the
+slave is hard-synced to the master, so the master's error shifts the whole
+output in time and the slave's is erased at the next sync pulse. Against a
+reference build with only that line removed, SAW_SYNC comes out bit-identical
+and SQUARE_SYNC differs by 0.0011 dB of level and 0.0022 dB of spectrum. No
+tolerance in `tests/ab.json` is widened for it.
+
 ## Level
 
 Braids pins its output at 0.75 of full scale in int16; the port applies the

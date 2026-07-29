@@ -112,12 +112,50 @@
 // Blackman-Harris sinc, which reads -1.06 / -18.76 / -45.10 dB at 23 / 25 /
 // 26 kHz, so between 24 and 26 kHz this port folds back more than the
 // reference does. It lands entirely in the 20.5-24 kHz band, and the A/B
-// measures the cost: across the fourteen cases that band runs +1.74 dB at the
+// measures the cost: across the fourteen cases that band runs +1.75 dB at the
 // worst (note 72, slave alone), +0.96 dB at the next (note 72 with the master
-// still in the mix) and within -0.53..+0.19 dB everywhere else, against
+// still in the mix) and within -0.53..+0.20 dB everywhere else, against
 // 2.0-7.9% of the energy. A 63-tap halfband was tried first and put the same
 // band at +4.57 dB; going past 95 taps buys progressively less for a
 // difference confined to the top band.
+//
+// THE MODULE'S SHAPE-CHANGE re-Init, AND WHY IT COSTS THIS ENGINE NOTHING.
+// AnalogOscillator::Render calls Init() whenever the shape it has been handed
+// differs from the last one it rendered (analog_oscillator.cc:74-77), and
+// Init() resets pitch_ to 60 << 7 (analog_oscillator.h:77) AFTER
+// RenderDualSync has already called set_pitch (macro_oscillator.cc:265, :269).
+// So on the block where a shape change lands, an oscillator renders its 24
+// samples at MIDI 60 rather than at the played note, and the phase error that
+// leaves persists for the rest of the note. The offset is
+// 24 * (f60 - fnote) / 96000 cycles -- zero at MIDI 60, larger the further
+// either way from it. That is the module's own behaviour, not an artefact of
+// the reference renderer, and this port does not reproduce it.
+//
+// For these two models it costs the A/B nothing, and that is measured rather
+// than assumed. The probe is a reference build with the `pitch_ = 60 << 7`
+// line deleted from Init(), i.e. the same reference with only this quirk
+// removed:
+//   * SAW_SYNC never triggers it. base_shape is OSC_SHAPE_SAW, which is 0, and
+//     Braids' MacroOscillator is a zero-initialised file-scope object
+//     (braids.cc:59), so previous_shape_ already reads OSC_SHAPE_SAW on the
+//     first block: the shape never changes and Init() never fires. The
+//     quirk-free build renders SAW_SYNC BIT-IDENTICAL to the stock reference,
+//     at note 45 Interval 1.0 Balance 1.0 and at note 72.
+//   * SQUARE_SYNC does trigger it, on BOTH oscillators, and still costs the
+//     A/B nothing, because the slave is hard-synced to the master. The
+//     master's block-0 error shifts the whole output in time; the slave's own
+//     is erased by the next sync pulse, which puts it back on the master's
+//     grid. Against the quirk-free build the stock reference at note 45
+//     differs by 0.0011 dB AC RMS and 0.0022 dB spectrum -- while the two
+//     waveforms are a whole signal apart sample by sample, because the shift
+//     is real: it measures 16.56 samples at 48 kHz against the 16.54 the
+//     formula above predicts (0.0379 cycles of 110 Hz). At note 60 the
+//     master's term is zero by construction and only the slave's block-0
+//     error remains: 0.0001 dB.
+// So no case in tests/ab.json widens a tolerance for this. The two metrics the
+// A/B reports over a steady note -- AC RMS, and an averaged magnitude spectrum
+// -- are blind to a pure time shift, which is all the quirk leaves behind once
+// the sync relationship is accounted for.
 //
 // OUT: the master/slave crossfade at Braids' balance. AUX (mono): the
 // complementary crossfade, so it always favours the side OUT does not; the two
@@ -143,6 +181,9 @@
 //   - no DC blocker, matching the module: a hard-synced slave carries DC that
 //     moves with the interval, and Braids emits it. Measured across the five
 //     scenarios, |DC| stays under 0.028.
+//   - the shape-change re-Init above: Braids renders one 24-sample block at
+//     MIDI 60 the first time SQUARE_SYNC is selected, and the port does not.
+//     Measured cost, from the section above: 0.0022 dB of spectrum.
 //
 // LEVEL (SPEC R1). Braids' own output is pinned at 0.75 of full scale by the
 // int16 (Mix >> 2) * 3, and this port applies the same 0.75 -- but its peak is

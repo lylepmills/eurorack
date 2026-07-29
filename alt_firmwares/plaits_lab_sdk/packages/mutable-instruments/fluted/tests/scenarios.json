@@ -1,0 +1,80 @@
+[
+  {
+    "id": "hero",
+    "name": "The steady pipe, both module knobs at noon",
+    "durationSeconds": 4,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.9, 0.9],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "air",
+    "name": "From a turbulent breath to a focused one",
+    "durationSeconds": 5,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.0, 1.0],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "embouchure",
+    "name": "The jet/bore split across its whole travel",
+    "durationSeconds": 4,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.0, 1.0],
+      "timbre": [0.9, 0.9],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "overblow",
+    "name": "Blowing the pipe up into its next register",
+    "durationSeconds": 5,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.9, 0.9],
+      "morph": [0.0, 1.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "body",
+    "name": "The bore's damping, from dark to bright",
+    "durationSeconds": 4,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.9, 0.9],
+      "morph": [0.5, 0.5],
+      "macro": [0.0, 1.0]
+    }
+  },
+  {
+    "id": "tongued",
+    "name": "Retongued, where the excitation envelope is audible",
+    "durationSeconds": 4,
+    "note": 57,
+    "triggerHz": 6,
+    "controls": {
+      "harmonics": [0.4, 0.4],
+      "timbre": [0.6, 0.6],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  }
+]

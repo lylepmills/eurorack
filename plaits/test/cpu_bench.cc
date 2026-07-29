@@ -54,6 +54,10 @@
 #include "plaits/dsp/engine2/sideband_engine.h"
 #include "plaits/dsp/engine2/spectral_spiral_engine.h"
 #include "plaits/dsp/engine2/bowed_engine.h"
+#include "plaits/dsp/engine2/question_mark_engine.h"
+#include "plaits/dsp/engine2/fluted_engine.h"
+#include "plaits/dsp/engine2/wave_paraphonic_engine.h"
+#include "plaits/dsp/engine2/wave_scan_engine.h"
 #include "plaits/dsp/engine2/cymbal_engine.h"
 #include "plaits/dsp/engine2/snare_engine.h"
 #include "plaits/dsp/engine2/kick_engine.h"
@@ -179,6 +183,10 @@ int main() {
   bench<ScannedEngine>("scanned");
   bench<PulsarEngine>("pulsar");
   bench<BowedEngine>("bowed");
+  bench<QuestionMarkEngine>("question-mark");
+  bench<FlutedEngine>("fluted");
+  bench<WaveParaphonicEngine>("wave-paraphonic");
+  bench<WaveScanEngine>("wave-scan");
   bench<CymbalEngine>("cymbal");
   bench<SnareEngine>("snare");
   bench<KickEngine>("kick");

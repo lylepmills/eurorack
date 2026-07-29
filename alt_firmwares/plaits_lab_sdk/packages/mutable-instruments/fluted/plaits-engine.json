@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/fluted",
+  "catalogId": "fluted",
+  "version": "1.0.0",
+  "name": "Fluted",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "A jet flute derived from Braids' FLUT: a bore and a jet delay line sharing one loop, driven by an asymmetric cubic jet and a breath the noise multiplies. It overblows into a higher register, as the module does.",
+  "family": "Physical modelling",
+  "tags": [
+    "braids",
+    "physical",
+    "waveguide",
+    "wind"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Embouchure",
+      "description": "Braids' COLOR: splits one fixed loop length between jet and bore. Moves the embouchure without moving the pitch."
+    },
+    {
+      "id": "timbre",
+      "label": "Air",
+      "description": "Braids' TIMBRE: breath turbulence, 51% depth down to 1%. Backwards, as the module's is: low airy, high steady."
+    },
+    {
+      "id": "morph",
+      "label": "Blow",
+      "description": "Breath pressure, welded at twice the envelope in Braids. Under- or over-blow the pipe until it changes register."
+    },
+    {
+      "id": "macro",
+      "label": "Body",
+      "description": "The bore's damping, which Braids ties rigidly to the note and gives no knob. Down for a dark pipe, up for a bright one."
+    }
+  ],
+  "outputs": {
+    "main": "The bore pressure at the far end, which is what the module emits.",
+    "aux": "A second tap halfway along the same bore \u2014 level-matched to the main output but decorrelated from it, so in stereo the two channels are one standing wave heard at two points."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/fluted_engine.h",
+    "files": [
+      "plaits/dsp/engine2/fluted_engine.cc"
+    ],
+    "className": "FlutedEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": -0.8,
+    "auxGain": -0.8
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids DigitalOscillator::RenderFluted"
+}

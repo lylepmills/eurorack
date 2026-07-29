@@ -1,0 +1,96 @@
+{
+  "shape": "WAVE_PARAPHONIC",
+  "note": "p1 is Braids' TIMBRE (the wave) and p2 its COLOR (the chord), so p1 maps to the engine's TIMBRE and p2 to its HARMONICS. Fan and Spread sit at noon in every case: the fan is zero there and Spread is 1.0, which is the module's own voicing. The p1 values are deliberate -- int(p1 * 32767) >> 10 picks a slot on the 33-wave scan line and the low bits crossfade it with its successor, so p1 = 0.6876 and p1 = 0.968902 sit almost exactly ON a slot while p1 = 0.70 and 0.36 sit between two. 16 of the 33 slots have an exact counterpart in Plaits' wave bank and 17 are substituted (see the engine header), so the cases measure both: wave-pure is the exact-wave floor and wave-worst is the worst substituted slot of the 33, which is the honest cost of the austerity wave path. wave-gain-step parks p1 midway between slots 10 and 11, the widest step in the port's gain table (1.703 against 0.945) and a pair whose waves are BOTH exact matches, so it isolates the crossfade arithmetic from the wave substitution -- it is the case that catches the gain being applied to the mixed result instead of to each wave. No cents tolerance is declared except on chord-low, because ab_compare's autocorrelation f0 is not reliable on a four-voice chord -- high-note, whose chord contains a near-octave, reports a clean -1200 cents octave error while every band below 320 Hz carries under 0.1% of the energy, so the reading says nothing about the port. chord-low is the one case where it does: its chord row is {2, 4, 6} in 1/128 semitone, four voices inside 4.7 cents of the root, so the signal is periodic at the root and the estimator has a single unambiguous peak.",
+  "cases": [
+    {
+      "id": "stock-mid",
+      "name": "Stock chord, between two exactly-matched waves",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.70, "p2": 0.5},
+      "engine": {"timbre": 0.70, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "wave-pure",
+      "name": "One exact wave, essentially uncrossfaded",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.6876, "p2": 0.5},
+      "engine": {"timbre": 0.6876, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "chord-low",
+      "name": "The sub-semitone unison row",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.70, "p2": 0.0},
+      "engine": {"timbre": 0.70, "harmonics": 0.0, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "cents": 3.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "chord-mid",
+      "name": "A minor seventh, dead centre of its row",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.36, "p2": 0.2},
+      "engine": {"timbre": 0.36, "harmonics": 0.2, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "chord-high",
+      "name": "The top of the chord list",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.70, "p2": 1.0},
+      "engine": {"timbre": 0.70, "harmonics": 1.0, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "wave-low",
+      "name": "The near end of the scan line, on a substituted wave",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.0, "p2": 0.5},
+      "engine": {"timbre": 0.0, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.5, "spectrumDb": 2.0}
+    },
+    {
+      "id": "wave-high",
+      "name": "The far end of the scan line",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 1.0, "p2": 0.5},
+      "engine": {"timbre": 1.0, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "wave-gain-step",
+      "name": "Midway across the widest gain step on the scan line",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.3281, "p2": 0.5},
+      "engine": {"timbre": 0.3281, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "wave-worst",
+      "name": "The worst substituted slot of the 33",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.968902, "p2": 0.5},
+      "engine": {"timbre": 0.968902, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 3.0}
+    },
+    {
+      "id": "high-note",
+      "name": "Two octaves up, where the 48 kHz readout aliases",
+      "seconds": 2,
+      "note": 69,
+      "braids": {"p1": 0.70, "p2": 0.5},
+      "engine": {"timbre": 0.70, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.5, "spectrumDb": 3.0}
+    }
+  ]
+}

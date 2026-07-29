@@ -97,54 +97,58 @@
 //   shrinks toward single digits and the per-semitone linear interpolation
 //   spans a wider exponential step.
 //
-// WHAT THE A/B MEASURES, AND THE ONE PLACE THE REFERENCE IS WRONG. Eleven
-// cases in tests/ab.json. Across the ten at musical settings, pitch is within
-// 0.9 cents and spectrum within 0.84 dB, and AC RMS is within 0.42 dB on every
-// case that plays ONE shape. The eleventh is the narrowest pulse two octaves
-// up, where 1.2% of a cycle is under one 96 kHz sample and BOTH sides alias:
-// AC RMS +1.12 dB and spectrum 2.29 dB. It declares no cents tolerance not
-// because the f0 estimator returns nothing -- it returns a number on both
-// sides -- but because on that aliased waveform each side locks onto a
-// DIFFERENT sub-harmonic of the played 1046.5 Hz: the reference reports
-// 149.5 Hz (f0/7) and the port 262.3 Hz (f0/4), a 969-cent gap that measures
-// the estimator, not the oscillator. The case is carried because it is where
-// the port stops tracking, not because it passes easily.
+// WHAT THE A/B MEASURES. Thirteen cases in tests/ab.json. Twelve of them hold
+// AC RMS to 1.0 dB, pitch to 1.0 cent and spectrum to 1.5 dB, and measure
+// within 0.71 dB, 0.6 cents and 1.29 dB of that. The thirteenth, pulse-high,
+// is the narrowest pulse two octaves up, where 1.2% of a cycle is under one
+// 96 kHz sample and BOTH sides alias: AC RMS +1.05 dB and spectrum 2.22 dB. It
+// declares no cents tolerance not because the f0 estimator returns nothing --
+// it returns a number on both sides -- but because on that aliased waveform
+// each side locks onto a DIFFERENT sub-harmonic of the played 1046.5 Hz: the
+// reference reports 149.5 Hz (f0/7) and the port 262.3 Hz (f0/4), a 969-cent
+// gap that measures the estimator, not the oscillator. The case is carried
+// because it is where the port stops tracking, not because it passes easily.
 //
-// Every case that MIXES two shapes is out by 1.4 to 1.7 dB on AC RMS -- HIGH
-// on the five saw-square mixes and 1.71 dB LOW on the one triangle-saw mix,
-// because the sign of the cross term between the pair differs -- and it is the
-// reference renderer, not the port, that is off.
+// ONE CASE, guard-band, CARRIES A WIDENED 2.5 dB AC RMS / 1.8 dB SPECTRUM
+// TOLERANCE, and the reason is a real Braids behaviour that this port
+// deliberately does not reproduce.
 //
 // AnalogOscillator::Render calls Init() when the shape changes
 // (analog_oscillator.cc:75-78), and Init() resets pitch_ to 60 << 7
 // (analog_oscillator.h:77) AFTER RenderMorph has already called set_pitch
 // (macro_oscillator.cc:70-71). So whichever of the two oscillators changed
 // shape renders its first 24-sample block at MIDI 60 rather than the played
-// note, and the phase error that leaves never comes back.
+// note, and the phase error that leaves never comes back. previous_shape_ is
+// zero-initialised to OSC_SHAPE_SAW on the module's file-scope MacroOscillator
+// (braids.cc:59), so on a MORPH note the square or the triangle re-Inits and
+// the saw does not, and the offset is exactly 24 * (f60 - fnote) / 96000
+// cycles -- ZERO at MIDI 60, growing either side of it, and opposite in sign
+// above and below. Measured first-hand in the reference renderer, by DFT-ing
+// the fundamental of a saw-alone render against a square-alone render at the
+// same note and referencing both to MIDI 60: +0.01039 cycles at MIDI 57
+// against +0.01041 predicted, +0.03785 at 45 against +0.03791, +0.05159 at 33
+// against +0.05166, -0.06534 at 72 against -0.06541, -0.19632 at 84 against
+// -0.19622, -0.35043 at 92 against -0.34990 and -0.45839 at 96 against
+// -0.45784. Agreement to 1e-4 cycles across four octaves.
 //
-// In the module that is bounded and note-dependent: braids.cc:58 declares the
-// MacroOscillator as a zero-initialised GLOBAL, so previous_shape_ is
-// OSC_SHAPE_SAW and only the square is re-Init'd, giving an offset of
-// 24 * (f60 - fnote) / 96000 cycles. Measured against a zero-initialised
-// oscillator: 0.0378 cycles at MIDI 45 against 0.0379 predicted, 0.0516 at
-// MIDI 33 against 0.0517, and exactly zero at MIDI 60.
+// The cost, derived then measured. For a 50/50 saw-square mix the level
+// follows RMS^2 = 1/12 + 1/4 + R(delta)/2 with R(delta) = 0.5 - 2*delta over
+// delta in [0, 0.5], predicting the port reading +0.00 dB at MIDI 60, +0.29 at
+// 45, +0.40 at 33, +1.78 at 84 and +3.98 at 92; the dry mix measures +0.01,
+// +0.26, +0.33, +1.77 and +4.10. Under a note it is a fraction of a dB, which
+// is why twelve cases hold at 1.0 dB. Only guard-band sits far enough from
+// MIDI 60 for it to bite, at +2.36 dB -- the fuzz at COLOR 0.8 compressing
+// that dry +4.10. Two control cases keep the widening honest: mix-at-60 is the
+// same mix and fuzz where the module's offset is zero (-0.01 dB) and
+// rolloff-92 is a single shape at guard-band's own note and fuzz (-0.01 dB),
+// so only the mix AND the distant note together cost anything.
 //
-// render_braids_model.cc declares its MacroOscillator as a stack LOCAL. It
-// does call Init() (:278), but AnalogOscillator::Init (analog_oscillator.h:70)
-// sets neither previous_shape_ nor previous_phase_increment_, so those two stay
-// indeterminate and the offset it produces is ~0.166 cycles at EVERY note.
-// Note-INDEPENDENT
-// is the signature of a garbage phase increment rather than the module's
-// note-dependent Init bug, and the A/B confirms it: the same 50/50 saw-square
-// mix reads +1.45 / +1.39 / +1.46 dB at MIDI 45 / 33 / 57. For that mix the
-// level follows RMS^2 = 1/12 + 1/4 + (0.5 - 2*offset)/2, which gives 0.7638
-// aligned and 0.6450 at 0.167 cycles -- +1.47 dB predicted against +1.45 dB
-// measured, and the port's own 0.7606 against 0.7638 predicted.
-//
-// The port therefore runs all three shapes off ONE phase accumulator. There is
-// no canonical offset to reproduce: Braids' own depends on the played note and
-// on where TIMBRE has been, since crossing a region boundary re-Inits an
-// oscillator and re-rolls it. This should be fixed in the harness, not here.
+// (Until 2026-07 render_braids_model.cc declared its MacroOscillator as a
+// stack LOCAL rather than at file scope, leaving previous_shape_ and
+// previous_phase_increment_ indeterminate and producing a note-INDEPENDENT
+// ~0.166-cycle offset of its own. Every morph figure measured against that
+// renderer is void, including the "1.4 to 1.7 dB on every mixed-shape case"
+// reading and the 2.0 dB tolerance it justified. Nothing above rests on it.)
 //
 // OUT: the fuzzed voice. AUX (mono): the same morph oscillator DRY -- no
 // filter, no fuzz -- which is the analog waveform the model is built on and
@@ -158,6 +162,15 @@
 // collapses.
 //
 // Declared deviations from Braids:
+//   - all three shapes run off ONE phase accumulator, so a crossfade mixes two
+//     shapes that are exactly in phase. Braids runs two AnalogOscillators and
+//     re-Inits whichever one changed shape, which leaves them
+//     24 * (f60 - fnote) / 96000 cycles apart (see above). The port does not
+//     reproduce that: there is no canonical value to copy, since Braids' own
+//     depends on the played note AND on where TIMBRE has been -- crossing a
+//     region boundary re-Inits an oscillator and re-rolls it. This is the one
+//     deviation the A/B pays for, and only far from MIDI 60: guard-band, at
+//     MIDI 92, is the single case whose tolerance is widened for it.
 //   - the decimator is a 31-tap Kaiser halfband, not Braids' native 96 kHz
 //     output. Measured against the reference renderer's own 127-tap decimator
 //     it is within 0.1 dB to 18 kHz, -0.65 dB at 20 kHz and -2.3 dB at 22 kHz,
