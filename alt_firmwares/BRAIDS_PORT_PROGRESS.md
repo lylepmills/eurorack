@@ -232,9 +232,17 @@ missing-submodule guard.
 3. ~~**`engineStereoBytes` has no entry for `toy`**~~ — **DONE 2026-07-28.**
    Swept with `flash_sweep.py --stereo`; the delta is −144 B (toy's stereo path
    compiles SMALLER), recorded on the website as `0`. See the measured-stereo
-   section above for the object-level proof and the controls. This closes the
-   FLASH question only; the ten Pattern-A ports' stereo BUTTON was item 1, and
-   is also now done — they get one from the derived `previewOnlyStereoEngine`,
+   section above for the object-level proof and the controls.
+
+   Recorded as `0`, not `−144` (`c1c6d975`), because the table's contract is a
+   non-negative marginal (`plaitsFlashBudget.test.ts` asserts it), and banking a
+   saving that sits inside the model's own residuals would only make the meter
+   read permissively. **The premise this item was written on was backwards** —
+   a missing entry already meant 0, and the true value is negative, so the meter
+   was never under-reading a toy-stereo palette.
+
+   This closes the FLASH question only; the ten Pattern-A ports' stereo BUTTON
+   was item 1, and is also now done — they get one from `previewOnlyStereoEngine`,
    and per item 1 they must NOT be added to `alwaysStereoEngineIds`, which no
    longer gates any button.
 
