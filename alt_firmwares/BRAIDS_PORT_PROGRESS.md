@@ -92,8 +92,62 @@ fine — a local rehearsal of the exact deploy-ordering hazard. And the image
 has an ENTRYPOINT, so the sweep needs `--entrypoint python3` or the command
 becomes arguments to the HTTP server and sits idle forever.
 
-Still not done: real `arm-none-eabi-size` flash measurements (§5 below), and
-the whole website side.
+**Open work, in the order it should be picked up:**
+
+1. **Stereo preview control is gated on the wrong condition** (small, visible).
+   `PlaitsEditor` lines ~900 and ~964 gate it on `stereoToggleableEngineIds`,
+   which means "can be switched off per build", when the intended question is
+   "does a stereo clip exist" — what `hasStereoPreview()` answers, currently
+   exported but referenced nowhere outside `previewPlayer.tsx`. The two agreed
+   for every pre-existing engine because the toggle set happened to cover them.
+   **It also affects five STOCK engines** — pulsar, attractor, spectral-spiral,
+   phase-distortion, string-machine — whose stereo clips have been unplayable
+   all along. Read `previewPlayer.tsx` and both call sites properly first; this
+   file has been misread twice from greps alone.
+
+2. **Braids 14-segment icons.** Agreed: option D (cycling) for placed slots,
+   option A (`Z**F`, `**FM`, `SUB*`, `**X3`) as the static fallback for the
+   library list and catalog card — TWO renderers, since the library has no slot
+   state to read. Corrections wanted on the prototype: the display has an
+   ITALIC SLANT (shear transform) and the characters are too WIDE relative to
+   their height. Keep Braids' custom glyphs rather than substituting letters:
+   the 0x88 / 0x89 / 0x8C / 0x8E bytes are waveform characters, drawable on the
+   same 14 segments but absent from any character table, so they need
+   hand-mapping from the module's own display. They appear in `saw-comb` (no
+   letters at all), two of `triple`'s members, and both `sub-oscillator`
+   arrows. Also wanted: call out in each blurb where a Braids model is an
+   ancestor of a Plaits one. Only two are genuine ancestry — `raw-fm` to
+   `two-op-fm`, `vowel-fof` to `speech`. `triple` is OVERLAP with
+   `chords`/`swarm`, a different claim that should read differently.
+
+3. **`engineStereoBytes` has no entry for `toy`**, the one Pattern-B engine
+   here, so its stereo delta is uncosted. Needs a sweep pass.
+
+4. **`render_previews.cc` should read the catalog** rather than carry its own
+   hardcoded list. Design already worked out: `render-previews.mjs` reads the
+   catalog plus `plaits-engine-sources.generated.json` and emits
+   `preview_engine_list.generated.h` into the build dir, picked up with `-I`;
+   the `.cc` expands one `PREVIEW_ENGINE_LIST(X)` macro. `stereo_capable()` can
+   be probed on the engine, so the separate stereo list disappears too. An
+   attempt was reverted after the includes were stripped without the generated
+   header landing — do it with the file actually open.
+
+5. **AUX designs are all stereo-split shaped.** Braids is MONO and has no AUX,
+   so every AUX here is an invention of this port, chosen as a decorrelated
+   partner for the L/R pair (bridge vs neck pickup, a filter model vs its
+   complement, a notch vs its mirror). Most Plaits engines instead give AUX a
+   genuinely DIFFERENT voice. Worth exploring whether any of the eleven could
+   carry a meaningful distinct AUX for parity. Open design question, not a
+   defect.
+
+6. **`fluted` is still gated** on the §3.11 mode-tracking measurement, to be run
+   BEFORE writing code. If MORPH below noon does not track f0, drop the engine
+   rather than patch around it.
+
+7. **Deploy** — builder image from the branch head FIRST, then the site. Engine
+   digests are the builder's allowlist. The site already surfaces "Builder
+   update required" on its own when they disagree.
+
 
 ---
 
@@ -309,7 +363,19 @@ path that can drive an increment past 1.0 needs that increment clamped.
 M4, so a divide-heavy engine reads optimistic. `ring-mod` carries two divides
 per sub-sample; treat its 69 % as a floor, not a number.
 
-### 3.9 A 15th registration step
+
+### 3.14 AUX is INVENTED here, not ported
+
+Braids is mono. It has no AUX at all, so every second output in this port is a
+design decision rather than something inherited — and calling these engines
+"already stereo" is wrong in a way that misleads. What is true is narrower:
+each engine's OUT and AUX were chosen to be a decorrelated PAIR (bridge vs neck
+pickup, a filter model vs its complement, a notch vs its mirror), which is why
+routing them L/R costs nothing extra. Pattern A vs Pattern B is a statement
+about COST, not about inheritance. Note also that most Plaits engines give AUX
+a genuinely different VOICE rather than a stereo partner — see open item 5.
+
+### 3.15 A 15th registration step
 
 The spec's 14-step per-engine checklist misses
 `alt_firmwares/plaits_lab_builder/test_generate_engine_config.py`, which pins
