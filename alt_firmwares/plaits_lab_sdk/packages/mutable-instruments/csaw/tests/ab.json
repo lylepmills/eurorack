@@ -1,0 +1,69 @@
+{
+  "shape": "CSAW",
+  "note": "MORPH and MACRO sit at 0.5 in every case: those are the two axes the port adds beyond Braids, and 0.5 is the stock position for both (bend 0 is Braids' straight ramp, and ApplyMacro returns the stock tilt at noon). Moving them would compare a sound Braids cannot make.",
+  "cases": [
+    {
+      "id": "stock",
+      "name": "Stock notch, mid width",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 0.5,
+        "cents": 10.0,
+        "spectrumDb": 1.0
+      }
+    },
+    {
+      "id": "deep-notch",
+      "name": "Deep notch against a wide cycle",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.8,
+        "p2": 0.1
+      },
+      "engine": {
+        "timbre": 0.8,
+        "harmonics": 0.1,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 0.5,
+        "cents": 10.0,
+        "spectrumDb": 1.0
+      }
+    },
+    {
+      "id": "narrow-high",
+      "name": "Narrow notch two octaves up",
+      "seconds": 2,
+      "note": 69,
+      "braids": {
+        "p1": 0.15,
+        "p2": 0.7
+      },
+      "engine": {
+        "timbre": 0.15,
+        "harmonics": 0.7,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 0.5,
+        "cents": 10.0,
+        "spectrumDb": 1.0
+      }
+    }
+  ]
+}

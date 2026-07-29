@@ -1,0 +1,60 @@
+{
+  "shape": "SINE_TRIANGLE",
+  "note": "Braids' TIMBRE is the fold depth and its COLOR is the crossfade, so p1 maps to the engine's TIMBRE and p2 to its HARMONICS. MORPH and MACRO sit at noon in every case: Symmetry is zero there and Drive is 1.0, which is the module exactly. The blend cases exist because reading the crossfade off the wrong parameter renders plausibly and is only caught by measuring it.",
+  "cases": [
+    {
+      "id": "stock-mid",
+      "name": "Half fold, both folders evenly",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.5, "cents": 10.0, "spectrumDb": 3.0}
+    },
+    {
+      "id": "shallow",
+      "name": "Barely folded",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.1, "p2": 0.5},
+      "engine": {"timbre": 0.1, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.5, "cents": 10.0, "spectrumDb": 3.0}
+    },
+    {
+      "id": "deep",
+      "name": "Fully folded",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.95, "p2": 0.5},
+      "engine": {"timbre": 0.95, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.5, "cents": 10.0, "spectrumDb": 3.0}
+    },
+    {
+      "id": "blend-sine",
+      "name": "The sine folder alone",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.7, "p2": 0.0},
+      "engine": {"timbre": 0.7, "harmonics": 0.0, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.5, "cents": 10.0, "spectrumDb": 3.0}
+    },
+    {
+      "id": "blend-triangle",
+      "name": "The triangle folder alone",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.7, "p2": 1.0},
+      "engine": {"timbre": 0.7, "harmonics": 1.0, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.5, "cents": 10.0, "spectrumDb": 3.0}
+    },
+    {
+      "id": "guard-band",
+      "name": "Inside the depth guard, above its knee",
+      "seconds": 2,
+      "note": 92,
+      "braids": {"p1": 0.8, "p2": 0.5},
+      "engine": {"timbre": 0.8, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 2.0, "spectrumDb": 4.0}
+    }
+  ]
+}

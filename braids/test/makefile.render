@@ -1,0 +1,34 @@
+# Host build for the Braids reference renderer used by the Plaits Palette port.
+#
+#   make -f braids/test/makefile.render      (run from the repo root)
+#
+# Kept separate from braids/test/makefile so the upstream test target stays
+# byte-identical to Emilie's.
+
+TARGET    = braids/test/render_braids_model
+BUILD_DIR = build/render_braids_model/
+
+SOURCES = braids/test/render_braids_model.cc \
+	braids/analog_oscillator.cc \
+	braids/digital_oscillator.cc \
+	braids/macro_oscillator.cc \
+	braids/resources.cc \
+	stmlib/utils/random.cc
+
+OBJS = $(patsubst %.cc,$(BUILD_DIR)%.o,$(SOURCES))
+
+CXXFLAGS = -DTEST -O2 -g -Wall -Wno-unused-variable -I.
+
+all: $(TARGET)
+
+$(BUILD_DIR)%.o: %.cc
+	@mkdir -p $(dir $@)
+	g++ -c $(CXXFLAGS) $< -o $@
+
+$(TARGET): $(OBJS)
+	g++ -o $(TARGET) $(OBJS)
+
+clean:
+	rm -rf $(BUILD_DIR) $(TARGET)
+
+.PHONY: all clean

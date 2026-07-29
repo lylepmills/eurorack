@@ -1,0 +1,282 @@
+{
+  "shape": "MORPH",
+  "note": "Braids' TIMBRE is the shape walk (macro_oscillator.cc:74-92) and its COLOR drives BOTH the low-pass cutoff (:99) and the fuzz mix (:107), so p1 maps to the engine's TIMBRE and p2 to its HARMONICS. MORPH and MACRO sit at noon in every case: Tone is zero offset there and Drive is 1.0, which is the module exactly. There is a case in each of the three regions and one in the middle of each crossfade, because the boundaries at :74 and :80 are the only places the model changes what it is doing.",
+  "moduleQuirk": "THE ONE DEVIATION THAT COSTS A WIDENED TOLERANCE, and it is a real Braids behaviour rather than a harness artefact. AnalogOscillator::Render calls Init() when the shape changes (analog_oscillator.cc:75-78) and Init() resets pitch_ to 60 << 7 (analog_oscillator.h:77) AFTER RenderMorph has already called set_pitch (:70-71). So whichever of the two oscillators changed shape renders its first 24-sample block at MIDI 60 rather than at the played note, and the phase error that leaves never comes back. previous_shape_ is zero-initialised to OSC_SHAPE_SAW on the module's file-scope MacroOscillator (braids.cc:59), so on a MORPH note it is the square or the triangle that re-Inits and the saw that does not, and the resulting offset is exactly 24 * (f60 - fnote) / 96000 cycles: ZERO at MIDI 60, growing in either direction from there, and opposite in sign either side of it. Measured first-hand in the reference renderer by DFT-ing the fundamental of a saw-alone render (p1 = 0.3333) against a square-alone render (p1 = 0.6666) at the same note and referencing both to MIDI 60: +0.01039 cycles at MIDI 57 against +0.01041 predicted, +0.03785 at 45 against +0.03791, +0.05159 at 33 against +0.05166, -0.06534 at 72 against -0.06541, -0.19632 at 84 against -0.19622, -0.35043 at 92 against -0.34990, -0.45839 at 96 against -0.45784. Agreement to 1e-4 cycles across four octaves, with the sign flip through MIDI 60.\n\nHISTORY, because every morph number measured before 2026-07 was taken against a wrong reference. braids/test/render_braids_model.cc used to declare its MacroOscillator as a stack LOCAL in main(), where the module declares it at file scope (braids.cc:59) and therefore gets it zero-initialised. AnalogOscillator::Init sets neither previous_shape_ nor previous_phase_increment_, so both stayed indeterminate and the renderer produced a note-INDEPENDENT offset of roughly 0.166 cycles instead of the module's note-dependent one. The object is static now. The old ~0.166-cycle figure, the '1.4 to 1.7 dB on every mixed-shape case' reading and the 2.0 dB tolerance those justified are all void, and nothing in this file or in morph_engine.h still rests on them.\n\nWHAT THE PORT DOES INSTEAD. It runs all three shapes off ONE phase accumulator and does not reproduce the offset, because Braids has no canonical offset to copy: its own depends on the played note AND on where TIMBRE has been, since crossing a region boundary re-Inits an oscillator and re-rolls it. That is a declared deviation, listed with the others in morph_engine.h -- not a defect, and no longer something to fix in the harness.\n\nWHAT IT COSTS, derived and then measured. For a 50/50 saw-square mix the level follows RMS^2 = 1/12 + 1/4 + R(delta)/2 with R(delta) = 0.5 - 2*delta over delta in [0, 0.5], which predicts the port reading +0.00 dB at MIDI 60, +0.08 at 57, +0.29 at 45, +0.40 at 33, +0.52 at 72, +1.00 at 78, +1.78 at 84, +3.98 at 92 and +6.67 at 96. The dry mix (COLOR 0) measures +0.01 / +0.07 / +0.26 / +0.33 / +0.50 / +0.98 / +1.77 / +4.10 / +7.15 against those. Under a note the cost is a fraction of a dB, so every case here is held at 1.0 dB AC RMS; only guard-band, at MIDI 92, sits far enough from 60 for it to bite, and it alone carries a widened 2.5 dB AC RMS and 1.8 dB spectrum tolerance -- measured +2.36 dB and 1.50 dB, the fuzz at COLOR 0.8 compressing the dry +4.10 down to +2.36.\n\nTWO CONTROL CASES PIN THAT CLAIM so the widened tolerance stays falsifiable. mix-at-60 is guard-band's own 50/50 mix and own fuzz setting at the note where the module's offset is exactly zero: -0.01 dB, 0.11 dB spectrum. rolloff-92 is a SINGLE shape at guard-band's own note and own fuzz setting, so it exercises the pitch guard at :108-113 with nothing to be out of phase with: -0.01 dB, 0.10 dB spectrum. Neither the mix alone nor the note alone widens anything; only the two together do.\n\npulse-high is unrelated to all of the above and is a single-shape case. It is the narrowest pulse two octaves up, where 1.2% of a cycle is under one 96 kHz sample and both sides alias. It declares no cents tolerance not because the estimator returns nothing -- it returns a number on both sides -- but because each side locks onto a DIFFERENT sub-harmonic of the played 1046.5 Hz (reference 149.5 Hz = f0/7, port 262.3 Hz = f0/4, a 969-cent gap that measures the estimator, not the oscillator); and 2.5 dB of spectrum because that is what was measured.",
+  "cases": [
+    {
+      "id": "stock-mid",
+      "name": "Mid shape, mid fuzz -- the 50/50 saw-square mix",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "shape-triangle",
+      "name": "Bottom of the shape walk, the triangle alone",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.0,
+        "p2": 0.3
+      },
+      "engine": {
+        "timbre": 0.0,
+        "harmonics": 0.3,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "shape-tri-saw",
+      "name": "Middle of the first region, triangle against saw",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.1667,
+        "p2": 0.3
+      },
+      "engine": {
+        "timbre": 0.1667,
+        "harmonics": 0.3,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "shape-saw",
+      "name": "The saw alone, at the top of the first region",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.3333,
+        "p2": 0.3
+      },
+      "engine": {
+        "timbre": 0.3333,
+        "harmonics": 0.3,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "shape-pulse",
+      "name": "Top of the shape walk, the narrow pulse",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 1.0,
+        "p2": 0.3
+      },
+      "engine": {
+        "timbre": 1.0,
+        "harmonics": 0.3,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "fuzz-dry",
+      "name": "Fuzz fully down: no filter, no overdrive",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.0
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "fuzz-wet",
+      "name": "Fuzz fully up: the filter lands on the fundamental",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 1.0
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 1.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "dry-low",
+      "name": "The raw mix an octave lower, where the module's own offset is 0.052 cycles",
+      "seconds": 3,
+      "note": 33,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.0
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "dry-high",
+      "name": "The raw mix an octave higher, where it falls to 0.010 cycles",
+      "seconds": 3,
+      "note": 57,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.0
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "guard-band",
+      "name": "Above MIDI 80, inside the fuzz roll-off -- the one widened case, see moduleQuirk",
+      "rationale": "The only case whose AC RMS tolerance is not 1.0 dB, and the reason is the module's shape-change re-Init, not the port. At MIDI 92 Braids' own two oscillators sit 0.350 cycles apart (measured -0.35043 against the -0.34990 that 24*(f60-fnote)/96000 predicts) and this port keeps its shapes phase-locked. The dry version of this mix reads +4.10 dB against the +3.98 dB that RMS^2 = 1/12 + 1/4 + (0.5 - 2*delta)/2 predicts; the fuzz at COLOR 0.8 compresses that to the +2.36 dB and 1.50 dB spectrum measured here. mix-at-60 and rolloff-92 below hold the same mix and the same note respectively at 1.0 dB, so it is only the two together that widen this one.",
+      "seconds": 2,
+      "note": 92,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.8
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.8,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 2.5,
+        "cents": 1.0,
+        "spectrumDb": 1.8
+      }
+    },
+    {
+      "id": "mix-at-60",
+      "name": "Control for guard-band: the same mix and fuzz at the note where the module's offset is zero",
+      "rationale": "Identical to guard-band except for the note. At MIDI 60 the re-Init lands the oscillator on its own played pitch, so Braids' offset is exactly zero and the port's phase-locked mix IS the module's mix. If a future change made the mix itself wrong, this case catches it at 1.0 dB where guard-band's widened tolerance no longer can.",
+      "seconds": 3,
+      "note": 60,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.8
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.8,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "rolloff-92",
+      "name": "Control for guard-band: guard-band's note and fuzz on a single shape",
+      "rationale": "Identical to guard-band except that TIMBRE 0 plays the triangle alone, so there is no second oscillator to be out of phase with. It exercises the fuzz roll-off at macro_oscillator.cc:108-113 -- which subtracts 2048 of 65535 per semitone above MIDI 80 and is well into its range here -- at the full 1.0 dB. Together with mix-at-60 it isolates guard-band's residual to the phase offset and nothing else at that note.",
+      "seconds": 2,
+      "note": 92,
+      "braids": {
+        "p1": 0.0,
+        "p2": 0.8
+      },
+      "engine": {
+        "timbre": 0.0,
+        "harmonics": 0.8,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "pulse-high",
+      "name": "The narrow pulse two octaves up, where both sides alias",
+      "seconds": 2,
+      "note": 84,
+      "braids": {
+        "p1": 1.0,
+        "p2": 0.3
+      },
+      "engine": {
+        "timbre": 1.0,
+        "harmonics": 0.3,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.5,
+        "spectrumDb": 2.5
+      }
+    }
+  ]
+}

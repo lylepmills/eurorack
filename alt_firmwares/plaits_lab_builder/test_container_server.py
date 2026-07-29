@@ -91,5 +91,37 @@ class StereoSelectionTest(unittest.TestCase):
         )
 
 
+class StereoMacroRegistrationTest(unittest.TestCase):
+    """STEREO_MACROS and the makefile's PLAITS_STEREO_MODELS must agree.
+
+    They are two hand-maintained lists of the same fact -- which engines have a
+    gated stereo render path. Drift is SILENT and asymmetric: a macro the
+    makefile knows and this map does not can never be switched off (the engine
+    always pays for its stereo branch), while a macro this map emits and the
+    makefile does not is a make variable nothing consumes. Neither breaks a
+    build, so only a test catches it. Adding four Braids ports to both lists at
+    once is what motivated this.
+    """
+
+    def makefile_macros(self) -> set[str]:
+        makefile = (
+            Path(__file__).resolve().parents[2] / "plaits" / "makefile"
+        ).read_text()
+        start = makefile.index("PLAITS_STEREO_MODELS =")
+        # A backslash-continued make variable: take lines until one does not
+        # continue.
+        lines = []
+        for line in makefile[start:].splitlines():
+            lines.append(line)
+            if not line.rstrip().endswith("\\"):
+                break
+        body = " ".join(lines).replace("\\", "")
+        body = body.split("=", 1)[1]
+        return {pair.split(":", 1)[0] for pair in body.split()}
+
+    def test_every_makefile_macro_is_mapped_from_a_catalog_id(self) -> None:
+        self.assertEqual(self.makefile_macros(), set(ALL_STEREO_MACROS))
+
+
 if __name__ == "__main__":
     unittest.main()

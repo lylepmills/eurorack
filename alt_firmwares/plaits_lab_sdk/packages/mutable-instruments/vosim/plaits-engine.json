@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/vosim",
+  "catalogId": "vosim",
+  "version": "1.0.0",
+  "name": "VOSIM",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "Braids' VOSM: two sine formants under a bell window the played note restarts. Both formant pitches are absolute and set independently, reaching pairs Granular Formant's ratio control cannot, and the 2:1 balance is a knob.",
+  "family": "Vocal",
+  "tags": [
+    "braids",
+    "vosim",
+    "formant",
+    "grain"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Formant 2",
+      "description": "The second formant's pitch, also absolute and set independently of the first."
+    },
+    {
+      "id": "timbre",
+      "label": "Formant 1",
+      "description": "The first formant's pitch, absolute rather than tracking the note."
+    },
+    {
+      "id": "morph",
+      "label": "Window",
+      "description": "Sets how much of each cycle the bell spends opening: a narrow spike, the module's one sixteenth, or half."
+    },
+    {
+      "id": "macro",
+      "label": "Balance",
+      "description": "Shifts weight between the two formants, from formant 2 alone to formant 1 alone. The detent is the module's fixed 2:1."
+    }
+  ],
+  "outputs": {
+    "main": "The grain train at the set balance.",
+    "aux": "The same grain train with the balance mirrored, favouring the formant MAIN does not."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/vosim_engine.h",
+    "files": [
+      "plaits/dsp/engine2/vosim_engine.cc"
+    ],
+    "className": "VosimEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": -0.8,
+    "auxGain": -0.8
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids DigitalOscillator::RenderVosim"
+}

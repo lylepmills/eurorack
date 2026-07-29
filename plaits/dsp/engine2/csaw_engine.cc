@@ -73,15 +73,20 @@ void CSawEngine::Render(
 
   const float frequency = NoteToFrequency(parameters.note);
 
-  // HARMONICS is Braids' aux_parameter_, the notch depth. AUX takes the
-  // mirrored knob position so the two outputs are never the same waveform.
+  const bool stereo = PLAITS_STEREO_CSAW && parameters.stereo;
+
+  // HARMONICS is Braids' aux_parameter_, the notch depth. In STEREO the right
+  // channel takes the mirrored knob position, so the two sides are never the
+  // same waveform -- except at the knob centre, where the mirror is its own
+  // fixed point. That collapse is why the mono AUX is a different waveform
+  // rather than the same one moved.
   const float target_depth = kCSawDepthOffset + \
       kCSawDepthRange * parameters.harmonics;
   const float target_depth_aux = kCSawDepthOffset + \
       kCSawDepthRange * (1.0f - parameters.harmonics);
 
-  // The DC term travels with the depth, so AUX mirrors it too and both
-  // outputs stay inside the same bounds.
+  // The DC term travels with the depth, so the mirrored channel mirrors it too
+  // and both outputs stay inside the same bounds.
   const float dc = kCSawDcShift * (1.0f - parameters.harmonics);
   const float dc_aux = kCSawDcShift * parameters.harmonics;
 
@@ -118,7 +123,6 @@ void CSawEngine::Render(
 
     // Slope of the tilted plateau, and of the segment at both of its ends.
     const float plateau_slope = tilt * (pw - depth_) / pw;
-    const float plateau_slope_aux = tilt * (pw - depth_aux_) / pw;
     const float slope_in = BendSegmentSlope(0.0f, bend);
     const float slope_out = BendSegmentSlope(1.0f, bend);
 
@@ -135,18 +139,29 @@ void CSawEngine::Render(
       const float next_int = NextIntegratedBlepSample(t);
 
       const float step = (pw - depth_) * (1.0f - tilt);
-      const float step_aux = (pw - depth_aux_) * (1.0f - tilt);
       this_sample += step * this_blep;
       next_sample += step * next_blep;
-      this_sample_aux += step_aux * this_blep;
-      next_sample_aux += step_aux * next_blep;
 
       const float slope_step = (slope_in - plateau_slope) * f;
-      const float slope_step_aux = (slope_in - plateau_slope_aux) * f;
       this_sample += slope_step * this_int;
       next_sample += slope_step * next_int;
-      this_sample_aux += slope_step_aux * this_int;
-      next_sample_aux += slope_step_aux * next_int;
+
+      if (stereo) {
+        const float step_aux = (pw - depth_aux_) * (1.0f - tilt);
+        this_sample_aux += step_aux * this_blep;
+        next_sample_aux += step_aux * next_blep;
+
+        const float plateau_slope_aux = tilt * (pw - depth_aux_) / pw;
+        const float slope_in_aux = BendSegmentSlope(0.0f, bend + kCSawStereoBend);
+        const float slope_step_aux = (slope_in_aux - plateau_slope_aux) * f;
+        this_sample_aux += slope_step_aux * this_int;
+        next_sample_aux += slope_step_aux * next_int;
+      } else {
+        // The pulse rises here. It is piecewise constant, so it carries VALUE
+        // blep only -- no slope discontinuity, hence no integrated term.
+        this_sample_aux += kCSawPulseStep * this_blep;
+        next_sample_aux += kCSawPulseStep * next_blep;
+      }
 
       high_ = true;
     } else if (phase_ >= 1.0f) {
@@ -161,23 +176,31 @@ void CSawEngine::Render(
       // Braids latches the depth here, inside the wrap, and uses the NEW
       // value as the step's destination.
       depth_ = target_depth;
-      depth_aux_ = target_depth_aux;
 
       const float step = depth_ - 1.0f;
-      const float step_aux = depth_aux_ - 1.0f;
       this_sample += step * this_blep;
       next_sample += step * next_blep;
-      this_sample_aux += step_aux * this_blep;
-      next_sample_aux += step_aux * next_blep;
 
       const float new_plateau_slope = tilt * (pw - depth_) / pw;
-      const float new_plateau_slope_aux = tilt * (pw - depth_aux_) / pw;
       const float slope_step = (new_plateau_slope - slope_out) * f;
-      const float slope_step_aux = (new_plateau_slope_aux - slope_out) * f;
       this_sample += slope_step * this_int;
       next_sample += slope_step * next_int;
-      this_sample_aux += slope_step_aux * this_int;
-      next_sample_aux += slope_step_aux * next_int;
+
+      if (stereo) {
+        depth_aux_ = target_depth_aux;
+        const float step_aux = depth_aux_ - 1.0f;
+        this_sample_aux += step_aux * this_blep;
+        next_sample_aux += step_aux * next_blep;
+
+        const float new_plateau_slope_aux = tilt * (pw - depth_aux_) / pw;
+        const float slope_out_aux = BendSegmentSlope(1.0f, bend + kCSawStereoBend);
+        const float slope_step_aux = (new_plateau_slope_aux - slope_out_aux) * f;
+        this_sample_aux += slope_step_aux * this_int;
+        next_sample_aux += slope_step_aux * next_int;
+      } else {
+        this_sample_aux -= kCSawPulseStep * this_blep;
+        next_sample_aux -= kCSawPulseStep * next_blep;
+      }
 
       high_ = false;
     }
@@ -188,18 +211,30 @@ void CSawEngine::Render(
     if (phase_ < pw) {
       const float ramp = phase_ / pw;
       naive = depth_ + tilt * (pw - depth_) * ramp;
-      naive_aux = depth_aux_ + tilt * (pw - depth_aux_) * ramp;
+      naive_aux = stereo
+          ? depth_aux_ + tilt * (pw - depth_aux_) * ramp
+          : -1.0f;
     } else {
       const float u = (phase_ - pw) / (1.0f - pw);
       naive = pw + (1.0f - pw) * BendSegment(u, bend);
-      naive_aux = naive;
+      // The stereo channel bends its saw segment by a constant offset from
+      // OUT's; that is what stops the pair collapsing (see kCSawStereoBend).
+      naive_aux = stereo
+          ? pw + (1.0f - pw) * BendSegment(u, bend + kCSawStereoBend)
+          : 1.0f;
     }
     next_sample += naive;
     next_sample_aux += naive_aux;
     previous_pw_ = pw;
 
     out[i] = kCSawMakeUp * (this_sample - 0.5f + dc);
-    aux[i] = kCSawMakeUp * (this_sample_aux - 0.5f + dc_aux);
+    aux[i] = stereo
+        ? kCSawMakeUp * (this_sample_aux - 0.5f + dc_aux)
+        // The pulse's mean travels with its duty, so it comes off here rather
+        // than through a blocker: -1 for the plateau's `pw` of the cycle and
+        // +1 for the rest averages to exactly 1 - 2*pw, and TIMBRE moves pw
+        // far too fast for a 7 Hz one-pole to follow without pumping.
+        : kCSawPulseGain * (this_sample_aux - (1.0f - 2.0f * pw));
   }
 
   next_sample_ = next_sample;

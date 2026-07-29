@@ -81,6 +81,20 @@
 #define PLAITS_BUILD_HOLD_ON_TRIGGER_OPTION 0
 #endif
 
+// Include the CV calibration procedure (off by default). The alt firmware has
+// shipped without it since 2023: calibration DATA lives in its own flash chunk
+// (settings.h, tag CALI, at 0x08004000) which the audio bootloader never erases
+// — it only writes from 0x08008000 — so a module calibrated under any other
+// Plaits firmware keeps tracking correctly here, and the procedure itself is
+// dead weight for almost everyone. It matters for a module that has never been
+// calibrated (a DIY build) or whose settings flash was erased over SWD, so a
+// recipe can opt back in and pay the flash for it. Entered by holding the RIGHT
+// button while powering the module up — the left button is the bootloader's
+// firmware-update gesture, so the right one is the free half of that idiom.
+#ifndef PLAITS_BUILD_ENABLE_CALIBRATION
+#define PLAITS_BUILD_ENABLE_CALIBRATION 0
+#endif
+
 // The id a locally built (non-hosted) firmware stamps into saved settings. It
 // must equal what the builder mints for an all-default recipe, or switching
 // between a local build and a hosted default build resets options each way.

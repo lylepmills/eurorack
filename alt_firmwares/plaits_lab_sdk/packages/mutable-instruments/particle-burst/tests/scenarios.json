@@ -1,0 +1,54 @@
+[
+  {
+    "id": "hero",
+    "name": "Density sweep, as the module has it",
+    "durationSeconds": 4,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.3, 0.3],
+      "timbre": [0.0, 1.0],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "scatter",
+    "name": "COLOR jitter, fixed chord to wide spray",
+    "durationSeconds": 4,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.0, 1.0],
+      "timbre": [0.5, 0.5],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "chord-width",
+    "name": "MORPH: unison through the module's voicing to a wide chord",
+    "durationSeconds": 4,
+    "note": 40,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.15, 0.15],
+      "timbre": [0.6, 0.6],
+      "morph": [0.0, 1.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "decay",
+    "name": "MACRO: a tick through the module's length to a bloom",
+    "durationSeconds": 3,
+    "note": 48,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.2, 0.2],
+      "timbre": [0.35, 0.35],
+      "morph": [0.5, 0.5],
+      "macro": [0.0, 1.0]
+    }
+  }
+]

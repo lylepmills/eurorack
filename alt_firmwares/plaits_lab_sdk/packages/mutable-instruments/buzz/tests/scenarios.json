@@ -1,0 +1,54 @@
+[
+  {
+    "id": "hero",
+    "name": "The single-knob sweep, as the module has it",
+    "durationSeconds": 4,
+    "note": 48,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.0, 0.0],
+      "timbre": [0.0, 1.0],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "detune",
+    "name": "Detune sweeping open at a fixed harmonic count",
+    "durationSeconds": 4,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.0, 1.0],
+      "timbre": [0.7, 0.7],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "spread",
+    "name": "MORPH splitting the two voices' harmonic content",
+    "durationSeconds": 4,
+    "note": 42,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.6, 0.6],
+      "timbre": [0.8, 0.8],
+      "morph": [0.0, 1.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "reach",
+    "name": "MACRO widening the detune to a full octave apart",
+    "durationSeconds": 3,
+    "note": 48,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [1.0, 1.0],
+      "timbre": [0.6, 0.6],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 1.0]
+    }
+  }
+]

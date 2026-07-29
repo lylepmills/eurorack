@@ -110,6 +110,19 @@ class Ui {
   void Navigate(int button);
   uint32_t BankToColor(int bank);
 
+  // CV calibration (PLAITS_BUILD_ENABLE_CALIBRATION builds only). Declared
+  // unconditionally, and defined + called only under that gate: ui.h
+  // deliberately does NOT include build_config.h, since every unit that reaches
+  // it must join the hosted builder's recipe-config scope (plaits/makefile,
+  // check_config_scope.py) — and a class whose shape depends on a macro that
+  // only some units see would be an ODR trap. So the gate lives wholly in
+  // ui.cc, and calibration state is carried OUTSIDE UiMode (see
+  // calibration_step_) so a build without it keeps the mode switches, and their
+  // generated code, exactly as they were.
+  void StartCalibration();
+  void CalibrateC1();
+  void CalibrateC3();
+
   bool OptionInert(int index) const;
   void AdvanceOptionIndex();
 
@@ -140,6 +153,20 @@ class Ui {
   NormalizationProbe normalization_probe_;
   PotController pots_[POTS_ADC_CHANNEL_LAST];
   float pitch_lp_;
+
+  // Calibration state. Unconditional (a few bytes of RAM, no flash) for the
+  // same reason as the methods above. calibration_step_ is 0 when the module is
+  // not calibrating, 1 while waiting for the low note and 2 for the high one —
+  // a separate variable rather than two more UiMode values, so that a build
+  // without calibration compiles the mode switches unchanged (adding
+  // enumerators would also trip -Wswitch under -Werror).
+  uint8_t calibration_step_;
+  float pitch_lp_calibration_;
+  float cv_c1_;
+  // Calibration is entered by holding a button through power-up, so that press
+  // is still down when the procedure starts. Steps only accept presses once
+  // both buttons have been seen up.
+  bool calibration_armed_;
 
   Settings* settings_;
 

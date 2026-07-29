@@ -53,7 +53,17 @@ void SubOscillatorEngine::Render(
   const float waveshape = 1.0f - 0.5f * parameters.harmonics;
 
   // TIMBRE is the main oscillator's shape parameter, sweeping the pulse from
-  // symmetric to thin.
+  // symmetric to thin. Two declared deviations live on this line, both DSP
+  // defects reported rather than fixed -- see the header for the measurements:
+  //  * the coefficient. Braids' low fraction is
+  //    (32768 - min(p1*32767, 32000)) / 65536: slope ~0.5, floor 0.01172. The
+  //    0.48/0.02 pair below diverges from it multiplicatively as the pulse
+  //    narrows, worst (+4.4 dB) at TIMBRE 0.977, not at 1.0.
+  //  * the effect is confined to the SQUARE_SUB half of HARMONICS' travel: at
+  //    HARMONICS=1.0 (SAW_SUB) `waveshape` above is exactly 0.5,
+  //    VariableShapeOscillator's pure-saw point, where pw drives nothing.
+  // Note also that Render() re-clamps this to [2f, 1-2f], so above ~MIDI 61
+  // the FREQUENCY sets the floor rather than TIMBRE; Braids has no such term.
   const float pw = 0.5f - 0.48f * parameters.timbre;
 
   // MORPH is Braids' COLOR: which side of centre picks the sub octave, and
@@ -87,9 +97,12 @@ void SubOscillatorEngine::Render(
     // TIMBRE the main duty reaches a few percent and the offset approaches
     // full scale. Braids leaves it, and so did the spec, but it thumps the
     // LPG at exactly those settings and the SDK's audio-health gate rejects
-    // it outright. The corner is ~7.6 Hz, an order of magnitude below the
-    // lowest sub this engine can produce, so the pulse shape is untouched
-    // wherever anyone would actually listen.
+    // it outright. The corner is ~7.6 Hz -- which is NOT an order of magnitude
+    // below the lowest sub this engine can produce. The two-octave sub reaches
+    // 7.6 Hz at note 21 and clears the corner by only 3.6x at note 45; at
+    // note 24 it sits at 8.18 Hz and the blocker takes 2.7 dB and 43 degrees
+    // off it (measured -1.11 dB AC RMS against Braids). See the header's
+    // declared deviations, including the per-trigger DC step Reset() causes.
     dc_out_ = mixed - dc_in_ + kSubOscillatorDcPole * dc_out_;
     dc_in_ = mixed;
     out[i] = dc_out_;

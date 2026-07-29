@@ -1,0 +1,199 @@
+{
+  "shape": "TRIPLE_SAW",
+  "note": "MAPPING, read off braids/macro_oscillator.cc:178-222. RenderTriple calls analog_oscillator_[0..2].set_parameter(0) at lines 198-200, so NEITHER Braids knob touches pulse width or slope -- both knobs are pure interval controls, and every waveform is the symmetric one. Lines 203-209 loop i = 0,1 and hand analog_oscillator_[i+1] the detune read from parameter_[i]: parameter_[0] (TIMBRE, ab.json p1) detunes the SECOND voice, parameter_[1] (COLOR, p2) detunes the THIRD. The port crosses those onto its macros -- triple_engine.cc:80 takes frequency[1] from `harmonics`, :82 takes frequency[2] from `timbre` -- so p1 maps to the engine's HARMONICS and p2 to its TIMBRE. That crossing is inaudible by construction (voices 1 and 2 are the same shape at the same 21/64 gain, macro_oscillator.cc:219, so exchanging them is a relabelling; square-p1-min and square-p2-min below render bit-identical numbers, which is the proof). It is therefore NOT what these cases test. What they test is that each knob reaches BOTH ends of the ladder and that neither is dead: a knob wired to the wrong voice hides, a knob wired to nothing does not.\n\nMORPH is the merge axis and is not a Braids parameter, so each case pins it to the Braids shape it renders rather than parking it at noon. triple_engine.cc:86-91 gives waveshape = 1 - morph/0.75, and VariableShapeOscillator (variable_shape_oscillator.h:137-138) reads waveshape 1.0 as square, 0.5 as saw and 0.0 as triangle, so morph = 0.0 / 0.375 / 0.75 is SQUARE / SAW / TRIANGLE exactly; morph = 1.0 puts sine_amount at 1.0 for SINE. Each case carries its own `shape` key to match.\n\nMACRO is the one axis the port adds, and it sits at 0.5 in every case. triple_engine.cc:95 is ApplyMacro(0.5, 0.5, 0.95, macro) -- minimum EQUALS stock -- so the whole lower half of the knob, detent included, is pw = 0.5, which is exactly what Braids' set_parameter(0) produces (a 50% square at analog_oscillator.cc:206, a symmetric triangle at :424-452, and nothing at all for saw or sine, neither of which reads parameter_). Anything above 0.5 is a sound the module cannot make.\n\nWHY THE -exact CASES EXIST. Braids' ladder crossfade ends in an INTEGER floor -- macro_oscillator.cc:207 `detune_1 + ((detune_2 - detune_1) * xfade >> 16)`, whose result is a whole number of 1/128 semitones. triple_engine.cc:40 evaluates the same expression in float and does not floor, so the port's detune runs up to 0.769 cents sharp of the module's. It is worst at exactly the parameter a centred knob produces: at p = 16383 Braids returns -1/128 semitone = -0.781 cents on BOTH upper voices while the port returns -0.012 cents. That is a slow chorus in the module against a hard unison in the port, and the beat rate scales with pitch (0.05 Hz at 110 Hz, 0.40 Hz at 880 Hz), so it dominates every knob-centre measurement and dominates square-high outright. saw-unison-exact and square-high-exact re-run the same two sounds one rung up, at p = 16399, where i1 = i2 = 32 and both implementations return exactly zero; the pair-vs-pair difference is the measurement of the defect and the control on it. Do not delete them.",
+  "cases": [
+    {
+      "id": "square-unison",
+      "name": "Both interval knobs centred, square",
+      "shape": "TRIPLE_SQUARE",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.5, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "cents": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "square-p1-min",
+      "name": "TIMBRE at zero: second voice two octaves down",
+      "note-on-tolerance": "No cents tolerance. ab_compare.autocorrelation_f0 returns its f_max clamp (2000.0 Hz) on BOTH sides of this case -- the mix carries a 27.5 Hz voice under two 110 Hz ones and the estimator's first-strong-local-maximum search never reaches the real period. Because both sides clamp identically the raw delta is 0.00, which the 4.61-cent kCorrectedSampleRate correction then reports as a confident -4.6 cents. A zero-padded FFT peak on the same pair reads +3.97 cents raw, i.e. -0.6 corrected, so the port is in tune; the metric, not the engine, is what fails here.",
+      "shape": "TRIPLE_SQUARE",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.0, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.0, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "square-p1-max",
+      "name": "TIMBRE at full: second voice two octaves up",
+      "shape": "TRIPLE_SQUARE",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 1.0, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 1.0, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "cents": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "square-p2-min",
+      "name": "COLOR at zero: third voice two octaves down",
+      "note-on-tolerance": "Cents omitted for the same reason as square-p1-min. This case also exists to prove the p1/p2 crossing is unmeasurable: it renders numbers identical to square-p1-min in every band, because voices 1 and 2 are interchangeable.",
+      "shape": "TRIPLE_SQUARE",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.0},
+      "engine": {"timbre": 0.0, "harmonics": 0.5, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "square-p2-max",
+      "name": "COLOR at full: third voice two octaves up",
+      "shape": "TRIPLE_SQUARE",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 1.0},
+      "engine": {"timbre": 1.0, "harmonics": 0.5, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "cents": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "square-high",
+      "name": "Unison square three octaves up, at the knob centre",
+      "note-on-tolerance": "Guide tolerances, deliberately. This case FAILS on AC RMS at +1.24 dB and it is meant to: the difference is the dropped integer floor in triple_engine.cc:40, not a property of the port worth blessing. square-high-exact is the same sound one ladder rung up, where both sides agree bit-exactly, and it reads +0.01 dB. Restoring the floor is what turns this green; widening the tolerance would only bury it.",
+      "shape": "TRIPLE_SQUARE",
+      "seconds": 2,
+      "note": 81,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.5, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "cents": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "square-high-exact",
+      "name": "The same square one rung up, where the ladder is bit-exact",
+      "note-on-tolerance": "The control on square-high, and the only place the square's edge rendering is measured without the ladder confound: polyBLEP at 48 kHz against Braids' 96 kHz BLEP decimated by render_braids_model's 127-tap filter. Everything carrying energy lands within 0.3 dB except the top two bands (-1.59, -1.54 dB, 17% of energy between them), which is the decimator difference the guide describes rather than a defect.",
+      "shape": "TRIPLE_SQUARE",
+      "seconds": 2,
+      "note": 81,
+      "braids": {"p1": 0.5005, "p2": 0.5005},
+      "engine": {"timbre": 0.5005, "harmonics": 0.5005, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "cents": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "saw-unison",
+      "name": "Both interval knobs centred, saw",
+      "shape": "TRIPLE_SAW",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.5, "morph": 0.375, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "cents": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "saw-unison-exact",
+      "name": "The same saw one rung up, where the ladder is bit-exact",
+      "note-on-tolerance": "The control on saw-unison, and the tightest case in the suite: AC RMS -0.01 dB, spectrum 0.24 dB, and a Goertzel sweep of harmonics 1 through 32 agrees with the module to within 0.05 dB across five octaves. Against it, saw-unison at the knob centre reads +0.41 dB, 0.84 dB and +1.68 dB in the 320-640 Hz band. The gap between the two is the ladder floor and nothing else.",
+      "shape": "TRIPLE_SAW",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5005, "p2": 0.5005},
+      "engine": {"timbre": 0.5005, "harmonics": 0.5005, "morph": 0.375, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "cents": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "saw-wide",
+      "name": "Both knobs at opposite ends, four octaves apart",
+      "note-on-tolerance": "acRmsDb widened to 1.5 dB, and cents omitted. The level figure is -1.18 dB, and the cause is NOT the ladder (knob 0.0 and knob 1.0 both land on a ladder rung with xfade 0, where the port and the module agree to the bit). It is that the three voices sit at exact octave ratios, so their harmonics COINCIDE and the sum depends on the relative phase the voices settle into -- and the port's voices acquire different permanent startup offsets, because VariableShapeOscillator::Init seeds slave_frequency_ = 0.01 and the first block's ParameterInterpolator ramps from there to the true frequency. Over one 24-sample block that is a lasting +39.0 deg for the 27.5 Hz voice against +31.9 deg for the 110 Hz ones -- about 124 deg of error where they meet at 110 Hz. Braids ramps its own phase_increment_ from a different seed and settles elsewhere. It only shows at octave detunes: measured -0.03 dB at a three-semitone detune, -0.71 with one voice at -24, -0.64 with one at +24, -0.82 with both at -24, -1.18 here with one at each end. The SHAPE still matches -- 0.78 dB overall, no band past 1.4 dB except the top two -- which is why this is a level tolerance and not a spectral one. Cents are omitted because the mix carries a 27.5 Hz voice, the material on which ab_compare's f0 estimator was measured to clamp (see square-p1-min).",
+      "shape": "TRIPLE_SAW",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.0, "p2": 1.0},
+      "engine": {"timbre": 1.0, "harmonics": 0.0, "morph": 0.375, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.5, "spectrumDb": 1.5}
+    },
+    {
+      "id": "saw-fine",
+      "name": "The fine rungs either side of centre, a few cents apart",
+      "note-on-tolerance": "The only case that exercises the six near-centre rungs (indices 29-35, +/-0.1875 to +/-0.03125 semitones) where the ladder stops being musical and becomes a detune. p1 = 0.53 lands mid-crossfade at +5.47 cents in the module against +5.74 in the port; p2 = 0.47 lands on a rung, where both give -6.25 exactly. cents widened to 2.0 for that residual.",
+      "shape": "TRIPLE_SAW",
+      "seconds": 4,
+      "note": 45,
+      "braids": {"p1": 0.53, "p2": 0.47},
+      "engine": {"timbre": 0.47, "harmonics": 0.53, "morph": 0.375, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "cents": 2.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "saw-sweep",
+      "name": "TIMBRE swept the whole ladder against a centred COLOR",
+      "note-on-tolerance": "Sweeps all 65 rungs in one render, so a wrong entry or a wrong index shift anywhere in the ladder shows up even though no single case sits on it. Cents are NOT omitted here, contrary to an earlier revision of this note: the swept voice is a moving target, but the root and the centred COLOR voice both sit at 110 Hz and the estimator locks on them cleanly on both sides -- measured 109.98 Hz on the module against 110.29 Hz on the port, +4.87 cents raw, +0.26 corrected. Since this is the only case that touches every rung, dropping its pitch tolerance would leave a wrong ladder ENTRY detectable only through the spectrum. Guide tolerance applies.",
+      "shape": "TRIPLE_SAW",
+      "seconds": 6,
+      "note": 45,
+      "braids": {"p1": [0.0, 1.0], "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": [0.0, 1.0], "morph": 0.375, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "cents": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "saw-low-dc",
+      "name": "A0 with the interval knob on its bottom rung",
+      "note-on-tolerance": "Guide tolerances, and this case FAILS on AC RMS at -1.16 dB deliberately. It is the only case in the suite that reaches the port's ONE added filter, the DC blocker at triple_engine.cc:133-143. Every other case sits at note 45 or 81, where its 7.6 Hz corner is inaudible and the header's claim that the corner is 'well below anything three detuned voices produce' holds. It does not hold here: note 21 is A0, and p1 = 0.0 puts the second voice two octaves under it at 6.875 Hz, essentially ON the corner. Measured on the kept WAVs, energy below 20 Hz falls from 12.73% of the module's total to 8.48% of the port's, which is -2.9 dB absolute on that region once the out_gain is undone, and that alone accounts for the whole -1.16 dB headline: every printed band from 20 Hz up is port-LOUDER (+0.30 to +1.35 dB), so the missing energy is all beneath the lowest band. Nothing in Braids does this -- RenderTriple has no filter of any kind -- and the blocker is not earning its keep at MACRO 0.5, where all three waveforms are symmetric and carry no DC to block. Widening this tolerance would bury a fixable port choice; cents are omitted because ab_compare's f0 estimator clamps on a 6.875 Hz voice exactly as it does on square-p1-min.",
+      "shape": "TRIPLE_SAW",
+      "seconds": 3,
+      "note": 21,
+      "braids": {"p1": 0.0, "p2": 0.5005},
+      "engine": {"timbre": 0.5005, "harmonics": 0.0, "morph": 0.375, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "saw-trigger",
+      "name": "Re-triggered twice a second, on the bit-exact rung",
+      "note-on-tolerance": "The only case that exercises the TRIGGER input, which the shipped manual describes as 'Realigns all three oscillator phases'. Braids has NO trigger response here at all: MacroOscillator::Strike (braids/macro_oscillator.h:80-81) forwards only to digital_oscillator_, and RenderTriple runs entirely on analog_oscillator_[0..2], so the reference side renders identically with and without --trigger-hz. The port's Reset() therefore adds a behaviour the module does not have, and this case measures its cost rather than assuming it is free. Held at the p = 16399 rung so the ladder floor cannot contaminate the reading. Headline metrics are clean -- AC RMS -0.00 dB, +0.1 cents, 0.26 dB spectrum -- but the 20-40 Hz band reads +6.04 dB against +0.04 dB on the untriggered saw-unison-exact, which is the phase discontinuity plus the DC blocker's step response, twice a second. It carries 0.1% of the energy, so it is deliberately left inside tolerance and recorded here rather than failed; what it must not do is go unmeasured. Note also that Reset() reaches VariableShapeOscillator::Init(), which reseeds slave_frequency_ to 0.01 -- so every trigger re-applies the first-block frequency ramp that saw-wide's note quantifies at +39.0 deg on a 27.5 Hz voice against +31.9 deg on a 110 Hz one. A trigger realigns the phases and then immediately skews them, which is more than the manual sentence claims.",
+      "shape": "TRIPLE_SAW",
+      "seconds": 3,
+      "note": 45,
+      "triggerHz": 2.0,
+      "braids": {"p1": 0.5005, "p2": 0.5005},
+      "engine": {"timbre": 0.5005, "harmonics": 0.5005, "morph": 0.375, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "cents": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "triangle-unison",
+      "name": "Both interval knobs centred, triangle",
+      "shape": "TRIPLE_TRIANGLE",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.5, "morph": 0.75, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "cents": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "triangle-inharmonic",
+      "name": "A fifth up against a major seventh down, triangle",
+      "note-on-tolerance": "No cents: the mix is inharmonic (an exact +7 semitone rung against a mid-crossfade -14.4 semitones) and ab_compare's autocorrelation clamps to f_max on it, the same failure as square-p1-min. Deliberately off the octave grid, which is why it is also the cleanest case in the suite -- 0.05 dB spectrum, -0.05 dB level -- and the counter-example that isolates saw-wide's level offset to coincident harmonics.",
+      "shape": "TRIPLE_TRIANGLE",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.6563, "p2": 0.2},
+      "engine": {"timbre": 0.2, "harmonics": 0.6563, "morph": 0.75, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "sine-unison",
+      "name": "Both interval knobs centred, sine",
+      "note-on-tolerance": "cents widened to 2.5. Three near-unison sines make one amplitude-modulated tone, and ab_compare's autocorrelation peak wanders on that material: it reads +1.9 cents here while a zero-padded FFT peak on the same pair reads +0.40. The +0.40 is real and is the ladder floor again -- the module's two upper voices are 0.781 cents flat at this knob position and drag the composite peak with them. Everything else about this case is exact (0.05 dB spectrum, +0.23 dB level), which also confirms the port's -cos-vs-sin phase convention costs nothing through a linear mix.",
+      "shape": "TRIPLE_SINE",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.5, "morph": 1.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "cents": 2.5, "spectrumDb": 1.5}
+    },
+    {
+      "id": "sine-spread",
+      "name": "Both knobs at opposite ends, sine",
+      "shape": "TRIPLE_SINE",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 1.0, "p2": 0.0},
+      "engine": {"timbre": 0.0, "harmonics": 1.0, "morph": 1.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "cents": 1.0, "spectrumDb": 1.5}
+    }
+  ]
+}

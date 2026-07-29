@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/particle-burst",
+  "catalogId": "particle-burst",
+  "version": "1.0.0",
+  "name": "Particle Burst",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "Braids' PRTC: three fixed-interval resonant filters, a chord above the note, re-struck by a shared decaying noise burst at a random rate. Plaits' particle-noise scatters six particles around one pitch instead -- a cloud, not a chord.",
+  "family": "Noise",
+  "tags": [
+    "braids",
+    "particle",
+    "resonator",
+    "noise",
+    "percussive"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Scatter",
+      "description": "Jitters each filter around its own fixed interval; the lowest one jitters about three quarters as far as the other two."
+    },
+    {
+      "id": "timbre",
+      "label": "Density",
+      "description": "Sets how often a burst fires, from a few sparse ticks a second to a dense rattle."
+    },
+    {
+      "id": "morph",
+      "label": "Chord width",
+      "description": "Scales the three filters' fixed intervals from unison, through the module's own voicing, to double the spread."
+    },
+    {
+      "id": "macro",
+      "label": "Decay",
+      "description": "Reshapes the burst envelope from a short tick, through the module's fixed length, to a long bloom."
+    }
+  ],
+  "outputs": {
+    "main": "The three resonant filters, summed.",
+    "aux": "Mono: the raw decaying-noise burst before filtering. Stereo: a second, fully independent filter bank and RNG stream, for genuinely decorrelated left and right bursts."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/particle_burst_engine.h",
+    "files": [
+      "plaits/dsp/engine2/particle_burst_engine.cc"
+    ],
+    "className": "ParticleBurstEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": 1.0,
+    "auxGain": 1.0
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids DigitalOscillator::RenderParticleNoise (PRTC)"
+}

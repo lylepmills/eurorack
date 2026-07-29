@@ -60,6 +60,29 @@
 #include "plaits/dsp/engine2/six_op_engine.h"
 #include "plaits/dsp/engine2/spectral_spiral_engine.h"
 #include "plaits/dsp/engine2/bowed_engine.h"
+#include "plaits/dsp/engine2/question_mark_engine.h"
+#include "plaits/dsp/engine2/fluted_engine.h"
+#include "plaits/dsp/engine2/wave_paraphonic_engine.h"
+#include "plaits/dsp/engine2/wave_scan_engine.h"
+#include "plaits/dsp/engine2/cymbal_engine.h"
+#include "plaits/dsp/engine2/snare_engine.h"
+#include "plaits/dsp/engine2/kick_engine.h"
+#include "plaits/dsp/engine2/struck_drum_engine.h"
+#include "plaits/dsp/engine2/struck_bell_engine.h"
+#include "plaits/dsp/engine2/blown_engine.h"
+#include "plaits/dsp/engine2/plucked_engine.h"
+#include "plaits/dsp/engine2/vosim_engine.h"
+#include "plaits/dsp/engine2/harmonics_engine.h"
+#include "plaits/dsp/engine2/vowel_engine.h"
+#include "plaits/dsp/engine2/saw_swarm_engine.h"
+#include "plaits/dsp/engine2/saw_square_engine.h"
+#include "plaits/dsp/engine2/particle_burst_engine.h"
+#include "plaits/dsp/engine2/noise_bank_engine.h"
+#include "plaits/dsp/engine2/morph_engine.h"
+#include "plaits/dsp/engine2/granular_cloud_engine.h"
+#include "plaits/dsp/engine2/dual_sync_engine.h"
+#include "plaits/dsp/engine2/buzz_engine.h"
+#include "plaits/dsp/engine2/fold_engine.h"
 #include "plaits/dsp/engine2/csaw_engine.h"
 #include "plaits/dsp/engine2/ring_mod_engine.h"
 #include "plaits/dsp/engine2/sub_oscillator_engine.h"
@@ -2161,7 +2184,30 @@ void TestExperimentalEngines() {
   RenderAuditionEngine<CSawEngine>("14-csaw.wav");
   RenderAuditionEngine<RingModEngine>("15-ring-mod.wav");
   RenderAuditionEngine<BowedEngine>("16-bowed.wav");
+  RenderAuditionEngine<QuestionMarkEngine>("51-question-mark.wav");
+  RenderAuditionEngine<FlutedEngine>("50-fluted.wav");
+  RenderAuditionEngine<WaveParaphonicEngine>("49-wave-paraphonic.wav");
+  RenderAuditionEngine<WaveScanEngine>("48-wave-scan.wav");
+  RenderAuditionEngine<CymbalEngine>("47-cymbal.wav");
+  RenderAuditionEngine<SnareEngine>("46-snare.wav");
+  RenderAuditionEngine<KickEngine>("45-kick.wav");
+  RenderAuditionEngine<StruckDrumEngine>("44-struck-drum.wav");
+  RenderAuditionEngine<StruckBellEngine>("43-struck-bell.wav");
+  RenderAuditionEngine<BlownEngine>("42-blown.wav");
+  RenderAuditionEngine<PluckedEngine>("41-plucked.wav");
+  RenderAuditionEngine<VosimEngine>("40-vosim.wav");
+  RenderAuditionEngine<HarmonicsEngine>("39-harmonics.wav");
+  RenderAuditionEngine<VowelEngine>("38-vowel.wav");
+  RenderAuditionEngine<SawSwarmEngine>("37-saw-swarm.wav");
+  RenderAuditionEngine<SawSquareEngine>("36-saw-square.wav");
+  RenderAuditionEngine<ParticleBurstEngine>("35-particle-burst.wav");
+  RenderAuditionEngine<NoiseBankEngine>("34-noise-bank.wav");
+  RenderAuditionEngine<MorphEngine>("33-morph.wav");
+  RenderAuditionEngine<GranularCloudEngine>("32-granular-cloud.wav");
+  RenderAuditionEngine<DualSyncEngine>("31-dual-sync.wav");
+  RenderAuditionEngine<BuzzEngine>("30-buzz.wav");
   RenderAuditionEngine<SubOscillatorEngine>("17-sub-oscillator.wav");
+  RenderAuditionEngine<FoldEngine>("29-fold.wav");
   ReportAuditionDcFailures();
   printf("Validating Glisson extremes...\n");
   fflush(stdout);
@@ -2203,6 +2249,29 @@ void TestExperimentalEngines() {
   ValidateExperimentalEngineExtremes<CSawEngine>();
   ValidateExperimentalEngineExtremes<RingModEngine>();
   ValidateExperimentalEngineExtremes<BowedEngine>();
+  ValidateExperimentalEngineExtremes<QuestionMarkEngine>();
+  ValidateExperimentalEngineExtremes<FlutedEngine>();
+  ValidateExperimentalEngineExtremes<WaveParaphonicEngine>();
+  ValidateExperimentalEngineExtremes<WaveScanEngine>();
+  ValidateExperimentalEngineExtremes<CymbalEngine>();
+  ValidateExperimentalEngineExtremes<SnareEngine>();
+  ValidateExperimentalEngineExtremes<KickEngine>();
+  ValidateExperimentalEngineExtremes<StruckDrumEngine>();
+  ValidateExperimentalEngineExtremes<StruckBellEngine>();
+  ValidateExperimentalEngineExtremes<BlownEngine>();
+  ValidateExperimentalEngineExtremes<PluckedEngine>();
+  ValidateExperimentalEngineExtremes<VosimEngine>();
+  ValidateExperimentalEngineExtremes<HarmonicsEngine>();
+  ValidateExperimentalEngineExtremes<VowelEngine>();
+  ValidateExperimentalEngineExtremes<SawSwarmEngine>();
+  ValidateExperimentalEngineExtremes<SawSquareEngine>();
+  ValidateExperimentalEngineExtremes<ParticleBurstEngine>();
+  ValidateExperimentalEngineExtremes<NoiseBankEngine>();
+  ValidateExperimentalEngineExtremes<MorphEngine>();
+  ValidateExperimentalEngineExtremes<GranularCloudEngine>();
+  ValidateExperimentalEngineExtremes<DualSyncEngine>();
+  ValidateExperimentalEngineExtremes<BuzzEngine>();
+  ValidateExperimentalEngineExtremes<FoldEngine>();
   ValidateExperimentalEngineExtremes<SubOscillatorEngine>();
   ValidateExperimentalControlResponse<LoopbackEngine>("Loopback");
   ValidateExperimentalControlResponse<LockstepEngine>("Lockstep");
@@ -2230,6 +2299,29 @@ void TestExperimentalEngines() {
   ValidateExperimentalControlResponse<CSawEngine>("CSaw");
   ValidateExperimentalControlResponse<RingModEngine>("Ring Mod");
   ValidateExperimentalControlResponse<BowedEngine>("Bowed");
+  ValidateExperimentalControlResponse<QuestionMarkEngine>("Question Mark");
+  ValidateExperimentalControlResponse<FlutedEngine>("Fluted");
+  ValidateExperimentalControlResponse<WaveParaphonicEngine>("Wave Paraphonic");
+  ValidateExperimentalControlResponse<WaveScanEngine>("Wave Scan");
+  ValidateExperimentalControlResponse<CymbalEngine>("Cymbal");
+  ValidateExperimentalControlResponse<SnareEngine>("Snare");
+  ValidateExperimentalControlResponse<KickEngine>("Kick");
+  ValidateExperimentalControlResponse<StruckDrumEngine>("Struck Drum");
+  ValidateExperimentalControlResponse<StruckBellEngine>("Struck Bell");
+  ValidateExperimentalControlResponse<BlownEngine>("Blown");
+  ValidateExperimentalControlResponse<PluckedEngine>("Plucked");
+  ValidateExperimentalControlResponse<VosimEngine>("VOSIM");
+  ValidateExperimentalControlResponse<HarmonicsEngine>("Harmonics");
+  ValidateExperimentalControlResponse<VowelEngine>("Vowel");
+  ValidateExperimentalControlResponse<SawSwarmEngine>("Saw Swarm");
+  ValidateExperimentalControlResponse<SawSquareEngine>("Saw Square");
+  ValidateExperimentalControlResponse<ParticleBurstEngine>("Particle Burst");
+  ValidateExperimentalControlResponse<NoiseBankEngine>("Noise Bank");
+  ValidateExperimentalControlResponse<MorphEngine>("Morph");
+  ValidateExperimentalControlResponse<GranularCloudEngine>("Granular Cloud");
+  ValidateExperimentalControlResponse<DualSyncEngine>("Dual Sync");
+  ValidateExperimentalControlResponse<BuzzEngine>("Buzz");
+  ValidateExperimentalControlResponse<FoldEngine>("Fold");
   ValidateExperimentalControlResponse<SubOscillatorEngine>("Sub Osc");
   printf("Validating stock fourth-macro midpoint...\n");
   fflush(stdout);

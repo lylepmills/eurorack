@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/saw-square",
+  "catalogId": "saw-square",
+  "version": "1.0.0",
+  "name": "Saw Square",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "Braids' variable saw and variable square, driven from one shared TIMBRE knob that opens one as it closes the other, crossfaded by COLOR. Virtual Analog runs the same pair of waveforms independently; this is the coupled, single-knob version.",
+  "family": "Subtractive",
+  "tags": [
+    "braids",
+    "saw",
+    "square",
+    "oscillator"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Blend",
+      "description": "Crossfades from the saw to the attenuated square."
+    },
+    {
+      "id": "timbre",
+      "label": "Shape",
+      "description": "Opens the saw's pulse width as it narrows the square's, or the reverse -- one knob, two waveforms."
+    },
+    {
+      "id": "morph",
+      "label": "Phase",
+      "description": "Offsets the square's phase against the saw's -- the module's two oscillators are always locked together."
+    },
+    {
+      "id": "macro",
+      "label": "Square Level",
+      "description": "Braids fixes the square at 58% of full level; this sweeps that attenuation from silent to unattenuated."
+    }
+  ],
+  "outputs": {
+    "main": "The crossfaded pair.",
+    "aux": "The complementary crossfade, always favouring the waveform MAIN does not."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/saw_square_engine.h",
+    "files": [
+      "plaits/dsp/engine2/saw_square_engine.cc"
+    ],
+    "className": "SawSquareEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": 0.8,
+    "auxGain": 0.8
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids MacroOscillator::RenderSawSquare over AnalogOscillator::RenderVariableSaw and RenderSquare"
+}

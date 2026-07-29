@@ -1,0 +1,54 @@
+[
+  {
+    "id": "hero",
+    "name": "Formant 2 swept over formant 1, as the module has it",
+    "durationSeconds": 4,
+    "note": 40,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.45, 0.85],
+      "timbre": [0.6, 0.6],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "formant-one",
+    "name": "Formant 1 across its whole range",
+    "durationSeconds": 3,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.0, 1.0],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "window",
+    "name": "The bell from a near-impulse attack to a symmetric one",
+    "durationSeconds": 3,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.7, 0.7],
+      "timbre": [0.58, 0.58],
+      "morph": [0.0, 1.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "balance",
+    "name": "From formant 1 alone to formant 2 alone, through the module's 2:1",
+    "durationSeconds": 3,
+    "note": 43,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.78, 0.78],
+      "timbre": [0.55, 0.55],
+      "morph": [0.5, 0.5],
+      "macro": [0.0, 1.0]
+    }
+  }
+]

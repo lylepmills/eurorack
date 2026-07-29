@@ -1,0 +1,54 @@
+[
+  {
+    "id": "hero",
+    "name": "The single-knob sweep, as the module has it",
+    "durationSeconds": 4,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.0, 1.0],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "blend",
+    "name": "Both folders alone, at a fixed depth",
+    "durationSeconds": 3,
+    "note": 48,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.0, 1.0],
+      "timbre": [0.7, 0.7],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "symmetry",
+    "name": "Symmetry through the even harmonics",
+    "durationSeconds": 3,
+    "note": 40,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.6, 0.6],
+      "morph": [0.0, 1.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "drive-high",
+    "name": "Past the module's depth, two octaves up",
+    "durationSeconds": 2,
+    "note": 72,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.9, 0.9],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 1.0]
+    }
+  }
+]

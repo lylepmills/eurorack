@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/fold",
+  "catalogId": "fold",
+  "version": "1.0.0",
+  "name": "Fold",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "Braids' two wavefolders crossfaded against each other, the sine one saturating where the triangle one keeps folding. The model Plaits' waveshaping engine descends from, with the second curve it left behind.",
+  "family": "Waveshaping",
+  "tags": [
+    "braids",
+    "wavefolder",
+    "waveshaping",
+    "harmonics"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Blend",
+      "description": "Crossfades from the sine folder, which saturates, to the triangle folder, which keeps folding."
+    },
+    {
+      "id": "timbre",
+      "label": "Fold",
+      "description": "Sets how hard both folders are driven, from a barely bent wave to the module's full depth."
+    },
+    {
+      "id": "morph",
+      "label": "Symmetry",
+      "description": "Offsets the wave into one half of the folder, adding the even harmonics a symmetric source cannot make."
+    },
+    {
+      "id": "macro",
+      "label": "Drive",
+      "description": "Pushes the folders past the depth the module stops at, or holds them back below it."
+    }
+  ],
+  "outputs": {
+    "main": "The crossfaded pair.",
+    "aux": "The complementary crossfade, always favouring the folder MAIN does not."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/fold_engine.h",
+    "files": [
+      "plaits/dsp/engine2/fold_engine.cc"
+    ],
+    "className": "FoldEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": -0.7,
+    "auxGain": -0.7
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids MacroOscillator::RenderSineTriangle over AnalogOscillator::RenderSineFold and RenderTriangleFold"
+}

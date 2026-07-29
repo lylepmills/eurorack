@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/dual-sync",
+  "catalogId": "dual-sync",
+  "version": "1.0.0",
+  "name": "Dual Sync",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "Braids' two hard-sync models in one engine: a master oscillator syncs a slave swept up to 64 semitones above it, crossfaded against it. Virtual Analog's sync square shares one knob with pulse width and gain, and has no balance.",
+  "family": "Subtractive",
+  "tags": [
+    "braids",
+    "sync",
+    "oscillator",
+    "analog"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Balance",
+      "description": "Crossfades from the master oscillator alone to the synced slave alone."
+    },
+    {
+      "id": "timbre",
+      "label": "Interval",
+      "description": "Sets how far above the master the synced slave sits, from unison to just under 64 semitones."
+    },
+    {
+      "id": "morph",
+      "label": "Shape",
+      "description": "Runs from the module's sync square to its sync saw, and through the blend between them that the module has no path to."
+    },
+    {
+      "id": "macro",
+      "label": "Reset",
+      "description": "Moves where in its own cycle the slave restarts on each sync pulse; the module always restarts it at the beginning."
+    }
+  ],
+  "outputs": {
+    "main": "The master and slave crossfaded at Balance.",
+    "aux": "The complementary crossfade, always favouring the side MAIN does not."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/dual_sync_engine.h",
+    "files": [
+      "plaits/dsp/engine2/dual_sync_engine.cc"
+    ],
+    "className": "DualSyncEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": -0.9,
+    "auxGain": -0.9
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids MacroOscillator::RenderDualSync over AnalogOscillator::RenderSquare and RenderSaw"
+}

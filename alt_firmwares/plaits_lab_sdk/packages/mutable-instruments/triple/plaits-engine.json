@@ -9,7 +9,7 @@
   "author": "Emilie Gillet",
   "origin": "Mutable Instruments",
   "license": "MIT",
-  "description": "Three oscillators with two continuously swept interval knobs, morphing together through square, saw, triangle and sine.",
+  "description": "Three oscillators with two continuously swept interval knobs, morphing together through square, saw, triangle and sine. It overlaps Chords and Swarm in territory, not lineage: intervals you sweep rather than a table you author.",
   "family": "Polyphonic",
   "tags": [
     "braids",

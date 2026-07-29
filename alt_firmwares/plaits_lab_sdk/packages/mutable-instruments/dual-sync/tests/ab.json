@@ -1,0 +1,147 @@
+{
+  "note": "Braids' TIMBRE is the sync interval and its COLOR is the master/slave balance, so p1 maps to the engine's TIMBRE and p2 to its HARMONICS. MORPH is not a spare macro here: it selects between the two Braids models this engine covers, so it is 0.0 for every SQUARE_SYNC case and 1.0 for every SAW_SYNC case, and the case's `shape` field says which reference it is measured against. MACRO is the only axis the module has no concept of, and it sits at noon in every case, where ApplyMacro returns Braids' own restart-at-zero exactly. Both ends of each Braids axis are covered on both shapes, because reading the balance off the wrong parameter renders plausibly and is only caught by measuring it.",
+  "pitchNote": "Three cases declare no `cents` tolerance because the autocorrelation estimator has no usable f0 on them, and that is measured rather than assumed. Two are the `-slave` pair: with Balance hard at the slave and the interval near the top, the render is dominated by the slave's own tone and its autocorrelation has near-equal peaks at a dozen lags (0.98-0.99 of zero-lag energy across lags 40 to 195), so which peak wins is arbitrary. On the REFERENCE renders the estimator picks 558.14 Hz against a played 523.25 Hz (+111.7 cents) and 107.34 Hz against a played 110.00 Hz (-42.3 cents) -- the reference disagreeing with itself, before the port is involved. The third is `saw-high-note`, where at MIDI 72 the estimator octave-flips: the reference reads 130.81 Hz against a played 523.25 Hz, two octaves down. A 1-second Hann-windowed DFT scanned at 0.5-cent steps around the played pitch puts the reference's fundamental exactly at nominal and the port's at +4.50 cents in every one of the three, which is the kCorrectedSampleRate offset (+4.61 cents) to within one scan step. The pitch is right; the estimator is not usable on these signals, so those cases measure level and spectrum only, and `square-high-note` at MIDI 60 carries the second pitch anchor instead.",
+  "toleranceNote": "The declared tolerances are set from what this engine actually measures, not from the campaign ceiling. Across the fourteen cases the worst figures are 0.01 dB AC RMS, 0.2 cents, and 0.10 dB of energy-weighted spectrum, so the tolerances are 0.2 dB / 1.0 cent / 0.5 dB -- a real regression guard with 5x to 20x of headroom, rather than the 1.0 / 1.5 / 1.5 dB campaign ceiling, which this engine clears by two orders of magnitude on level and would not catch a regression in. Nothing here is widened for the module's shape-change re-Init (analog_oscillator.cc:74-77 re-Initing on a shape change, and Init() clobbering pitch_ to 60 << 7 for that one 24-sample block). That quirk is real Braids behaviour that the port does not reproduce, but it is inert for these two models: SAW_SYNC never triggers it -- OSC_SHAPE_SAW is 0, so it matches the zero-initialised previous_shape_ and the shape never changes -- and SQUARE_SYNC triggers it on both oscillators but the slave is hard-synced to the master, so it comes out as a pure time shift of the whole output (16.56 samples at 48 kHz measured at note 45 against 16.54 predicted by 24*(f60-fnote)/96000 cycles) which AC RMS and an averaged magnitude spectrum are both blind to. Measured against a reference build with only that quirk removed: SAW_SYNC bit-identical, SQUARE_SYNC 0.0011 dB AC RMS and 0.0022 dB spectrum. The derivation is in the engine header.",
+  "cases": [
+    {
+      "id": "square-stock",
+      "shape": "SQUARE_SYNC",
+      "name": "Square, half interval, both oscillators evenly",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.5, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.2, "cents": 1.0, "spectrumDb": 0.5}
+    },
+    {
+      "id": "square-unison",
+      "shape": "SQUARE_SYNC",
+      "name": "Square at interval zero, where the slave tracks the master exactly",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.0, "p2": 0.5},
+      "engine": {"timbre": 0.0, "harmonics": 0.5, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.2, "cents": 1.0, "spectrumDb": 0.5}
+    },
+    {
+      "id": "square-top-interval",
+      "shape": "SQUARE_SYNC",
+      "name": "Square, slave at the top of the interval sweep",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 1.0, "p2": 0.5},
+      "engine": {"timbre": 1.0, "harmonics": 0.5, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.2, "cents": 1.0, "spectrumDb": 0.5}
+    },
+    {
+      "id": "square-master-only",
+      "shape": "SQUARE_SYNC",
+      "name": "Square with the balance hard at the master",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.6, "p2": 0.0},
+      "engine": {"timbre": 0.6, "harmonics": 0.0, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.2, "cents": 1.0, "spectrumDb": 0.5}
+    },
+    {
+      "id": "square-slave-only",
+      "shape": "SQUARE_SYNC",
+      "name": "Square with the balance hard at the synced slave",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.6, "p2": 1.0},
+      "engine": {"timbre": 0.6, "harmonics": 1.0, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.2, "cents": 1.0, "spectrumDb": 0.5}
+    },
+    {
+      "id": "saw-stock",
+      "shape": "SAW_SYNC",
+      "name": "Saw, half interval, both oscillators evenly",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.5, "morph": 1.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.2, "cents": 1.0, "spectrumDb": 0.5}
+    },
+    {
+      "id": "saw-unison",
+      "shape": "SAW_SYNC",
+      "name": "Saw at interval zero",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.0, "p2": 0.5},
+      "engine": {"timbre": 0.0, "harmonics": 0.5, "morph": 1.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.2, "cents": 1.0, "spectrumDb": 0.5}
+    },
+    {
+      "id": "saw-top-interval",
+      "shape": "SAW_SYNC",
+      "name": "Saw, slave at the top of the interval sweep",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 1.0, "p2": 0.5},
+      "engine": {"timbre": 1.0, "harmonics": 0.5, "morph": 1.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.2, "cents": 1.0, "spectrumDb": 0.5}
+    },
+    {
+      "id": "saw-top-interval-slave",
+      "shape": "SAW_SYNC",
+      "name": "Saw at the top of the sweep with the balance hard at the slave",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 1.0, "p2": 1.0},
+      "engine": {"timbre": 1.0, "harmonics": 1.0, "morph": 1.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.2, "spectrumDb": 0.5}
+    },
+    {
+      "id": "saw-master-only",
+      "shape": "SAW_SYNC",
+      "name": "Saw with the balance hard at the master",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.6, "p2": 0.0},
+      "engine": {"timbre": 0.6, "harmonics": 0.0, "morph": 1.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.2, "cents": 1.0, "spectrumDb": 0.5}
+    },
+    {
+      "id": "saw-slave-only",
+      "shape": "SAW_SYNC",
+      "name": "Saw with the balance hard at the synced slave",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.6, "p2": 1.0},
+      "engine": {"timbre": 0.6, "harmonics": 1.0, "morph": 1.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.2, "cents": 1.0, "spectrumDb": 0.5}
+    },
+    {
+      "id": "square-high-note",
+      "shape": "SQUARE_SYNC",
+      "name": "An octave up, the second anchor for the pitch mapping",
+      "seconds": 2,
+      "note": 60,
+      "braids": {"p1": 0.25, "p2": 0.5},
+      "engine": {"timbre": 0.25, "harmonics": 0.5, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.2, "cents": 1.0, "spectrumDb": 0.5}
+    },
+    {
+      "id": "saw-high-note",
+      "shape": "SAW_SYNC",
+      "name": "Two octaves up, with the master still in the mix",
+      "seconds": 2,
+      "note": 72,
+      "braids": {"p1": 0.75, "p2": 0.5},
+      "engine": {"timbre": 0.75, "harmonics": 0.5, "morph": 1.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.2, "spectrumDb": 0.5}
+    },
+    {
+      "id": "saw-high-note-slave",
+      "shape": "SAW_SYNC",
+      "name": "Two octaves up on the slave alone, the noisiest corner of the model",
+      "seconds": 2,
+      "note": 72,
+      "braids": {"p1": 0.75, "p2": 1.0},
+      "engine": {"timbre": 0.75, "harmonics": 1.0, "morph": 1.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.2, "spectrumDb": 0.5}
+    }
+  ]
+}

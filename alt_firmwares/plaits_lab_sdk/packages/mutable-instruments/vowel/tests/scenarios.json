@@ -1,0 +1,67 @@
+[
+  {
+    "id": "hero",
+    "name": "The vowel walk, as the module has it",
+    "durationSeconds": 4,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.5, 0.5],
+      "morph": [0.0, 1.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "shift",
+    "name": "One vowel through the whole formant shift",
+    "durationSeconds": 3,
+    "note": 40,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.0, 1.0],
+      "morph": [0.2, 0.2],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "spread",
+    "name": "Formant spacing pulled in and pushed out",
+    "durationSeconds": 3,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.0, 1.0],
+      "timbre": [0.5, 0.5],
+      "morph": [0.35, 0.35],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "grain",
+    "name": "The per-period burst from tight to wide open",
+    "durationSeconds": 3,
+    "note": 48,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.6, 0.6],
+      "morph": [0.5, 0.5],
+      "macro": [0.0, 1.0]
+    }
+  },
+  {
+    "id": "consonants",
+    "name": "Triggered, so every note opens on a consonant",
+    "durationSeconds": 4,
+    "note": 43,
+    "triggerHz": 4,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.45, 0.45],
+      "morph": [0.1, 0.8],
+      "macro": [0.5, 0.5]
+    }
+  }
+]

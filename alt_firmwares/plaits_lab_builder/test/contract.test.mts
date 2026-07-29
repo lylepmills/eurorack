@@ -26,6 +26,84 @@ test("normalization removes nondeterministic manifest fields", () => {
   assert.equal(normalized.initialOptions.lockedFrequencyKnob, "octaves");
 });
 
+// The calibration procedure (v14). It is a firmware PREFERENCE, not a stored
+// option, so the whole contract for it is: absent means off, asking for it lifts
+// the recipe to v14, and an older declared version cannot smuggle it in.
+test("a recipe without the calibration key means calibration off", () => {
+  const normalized = normalizeRecipe(fixture);
+  assert.equal(normalized.preferences.calibration, false);
+  assert.equal(normalized.schemaVersion, 5);
+});
+
+test("calibration off is accepted at any version and changes nothing", () => {
+  const normalized = normalizeRecipe({
+    ...fixture,
+    preferences: { ...fixture.preferences, calibration: false },
+  });
+  assert.equal(normalized.preferences.calibration, false);
+  // Still v5: an explicit false asks for nothing a v5 builder cannot do.
+  assert.equal(normalized.schemaVersion, 5);
+});
+
+test("calibration is carried, version-gated, and type-checked", async () => {
+  const publicCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const chordCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_chord_tables/catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const byId = new Map(publicCatalog.engines.map((engine: { id: string }) => [engine.id, engine]));
+  const publishedTable = structuredClone(chordCatalog.tables[0]);
+  const makeRecipe = (schemaVersion: number, calibration: unknown) => ({
+    ...fixture,
+    schemaVersion,
+    slots: fixture.slots.map((engineId: string) => {
+      const engine = byId.get(engineId) as { packageId: string; version: string; digest: string };
+      return { engine: engineId, package: engine.packageId, version: engine.version, digest: engine.digest };
+    }),
+    preferences: { navigationMode: "linear", calibration },
+    initialOptions: {
+      lockedFrequencyKnob: "octaves", modelInput: "model", levelInput: "level",
+      auxOutput: "alternate-model", suboscillatorOctave: 0, chordTable: publishedTable.id,
+      holdOnTrigger: false,
+    },
+    resources: { chordTables: [publishedTable] },
+  });
+
+  // Asking for it lifts the recipe to v14 — and v14 is the one version whose
+  // feature says nothing about resources, so unlike v12/v13 it must not demand a
+  // userDataBanks list.
+  const on = normalizeRecipe(makeRecipe(14, true));
+  assert.equal(on.preferences.calibration, true);
+  assert.equal(on.schemaVersion, 14);
+  assert.equal("userDataBanks" in on.resources, false);
+
+  // An explicit false asks for nothing a v5 builder cannot do, so it stays v5.
+  const off = normalizeRecipe(makeRecipe(14, false));
+  assert.equal(off.preferences.calibration, false);
+  assert.equal(off.schemaVersion, 5);
+
+  // A pre-v14 declared version cannot smuggle it in. (Declared v11 rather than
+  // v13: a v13 recipe is required to carry a userDataBanks list, so it would
+  // trip the resources guard before ever reaching this one.)
+  assert.throws(
+    () => normalizeRecipe(makeRecipe(11, true)),
+    (error: { code?: string }) => error.code === "unsupported_schema",
+  );
+  // ...and it must be a boolean.
+  assert.throws(
+    () => normalizeRecipe(makeRecipe(14, "yes")),
+    (error: { code?: string }) => error.code === "invalid_preferences",
+  );
+
+  // Turning it on changes the build identity, so a cached mono build cannot be
+  // served to someone who asked for the procedure.
+  const identity = { sourceRevision: "source", toolchain: "toolchain", contract: "14" };
+  assert.notEqual(await computeBuildKey(on, identity), await computeBuildKey(off, identity));
+});
+
 test("build keys are stable and include the build identity", async () => {
   const recipe = normalizeRecipe(fixture);
   const identity = { sourceRevision: "source-a", toolchain: "toolchain-a", contract: "1" };
@@ -668,7 +746,7 @@ test("per-engine stereo (stereoEngines) requires and normalizes to v10", async (
 // must name the range the guard actually accepts — it once still said "2
 // through 11" after v12 (per-slot custom FM banks) had been accepted.
 test("the unsupported-schema message names the range the guard accepts", () => {
-  const highest = 13;
+  const highest = 14;
   // Reports the schema code a version is rejected with, or null if the version
   // itself was accepted (a later invalid_slots / unapproved_package complaint
   // about the fixture's shape means the version passed this guard).

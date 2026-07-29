@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/wave-scan",
+  "catalogId": "wave-scan",
+  "version": "1.0.0",
+  "name": "Wave Scan",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "Braids' three wavetable models in one slot, over its own 256-wave 8-bit bank: 20 named banks, a 16x16 interpolated map, and a curated line with a phase-domain crush.",
+  "family": "Wavetable",
+  "tags": [
+    "braids",
+    "wavetable",
+    "scanning",
+    "lo-fi"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Model",
+      "description": "Selects the banks, the 16x16 map, or the curated line."
+    },
+    {
+      "id": "timbre",
+      "label": "Scan",
+      "description": "Position within the bank, along the map's X axis, or along the line."
+    },
+    {
+      "id": "morph",
+      "label": "Shape",
+      "description": "Which of the 20 banks, the map's Y axis, or the line's four-zone crush."
+    },
+    {
+      "id": "macro",
+      "label": "Snap",
+      "description": "Steps the scan between whole waves above noon, blurs it into their sum below; Braids exactly at the detent."
+    }
+  ],
+  "outputs": {
+    "main": "The scanned readout.",
+    "aux": "Its complement: the adjacent wave, the opposite corner of the map cell, or the other end of the crush."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/wave_scan_engine.h",
+    "files": [
+      "plaits/dsp/engine2/wave_scan_engine.cc"
+    ],
+    "className": "WaveScanEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": -1.0,
+    "auxGain": -1.0
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids DigitalOscillator::RenderWavetables, RenderWaveMap and RenderWaveLine"
+}

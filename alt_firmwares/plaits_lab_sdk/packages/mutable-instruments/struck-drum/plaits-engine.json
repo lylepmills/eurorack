@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/struck-drum",
+  "catalogId": "struck-drum",
+  "version": "1.0.0",
+  "name": "Struck Drum",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "Braids' DRUM: six fixed partials struck once per trigger. Two are ring-modulated by lowpass-filtered noise instead of played straight -- a different mechanism from a resonator excited by noise.",
+  "family": "Additive",
+  "tags": [
+    "braids",
+    "drum",
+    "additive",
+    "percussive",
+    "struck",
+    "noise"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Color",
+      "description": "The noise's cutoff, the six-partial harmonics level, and a two-voice noise crossfade, coupled as the module does."
+    },
+    {
+      "id": "timbre",
+      "label": "Decay",
+      "description": "Blends between the module's two decay tables; past about 98% the drum drones and never loses energy."
+    },
+    {
+      "id": "morph",
+      "label": "Spread",
+      "description": "Scales the six fixed partial ratios together, from unison at 0 through the module's own voicing at noon to double at 1."
+    },
+    {
+      "id": "macro",
+      "label": "Decay spread",
+      "description": "How much faster high partials decay than low: uniform toward 0, the module's own spread at noon, exaggerated toward 1."
+    }
+  ],
+  "outputs": {
+    "main": "The six-partial mix. Tracks the module's own output closely; tests/ab.json carries the measured figures.",
+    "aux": "Mono: the two noise-ring-modulated partials alone, without the direct tone or the harmonics sum. Stereo: a second, independently-filtered noise realization for the right channel, sharing the same tonal partials as the left."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/struck_drum_engine.h",
+    "files": [
+      "plaits/dsp/engine2/struck_drum_engine.cc"
+    ],
+    "className": "StruckDrumEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": true,
+    "outGain": 1.0,
+    "auxGain": 1.0
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids DigitalOscillator::RenderStruckDrum (DRUM)"
+}

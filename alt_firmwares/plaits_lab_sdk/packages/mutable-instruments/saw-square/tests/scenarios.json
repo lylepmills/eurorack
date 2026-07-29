@@ -1,0 +1,54 @@
+[
+  {
+    "id": "hero",
+    "name": "The single-knob sweep, as the module has it",
+    "durationSeconds": 4,
+    "note": 48,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.0, 1.0],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "blend",
+    "name": "Saw to square at a fixed shape",
+    "durationSeconds": 3,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.0, 1.0],
+      "timbre": [0.6, 0.6],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "phase",
+    "name": "The square sliding out of lock with the saw",
+    "durationSeconds": 3,
+    "note": 40,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.5, 0.5],
+      "morph": [0.0, 1.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "square-level",
+    "name": "The square's hidden balance, revealed",
+    "durationSeconds": 3,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.5, 0.5],
+      "morph": [0.5, 0.5],
+      "macro": [0.0, 1.0]
+    }
+  }
+]

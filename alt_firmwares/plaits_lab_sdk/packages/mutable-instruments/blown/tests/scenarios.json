@@ -1,0 +1,54 @@
+[
+  {
+    "id": "hero",
+    "name": "Turbulent through to focused, as the module has it",
+    "durationSeconds": 4,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.0, 1.0],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "body",
+    "name": "The body filter across its useful travel",
+    "durationSeconds": 3,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.15, 0.77],
+      "timbre": [0.7, 0.7],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "blow",
+    "name": "Under-blown to over-blown at a fixed reed",
+    "durationSeconds": 3,
+    "note": 40,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.6, 0.6],
+      "timbre": [0.75, 0.75],
+      "morph": [0.0, 1.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "reed",
+    "name": "A loose reed through to one pinned at its clip",
+    "durationSeconds": 3,
+    "note": 52,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.6, 0.6],
+      "timbre": [0.8, 0.8],
+      "morph": [0.5, 0.5],
+      "macro": [0.0, 1.0]
+    }
+  }
+]

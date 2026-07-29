@@ -9,6 +9,25 @@ spec; where the two conflict, this file is the one with numbers behind it.**
 
 Branch: `claude/braids-engines-plaits-palette-je03ac` (both repos).
 
+**THIS FILE IS THE SOURCE. Edit it here.** It is mirrored into
+`rubato-audio:BRAIDS_PORT_PROGRESS.md` — the work spans both repos and either
+side needs the whole picture — but that copy is now **generated**, opens with a
+DO-NOT-EDIT banner, and is overwritten by:
+
+```
+rubato-audio$ shared/coord/sync-braids-progress.sh --repo <this-checkout>
+rubato-audio$ shared/coord/sync-braids-progress.sh --check   # verify only
+```
+
+Run the sync in the same change that edits this file, so the two land together.
+
+The mirror used to be hand-kept, and it drifted silently: on 2026-07-28 the two
+copies had diverged 245 lines in OPPOSITE directions — one repo's session closed
+open item 1 in its copy, another closed items 3/4 in the other, and each copy
+still listed the other's as open. Neither was a superset, so **both actively
+misled about what was still open**. Asking people to remember two copies did not
+work; generating one from the other is the fix.
+
 ---
 
 ## 1. Status
@@ -16,20 +35,34 @@ Branch: `claude/braids-engines-plaits-palette-je03ac` (both repos).
 | Engine | State | qemu CPU | A/B vs Braids |
 |---|---|---:|---|
 | `z-filter` | **landed** | 62% | all 4 models within 0.05 dB AC RMS, +5 cents |
-| `toy` | **landed** | 35% | within 0.42 dB mean, ≤9 cents |
-| `csaw` | **landed** | 12% | 0.00 dB mean at two settings, 0.75 dB at a third |
-| `bowed` | **landed** | 37% | 3–5 dB; chaotic self-oscillator, see §3.10 |
-| `ring-mod` | **landed** | 69% | within 0.04 dB energy-weighted at four detunings |
+| `toy` | **landed** | 35% / 48% | within 0.42 dB mean, ≤9 cents |
+| `csaw` | **landed** | 12% / 13% | 0.00 dB mean at two settings, 0.75 dB at a third |
+| `bowed` | **landed** | 37% / 38% | 3–5 dB; chaotic self-oscillator, see §3.10 |
+| `ring-mod` | **landed** | 60% / 69% | within 0.04 dB energy-weighted at four detunings |
 | `sub-oscillator` | **landed** | 28% | 0.23 / 0.42 dB against both source models |
-| `digital-modulation` | **landed** | 18% | 0.00 dB at the stock frame; 0.09–0.45 dB across settings |
+| `digital-modulation` | **landed** | 20% / 18% | 0.00 dB at the stock frame; 0.09–0.45 dB across settings |
 | `saw-comb` | **landed** | 32% | 0.19 / 0.45 / 0.67 dB |
-| `vowel-fof` | **landed** | 72% | 1.96–2.29 dB |
+| `vowel-fof` | **landed** | 71% / 73% | 1.96–2.29 dB |
 | `raw-fm` | **landed** | 15% | 0.05 / 0.13 / 0.02 dB across all three source models |
 | `triple` | **landed** | 52% | 0.24 / 0.25 / 0.03 / 0.02 dB across all four source models |
-| `fluted` | still gated on the §3.11 mode-tracking measurement | — | — |
+| `fluted` | **DROPPED** — §3.11 gate measured and failed, see §3.16 | — | — |
 
-**ALL ELEVEN ENGINES ARE LANDED.** What remains is measurement and the
-website, not DSP. Notes kept for reference:
+**ALL ELEVEN ENGINES ARE LANDED, and the twelfth is dropped.** The §3.11 gate
+was run before any `fluted` code was written; it failed, and the spec's own
+instruction was to drop rather than patch around it. So the port is **eleven
+engines, final**. What remains is measurement and the website, not DSP.
+
+**A `mono / stereo` CPU entry means a Pattern B engine** — one that renders a
+different AUX in each aux mode, so it has two costs and the larger is its peak.
+`toy` was always one; `bowed`, `csaw`, `ring-mod` and `vowel-fof` became ones
+when open item 5 was resolved, and `digital-modulation` when its stereo render
+was fixed (`BRAIDS_PORT_AUX_PROPOSAL.md` parts 6 and 7). Note it is the only
+one whose stereo path is CHEAPER than its mono one. The
+single-number engines render one pair for both modes. Every number here is
+`estimate.py --sweep`; the stereo column needs `--stereo`, which did not exist
+until 2026-07-28 — before that the table's figures were all mono.
+
+Notes kept for reference:
 
 - `vowel-fof` — the spec's headline finding is CONFIRMED in the source:
   `out += svf_bp[i] * amplitudes[0] >> 17` reads `amplitudes[0]`, not
@@ -51,11 +84,11 @@ test suite is the real contract here; §9 of the handoff is not.
    *(not in the handoff)*
 3. `flash-budget.ts` — real measurements, now via
    `alt_firmwares/plaits_lab_builder/flash_sweep.py`
-4. `previews.generated.json` + the mp3s — `render-previews.mjs`, **and**
-   `scripts/plaits-previews/render_previews.cc`, which keeps its own
-   HARDCODED engine list (includes, a mono `Emit<>` and a stereo `Emit<>`
-   per engine). *(not in the handoff, and it needs a C++ edit, not a script
-   run)*
+4. `previews.generated.json` + the mp3s — `render-previews.mjs`. *(not in the
+   handoff)* It used to be two registration points: `render_previews.cc` kept
+   its own HARDCODED engine list (includes, a mono `Emit<>` and a stereo
+   `Emit<>` per engine), so a new engine needed a C++ edit and was silently
+   skipped without one. That list is now generated — see open item 4 below.
 
 No changes were needed to `engines.ts`, `PlaitsEditor.tsx` or
 `plaits-palette.css`: with `origin: "Mutable Instruments"` and no `artwork`
@@ -64,36 +97,383 @@ keys off `origin === "Rubato Lab"` so they do not disturb it.
 
 ### Measured ARM flash — real, replacing every estimate
 
-Swept 2026-07-28 against a local builder container built from `dc1650c14`,
-leave-one-out into Speech's slot in the stock-24 context. Baseline 181,216 B.
+Re-swept 2026-07-28 against a local builder container built from the head AFTER
+the `origin/master` merge, leave-one-out into Speech's slot in the stock-24
+context. **Baseline 205,136 B — the same baseline Helix was measured against**,
+so these sit on Helix's footing rather than the smaller pre-merge palette
+(181,216) an earlier pass used. Controls reproduced the published table within
+16 B (speech 23,296 vs 23,312, reed-pipe 2,000 exact, spectral-spiral 2,048 vs
+2,064).
 
 | engine | measured | spec estimate |
 |---|---:|---:|
-| raw-fm | 880 | 1,450 |
-| digital-modulation | 1,200 | 1,620 |
-| toy | 1,232 | 1,520 |
-| csaw | 1,392 | 1,400 |
+| raw-fm | 912 | 1,450 |
+| digital-modulation | 1,216 | 1,620 |
+| toy | 1,248 | 1,520 |
+| csaw | 1,344 | 1,400 |
+| ring-mod | 1,696 | 1,700 |
 | z-filter | 1,712 | 2,200 |
-| ring-mod | 1,872 | 1,700 |
-| sub-oscillator | 2,256 | 1,300 |
-| saw-comb | 2,496 | 3,000 |
-| vowel-fof | 2,640 | 3,100 |
-| bowed | 2,928 | 2,400 |
-| triple | 3,408 | 2,800 |
-| **total** | **22,016** | 22,490 |
+| sub-oscillator | 2,224 | 1,300 |
+| saw-comb | 2,512 | 3,000 |
+| vowel-fof | 2,704 | 3,100 |
+| bowed | 2,944 | 2,400 |
+| triple | 3,424 | 2,800 |
+| **total** | **21,936** | 22,490 |
 
-The spec's AGGREGATE was within 2 %. Its PER-ENGINE numbers ranged −39 % to
+The spec's AGGREGATE was within 3 %. Its PER-ENGINE numbers ranged −39 % to
 +74 %, so treat §1 as a ranking and never as a budget.
 
-**Two traps when re-running the sweep.** The builder image bakes the firmware
+**These moved TWICE during the branch**, so any earlier number is superseded.
+The AUX rework re-costed `csaw` (1,392 → 1,344), `ring-mod` (1,872 → 1,680) and
+`vowel-fof` (2,640 → 2,704) because it changed their DSP; the `origin/master`
+merge then shifted eight of the eleven by ±16–32 B. **A DSP change re-costs the
+engine, and so does merging a moved main** — re-sweep after either, not just
+after adding an engine. `flash_sweep.py`'s controls now FAIL the run (exit 2) if
+the base drifted, so a stale comparison stops being silent.
+
+### Measured stereo delta — six Pattern-B ports, and `toy` costs NOTHING
+
+Container built from the branch head. That matters for layering the numbers
+onto the website: the head CONTAINS the deployed re-calibration revision
+`94e84165`, so these sit on the same firmware lineage the flash meter is
+calibrated against, plus the eleven ports.
+
+`flash_sweep.py --stereo` differences two builds identical but for the recipe's
+`stereoEngines` list (both `auxOutput: "stereo"`, so whatever the stereo aux
+option itself costs cancels — and it costs nothing: the all-mono stereo arm
+lands at 182,448, exactly the baseline 181,216 plus toy's 1,232 mono marginal).
+
+| engine | stereo delta |
+|---|---:|
+| toy | **−144** |
+| digital-modulation | 48 |
+| bowed | 112 |
+| csaw | 240 |
+| ring-mod | 272 |
+| vowel-fof | 496 |
+
+`toy` shipped as the only Pattern-B port; `bowed`, `csaw`, `ring-mod` and
+`vowel-fof` joined it in `c84a06a`, which gave each a distinct mono AUX voice
+and therefore a second render path worth gating, and `digital-modulation` when
+its stereo render was fixed. All six are in the builder's `STEREO_MACROS` and in
+the website's `stereoToggleableEngineIds`; the remaining five are Pattern A and
+want no entry.
+
+**These move under you.** The set went 1 → 5 → 6 in a single day, and `csaw`'s
+delta moved 208 → 240 between two sweeps hours apart, so re-sweep at the head
+you are actually shipping rather than trusting a number from earlier in the
+branch. `plaitsStereoControls.test.ts` now asserts every engine with a build
+macro HAS an `engineStereoBytes` entry, which turns "a new Pattern-B engine
+landed uncosted" from something you have to notice into a failing test.
+
+**⚠ The measurement is silently meaningless if the engine is not IN the
+palette.** Enabling `PLAITS_STEREO_<X>` for an engine no slot references links
+no object, so the delta is exactly 0 — indistinguishable from a real "costs
+nothing" result. The first run of this sweep pinned one engine in Speech's slot
+and swept `stereoEngines` against it, and duly reported a confident 0 for all
+four of the engines above, none of which were in the build. The controls did not
+catch it, because `harmonic` and `glisson` happen to be in the base palette.
+`flash_sweep.py` now builds a per-engine mono/stereo pair with the target in the
+slot; a shared baseline is not worth that failure mode.
+
+`toy` measures **−144 bytes** — compiling the stereo path makes the firmware
+SMALLER. That is not a mismeasurement:
+
+- Object-level diff moves exactly ONE object, `toy_engine.o` (1,200 → 1,052),
+  and within it exactly one symbol, `ToyEngine::Render`. That is precisely the
+  object the makefile's `-DPLAITS_STEREO_TOY=0` rule targets, so the isolation
+  is clean and the cause is gcc 4.8 codegen: the runtime `parameters.stereo`
+  branch compiles tighter than the specialised mono-only body it replaces.
+- It is palette-INDEPENDENT — `toy_engine.cc` reads no `engine_config.h`, and
+  the delta is −144 on both a 3-engine palette and stock-24.
+
+Controls validate the harness: `harmonic` and `glisson` re-measure at 2,576 and
+416, within 16 B of the website's published 2,560 and 432 — harmonic +16,
+glisson −16, i.e. inside the ±32 B quantization the rev-94e84165 pass already
+documents for this table.
+
+**Correction, worth keeping as a warning.** This was first written up as "both
+exactly 16 B low, a consistent revision offset" — because the controls were
+compared against the copy of `flash-budget.ts` on THIS BRANCH, which had gone
+stale: it still carried the 8b3e1cb table (harmonic 2,592) while `origin/main`
+had been re-calibrated to 94e84165 (harmonic 2,560). Against the stale table the
+two errors line up at −16 and look like a systematic offset; against the real
+one they are +16/−16 and are just quantization. When a control seems to reveal a
+neat systematic pattern, check that the published numbers you are differencing
+against are the CURRENT ones first.
+
+The website records this as `0`, not `−144`: `engineStereoBytes`' contract is a
+non-negative marginal (its test asserts it), and banking a 144 B saving — well
+inside the model's own ~350 B residuals — would only make the meter read
+permissively. The entry exists so the measurement is on record rather than the
+engine looking merely overlooked.
+
+**Three traps when re-running the sweep.** The builder image bakes the firmware
 source in (`COPY . /workspace`), so `docker build` it AFTER the engines land
 or every new engine fails with a missing header while the baseline builds
-fine — a local rehearsal of the exact deploy-ordering hazard. And the image
+fine — a local rehearsal of the exact deploy-ordering hazard. The image
 has an ENTRYPOINT, so the sweep needs `--entrypoint python3` or the command
-becomes arguments to the HTTP server and sits idle forever.
+becomes arguments to the HTTP server and sits idle forever. And a FRESH
+worktree has no submodule content — `git submodule update --init stmlib
+stm_audio_bootloader` before the `docker build`, or it stops at the
+missing-submodule guard.
 
-Still not done: real `arm-none-eabi-size` flash measurements (§5 below), and
-the whole website side.
+**Open work, in the order it should be picked up:**
+
+1. ~~**Stereo preview control is gated on the wrong condition**~~ — **DONE.**
+   `PlaitsEditor`'s `stereoButtonFor` now tests `stereoToggleableEngineIds`
+   FIRST (the build toggle, which edits the firmware recipe and charges flash)
+   and falls through to a derived `previewOnlyStereoEngine` — "no build macro,
+   but a stereo clip exists", i.e. `hasStereoPreview()`. The same predicate
+   replaced the hardcoded set in `engineStereoOn` (which picks the clip) and in
+   the localStorage restore filter, so a toggled chip now survives a refresh.
+   Verified in the running site: **50/50 models have a stereo control, up from
+   40/50** — 35 build toggles (unchanged) + 15 preview-only. `z-filter` and
+   `pulsar` both stream their `-stereo.mp3`; `virtual-analog` still charges its
+   flash delta and writes `stereoEngines`, and no preview-only toggle leaks
+   into the recipe. Regression guard: `website/src/lib/plaitsStereoControls.test.ts`
+   (confirmed failing against the old gate before the fix).
+
+   **Correction to this item as written:** the claim that it "also affects five
+   STOCK engines — pulsar, attractor, spectral-spiral, phase-distortion,
+   string-machine" was already stale. Commit `9e11adad` ("stereo previews +
+   toggle for the always-stereo engines") added `alwaysStereoEngineIds` and gave
+   exactly those five a working preview-only button; they were verified rendering
+   one *before* this change. The engines actually stranded were the ten Pattern A
+   Braids ports and only those — they were in neither set. `alwaysStereoEngineIds`
+   survives, but only as the seed for the stock-derived Stereo Dreams preset; it
+   no longer gates any button, so a future always-stereo engine needs no entry.
+
+2. ~~**Braids 14-segment icons.**~~ **DONE.** A merged engine cycles its source
+   codes EVERYWHERE its icon appears — placed slots and the library rail alike.
+   The two-renderer split the brief called for was built and then dropped:
+   holding the library static was justified by "no slot state to read", but the
+   cycle carries its own message anywhere it runs (this slot is several Braids
+   models at once) and says it more plainly than a wildcard. The static wildcard
+   (`Z**F`, `**FM`, `SUB*`, `**X3`) survives as the **reduced-motion** frame.
+   `website/src/lib/braidsDisplay.ts` (font, geometry and frame selection, 15
+   tests) and `components/plaits-palette/BraidsDisplay.tsx`.
+   Four findings worth keeping:
+   - **Nothing needed hand-mapping.** `chr_characters[]` in `braids/resources.cc`
+     is a direct byte→16-bit segment-word table — the one `Display::Refresh`
+     indexes by raw character byte and shifts to the driver — so the custom
+     0x88 / 0x8C / 0x8E glyphs come from the firmware like every letter does.
+     The bit→segment mapping was solved from the table itself ('I' = A D J M,
+     'X' = the four diagonals, '-' = G1 G2), and bits 0–1 are unused across all
+     256 entries. Decoded, the glyphs are waveform traces: 0x88 saw (B C K N),
+     0x8C square top (A B C E F), 0x8E comb spike (D J M).
+   - **The geometry is measured, not styled.** The display is two Kingbright
+     **PDC54-11GWA** modules (named in `braids/hardware_design/Braids.xlsx`), and
+     its package drawing gives character box 7.97 × 13.8 mm, segment width
+     1.0 mm, digit pitch 12.7 mm, and slant **5°**. The first pass eyeballed the
+     slant at 10° and read obviously wrong; the datasheet settled it. A test
+     pins all five numbers so a "looks better" edit fails. The one number
+     deliberately NOT the datasheet's is the drawn stroke: 1.0 mm is the die,
+     and a lit segment blooms through the white diffused lens, so it is drawn at
+     1.45× or the code goes thin at the 30 px slot size — the test asserts that
+     relationship rather than the raw width.
+   - **The mapping is twenty models, not nineteen** — `saw-comb` is a seventh
+     1:1 engine, not only the glyph case. Cross-checked against the `upstream`
+     field of all eleven `plaits-engine.json` files.
+   - **The display is GREEN, and the first pass drew it red.** Kingbright's
+     `-GWA` suffix on that part is the green GaP die behind a white diffused
+     lens (565 nm peak, 568 nm dominant). Both visual errors this round — a
+     slant at twice the real angle, and an entirely wrong colour — were answered
+     on pages 1–2 of a datasheet *already open* for the geometry. Lesson kept in
+     the `feedback_read_the_datasheet` memory note.
+
+   Blurb ancestry is done too, taken from the engine headers. One correction:
+   `vowel-fof` and `speech` share the five-vowel × five-register **grid**, not
+   the table — `vowel_fof_data.cc` deliberately vendors its own copy because
+   speech's uint8 quantisation is ~half a semitone coarse against a Q = 64
+   filter. The copy says grid. `triple` is worded as overlap, not lineage.
+
+   ⚠️ **Deploy coupling:** a description is part of the hashed engine record, so
+   `raw-fm`, `triple` and `vowel-fof` moved digests. `public_catalog.json` was
+   regenerated in the same commit; verified blast radius is exactly those three
+   (47 of 50 byte-identical), so no already-deployed engine is affected — but
+   the builder image and this snapshot still ship together, per item 7.
+
+   The wildcard's one legibility wrinkle is now mostly moot: on a 14-segment
+   display `*` (H J K L M N) sits close to `X` (H K L N), so `**X3` read a
+   little like "XXX3". Since the wildcard only shows under reduced motion it is
+   no longer what most readers see — revisit only if that frame becomes
+   prominent again.
+
+3. ~~**`engineStereoBytes` has no entry for `toy`**~~ — **DONE 2026-07-28.**
+   Swept with `flash_sweep.py --stereo`; toy's delta is −144 B (its stereo path
+   compiles SMALLER), recorded on the website as `0`. See the measured-stereo
+   section above for the object-level proof, the controls, and the
+   not-in-the-palette trap that made a first pass report a false 0.
+
+   Recorded as `0`, not `−144` (`c1c6d975`), because the table's contract is a
+   non-negative marginal (`plaitsFlashBudget.test.ts` asserts it), and banking a
+   saving that sits inside the model's own residuals would only make the meter
+   read permissively. **The premise this item was written on was backwards** —
+   a missing entry already meant 0, and the true value is negative, so the meter
+   was never under-reading a toy-stereo palette.
+
+   **It widened twice while being fixed.** `toy` was the only Pattern-B port
+   when this item was written; `c84a06a` added `bowed`, `csaw`, `ring-mod` and
+   `vowel-fof`, and the `digital-modulation` stereo fix added a sixth. Those
+   five DO cost flash (48–496 B) and were genuinely uncosted. All six are now measured, in
+   `engineStereoBytes` and in `stereoToggleableEngineIds`; the mono marginals
+   the AUX rework moved are re-swept too, since a DSP change re-costs an engine.
+
+   This closes the FLASH question only; the Pattern-A ports' stereo BUTTON
+   was item 1, and is also now done — they get one from `previewOnlyStereoEngine`,
+   and per item 1 they must NOT be added to `alwaysStereoEngineIds`, which no
+   longer gates any button.
+
+   The same sweep also found this branch's `flash-budget.ts` had gone stale
+   against `origin/main`'s 94e84165 re-calibration — see item 8.
+
+4. ~~**`render_previews.cc` should read the catalog**~~ **DONE.**
+   `render-previews.mjs` reads the catalog plus
+   `plaits-engine-sources.generated.json` and writes
+   `preview_engine_list.generated.h` into the build dir (picked up with `-I`);
+   the `.cc` expands one `PREVIEW_ENGINE_LIST(X)` macro, and emits a stereo
+   clip iff the constructed engine reports `stereo_capable()`, so the separate
+   stereo list is gone. 50 engines, 100 clips, manifest unchanged.
+
+   **It surfaced a latent bug, since fixed.** A clip was not a pure function of
+   its engine: renders changed content when the emission order changed, because
+   engines read state they never wrote. Verified in source: `FMEngine::Init`
+   never touches `sub_fir_` / `carrier_fir_`, which the downsamplers read on the
+   first block; `SixOpEngine::Init` and `ChiptuneEngine::Init` take scratch out
+   of the shared 16 KB `g_ram_block` arena and do not zero it. Every render
+   reused the same stack frame and the same arena, so each picked up what the
+   previous one left behind.
+
+   `RenderAudition` now resets all three carriers before each render: reseed the
+   PRNG (it already did), `memset` the arena, and placement-new the engine into
+   zeroed storage — placement-new because a `memset` over a CONSTRUCTED object
+   would clobber its vptr. The per-block `out`/`aux` scratch is hoisted and
+   zeroed once for the same reason. **Verified by rendering the catalog forwards
+   and fully reversed: 100/100 WAVs identical.** Re-rendering moved 8 of the 100
+   clips: `two-op-fm` and the DX7 banks differ only in a segment-0 startup
+   transient (−38 to −69 dB relative, later segments bit-identical), and
+   `chiptune` picks a different arpeggio through segment 1 at the same level and
+   envelope — deterministic now, rather than a readout of arena leftovers.
+
+   **This one took the slow route, and the lesson generalizes.** The fix already
+   existed in `rubato-audio`'s `plugins/palette`: its golden-parity harness
+   zeroed arena and engine storage from the start, and its CLAUDE.md carried a
+   "worth reporting upstream — the website renderer would be more robust doing
+   the same" note that sat unactioned. One product solving what a sibling is
+   still living with is this repo's standing failure mode. Palette's suite is
+   green against the fixed renderer (6/6, `engine_parity` included), and the one
+   remaining divergence — the reference leaves its per-block `out`/`aux`
+   uninitialized — was measured inert: poisoning both with `0x7F7F7F7F` before
+   every `Render` changed 0 of 100 clips, so no engine leaves a block sample
+   unwritten.
+
+5. ~~**AUX designs are all stereo-split shaped.**~~ — **RESOLVED 2026-07-28.**
+   Design + costing in `BRAIDS_PORT_AUX_PROPOSAL.md`; the four recommended
+   changes are landed. The crux — a genuinely different AUX voice makes a poor
+   right channel — is real, and the firmware already settles it: twelve stock
+   engines render the two aux modes SEPARATELY off `parameters.stereo` and drop
+   the mono AUX voice in stereo. Ten of the eleven ports collapsed both modes
+   into one render, which no stock engine does. Six were already at or above the
+   real stock bar and are untouched; `z-filter` is a genuine no (OUT is a
+   crossfade of its only two constituents, so any AUX built from one collides
+   with it somewhere in MORPH). Now Pattern B: **`bowed`** mono AUX is the bow
+   exciter, **`csaw`** a variable-width pulse off the same transitions,
+   **`ring-mod`** the bare first modulator (mono 69% → 60%, divides 4 → 2),
+   **`vowel-fof`** the glottal source. Stereo renders are bit-identical to
+   before on all four.
+
+   Two defects found while writing that proposal are fixed alongside it (part 7).
+   **`digital-modulation`'s stereo render never matched the spec**: the spec
+   specifies an I/Q split, the code shipped the DC-blocked symbol staircase on
+   AUX in both modes, and the header comment kept the spec's language — so it
+   read as doc drift when the render was what was missing. Now Pattern B, and
+   L + R reproduces the mono OUT to float epsilon. **`csaw`'s stereo pair
+   collapsed to mono at HARMONICS noon** (measured bit-identical); no depth
+   remapping can fix that — a continuous self-map of the depth range always has
+   a fixed point — so the channels are separated on a second axis, a constant
+   bend offset, which `BendSegment` being affine in bend makes provably
+   collapse-free everywhere.
+
+   Still open: flash unmeasured for the six Pattern B ports
+   (`flash_sweep.py --stereo`), and a listening test on `vowel-fof`'s source.
+
+6. ~~**`fluted` is still gated**~~ **DONE — measured, failed, dropped.** See
+   §3.16. No `fluted` code was ever written. Nothing downstream needs doing:
+   the engine never entered the catalog, so there is no registration, preview,
+   flash or builder entry to unwind.
+
+7. ~~**Deploy**~~ — **DONE 2026-07-29.** Builder image first, then the site, as
+   this item required. Firmware `master` merged the branch at `2782e70be79c`;
+   that merge moved five engine digests (bowed, csaw, digital-modulation,
+   ring-mod, vowel-fof — the AUX rework), so the image was rebuilt from it,
+   verified before pushing (ran it, submitted `mixed_build_request.json`, got a
+   real WAV stamped `X-Plaits-Source-Revision: 2782e70be79c` rather than the
+   `development` sentinel), pushed, and the Worker deployed onto it. The website
+   then re-pinned to the SAME revision with exact digest parity across all 56
+   engines, and shipped the 14-segment icons.
+
+   **The generated artifacts had to be REGENERATED, not merged** — neither side
+   was a superset. The branch's catalog predated main's five newest engines
+   (brass, shakers, bytebeat, diatonic-chord, scale-stack) while main's previews
+   manifest had no stereo clips for the Braids ports, so a naive merge would
+   have dropped five live engines. `plaitsStereoControls.test.ts` caught exactly
+   that: red on the hand-merged manifest, green once all 112 clips were
+   re-rendered from the merged firmware revision.
+
+   Verified end to end on the live site: a recipe containing two moved-digest
+   engines built successfully (`cacheHit: false`, ARM text 216,464 B), so the
+   deployed allowlist really does accept what the site emits.
+
+8. ~~**Merge `origin/main` into this branch before deploying**~~ — **DONE
+   2026-07-28**, both repos. The branch was long-lived and main had moved under
+   it: it still carried the pre-`94e84165` flash table, so merging would have
+   silently REVERTED the re-calibration — including `flashSafetyMarginBytes`
+   192 → 512, which would have made the buildable DEFAULT palette read "over"
+   (the margin must stay under stock-24's headroom, now 272 B, was 688). **The
+   branch could not self-diagnose it: its own suite passed throughout**, because
+   its catalog snapshot was also pre-`helix`.
+
+   Order matters and is cross-repo: **eurorack first, then the website**, because
+   the site's catalog snapshot is GENERATED from the firmware repo. Merging
+   `origin/master` into the eurorack branch gave a catalog holding both `helix`
+   (from master) and the eleven ports; only then can the website regenerate a
+   51-engine snapshot. Regenerating from the un-merged eurorack branch would have
+   silently DROPPED `helix`.
+
+   How the conflicts resolved, for the next time:
+   - `catalog.json` / `public_catalog.json` / `previews.generated.json` —
+     conflicts were pure FORMATTING (master reformatted to expanded JSON) plus
+     disjoint additions. No shared engine differed. Rebuilt as a programmatic
+     union rather than hand-merged.
+   - `catalog.generated.json` / `plaits-pins.json` /
+     `plaits-engine-sources.generated.json` — REGENERATED from the merged
+     eurorack head (`sync-plaits-catalog.mjs`, `gen-plaits-engine-sources.mjs`),
+     never hand-resolved. 51 engines, 51 measured, no gaps either way.
+   - `render_previews.cc` — took the branch's generated `PREVIEW_ENGINE_LIST`
+     (item 4) over master's hardcoded list; being catalog-driven it picks up
+     `helix` on its own.
+   - `test_generate_engine_config.py` — its hardcoded `len(CATALOG)` is 51 now.
+     Note master's own value was left at 39 against a 40-engine catalog when
+     `helix` landed, so that assertion was ALREADY failing on master; this fixes
+     it in passing.
+
+   Verified after: merged firmware still builds in the container and reproduces
+   the same flash numbers; 274 website tests pass.
+
+   **Two follow-ups this leaves open.** (a) `previews.generated.json` is a UNION
+   of two renders and its `sourceRevision` says so verbatim — a re-render from
+   the merged head collapses it back to single-revision provenance. (b) The
+   local `npm test` appeared unrunnable — `devEngines` is `onFail: error` at
+   node 24.15.0 / npm 11.12.1 and the shell was on 24.18.0 — so the suites were
+   run directly with `node --test`. **That diagnosis was wrong**: it is a PATH
+   problem, not a pin problem. `nvm use` in `website/` reads `.nvmrc` and gives
+   node 24.15.0 AND npm 11.12.1, satisfying both pins exactly; v24.15.0 is
+   installed for precisely this. `npm test` runs: 274 passing. The pins are a
+   deliberate deploy-parity contract and are unchanged. The trap for agent
+   sessions is that shell state does not survive between tool calls, so the
+   activation has to be in the same command — see `website/CLAUDE.md`.
+
 
 ---
 
@@ -107,7 +487,7 @@ with (`grain_engine.cc`, `fm_engine.cc`, and eight more) **and kept
 are the same situation: Émilie's algorithm plus a Rubato fourth macro. So they
 are treated exactly like Plaits rather than differently from it.
 
-Uniform across all twelve:
+Uniform across all eleven:
 
 ```
 origin:    "Mutable Instruments"
@@ -309,11 +689,97 @@ path that can drive an increment past 1.0 needs that increment clamped.
 M4, so a divide-heavy engine reads optimistic. `ring-mod` carries two divides
 per sub-sample; treat its 69 % as a floor, not a number.
 
-### 3.9 A 15th registration step
+
+### 3.14 AUX is INVENTED here, not ported
+
+Braids is mono. It has no AUX at all, so every second output in this port is a
+design decision rather than something inherited — and calling these engines
+"already stereo" is wrong in a way that misleads. What is true is narrower:
+each engine's OUT and AUX were chosen to be a decorrelated PAIR (bridge vs neck
+pickup, a filter model vs its complement, a notch vs its mirror), which is why
+routing them L/R costs nothing extra. Pattern A vs Pattern B is a statement
+about COST, not about inheritance. Note also that most Plaits engines give AUX
+a genuinely different VOICE rather than a stereo partner — see open item 5.
+
+### 3.15 A 15th registration step
 
 The spec's 14-step per-engine checklist misses
 `alt_firmwares/plaits_lab_builder/test_generate_engine_config.py`, which pins
 `len(CATALOG)`. It has to move with every engine or the builder suite fails.
+
+### 3.16 `fluted`: the §3.11 gate was measured and FAILED — engine dropped
+
+Run 2026-07-28, before any engine code. Instrument and every script:
+`experimental/fluted_gate/`. The instrument was validated first (`validate.py`)
+by rendering Braids' own FLUT and reproducing the known chaotic detuning across
+COLOR (measured 1.53 / 1.02 / 1.04 / 4.49 / 2.51 against the cited study's
+1.50 / 3.47 / 1.01 / 2.44 / 2.48 — same scatter, same character).
+
+**The claim under test:** *"below noon (2 harmonics) only the fundamental
+survives and the pipe tunes reliably."* It is false, and it is not close.
+
+**At the spec's own coefficients** (in-loop DC blocker = Braids' 0.99 @ 96 kHz
+rate-corrected to 0.98 @ 48 kHz, which is fix #2's answer), MORPH below noon
+tuned **0 of 25** HARMONICS × MACRO settings at *every* note from MIDI 36 to
+60, and at most 5/25 above it. 2,000 renders; 13% in tune overall. The engine
+either fails to oscillate at all — the low notes at MORPH ≈ 0, where the
+reflection is darkest, which is the exact opposite of "only the fundamental
+survives" — or it locks to 3× or 5× f0.
+
+**It is a real mode hop, not a bright fundamental.** Where the peak sits at
+3 × f0, the played note measures **41 to 55 dB below** the loudest partial and
+the surviving partials are 3, 6, 9 × f0 — harmonics of 3f0, with nothing at f0
+or 2f0. The period is genuinely wrong. (`period.py`; this is the check that
+separates "in tune but bright" from "playing a different note", and it has to
+be made explicitly — a dominant-partial number alone cannot tell them apart.)
+
+**Best case available, and it still fails.** Moving the in-loop DC blocker to
+0.999 (8 Hz) — a change beyond the spec's eight fixes — recovers a lot, and
+one setting (HARMONICS 0.5, MACRO 0.75) is in tune 40/40 below noon. But that
+is one point in the control space, not the control space:
+
+- **HARMONICS transposes the engine.** At the best MACRO / DC blocker,
+  HARMONICS 0.00–0.13 sits **+7 semitones**, 0.83–1.00 sits **+16 semitones**,
+  and only 12–17 of 25 knob positions hold pitch, the ends failing identically
+  at every note. It is deterministic, not noise-driven (three breath-noise
+  seeds agree everywhere except one bistable point).
+- **MORPH transposes it too**, which is the gate's actual question. Give the
+  design *both* fixes — 8 Hz blocker *and* HARMONICS pre-restricted to its
+  in-tune window — and 78–82% of (note × HARMONICS × MORPH) holds pitch, with
+  the failures being **+22 and +26 semitone** jumps that MORPH triggers
+  mid-travel, at a boundary that moves with the note. E.g. MIDI 60 at
+  HARMONICS 0.20: in tune to MORPH 0.2, then +22 semitones from 0.3 up.
+
+**Mechanism.** The bore-only loop *cannot* self-oscillate: the bore write takes
+`reflection >> 1`, capping its round-trip gain at |H|/2 ≤ 0.5. So the
+oscillation is set by the **jet** path, whose delay is 48/256…79/256 of the
+total — and that fraction is HARMONICS. Sliding it slides the whole mode
+family, so the played note is only reachable near the middle of the knob. This
+is also why the cited study's scatter appeared **across the COLOR sweep**:
+COLOR *is* the jet fraction. The detuning was never MORPH's doing.
+
+**On the spec's topology objection: right verdict, wrong arithmetic.** §3.11
+predicted the survivor would be a **sub-f0** mode near 0.31–0.36 f0, the third
+member of the bore-only series. That series is not available at all (the ½
+above), and every mode measured is **super-f0** — 1.5×, 2.5×, 3.5×, 4×. The
+conclusion "MORPH does the opposite of what the design claims" stands; the
+named mechanism does not.
+
+Two by-products worth keeping:
+
+- Braids' `lut_flute_body_filter` works out to a nearly constant **8.8–13.2
+  harmonics of the note** across the keyboard (13.2 at MIDI 43 → 8.8 at MIDI
+  79), so the port's "corner in harmonics" MORPH really was the right
+  generalisation of it, and Braids' own fixed setting sits at MORPH ≈ 0.27 —
+  *below noon*, in the region the claim says is reliable. Braids is famously
+  not, and the measurement reproduces that.
+- **`DigitalOscillatorShape` is NOT the `fn_table_` index.** `fn_table_` is
+  indexed by `MacroOscillatorShape - MACRO_OSC_SHAPE_TRIPLE_RING_MOD`; the
+  `DigitalOscillatorShape` enum is in a different order, so
+  `set_shape(OSC_SHAPE_FLUTED)` silently renders **Snare**. It cost an hour
+  here, presenting as "FLUT does not sustain" (one loud block, then decay to a
+  DC value of 10). Anything driving `DigitalOscillator` directly is exposed;
+  drive `MacroOscillator` with a `MACRO_OSC_SHAPE_*`.
 
 ---
 

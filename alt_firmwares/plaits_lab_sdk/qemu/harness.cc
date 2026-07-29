@@ -51,6 +51,14 @@ using namespace plaits;
 #define PLAITS_QEMU_TRIGGER 2
 #endif
 
+// Stereo requests the L/R render path from engines that branch on it. An
+// engine whose stereo branch is a second render (the Pattern B shape: a mono
+// AUX voice on one side, an L/R pair on the other) costs DIFFERENTLY in the
+// two modes, and pinning this to false measures only the mono half.
+#ifndef PLAITS_QEMU_STEREO
+#define PLAITS_QEMU_STEREO 0
+#endif
+
 // Semihosting: the only way out of a bare-metal guest. bkpt 0xAB is the ARM
 // convention; QEMU implements it when started with -semihosting-config.
 static inline int Semihost(int op, void* arg) {
@@ -80,7 +88,7 @@ int main() {
   p.accent = 1.0f;
   p.macro = PLAITS_QEMU_MACRO;
   p.chord_set_option = 0;
-  p.stereo = false;
+  p.stereo = PLAITS_QEMU_STEREO != 0;
 
   float out[kBlockSize];
   float aux[kBlockSize];

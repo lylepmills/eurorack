@@ -45,6 +45,7 @@ node_modules/
 /tmp/
 bank_*.raw
 plaits_test
+braids/test/render_braids_model
 plaits_*_engine.wav
 /[0-9][0-9]-*.wav
 __pycache__/

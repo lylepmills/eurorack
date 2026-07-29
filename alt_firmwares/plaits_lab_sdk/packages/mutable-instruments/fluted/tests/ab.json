@@ -1,0 +1,126 @@
+{
+  "shape": "FLUTED",
+
+  "note": "Braids' TIMBRE is the breath-noise depth and its COLOR is the jet/bore split of one fixed loop length, so p1 maps to the engine's TIMBRE and p2 to its HARMONICS, both 1:1. MORPH and MACRO sit at noon in every case, where Blow is 1.0 (the module's `breath_pressure <<= 1`) and Body is 0 (the module's note-derived reflection-filter index). ApplyMacro returns the stock value exactly at 0.5, so with both at noon the engine's inner loop is Braids' arithmetic term for term.",
+
+  "whyThisModelWasDroppedOnce": "Wave 1 gated FLUT on this measurement and dropped it at 37 cents of pitch error. RenderFluted has no `size -= 2` (digital_oscillator.cc:1405), so it is a 96 kHz algorithm, and its `- (2 << 16)` of loop delay, its reflection one-pole's group delay and its in-loop DC blocker's phase are all rate constants that do not transfer into a 48 kHz loop. This engine runs its waveguide at 96 kHz -- two internal steps per output sample, as blown does -- and the constants transfer verbatim. The pitch cases below are what that buys, and the engine header carries the full analysis.",
+
+  "onTheCentsTolerance": "1.5 cents rather than 1.0, and the reason is measured on both sides. First, ab_engine's f0 estimator is not stable enough here to justify a tighter number: rendering the MODULE at eight different RNG seeds and reading its own f0 gives spans of 0.2 to 1.6 cents depending on the case, so a 1.0-cent tolerance is inside the metric's own noise. Second, ab_engine subtracts a flat 4.61 cents for kCorrectedSampleRate (R6), and that subtraction is only approximate for a waveguide: R6 shortens the delay LINE by 0.266%, but two fixed samples and the phase of two filters are also in this loop and do not scale, so the pitch moves by less than the line does, by a register-dependent amount. Measured on the module's own deterministic corner (TIMBRE 1.0, COLOR 0.5, spectral-peak f0), the raw shift runs 3.37 to 5.65 cents across MIDI 33 to 81 rather than a flat 4.61. Rendering the engine at note - 0.0461 semitones instead, so its delay lines match the module's exactly, the residual is -0.093 to +0.018 cents at MIDI 33.5 / 45.5 / 57.5 / 69.5 / 81.5. So the loop is right to a tenth of a cent and the tolerance is set by the metric plus the R6 transfer, not by the port. The turbulent case declares no cents tolerance at all: at TIMBRE 0 the model wanders between registers and the estimator returns no usable f0 on either side.",
+
+  "whyMostCasesAreTriggered": "FLUT is a noise-driven self-oscillator, but unlike BLOWN it is well behaved: rendering the MODULE from eight seeds spreads its own AC RMS by at most 0.24 dB and its own pairwise spectrum by at most 0.31 dB, held or triggered. So held cases are legitimate here and three of them carry the pitch checks, at minimum turbulence where the module's own f0 is stable to 0.2 cents. The triggered cases exist to exercise the excitation envelope -- Braids restarts it on a strike (digital_oscillator.cc:1381-1387) and it is the only part of this model that is not steady state.",
+
+  "onJetLongBeingTheWorstCase": "jet-long reads 0.87 dB of AC RMS and 1.29 dB of spectrum, against 0.34 dB and 0.30 dB for the module compared against itself over twelve seeds -- outside the noise, so it is a real difference and it gets a real explanation rather than a wider tolerance elsewhere. It is a property of that corner of the MODEL, not of the port: (1) the identical case at MIDI 45.5 instead of 45 reads 0.16 to 0.31 dB against a module-against-itself spread of 0.22 dB, so nothing systematic is wrong; (2) the MODULE compared against ITSELF at MIDI 45 versus MIDI 45 plus TWO CENTS, at this COLOR, reads 1.24 dB of spectrum and 0.76 dB of AC RMS. At COLOR 1 the jet takes 30.86% of the loop and the model sits near a mode boundary where a couple of cents of bore length moves the balance that much -- and R6 moves the bore by 4.61 cents whatever the port does. The tolerance is set at 1.0 dB / 1.5 dB for this case alone, with that measurement as the justification.",
+
+  "cases": [
+    {
+      "id": "quiet-held",
+      "name": "Minimum turbulence, held, where the module is deterministic",
+      "seconds": 3,
+      "note": 45,
+      "triggerHz": 0,
+      "braids": {"p1": 1.0, "p2": 0.5},
+      "engine": {"timbre": 1.0, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.5, "cents": 1.5, "spectrumDb": 1.0},
+      "toleranceNote": "The tightest case in the set on purpose: at TIMBRE 1.0 the noise depth is 1.3% and the module reproduces itself to 0.01 dB of AC RMS and 0.10 dB of spectrum across eight seeds, so this is the case that would catch a real arithmetic error. Reads -0.02 dB / 0.18 dB / -0.3 cents."
+    },
+    {
+      "id": "stock-mid",
+      "name": "Both module knobs at noon",
+      "seconds": 4,
+      "note": 45,
+      "triggerHz": 8,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.6, "cents": 1.5, "spectrumDb": 1.0},
+      "toleranceNote": "Module against itself over eight seeds: 0.16 dB of AC RMS, 0.15 dB of spectrum, 1.4 cents of estimator spread."
+    },
+    {
+      "id": "turbulent",
+      "name": "Maximum turbulence, where the pipe barely holds a register",
+      "seconds": 4,
+      "note": 45,
+      "triggerHz": 8,
+      "braids": {"p1": 0.0, "p2": 0.5},
+      "engine": {"timbre": 0.0, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.6, "spectrumDb": 1.0},
+      "toleranceNote": "No cents tolerance: at TIMBRE 0 the noise depth is 51.3% and the model wanders between registers, and ab_engine's estimator returns no usable f0 on the MODULE either. Level and spectrum are the ordinary ones and the port meets them (+0.32 dB / 0.22 dB) against a module-against-itself spread of 0.06 dB / 0.09 dB."
+    },
+    {
+      "id": "jet-short",
+      "name": "COLOR at its floor, the shortest jet",
+      "seconds": 4,
+      "note": 45,
+      "triggerHz": 8,
+      "braids": {"p1": 0.5, "p2": 0.0},
+      "engine": {"timbre": 0.5, "harmonics": 0.0, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.6, "cents": 1.5, "spectrumDb": 1.0},
+      "toleranceNote": "COLOR 0 puts 48/256 = 18.75% of the loop in the jet. Module against itself: 0.24 dB / 0.27 dB / 1.1 cents."
+    },
+    {
+      "id": "jet-long",
+      "name": "COLOR at its ceiling, the longest jet",
+      "seconds": 4,
+      "note": 45,
+      "triggerHz": 8,
+      "braids": {"p1": 0.5, "p2": 1.0},
+      "engine": {"timbre": 0.5, "harmonics": 1.0, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "cents": 1.5, "spectrumDb": 1.5},
+      "toleranceNote": "The one loose case, and the only one whose tolerance is not set by the module's own seed spread. See onJetLongBeingTheWorstCase: at this COLOR the model is so sensitive to bore length that the MODULE two cents away from itself reads 1.24 dB of spectrum, and R6 moves the bore by 4.61 cents. Reads +0.87 dB / 1.29 dB / -0.4 cents."
+    },
+    {
+      "id": "low",
+      "name": "An octave down, retongued",
+      "seconds": 4,
+      "note": 33,
+      "triggerHz": 4,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.6, "cents": 1.5, "spectrumDb": 1.0},
+      "toleranceNote": "Triggered at 4 Hz rather than 8 so each strike gets enough cycles of a longer bore to settle. Module against itself: 0.19 dB / 0.19 dB / 1.5 cents."
+    },
+    {
+      "id": "low-quiet-held",
+      "name": "The long bore held at minimum turbulence",
+      "seconds": 3,
+      "note": 33,
+      "triggerHz": 0,
+      "braids": {"p1": 1.0, "p2": 0.5},
+      "engine": {"timbre": 1.0, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.5, "cents": 2.0, "spectrumDb": 1.0},
+      "toleranceNote": "2.0 cents, not 1.5: this is the case where ab_engine's estimator is least stable, spanning 1.6 cents across eight renders of the MODULE alone. Reads +0.7 cents, and the same note measured by spectral peak with the delay matched reads -0.093 cents."
+    },
+    {
+      "id": "high-quiet-held",
+      "name": "Two octaves up, held at minimum turbulence",
+      "seconds": 3,
+      "note": 69,
+      "triggerHz": 0,
+      "braids": {"p1": 1.0, "p2": 0.5},
+      "engine": {"timbre": 1.0, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.5, "cents": 1.5, "spectrumDb": 1.0},
+      "toleranceNote": "The other deterministic corner: module against itself 0.00 dB / 0.02 dB / 0.2 cents. Reads -0.01 dB / 0.09 dB / -0.8 cents, the -0.8 being the R6 transfer described in onTheCentsTolerance."
+    },
+    {
+      "id": "sweep-timbre",
+      "name": "TIMBRE swept across the whole knob",
+      "seconds": 5,
+      "note": 45,
+      "triggerHz": 8,
+      "braids": {"p1": [0.0, 1.0], "p2": 0.5},
+      "engine": {"timbre": [0.0, 1.0], "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.6, "cents": 1.5, "spectrumDb": 1.0},
+      "toleranceNote": "Covers Braids' TIMBRE axis end to end in one render, which is the check that the `2100 - (parameter_[0] >> 4)` mapping and its direction are right. Module against itself: 0.11 dB / 0.12 dB / 1.0 cents."
+    },
+    {
+      "id": "sweep-color",
+      "name": "COLOR swept across the whole knob",
+      "seconds": 5,
+      "note": 45,
+      "triggerHz": 8,
+      "braids": {"p1": 0.8, "p2": [0.0, 1.0]},
+      "engine": {"timbre": 0.8, "harmonics": [0.0, 1.0], "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.6, "cents": 1.5, "spectrumDb": 1.0},
+      "toleranceNote": "The other Braids axis end to end, at a TIMBRE quiet enough that the sweep is not buried in turbulence. Module against itself: 0.14 dB / 0.17 dB / 0.8 cents."
+    }
+  ]
+}

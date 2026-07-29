@@ -1,0 +1,60 @@
+{
+  "shape": "SAW_SWARM",
+  "note": "Braids' TIMBRE is the detune spread and its COLOR is the filter cutoff, so p1 maps to the engine's TIMBRE and p2 to its HARMONICS. MORPH and MACRO sit at noon in every case: at morph=0.5 the filter sweep is exactly the module's own highpass, and at macro=0.5 the resonance is exactly the module's fixed damping -- otherwise the comparison would not be of a sound the module can make.",
+  "cases": [
+    {
+      "id": "stock-mid",
+      "name": "Mid detune, mid color",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.5, "cents": 10.0, "spectrumDb": 3.0}
+    },
+    {
+      "id": "unison",
+      "name": "Near-unison detune -- the slowest beat, so the initial phases dominate",
+      "seconds": 3,
+      "note": 48,
+      "braids": {"p1": 0.05, "p2": 0.5},
+      "engine": {"timbre": 0.05, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.5, "cents": 10.0, "spectrumDb": 3.0}
+    },
+    {
+      "id": "wide-chorus",
+      "name": "Widest detune spread",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.95, "p2": 0.5},
+      "engine": {"timbre": 0.95, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.5, "cents": 10.0, "spectrumDb": 3.0}
+    },
+    {
+      "id": "color-low",
+      "name": "Cutoff dropped well below the note -- barely filtered",
+      "seconds": 3,
+      "note": 48,
+      "braids": {"p1": 0.5, "p2": 0.0},
+      "engine": {"timbre": 0.5, "harmonics": 0.0, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.5, "cents": 10.0, "spectrumDb": 3.0}
+    },
+    {
+      "id": "color-high",
+      "name": "Cutoff pushed well above the note -- thin and hollow, no clear pitch",
+      "seconds": 3,
+      "note": 48,
+      "braids": {"p1": 0.5, "p2": 1.0},
+      "engine": {"timbre": 0.5, "harmonics": 1.0, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.5, "spectrumDb": 3.0}
+    },
+    {
+      "id": "high-note",
+      "name": "Two octaves up, where the naive saws alias hardest",
+      "seconds": 2,
+      "note": 84,
+      "braids": {"p1": 0.6, "p2": 0.5},
+      "engine": {"timbre": 0.6, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.5, "cents": 10.0, "spectrumDb": 3.0}
+    }
+  ]
+}

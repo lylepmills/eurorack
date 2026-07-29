@@ -1,0 +1,133 @@
+{
+  "shape": "STRUCK_DRUM",
+  "note": "Braids' TIMBRE is the decay and its COLOR drives the noise cutoff/harmonics gain/noise-mode crossfade together, so p1 maps to the engine's TIMBRE and p2 to its HARMONICS. MORPH and MACRO sit at noon in every case (Spread 1.0 = the module's own six-partial voicing exactly; Decay spread 1.0 = the module's own per-partial divergence exactly). DRUM is a one-shot per trigger, so every case drives triggerHz > 0 and seconds is an exact multiple of the hit period, giving both sides the SAME number of hits in the compared window -- triggerHz 0 would leave the port silent (TRIGGER_UNPATCHED, never a rising edge; see render_model.cc:91-99) while the Braids reference still strikes once at t=0. The five note-45 cases declare no cents tolerance: ab_engine.py's autocorrelation f0 tracker locks onto exactly 2000 Hz (its own upper search bound, min_lag = rate/f_max) on BOTH sides at that register, a degenerate 'hit the search wall' result, not a pitch reading -- confirmed by comparing raw (uncorrected) f0 directly with ab_compare.py, which prints 'reference 2000.00 Hz  port 2000.00 Hz' verbatim. Six simultaneous partials (two sharing the fundamental, four inharmonic overtones) plus two of them ring-modulated by noise give the single-lag autocorrelator nothing reliable to lock onto at note 45, the same caveat particle-burst's header documents for its own multi-resonator chord. high-register (note 72) is the exception and DOES track: raw f0 reads 524.76 Hz reference against 526.26 Hz port (+4.95 cents raw, +0.3 cents after the kCorrectedSampleRate subtraction) -- close to the note's nominal 523.25 Hz on both sides, so that ONE case keeps a real cents tolerance as the suite's positive pitch check; the per-band tables (run with --bands) cover the fundamental at note 45 instead, where every case's dominant band matches within 0.2 dB. color-dark is deliberately an EIGHT-hit, four-second window like the other multi-hit cases even though COLOR 0 is where the noise lowpass is slowest (cutoff coefficient ~45/32768, a multi-hundred-millisecond three-stage memory that a strike never resets): the chain's integer truncation is reproduced (see struck_drum_engine.h, NOISE-CHAIN TRUNCATION), so its behaviour is dominated by Braids' own deterministic DC offset rather than by the RNG sequence, and the long window no longer accumulates a difference. Measured: +0.03 dB over eight hits. Before that truncation was reproduced the same window read +2.32 dB and grew with length (2 hits +1.61 dB), which is exactly the signature to re-check here if this case ever regresses.",
+  "cases": [
+    {
+      "id": "stock-mid",
+      "name": "Stock decay, moderate color",
+      "seconds": 4,
+      "note": 45,
+      "triggerHz": 2,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "decay-fast",
+      "name": "TIMBRE at 0: fastest decay",
+      "seconds": 2,
+      "note": 45,
+      "triggerHz": 4,
+      "braids": {
+        "p1": 0.0,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.0,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "decay-drone",
+      "name": "TIMBRE at 1: droning, no energy loss",
+      "seconds": 3,
+      "note": 45,
+      "triggerHz": 1,
+      "braids": {
+        "p1": 1.0,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 1.0,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "color-bright",
+      "name": "COLOR at 1: brightest noise, mode 2 crossfade",
+      "seconds": 4,
+      "note": 45,
+      "triggerHz": 2,
+      "braids": {
+        "p1": 0.5,
+        "p2": 1.0
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 1.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "color-dark",
+      "name": "COLOR at 0: darkest noise, harmonics floor",
+      "seconds": 4,
+      "note": 45,
+      "triggerHz": 2,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.0
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "high-register",
+      "name": "Two octaves up",
+      "seconds": 3,
+      "note": 72,
+      "triggerHz": 3,
+      "braids": {
+        "p1": 0.4,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.4,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 10.0,
+        "spectrumDb": 1.5
+      }
+    }
+  ]
+}

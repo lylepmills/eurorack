@@ -1,0 +1,152 @@
+{
+  "shape": "BUZZ",
+  "note": "p1 is Braids' TIMBRE (the shared harmonic-count shift, both oscillators). p2 is COLOR, which drives ONLY the second oscillator's detune -- not harmonic content, the trap this engine's header documents. MORPH and MACRO sit at noon in every case: Spread is zero there (both voices share TIMBRE's zone, exactly Braids) and Reach's detune ceiling equals the module's own ~1-semitone maximum, so engine.harmonics reproduces braids.p2 directly. The color-half-detune case exercises the exact axis a wrong reading (COLOR driving harmonic content, like a two-band FOLD) would have gotten wrong. The rate fix (SPEC R5, reading the 96kHz-generated zone tables at 2x then decimating) matters most at a LOW note with TIMBRE near 1, and not for the zones' own harmonics: the zone index tracks the played note, so the stack read tops out around 17-27kHz whatever you play. What sits above 24kHz is the image of the 256-point table read, around 256*f0. Measured on the reference renderer at 96kHz: note 48 / TIMBRE 1 puts 0.49% of its energy above 24kHz (timbre-high is that case), where note 84 / TIMBRE 1 puts 0.0003% there.",
+  "cases": [
+    {
+      "id": "stock-mid",
+      "name": "Half TIMBRE, no detune",
+      "seconds": 3,
+      "note": 48,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.0
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 10.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "timbre-low",
+      "name": "TIMBRE at 0 -- near-sine, top zone",
+      "seconds": 3,
+      "note": 48,
+      "braids": {
+        "p1": 0.0,
+        "p2": 0.0
+      },
+      "engine": {
+        "timbre": 0.0,
+        "harmonics": 0.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 10.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "timbre-high",
+      "name": "TIMBRE at 1 -- fullest stack the note carries",
+      "seconds": 3,
+      "note": 48,
+      "braids": {
+        "p1": 1.0,
+        "p2": 0.0
+      },
+      "engine": {
+        "timbre": 1.0,
+        "harmonics": 0.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 10.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "color-full-detune",
+      "name": "COLOR at 1 -- the module's own sub-semitone detune ceiling",
+      "seconds": 3,
+      "note": 48,
+      "braids": {
+        "p1": 0.7,
+        "p2": 1.0
+      },
+      "engine": {
+        "timbre": 0.7,
+        "harmonics": 1.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 15.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "color-half-detune",
+      "name": "COLOR mid-travel -- the axis a parameter-index trap would get wrong",
+      "seconds": 3,
+      "note": 48,
+      "braids": {
+        "p1": 0.7,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.7,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 15.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "high-note-many-harmonics",
+      "name": "High note, TIMBRE at 1 -- the densest stack a high note reaches (zones 10 and 11, 20 and 12 harmonics, top partial 20.9kHz). NOT an aliasing case: measured at 96kHz it carries 0.0003% of its energy above 24kHz, so nothing folds. The rate fix is exercised by timbre-high instead -- see the note above. No cents tolerance: ab_engine.py's autocorrelation f0 locks onto the wrong peak for this case in BOTH signals (BUZZ's flat harmonic spectrum gives it many near-tied correlation peaks) and reports a bogus ~2-octave error. A direct Goertzel scan of both WAVs confirms the true fundamentals agree: reference 1046.5 Hz (the nominal, uncorrected render), port 1049.3 Hz -- 4.63 cents apart, the expected kCorrectedSampleRate offset (R6), same as every other case here.",
+      "seconds": 2,
+      "note": 84,
+      "braids": {
+        "p1": 1.0,
+        "p2": 0.0
+      },
+      "engine": {
+        "timbre": 1.0,
+        "harmonics": 0.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "high-note",
+      "name": "High note, mid TIMBRE",
+      "seconds": 2,
+      "note": 84,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.2
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.2,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 10.0,
+        "spectrumDb": 1.5
+      }
+    }
+  ]
+}

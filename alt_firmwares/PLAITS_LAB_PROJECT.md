@@ -50,7 +50,7 @@ Implemented in this checkpoint:
   audible macro response, and distinct/responding DX banks
 - An AMD64 Docker/devcontainer toolchain that works on Apple Silicon
 - Flash-size recovery by size-optimizing non-audio UI/settings objects
-- A Plaits Lab SDK v0 with blank/fork scaffolding for all 39 catalog models,
+- A Plaits Lab SDK v0 with blank/fork scaffolding for all 50 catalog models,
   sanitizer/audio validation, hot-reloading browser previews, deterministic
   submissions, and unreviewed local ARM builds
 - One authoritative content-addressed package catalog generating the editor
@@ -314,6 +314,27 @@ A bank may hold FEWER than eight engines. Shipped end-to-end and DEPLOYED
   (`validate_bank_shape` / `contract.ts`) gates a sparse layout on v11; `/v1/catalog`
   advertises `recipeSchemaVersion` 11. No engine DSP changed, so engine digests are
   unmoved — no catalog re-sync (website pin stays at the per-engine-stereo rev).
+- **Optional CV calibration — schema v14, SHIPPED + DEPLOYED 2026-07-29** (source
+  `9e04ca2bf0d5` / image `rev-9e04ca2bf0d5`, manual contract 7). The procedure the
+  alt firmware dropped in 2023 (`c03f73d`) can be compiled back in per recipe,
+  behind `PLAITS_BUILD_ENABLE_CALIBRATION` (default 0). It costs **512 bytes**,
+  measured by building the same source twice in the pinned container — so the
+  stock-24 palette, which has only 272 B of headroom, cannot fit it. Entered by
+  holding the RIGHT button through power-up, mirroring the bootloader's
+  left-button update gesture; the steps stay disarmed until both buttons are
+  physically up, so the press that started it is not read as the first step. The
+  arithmetic is the stock procedure unchanged, and nothing is written until the
+  second reading validates as two octaves apart. Calibration DATA was never the
+  issue — it lives in the `CALI` chunk at `0x08004000`, below the `0x08008000`
+  the audio bootloader writes from, so it survives every install in either
+  direction; only the procedure was missing. `preferences.calibration` is
+  optional in the recipe (absent means off, so every older recipe is unchanged)
+  and deliberately OUTSIDE the options-profile-id fold, since it is compiled in
+  or out rather than stored — folding it in would reset a user's saved options
+  the first time they toggled it. v14 is also the first version whose defining
+  feature says nothing about a recipe's SHAPE, so it is the first to accept
+  either resource shape (with or without `userDataBanks`). No engine DSP changed,
+  so engine digests are unmoved and the website re-sync was a pin bump only.
 - **Firmware: per-bank-memory navigation ("design B").** `plaits/bank_navigation.h`
   (pure, host-tested in `plaits/test/`) — within-bank stepping wraps at the
   bank's real size; change-bank lands on the destination bank's LAST-SELECTED row
@@ -408,7 +429,7 @@ rather than treating any figure here as an expected value.
 
 ## Personalized manual prototype
 
-The authoritative package catalog now includes manual prose for all 39 models.
+The authoritative package catalog now includes manual prose for all 50 models.
 It receives a documentation digest independent of the executable package
 digest, so editing user-facing text does not invalidate saved firmware recipes.
 
@@ -434,7 +455,7 @@ downloads — no combined ZIP. Details in
 
 Still open:
 
-1. Give all 39 model descriptions a final editorial/listening review and
+1. Give all 50 model descriptions a final editorial/listening review and
    re-check the rendered Letter pages after any catalog wording change.
 
 (The manual rollout that used to sit at the top of this list shipped July 19,

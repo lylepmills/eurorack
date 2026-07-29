@@ -1,0 +1,67 @@
+[
+  {
+    "id": "hero",
+    "name": "The chord list, top to bottom, on one wave",
+    "durationSeconds": 5,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.0, 1.0],
+      "timbre": [0.55, 0.55],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "wave-scan",
+    "name": "The 33-wave scan line, chord held",
+    "durationSeconds": 4,
+    "note": 48,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.65, 0.65],
+      "timbre": [0.0, 1.0],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "fan",
+    "name": "Fanning the four voices apart along the scan line",
+    "durationSeconds": 4,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.65, 0.65],
+      "timbre": [0.5, 0.5],
+      "morph": [0.0, 1.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "spread",
+    "name": "A triad collapsing to unison and opening to double width",
+    "durationSeconds": 4,
+    "note": 40,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.65, 0.65],
+      "timbre": [0.3, 0.3],
+      "morph": [0.5, 0.5],
+      "macro": [0.0, 1.0]
+    }
+  },
+  {
+    "id": "retrigger",
+    "name": "Re-struck, so the four phases redraw each time",
+    "durationSeconds": 3,
+    "note": 52,
+    "triggerHz": 2,
+    "controls": {
+      "harmonics": [0.05, 0.05],
+      "timbre": [0.75, 0.75],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  }
+]

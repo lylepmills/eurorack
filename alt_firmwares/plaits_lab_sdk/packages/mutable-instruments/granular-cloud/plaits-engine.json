@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/granular-cloud",
+  "catalogId": "granular-cloud",
+  "version": "1.0.0",
+  "name": "Granular Cloud",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "Braids' asynchronous grain cloud: four windowed sine grains respawning on a coin flip, each taking a fresh random pitch. Where Granular Formant stays locked to a carrier, this one scatters until the pitch is gone.",
+  "family": "Granular",
+  "tags": [
+    "braids",
+    "granular",
+    "grains",
+    "stochastic",
+    "cloud"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Scatter",
+      "description": "Widens the random pitch each grain takes when it respawns, from unison to a cloud with no pitch left."
+    },
+    {
+      "id": "timbre",
+      "label": "Grain",
+      "description": "Sets grain length, from long overlapping windows down to short ones that respawn far more often."
+    },
+    {
+      "id": "morph",
+      "label": "Shape",
+      "description": "Slides where the grain window peaks, from a reversed swell through the module's symmetric window to a struck grain."
+    },
+    {
+      "id": "macro",
+      "label": "Density",
+      "description": "Sets how readily a finished grain respawns, from a sputtering cloud full of gaps up to four voices that never leave one."
+    }
+  ],
+  "outputs": {
+    "main": "The four grains summed, as the module sums them.",
+    "aux": "The cloud's amplitude on one steady tone at the played pitch: the grain rhythm without the scatter."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/granular_cloud_engine.h",
+    "files": [
+      "plaits/dsp/engine2/granular_cloud_engine.cc"
+    ],
+    "className": "GranularCloudEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": 0.8,
+    "auxGain": 0.5
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids DigitalOscillator::RenderGranularCloud"
+}

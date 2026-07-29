@@ -1,0 +1,78 @@
+{
+  "shape": "VOSIM",
+  "note": "Braids' TIMBRE is formant 1's absolute pitch and its COLOR is formant 2's, so p1 maps to the engine's TIMBRE and p2 to its HARMONICS. MORPH and MACRO sit at noon in every case: Window is the module's one-sixteenth attack there and Balance is its fixed 2:1, which is the module exactly. Both knobs are swept to their ends because both are pitches over the whole MIDI range, and the model sounds nothing alike at the two ends of either. The two cases with a formant at the top of its range declare no cents tolerance: a 13.29 kHz formant carrying a third to a half of the energy puts a 3.6-sample comb into the autocorrelation, and the estimator picks a different tooth of it on the two sides, reading tens of cents where there is no pitch difference at all. Measured directly instead -- a fine-grained DFT peak on the fundamental, 0.5 s from the middle of each render -- the two sides agree to +0.05 cents on both of them, the same figure as on stock-mid.",
+  "cases": [
+    {
+      "id": "stock-mid",
+      "name": "Both formants at noon",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "cents": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "vowel-pair",
+      "name": "Formants at 690 and 1676 Hz, the granular-formant comparison point",
+      "seconds": 3,
+      "note": 40,
+      "braids": {"p1": 0.6, "p2": 0.72},
+      "engine": {"timbre": 0.6, "harmonics": 0.72, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "cents": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "formant1-low",
+      "name": "Formant 1 at the bottom of its range",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.0, "p2": 0.5},
+      "engine": {"timbre": 0.0, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "cents": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "formant1-high",
+      "name": "Formant 1 at the top of its range",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 1.0, "p2": 0.5},
+      "engine": {"timbre": 1.0, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "formant2-low",
+      "name": "Formant 2 at the bottom of its range",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.0},
+      "engine": {"timbre": 0.5, "harmonics": 0.0, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "cents": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "formant2-high",
+      "name": "Formant 2 at the top of its range",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 1.0},
+      "engine": {"timbre": 0.5, "harmonics": 1.0, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "wide-pair",
+      "name": "Formants 51 semitones apart, past a +/-24-semitone ratio control",
+      "seconds": 3,
+      "note": 40,
+      "braids": {"p1": 0.45, "p2": 0.85},
+      "engine": {"timbre": 0.45, "harmonics": 0.85, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "cents": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "high-note",
+      "name": "Two octaves up, where the bell attack is under seven samples",
+      "seconds": 2,
+      "note": 69,
+      "braids": {"p1": 0.65, "p2": 0.8},
+      "engine": {"timbre": 0.65, "harmonics": 0.8, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "cents": 1.0, "spectrumDb": 1.5}
+    }
+  ]
+}

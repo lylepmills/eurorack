@@ -1799,7 +1799,7 @@
         "Mirrored notch depth"
       ],
       "version": "1.0.0",
-      "digest": "sha256:6c63cb6f5f3bbf6b90b64440bdbbac7cb77012ae2e04c3ed8e1efc1c9c5bd41d",
+      "digest": "sha256:7ff3d1730a08063c3a9cfe410f43be6bf339cde5d9146fba53c46641297950fc",
       "documentationDigest": "sha256:94e3aec1ce82bb8e0fc6857124dac5eacbf343bdd83fb17aae2edfe102db28a8",
       "manual": {
         "controls": {
@@ -1839,7 +1839,7 @@
         "Carrier and first modulator"
       ],
       "version": "1.0.0",
-      "digest": "sha256:f10a3f944678f5049c4c8f3721d9b7255594c1eead9d5687b84c89c165904df1",
+      "digest": "sha256:440ab7413a46adc83480edc5ea409b460531c7d778aa185a8307bcff9a95eded",
       "documentationDigest": "sha256:34eb5e33ad1392c007d88317ded14aab73de07e66e9102e8253ebfc20d0ae612",
       "manual": {
         "controls": {
@@ -1879,7 +1879,7 @@
         "Neck pickup"
       ],
       "version": "1.0.0",
-      "digest": "sha256:b37b30efef39897c4f9b03590b5ef920e120cebc8dc9ca8c0d7d83acce743b98",
+      "digest": "sha256:ed3e38c4de99f009c59bae1f1b829b86e113bce4750d76afdcc72a37c0aea007",
       "documentationDigest": "sha256:b913cb9025a1b2ed2dee10c5c3c5f6e724a61c84404be673ed659bcdc981b08b",
       "manual": {
         "controls": {
@@ -1959,7 +1959,7 @@
         "Symbol staircase"
       ],
       "version": "1.0.0",
-      "digest": "sha256:fd9a8616025aa5c7cced5e447ba92f1b7ce3d228e229a24c2ceaecaadc7d8d80",
+      "digest": "sha256:2b4cd4326ce213a23f6336c9161e54fa24ddb8c7fa168327a9ad39eec02f8f7c",
       "documentationDigest": "sha256:76ff0cca3dbaa7eccc97f7cce7f5569d5f9bf5d16c0ce7e668238f7435a63fdd",
       "manual": {
         "controls": {
@@ -2039,7 +2039,7 @@
         "Upper-formant weighting"
       ],
       "version": "1.0.0",
-      "digest": "sha256:eed70e864ce748413562e4460c563674b26782b18df9e4e0938e1d34aab08553",
+      "digest": "sha256:db3792753aa3d154e8334fb359f85dd06373f72580ec9a57046b4d42a5849102",
       "documentationDigest": "sha256:c6bb521ba1dcecf6cd7fe3158fae1f7b9288886732d0a3686549530bf7db5f7e",
       "manual": {
         "controls": {
