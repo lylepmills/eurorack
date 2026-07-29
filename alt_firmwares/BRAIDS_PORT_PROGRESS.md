@@ -189,11 +189,16 @@ missing-submodule guard.
    survives, but only as the seed for the stock-derived Stereo Dreams preset; it
    no longer gates any button, so a future always-stereo engine needs no entry.
 
-2. ~~**Braids 14-segment icons.**~~ **DONE.** Both renderers ship: placed slots
-   cycle the source codes, the library rail and catalog card show the static
-   wildcard (`Z**F`, `**FM`, `SUB*`, `**X3`). `website/src/lib/braidsDisplay.ts`
-   (data + geometry, 12 tests) and `components/plaits-palette/BraidsDisplay.tsx`.
-   Three findings worth keeping:
+2. ~~**Braids 14-segment icons.**~~ **DONE.** A merged engine cycles its source
+   codes EVERYWHERE its icon appears — placed slots and the library rail alike.
+   The two-renderer split the brief called for was built and then dropped:
+   holding the library static was justified by "no slot state to read", but the
+   cycle carries its own message anywhere it runs (this slot is several Braids
+   models at once) and says it more plainly than a wildcard. The static wildcard
+   (`Z**F`, `**FM`, `SUB*`, `**X3`) survives as the **reduced-motion** frame.
+   `website/src/lib/braidsDisplay.ts` (font, geometry and frame selection, 15
+   tests) and `components/plaits-palette/BraidsDisplay.tsx`.
+   Four findings worth keeping:
    - **Nothing needed hand-mapping.** `chr_characters[]` in `braids/resources.cc`
      is a direct byte→16-bit segment-word table — the one `Display::Refresh`
      indexes by raw character byte and shifts to the driver — so the custom
@@ -207,10 +212,20 @@ missing-submodule guard.
      its package drawing gives character box 7.97 × 13.8 mm, segment width
      1.0 mm, digit pitch 12.7 mm, and slant **5°**. The first pass eyeballed the
      slant at 10° and read obviously wrong; the datasheet settled it. A test
-     pins all five numbers so a "looks better" edit fails.
+     pins all five numbers so a "looks better" edit fails. The one number
+     deliberately NOT the datasheet's is the drawn stroke: 1.0 mm is the die,
+     and a lit segment blooms through the white diffused lens, so it is drawn at
+     1.45× or the code goes thin at the 30 px slot size — the test asserts that
+     relationship rather than the raw width.
    - **The mapping is twenty models, not nineteen** — `saw-comb` is a seventh
      1:1 engine, not only the glyph case. Cross-checked against the `upstream`
      field of all eleven `plaits-engine.json` files.
+   - **The display is GREEN, and the first pass drew it red.** Kingbright's
+     `-GWA` suffix on that part is the green GaP die behind a white diffused
+     lens (565 nm peak, 568 nm dominant). Both visual errors this round — a
+     slant at twice the real angle, and an entirely wrong colour — were answered
+     on pages 1–2 of a datasheet *already open* for the geometry. Lesson kept in
+     the `feedback_read_the_datasheet` memory note.
 
    Blurb ancestry is done too, taken from the engine headers. One correction:
    `vowel-fof` and `speech` share the five-vowel × five-register **grid**, not
@@ -224,10 +239,11 @@ missing-submodule guard.
    (47 of 50 byte-identical), so no already-deployed engine is affected — but
    the builder image and this snapshot still ship together, per item 7.
 
-   Still open, for Lyle: on a 14-segment display `*` (H J K L M N) sits close to
-   `X` (H K L N), so `**X3` reads a little like "XXX3" at a glance — the vertical
-   stem is what separates them. Shipped as approved; say the word if a different
-   wildcard character would read better.
+   The wildcard's one legibility wrinkle is now mostly moot: on a 14-segment
+   display `*` (H J K L M N) sits close to `X` (H K L N), so `**X3` read a
+   little like "XXX3". Since the wildcard only shows under reduced motion it is
+   no longer what most readers see — revisit only if that frame becomes
+   prominent again.
 
 3. ~~**`engineStereoBytes` has no entry for `toy`**~~ — **DONE 2026-07-28.**
    Swept with `flash_sweep.py --stereo`; the delta is −144 B (toy's stereo path
