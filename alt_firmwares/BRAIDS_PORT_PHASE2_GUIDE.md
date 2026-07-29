@@ -34,7 +34,7 @@ Nothing in code review caught it. The A/B caught it on the first run.
 behaviour, and cite the line.** Then prove it with an A/B case at each end of
 each axis.
 
-## 2. Two more things that are not what they look like
+## 2. Three more things that are not what they look like
 
 - **Braids' `wav_sine` is not Plaits' `lut_sine`.** It starts at −32512 and
   crosses zero a quarter of the way through: it is `−cos(2*pi*phase)`, where
@@ -46,6 +46,51 @@ each axis.
   renderer does not. `ab_engine.py` already subtracts it and prints the
   corrected figure. If your engine reads ±0.5 cents, it is in tune. If it reads
   tens or hundreds of cents, you have an R5 rate bug.
+- **`AnalogOscillator::Init()` sets neither `previous_phase_increment_` nor
+  `previous_shape_` — and that is fine. Do not "fix" it, and do not re-derive
+  the question from a stack-local test rig.** Both fields are zero because the
+  object has static storage duration: the module declares `MacroOscillator osc;`
+  at file scope (`braids.cc:58`) and `render_braids_model.cc` deliberately
+  matches it (`static MacroOscillator osc;`, with the reasoning in its own
+  comment). So the first `Render()` ramps `phase_increment` up from a
+  *deterministic* zero, not from garbage. Three consequences, each measured:
+  - **The ramp is common-mode, so multi-oscillator models are phase-coherent in
+    the reference.** Ramping linearly 0 → P over N samples accumulates
+    `P*(N+1)/2`, i.e. a lag of `(N−1)/2` = **11.5 samples at N = 24 —
+    independent of P**. Every oscillator, at any pitch, lags by the same 11.5
+    samples, which is a pure global delay. Probing `phase_/phase_increment_` at
+    the first block boundary reads exactly `12.50000` for *every* oscillator of
+    `SAW_SQUARE`, `SQUARE_SYNC`, `SAW_SYNC`, `TRIPLE_SAW` (including the
+    four-octave `saw-wide` spread), `TRIPLE_SQUARE`, `SQUARE_SUB`,
+    `SINE_TRIANGLE` and `MORPH` — spread `0.000e+00`. There is no
+    reference-side relative-phase artifact to chase in any of them.
+  - **Zeroing the field in `Init()` is a no-op on the first call and a
+    regression on later ones.** Measured bit-exact both ways: identical output
+    on every model above, *except* `MORPH` under a TIMBRE sweep, which crosses a
+    region boundary and re-`Init()`s an oscillator mid-render — where the field
+    currently holds a live, correct value and zeroing it injects a spurious
+    11.5-sample slip the hardware does not have (14.7% of samples differ, peak
+    full-scale, difference RMS only 11.7 dB below signal). The field is
+    load-bearing on the re-`Init()` path. Leave it alone.
+  - **The asymmetry that *does* exist is the shape-change re-`Init()` pitch
+    clobber, not the phase increment.** `Init()` resets `pitch_` to `60 << 7`
+    after `set_pitch`, so a re-`Init()`ing oscillator renders one block at MIDI
+    60. It is common-mode wherever both/all oscillators change shape on the same
+    first `Render()` (saw-square, dual-sync, triple, sub, sine-triangle — all
+    documented in their `ab.json`s as costing nothing), and asymmetric only in
+    `MORPH`, where `OSC_SHAPE_SAW` is 0 and so matches the zero-initialised
+    `previous_shape_` while its partner does not. `morph/tests/ab.json` derives
+    and measures that offset — `24 * (f60 − fnote) / 96000` cycles — across four
+    octaves; read it before you conclude you have found something new.
+
+  History, so it is not rediscovered a third time: before 2026-07 the renderer
+  declared `osc` as a stack **local**, which really did leave both fields
+  indeterminate and gave the reference a note-independent ~0.166-cycle skew.
+  Every number taken against that build is void, including a "1.4 to 1.7 dB on
+  every mixed-shape case" reading and the 2.0 dB tolerance it justified. If you
+  are looking at figures in that range, you are looking at the old harness — or
+  at a fresh test rig that reintroduced the bug by allocating an oscillator on
+  the stack.
 
 ## 3. R5 — do the rate analysis before writing a line
 
