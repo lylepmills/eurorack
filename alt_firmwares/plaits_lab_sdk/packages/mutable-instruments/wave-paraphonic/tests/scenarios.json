@@ -1,7 +1,7 @@
 [
   {
     "id": "hero",
-    "name": "The chord list, top to bottom, on one wave",
+    "name": "The active chord table, top to bottom, on one wave",
     "durationSeconds": 5,
     "note": 45,
     "triggerHz": 0,
@@ -40,7 +40,7 @@
   },
   {
     "id": "spread",
-    "name": "A triad collapsing to unison and opening to double width",
+    "name": "A table chord collapsing to unison and opening to double width",
     "durationSeconds": 4,
     "note": 40,
     "triggerHz": 0,

@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 //
 // Braids' WAVE PARAPHONIC model: four wavetable voices reading one scan line,
-// three of them detuned to a chord.
+// tuned by Plaits' shared chord table.
 //
 // The algorithm is Emilie Gillet's DigitalOscillator::RenderWaveParaphonic
 // (braids/digital_oscillator.cc:1755-1831).
@@ -18,11 +18,10 @@
 // design proposed for MACRO is deliberately absent, because ChordEngine's
 // inversion is that control already.
 //
-// What the Braids model still has that ChordEngine does not: its own 17-row
-// chord list, whose first two rows are sub-semitone unisons ({2, 4, 6} and
-// {16, 32, 48} in 1/128 semitone, i.e. inside 4.7 and 37.5 cents); a 33-step
-// scan line over a different selection of waves; and no per-voice registration
-// or amplitude shaping at all -- four equal voices, nothing else.
+// What the Braids model still has that ChordEngine does not: a 33-step scan
+// line over a different selection of waves; no per-voice registration or
+// amplitude shaping at all -- four equal voices, nothing else; and dedicated
+// controls for fanning the four waves and scaling the loaded chord's intervals.
 //
 // THE BRAIDS CONTROLS, with line numbers. RenderWaveParaphonic reads
 // parameter_[0] and parameter_[1] DIRECTLY -- it uses none of the
@@ -34,33 +33,23 @@
 //     them by wave_xfade = (uint16_t)(parameter_[0] << 6). 32 steps of 1024
 //     with a 16-bit fraction inside each; the two expressions are continuous
 //     across a step boundary.
-//   parameter_[1] = COLOR -> the chord. :1777-1792. chord_integral =
-//     parameter_[1] >> 11 picks a row of chords[17][3]; chord_fractional =
-//     (uint16_t)(parameter_[1] << 5) is then flattened to 0 below 30720 and to
-//     65535 at/above 34816 and otherwise expanded by 16, which gives each row
-//     a dead zone and a fast ramp between rows rather than a linear morph.
-//     Each of the three upper voices takes
-//     detune = d1 + ((d2 - d1) * chord_fractional >> 16), an INTEGER in
-//     1/128 semitone, and plays at ComputePhaseIncrement(pitch_ + detune).
-//     Voice 0 always plays the root, undetuned.
+//   parameter_[1] = COLOR -> the chord in Braids. The Plaits port deliberately
+//     routes this axis through ChordBank instead: HARMONICS selects a position
+//     in the active firmware chord table, shared with Chords, String Machine,
+//     Chiptune and Helix. All four stored cent offsets are used. `arpLength`
+//     remains Chiptune-only; this engine always sounds all four voices.
 //
-// The port keeps that arithmetic in integers so the truncation survives: the
-// detunes are quantised to 1/128 semitone before they reach the pitch, exactly
-// as the module quantises them, rather than being computed as exact floats.
-//
-//   HARMONICS  Chord      Braids' COLOR: the 17-row chord list.
+//   HARMONICS  Chord      Selects a position in the active chord table.
 //   TIMBRE     Wave       Braids' TIMBRE: the 33-step scan line.
 //   MORPH      Fan        offsets each voice further along the scan line, so
 //                         the four read different waves. Zero at noon, and
 //                         signed: below noon the root keeps the brighter wave,
 //                         above it the top of the chord does. Braids has no
 //                         such control, and neither does ChordEngine.
-//   MACRO      Spread     scales every chord interval by 0 to 2x around
-//                         Braids' own voicing at 1.0. At 0 the chord collapses
-//                         to a unison; at 2 every interval doubles, so a fifth
-//                         opens to a ninth and a tritone to an octave. This is
-//                         an interval scaler, not the octave fan
-//                         ComputeChordInversion already performs.
+//   MACRO      Spread     scales every loaded chord interval by 0 to 2x. At
+//                         noon the table is verbatim; at 0 it collapses to a
+//                         unison; at 2 every interval doubles. This is an
+//                         interval scaler, not ChordEngine's octave inversion.
 //
 // STRIKE, and why no core file is edited. :1759-1764 randomises all four
 // phases from Random::GetWord() on a strike, which is what keeps the
@@ -89,8 +78,8 @@
 // has to move.
 //
 // Here nothing does. The function contains no filter, no envelope and no time
-// constant of any kind: the chord detunes live in the pitch domain (1/128
-// semitone), the wave scan is a table index, and the only rate-dependent
+// constant of any kind: the chord intervals live in the pitch domain, the wave
+// scan is a table index, and the only rate-dependent
 // quantity in the whole model is the phase increment itself, which Plaits
 // derives from NoteToFrequency against kCorrectedSampleRate (R6). So the model
 // transfers to 48 kHz verbatim, and the single consequence of the halved rate
@@ -143,7 +132,8 @@
 // symmetric per-octave-band comparison and then chosen by measuring each
 // shortlisted candidate through the A/B itself.
 //
-// Per-slot A/B against the module, 8 s at MIDI 45 on the stock chord, with
+// Before chord-table routing, per-slot A/B against the module measured at 8 s
+// and MIDI 45 on Braids' stock chord, with
 // TIMBRE parked on each slot in turn (33 measurements, all in
 // tests/ab.json's format):
 //
@@ -172,7 +162,8 @@
 // not, so a 33-entry gain table in 1/128 steps restores each slot's Braids
 // RMS. The gains span 0.734 to 1.703 and quantise to within 0.042 dB.
 //
-// MEASUREMENT WINDOW, worth knowing before reading any number here. The stock
+// HISTORICAL MEASUREMENT WINDOW, worth knowing before reading the numbers above.
+// The stock
 // chord row is {7, 12.023, 19.039} semitones, so the octave and twelfth voices
 // sit 2.3 and 3.9 cents off exact ratios and their coincident harmonics beat
 // at a fraction of a hertz. A short render catches an arbitrary point of that
@@ -184,8 +175,9 @@
 //
 // OUT: the four voices summed and averaged, exactly as :1806-1810 and
 // :1817-1822 do.
-// AUX (mono): the root voice alone, at twice the level it contributes to OUT
-// so it stands up as a layer. In stereo OUT/AUX become L/R and the four voices
+// AUX (mono): the table's first voice alone, at twice the level it contributes
+// to OUT so it stands up as a layer. This is usually the root, but user tables
+// may put any offset first. In stereo OUT/AUX become L/R and the four voices
 // take fixed equal-power pan positions.
 //
 // Declared deviations from Braids:
@@ -203,17 +195,21 @@
 //     See the note at the output stage in the .cc.
 //   - the waves carry no DC: wavetables.py mean-removes each one, where
 //     Braids plays its 8-bit table with whatever offset it has.
-//   - Spread and Fan have no counterpart in the module; both are neutral at
-//     MACRO/MORPH noon, which is where every A/B case holds them.
+//   - HARMONICS uses Plaits' active chord table instead of Braids' private
+//     17-row list. "Braids Wave Paraphonic" in the table catalog preserves an
+//     integer-cent approximation of that list for users who want it.
+//   - Spread and Fan have no counterpart in the module. Fan is neutral at
+//     MORPH noon; Spread reproduces the selected table at MACRO noon.
 
 #ifndef PLAITS_DSP_ENGINE2_WAVE_PARAPHONIC_ENGINE_H_
 #define PLAITS_DSP_ENGINE2_WAVE_PARAPHONIC_ENGINE_H_
 
+#include "plaits/dsp/chords/chord_bank.h"
 #include "plaits/dsp/engine/engine.h"
 
 namespace plaits {
 
-// Braids plays the root plus three chord voices (digital_oscillator.cc:1766).
+// One oscillator per stored chord-table voice.
 const int kWaveParaphonicNumVoices = 4;
 
 // 33 entries, 32 steps of 1024 counts of parameter_[0] between them
@@ -227,8 +223,8 @@ const int kWaveParaphonicStep = 1024;
 // stay recognisably one instrument.
 const float kWaveParaphonicMaxFan = 0.15f;
 
-// Braids' own voicing is Spread 1.0. Zero collapses the chord to a unison,
-// 2.0 doubles every interval.
+// The loaded table is verbatim at Spread 1.0. Zero collapses the chord to a
+// unison; 2.0 doubles every interval in log-pitch space.
 const float kWaveParaphonicMinSpread = 0.0f;
 const float kWaveParaphonicMaxSpread = 2.0f;
 
@@ -253,6 +249,7 @@ class WaveParaphonicEngine : public Engine {
   virtual bool stereo_capable() const { return PLAITS_STEREO_WAVE_PARAPHONIC; }
 
  private:
+  ChordBank chords_;
   float phase_[kWaveParaphonicNumVoices];
   float frequency_[kWaveParaphonicNumVoices];
 

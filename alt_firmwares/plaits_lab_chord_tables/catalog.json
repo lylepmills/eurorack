@@ -85,6 +85,36 @@
         { "id": "i-major-7-sus4", "name": "I maj7sus4/vii", "voices": [1100, 500, 1900, 2400], "arpLength": 4 },
         { "id": "v-dominant-7-sus4", "name": "V 7sus4", "voices": [700, 1400, 1700, 2400], "arpLength": 4 }
       ]
+    },
+    {
+      "id": "braids-wave-paraphonic",
+      "packageId": "mutable-instruments/braids-wave-paraphonic-chords",
+      "version": "1.0.0",
+      "digest": "sha256:51a461c107888d5cfc101baa7fe31cfa219d7e884280152f3068166eedb2d76a",
+      "name": "Braids Wave Paraphonic",
+      "author": "Mutable Instruments",
+      "license": "MIT",
+      "origin": "Mutable Instruments",
+      "description": "Braids' original seventeen Wave Paraphonic positions, rounded from 1/128-semitone units to the shared table's integer cents.",
+      "chords": [
+        { "id": "fine-unison", "name": "Fine unison", "voices": [0, 2, 3, 5], "arpLength": 4 },
+        { "id": "wide-unison", "name": "Wide unison", "voices": [0, 13, 25, 38], "arpLength": 4 },
+        { "id": "octave-add-two", "name": "Octave add 2", "voices": [0, 200, 700, 1200], "arpLength": 4 },
+        { "id": "minor-seven", "name": "Minor 7th", "voices": [0, 300, 700, 1000], "arpLength": 4 },
+        { "id": "minor", "name": "Minor", "voices": [0, 300, 700, 1200], "arpLength": 4 },
+        { "id": "minor-add-nine", "name": "Minor add 9", "voices": [0, 300, 700, 1400], "arpLength": 4 },
+        { "id": "minor-eleven", "name": "Minor 11th", "voices": [0, 300, 700, 1700], "arpLength": 4 },
+        { "id": "fifth-stack", "name": "Fifth stack", "voices": [0, 700, 1200, 1900], "arpLength": 4 },
+        { "id": "stretched-fifths", "name": "Stretched fifths", "voices": [0, 700, 1202, 1904], "arpLength": 4 },
+        { "id": "major-eleven", "name": "Major 11th", "voices": [0, 400, 700, 1700], "arpLength": 4 },
+        { "id": "major-add-nine", "name": "Major add 9", "voices": [0, 400, 700, 1400], "arpLength": 4 },
+        { "id": "major", "name": "Major", "voices": [0, 400, 700, 1200], "arpLength": 4 },
+        { "id": "major-seven", "name": "Major 7th", "voices": [0, 400, 700, 1100], "arpLength": 4 },
+        { "id": "sus-four", "name": "Sus 4", "voices": [0, 500, 700, 1200], "arpLength": 4 },
+        { "id": "fifth-chorus", "name": "Fifth chorus", "voices": [0, 3, 700, 1200], "arpLength": 4 },
+        { "id": "octave-cluster", "name": "Octave cluster", "voices": [0, 3, 1203, 1200], "arpLength": 4 },
+        { "id": "octave-cluster-end", "name": "Octave cluster end", "voices": [0, 3, 1203, 1200], "arpLength": 4 }
+      ]
     }
   ]
 }

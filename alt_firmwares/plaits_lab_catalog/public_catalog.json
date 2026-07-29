@@ -2672,7 +2672,7 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Polyphonic",
-      "description": "Braids' four wavetable voices tuned to a chord, over its own 33-wave scan line and 17-row chord list. Adds a per-voice wave fan and a continuous interval scaler, neither of which Chords has.",
+      "description": "Four wavetable voices play the active Plaits chord table over Braids' 33-wave scan line, with per-voice wave fan and continuous interval scaling.",
       "tags": [
         "braids",
         "wavetable",
@@ -2687,17 +2687,20 @@
       ],
       "outputs": [
         "The four voices summed, as the module has them.",
-        "The root voice on its own, undetuned."
+        "The chord table's first voice on its own."
+      ],
+      "sharedModules": [
+        "chord-bank"
       ],
       "version": "1.0.0",
-      "digest": "sha256:53b3b027c63c8153b0bc6c0ecd3c095a05171a36362a35dff438e048dd9dfa43",
-      "documentationDigest": "sha256:1da860a3876deb87567c23ff3a5ce3728b841faf766e163b006a832f14e3a520",
+      "digest": "sha256:b2a50037b22cba92d17313293f1c7f0a8b62d2983c538fa94bbab7f02a371d2c",
+      "documentationDigest": "sha256:37aafa0fa071076b236307e769968df1e2183e1d8fddd9bdd2928444b58b3b34",
       "manual": {
         "controls": {
-          "harmonics": "Braids' 17-row chord list: sub-semitone unisons, then triads, wide voicings, and octave stacks at the top.",
+          "harmonics": "Selects a position in the active chord table.",
           "timbre": "Scans the 33-wave line all four voices read, crossfading between neighbours.",
           "morph": "Offsets each voice further along the scan line, so the four read different waves.",
-          "macro": "Scales every chord interval, from a unison at zero to double width. Braids' voicing at noon."
+          "macro": "Scales every table interval, from a unison at zero through the table verbatim at noon to double width."
         },
         "trigger": "Restarts the engine."
       },

@@ -1,7 +1,7 @@
 # Wave Paraphonic
 
 A port of Braids' WAVE PARAPHONIC — four wavetable voices reading one scan
-line, three of them detuned to a chord.
+line, tuned by Plaits' active chord table.
 
 The DSP is Emilie Gillet's `DigitalOscillator::RenderWaveParaphonic`.
 
@@ -12,11 +12,6 @@ what the upper half of its waveform morph turns into — and its inversion
 control already fans voices by octaves. So this port does not repeat either.
 What Braids brings is a different instrument built from the same parts:
 
-- **Its own chord list, 17 rows, read continuously.** The first two rows are
-  sub-semitone unisons — `{2, 4, 6}` and `{16, 32, 48}` in units of 1/128
-  semitone, four voices inside 4.7 and 37.5 cents. That is a detune knob's
-  worth of thickening at the bottom of the Chord control before the first real
-  interval appears.
 - **A 33-step scan line over a different selection of waves**, crossfaded
   rather than stepped.
 - **No registration or per-voice level shaping at all.** Four equal voices.
@@ -26,22 +21,26 @@ And two controls the module has no knob for:
 - **Fan** offsets each voice further along the scan line, so the four read
   different waves. It is signed around noon: below noon the root keeps the
   brighter wave, above it the top of the chord does.
-- **Spread** scales every chord interval continuously, from a unison at zero
-  through Braids' own voicing at noon to double width at maximum. Chords can
-  transpose a voice by an octave; it cannot widen a fifth into a minor sixth.
+- **Spread** scales every loaded chord interval continuously, from a unison at
+  zero through the table verbatim at noon to double width at maximum. Chords
+  can transpose a voice by an octave; it cannot widen a fifth into a ninth.
+
+The original Braids 17-row list remains available as the **Braids Wave
+Paraphonic** chord table. Its 1/128-semitone offsets are rounded to the nearest
+cent because that is the shared table format; the two near-unison rows become
+`[0, 2, 3, 5]` and `[0, 13, 25, 38]`.
 
 ## The controls
 
-Chord is Braids' COLOR and Wave is its TIMBRE. `RenderWaveParaphonic` reads
-`parameter_[0]` and `parameter_[1]` directly — it uses none of the
-`BEGIN_INTERPOLATE_PARAMETER_n` macros, so the suffix trap that cost `fold` a
-rewrite cannot arise here. Fan and Spread are the two added axes, and both are
-neutral at noon: the fan is zero and Spread is 1.0, which is the module
-exactly. Every A/B case holds them there.
+Wave is Braids' TIMBRE. Chord deliberately diverges from Braids' COLOR:
+`ChordBank::set_chord` quantizes HARMONICS to one position in the active table,
+using the same firmware option as Chords, String Machine, Chiptune and Helix.
+All four stored offsets sound; `arpLength` remains an arpeggiator hint and is
+ignored here, as it is by String Machine.
 
-Braids interpolates between chord rows in integers and truncates the result to
-1/128 semitone before it reaches the pitch. The port does the arithmetic the
-same way rather than in floats, so the quantisation survives.
+Fan and Spread are the two added axes. Fan is neutral at noon. Spread is 1.0
+at noon, where it reproduces the selected table; below and above noon it scales
+the table's ratios in log-pitch space.
 
 ## Rate
 
@@ -91,8 +90,8 @@ the 192-wave bank. The other 17 do not, and take the nearest wave in the bank
 instead: shortlisted by an offline symmetric per-octave-band comparison, then
 chosen by measuring each shortlisted candidate through the A/B itself.
 
-Parked on each slot in turn, 8 s at MIDI 45 on the stock chord, against the
-module:
+Before the chord-table routing change, the wave path was parked on each slot
+in turn for 8 s at MIDI 45 on Braids' stock chord, against the module:
 
 | | spectrum | AC RMS |
 | --- | --- | --- |
@@ -139,7 +138,8 @@ opening phases are the module's own.
 
 ## Reading the measurements
 
-The stock chord's octave and twelfth sit 2.3 and 3.9 cents off exact ratios, so
+In that historical measurement, the stock chord's octave and twelfth sit 2.3
+and 3.9 cents off exact ratios, so
 their coincident harmonics beat at a fraction of a hertz and a short render
 catches an arbitrary point of it. One exact slot measured over 2 / 4 / 8 / 16 s
 reads 1.49 / 0.29 / 0.23 / 0.17 dB, and on the near-unison row — where the four

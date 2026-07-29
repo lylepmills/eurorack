@@ -2,8 +2,8 @@
 // Copyright 2026 Lyle Mills.
 // SPDX-License-Identifier: MIT
 //
-// Braids' WAVE PARAPHONIC: four wavetable voices, three of them detuned to a
-// chord.
+// Braids' WAVE PARAPHONIC: four wavetable voices tuned by Plaits' shared
+// chord table.
 
 #include "plaits/dsp/engine2/wave_paraphonic_engine.h"
 
@@ -23,31 +23,17 @@ using namespace stmlib;
 
 namespace {
 
-// Braids' chords[17][3], verbatim from digital_oscillator.cc:1735-1753, with
-// its `#define SEMI * 128` expanded. Extracted from the source rather than
-// retyped: the two rows that are not round numbers are the reason -- row 8 is
-// { 7 SEMI, 3 + 12 SEMI, 5 + 19 SEMI } = { 896, 1539, 2437 }, and rows 15-16
-// are { 4, 4 + 12 SEMI, 12 SEMI }, whose SECOND voice sits above its third.
-// Units are 1/128 semitone, matching Braids' pitch_.
-const int16_t kChords[17][3] = {
-  {     2,     4,     6 },
-  {    16,    32,    48 },
-  {   256,   896,  1536 },
-  {   384,   896,  1280 },
-  {   384,   896,  1536 },
-  {   384,   896,  1792 },
-  {   384,   896,  2176 },
-  {   896,  1536,  2432 },
-  {   896,  1539,  2437 },
-  {   512,   896,  2176 },
-  {   512,   896,  1792 },
-  {   512,   896,  1536 },
-  {   512,   896,  1408 },
-  {   640,   896,  1536 },
-  {     4,   896,  1536 },
-  {     4,  1540,  1536 },
-  {     4,  1540,  1536 }
-};
+// ChordBank stores frequency ratios while Spread is defined in pitch space.
+// The bare-metal firmware cannot afford libm log2f (it pulls in __errno), so
+// use the same branch-free approximation Helix uses for chord-table ratios.
+inline float FastLog2(float x) {
+  union { float f; uint32_t i; } u = { x };
+  const float e = static_cast<float>((u.i >> 23) & 0xFFu) - 127.0f;
+  u.i = (u.i & 0x007FFFFFu) | 0x3F800000u;
+  const float m = u.f;
+  return e + (-1.7417939f + (2.8212026f + (-1.4699568f
+             + (0.44717955f - 0.056570851f * m) * m) * m) * m);
+}
 
 // The scan line. Braids' mini_wave_line (digital_oscillator.cc:1622-1626) names
 // 33 waves in its own wt_waves; this is the corresponding wave in Plaits'
@@ -156,11 +142,12 @@ inline float ReadWave(const WaveTap& tap, float phase) {
 }  // namespace
 
 void WaveParaphonicEngine::Init(BufferAllocator* allocator) {
-  (void) allocator;
+  chords_.Init(allocator);
   Reset();
 }
 
 void WaveParaphonicEngine::Reset() {
+  chords_.Reset();
   for (int i = 0; i < kWaveParaphonicNumVoices; ++i) {
     phase_[i] = 0.0f;
     frequency_[i] = 0.01f;
@@ -185,20 +172,11 @@ void WaveParaphonicEngine::Render(
 
   const bool stereo = PLAITS_STEREO_WAVE_PARAPHONIC && parameters.stereo;
 
-  // Braids' COLOR, :1777-1785. The dead zones and the x16 expansion are the
-  // module's, and they are what makes the chord list step crisply between
-  // rows instead of morphing across the whole knob.
-  const int color = static_cast<int>(parameters.harmonics * 32767.0f);
-  const int color_ticks = color < 0 ? 0 : (color > 32767 ? 32767 : color);
-  const int chord_integral = color_ticks >> 11;
-  int chord_fractional = (color_ticks << 5) & 0xffff;
-  if (chord_fractional < 30720) {
-    chord_fractional = 0;
-  } else if (chord_fractional >= 34816) {
-    chord_fractional = 65535;
-  } else {
-    chord_fractional = (chord_fractional - 30720) * 16;
-  }
+  // HARMONICS selects one position in the active firmware chord table. This
+  // is the compatibility contract shared with the other chord-bank engines.
+  // Wave Paraphonic always sounds all four stored voices; `arpLength` remains
+  // an arpeggiator concern and does not mute oscillators here.
+  chords_.set_chord(parameters.harmonics, parameters.chord_set_option);
 
   // Braids' TIMBRE, :1794-1796, plus the port's per-voice fan.
   const int timbre = static_cast<int>(parameters.timbre * 32767.0f);
@@ -229,16 +207,10 @@ void WaveParaphonicEngine::Render(
   for (int i = 0; i < kWaveParaphonicNumVoices; ++i) {
     ResolveTap(timbre_ticks + i * fan, &tap[i]);
 
-    float note = parameters.note;
-    if (i > 0) {
-      // :1787-1792. The interpolation between the two chord rows is done in
-      // integers and TRUNCATED to 1/128 semitone before it reaches the pitch,
-      // exactly as the module truncates it; Spread then scales the result.
-      const int32_t low = kChords[chord_integral][i - 1];
-      const int32_t high = kChords[chord_integral + 1][i - 1];
-      const int32_t detune = low + ((high - low) * chord_fractional >> 16);
-      note += float(detune) * spread * (1.0f / 128.0f);
-    }
+    // ChordBank exposes ratios; return to log-pitch space so Spread remains a
+    // musical 0x..2x interval scaler, including for rootless/inverted tables.
+    const float interval = 12.0f * FastLog2(chords_.ratio(i));
+    const float note = parameters.note + interval * spread;
     target_frequency[i] = NoteToFrequency(note);
   }
 
@@ -264,7 +236,7 @@ void WaveParaphonicEngine::Render(
     float sum = 0.0f;
     float left = 0.0f;
     float right = 0.0f;
-    float root = 0.0f;
+    float first_voice = 0.0f;
 
     for (int i = 0; i < kWaveParaphonicNumVoices; ++i) {
       float phase = phase_[i] + fm[i]->Next();
@@ -277,7 +249,7 @@ void WaveParaphonicEngine::Render(
 
       sum += sample;
       if (i == 0) {
-        root = sample;
+        first_voice = sample;
       }
       if (stereo) {
         left += sample * pan_left[i];
@@ -302,7 +274,7 @@ void WaveParaphonicEngine::Render(
     // shifted right by two always fits), so this is a declared deviation with
     // no measured instance rather than an equivalence.
     float main = stereo ? left * 0.25f : sum * 0.25f;
-    float second = stereo ? right * 0.25f : root * 0.5f;
+    float second = stereo ? right * 0.25f : first_voice * 0.5f;
     CONSTRAIN(main, -1.0f, 1.0f);
     CONSTRAIN(second, -1.0f, 1.0f);
 
