@@ -4,21 +4,26 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
 import re
+import secrets
 import shutil
 import struct
 import subprocess
 import sys
 import tempfile
+import textwrap
 import time
 import wave
 import zipfile
 from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import urllib.error
+import urllib.request
 from urllib.parse import urlparse
 from pathlib import Path
 from typing import Any
@@ -157,7 +162,8 @@ def builtin_engine(identifier: str) -> tuple[dict[str, Any], dict[str, Any]]:
     by_package = {item["packageId"]: engine_id for engine_id, item in catalog.items()}
     engine_id = identifier if identifier in catalog else by_package.get(identifier)
     if not engine_id:
-        raise PackageError(f"unknown built-in model {identifier!r}; run `plaits-lab catalog`")
+        raise PackageError(f"unknown built-in model {identifier!r}; "
+                           f"run `{cli_invocation()} catalog`")
     return catalog[engine_id], public[engine_id]
 
 
@@ -206,7 +212,8 @@ def validate_shared_modules(module_ids: Any) -> list[str]:
     require(len(module_ids) == len(set(module_ids)), "sharedModules must be unique")
     for module_id in module_ids:
         require(module_id in registry,
-                f"unknown shared module {module_id!r}; run `plaits-lab modules`")
+                f"unknown shared module {module_id!r}; "
+                f"run `{cli_invocation()} modules`")
     return module_ids
 
 
@@ -354,6 +361,9 @@ def autodeclare_shared_modules(paths: list[Path], declared: list[str]) -> list[s
     return added
 
 
+HEX_COLOR_PATTERN = re.compile(r"#[0-9a-fA-F]{6}")
+
+
 def load_package(package_arg: str, autodeclare: bool = False) -> dict[str, Any]:
     package_dir = Path(package_arg).resolve()
     manifest_path = package_dir / "plaits-engine.json"
@@ -365,11 +375,23 @@ def load_package(package_arg: str, autodeclare: bool = False) -> dict[str, Any]:
         "name", "author", "origin", "license", "description", "family", "tags",
         "controls", "outputs", "source", "postProcessing", "scenarios",
     }
-    optional = {"upstream", "forkedFrom", "sharedModules"}
+    optional = {"upstream", "forkedFrom", "sharedModules", "artwork"}
     require(required <= set(manifest), f"manifest is missing {sorted(required - set(manifest))}")
     require(set(manifest) <= required | optional,
             f"manifest has unsupported fields {sorted(set(manifest) - required - optional)}")
     require(manifest["schemaVersion"] == 1, "schemaVersion must be 1")
+    # The colour a contributor picks for their model. It used to live only in
+    # the browser's localStorage, so it never reached the package and every
+    # community engine rendered in the catalog's grey fallback — the choice was
+    # decorative. Carrying it here is what makes it survive submission.
+    if "artwork" in manifest:
+        artwork = manifest["artwork"]
+        require(isinstance(artwork, dict) and set(artwork) <= {"color"},
+                "artwork may only contain a color")
+        if "color" in artwork:
+            require(isinstance(artwork["color"], str)
+                    and HEX_COLOR_PATTERN.fullmatch(artwork["color"]) is not None,
+                    "artwork color must be a #RRGGBB hex string")
     require(manifest["sdk"] == SDK_VERSION, f"sdk must be {SDK_VERSION}")
     require(manifest["packageType"] in {"builtin-reference", "community"},
             "packageType must be builtin-reference or community")
@@ -845,7 +867,7 @@ _CPU_HOST_CAVEAT = (
     "  pathologically expensive engines. For a real estimate run\n"
     "    qemu/estimate.py <package> --sweep\n"
     "  and before publishing, measure on the module itself:\n"
-    "    build --hardware --cpu-probe   (reads out on AUX and the LEDs)"
+    "    build --hardware --cpu-probe   (the LEDs become a CPU meter)"
 )
 
 
@@ -1309,6 +1331,7 @@ def init_command(args: argparse.Namespace) -> int:
         "name": name,
         "author": args.author,
         "origin": "Community",
+        **({"artwork": {"color": args.color}} if getattr(args, "color", None) else {}),
         "license": spdx,
         "description": description,
         "family": family,
@@ -1332,7 +1355,10 @@ def init_command(args: argparse.Namespace) -> int:
     (output / "LICENSE").write_text(license_file_text(spdx, license_notices), encoding="utf-8")
     (output / "README.md").write_text(
         f"# {name}\n\nA Plaits Lab community engine package.\n\n"
-        f"Run `plaits-lab check .` and `plaits-lab render . --output preview.wav` from this directory.\n",
+        # NOT cli_invocation() here: this README is written INTO the package
+        # and published, so it must not bake in the author's own checkout path.
+        f"From your eurorack checkout:\n\n"
+        f"    python3 alt_firmwares/plaits_lab_sdk/plaits_lab.py check <path-to-this-package> --full\n",
         encoding="utf-8",
     )
     load_package(str(output))
@@ -1543,21 +1569,359 @@ def add_zip_file(archive: zipfile.ZipFile, name: str, data: bytes) -> None:
     archive.writestr(info, data)
 
 
+# --- Contributor identity and submission upload -----------------------------
+#
+# A contributor is a bearer token and nothing else: the server stores only
+# SHA-256(token) as the owner of a submission, which is what lets you check,
+# re-download or withdraw your own drafts. The token is minted HERE rather than
+# in the browser so a first submission needs no web visit at all; the
+# contributor center accepts the same token pasted in to FOLLOW submissions,
+# and `login` adopts an existing identity on a second machine.
+#
+# It lives in a USER-level config file, never inside a package: package files
+# are zipped into the bundle and eventually vendored into a public repo, and
+# one identity should span all of your packages anyway.
+
+DEFAULT_API_BASE = "https://rubato.audio"
+TOKEN_MIN, TOKEN_MAX = 32, 256
+
+
+def cli_invocation() -> str:
+    """How this tool was actually invoked, e.g.
+    "python3 alt_firmwares/plaits_lab_sdk/plaits_lab.py".
+
+    There is no `plaits-lab` on anyone's PATH — the README defines it as a
+    shell alias and prose uses it as the tool's name — so any command this
+    program PRINTS has to spell out the real invocation, or it is not
+    runnable for the person reading it."""
+    return f"python3 {sys.argv[0]}"
+
+
+def credentials_path() -> Path:
+    """The per-user credential file, on each platform's own config path."""
+    override = os.environ.get("PLAITS_LAB_CONFIG_DIR")
+    if override:
+        return Path(override).expanduser() / "credentials.json"
+    if sys.platform == "win32":
+        base = os.environ.get("APPDATA")
+        root = Path(base) if base else Path.home() / "AppData/Roaming"
+    elif sys.platform == "darwin":
+        root = Path.home() / "Library/Application Support"
+    else:
+        base = os.environ.get("XDG_CONFIG_HOME")
+        root = Path(base) if base else Path.home() / ".config"
+    return root / "plaits-lab/credentials.json"
+
+
+def read_token() -> str | None:
+    path = credentials_path()
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    token = data.get("token") if isinstance(data, dict) else None
+    return token if isinstance(token, str) and token else None
+
+
+def write_token(token: str) -> Path:
+    require(TOKEN_MIN <= len(token) <= TOKEN_MAX,
+            f"a contributor token must be {TOKEN_MIN}-{TOKEN_MAX} characters")
+    path = credentials_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    # Written 0600 where the OS has POSIX modes; opened O_CREAT|O_WRONLY|O_TRUNC
+    # so the mode applies at creation rather than after a readable window.
+    descriptor = os.open(path, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+        json.dump({"token": token}, handle, indent=2)
+        handle.write("\n")
+    return path
+
+
+def ensure_token() -> str:
+    token = read_token()
+    if token:
+        return token
+    # Same shape the contributor center mints, from the CSPRNG.
+    token = f"{secrets.token_hex(16)}-{secrets.token_hex(16)}"
+    write_token(token)
+    return token
+
+
+def token_fingerprint(token: str) -> str:
+    """First 8 hex of the owner hash the server stores — safe to show."""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()[:8]
+
+
+def api_base(args: argparse.Namespace) -> str:
+    base = getattr(args, "api", None) or os.environ.get("PLAITS_LAB_API") or DEFAULT_API_BASE
+    return base.rstrip("/")
+
+
+class ApiError(PackageError):
+    """A failed API call, carrying the status so a caller can recover from it."""
+
+    def __init__(self, message: str, status: int, code: str = "") -> None:
+        super().__init__(message)
+        self.status = status
+        self.code = code
+
+
+def api_call(base: str, path: str, *, token: str | None = None, method: str = "GET",
+             payload: Any = None, body: bytes | None = None,
+             content_type: str | None = None) -> dict[str, Any]:
+    """One JSON API call. Raises PackageError with the server's own message."""
+    data = body
+    # A real User-Agent is REQUIRED, not politeness: Cloudflare's bot
+    # protection 403s Python's default "Python-urllib/x.y" outright, which
+    # surfaces as an inexplicable failure against production while curl and
+    # local wrangler both work.
+    headers = {
+        "Accept": "application/json",
+        "User-Agent": f"plaits-lab/{SDK_VERSION} (+https://rubato.audio/plaits-palette)",
+    }
+    if payload is not None:
+        data = json.dumps(payload).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+    elif content_type:
+        headers["Content-Type"] = content_type
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    if data is not None:
+        # The API requires a bounded Content-Length; urllib sets it for bytes.
+        headers["Content-Length"] = str(len(data))
+    request = urllib.request.Request(f"{base}{path}", data=data, headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(request, timeout=120) as response:
+            return json.loads(response.read().decode("utf-8") or "{}")
+    except urllib.error.HTTPError as error:
+        detail, code = "", ""
+        try:
+            body_json = json.loads(error.read().decode("utf-8"))
+            detail = body_json.get("error", {}).get("message", "")
+            code = body_json.get("error", {}).get("code", "")
+        except (ValueError, OSError):
+            pass
+        raise ApiError(
+            f"{method} {path} failed ({error.code}){': ' + detail if detail else ''}",
+            error.code, code,
+        ) from error
+    except urllib.error.URLError as error:
+        raise PackageError(
+            f"could not reach {base}: {error.reason}. The bundle is already built, so "
+            f"re-running submit once you are back online skips straight to uploading it."
+        ) from error
+
+
+def multipart_body(fields: dict[str, str], filename: str, file_bytes: bytes) -> tuple[bytes, str]:
+    """Encode one file plus text fields as multipart/form-data."""
+    boundary = f"----plaits-lab-{secrets.token_hex(16)}"
+    parts: list[bytes] = []
+    for name, value in fields.items():
+        parts.append(
+            f"--{boundary}\r\nContent-Disposition: form-data; name=\"{name}\"\r\n\r\n"
+            f"{value}\r\n".encode("utf-8")
+        )
+    parts.append(
+        f"--{boundary}\r\nContent-Disposition: form-data; name=\"bundle\"; "
+        f"filename=\"{filename}\"\r\nContent-Type: application/zip\r\n\r\n".encode("utf-8")
+    )
+    parts.append(file_bytes)
+    parts.append(f"\r\n--{boundary}--\r\n".encode("utf-8"))
+    return b"".join(parts), f"multipart/form-data; boundary={boundary}"
+
+
+def bundle_claims(bundle_path: Path) -> dict[str, Any]:
+    """Read what the built bundle itself claims — the same bytes the server
+    verifies, so the upload never asserts anything the zip does not contain."""
+    with zipfile.ZipFile(bundle_path) as archive:
+        try:
+            submission = json.loads(archive.read("submission.json").decode("utf-8"))
+            manifest_bytes = archive.read("package/plaits-engine.json")
+        except KeyError as error:
+            raise PackageError(
+                f"{bundle_path.name} is not a plaits-lab submission bundle ({error})"
+            ) from error
+    manifest = json.loads(manifest_bytes.decode("utf-8"))
+    return {
+        "packageId": str(manifest["id"]),
+        "version": str(manifest["version"]),
+        "digest": str(submission["digest"]),
+        "manifest": manifest_bytes.decode("utf-8"),
+        "license": str(manifest.get("license", "unknown")),
+        "author": str(manifest.get("author", "")),
+    }
+
+
+def confirm_submission(claims: dict[str, Any], contract: dict[str, Any],
+                       bundle_path: Path, args: argparse.Namespace) -> dict[str, str]:
+    """The loud step. Returns the affirmation to send, or raises."""
+    size_kb = bundle_path.stat().st_size / 1024.0
+    print()
+    print("=" * 72)
+    print("  SUBMITTING TO RUBATO AUDIO — this leaves your machine")
+    print("=" * 72)
+    print(f"  package   {claims['packageId']} {claims['version']}")
+    print(f"  license   {claims['license']}")
+    print(f"  digest    {claims['digest']}")
+    print(f"  bundle    {bundle_path.name} ({size_kb:.0f} KB) — full source + preview renders")
+    print()
+    print("  Your engine's SOURCE is uploaded for maintainer review. If it is")
+    print("  published it is compiled into firmware that other people flash.")
+    print()
+    for line in textwrap.wrap(contract["text"], 68):
+        print(f"  {line}")
+    print("=" * 72)
+    print()
+
+    author = (args.author or "").strip()
+    contact = (args.contact or "").strip()
+    interactive = sys.stdin.isatty() and not args.yes
+    if interactive:
+        default_author = author or claims["author"]
+        prompt = f"Rights holder [{default_author}]: " if default_author else "Rights holder: "
+        author = input(prompt).strip() or default_author
+        if not contact:
+            contact = input("Contact (optional, blank to stay anonymous): ").strip()
+    require(author, "a rights holder is required — pass --author, or answer the prompt")
+
+    if args.yes:
+        print(f"--yes given: submitting as {author}.")
+        return {"author": author, "contact": contact}
+    require(sys.stdin.isatty(),
+            "submitting needs a terminal to confirm — pass --yes with --author to "
+            "submit non-interactively, or --bundle-only to build the zip without sending it")
+    typed = input('Type "submit" to send it, anything else to stop: ').strip()
+    require(typed == "submit", "not submitted — the bundle is built and unchanged")
+    return {"author": author, "contact": contact}
+
+
+def upload_submission(bundle_path: Path, args: argparse.Namespace) -> int:
+    base = api_base(args)
+    claims = bundle_claims(bundle_path)
+
+    status = api_call(base, "/api/contributors/status")
+    if not status.get("intakeEnabled"):
+        raise PackageError(
+            f"community intake is not open at {base} right now. The bundle is built "
+            f"at {bundle_path} — keep it and run submit again when intake reopens."
+        )
+    contract = status.get("affirmation") or {}
+    require(contract.get("version") and contract.get("text"),
+            "the server did not offer an affirmation contract to agree to")
+
+    affirmation = confirm_submission(claims, contract, bundle_path, args)
+    token = ensure_token()
+
+    body, content_type = multipart_body(
+        {
+            "packageId": claims["packageId"],
+            "version": claims["version"],
+            "digest": claims["digest"],
+            "manifest": claims["manifest"],
+        },
+        bundle_path.name,
+        bundle_path.read_bytes(),
+    )
+    print("uploading…", flush=True)
+    try:
+        created = api_call(base, "/api/contributors/submissions", token=token, method="POST",
+                           body=body, content_type=content_type)
+        submission_id = str(created["id"])
+        print(f"draft created  {submission_id}")
+    except ApiError as error:
+        # Submitting is two calls — upload, then send to review — so a network
+        # blip between them leaves a draft this package/version can never
+        # re-upload (the pair is unique). Adopt that draft and finish it rather
+        # than stranding the contributor on a version bump.
+        if error.status != 409:
+            raise
+        mine = api_call(base, "/api/contributors/submissions", token=token)
+        draft = next((row for row in mine.get("submissions", [])
+                      if row.get("packageId") == claims["packageId"]
+                      and row.get("version") == claims["version"]
+                      and row.get("state") == "draft"), None)
+        if not draft:
+            raise PackageError(
+                f"{claims['packageId']} {claims['version']} has already been submitted. "
+                f"Bump the version in plaits-engine.json to submit a revision."
+            ) from error
+        submission_id = str(draft["id"])
+        print(f"resuming the draft left by an interrupted submit  {submission_id}")
+
+    sent = api_call(base, f"/api/contributors/submissions/{submission_id}/submit",
+                    token=token, method="POST", payload={"affirmation": {
+                        "agreed": True,
+                        "version": contract["version"],
+                        "author": affirmation["author"],
+                        "contact": affirmation["contact"],
+                    }})
+    print(f"state          {sent.get('state', 'in-review')}")
+    print()
+    # Name the destination precisely, in the same words the page uses for it:
+    # "paste this somewhere over there" sends people hunting.
+    print("Your contributor token — the only thing identifying your submissions:")
+    print(f"  {read_token()}")
+    print(f"  (stored at {credentials_path()};"
+          f" `{cli_invocation()} whoami --show` prints it again)")
+    print()
+    print(f"To follow this submission in a browser, open")
+    print(f"  {base}/plaits-palette/contribute")
+    print('and paste that token into "Follow a CLI submission" under step 9.')
+    return 0
+
+
+def login_command(args: argparse.Namespace) -> int:
+    """Reuse one contributor identity elsewhere — a second machine, a rebuilt
+    one, or the token an older contributor-center visit already made."""
+    token = (args.token or "").strip()
+    if not token:
+        require(sys.stdin.isatty(), "pass --token when not running in a terminal")
+        token = input(f"Contributor token (`{cli_invocation()} whoami --show` "
+                      f"on the other machine): ").strip()
+    path = write_token(token)
+    print(f"stored contributor token {token_fingerprint(token)}… at {path}")
+    return 0
+
+
+def whoami_command(args: argparse.Namespace) -> int:
+    token = read_token()
+    path = credentials_path()
+    if not token:
+        print(f"no contributor token yet ({path})")
+        print(f"one is minted on your first `{cli_invocation()} submit`, "
+              f"or run `{cli_invocation()} login`.")
+        return 0
+    print(f"contributor {token_fingerprint(token)}…  ({path})")
+    if args.show:
+        print(token)
+    else:
+        print("run with --show to print the token itself (it identifies your submissions)")
+    return 0
+
+
 def submit_command(args: argparse.Namespace) -> int:
     package = load_package(args.package)
-    output = Path(args.output).resolve()
+    default_name = f"{package['manifest'].get('catalogId', 'package')}.plaits-package.zip"
+    output = Path(args.output or default_name).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     # A bundle is only accepted if it passed the sanitizers, so submit builds one
     # in the builder image when the host cannot. The output directory is the one
     # writable mount; the container writes the zip straight into it, and the
     # digest it records is identical to a host-built one (package_content_digest
     # orders on POSIX relative paths, so it does not vary by platform).
+    #
+    # The inner run BUILDS ONLY (--bundle-only): it has no credentials and no
+    # terminal to confirm at, and letting it reach the upload would submit twice
+    # — once from the container, once from here. Uploading is the outer
+    # process's job, after the container hands back a bundle.
     if not args.native and not host_sanitizers_available(args.compiler):
-        return run_sanitized_in_docker(
+        run_sanitized_in_docker(
             package, args, "submit",
-            ["submit", "/contributor", "--output", f"/output/{output.name}", "--native"],
+            ["submit", "/contributor", "--output", f"/output/{output.name}",
+             "--native", "--bundle-only"],
             extra_mounts=["-v", f"{output.parent}:/output"],
         )
+        return finish_submit(output, args)
     with tempfile.TemporaryDirectory(prefix="plaits-lab-submit-") as temp_dir:
         preview_dir = Path(temp_dir) / "previews"
         preview_dir.mkdir()
@@ -1586,8 +1950,14 @@ def submit_command(args: argparse.Namespace) -> int:
         with zipfile.ZipFile(output, "w") as archive:
             # Same POSIX-relative ordering as package_content_digest, so a bundle
             # built on Windows lays its entries out identically to one built here.
+            # Same exclusion as package_content_digest: the reserved
+            # .plaits-lab/ scratch directory is LOCAL state, so it must not
+            # ride into the bundle either. Carrying a file the digest does not
+            # cover would let un-reviewed content reach a vendored package,
+            # and intake rejects such a bundle outright.
             for path in sorted(
-                (item for item in package["directory"].rglob("*") if item.is_file()),
+                (item for item in package["directory"].rglob("*")
+                 if item.is_file() and ".plaits-lab" not in item.parts),
                 key=lambda item: item.relative_to(package["directory"]).as_posix(),
             ):
                 add_zip_file(archive, f"package/{path.relative_to(package['directory']).as_posix()}", path.read_bytes())
@@ -1596,7 +1966,17 @@ def submit_command(args: argparse.Namespace) -> int:
             add_zip_file(archive, "submission.json", (json.dumps(submission, indent=2) + "\n").encode("utf-8"))
     print(f"created draft submission {output}")
     print(f"package digest {submission['digest']}")
-    return 0
+    return finish_submit(output, args)
+
+
+def finish_submit(output: Path, args: argparse.Namespace) -> int:
+    """Upload the built bundle, unless the caller only wanted the zip."""
+    if args.bundle_only:
+        print(f"--bundle-only: not submitted. Run `{cli_invocation()} submit "
+              f"{args.package}` without it to send this package for review — "
+              f"submitting is the CLI's job, there is no browser upload.")
+        return 0
+    return upload_submission(output, args)
 
 
 def cpp_bool(value: bool) -> str:
@@ -1656,7 +2036,9 @@ def render_stock_bench_config(engine_ids: tuple[str, ...] = STOCK_BENCH_ENGINES,
                               flush_to_zero: bool = False) -> str:
     """Config for a multi-engine measurement firmware: the AUX cycle readout, but
     NOT the LED meter -- the normal display has to keep showing which engine is
-    selected so a sweep through them can be identified."""
+    selected so a sweep through them can be identified. The two readout channels
+    are independent defines, and this build is the mirror image of a
+    contributor's (LEDs, no tone)."""
     selected = []
     for identifier in engine_ids:
         entry, _ = builtin_engine(identifier)
@@ -1697,6 +2079,7 @@ def render_stock_bench_config(engine_ids: tuple[str, ...] = STOCK_BENCH_ENGINES,
 
 #define PLAITS_CPU_PROBE 1
 #define PLAITS_CPU_PROBE_LEDS 0
+#define PLAITS_CPU_PROBE_AUX 1
 #define PLAITS_CPU_PROBE_FTZ {ftz}
 #define PLAITS_ENGINE_COUNT {count}
 #define PLAITS_BANK_SIZES {{ {", ".join(str(v) for v in bank_sizes)} }}
@@ -1716,17 +2099,29 @@ def render_stock_bench_config(engine_ids: tuple[str, ...] = STOCK_BENCH_ENGINES,
 
 def render_local_hardware_config(
     package: dict[str, Any], cpu_probe: bool = False, memhunt: bool = False,
+    cpu_probe_aux: bool = False,
 ) -> str:
     manifest = package["manifest"]
     source = manifest["source"]
     post = manifest["postProcessing"]
-    # A probe build measures Voice::Render with the Cortex-M4 cycle counter and
-    # reports the result on AUX; see plaits/cpu_probe.h. Emitted through the
-    # generated config rather than as a make flag so it travels into the
-    # containerised build with everything else.
-    cpu_probe_define = "#define PLAITS_CPU_PROBE 1\n" if cpu_probe else ""
-    if cpu_probe and memhunt:
-        cpu_probe_define += "#define PLAITS_CPU_PROBE_MEMHUNT 1\n"
+    # A probe build measures Voice::Render with the Cortex-M4 cycle counter; see
+    # plaits/cpu_probe.h. Emitted through the generated config rather than as a
+    # make flag so it travels into the containerised build with everything else.
+    #
+    # The measurement has two independent readout channels, and a contributor
+    # build takes only the LED meter: it costs nothing they need (a one-model
+    # firmware has nothing to select) and leaves their engine's AUX output
+    # audible. The AUX tone is the precise readout and the internal one -- it
+    # overwrites that output -- so it is opt-in, and memhunt, whose readout IS
+    # the tone, turns it on.
+    probe = cpu_probe or cpu_probe_aux
+    tone = cpu_probe_aux or (probe and memhunt)
+    cpu_probe_define = ""
+    if probe:
+        cpu_probe_define = "#define PLAITS_CPU_PROBE 1\n"
+        cpu_probe_define += f"#define PLAITS_CPU_PROBE_AUX {1 if tone else 0}\n"
+        if memhunt:
+            cpu_probe_define += "#define PLAITS_CPU_PROBE_MEMHUNT 1\n"
     custom = {
         "source": {
             "header": package["header"].name,
@@ -1870,8 +2265,11 @@ def _arm_compile_native(package: dict[str, Any], args: argparse.Namespace, toolc
         config.write_text(
             render_stock_bench_config(flush_to_zero=getattr(args, "ftz", False))
             if getattr(args, "stock_bench", False)
-            else render_local_hardware_config(package, cpu_probe=getattr(args, "cpu_probe", False),
-                                         memhunt=getattr(args, "memhunt", False)),
+            else render_local_hardware_config(
+                package,
+                cpu_probe=getattr(args, "cpu_probe", False),
+                memhunt=getattr(args, "memhunt", False),
+                cpu_probe_aux=getattr(args, "cpu_probe_aux", False)),
             encoding="utf-8")
         cppflags = f"-fno-exceptions -fno-rtti -I{package['source_root']} -include {config}"
         # Build only the package's OWN object(s): the makefile's $(BUILD_DIR)%.o
@@ -1936,6 +2334,7 @@ def hardware_build_command(args: argparse.Namespace) -> int:
                 "alt_firmwares/plaits_lab_sdk/plaits_lab.py", "build", "/contributor",
                 "--hardware", "--output", f"/output/{output.name}",
                 *(["--cpu-probe"] if getattr(args, "cpu_probe", False) else []),
+                *(["--cpu-probe-aux"] if getattr(args, "cpu_probe_aux", False) else []),
                 *(["--stock-bench"] if getattr(args, "stock_bench", False) else []),
                 *(["--ftz"] if getattr(args, "ftz", False) else []),
                 *(["--memhunt"] if getattr(args, "memhunt", False) else []),
@@ -1968,8 +2367,11 @@ def hardware_build_command(args: argparse.Namespace) -> int:
         config = Path(temp_dir) / "engine_config.h"
         config.write_text(
             render_stock_bench_config() if getattr(args, "stock_bench", False)
-            else render_local_hardware_config(package, cpu_probe=getattr(args, "cpu_probe", False),
-                                         memhunt=getattr(args, "memhunt", False)),
+            else render_local_hardware_config(
+                package,
+                cpu_probe=getattr(args, "cpu_probe", False),
+                memhunt=getattr(args, "memhunt", False),
+                cpu_probe_aux=getattr(args, "cpu_probe_aux", False)),
             encoding="utf-8")
         cppflags = f"-fno-exceptions -fno-rtti -I{package['source_root']} -include {config}"
         command = [
@@ -2239,6 +2641,7 @@ def build_parser() -> argparse.ArgumentParser:
     init_parser.add_argument("--package-id")
     init_parser.add_argument("--slug")
     init_parser.add_argument("--name")
+    init_parser.add_argument("--color", help="the model's colour in the palette editor, #RRGGBB")
     init_parser.set_defaults(handler=init_command)
 
     check_parser = subparsers.add_parser("check", help="validate and compile an engine package")
@@ -2260,13 +2663,32 @@ def build_parser() -> argparse.ArgumentParser:
     render_parser.add_argument("--compiler")
     render_parser.set_defaults(handler=render_command)
 
-    submit_parser = subparsers.add_parser("submit", help="validate and bundle an immutable draft submission")
+    submit_parser = subparsers.add_parser(
+        "submit", help="check, bundle, and submit the package for review")
     submit_parser.add_argument("package")
-    submit_parser.add_argument("--output", required=True)
+    submit_parser.add_argument("--output", help="where to write the bundle "
+                               "(default: <catalogId>.plaits-package.zip)")
     submit_parser.add_argument("--compiler")
     submit_parser.add_argument("--docker-image", default="plaits-lab-builder:local")
+    submit_parser.add_argument("--bundle-only", action="store_true",
+                               help="build the bundle without submitting (to inspect it, or for CI)")
+    submit_parser.add_argument("--author", help="the rights holder to record on the affirmation")
+    submit_parser.add_argument("--contact", help="optional contact for questions about the model")
+    submit_parser.add_argument("--yes", action="store_true",
+                               help="skip the typed confirmation (requires --author)")
+    submit_parser.add_argument("--api", help=argparse.SUPPRESS)
     submit_parser.add_argument("--native", action="store_true", help=argparse.SUPPRESS)
     submit_parser.set_defaults(handler=submit_command)
+
+    login_parser = subparsers.add_parser(
+        "login", help="submit as an existing contributor identity (e.g. on a second machine)")
+    login_parser.add_argument("--token")
+    login_parser.set_defaults(handler=login_command)
+
+    whoami_parser = subparsers.add_parser(
+        "whoami", help="show which contributor identity this machine submits as")
+    whoami_parser.add_argument("--show", action="store_true", help="print the token itself")
+    whoami_parser.set_defaults(handler=whoami_command)
 
     build_parser_command = subparsers.add_parser("build", help="build an unreviewed local hardware firmware")
     build_parser_command.add_argument("package")
@@ -2276,9 +2698,11 @@ def build_parser() -> argparse.ArgumentParser:
     build_parser_command.add_argument("--stock-bench", action="store_true",
         help="build a multi-engine bench firmware (stock engines + AUX cycle readout)")
     build_parser_command.add_argument("--memhunt", action="store_true",
-        help="probe builds: readout carries only the watched address (writer hunt)")
+        help="probe builds: readout carries only the watched address (writer hunt); implies --cpu-probe-aux")
     build_parser_command.add_argument("--cpu-probe", action="store_true",
-        help="measure Voice::Render on-chip with the DWT cycle counter and report on AUX")
+        help="measure Voice::Render on-chip with the DWT cycle counter and meter it on the LEDs")
+    build_parser_command.add_argument("--cpu-probe-aux", action="store_true",
+        help="probe builds: also read out on AUX as a tone -- precise, but it takes over the AUX output")
     build_parser_command.add_argument("--output", required=True)
     build_parser_command.add_argument("--toolchain", default="/usr/local/arm-4.8.3")
     build_parser_command.add_argument("--docker-image", default="plaits-lab-builder:local")

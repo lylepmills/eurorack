@@ -2243,6 +2243,47 @@
         "outGain": -1.0,
         "auxGain": 0.8
       }
+    },
+    {
+      "id": "helix",
+      "packageId": "community/helix",
+      "name": "Helix",
+      "author": "Rubato Audio",
+      "origin": "Community",
+      "family": "Experimental",
+      "description": "A chord stacked across octaves on a Shepard helix, gliding endlessly up or down without ever changing register.",
+      "tags": [
+        "community",
+        "experimental",
+        "shepard",
+        "chord"
+      ],
+      "controls": [
+        "Chord",
+        "Glide",
+        "Fold",
+        "Spread"
+      ],
+      "outputs": [
+        "Folded voices (left in stereo)",
+        "Unfolded voices (right in stereo)"
+      ],
+      "source": {
+        "header": "plaits/dsp/engine2/helix_engine.h",
+        "className": "HelixEngine",
+        "member": "helix_engine_",
+        "files": [
+          "plaits/dsp/engine2/helix_engine.cc"
+        ]
+      },
+      "postProcessing": {
+        "alreadyEnveloped": false,
+        "outGain": 0.8,
+        "auxGain": 0.8
+      },
+      "sharedModules": [
+        "chord-bank"
+      ]
     }
   ],
   "manuals": {
@@ -2740,6 +2781,15 @@
         "macro": "Slide. Detunes the bore against the lips, which is where the growl and the split note come from."
       },
       "trigger": "Empties the bore and resets the lips so each note starts the same way."
+    },
+    "helix": {
+      "controls": {
+        "harmonics": "Selects the chord, voiced at every octave of the helix at once.",
+        "timbre": "Sets the glide: centred is still, either side sends the stack endlessly rising or falling.",
+        "morph": "Folds the summed voices, from clean through progressively harder wavefolding.",
+        "macro": "Sets how much of the helix you hear at once, from a tight chord to a wide cloud of octaves."
+      },
+      "trigger": "Strikes the low-pass gate while the helix keeps gliding underneath."
     }
   },
   "presets": {

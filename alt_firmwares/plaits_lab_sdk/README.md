@@ -118,7 +118,7 @@ patched trigger, so sustained engines respond to Strike too.
 
 ```sh
 $SDK check ./$PKG/my-engine --full
-$SDK submit ./$PKG/my-engine --output ./my-engine.plaits-package.zip
+$SDK submit ./$PKG/my-engine
 ```
 
 Full checks enforce the manifest, licensing (see above — LICENSE text, rights
@@ -128,6 +128,17 @@ scenario, measure CPU cost against a stock engine (see below), and reject
 invalid duration, silent output, or excessive DC. The
 bundle contains the exact source, deterministic preview WAVs, content digest,
 and per-scenario peak/RMS/DC/silence/realtime metrics.
+
+`submit` runs those same checks, then shows you exactly what is about to
+leave your machine — package, license, digest, bundle size, and the ownership
+affirmation — and uploads only after you type `submit` to confirm. It is the
+only way to submit: the contributor center follows submissions, it does not
+accept them. Add `--bundle-only` to build the zip without sending it (to look
+inside, or for CI), or `--yes --author "…"` to submit non-interactively. Your identity is
+a token minted on first submit and kept in a per-user config file (`$SDK
+whoami` shows which, `--show` prints it); paste it into the contributor center
+to follow your submissions in the browser, or `$SDK login` to adopt one that
+page already made.
 
 Both of those commands need a compiler that can link the sanitizers. MinGW-w64
 — the usual Windows toolchain — ships no sanitizer runtime, so there the SDK
@@ -156,6 +167,10 @@ $SDK check ./$PKG/my-engine --full --arm
 ```
 
 ### Will it run in real time?
+
+> The short version lives here; the full guide — meter semantics, the
+> measured cost table, and the optimization playbook with real numbers — is
+> [PERFORMANCE.md](PERFORMANCE.md).
 
 The audio callback gets roughly **1500 CPU cycles per sample** (72 MHz ÷ 48 kHz),
 and that covers everything — the low-pass gate, the output stage, the UI and the
@@ -201,11 +216,17 @@ the readout to trust when a build overruns.
 
 **3. `build --hardware --cpu-probe` — the measurement.** The Cortex-M4's own
 cycle counter wrapped around the real render call, in the real audio interrupt.
-The eight LEDs become a meter (one per eighth of budget, amber near the limit,
-blinking red once over), and AUX carries a square wave whose *frequency* is the
-answer — 1000 Hz means the whole budget, 600 Hz means 60%. Frequency rather than
-a voltage so the reading survives any gain or coupling between the module and
-whatever measures it. MAIN keeps your audio, so you can listen while measuring.
+The eight LEDs become a meter: one per eighth of budget, the next LED's
+brightness carrying the fraction, amber near the limit, blinking red once over.
+Nothing to patch and no output to give up — your engine plays out of MAIN and
+AUX exactly as it will ship, while the display tells you what it costs.
+
+Add `--cpu-probe-aux` when you want a number rather than a bar: AUX then carries
+a square wave whose *frequency* is the answer — 1000 Hz means the whole budget,
+600 Hz means 60%. Frequency rather than a voltage so the reading survives any
+gain or coupling between the module and whatever measures it. It overwrites the
+engine's own AUX output for as long as it is on, which is why it is opt-in; MAIN
+still keeps your audio.
 
 **Hardware is the authority.** Publication requires a probe measurement; the
 estimate is a pre-flight check, not a substitute.

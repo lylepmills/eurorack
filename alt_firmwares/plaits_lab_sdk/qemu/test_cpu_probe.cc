@@ -15,7 +15,8 @@
 //
 // Build & run:
 //   c++ -std=c++11 -O1 -I ../../.. -DPLAITS_CPU_PROBE=1 \
-//       -DPLAITS_CPU_PROBE_HOST_TEST=1 test_cpu_probe.cc -o /tmp/tcp && /tmp/tcp
+//       -DPLAITS_CPU_PROBE_AUX=1 -DPLAITS_CPU_PROBE_HOST_TEST=1 \
+//       test_cpu_probe.cc -o /tmp/tcp && /tmp/tcp
 
 #include <cmath>
 #include <cstdio>
@@ -23,6 +24,9 @@
 #include <vector>
 
 #define PLAITS_CPU_PROBE 1
+// Scenario 5 decodes a generated AUX stream, so this test is by definition an
+// AUX-channel test — the tone is opt-in for firmware builds, never for this.
+#define PLAITS_CPU_PROBE_AUX 1
 
 #include "plaits/cpu_probe.h"
 

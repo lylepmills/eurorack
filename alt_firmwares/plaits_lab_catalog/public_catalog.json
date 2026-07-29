@@ -2287,60 +2287,18 @@
       ],
       "version": "1.0.0",
       "digest": "sha256:d4a38ebb1f93bd93f277feb892508870fa57c6f438ebb9aa22b2d8e6a1aa6ea1",
-      "documentationDigest": "sha256:f0c6c15bdf5d15709bfd25509aaaf85904edce5ddd456854944c0dc03840d028",
+      "documentationDigest": "sha256:349a4181a3118a092a81b6d4bc347b7ca42bf075253ee6caa7f5a185cc84b468",
       "manual": {
         "controls": {
           "harmonics": "Steps through sixteen instruments, from a maraca through bells and gravel to a guiro.",
-          "timbre": "How hard it is being shaken. Energy is injected continuously, so it plays without a trigger.",
+          "timbre": "How hard it is being shaken. It shakes while TRIG is unpatched or a patched gate is high, so it drones on its own.",
           "morph": "How long the instrument keeps ringing after each collision, around its measured decay.",
           "macro": "How many objects are inside, from a couple of large ones to a dense hiss of small ones."
         },
-        "trigger": "One hard shake, or one pass of the stick for the guiro and wrench."
+        "trigger": "Strikes it once and lets it ring out, or one pass of the stick for the guiro and wrench. Hold the gate to keep shaking."
       },
       "implementation": {
         "className": "ShakersEngine"
-      }
-    },
-    {
-      "id": "banded-waveguide",
-      "packageId": "rubato/banded-waveguide",
-      "name": "Banded Waveguide",
-      "author": "Lyle Mills, after Perry R. Cook and Gary P. Scavone",
-      "origin": "Rubato Lab",
-      "family": "Physical",
-      "description": "A bowed bar, bowl or glass. Each mode gets its own waveguide loop, so a bow has a travelling wave to grip -- which a bank of resonators does not.",
-      "tags": [
-        "stk",
-        "bowed",
-        "bar",
-        "physical",
-        "waveguide",
-        "modal"
-      ],
-      "controls": [
-        "Material",
-        "Bow force",
-        "Bow speed",
-        "Ring"
-      ],
-      "outputs": [
-        "The instrument",
-        "Fundamental band"
-      ],
-      "version": "1.0.0",
-      "digest": "sha256:7a0e18978492e4149146b1f3c6c80a3baa7ee9d5deee617c015dbb1dac4550b8",
-      "documentationDigest": "sha256:20ba6a01cbd2d09c7ba1cc5ae16e32d1b182b6e92c5b58398aac8467bc546423",
-      "manual": {
-        "controls": {
-          "harmonics": "Selects the material: uniform bar, tuned bar, glass harmonica or Tibetan prayer bowl.",
-          "timbre": "Bow force, from a light steep grip to a broad heavy one that loosens the tone.",
-          "morph": "Bow speed. There is a best speed in the middle, as there is on a real instrument.",
-          "macro": "How long the bank rings once the bow lifts, from a dead bar to an almost endless bowl."
-        },
-        "trigger": "Strikes the bank instead of bowing it, exciting every mode at once."
-      },
-      "implementation": {
-        "className": "BandedWaveguideEngine"
       }
     },
     {
@@ -2370,7 +2328,7 @@
         "Valve buzz"
       ],
       "version": "1.0.0",
-      "digest": "sha256:5dc7346cfe8648ca751771598f917b239d9351a111ff78497ddbdef1a7fe691e",
+      "digest": "sha256:ff00e8660828d33748616355584922d16f600f7f1609fb29dda3fe428bafee3f",
       "documentationDigest": "sha256:2e29a5c351344ffc48f40b4f77ba746e400eacfd525d93fade7817afddf2f980",
       "manual": {
         "controls": {
