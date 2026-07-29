@@ -65,11 +65,17 @@ and already has the split (`toy_engine.cc:123`, `:140`).
   question tractable given PROGRESS §3.6 — the "no second render path" rule
   was about rendering AUX **in addition to** its partner, and a Pattern B
   branch never does that.
-- **Flash: the real price.** Both branches are compiled in. Mitigated by the
-  existing per-engine gate: a recipe that leaves an engine in mono gets
-  `-DPLAITS_STEREO_<X>=0` and the stereo branch is dead-stripped. Measure with
-  `flash_sweep.py` before committing; none of the four changes below adds a
-  new algorithm, only a second combination of state already computed.
+- **Flash: the nominal price, and smaller than it looks.** Both branches are
+  compiled in, so this is where a split would be expected to cost. It does not
+  have to: `toy`, the one Pattern B engine already in the tree, measures
+  **−144 bytes** for carrying its stereo branch (open item 3, 2026-07-28) —
+  gcc 4.8 compiles the runtime `parameters.stereo` branch tighter than the
+  specialised mono-only body it replaces. One data point, not a law, and
+  none of the four changes below adds a new algorithm — only a second
+  combination of state already computed. Measure each with
+  `flash_sweep.py --stereo` before committing. The existing per-engine gate
+  (`-DPLAITS_STEREO_<X>=0`) caps the downside for recipes that leave an engine
+  in mono.
 - **RAM: whatever the second voice needs is permanent**, since both branches
   live in one object. Three of the four proposals below *free* state.
 
@@ -82,15 +88,23 @@ is the mono path. For the ten Pattern-A engines that is the same code either
 way, so those numbers stand unchanged. For `toy` it means the reported 35%
 **excludes its entire stereo branch** — a second hold counter, a second
 downsampler accumulate and a second DC blocker *per sub-sample*, i.e. most of
-the inner loop again. That pairs with open item 3, which already notes `toy`'s
-stereo *flash* is uncosted; the CPU is uncosted too.
+the inner loop again. Open item 3 closed the same gap on the *flash* side on
+2026-07-28 (`toy`'s stereo delta measures −144 B, recorded as 0); the CPU side
+was still open, and this closes it.
 
 A `--stereo` flag (`PLAITS_QEMU_STEREO`, four lines in `harness.cc` +
-`estimate.py`) closes this, and is a prerequisite for measuring any Pattern B
-engine. Prototyped in this session's scratch worktree, it puts **`toy`'s
-stereo path at 248.5 instructions/sample — 48% of budget, against the 35% the
-table reports.** A thirteen-point gap that nothing in the tooling could
-previously see, on the one engine the table already describes as split.
+`estimate.py`) does it, and is a prerequisite for measuring any Pattern B
+engine. It puts **`toy`'s stereo path at 248.5 instructions/sample — 48% of
+budget, against the 35% the table reports.** A thirteen-point gap that nothing
+in the tooling could previously see, on the one engine the table already
+describes as split.
+
+Worth noting the two measurements point opposite ways, and both are right:
+`toy`'s stereo branch costs nothing in flash (gcc 4.8 compiles the runtime
+branch tighter than the specialised mono body) while costing thirteen points of
+CPU. Flash is the cost of *having* both branches; CPU is the cost of *running*
+the more expensive one. A Pattern B conversion has to be costed on both, and
+neither predicts the other.
 
 **`harness.cc:78` pins `p.morph = 0.5f`, and `SWEEP_POSITIONS` never moves
 it.** The sweep varies harmonics, timbre, macro and note only. Several of
@@ -321,7 +335,7 @@ Same reasoning as `sub-oscillator`; same stock precedent.
 
 Nothing to do.
 
-### digital-modulation — KEEP the mono AUX. FIX the stereo render and the comment.
+### digital-modulation — KEEP the mono AUX. FIX the stereo render.
 
 The mono AUX — the symbol staircase — is **above** the stock bar, not below
 it. Nothing in the stock palette emits a control signal; this is a stepped LFO
@@ -416,7 +430,9 @@ ten Pattern-A engines have no entry today, which is correct while there is no
 second branch to strip and wrong the moment there is.
 
 Flash is the one cost this proposal does not have numbers for. Run
-`flash_sweep.py` over the four converted engines before committing; none adds
-a new algorithm, only a second combination of state already computed, so the
-delta should be small — but PROGRESS §1's own table is the reason not to guess
-(the spec's per-engine flash estimates ranged −39% to +74%).
+`flash_sweep.py --stereo` over each converted engine before committing. The
+prior is encouraging — `toy` carries its stereo branch for −144 B — and none of
+these adds a new algorithm, only a second combination of state already
+computed. But PROGRESS §1's own table is the reason not to guess: the spec's
+per-engine flash estimates ranged −39% to +74% while its aggregate was within
+2%.
