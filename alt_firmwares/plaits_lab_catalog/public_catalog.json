@@ -1719,7 +1719,7 @@
         "Complementary model"
       ],
       "version": "1.0.0",
-      "digest": "sha256:c8df5da8b0645443d903da9daaaadae88ca47f814a9289a69e9c888af707653a",
+      "digest": "sha256:a4138ec0c82c5ed73c5a519477dff4a726330f047303765df353072ffec82d93",
       "documentationDigest": "sha256:7f0724de6d8ed5ed3320a067bf1c454b98daa0b92ecfbd340959c0386f7999dd",
       "manual": {
         "controls": {
@@ -1839,7 +1839,7 @@
         "Carrier and first modulator"
       ],
       "version": "1.0.0",
-      "digest": "sha256:9df1f4eae3d0b1c3ab747eaf25685d8f19fce6d953c6bda70a9bc4a39b9b279a",
+      "digest": "sha256:3b5f52291b173df4146bef07b4dc6a269cf042243011837b4eef9d5c5cb958e0",
       "documentationDigest": "sha256:34eb5e33ad1392c007d88317ded14aab73de07e66e9102e8253ebfc20d0ae612",
       "manual": {
         "controls": {
@@ -1879,7 +1879,7 @@
         "Complementary crossfade"
       ],
       "version": "1.0.0",
-      "digest": "sha256:577de7dcc57eadda33f5e64ad7a6659b611022363c33b628586e1eb5e14dcc08",
+      "digest": "sha256:d1ee41f2268c6f5aace74f62eedb89e6b82f245076b16ea8b623a781f40a2618",
       "documentationDigest": "sha256:c2133bab9a950fcf69a1ac5650f92c9ed53d4b52e055e710dbb3f7f28f503b92",
       "manual": {
         "controls": {
@@ -1960,7 +1960,7 @@
         "The complementary crossfade, always favouring the side MAIN does not."
       ],
       "version": "1.0.0",
-      "digest": "sha256:65c4a4d0bd0ae4f019e4434a7c17ac8434ff3ec4dc5ab77135b07db09408211c",
+      "digest": "sha256:0914afc27633db28864894ee8f7a69e0139ef3774be12c18e2a1c32359e18e13",
       "documentationDigest": "sha256:ff57bbcd5399d2697df84b71ad86ee7256371cad2a34a04259b4ce1f92abcd21",
       "manual": {
         "controls": {
@@ -2001,7 +2001,7 @@
         "The cloud's amplitude on one steady tone at the played pitch: the grain rhythm without the scatter."
       ],
       "version": "1.0.0",
-      "digest": "sha256:8ba7e6ca92d4dd7257aa81a89a52842b5355331afc4f5d7c222fc78416312e3e",
+      "digest": "sha256:02b954191555006856dab167223964ab823032f227d1e7fd88761ca9f9e8632e",
       "documentationDigest": "sha256:7bf5a8be6b46a035294ea971bc01265b98236a83dca905687e18934221a164e7",
       "manual": {
         "controls": {
@@ -2081,7 +2081,7 @@
         "Its complement: the notch, the difference of the two peaks, or a second independent sequence."
       ],
       "version": "1.0.0",
-      "digest": "sha256:f7c2d229e17f6c2e0fd6468b95455bed0165134b92e46a97aceb08e6e62a3c9f",
+      "digest": "sha256:a552c30358516c458f888ad852d429b912bf92277224182bb70ee76ee0abc04a",
       "documentationDigest": "sha256:e381a1a03446586b64c0fc846f28a24b1047a8997f2b62d24113dc9b3d5baf4c",
       "manual": {
         "controls": {
@@ -2283,7 +2283,7 @@
         "The same stack with Peak reflected, so it holds the end of the series MAIN does not."
       ],
       "version": "1.0.0",
-      "digest": "sha256:1d070fbb6b4c00b8dac9401a1dcecaea4f81f56a51046be96e90787a692d3a3e",
+      "digest": "sha256:b9bb73912801f1887ef5ff597cae643fd34c179ad315681977c789e032d5e708",
       "documentationDigest": "sha256:df5305a57231f4ae30a23acd8a2fb6555961efbddc2699aacba2d89584c396e2",
       "manual": {
         "controls": {
@@ -2446,7 +2446,7 @@
         "Mono: the five highest partials alone, a bright fast-decaying companion voice. Stereo: a second, independently detuned eleven-partial render sharing the same amplitude envelope, for a wide chorused bell."
       ],
       "version": "1.0.0",
-      "digest": "sha256:1eded112568ac337864eebe630998536d69570a53d20eac7b9878447b8bdb91d",
+      "digest": "sha256:ac71525bd8fb216b839c2ea70660d54c144acf01272eb78b0f36867ee93c9b8b",
       "documentationDigest": "sha256:846dd12f1e7b0fa20bf9051bc91d3cfd20c543d4a57022fa7e3917fd9c8e37bd",
       "manual": {
         "controls": {
@@ -2488,7 +2488,7 @@
         "Mono: the two noise-ring-modulated partials alone, without the direct tone or the harmonics sum. Stereo: a second, independently-filtered noise realization for the right channel, sharing the same tonal partials as the left."
       ],
       "version": "1.0.0",
-      "digest": "sha256:fd84ef4baf46046d42b875c67c42cac7112511c8eedaa4331869094fd668e041",
+      "digest": "sha256:53b250d3e5b76f21ecaf5a87041b709633d2579c7fa2a22b193dff687640077b",
       "documentationDigest": "sha256:65aab70f996077b94b1aa30db54d38ffa46b367e023cbfcf31ffffd4770f9a87",
       "manual": {
         "controls": {
@@ -2528,7 +2528,7 @@
         "The raw excitation pulses, before the resonator, soft-clipped."
       ],
       "version": "1.0.0",
-      "digest": "sha256:c4e9aef059e7db31e8ae4d0913307fd9fe22977107a43cf867ee3f9b6615f3ed",
+      "digest": "sha256:92985f856c852c3cd1d2ac7e51db0aac38fc2e58e0c5e19c0c6c29c5ccb03589",
       "documentationDigest": "sha256:54d87d810fb12519140ca3a85f20fb60a96d71730d6e638894310de75b8aaed8",
       "manual": {
         "controls": {
@@ -2569,7 +2569,7 @@
         "The snap resonator alone, soft-clipped."
       ],
       "version": "1.0.0",
-      "digest": "sha256:e3fe5763e6e824496942591783e338a95c7fc83fca314614450f4a58457736db",
+      "digest": "sha256:49431b366173d9134349ca0ae1c6cecdcc031cbff8b4e94e596540f13d72d354",
       "documentationDigest": "sha256:dea4844f0033ccb898d64d472f5b41b1376ccc7f1de51cad707b894b8800998e",
       "manual": {
         "controls": {
@@ -2610,7 +2610,7 @@
         "Mono: the complementary crossfade, always favouring the side MAIN does not. Stereo: a second, independent raw-noise stream and a small opposing offset on Color."
       ],
       "version": "1.0.0",
-      "digest": "sha256:1f180439278fc98378b0c99c8e3d5c1efefc31c96be73bc969868df743ecba59",
+      "digest": "sha256:4006f5f245b883d22d0a134b7ed399293d40517d3a59250459d1398477107faf",
       "documentationDigest": "sha256:78c459781c274768478fd338172d4203b775589e2ba2070882f239c535508bf6",
       "manual": {
         "controls": {
@@ -2811,7 +2811,7 @@
         "Neck pickup"
       ],
       "version": "1.0.0",
-      "digest": "sha256:67e186f1ae4412159ec3b7fb289be38df3d81028f8c4fe6258d53ab2575cc665",
+      "digest": "sha256:c768dea9505cb2a25bfc89dbd8a85f2cdbbbfcf3bcecfac165cb67d6a00f9416",
       "documentationDigest": "sha256:b913cb9025a1b2ed2dee10c5c3c5f6e724a61c84404be673ed659bcdc981b08b",
       "manual": {
         "controls": {
@@ -2851,7 +2851,7 @@
         "Sub only"
       ],
       "version": "1.0.0",
-      "digest": "sha256:41c06037a7e5709b25074c9b763932aae9787e4fcf55946dee4c18e86dd27417",
+      "digest": "sha256:5289e14c666eefc617d4db5b3747590d18d3bdc9664db91b900cac3d61b21ef1",
       "documentationDigest": "sha256:45012e3dfe937d6f147a1a3d1fbbe118e1931f9f87b664c4163d8613dff75c61",
       "manual": {
         "controls": {
@@ -2891,7 +2891,7 @@
         "Symbol staircase"
       ],
       "version": "1.0.0",
-      "digest": "sha256:2b4cd4326ce213a23f6336c9161e54fa24ddb8c7fa168327a9ad39eec02f8f7c",
+      "digest": "sha256:236f34ab7923cb860501ac6a4841aa0c7f245970b279f5219f62e4fb44437c42",
       "documentationDigest": "sha256:76ff0cca3dbaa7eccc97f7cce7f5569d5f9bf5d16c0ce7e668238f7435a63fdd",
       "manual": {
         "controls": {
@@ -2928,11 +2928,11 @@
       ],
       "outputs": [
         "Comb output",
-        "Second tap a fifth away"
+        "Second comb tap a fifth below"
       ],
       "version": "1.0.0",
-      "digest": "sha256:e295c9c2e6881091298201469c06db08b703bcaac1bbaa7db8f316e561ad377f",
-      "documentationDigest": "sha256:74d5139b7ea8408cd0135babf3ae82cc364b74ecf441ddbc63f52faba9ed7f58",
+      "digest": "sha256:590e9c88fa7ba5fa04970abc0beffb9fb51ed7bf2e978e834ae9010e01218230",
+      "documentationDigest": "sha256:e93de6736c53c3233de9f1a9f85e41ae557cd9a77504267e9511039df85b2a53",
       "manual": {
         "controls": {
           "harmonics": "Sweeps comb feedback from inverted through a single echo to ringing resonance.",
@@ -2962,25 +2962,25 @@
       ],
       "controls": [
         "Brightness",
-        "Register",
         "Vowel",
+        "Register",
         "Formant tilt"
       ],
       "outputs": [
         "Formant bank",
-        "Upper-formant weighting"
+        "Glottal source; upper-formant weighting in stereo"
       ],
       "version": "1.0.0",
-      "digest": "sha256:db3792753aa3d154e8334fb359f85dd06373f72580ec9a57046b4d42a5849102",
-      "documentationDigest": "sha256:c6bb521ba1dcecf6cd7fe3158fae1f7b9288886732d0a3686549530bf7db5f7e",
+      "digest": "sha256:d653f9ebd7e112cc3b477918e1603bf40e6b2cc6852474c05314ad9d292bd34f",
+      "documentationDigest": "sha256:8c96f04379f022837b8697a96378e1f7c7285f21dea00c48a250aadba8e43770",
       "manual": {
         "controls": {
           "harmonics": "Tilts the excitation from a dark buzz to a bright breathy hiss.",
-          "timbre": "Steps the vocal register from bass through tenor to soprano.",
-          "morph": "Sweeps the vowel through the five phonemes.",
-          "macro": "Restores the formant amplitude balance the stock model leaves flat."
+          "timbre": "Sweeps the vowel through the five phonemes.",
+          "morph": "Steps the vocal register from bass through tenor to soprano.",
+          "macro": "Restores the formant amplitude balance the stock model leaves flat. Centred is flat, exactly as hardware."
         },
-        "trigger": "Restarts the internal envelope when TRIG is patched."
+        "trigger": "Re-inits the filter bank when TRIG is patched. There is no internal envelope; the model itself ignores TRIG on this shape."
       },
       "implementation": {
         "className": "VowelFofEngine"
@@ -3011,7 +3011,7 @@
         "Modulator"
       ],
       "version": "1.0.0",
-      "digest": "sha256:9add27f51fe1d0d57d692e80710f6a0870283b21041beb8b09c5bf56f485cdc5",
+      "digest": "sha256:0a3e10f71e17df66bdec0580e5a1ba2d2e4f4e3437bb26a1e2096c2cf36763f4",
       "documentationDigest": "sha256:9a85bb18834f4d7ba13311c07e67d1dc493f786d5b78622330827c9032d728a4",
       "manual": {
         "controls": {
@@ -3051,7 +3051,7 @@
         "Undetuned root voice"
       ],
       "version": "1.0.0",
-      "digest": "sha256:ea56e2b1543c1bec775bbb7c8d7cf50fa35bc7a0a300f055e138e4fb180fa18c",
+      "digest": "sha256:f8f69c6a765da70e649636a1d0c6a6bbb602738376587250d5ffcab122b420e3",
       "documentationDigest": "sha256:aa32b300d63abf627ac7324a7dfb7aeca8da416a6b7c752cdba1d713536e4f71",
       "manual": {
         "controls": {
