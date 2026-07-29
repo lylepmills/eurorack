@@ -140,20 +140,45 @@ missing-submodule guard.
    all along. Read `previewPlayer.tsx` and both call sites properly first; this
    file has been misread twice from greps alone.
 
-2. **Braids 14-segment icons.** Agreed: option D (cycling) for placed slots,
-   option A (`Z**F`, `**FM`, `SUB*`, `**X3`) as the static fallback for the
-   library list and catalog card — TWO renderers, since the library has no slot
-   state to read. Corrections wanted on the prototype: the display has an
-   ITALIC SLANT (shear transform) and the characters are too WIDE relative to
-   their height. Keep Braids' custom glyphs rather than substituting letters:
-   the 0x88 / 0x89 / 0x8C / 0x8E bytes are waveform characters, drawable on the
-   same 14 segments but absent from any character table, so they need
-   hand-mapping from the module's own display. They appear in `saw-comb` (no
-   letters at all), two of `triple`'s members, and both `sub-oscillator`
-   arrows. Also wanted: call out in each blurb where a Braids model is an
-   ancestor of a Plaits one. Only two are genuine ancestry — `raw-fm` to
-   `two-op-fm`, `vowel-fof` to `speech`. `triple` is OVERLAP with
-   `chords`/`swarm`, a different claim that should read differently.
+2. ~~**Braids 14-segment icons.**~~ **DONE.** Both renderers ship: placed slots
+   cycle the source codes, the library rail and catalog card show the static
+   wildcard (`Z**F`, `**FM`, `SUB*`, `**X3`). `website/src/lib/braidsDisplay.ts`
+   (data + geometry, 12 tests) and `components/plaits-palette/BraidsDisplay.tsx`.
+   Three findings worth keeping:
+   - **Nothing needed hand-mapping.** `chr_characters[]` in `braids/resources.cc`
+     is a direct byte→16-bit segment-word table — the one `Display::Refresh`
+     indexes by raw character byte and shifts to the driver — so the custom
+     0x88 / 0x8C / 0x8E glyphs come from the firmware like every letter does.
+     The bit→segment mapping was solved from the table itself ('I' = A D J M,
+     'X' = the four diagonals, '-' = G1 G2), and bits 0–1 are unused across all
+     256 entries. Decoded, the glyphs are waveform traces: 0x88 saw (B C K N),
+     0x8C square top (A B C E F), 0x8E comb spike (D J M).
+   - **The geometry is measured, not styled.** The display is two Kingbright
+     **PDC54-11GWA** modules (named in `braids/hardware_design/Braids.xlsx`), and
+     its package drawing gives character box 7.97 × 13.8 mm, segment width
+     1.0 mm, digit pitch 12.7 mm, and slant **5°**. The first pass eyeballed the
+     slant at 10° and read obviously wrong; the datasheet settled it. A test
+     pins all five numbers so a "looks better" edit fails.
+   - **The mapping is twenty models, not nineteen** — `saw-comb` is a seventh
+     1:1 engine, not only the glyph case. Cross-checked against the `upstream`
+     field of all eleven `plaits-engine.json` files.
+
+   Blurb ancestry is done too, taken from the engine headers. One correction:
+   `vowel-fof` and `speech` share the five-vowel × five-register **grid**, not
+   the table — `vowel_fof_data.cc` deliberately vendors its own copy because
+   speech's uint8 quantisation is ~half a semitone coarse against a Q = 64
+   filter. The copy says grid. `triple` is worded as overlap, not lineage.
+
+   ⚠️ **Deploy coupling:** a description is part of the hashed engine record, so
+   `raw-fm`, `triple` and `vowel-fof` moved digests. `public_catalog.json` was
+   regenerated in the same commit; verified blast radius is exactly those three
+   (47 of 50 byte-identical), so no already-deployed engine is affected — but
+   the builder image and this snapshot still ship together, per item 7.
+
+   Still open, for Lyle: on a 14-segment display `*` (H J K L M N) sits close to
+   `X` (H K L N), so `**X3` reads a little like "XXX3" at a glance — the vertical
+   stem is what separates them. Shipped as approved; say the word if a different
+   wildcard character would read better.
 
 3. ~~**`engineStereoBytes` has no entry for `toy`**~~ — **DONE 2026-07-28.**
    Swept with `flash_sweep.py --stereo`; the delta is −144 B (toy's stereo path
