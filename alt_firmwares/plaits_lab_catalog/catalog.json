@@ -2246,7 +2246,7 @@
     },
     {
       "id": "helix",
-      "packageId": "community/helix",
+      "packageId": "rubato/helix",
       "name": "Helix",
       "author": "Lyle Mills",
       "origin": "Rubato Lab",
