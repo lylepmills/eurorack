@@ -403,9 +403,27 @@ missing-submodule guard.
    the engine never entered the catalog, so there is no registration, preview,
    flash or builder entry to unwind.
 
-7. **Deploy** — builder image from the branch head FIRST, then the site. Engine
-   digests are the builder's allowlist. The site already surfaces "Builder
-   update required" on its own when they disagree.
+7. ~~**Deploy**~~ — **DONE 2026-07-29.** Builder image first, then the site, as
+   this item required. Firmware `master` merged the branch at `2782e70be79c`;
+   that merge moved five engine digests (bowed, csaw, digital-modulation,
+   ring-mod, vowel-fof — the AUX rework), so the image was rebuilt from it,
+   verified before pushing (ran it, submitted `mixed_build_request.json`, got a
+   real WAV stamped `X-Plaits-Source-Revision: 2782e70be79c` rather than the
+   `development` sentinel), pushed, and the Worker deployed onto it. The website
+   then re-pinned to the SAME revision with exact digest parity across all 56
+   engines, and shipped the 14-segment icons.
+
+   **The generated artifacts had to be REGENERATED, not merged** — neither side
+   was a superset. The branch's catalog predated main's five newest engines
+   (brass, shakers, bytebeat, diatonic-chord, scale-stack) while main's previews
+   manifest had no stereo clips for the Braids ports, so a naive merge would
+   have dropped five live engines. `plaitsStereoControls.test.ts` caught exactly
+   that: red on the hand-merged manifest, green once all 112 clips were
+   re-rendered from the merged firmware revision.
+
+   Verified end to end on the live site: a recipe containing two moved-digest
+   engines built successfully (`cacheHit: false`, ARM text 216,464 B), so the
+   deployed allowlist really does accept what the site emits.
 
 8. ~~**Merge `origin/main` into this branch before deploying**~~ — **DONE
    2026-07-28**, both repos. The branch was long-lived and main had moved under
