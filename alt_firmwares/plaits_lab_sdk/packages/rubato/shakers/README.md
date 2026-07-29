@@ -72,14 +72,40 @@ what it reads as — its intended loudness.
 That alone does not level the selector. Measured across the shake/decay/object
 space, the sixteen still spanned **46 dB** — a cabasa 12.7 dB above the mean, a
 water drop 33.5 dB below it. Each preset now carries a measured makeup gain
-toward a common target, clamped to [0.15, 20] so the two sparsest are lifted as
-far as their crest factor allows rather than slammed. **Worst remaining
-deviation: 6.5 dB, and thirteen of the sixteen land inside 0.7 dB.**
+toward a common target.
+
+The first pass at those gains was clamped to an arbitrary [0.15, 20], which held
+water drops 8.6 dB and little rocks 10.1 dB below the rest — a sweep of
+HARMONICS audibly ducked twice. There is no runtime clamp on the makeup gain, so
+the arbitrary ceiling bought nothing; the real constraint is **peak headroom**,
+because a sparse instrument with a high crest factor clips before its RMS
+reaches the target. The gains are now measured against that constraint directly
+(`alt_firmwares/research/shakers_levels/`, 108 points per instrument over
+timbre × decay × objects × two octaves, lifted toward the mean and capped where
+worst-case peak would pass 0.95). **Worst remaining deviation: 1.5 dB, and
+fourteen of the sixteen land inside 0.31 dB.**
+
+The two that remain low are crunch (−1.1 dB) and big rocks (−1.5 dB), and they
+are peak-limited rather than mismeasured: both have crest factors near 40, so
+their peaks are already at 0.85–0.94 while their RMS is still short. That is
+also the direction to err — for a sound this impulsive, peak drives perceived
+loudness more than RMS does, so matching RMS exactly would make them the loud
+ones. Re-run the harness and re-bake if the resonator normalisation or the
+energy model ever changes.
 
 ## Controls
 
-HARMONICS picks the instrument. TIMBRE is how hard it is being shaken (injected
-continuously, so it plays without a trigger; a rising edge is one hard shake).
+HARMONICS picks the instrument. TIMBRE is how hard it is being shaken.
+
+The shaking follows the same convention every sustaining engine here uses (see
+`reed-pipe`'s breath): a hand is on the instrument while **TRIG is unpatched, or
+while a patched gate is high**. So it drones on its own, a held gate shakes it
+for as long as you hold, and a short trigger is a single strike that rings out
+and stops. That last case is the point — struck sleigh bells or a struck coke
+can is a different instrument from a shaken one, and for a while it was only
+reachable by turning TIMBRE fully down, because the continuous injection ran
+underneath a patched trigger and buried the one-shot.
+
 MORPH and MACRO are upstream's own decay and object-count controls, and both of
 his mappings already put the measured value at the detent — `nObjects = 2 *
 norm * baseObjects + 1.1` is exactly `baseObjects` at 0.5.

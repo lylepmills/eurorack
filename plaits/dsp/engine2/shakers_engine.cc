@@ -118,22 +118,22 @@ inline float Noise() {
 
 const ShakerPreset kShakerPresets[kShakersNumInstruments] = {
   //                        n  freq          radii         gains       objects  sysdec  snddec  gain  dscale vary  mask  b0     b1     b2    mech                       ratchet  makeup
-  { "Maraca",               1, kMaracaF,      kMaracaR,      kMaracaG,      25.0f, 0.999f,  0.95f,  4.0f, 0.97f, 0.0f,  0x00, 1.0f, -1.0f,  0.0f, SHAKER_MECHANISM_SHAKE,   0.0f, 1.823f },
-  { "Cabasa",               1, kCabasaF,      kCabasaR,      kCabasaG,     512.0f, 0.997f,  0.96f,  8.0f, 0.97f, 0.0f,  0x00, 1.0f, -1.0f,  0.0f, SHAKER_MECHANISM_SHAKE,   0.0f, 0.206f },
-  { "Sekere",               1, kSekereF,      kSekereR,      kSekereG,      64.0f, 0.999f,  0.96f,  4.0f, 0.94f, 0.0f,  0x00, 1.0f,  0.0f, -1.0f, SHAKER_MECHANISM_SHAKE,   0.0f, 0.257f },
-  { "Tambourine",           3, kTambourineF,  kTambourineR,  kTambourineG,  32.0f, 0.9985f, 0.95f,  1.0f, 0.95f, 0.05f, 0x06, 1.0f,  0.0f, -1.0f, SHAKER_MECHANISM_SHAKE,   0.0f, 6.151f },
-  { "Sleigh bells",         5, kSleighF,      kSleighR,      kSleighG,      32.0f, 0.9994f, 0.97f,  1.0f, 0.9f,  0.03f, 0x1f, 1.0f,  0.0f, -1.0f, SHAKER_MECHANISM_SHAKE,   0.0f, 2.796f },
-  { "Bamboo chimes",        3, kBambooF,      kBambooR,      kBambooG,       1.2f, 0.9999f, 0.9f,   0.4f, 0.7f,  0.2f,  0x07, 1.0f,  0.0f,  0.0f, SHAKER_MECHANISM_SHAKE,   0.0f, 15.766f },
-  { "Angklung",             7, kAngklungF,    kAngklungR,    kAngklungG,     1.2f, 0.9999f, 0.95f,  0.5f, 0.7f,  0.0f,  0x00, 1.0f,  0.0f, -1.0f, SHAKER_MECHANISM_SHAKE,   0.0f, 11.986f },
-  { "Coke can",             5, kCokeCanF,     kCokeCanR,     kCokeCanG,     48.0f, 0.999f,  0.97f,  0.5f, 0.95f, 0.0f,  0x00, 1.0f,  0.0f, -1.0f, SHAKER_MECHANISM_SHAKE,   0.0f, 2.888f },
-  { "Sticks",               1, kStixF,        kStixR,        kStixG,         2.0f, 0.998f,  0.96f,  6.0f, 0.96f, 0.0f,  0x00, 1.0f,  0.0f, -1.0f, SHAKER_MECHANISM_SHAKE,   0.0f, 0.515f },
-  { "Crunch",               1, kCrunchF,      kCrunchR,      kCrunchG,       7.0f, 0.99806f,0.95f,  4.0f, 0.96f, 0.0f,  0x00, 1.0f, -1.0f,  0.0f, SHAKER_MECHANISM_SHAKE,   0.0f, 2.298f },
-  { "Big rocks",            1, kBigRocksF,    kBigRocksR,    kBigRocksG,    23.0f, 0.9965f, 0.98f,  4.0f, 0.95f, 0.11f, 0x01, 1.0f,  0.0f, -1.0f, SHAKER_MECHANISM_SHAKE,   0.0f, 0.766f },
-  { "Little rocks",         1, kLittleRocksF, kLittleRocksR, kLittleRocksG,1600.0f,0.99586f,0.98f,  4.0f, 0.95f, 0.18f, 0x01, 1.0f,  0.0f, -1.0f, SHAKER_MECHANISM_SHAKE,   0.0f, 0.263f },
-  { "Coins in a mug",       7, kMugF,         kMugR,         kMugG,          3.0f, 0.9995f, 0.97f,  0.8f, 0.95f, 0.0f,  0x00, 1.0f,  0.0f, -1.0f, SHAKER_MECHANISM_SHAKE,   0.0f, 11.513f },
-  { "Water drops",          3, kWaterF,       kWaterR,       kWaterG,       10.0f, 0.996f,  0.95f,  1.0f, 0.8f,  0.0f,  0x00,-1.0f,  0.0f,  1.0f, SHAKER_MECHANISM_WATER,   0.0f, 20.0f },
-  { "Guiro",                2, kGuiroF,       kGuiroR,       kGuiroG,      128.0f, 0.999f,  0.95f,  0.4f, 0.95f, 0.0f,  0x00, 1.0f,  0.0f, -1.0f, SHAKER_MECHANISM_RATCHET, kShakersGuiroRatchetDelta, 11.785f },
-  { "Wrench",               2, kWrenchF,      kWrenchR,      kWrenchG,     128.0f, 0.999f,  0.95f,  0.4f, 0.95f, 0.0f,  0x00, 1.0f,  0.0f, -1.0f, SHAKER_MECHANISM_RATCHET, kShakersWrenchRatchetDelta, 20.0f },
+  { "Maraca",               1, kMaracaF,      kMaracaR,      kMaracaG,      25.0f, 0.999f,  0.95f,  4.0f, 0.97f, 0.0f,  0x00, 1.0f, -1.0f,  0.0f, SHAKER_MECHANISM_SHAKE,   0.0f, 1.788f },
+  { "Cabasa",               1, kCabasaF,      kCabasaR,      kCabasaG,     512.0f, 0.997f,  0.96f,  8.0f, 0.97f, 0.0f,  0x00, 1.0f, -1.0f,  0.0f, SHAKER_MECHANISM_SHAKE,   0.0f, 0.248f },
+  { "Sekere",               1, kSekereF,      kSekereR,      kSekereG,      64.0f, 0.999f,  0.96f,  4.0f, 0.94f, 0.0f,  0x00, 1.0f,  0.0f, -1.0f, SHAKER_MECHANISM_SHAKE,   0.0f, 0.237f },
+  { "Tambourine",           3, kTambourineF,  kTambourineR,  kTambourineG,  32.0f, 0.9985f, 0.95f,  1.0f, 0.95f, 0.05f, 0x06, 1.0f,  0.0f, -1.0f, SHAKER_MECHANISM_SHAKE,   0.0f, 6.705f },
+  { "Sleigh bells",         5, kSleighF,      kSleighR,      kSleighG,      32.0f, 0.9994f, 0.97f,  1.0f, 0.9f,  0.03f, 0x1f, 1.0f,  0.0f, -1.0f, SHAKER_MECHANISM_SHAKE,   0.0f, 2.564f },
+  { "Bamboo chimes",        3, kBambooF,      kBambooR,      kBambooG,       1.2f, 0.9999f, 0.9f,   0.4f, 0.7f,  0.2f,  0x07, 1.0f,  0.0f,  0.0f, SHAKER_MECHANISM_SHAKE,   0.0f, 8.183f },
+  { "Angklung",             7, kAngklungF,    kAngklungR,    kAngklungG,     1.2f, 0.9999f, 0.95f,  0.5f, 0.7f,  0.0f,  0x00, 1.0f,  0.0f, -1.0f, SHAKER_MECHANISM_SHAKE,   0.0f, 9.049f },
+  { "Coke can",             5, kCokeCanF,     kCokeCanR,     kCokeCanG,     48.0f, 0.999f,  0.97f,  0.5f, 0.95f, 0.0f,  0x00, 1.0f,  0.0f, -1.0f, SHAKER_MECHANISM_SHAKE,   0.0f, 2.654f },
+  { "Sticks",               1, kStixF,        kStixR,        kStixG,         2.0f, 0.998f,  0.96f,  6.0f, 0.96f, 0.0f,  0x00, 1.0f,  0.0f, -1.0f, SHAKER_MECHANISM_SHAKE,   0.0f, 0.493f },
+  { "Crunch",               1, kCrunchF,      kCrunchR,      kCrunchG,       7.0f, 0.99806f,0.95f,  4.0f, 0.96f, 0.0f,  0x00, 1.0f, -1.0f,  0.0f, SHAKER_MECHANISM_SHAKE,   0.0f, 2.33f },
+  { "Big rocks",            1, kBigRocksF,    kBigRocksR,    kBigRocksG,    23.0f, 0.9965f, 0.98f,  4.0f, 0.95f, 0.11f, 0x01, 1.0f,  0.0f, -1.0f, SHAKER_MECHANISM_SHAKE,   0.0f, 0.991f },
+  { "Little rocks",         1, kLittleRocksF, kLittleRocksR, kLittleRocksG,1600.0f,0.99586f,0.98f,  4.0f, 0.95f, 0.18f, 0x01, 1.0f,  0.0f, -1.0f, SHAKER_MECHANISM_SHAKE,   0.0f, 0.843f },
+  { "Coins in a mug",       7, kMugF,         kMugR,         kMugG,          3.0f, 0.9995f, 0.97f,  0.8f, 0.95f, 0.0f,  0x00, 1.0f,  0.0f, -1.0f, SHAKER_MECHANISM_SHAKE,   0.0f, 10.062f },
+  { "Water drops",          3, kWaterF,       kWaterR,       kWaterG,       10.0f, 0.996f,  0.95f,  1.0f, 0.8f,  0.0f,  0x00,-1.0f,  0.0f,  1.0f, SHAKER_MECHANISM_WATER,   0.0f, 50.0f },
+  { "Guiro",                2, kGuiroF,       kGuiroR,       kGuiroG,      128.0f, 0.999f,  0.95f,  0.4f, 0.95f, 0.0f,  0x00, 1.0f,  0.0f, -1.0f, SHAKER_MECHANISM_RATCHET, kShakersGuiroRatchetDelta, 9.51f },
+  { "Wrench",               2, kWrenchF,      kWrenchR,      kWrenchG,     128.0f, 0.999f,  0.95f,  0.4f, 0.95f, 0.0f,  0x00, 1.0f,  0.0f, -1.0f, SHAKER_MECHANISM_RATCHET, kShakersWrenchRatchetDelta, 17.74f },
 };
 
 void ShakersEngine::Init(BufferAllocator* allocator) {
@@ -245,7 +245,18 @@ void ShakersEngine::Render(
   // TIMBRE is how hard it is being shaken. Upstream injects energy from a MIDI
   // controller; here the knob injects continuously so the engine drones with
   // TRIG unpatched, and a rising edge is a single hard shake.
-  const float shake_rate = parameters.timbre * parameters.timbre * 0.02f;
+  //
+  // The continuous injection is gated the way every other sustaining engine
+  // here gates its excitation (see ReedPipeEngine's `blowing`): a hand is on
+  // the instrument when nothing is patched to TRIG, or when a patched gate is
+  // high. Without this the drone runs underneath a patched trigger and buries
+  // the one-shot -- a struck shaker is exactly what TRIG should give, and for
+  // sparse instruments like sleigh bells or a coke can it is the useful voice.
+  const bool shaking = parameters.trigger & \
+      (TRIGGER_HIGH | TRIGGER_UNPATCHED);
+  const float shake_rate = shaking
+      ? parameters.timbre * parameters.timbre * 0.02f
+      : 0.0f;
   if (parameters.trigger & TRIGGER_RISING_EDGE) {
     if (p.mechanism == SHAKER_MECHANISM_RATCHET) {
       ratchet_count_ += 8.0f;
