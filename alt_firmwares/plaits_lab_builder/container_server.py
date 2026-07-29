@@ -162,6 +162,7 @@ STEREO_MACROS = {
     "csaw": "CSAW",
     "ring-mod": "RING_MOD",
     "vowel-fof": "VOWEL_FOF",
+    "digital-modulation": "DIGITAL_MODULATION",
     "virtual-analog": "VIRTUAL_ANALOG",
     "waveshaping": "WAVESHAPING",
     "two-op-fm": "TWO_OP_FM",

@@ -107,6 +107,8 @@ void DigitalModulationEngine::Render(
   const float shaping = parameters.morph;
   const float shape_pole = shaping * shaping * 0.9995f;
 
+  const bool stereo = PLAITS_STEREO_DIGITAL_MODULATION && parameters.stereo;
+
   for (size_t i = 0; i < size; ++i) {
     phase_ += carrier_increment;
     if (phase_ >= 1.0f) {
@@ -145,17 +147,30 @@ void DigitalModulationEngine::Render(
 
     const float in_phase = BraidsSine(phase_);
     const float quadrature = BraidsSine(phase_ + 0.25f);
-    out[i] = shaped_i_ * in_phase + shaped_q_ * quadrature;
 
-    // The symbol staircase. It sits at +1.0 for the whole preamble, so it has
-    // to be DC-blocked or it parks the LPG open; the blocker is why the
-    // registered aux gain is negative.
-    const float staircase = (shaped_i_ + shaped_q_) * \
-        (1.0f / (2.0f * kDigitalModulationRadius));
-    dc_aux_out_ = staircase - dc_aux_in_ + \
-        kDigitalModulationDcPole * dc_aux_out_;
-    dc_aux_in_ = staircase;
-    aux[i] = dc_aux_out_;
+    if (stereo) {
+      // L/R: the two quadrature components, one per channel. They are the
+      // constituents OUT is built from, so L + R reproduces the mono output
+      // EXACTLY -- the split is a decomposition, not a second render, and it
+      // is perfectly mono-compatible. Each channel therefore peaks at the
+      // constellation radius against the mono 0.997, i.e. 3 dB down; two
+      // decorrelated channels at -3 dB carry the same power as one at 0, so
+      // no make-up is applied (and applying one would break the identity).
+      out[i] = shaped_i_ * in_phase;
+      aux[i] = shaped_q_ * quadrature;
+    } else {
+      out[i] = shaped_i_ * in_phase + shaped_q_ * quadrature;
+
+      // The symbol staircase. It sits at +1.0 for the whole preamble, so it
+      // has to be DC-blocked or it parks the LPG open; the blocker is why the
+      // registered aux gain is negative.
+      const float staircase = (shaped_i_ + shaped_q_) * \
+          (1.0f / (2.0f * kDigitalModulationRadius));
+      dc_aux_out_ = staircase - dc_aux_in_ + \
+          kDigitalModulationDcPole * dc_aux_out_;
+      dc_aux_in_ = staircase;
+      aux[i] = dc_aux_out_;
+    }
   }
 }
 

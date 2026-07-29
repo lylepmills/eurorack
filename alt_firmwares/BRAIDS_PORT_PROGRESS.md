@@ -30,7 +30,7 @@ in both; `diff` the two before trusting either.
 | `bowed` | **landed** | 37% / 38% | 3–5 dB; chaotic self-oscillator, see §3.10 |
 | `ring-mod` | **landed** | 60% / 69% | within 0.04 dB energy-weighted at four detunings |
 | `sub-oscillator` | **landed** | 28% | 0.23 / 0.42 dB against both source models |
-| `digital-modulation` | **landed** | 18% | 0.00 dB at the stock frame; 0.09–0.45 dB across settings |
+| `digital-modulation` | **landed** | 20% / 18% | 0.00 dB at the stock frame; 0.09–0.45 dB across settings |
 | `saw-comb` | **landed** | 32% | 0.19 / 0.45 / 0.67 dB |
 | `vowel-fof` | **landed** | 71% / 73% | 1.96–2.29 dB |
 | `raw-fm` | **landed** | 15% | 0.05 / 0.13 / 0.02 dB across all three source models |
@@ -45,7 +45,9 @@ engines, final**. What remains is measurement and the website, not DSP.
 **A `mono / stereo` CPU entry means a Pattern B engine** — one that renders a
 different AUX in each aux mode, so it has two costs and the larger is its peak.
 `toy` was always one; `bowed`, `csaw`, `ring-mod` and `vowel-fof` became ones
-when open item 5 was resolved (`BRAIDS_PORT_AUX_PROPOSAL.md` part 6). The
+when open item 5 was resolved, and `digital-modulation` when its stereo render
+was fixed (`BRAIDS_PORT_AUX_PROPOSAL.md` parts 6 and 7). Note it is the only
+one whose stereo path is CHEAPER than its mono one. The
 single-number engines render one pair for both modes. Every number here is
 `estimate.py --sweep`; the stereo column needs `--stereo`, which did not exist
 until 2026-07-28 — before that the table's figures were all mono.
@@ -292,7 +294,21 @@ missing-submodule guard.
    exciter, **`csaw`** a variable-width pulse off the same transitions,
    **`ring-mod`** the bare first modulator (mono 69% → 60%, divides 4 → 2),
    **`vowel-fof`** the glottal source. Stereo renders are bit-identical to
-   before on all four. Still open: flash unmeasured for the four
+   before on all four.
+
+   Two defects found while writing that proposal are fixed alongside it (part 7).
+   **`digital-modulation`'s stereo render never matched the spec**: the spec
+   specifies an I/Q split, the code shipped the DC-blocked symbol staircase on
+   AUX in both modes, and the header comment kept the spec's language — so it
+   read as doc drift when the render was what was missing. Now Pattern B, and
+   L + R reproduces the mono OUT to float epsilon. **`csaw`'s stereo pair
+   collapsed to mono at HARMONICS noon** (measured bit-identical); no depth
+   remapping can fix that — a continuous self-map of the depth range always has
+   a fixed point — so the channels are separated on a second axis, a constant
+   bend offset, which `BendSegment` being affine in bend makes provably
+   collapse-free everywhere.
+
+   Still open: flash unmeasured for the six Pattern B ports
    (`flash_sweep.py --stereo`), and a listening test on `vowel-fof`'s source.
 
 6. ~~**`fluted` is still gated**~~ **DONE — measured, failed, dropped.** See

@@ -1799,7 +1799,7 @@
         "Variable-width pulse"
       ],
       "version": "1.0.0",
-      "digest": "sha256:ac84188a8470df15a8e0d25fa67b2cee44ca01c83fa4adc60bd8dc74ffde6ef9",
+      "digest": "sha256:ed76e28926f99210d4fb63572064f10fbb3989cd59dd60c4aba18e31aee63367",
       "documentationDigest": "sha256:4605b54219c67b06d9e61f4da622b7889b99260bba50c152b940678d3f999a9e",
       "manual": {
         "controls": {
@@ -1959,7 +1959,7 @@
         "Symbol staircase"
       ],
       "version": "1.0.0",
-      "digest": "sha256:fd9a8616025aa5c7cced5e447ba92f1b7ce3d228e229a24c2ceaecaadc7d8d80",
+      "digest": "sha256:2b4cd4326ce213a23f6336c9161e54fa24ddb8c7fa168327a9ad39eec02f8f7c",
       "documentationDigest": "sha256:76ff0cca3dbaa7eccc97f7cce7f5569d5f9bf5d16c0ce7e668238f7435a63fdd",
       "manual": {
         "controls": {

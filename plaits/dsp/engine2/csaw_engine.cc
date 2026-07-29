@@ -152,7 +152,8 @@ void CSawEngine::Render(
         next_sample_aux += step_aux * next_blep;
 
         const float plateau_slope_aux = tilt * (pw - depth_aux_) / pw;
-        const float slope_step_aux = (slope_in - plateau_slope_aux) * f;
+        const float slope_in_aux = BendSegmentSlope(0.0f, bend + kCSawStereoBend);
+        const float slope_step_aux = (slope_in_aux - plateau_slope_aux) * f;
         this_sample_aux += slope_step_aux * this_int;
         next_sample_aux += slope_step_aux * next_int;
       } else {
@@ -192,7 +193,8 @@ void CSawEngine::Render(
         next_sample_aux += step_aux * next_blep;
 
         const float new_plateau_slope_aux = tilt * (pw - depth_aux_) / pw;
-        const float slope_step_aux = (new_plateau_slope_aux - slope_out) * f;
+        const float slope_out_aux = BendSegmentSlope(1.0f, bend + kCSawStereoBend);
+        const float slope_step_aux = (new_plateau_slope_aux - slope_out_aux) * f;
         this_sample_aux += slope_step_aux * this_int;
         next_sample_aux += slope_step_aux * next_int;
       } else {
@@ -215,7 +217,11 @@ void CSawEngine::Render(
     } else {
       const float u = (phase_ - pw) / (1.0f - pw);
       naive = pw + (1.0f - pw) * BendSegment(u, bend);
-      naive_aux = stereo ? naive : 1.0f;
+      // The stereo channel bends its saw segment by a constant offset from
+      // OUT's; that is what stops the pair collapsing (see kCSawStereoBend).
+      naive_aux = stereo
+          ? pw + (1.0f - pw) * BendSegment(u, bend + kCSawStereoBend)
+          : 1.0f;
     }
     next_sample += naive;
     next_sample_aux += naive_aux;

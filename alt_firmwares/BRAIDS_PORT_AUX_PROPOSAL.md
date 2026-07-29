@@ -540,7 +540,87 @@ existing ordering constraint, not a new one.
 - **The listening test on `vowel-fof`'s glottal source still stands.** It is
   the one change whose case was never CPU (one point of mono), and a bare saw
   at HARMONICS 0 is a thin AUX voice against a weighting that is always vocal.
-- The two defects part 4 identified are NOT fixed here: `digital-modulation`'s
-  stale `stereo_capable()` comment and I/Q stereo render, and `csaw`'s
-  HARMONICS-noon stereo collapse. Both are independent of the AUX question.
-  `csaw`'s collapse is now at least documented in its header.
+- ~~The two defects part 4 identified~~ — **both fixed**, see part 7.
+
+
+---
+
+## 7. The two defects
+
+Both were found while writing parts 1-4, both are independent of the AUX
+question, and both are now fixed.
+
+### digital-modulation — the stereo render never matched its own spec
+
+The `stereo_capable()` comment described "Pattern A: I on one side, Q on the
+other", with a correct 3 dB level derivation. The code rendered
+`out = I·cos + Q·sin` and `aux = the DC-blocked symbol staircase` — no I/Q
+split at all, so in stereo the right channel was a stepped LFO.
+
+This was not a stale comment drifting off working code. `BRAIDS_PORT_SPEC.md`
+specifies exactly that split ("L = ±R·sin θ and R = ±R·cos θ ... each channel
+peaks at 0.705 vs the mono 0.997"). The implementation shipped the staircase on
+AUX for BOTH modes and the comment kept the spec's language, so the divergence
+read as documentation drift when it was the render that was missing.
+
+Fixed by making it Pattern B: mono keeps the staircase (above the stock bar —
+nothing stock emits a control signal), stereo drops it and splits OUT into its
+two quadrature components. Both terms are already computed for the mono sum, so
+this is a decomposition rather than a second render:
+
+- **L + R reproduces the mono OUT exactly** — measured
+  `max |mono − (L + R)| = 5.6e-08` over a 125-point grid, i.e. float epsilon.
+  The pair is perfectly mono-compatible, and no make-up gain is applied because
+  applying one would break that identity.
+- Each channel peaks at 0.705 against the mono 0.997, the 3 dB the spec
+  predicted, and the two channels measure within 0.01 dB of each other.
+- Stereo is CHEAPER than mono: 93.7 instructions/sample (18%) against 103.7
+  (20%), because it skips the staircase's DC blocker.
+
+### csaw — the stereo pair collapsed to mono at HARMONICS noon
+
+Measured before the fix: at HARMONICS 0.50 the two channels were bit-identical,
+`max |out − aux| = 0.000e+00` at an output RMS of 0.46. The mirrored notch
+depth is its own fixed point at the knob centre, and the DC term that travels
+with the depth mirrors too.
+
+**No remapping of the notch depth can fix this.** A continuous `f` mapping the
+depth range into itself with `f(x) ≠ x` everywhere would need `f(x) > x` for all
+x — impossible at the maximum — or `f(x) < x` for all x, impossible at the
+minimum. A fixed point is guaranteed, so any "better" mirror only MOVES the
+collapse. That is worth stating because the obvious fixes all fail this way.
+
+So the channels are separated on a second axis. `BendSegment` is AFFINE in its
+bend parameter —
+
+    BendSegment(u, a) − BendSegment(u, b) = (a − b)(u² − u)
+
+— so a constant, non-zero bend difference makes the two saw segments differ at
+every interior point of the segment, at every knob position, with no fixed point
+anywhere. The segment always exists (pw tops out at 0.375), so the channels can
+never coincide. The offset deliberately carries the aux bend outside the [−1, 1]
+the knob reaches; clamping it back would reintroduce a fixed point at the
+extreme. At the top of MORPH the aux bend reaches 1.35, where the segment dips
+2.3% below its start before rising — a continuous wiggle, not a new
+discontinuity, and the integrated BLEP stays exact because `BendSegmentSlope` is
+the true derivative at any bend.
+
+Verified by sweeping 8,000 points across all four knobs (with a sample landing
+exactly on HARMONICS 0.50): worst L/R separation is now **0.0496 RMS**, against
+0.000000 before. Cost: stereo 68.3 instructions/sample (13%) against 65.4;
+mono is untouched and bit-identical.
+
+One thing this cost a round-trip: the aux bend terms were first computed at the
+top of the sample loop with a `stereo ? … : …` ternary, which put an add and two
+ternaries per sample into the MONO path for values only stereo reads — 73.0
+instructions/sample against 64.2, a regression on a path whose output had not
+changed. Moving them inside the stereo guards restored it to 63.8. Same lesson
+as `vowel-fof`'s formant loop, one level up: put the work where the branch
+already is.
+
+### Verification for both
+
+Mono renders are bit-identical to before on both engines (18.7 MB of samples
+each); stereo renders differ, as intended. ARM compiles clean under `-Wall` in
+both gate states. `digital-modulation` gained a `PLAITS_STEREO_<X>` entry in all
+three registration points, so both engines' stereo branches are now strippable.

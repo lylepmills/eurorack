@@ -22,11 +22,25 @@
 // and the control is inert for the whole header. A knob that does nothing at
 // its default position is a defect, not a testing inconvenience.
 //
-// OUT: the modulated carrier, zero-mean by construction. AUX: the symbol
-// staircase, which is a modulation source rather than a second voice -- at
-// MIDI 36 with TIMBRE down it is a ~5 Hz stepped LFO, and only becomes a
-// voice at high TIMBRE and mid-to-high pitch. It sits at +1.0 for the whole
-// preamble, so it carries a DC blocker and a NEGATIVE gain (R1).
+// OUT: the modulated carrier, zero-mean by construction.
+//
+// AUX (mono): the symbol staircase, which is a modulation source rather than a
+// second voice -- at MIDI 36 with TIMBRE down it is a ~5 Hz stepped LFO, and
+// only becomes a voice at high TIMBRE and mid-to-high pitch. Nothing in the
+// stock palette emits a control signal, so this is if anything MORE distinct
+// than the usual AUX. It sits at +1.0 for the whole preamble, so it carries a
+// DC blocker and a NEGATIVE gain (R1).
+//
+// In stereo OUT/AUX become L/R and carry the two QUADRATURE components: I on
+// the left, Q on the right. That is a decomposition rather than a second
+// render -- both terms are already computed for the mono sum, so L + R
+// reproduces the mono output EXACTLY and the pair is perfectly mono-compatible.
+// Each channel peaks at the constellation radius against the mono R*sqrt(2),
+// so stereo is 3 dB down per channel; two decorrelated channels at -3 dB carry
+// the same power as one at 0, and a make-up would break the identity, so none
+// is applied. The staircase is NOT sent to a channel here: a DC-blocked
+// stepped LFO hard right is a poor right channel, which is exactly the split
+// Pattern B exists to make.
 //
 // Declared deviation: Braids reseeds nothing on sync but its own symbol
 // count, so the carrier phase runs free across a trigger. Kept.
@@ -76,11 +90,13 @@ class DigitalModulationEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-  // Pattern A: I on one side, Q on the other. Note the two are largely a
-  // quadrature pair rather than different waveforms -- heard as phasey width,
-  // decorrelated only by the per-symbol sign flips -- and each channel peaks
-  // at 0.705 against the mono 0.997, so stereo is ~3 dB quieter (R13).
-  virtual bool stereo_capable() const { return true; }
+  // Pattern B: mono AUX is the symbol staircase, a control signal; the stereo
+  // branch drops it and splits OUT into its I and Q components instead. The two
+  // are a quadrature pair rather than different waveforms -- heard as phasey
+  // width, decorrelated by the per-symbol sign flips -- and each channel peaks
+  // at 0.705 against the mono 0.997, so stereo is ~3 dB quieter per channel
+  // (R13).
+  virtual bool stereo_capable() const { return PLAITS_STEREO_DIGITAL_MODULATION; }
 
  private:
   float phase_;
