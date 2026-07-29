@@ -3253,21 +3253,21 @@
         "Lip",
         "Breath",
         "Bell",
-        "Slide"
+        "Buzz"
       ],
       "outputs": [
         "Mouthpiece",
         "Valve buzz"
       ],
       "version": "1.0.0",
-      "digest": "sha256:23bc3ad729f941f84d86e33909785e28a99fa6efec2dee8558e0650c10e853b9",
-      "documentationDigest": "sha256:2e29a5c351344ffc48f40b4f77ba746e400eacfd525d93fade7817afddf2f980",
+      "digest": "sha256:4474d7b4d12594218bf094563be93984bbf39bebd81746e1ceb7d5d4ddfce076",
+      "documentationDigest": "sha256:052613365b7699d260a674d0c018ad9bfe62adaaf29ce9755e3ad2311da80a38",
       "manual": {
         "controls": {
           "harmonics": "Lip tension. Climbs the bore's partials -- unison, fifth, octave, tenth, twelfth -- and bends each one sharp as it rises.",
           "timbre": "Breath pressure. Below the threshold the instrument does not speak, exactly as a real one does not.",
           "morph": "Bell size, from a stopped horn that barely sustains to an open one that rings and overblows easily.",
-          "macro": "Slide. Detunes the bore against the lips, which is where the growl and the split note come from."
+          "macro": "Buzz. How far the lips swing into closure each cycle -- a soft flutter at the bottom, a real mouthpiece buzz at the top."
         },
         "trigger": "Empties the bore and resets the lips so each note starts the same way."
       },
