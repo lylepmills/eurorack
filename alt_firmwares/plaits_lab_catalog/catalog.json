@@ -1777,6 +1777,13 @@
       }
     },
     {
+      "id": "fold", "packageId": "mutable-instruments/fold", "name": "Fold", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Waveshaping",
+      "description": "Braids' two wavefolders crossfaded against each other, the sine one saturating where the triangle one keeps folding. The model Plaits' waveshaping engine descends from, with the second curve it left behind.", "tags": ["braids", "wavefolder", "waveshaping", "harmonics"],
+      "controls": ["Blend", "Fold", "Symmetry", "Drive"], "outputs": ["Crossfaded pair", "Complementary crossfade"],
+      "source": { "header": "plaits/dsp/engine2/fold_engine.h", "className": "FoldEngine", "member": "fold_engine_", "files": ["plaits/dsp/engine2/fold_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": -0.7, "auxGain": -0.7 }
+    },
+    {
       "id": "bowed",
       "packageId": "mutable-instruments/bowed",
       "name": "Bowed",
@@ -2676,6 +2683,15 @@
         "macro": "Drives the output shaper, from clean multiplication to hard saturation."
       },
       "trigger": "Realigns the three oscillator phases so each note starts alike."
+    },
+    "fold": {
+      "controls": {
+        "harmonics": "Crossfades from the sine folder, which saturates, to the triangle folder, which keeps folding.",
+        "timbre": "Sets how hard both folders are driven, from a barely bent wave to the module's full depth.",
+        "morph": "Offsets the wave into one half of the folder, adding the even harmonics a symmetric source cannot make.",
+        "macro": "Pushes the folders past the depth the module stops at, or holds them back below it."
+      },
+      "trigger": "Restarts the oscillator phase so each note folds from the same point."
     },
     "bowed": {
       "controls": {

@@ -126,6 +126,9 @@
 #ifndef PLAITS_STEREO_CSAW
 #define PLAITS_STEREO_CSAW 1
 #endif
+#ifndef PLAITS_STEREO_FOLD
+#define PLAITS_STEREO_FOLD 1
+#endif
 #ifndef PLAITS_STEREO_RING_MOD
 #define PLAITS_STEREO_RING_MOD 1
 #endif

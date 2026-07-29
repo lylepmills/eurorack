@@ -54,6 +54,7 @@
 #include "plaits/dsp/engine2/sideband_engine.h"
 #include "plaits/dsp/engine2/spectral_spiral_engine.h"
 #include "plaits/dsp/engine2/bowed_engine.h"
+#include "plaits/dsp/engine2/fold_engine.h"
 #include "plaits/dsp/engine2/csaw_engine.h"
 #include "plaits/dsp/engine2/ring_mod_engine.h"
 #include "plaits/dsp/engine2/sub_oscillator_engine.h"
@@ -160,6 +161,7 @@ int main() {
   bench<ScannedEngine>("scanned");
   bench<PulsarEngine>("pulsar");
   bench<BowedEngine>("bowed");
+  bench<FoldEngine>("fold");
   bench<CSawEngine>("csaw");
   bench<RingModEngine>("ring-mod");
   bench<SubOscillatorEngine>("sub-oscillator");

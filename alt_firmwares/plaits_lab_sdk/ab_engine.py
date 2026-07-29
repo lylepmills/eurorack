@@ -53,6 +53,20 @@ from pathlib import Path
 
 SDK_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SDK_DIR.parents[1]
+
+# Plaits derives pitch from kCorrectedSampleRate (47872.34 Hz, plaits/dsp/dsp.h)
+# rather than a nominal 48 kHz, because the I2S clock is a divider (SPEC R6).
+# render_braids_model has no such correction -- it renders at a nominal rate --
+# so every ported engine reads sharp against it by
+#
+#     1200 * log2(48000 / 47872.34) = 4.61 cents
+#
+# regardless of whether the port is correct. Both csaw, which is landed and
+# verified, and fold measured +4.5 to +4.7 against it. The raw figure is kept
+# and the corrected one printed beside it: subtracting silently would hide the
+# R5 rate-constant errors this metric exists to catch, and those are whole
+# semitones, not cents.
+CORRECTED_SAMPLE_RATE_CENTS = 1200.0 * __import__("math").log2(48000.0 / 47872.34)
 BRAIDS_RENDERER = REPO_ROOT / "braids" / "test" / "render_braids_model"
 BRAIDS_MAKEFILE = REPO_ROOT / "braids" / "test" / "makefile.render"
 
@@ -222,8 +236,8 @@ def main() -> int:
             # comparison stops being meaningful and is reported as such.
             out_gain = float(package["manifest"]["postProcessing"]["outGain"])
             limited = out_gain < 0.0
-            if not limited and out_gain not in (0.0, 1.0):
-                port = [s / out_gain for s in port]
+            if out_gain:
+                port = [s / abs(out_gain) for s in port]
 
             length = min(len(reference), len(port))
             reference, port = reference[:length], port[:length]
@@ -241,8 +255,12 @@ def main() -> int:
                 "spectral_delta_db": overall,
             }
 
-            pitch = ("no f0" if results["pitch_delta_cents"] is None
-                     else f"{results['pitch_delta_cents']:+.1f} cents")
+            if results["pitch_delta_cents"] is None:
+                pitch = "no f0"
+            else:
+                corrected = results["pitch_delta_cents"] - CORRECTED_SAMPLE_RATE_CENTS
+                results["pitch_delta_cents"] = corrected
+                pitch = f"{corrected:+.1f} cents"
             spectrum = ("n/a" if overall is None else f"{overall:.2f} dB")
             print(f"  {case_id:<20} {case.get('name', '')}")
             print(f"    AC RMS {results['ac_rms_delta_db']:+6.2f} dB   "

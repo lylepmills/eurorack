@@ -73,6 +73,7 @@ CC_FILES       = algorithms.cc \
 		waveshaping_engine.cc \
 		wavetable_engine.cc \
 		bowed_engine.cc \
+		fold_engine.cc \
 		csaw_engine.cc \
 		ring_mod_engine.cc \
 		sub_oscillator_engine.cc \

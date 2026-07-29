@@ -120,7 +120,25 @@ def autocorrelation_f0(samples, rate, f_min=20.0, f_max=2000.0):
     # Correlation at the peak, normalized against zero-lag energy.
     if best_value / (energy / 2.0) < 0.25:
         return None
-    return rate / float(best_lag)
+
+    # Parabolic interpolation across the peak. An integer lag quantizes badly
+    # at musical pitches -- at 110 Hz the lag is 436.4 samples, so whole-sample
+    # lags land 4 cents apart, and every engine measured here reported the same
+    # +4.0 cents. A systematic bias that size would mask a real one, and pitch
+    # is the metric the R5 rate-constant bugs show up in.
+    def correlate(lag):
+        return sum(segment[i] * segment[i + lag]
+                   for i in range(0, len(segment) - lag, 2))
+
+    lag = best_lag
+    if min_lag < lag < max_lag - 1:
+        before, centre, after = correlate(lag - 1), correlate(lag), correlate(lag + 1)
+        denominator = 2.0 * (2.0 * centre - before - after)
+        if denominator != 0.0:
+            offset = (after - before) / denominator
+            if -1.0 < offset < 1.0:
+                return rate / (float(lag) + offset)
+    return rate / float(lag)
 
 
 def cents(f_reference, f_port):
