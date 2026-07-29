@@ -325,21 +325,21 @@
     {
       "id": "csaw", "packageId": "mutable-instruments/csaw", "name": "CSaw", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Subtractive",
       "description": "The emblematic Braids sawtooth, with a notch cut into the start of every cycle and a bendable ramp.", "tags": ["braids", "sawtooth", "analog", "subtractive"],
-      "controls": ["Depth", "Width", "Bend", "Tilt"], "outputs": ["Notched sawtooth", "Mirrored notch depth"],
+      "controls": ["Depth", "Width", "Bend", "Tilt"], "outputs": ["Notched sawtooth", "Variable-width pulse"],
       "source": { "header": "plaits/dsp/engine2/csaw_engine.h", "className": "CSawEngine", "member": "csaw_engine_", "files": ["plaits/dsp/engine2/csaw_engine.cc"] },
       "postProcessing": { "alreadyEnveloped": false, "outGain": 0.73, "auxGain": 0.73 }
     },
     {
       "id": "ring-mod", "packageId": "mutable-instruments/ring-mod", "name": "Ring Mod", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Digital",
       "description": "A carrier ring-modulated by two independently detuned sines, driven through a saturating shaper.", "tags": ["braids", "ring modulation", "sideband", "digital"],
-      "controls": ["Detune 1", "Detune 2", "Depth", "Drive"], "outputs": ["Three-way ring product", "Carrier and first modulator"],
+      "controls": ["Detune 1", "Detune 2", "Depth", "Drive"], "outputs": ["Three-way ring product", "First modulator"],
       "source": { "header": "plaits/dsp/engine2/ring_mod_engine.h", "className": "RingModEngine", "member": "ring_mod_engine_", "files": ["plaits/dsp/engine2/ring_mod_engine.cc"] },
       "postProcessing": { "alreadyEnveloped": false, "outGain": -1.5, "auxGain": -1.5 }
     },
     {
       "id": "bowed", "packageId": "mutable-instruments/bowed", "name": "Bowed", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Physical",
       "description": "A bowed string waveguide with a stick-slip friction exciter, a movable bow and an adjustable instrument body.", "tags": ["braids", "waveguide", "physical", "string"],
-      "controls": ["Bow position", "Bow pressure", "Nut damping", "Body"], "outputs": ["Bridge pickup", "Neck pickup"],
+      "controls": ["Bow position", "Bow pressure", "Nut damping", "Body"], "outputs": ["Bridge pickup", "Bow exciter"],
       "source": { "header": "plaits/dsp/engine2/bowed_engine.h", "className": "BowedEngine", "member": "bowed_engine_", "files": ["plaits/dsp/engine2/bowed_engine.cc"] },
       "postProcessing": { "alreadyEnveloped": false, "outGain": -0.85, "auxGain": -0.85 }
     },
@@ -367,7 +367,7 @@
     {
       "id": "vowel-fof", "packageId": "mutable-instruments/vowel-fof", "name": "Vowel FOF", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Vocal",
       "description": "Five very narrow filters sweeping five vowels across five vocal registers, with the formant balance Braids leaves flat. The ancestor of Speech's naive mode, on the same vowel and register grid, carried here at finer resolution.", "tags": ["braids", "formant", "vocal", "vowel"],
-      "controls": ["Brightness", "Register", "Vowel", "Formant tilt"], "outputs": ["Formant bank", "Upper-formant weighting"],
+      "controls": ["Brightness", "Register", "Vowel", "Formant tilt"], "outputs": ["Formant bank", "Glottal source"],
       "source": { "header": "plaits/dsp/engine2/vowel_fof_engine.h", "className": "VowelFofEngine", "member": "vowel_fof_engine_", "files": ["plaits/dsp/engine2/vowel_fof_engine.cc", "plaits/dsp/engine2/vowel_fof_data.cc"] },
       "postProcessing": { "alreadyEnveloped": false, "outGain": -3.8, "auxGain": -3.8 }
     },

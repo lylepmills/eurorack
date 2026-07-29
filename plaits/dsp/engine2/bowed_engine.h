@@ -14,10 +14,21 @@
 // MORPH is new: Braids welds the nut reflection to -1.0 and this opens it.
 // MACRO is new: it moves the body resonance +-1 octave around the stock pole.
 //
-// OUT: the bridge pickup through the body filter. AUX: the neck pickup
-// through its own copy of the same body filter, so the two are a genuine
-// pair of pickup positions at matched gain rather than one filtered voice
-// against one raw one.
+// OUT: the bridge pickup through the body filter.
+//
+// AUX (mono): the BOW, not the string -- `new_velocity`, the stick-slip
+// friction output, before the waveguide or the body has coloured it. A dry
+// unpitched scrape against a resonated string, and the in-tree idiom for a
+// physical model: inharmonic-string, modal-resonator and particle-noise all
+// put their raw exciter on AUX, and all three drop it in stereo. It is
+// DC-blocked (the bowing envelope is unipolar, so the friction output carries
+// bow pressure as offset) and scaled to sit at OUT's level.
+//
+// In stereo OUT/AUX become L/R and AUX reverts to the neck pickup through its
+// own copy of the body filter -- a genuine pair of pickup positions at matched
+// gain, which the exciter would not be. Only one branch runs per block, so the
+// split costs no CPU; the stereo path is the more expensive of the two and
+// therefore still sets the engine's peak.
 //
 // MEMORY: the delay lines are int8 exactly as in Braids -- 1024 + 4096 = 5 KB
 // of the 16 KB arena. Braids quantizes every write to int8 anyway (R8 keeps
@@ -102,6 +113,24 @@ const float kBowedEnvelopeHold = 720.0f;
 // 12 kHz against its -1.4 dB.
 const float kBowedTilt = 0.15f;
 
+// Mono AUX carries the bow exciter, whose envelope is unipolar -- so it needs
+// a blocker. Corner near 7.6 Hz, an octave-and-more below the model's lowest
+// note, so the scrape's own shape is untouched.
+const float kBowedExciterDcPole = 0.999f;
+
+// Make-up for the exciter, INSIDE the SoftClip as the output stage already is
+// (R3). It runs far COLDER than the string: in steady state the string
+// velocity approaches the bow velocity, so the friction output -- which is
+// the DIFFERENCE -- shrinks as the resonance builds. Over a 500 ms note across
+// the parameter grid the raw exciter sits about 14 dB under OUT; 6.77 brings
+// it to -0.44 dB at a peak of 0.81, so aux_gain stays equal to out_gain.
+//
+// Measure this over a whole NOTE, not a settled tail. The string keeps
+// building for ~100 ms while the exciter settles toward equilibrium, so the
+// same two signals measure -10 dB apart over 30 ms and -16 dB apart once
+// settled. Neither window is what a player hears.
+const float kBowedExciterGain = 6.77f;
+
 class BowedEngine : public Engine {
  public:
   BowedEngine() { }
@@ -115,8 +144,9 @@ class BowedEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-  // Pattern A: two pickups on one string, decorrelated at matched gain.
-  virtual bool stereo_capable() const { return true; }
+  // Pattern B: mono AUX is the bow exciter, a different signal in kind; the
+  // stereo branch replaces it with the neck pickup so L/R stay a matched pair.
+  virtual bool stereo_capable() const { return PLAITS_STEREO_BOWED; }
 
  private:
   int8_t* bridge_line_;
@@ -133,6 +163,9 @@ class BowedEngine : public Engine {
 
   float tilt_state_;
   float tilt_state_aux_;
+
+  float exciter_dc_in_;
+  float exciter_dc_out_;
 
   DISALLOW_COPY_AND_ASSIGN(BowedEngine);
 };

@@ -132,6 +132,8 @@ void RingModEngine::Render(
   // and there is no reason to pay for four table reads per output sample.
   const bool modulated = depth > 0.001f;
 
+  const bool stereo = PLAITS_STEREO_RING_MOD && parameters.stereo;
+
   for (size_t i = 0; i < size; ++i) {
     for (int s = 0; s < 2; ++s) {
       phase_ += increment;
@@ -160,12 +162,27 @@ void RingModEngine::Render(
       history_position_ = (history_position_ + 1) & 15;
       history_[history_position_] = \
           Overdrive(kRingModPreShaperScale * drive * ring);
-      history_aux_[history_position_] = \
-          Overdrive(kRingModPreShaperScale * drive * ring_aux);
+      if (stereo) {
+        history_aux_[history_position_] = \
+            Overdrive(kRingModPreShaperScale * drive * ring_aux);
+      }
     }
 
     out[i] = Decimate(history_);
-    aux[i] = Decimate(history_aux_);
+    if (stereo) {
+      aux[i] = Decimate(history_aux_);
+    } else {
+      // Mono AUX: modulator 1 alone, at FULL level regardless of MORPH. The
+      // depth-scaled version would go silent at MORPH 0 -- exactly where OUT
+      // is a bare carrier and the modulator is the thing you would reach for.
+      // (Same call sub-oscillator makes about its sub.)
+      //
+      // Every increment here is clamped to kRingModMaxPitch, 13.29 kHz, so
+      // this sine is comfortably under Nyquist at the 48 kHz output rate and
+      // needs neither the shaper nor the halfband. That is what makes the mono
+      // path much cheaper than the stereo one rather than merely different.
+      aux[i] = kRingModAuxGain * SineNoWrap(modulator_phase_);
+    }
   }
 }
 

@@ -1,8 +1,9 @@
 # AUX designs for the eleven Braids ports — proposal
 
 Answers open item 5 of `BRAIDS_PORT_PROGRESS.md` ("AUX designs are all
-stereo-split shaped"). Nothing here is implemented; this is the design
-argument plus measured CPU, to be decided before any code lands.
+stereo-split shaped"). Parts 1-5 are the design argument as it was put to Lyle;
+**part 6 records what was then implemented, and corrects the numbers parts 4
+and 5 projected.** All four recommended changes are landed.
 
 Branch: `claude/braids-engines-plaits-palette-je03ac`. `PROGRESS §N` refers to
 `BRAIDS_PORT_PROGRESS.md`; this document's own sections are called parts.
@@ -59,12 +60,13 @@ and already has the split (`toy_engine.cc:123`, `:140`).
 
 ### What the split costs
 
-- **CPU: nothing.** The branches are mutually exclusive, so per-block cost is
-  `max(mono, stereo)`, not the sum. A distinct AUX voice only has to fit
-  *instead of* the current partner. This is the point that makes the whole
-  question tractable given PROGRESS §3.6 — the "no second render path" rule
-  was about rendering AUX **in addition to** its partner, and a Pattern B
-  branch never does that.
+- **CPU: almost nothing.** The branches are mutually exclusive, so per-block
+  cost is `max(mono, stereo)`, not the sum. A distinct AUX voice only has to
+  fit *instead of* the current partner. This is what makes the question
+  tractable given PROGRESS §3.6 — the "no second render path" rule was about
+  rendering AUX **in addition to** its partner, and a Pattern B branch never
+  does that. (Measured afterwards: the branch itself is not quite free, about a
+  point of peak budget. Part 6.)
 - **Flash: the nominal price, and smaller than it looks.** Both branches are
   compiled in, so this is where a split would be expected to cost. It does not
   have to: `toy`, the one Pattern B engine already in the tree, measures
@@ -77,7 +79,9 @@ and already has the split (`toy_engine.cc:123`, `:140`).
   (`-DPLAITS_STEREO_<X>=0`) caps the downside for recipes that leave an engine
   in mono.
 - **RAM: whatever the second voice needs is permanent**, since both branches
-  live in one object. Three of the four proposals below *free* state.
+  live in one object — and Pattern B FREES nothing, because the stereo branch
+  still needs everything the old shared render did. Only `bowed` ended up
+  adding any (two floats, for the exciter's DC blocker).
 
 ---
 
@@ -158,10 +162,14 @@ PROGRESS §1 to within a point.
 
 **Read the deltas this way.** Under Pattern B the *stereo* branch keeps
 today's render, so today's number becomes the stereo cost and the prototype
-number becomes the mono cost. Peak cost is `max(mono, stereo)` — and since all
-four candidates measure *cheaper* than what they replace, **peak CPU is
-unchanged in every case** and mono mode gets cheaper. No proposal here spends
-CPU.
+number becomes the mono cost. Peak cost is `max(mono, stereo)`.
+
+> ⚠️ **Part 6 supersedes these prototype numbers.** Each prototype REPLACED the
+> aux computation outright; a Pattern B engine BRANCHES, and the branch is not
+> free. Measured after implementation, peak cost rose about a point on three of
+> the four, and `ring-mod`'s mono saving came in at nine points rather than
+> seventeen. Every recommendation's DIRECTION held; the magnitudes did not, and
+> the claim that peak CPU is unchanged in every case was simply wrong.
 
 | engine | baseline (= stereo after) | prototype (= mono after) | mono delta |
 |---|---:|---:|---:|
@@ -436,3 +444,103 @@ these adds a new algorithm, only a second combination of state already
 computed. But PROGRESS §1's own table is the reason not to guess: the spec's
 per-engine flash estimates ranged −39% to +74% while its aggregate was within
 2%.
+
+---
+
+## 6. As implemented
+
+All four changes are landed. Every number below is measured on this branch, not
+projected.
+
+### CPU — `estimate.py --sweep`, worst case over the grid
+
+Mono and stereo are now separate render paths, so each engine has two numbers.
+Peak is the larger, which is the stereo path in all four cases.
+
+| engine | before | mono after | stereo after | peak |
+|---|---:|---:|---:|---:|
+| `csaw` | 60.1 / 12% | 64.2 / 12% | 65.4 / 13% | +1 pt |
+| `bowed` | 190.3 / 37% | 190.4 / 37% | 198.4 / 38% | +1 pt |
+| `ring-mod` | 358.5 / 69% | **309.6 / 60%** | 357.6 / 69% | unchanged |
+| `vowel-fof` | 376.3 / 72% | 367.9 / 71% | 377.1 / 73% | +1 pt |
+
+**Where part 4 was wrong, and why.** The prototypes replaced the aux
+computation; the shipped engines branch on `parameters.stereo`, and the branch
+costs. `ring-mod`'s mono path came in at 60% rather than the prototype's 52%,
+so the saving is nine points rather than seventeen — still the largest CPU move
+in the port, and still on the engine PROGRESS §3.13 says reads optimistically
+(its divides do drop 4.00 → 2.00 per sample as predicted). `csaw` and `bowed`
+gained about a point of peak instead of getting cheaper. Nothing regressed
+enough to matter, but "peak CPU is unchanged in every case" was an artefact of
+measuring the wrong thing.
+
+**`vowel-fof` needed a second try.** Written as one loop with `if (stereo)`
+inside the FIVE-iteration formant loop, gcc 4.8 re-evaluated the branch per tap
+rather than hoisting it: 388.7 instructions/sample, **75%** — a regression
+against the 72% it started at, on the engine with the least headroom in the
+port. Giving each aux mode its own sample loop (sharing an `inline
+RenderFormant`, so the two cannot drift apart) brought it to 367.9 / 71%. Worth
+carrying forward: on this engine a per-tap branch costs about 21
+instructions/sample, so hoist to the widest scope the code allows.
+
+### Levels
+
+`aux_gain` is used ONLY in mono — `voice.cc` hands the stereo AUX `out_gain` so
+an L/R pair leaves at matched gain. So each new mono voice could be levelled
+without touching stereo. Each is scaled in-engine to sit at OUT's RMS, which
+keeps `auxGain == outGain` in the catalog exactly as before:
+
+| engine | mono AUX vs OUT | worst DC |
+|---|---:|---:|
+| `bowed` | −0.44 dB | +0.036 |
+| `csaw` | +0.06 dB | −0.002 |
+| `ring-mod` | +0.02 dB | −0.013 |
+| `vowel-fof` | +0.01 dB | −0.062 |
+
+All well inside the SDK audio-health gate's ±0.2 DC limit. Two of the four
+needed explicit DC handling: `bowed`'s bowing envelope is unipolar so the
+friction output carries bow pressure as offset (one-pole blocker, ~7.6 Hz), and
+`csaw`'s pulse mean travels with its duty (removed arithmetically as `1 - 2*pw`
+rather than with a blocker, since TIMBRE moves pw far too fast for a 7 Hz pole
+to follow without pumping).
+
+**Measure a level over a whole NOTE, not a settled tail.** `bowed` taught this:
+its string keeps building for ~100 ms while its exciter settles toward
+stick-slip equilibrium, so the same two signals measure 10 dB apart over 30 ms
+and 16 dB apart once settled. The shipped gain is fitted over 500 ms from onset.
+
+### Verification
+
+- **Stereo is bit-identical to before the change** on all four, over 18.7 MB of
+  rendered samples each across a 243-point parameter grid — the guard that says
+  Pattern B only added a path rather than moving the existing one. Mono differs
+  on all four, which is the point.
+- ARM compiles clean under `-Wall` for all four, in BOTH gate states.
+- `PLAITS_STEREO_<X>=0` correctly reports `stereo_capable() == false` and
+  dead-strips the stereo branch.
+- `test_container_server.py` gained a test pinning `STEREO_MACROS` against the
+  makefile's `PLAITS_STEREO_MODELS`. They are two hand-written lists of the same
+  fact and drift between them is silent — a macro the makefile knows and the map
+  does not can never be switched off. Verified it fails when drifted.
+
+### Registration points touched
+
+`stereo_config.h` (four macros), `plaits/makefile` (`PLAITS_STEREO_MODELS`),
+`container_server.py` (`STEREO_MACROS`), `catalog.json` (each engine's second
+`outputs` entry, which names the MONO aux — see `toy` and `modal-resonator`),
+and `public_catalog.json` regenerated by `sync_public_catalog.sh`. That last one
+moves all four engine DIGESTS, so the deployed builder must be rebuilt from this
+branch head before the site can offer these engines — which is open item 7's
+existing ordering constraint, not a new one.
+
+### Still open
+
+- **Flash is unmeasured for these four.** Run `flash_sweep.py --stereo` per
+  engine. `vowel-fof` in particular now carries two copies of its sample loop.
+- **The listening test on `vowel-fof`'s glottal source still stands.** It is
+  the one change whose case was never CPU (one point of mono), and a bare saw
+  at HARMONICS 0 is a thin AUX voice against a weighting that is always vocal.
+- The two defects part 4 identified are NOT fixed here: `digital-modulation`'s
+  stale `stereo_capable()` comment and I/Q stereo render, and `csaw`'s
+  HARMONICS-noon stereo collapse. Both are independent of the AUX question.
+  `csaw`'s collapse is now at least documented in its header.

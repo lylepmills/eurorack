@@ -1796,11 +1796,11 @@
       ],
       "outputs": [
         "Notched sawtooth",
-        "Mirrored notch depth"
+        "Variable-width pulse"
       ],
       "version": "1.0.0",
-      "digest": "sha256:6c63cb6f5f3bbf6b90b64440bdbbac7cb77012ae2e04c3ed8e1efc1c9c5bd41d",
-      "documentationDigest": "sha256:94e3aec1ce82bb8e0fc6857124dac5eacbf343bdd83fb17aae2edfe102db28a8",
+      "digest": "sha256:ac84188a8470df15a8e0d25fa67b2cee44ca01c83fa4adc60bd8dc74ffde6ef9",
+      "documentationDigest": "sha256:4605b54219c67b06d9e61f4da622b7889b99260bba50c152b940678d3f999a9e",
       "manual": {
         "controls": {
           "harmonics": "Deepens the notch cut into each sawtooth cycle.",
@@ -1836,11 +1836,11 @@
       ],
       "outputs": [
         "Three-way ring product",
-        "Carrier and first modulator"
+        "First modulator"
       ],
       "version": "1.0.0",
-      "digest": "sha256:f10a3f944678f5049c4c8f3721d9b7255594c1eead9d5687b84c89c165904df1",
-      "documentationDigest": "sha256:34eb5e33ad1392c007d88317ded14aab73de07e66e9102e8253ebfc20d0ae612",
+      "digest": "sha256:ce3151b69cbac74e9d189ec82991a66e7829791f742570df00ba55e34373604c",
+      "documentationDigest": "sha256:5626c10e5b454cf6c1dfe5cb9a97561ecb307bd983de813bf02982f52ba7ad36",
       "manual": {
         "controls": {
           "harmonics": "Detunes the first modulator through harmonic and clangorous intervals.",
@@ -1876,11 +1876,11 @@
       ],
       "outputs": [
         "Bridge pickup",
-        "Neck pickup"
+        "Bow exciter"
       ],
       "version": "1.0.0",
-      "digest": "sha256:b37b30efef39897c4f9b03590b5ef920e120cebc8dc9ca8c0d7d83acce743b98",
-      "documentationDigest": "sha256:b913cb9025a1b2ed2dee10c5c3c5f6e724a61c84404be673ed659bcdc981b08b",
+      "digest": "sha256:68e58454c54c7d270bdbc8538a523f396b67008ea470a70a106c5891528a155d",
+      "documentationDigest": "sha256:b560a43680ed253da063217c266dcd57434c83ef27bdb84ccf12a3f28247be12",
       "manual": {
         "controls": {
           "harmonics": "Moves the bow from near the bridge to well up the neck.",
@@ -2036,11 +2036,11 @@
       ],
       "outputs": [
         "Formant bank",
-        "Upper-formant weighting"
+        "Glottal source"
       ],
       "version": "1.0.0",
-      "digest": "sha256:a57b71cff7b2e57ff85df8f452bcbc9a442752b40bcc4c58a9c011d36d55a127",
-      "documentationDigest": "sha256:abbbbc4ebe6cc475dbe6849e67a43d2dc94dcd008285a508eb21d07d653af53c",
+      "digest": "sha256:6e0c393c732b8c4f5e38be817e002974e979e9e9d069cf066d8b29b6714ec590",
+      "documentationDigest": "sha256:6f690670b6d8ddfe42caa2d0fd92f824a98a1ddd876ffa7c1aa3a319c98bc9c1",
       "manual": {
         "controls": {
           "harmonics": "Tilts the excitation from a dark buzz to a bright breathy hiss.",

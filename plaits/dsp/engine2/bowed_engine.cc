@@ -89,6 +89,8 @@ void BowedEngine::Reset() {
   body_aux_y1_ = 0.0f;
   tilt_state_ = 0.0f;
   tilt_state_aux_ = 0.0f;
+  exciter_dc_in_ = 0.0f;
+  exciter_dc_out_ = 0.0f;
 }
 
 void BowedEngine::Render(
@@ -227,20 +229,42 @@ void BowedEngine::Render(
     body_y1_ = body_y0_;
     body_y0_ = body;
 
-    const float body_aux = kBowedBodyGain * nut_value + \
-        body_a1 * body_aux_y0_ + body_a2 * body_aux_y1_;
-    const float neck_out = body_aux - body_aux_y1_;
-    body_aux_y1_ = body_aux_y0_;
-    body_aux_y0_ = body_aux;
-
     // Stands in for the baseband tilt of Braids' 2x interpolating upsampler.
     tilt_state_ += (1.0f - kBowedTilt) * (bridge_out - tilt_state_);
-    tilt_state_aux_ += (1.0f - kBowedTilt) * (neck_out - tilt_state_aux_);
 
     // Make-up INSIDE the clip (R3): SoftClip is near-linear at the real
     // operating level, so `1.6f * SoftClip(x)` would emit +-1.6 unprotected.
     out[i] = SoftClip(1.6f * tilt_state_);
-    aux[i] = SoftClip(1.6f * tilt_state_aux_);
+
+    if (PLAITS_STEREO_BOWED && parameters.stereo) {
+      // L/R: the neck tap through its own copy of the body filter, so the two
+      // channels are the same string heard at two pickup positions.
+      const float body_aux = kBowedBodyGain * nut_value + \
+          body_a1 * body_aux_y0_ + body_a2 * body_aux_y1_;
+      const float neck_out = body_aux - body_aux_y1_;
+      body_aux_y1_ = body_aux_y0_;
+      body_aux_y0_ = body_aux;
+
+      tilt_state_aux_ += (1.0f - kBowedTilt) * (neck_out - tilt_state_aux_);
+      aux[i] = SoftClip(1.6f * tilt_state_aux_);
+    } else {
+      // Mono AUX: the bow itself. `new_velocity` is the stick-slip friction
+      // output -- what the exciter injects into the string, before the string
+      // or the body has coloured it. The in-tree idiom for a physical model
+      // (inharmonic-string, modal-resonator and particle-noise all put their
+      // raw exciter here), and a different thing in kind rather than the same
+      // string at another position: dry, unpitched, and useful for exciting
+      // something else.
+      //
+      // The bowing envelope is unipolar, so the friction output carries the
+      // bow pressure as DC -- enough to park the LPG open and to fail the
+      // SDK's audio-health gate. The blocker's corner is far below anything
+      // the model produces, so the scrape itself is untouched.
+      exciter_dc_out_ = new_velocity - exciter_dc_in_ + \
+          kBowedExciterDcPole * exciter_dc_out_;
+      exciter_dc_in_ = new_velocity;
+      aux[i] = SoftClip(kBowedExciterGain * exciter_dc_out_);
+    }
 
     // One envelope step per two output samples, Braids' `excitation_ptr >> 1`
     // at its 48 kHz iteration rate. 600 steps of rise is 25 ms.

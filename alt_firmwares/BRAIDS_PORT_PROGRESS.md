@@ -16,14 +16,14 @@ Branch: `claude/braids-engines-plaits-palette-je03ac` (both repos).
 | Engine | State | qemu CPU | A/B vs Braids |
 |---|---|---:|---|
 | `z-filter` | **landed** | 62% | all 4 models within 0.05 dB AC RMS, +5 cents |
-| `toy` | **landed** | 35% | within 0.42 dB mean, ≤9 cents |
-| `csaw` | **landed** | 12% | 0.00 dB mean at two settings, 0.75 dB at a third |
-| `bowed` | **landed** | 37% | 3–5 dB; chaotic self-oscillator, see §3.10 |
-| `ring-mod` | **landed** | 69% | within 0.04 dB energy-weighted at four detunings |
+| `toy` | **landed** | 35% / 48% | within 0.42 dB mean, ≤9 cents |
+| `csaw` | **landed** | 12% / 13% | 0.00 dB mean at two settings, 0.75 dB at a third |
+| `bowed` | **landed** | 37% / 38% | 3–5 dB; chaotic self-oscillator, see §3.10 |
+| `ring-mod` | **landed** | 60% / 69% | within 0.04 dB energy-weighted at four detunings |
 | `sub-oscillator` | **landed** | 28% | 0.23 / 0.42 dB against both source models |
 | `digital-modulation` | **landed** | 18% | 0.00 dB at the stock frame; 0.09–0.45 dB across settings |
 | `saw-comb` | **landed** | 32% | 0.19 / 0.45 / 0.67 dB |
-| `vowel-fof` | **landed** | 72% | 1.96–2.29 dB |
+| `vowel-fof` | **landed** | 71% / 73% | 1.96–2.29 dB |
 | `raw-fm` | **landed** | 15% | 0.05 / 0.13 / 0.02 dB across all three source models |
 | `triple` | **landed** | 52% | 0.24 / 0.25 / 0.03 / 0.02 dB across all four source models |
 | `fluted` | **DROPPED** — §3.11 gate measured and failed, see §3.16 | — | — |
@@ -31,8 +31,17 @@ Branch: `claude/braids-engines-plaits-palette-je03ac` (both repos).
 **ALL ELEVEN ENGINES ARE LANDED, and the twelfth is dropped.** The §3.11 gate
 was run before any `fluted` code was written; it failed, and the spec's own
 instruction was to drop rather than patch around it. So the port is **eleven
-engines, final**. What remains is measurement and the website, not DSP. Notes
-kept for reference:
+engines, final**. What remains is measurement and the website, not DSP.
+
+**A `mono / stereo` CPU entry means a Pattern B engine** — one that renders a
+different AUX in each aux mode, so it has two costs and the larger is its peak.
+`toy` was always one; `bowed`, `csaw`, `ring-mod` and `vowel-fof` became ones
+when open item 5 was resolved (`BRAIDS_PORT_AUX_PROPOSAL.md` part 6). The
+single-number engines render one pair for both modes. Every number here is
+`estimate.py --sweep`; the stereo column needs `--stereo`, which did not exist
+until 2026-07-28 — before that the table's figures were all mono.
+
+Notes kept for reference:
 
 - `vowel-fof` — the spec's headline finding is CONFIRMED in the source:
   `out += svf_bp[i] * amplitudes[0] >> 17` reads `amplitudes[0]`, not
@@ -198,25 +207,21 @@ missing-submodule guard.
    attempt was reverted after the includes were stripped without the generated
    header landing — do it with the file actually open.
 
-5. **AUX designs are all stereo-split shaped.** Braids is MONO and has no AUX,
-   so every AUX here is an invention of this port, chosen as a decorrelated
-   partner for the L/R pair (bridge vs neck pickup, a filter model vs its
-   complement, a notch vs its mirror). Most Plaits engines instead give AUX a
-   genuinely DIFFERENT voice. Worth exploring whether any of the eleven could
-   carry a meaningful distinct AUX for parity. Open design question, not a
-   defect.
-   **→ Explored and costed in `BRAIDS_PORT_AUX_PROPOSAL.md`; awaiting Lyle's
-   decision before any engine code moves.** Short version: the conflict between
-   "a useful second output" and "a good right channel" is real, and twelve
-   stock engines already resolve it by rendering the two modes SEPARATELY off
-   `parameters.stereo` and dropping the mono AUX voice in stereo — ten of these
-   eleven collapse both modes into one render, which no stock engine does. Six
-   of the eleven are already at or above the real stock bar; four are worth
-   changing (`ring-mod` at −17 points of CPU, `bowed`, `csaw`, `vowel-fof`);
-   `z-filter` is a genuine no. Two defects fell out on the way: `csaw`'s OUT
-   and AUX are bit-identical at HARMONICS noon (measured, so its stereo image
-   collapses to mono there), and `digital-modulation`'s `stereo_capable()`
-   comment describes an I/Q split the code does not do.
+5. ~~**AUX designs are all stereo-split shaped.**~~ — **RESOLVED 2026-07-28.**
+   Design + costing in `BRAIDS_PORT_AUX_PROPOSAL.md`; the four recommended
+   changes are landed. The crux — a genuinely different AUX voice makes a poor
+   right channel — is real, and the firmware already settles it: twelve stock
+   engines render the two aux modes SEPARATELY off `parameters.stereo` and drop
+   the mono AUX voice in stereo. Ten of the eleven ports collapsed both modes
+   into one render, which no stock engine does. Six were already at or above the
+   real stock bar and are untouched; `z-filter` is a genuine no (OUT is a
+   crossfade of its only two constituents, so any AUX built from one collides
+   with it somewhere in MORPH). Now Pattern B: **`bowed`** mono AUX is the bow
+   exciter, **`csaw`** a variable-width pulse off the same transitions,
+   **`ring-mod`** the bare first modulator (mono 69% → 60%, divides 4 → 2),
+   **`vowel-fof`** the glottal source. Stereo renders are bit-identical to
+   before on all four. Still open: flash unmeasured for the four
+   (`flash_sweep.py --stereo`), and a listening test on `vowel-fof`'s source.
 
 6. ~~**`fluted` is still gated**~~ **DONE — measured, failed, dropped.** See
    §3.16. No `fluted` code was ever written. Nothing downstream needs doing:

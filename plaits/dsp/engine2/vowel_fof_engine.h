@@ -33,11 +33,21 @@
 // bass F1 against 77 Hz at a soprano F5, an 8:1 energy spread that one
 // constant cannot level.
 //
-// OUT: the bank under the current tilt. AUX: the same five filter outputs
+// OUT: the bank under the current tilt.
+//
+// AUX (mono): the GLOTTAL SOURCE, ahead of the bank -- the saw crossfaded to
+// noise by HARMONICS, at one neutral makeup instead of the five per-formant
+// ones. The raw-exciter idiom (inharmonic-string, modal-resonator and
+// particle-noise all put theirs on AUX, and all three drop it in stereo), and
+// the natural sibling of speech, whose AUX is its secondary path. Cheaper than
+// what it replaces, on the engine with the least headroom in the port.
+//
+// In stereo OUT/AUX become L/R and AUX reverts to the same five filter outputs
 // summed with the formant weighting REVERSED, so it leans on the upper
-// formants. That is a different weighted sum of state the engine has already
-// computed, not a second bank -- a second five-filter bank is a full extra
-// render path and z-filter measured what those cost.
+// formants -- a different weighted sum of state the engine has already
+// computed, not a second bank (a second five-filter bank is a full extra
+// render path and z-filter measured what those cost). Two weightings of one
+// bank make a decent L/R pair; a bare source would not.
 
 #ifndef PLAITS_DSP_ENGINE2_VOWEL_FOF_ENGINE_H_
 #define PLAITS_DSP_ENGINE2_VOWEL_FOF_ENGINE_H_
@@ -61,6 +71,12 @@ const float kVowelFofOutputScale = 0.125f;
 // is 0..1, so it arrives 6 dB hot.
 const float kVowelFofExcitationScale = 0.5f;
 
+// The source is a full-scale saw where OUT is five very narrow bandpasses at
+// an eighth gain each, so it arrives far hotter. Measured over the parameter
+// grid this lands the mono AUX within a fraction of a dB of OUT, so aux_gain
+// stays equal to out_gain.
+const float kVowelFofSourceGain = 0.355f;
+
 class VowelFofEngine : public Engine {
  public:
   VowelFofEngine() { }
@@ -74,8 +90,9 @@ class VowelFofEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-  // Pattern A: two weightings of one filter bank.
-  virtual bool stereo_capable() const { return true; }
+  // Pattern B: mono AUX is the glottal source; the stereo branch replaces it
+  // with the reversed formant weighting so L/R stay a matched pair.
+  virtual bool stereo_capable() const { return PLAITS_STEREO_VOWEL_FOF; }
 
  private:
   Oscillator excitation_;

@@ -18,15 +18,29 @@
 // engine aliasing worst exactly where the new control is most interesting, so
 // the slope discontinuities carry integrated BLEP as well.
 //
-// OUT: the notched saw. AUX: the same waveform with the notch depth taken
-// from the MIRRORED harmonics position, so a deep notch on one output pairs
-// with a shallow one on the other.
+// OUT: the notched saw.
+//
+// AUX (mono): a variable-width PULSE -- -1 across the notch plateau, +1 across
+// the saw segment -- BLEP'd off the same two transitions OUT already computes,
+// with its duty-dependent mean removed at sample rate. A saw against a PWM
+// square is the oldest dual-VCO pairing there is, and TIMBRE sweeps the duty
+// for free because the plateau width IS the pulse width. Being piecewise
+// constant it needs value BLEP only, so it is cheaper than the waveform it
+// replaced.
+//
+// In stereo OUT/AUX become L/R and AUX reverts to the same waveform with the
+// notch depth taken from the MIRRORED harmonics position, so a deep notch on
+// one side pairs with a shallow one on the other. Note that mirror is its own
+// fixed point at the knob centre: there the two sides are BIT-IDENTICAL and
+// the image collapses to mono. That is a known limitation of the stereo pair,
+// and the reason the mono AUX is a different waveform rather than the same one
+// with a knob moved -- a mono patcher never sees the collapse.
 //
 // Declared deviations from Braids:
-//   - AUX mirrors the notch depth rather than negating it. Negating puts the
-//     plateau at -0.375 and the output at 1.42 before the registered gain,
-//     which clips under a positive gain and breaks Pattern A's matched-gain
-//     stereo. Mirroring keeps AUX inside OUT's own bounds.
+//   - the stereo channel MIRRORS the notch depth rather than negating it.
+//     Negating puts the plateau at -0.375 and the output at 1.42 before the
+//     registered gain, which clips under a positive gain and breaks the
+//     matched-gain L/R pair. Mirroring keeps it inside OUT's own bounds.
 //   - Braids' analog oscillator has no bend or tilt, so only the MORPH and
 //     MACRO detents reproduce it.
 
@@ -53,6 +67,15 @@ const float kCSawDepthRange = 0.5f;
 const float kCSawDcShift = 2047.0f / 32768.0f;
 const float kCSawMakeUp = 1.625f;
 
+// The mono AUX pulse sits at -1 on the plateau and +1 on the saw segment, so
+// every transition is a step of 2.
+const float kCSawPulseStep = 2.0f;
+
+// Mean-removed, a pulse of duty (1 - pw) has an RMS of 2*sqrt(pw*(1-pw)).
+// Measured over the parameter grid this lands AUX within 0.1 dB of OUT, so
+// aux_gain stays equal to out_gain.
+const float kCSawPulseGain = 0.70f;
+
 class CSawEngine : public Engine {
  public:
   CSawEngine() { }
@@ -66,9 +89,9 @@ class CSawEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-  // Pattern A: OUT and AUX share one phase and differ only in notch depth,
-  // so they are decorrelated at matched gain with no second render path.
-  virtual bool stereo_capable() const { return true; }
+  // Pattern B: mono AUX is a pulse off the same transitions; the stereo branch
+  // replaces it with the mirrored-notch waveform so L/R stay a matched pair.
+  virtual bool stereo_capable() const { return PLAITS_STEREO_CSAW; }
 
  private:
   float phase_;

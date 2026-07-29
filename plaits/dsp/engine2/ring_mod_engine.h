@@ -13,8 +13,21 @@
 // bare carrier, and MACRO drives the shaper. At the MACRO detent the drive is
 // 1.0 and the shaper is Braids'.
 //
-// OUT: the full three-way ring product. AUX: carrier times the first
-// modulator only, at matched gain and the same scale.
+// OUT: the full three-way ring product.
+//
+// AUX (mono): modulator 1 on its own -- a clean sine at note + detune 1, at
+// full level whatever MORPH is doing. The modulator is the one thing in the
+// engine you cannot otherwise hear, which is the same reason two-op-fm puts
+// its sub-oscillator on AUX; and it is the only signal here that is not simply
+// OUT with a knob moved (turn MORPH down and the old AUX walks into OUT).
+// Because its increment is clamped to 13.29 kHz it is under Nyquist at the
+// output rate, so it skips the shaper AND the halfband entirely: the mono path
+// costs 271 instructions/sample against the stereo path's 358, and carries two
+// divides per sample rather than four.
+//
+// In stereo OUT/AUX become L/R and AUX reverts to carrier times modulator 1,
+// at matched gain and the same scale -- a bare sine would be a poor right
+// channel against a saturated ring product.
 //
 // Declared deviations from Braids:
 //   - the shaper is `SoftLimit(2x) / SoftLimit(2)` rather than a lookup into
@@ -57,6 +70,12 @@ const float kRingModPreShaperScale = 0.25f;
 // 1 / SoftLimit(2), so the shaper reaches unity at unity input.
 const float kRingModShaperNorm = 1.016129f;
 
+// The mono AUX sine is a full-scale waveform where OUT is a ring product that
+// has been through the shaper, so it arrives hot. Measured over the parameter
+// grid this lands AUX within a fraction of a dB of OUT, keeping aux_gain equal
+// to out_gain.
+const float kRingModAuxGain = 0.51f;
+
 // 15-tap halfband, Kaiser beta 3.25, normalized to unity DC gain. Only the
 // centre and the odd offsets are non-zero.
 const float kRingModHalfbandCentre = 0.500547367f;
@@ -78,8 +97,9 @@ class RingModEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-  // Pattern A: OUT and AUX are two different ring products off one carrier.
-  virtual bool stereo_capable() const { return true; }
+  // Pattern B: mono AUX is the bare modulator; the stereo branch replaces it
+  // with the two-way ring product so L/R stay a matched pair.
+  virtual bool stereo_capable() const { return PLAITS_STEREO_RING_MOD; }
 
  private:
   inline float Decimate(const float* history) const;

@@ -47,6 +47,34 @@ inline float InterpolateFormant(
   return ab + (cd - ab) * yf;
 }
 
+// One formant of the bank: excite, run the Chamberlin SVF, return the limited
+// bandpass tap. Factored out only so the two aux-mode loops below cannot drift
+// apart -- it is `inline` and both call sites expand it, so the split costs
+// flash for a second copy but nothing at run time.
+inline float RenderFormant(
+    int k,
+    float saw,
+    float noise,
+    float noise_makeup,
+    float breath,
+    float f,
+    float* svf_lp,
+    float* svf_bp) {
+  const float in = saw + (noise * noise_makeup - saw) * breath;
+  const float notch = in - svf_bp[k] * kVowelFofDamping;
+  svf_lp[k] += f * svf_bp[k];
+  CONSTRAIN(svf_lp[k], -1.0f, 1.0f);
+  const float hp = notch - svf_lp[k];
+  svf_bp[k] += f * hp;
+  CONSTRAIN(svf_bp[k], -1.0f, 1.0f);
+  // Limit BEFORE the output scale. Braids drives at full scale and CLIPs its
+  // state every sample; scaling first and limiting after makes the limiter a
+  // no-op exactly where hardware is clipping hardest. Declared deviation:
+  // Braids clips the STATE inside the resonant loop, so at Q = 64 these states
+  // stay bounded where the port's only bounds the tap.
+  return SoftClip(svf_bp[k]);
+}
+
 }  // namespace
 
 void VowelFofEngine::Init(BufferAllocator* allocator) {
@@ -111,6 +139,21 @@ void VowelFofEngine::Render(
 
   const float breath = parameters.harmonics;
 
+  const bool stereo = PLAITS_STEREO_VOWEL_FOF && parameters.stereo;
+
+  // Mono AUX carries the source that drives the bank, so it needs ONE noise
+  // makeup rather than the per-formant ones -- there is no formant to level it
+  // against. The mean of the five keeps the saw-to-noise crossfade at roughly
+  // constant loudness across HARMONICS, which is what the per-formant makeups
+  // do inside the bank.
+  float source_makeup = 0.0f;
+  if (!stereo) {
+    for (int i = 0; i < kVowelFofNumFormants; ++i) {
+      source_makeup += noise_makeup[i];
+    }
+    source_makeup *= 1.0f / static_cast<float>(kVowelFofNumFormants);
+  }
+
   // Render the exciter for the whole block in one call. Asking for a single
   // sample at a time makes the oscillator rebuild its parameter interpolators
   // once per sample rather than once per block: 77% of the CPU budget against
@@ -118,35 +161,56 @@ void VowelFofEngine::Render(
   float excitation[kMaxBlockSize];
   excitation_.Render<OSCILLATOR_SHAPE_SAW>(frequency, 0.0f, excitation, size);
 
-  for (size_t i = 0; i < size; ++i) {
-    const float saw = excitation[i] * kVowelFofExcitationScale;
+  // The two aux modes get their OWN sample loop rather than sharing one with a
+  // branch inside it. The branch would sit in the FIVE-iteration formant loop,
+  // where gcc 4.8 re-evaluates it per tap rather than hoisting: measured, the
+  // shared-loop form cost 388.7 instructions/sample against this one's 367.9 --
+  // 75% of budget against 71%, so the shared form turned a saving into a
+  // REGRESSION against the 72% this engine started at, on the tightest engine
+  // in the port. Keep the two loops separate.
+  if (stereo) {
+    for (size_t i = 0; i < size; ++i) {
+      const float saw = excitation[i] * kVowelFofExcitationScale;
 
-    noise_state_ = noise_state_ * 1664525u + 1013904223u;
-    const float noise = static_cast<float>(noise_state_ >> 9) * \
-        (1.0f / 8388608.0f) - 1.0f;
+      noise_state_ = noise_state_ * 1664525u + 1013904223u;
+      const float noise = static_cast<float>(noise_state_ >> 9) * \
+          (1.0f / 8388608.0f) - 1.0f;
 
-    float sum = 0.0f;
-    float sum_aux = 0.0f;
-    for (int k = 0; k < kVowelFofNumFormants; ++k) {
-      const float in = saw + (noise * noise_makeup[k] - saw) * breath;
-      const float notch = in - svf_bp_[k] * kVowelFofDamping;
-      svf_lp_[k] += f[k] * svf_bp_[k];
-      CONSTRAIN(svf_lp_[k], -1.0f, 1.0f);
-      const float hp = notch - svf_lp_[k];
-      svf_bp_[k] += f[k] * hp;
-      CONSTRAIN(svf_bp_[k], -1.0f, 1.0f);
-      // Limit BEFORE the output scale. Braids drives at full scale and CLIPs
-      // its state every sample; scaling first and limiting after makes the
-      // limiter a no-op exactly where hardware is clipping hardest. Declared
-      // deviation: Braids clips the STATE inside the resonant loop, so at
-      // Q = 64 these states stay bounded where the port's only bounds the tap.
-      const float tap = SoftClip(svf_bp_[k]);
-      sum += tap * amplitude[k];
-      sum_aux += tap * amplitude[kVowelFofNumFormants - 1 - k];
+      float sum = 0.0f;
+      float sum_aux = 0.0f;
+      for (int k = 0; k < kVowelFofNumFormants; ++k) {
+        const float tap = RenderFormant(
+            k, saw, noise, noise_makeup[k], breath, f[k], svf_lp_, svf_bp_);
+        sum += tap * amplitude[k];
+        sum_aux += tap * amplitude[kVowelFofNumFormants - 1 - k];
+      }
+
+      out[i] = kVowelFofOutputScale * sum;
+      aux[i] = kVowelFofOutputScale * sum_aux;
     }
+  } else {
+    for (size_t i = 0; i < size; ++i) {
+      const float saw = excitation[i] * kVowelFofExcitationScale;
 
-    out[i] = kVowelFofOutputScale * sum;
-    aux[i] = kVowelFofOutputScale * sum_aux;
+      noise_state_ = noise_state_ * 1664525u + 1013904223u;
+      const float noise = static_cast<float>(noise_state_ >> 9) * \
+          (1.0f / 8388608.0f) - 1.0f;
+
+      float sum = 0.0f;
+      for (int k = 0; k < kVowelFofNumFormants; ++k) {
+        const float tap = RenderFormant(
+            k, saw, noise, noise_makeup[k], breath, f[k], svf_lp_, svf_bp_);
+        sum += tap * amplitude[k];
+      }
+
+      out[i] = kVowelFofOutputScale * sum;
+      // Mono AUX: the glottal source, ahead of the bank -- the saw crossfaded
+      // to noise by HARMONICS, at one neutral makeup. The raw-exciter idiom
+      // (inharmonic-string, modal-resonator, particle-noise), and the natural
+      // sibling of speech, whose AUX is its secondary path.
+      aux[i] = kVowelFofSourceGain * \
+          (saw + (noise * source_makeup - saw) * breath);
+    }
   }
 }
 
