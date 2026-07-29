@@ -1,0 +1,126 @@
+{
+  "shape": "PARTICLE_NOISE",
+  "note": "Braids' TIMBRE is burst density and its COLOR is per-filter jitter, so p1 maps to the engine's TIMBRE and p2 to its HARMONICS. MORPH and MACRO sit at noon in every case (Chord width 1.0 = the module's own voicing, Decay = the module's fixed rate). PRTC is a stochastic burst generator, not a deterministic oscillator -- per the granular-cloud/particle-noise caveat, these are A/B'd on long-window band statistics, not sample-for-sample, and the low-density case runs longer so its RMS has enough bursts in it to mean something. No case declares a cents tolerance: ab_engine.py's single-lag autocorrelation f0 tracker demonstrably does not track this source at moderate registers -- retuning the port's resonators by up to 75 cents (the resonator-coefficient fixed-point fix) left every moderate-note case's reported cents figure unchanged to the hundredth of a cent. Pitch is verified by spectral centroid on the COLOR=0 chord instead; see particle_burst_engine.h, PITCH CORRECTION. density-low's spectrum tolerance is widened because at six bursts a second its 20-80 Hz content is the shot noise of burst TIMING between two independent RNG streams, not tone: moving the played note one semitone swings the 20-40 Hz figure between -5.4 and -10.0 dB, and a longer window does not converge it (25s: RMS improved 0.59->0.15 dB while that bin got WORSE, -9.1->-11.0 dB). The band carrying the fundamental (160-320 Hz, ~40% of energy) matches to within 0.3 dB in every case.",
+  "cases": [
+    {
+      "id": "stock-mid",
+      "name": "Stock density, moderate jitter",
+      "seconds": 4,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 0.5
+      }
+    },
+    {
+      "id": "density-low",
+      "name": "TIMBRE at 0: sparsest ticks",
+      "seconds": 10,
+      "note": 45,
+      "braids": {
+        "p1": 0.0,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.0,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.5,
+        "spectrumDb": 2.5
+      }
+    },
+    {
+      "id": "density-high",
+      "name": "TIMBRE at 1: densest rattle",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 1.0,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 1.0,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 0.5
+      }
+    },
+    {
+      "id": "scatter-none",
+      "name": "COLOR at 0: the fixed chord, no jitter",
+      "seconds": 4,
+      "note": 45,
+      "braids": {
+        "p1": 0.6,
+        "p2": 0.0
+      },
+      "engine": {
+        "timbre": 0.6,
+        "harmonics": 0.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 0.5
+      }
+    },
+    {
+      "id": "scatter-max",
+      "name": "COLOR at 1: widest per-filter jitter",
+      "seconds": 4,
+      "note": 45,
+      "braids": {
+        "p1": 0.6,
+        "p2": 1.0
+      },
+      "engine": {
+        "timbre": 0.6,
+        "harmonics": 1.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 0.5
+      }
+    },
+    {
+      "id": "high-register",
+      "name": "High note, inside the resonator table's saturation region",
+      "seconds": 3,
+      "note": 82,
+      "braids": {
+        "p1": 0.6,
+        "p2": 0.4
+      },
+      "engine": {
+        "timbre": 0.6,
+        "harmonics": 0.4,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 0.5
+      }
+    }
+  ]
+}

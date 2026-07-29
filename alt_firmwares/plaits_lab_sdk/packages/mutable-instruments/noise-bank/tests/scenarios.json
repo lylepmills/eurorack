@@ -1,0 +1,80 @@
+[
+  {
+    "id": "hero",
+    "name": "Filtered noise, resonance opening up",
+    "durationSeconds": 4,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.0, 0.0],
+      "timbre": [0.0, 1.0],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "morph",
+    "name": "Filtered noise, lowpass through bandpass to highpass",
+    "durationSeconds": 3,
+    "note": 48,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.0, 0.0],
+      "timbre": [0.8, 0.8],
+      "morph": [0.0, 1.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "twin-peaks",
+    "name": "Twin peaks, the second peak sweeping past the first",
+    "durationSeconds": 4,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.8, 0.8],
+      "morph": [0.0, 1.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "clocked-loop",
+    "name": "Clocked noise, the sequence tightening into a pitched buzz",
+    "durationSeconds": 4,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [1.0, 1.0],
+      "timbre": [0.2, 1.0],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "clocked-steps",
+    "name": "Clocked noise, 2 to 32 quantization levels",
+    "durationSeconds": 3,
+    "note": 40,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [1.0, 1.0],
+      "timbre": [0.9, 0.9],
+      "morph": [0.0, 1.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "drive",
+    "name": "Twin peaks pushed into the overdrive shaper",
+    "durationSeconds": 3,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.9, 0.9],
+      "morph": [0.65, 0.65],
+      "macro": [0.5, 1.0]
+    }
+  }
+]

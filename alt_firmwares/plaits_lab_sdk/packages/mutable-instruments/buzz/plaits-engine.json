@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/buzz",
+  "catalogId": "buzz",
+  "version": "1.0.0",
+  "name": "Buzz",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "Braids' two unison-tuned band-limited pulse trains, summed. Harmonic count comes from a wavetable zone lookup, not a live additive sum, so the sweep is a flat spectrum with a hard cutoff moving through it, not a shaped one.",
+  "family": "Digital",
+  "tags": [
+    "braids",
+    "pulse",
+    "wavetable",
+    "detune",
+    "buzz"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Detune",
+      "description": "Detunes the second voice from unison, within whatever reach MACRO sets."
+    },
+    {
+      "id": "timbre",
+      "label": "Buzz",
+      "description": "Sweeps harmonic count upward from a bare sine to the fullest stack the module holds for that note."
+    },
+    {
+      "id": "morph",
+      "label": "Spread",
+      "description": "Offsets the second voice's harmonic content away from the first, zero at noon."
+    },
+    {
+      "id": "macro",
+      "label": "Reach",
+      "description": "Widens the detune past the module's own sub-semitone ceiling, up to an octave apart."
+    }
+  ],
+  "outputs": {
+    "main": "The two voices summed, or the first voice alone in stereo.",
+    "aux": "The two voices' difference, or the second voice alone in stereo."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/buzz_engine.h",
+    "files": [
+      "plaits/dsp/engine2/buzz_engine.cc"
+    ],
+    "className": "BuzzEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": 0.8,
+    "auxGain": 0.8
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids MacroOscillator::RenderBuzz over AnalogOscillator::RenderBuzz"
+}

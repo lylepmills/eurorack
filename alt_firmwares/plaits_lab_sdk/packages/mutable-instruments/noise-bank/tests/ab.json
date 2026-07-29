@@ -1,0 +1,384 @@
+{
+  "note": "Three Braids shapes share this slot, so every case names its own. HARMONICS is the model selector, not a Braids axis: 0.0 = FILTERED_NOISE, 0.5 = TWIN_PEAKS_NOISE, 1.0 = CLOCKED_NOISE. Braids' TIMBRE (p1) maps to the engine's TIMBRE and its COLOR (p2) to MORPH. MACRO is the only added axis and sits at noon in every case, where Drive is 1.0 for the two filtered models and 0 (shaper bypassed) for the clocked one -- the module exactly in all three. Each model is covered at both ends of both Braids axes. Two things about the metrics, both measured rather than assumed. (1) No cents tolerance is declared on any case except clkn-short-loop, because ab_compare's autocorrelation cannot find an f0 in a noise signal: its first local maximum is always the one at min_lag, so it reports the f_max cap of 2000.0 Hz for the reference AND the port and the delta is a meaningless 0.0. The spectrum figure carries the tuning check instead -- the band holding the resonance reads within 0.12 dB, where an R5 rate error would move it an octave. (2) The port and the reference draw the SAME noise: both LCGs start at stmlib's 0x21 and both consume one word per 96 kHz sample, so the two renders cross-correlate at 0.997 (lag 4, the decimator's latency) and these numbers are systematic, not sampling noise. The one place that does not hold is CLKN, where Braids seeds its looping sequence from a word drawn at Strike and the port does not, so a short loop is a handful of DIFFERENT random values on the two sides.",
+  "cases": [
+    {
+      "id": "nois-mid",
+      "shape": "FILTERED_NOISE",
+      "name": "Filtered noise, half resonance, band-pass",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.5
+      },
+      "engine": {
+        "harmonics": 0.0,
+        "timbre": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "nois-open",
+      "shape": "FILTERED_NOISE",
+      "name": "Filtered noise, resonance almost closed",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 0.02,
+        "p2": 0.5
+      },
+      "engine": {
+        "harmonics": 0.0,
+        "timbre": 0.02,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "nois-resonant",
+      "shape": "FILTERED_NOISE",
+      "name": "Filtered noise, resonance wide open",
+      "seconds": 8,
+      "note": 45,
+      "braids": {
+        "p1": 0.98,
+        "p2": 0.5
+      },
+      "engine": {
+        "harmonics": 0.0,
+        "timbre": 0.98,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      },
+      "note_": "8 seconds, not 2, and that is a measurement decision worth recording. At TIMBRE 0.98 the damping is 0.0178, so the resonator's decay is 0.16 s and a 2-second render holds only about twelve independent excitations of it. The port's cutoff sits 0.65% above Braids' because it comes off kCorrectedSampleRate (R6) rather than the module's Q15 lut_svf_cutoff, and at Q=56 that offset changes WHICH noise components ring: simulated on the identical sequence the AC RMS delta is +1.07 dB over 2 s, +0.37 dB over 4 s, -0.06 dB over 8 s and -0.12 dB over 16 s, while forcing the port onto Braids' exact table value gives +0.015 / +0.001 / -0.000 dB at the same lengths. The 1 dB was the window, not the level."
+    },
+    {
+      "id": "nois-lowpass",
+      "shape": "FILTERED_NOISE",
+      "name": "Filtered noise, COLOR fully low-pass",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 0.7,
+        "p2": 0.0
+      },
+      "engine": {
+        "harmonics": 0.0,
+        "timbre": 0.7,
+        "morph": 0.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "nois-highpass",
+      "shape": "FILTERED_NOISE",
+      "name": "Filtered noise, COLOR fully high-pass",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 0.7,
+        "p2": 1.0
+      },
+      "engine": {
+        "harmonics": 0.0,
+        "timbre": 0.7,
+        "morph": 1.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "nois-high-note",
+      "shape": "FILTERED_NOISE",
+      "name": "Filtered noise three octaves up, where the SVF cutoff is the widest tested",
+      "seconds": 2,
+      "note": 84,
+      "braids": {
+        "p1": 0.7,
+        "p2": 0.5
+      },
+      "engine": {
+        "harmonics": 0.0,
+        "timbre": 0.7,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "twnq-mid",
+      "shape": "TWIN_PEAKS_NOISE",
+      "name": "Twin peaks, half resonance, both peaks on the note",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.5
+      },
+      "engine": {
+        "harmonics": 0.5,
+        "timbre": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "twnq-low-q",
+      "shape": "TWIN_PEAKS_NOISE",
+      "name": "Twin peaks, lowest resonance and highest makeup gain",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 0.0,
+        "p2": 0.5
+      },
+      "engine": {
+        "harmonics": 0.5,
+        "timbre": 0.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "twnq-high-q",
+      "shape": "TWIN_PEAKS_NOISE",
+      "name": "Twin peaks, resonance wide open",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 1.0,
+        "p2": 0.5
+      },
+      "engine": {
+        "harmonics": 0.5,
+        "timbre": 1.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "twnq-peak-down",
+      "shape": "TWIN_PEAKS_NOISE",
+      "name": "Twin peaks, second peak 64 semitones below",
+      "seconds": 2,
+      "note": 60,
+      "braids": {
+        "p1": 0.8,
+        "p2": 0.0
+      },
+      "engine": {
+        "harmonics": 0.5,
+        "timbre": 0.8,
+        "morph": 0.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "twnq-peak-up",
+      "shape": "TWIN_PEAKS_NOISE",
+      "name": "Twin peaks, second peak 64 semitones above",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 0.8,
+        "p2": 1.0
+      },
+      "engine": {
+        "harmonics": 0.5,
+        "timbre": 0.8,
+        "morph": 1.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "twnq-low-note",
+      "shape": "TWIN_PEAKS_NOISE",
+      "name": "Twin peaks at MIDI 36, where the excitation is three levels wide",
+      "seconds": 3,
+      "note": 36,
+      "braids": {
+        "p1": 0.8,
+        "p2": 0.5
+      },
+      "engine": {
+        "harmonics": 0.5,
+        "timbre": 0.8,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "clkn-mid",
+      "shape": "CLOCKED_NOISE",
+      "name": "Clocked noise, mid loop length and 16 levels",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.5
+      },
+      "engine": {
+        "harmonics": 1.0,
+        "timbre": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "clkn-loop",
+      "shape": "CLOCKED_NOISE",
+      "name": "Clocked noise, the loop audible but long enough to measure",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.75,
+        "p2": 0.5
+      },
+      "engine": {
+        "harmonics": 1.0,
+        "timbre": 0.75,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "clkn-short-loop",
+      "shape": "CLOCKED_NOISE",
+      "name": "Clocked noise, the loop short enough to be pitched",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 0.95,
+        "p2": 0.5
+      },
+      "engine": {
+        "harmonics": 1.0,
+        "timbre": 0.95,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "cents": 20.0
+      },
+      "note_": "The only case with a usable f0, and the only one whose level is not compared. The loop here is seven clock ticks long, so the AC RMS and the spectrum are statistics of seven random values, and the two sides do not draw the same seven (see the header note) -- measured +1.05 dB and 1.04 dB, which is what a seven-sample estimate is worth. What IS meaningful is the pitch, and it fails the 1-cent target for a reason that is the model's: RenderClockedNoise snaps its clock onto an exact divisor of the sample rate (`phase = phase_increment`, :2008), so at MIDI 45 the clock can only be 96000/109 = 880.7 Hz or 96000/110 = 872.7 Hz, one step being 15.8 cents. Braids lands on 110 samples and the port, 0.27% higher off the corrected rate, lands on 109. Measured +12.7 cents raw. The tolerance is one snap step."
+    },
+    {
+      "id": "clkn-long-loop",
+      "shape": "CLOCKED_NOISE",
+      "name": "Clocked noise, the loop long enough never to repeat",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 0.05,
+        "p2": 0.5
+      },
+      "engine": {
+        "harmonics": 1.0,
+        "timbre": 0.05,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "clkn-two-levels",
+      "shape": "CLOCKED_NOISE",
+      "name": "Clocked noise quantized to two levels",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.0
+      },
+      "engine": {
+        "harmonics": 1.0,
+        "timbre": 0.5,
+        "morph": 0.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "clkn-many-levels",
+      "shape": "CLOCKED_NOISE",
+      "name": "Clocked noise quantized to 32 levels",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 1.0
+      },
+      "engine": {
+        "harmonics": 1.0,
+        "timbre": 0.5,
+        "morph": 1.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    }
+  ]
+}

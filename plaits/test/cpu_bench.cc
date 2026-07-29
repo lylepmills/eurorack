@@ -54,6 +54,14 @@
 #include "plaits/dsp/engine2/sideband_engine.h"
 #include "plaits/dsp/engine2/spectral_spiral_engine.h"
 #include "plaits/dsp/engine2/bowed_engine.h"
+#include "plaits/dsp/engine2/saw_swarm_engine.h"
+#include "plaits/dsp/engine2/saw_square_engine.h"
+#include "plaits/dsp/engine2/particle_burst_engine.h"
+#include "plaits/dsp/engine2/noise_bank_engine.h"
+#include "plaits/dsp/engine2/morph_engine.h"
+#include "plaits/dsp/engine2/granular_cloud_engine.h"
+#include "plaits/dsp/engine2/dual_sync_engine.h"
+#include "plaits/dsp/engine2/buzz_engine.h"
 #include "plaits/dsp/engine2/fold_engine.h"
 #include "plaits/dsp/engine2/csaw_engine.h"
 #include "plaits/dsp/engine2/ring_mod_engine.h"
@@ -161,6 +169,14 @@ int main() {
   bench<ScannedEngine>("scanned");
   bench<PulsarEngine>("pulsar");
   bench<BowedEngine>("bowed");
+  bench<SawSwarmEngine>("saw-swarm");
+  bench<SawSquareEngine>("saw-square");
+  bench<ParticleBurstEngine>("particle-burst");
+  bench<NoiseBankEngine>("noise-bank");
+  bench<MorphEngine>("morph");
+  bench<GranularCloudEngine>("granular-cloud");
+  bench<DualSyncEngine>("dual-sync");
+  bench<BuzzEngine>("buzz");
   bench<FoldEngine>("fold");
   bench<CSawEngine>("csaw");
   bench<RingModEngine>("ring-mod");

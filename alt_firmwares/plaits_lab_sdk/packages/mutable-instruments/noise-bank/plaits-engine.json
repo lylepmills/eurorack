@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/noise-bank",
+  "catalogId": "noise-bank",
+  "version": "1.0.0",
+  "name": "Noise Bank",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "Braids' three noise models in one slot: noise through a resonant filter, two resonant peaks, and a sample-and-hold whose random sequence loops into a pitched buzz.",
+  "family": "Noise",
+  "tags": [
+    "braids",
+    "noise",
+    "resonator",
+    "sample and hold"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Model",
+      "description": "Selects filtered noise, twin peaks, or clocked noise."
+    },
+    {
+      "id": "timbre",
+      "label": "Colour",
+      "description": "Resonance for the two filtered models; loop length of the random sequence for the clocked one."
+    },
+    {
+      "id": "morph",
+      "label": "Shape",
+      "description": "Lowpass to bandpass to highpass, the second peak's interval, or the number of sample-and-hold levels."
+    },
+    {
+      "id": "macro",
+      "label": "Drive",
+      "description": "Pushes the output through the module's overdrive shaper, or backs it out into the clean part of the curve."
+    }
+  ],
+  "outputs": {
+    "main": "The selected model.",
+    "aux": "Its complement: the notch, the difference of the two peaks, or a second independent sequence."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/noise_bank_engine.h",
+    "files": [
+      "plaits/dsp/engine2/noise_bank_engine.cc"
+    ],
+    "className": "NoiseBankEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": 0.8,
+    "auxGain": 0.8
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids DigitalOscillator::RenderFilteredNoise, RenderTwinPeaksNoise and RenderClockedNoise"
+}

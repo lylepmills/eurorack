@@ -73,6 +73,14 @@ CC_FILES       = algorithms.cc \
 		waveshaping_engine.cc \
 		wavetable_engine.cc \
 		bowed_engine.cc \
+		saw_swarm_engine.cc \
+		saw_square_engine.cc \
+		particle_burst_engine.cc \
+		noise_bank_engine.cc \
+		morph_engine.cc \
+		granular_cloud_engine.cc \
+		dual_sync_engine.cc \
+		buzz_engine.cc \
 		fold_engine.cc \
 		csaw_engine.cc \
 		ring_mod_engine.cc \

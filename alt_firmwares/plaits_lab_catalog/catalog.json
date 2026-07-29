@@ -1784,6 +1784,62 @@
       "postProcessing": { "alreadyEnveloped": false, "outGain": -0.7, "auxGain": -0.7 }
     },
     {
+      "id": "buzz", "packageId": "mutable-instruments/buzz", "name": "Buzz", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Digital",
+      "description": "Braids' two unison-tuned band-limited pulse trains, summed. Harmonic count comes from a wavetable zone lookup, not a live additive sum, so the sweep is a flat spectrum with a hard cutoff moving through it, not a shaped one.", "tags": ["braids", "pulse", "wavetable", "detune", "buzz"],
+      "controls": ["Detune", "Buzz", "Spread", "Reach"], "outputs": ["The two voices summed, or the first voice alone in stereo.", "The two voices' difference, or the second voice alone in stereo."],
+      "source": { "header": "plaits/dsp/engine2/buzz_engine.h", "className": "BuzzEngine", "member": "buzz_engine_", "files": ["plaits/dsp/engine2/buzz_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.8, "auxGain": 0.8 }
+    },
+    {
+      "id": "dual-sync", "packageId": "mutable-instruments/dual-sync", "name": "Dual Sync", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Subtractive",
+      "description": "Braids' two hard-sync models in one engine: a master oscillator syncs a slave swept up to 64 semitones above it, crossfaded against it. Virtual Analog's sync square shares one knob with pulse width and gain, and has no balance.", "tags": ["braids", "sync", "oscillator", "analog"],
+      "controls": ["Balance", "Interval", "Shape", "Reset"], "outputs": ["The master and slave crossfaded at Balance.", "The complementary crossfade, always favouring the side MAIN does not."],
+      "source": { "header": "plaits/dsp/engine2/dual_sync_engine.h", "className": "DualSyncEngine", "member": "dual_sync_engine_", "files": ["plaits/dsp/engine2/dual_sync_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": -0.9, "auxGain": -0.9 }
+    },
+    {
+      "id": "granular-cloud", "packageId": "mutable-instruments/granular-cloud", "name": "Granular Cloud", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Granular",
+      "description": "Braids' asynchronous grain cloud: four windowed sine grains respawning on a coin flip, each taking a fresh random pitch. Where Granular Formant stays locked to a carrier, this one scatters until the pitch is gone.", "tags": ["braids", "granular", "grains", "stochastic", "cloud"],
+      "controls": ["Scatter", "Grain", "Shape", "Density"], "outputs": ["The four grains summed, as the module sums them.", "The cloud's amplitude on one steady tone at the played pitch: the grain rhythm without the scatter."],
+      "source": { "header": "plaits/dsp/engine2/granular_cloud_engine.h", "className": "GranularCloudEngine", "member": "granular_cloud_engine_", "files": ["plaits/dsp/engine2/granular_cloud_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.8, "auxGain": 0.5 }
+    },
+    {
+      "id": "morph", "packageId": "mutable-instruments/morph", "name": "Morph", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Virtual analog",
+      "description": "Braids' one-knob walk from triangle through saw to a narrowing pulse, into a low-pass that tracks the note and a tanh fuzz. Virtual analog shares the waveforms and has neither.", "tags": ["braids", "analog", "morph", "fuzz"],
+      "controls": ["Fuzz", "Shape", "Tone", "Drive"], "outputs": ["The filtered and fuzzed voice.", "The same morph oscillator dry, with neither the filter nor the fuzz on it."],
+      "source": { "header": "plaits/dsp/engine2/morph_engine.h", "className": "MorphEngine", "member": "morph_engine_", "files": ["plaits/dsp/engine2/morph_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": -0.45, "auxGain": -0.45 }
+    },
+    {
+      "id": "noise-bank", "packageId": "mutable-instruments/noise-bank", "name": "Noise Bank", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Noise",
+      "description": "Braids' three noise models in one slot: noise through a resonant filter, two resonant peaks, and a sample-and-hold whose random sequence loops into a pitched buzz.", "tags": ["braids", "noise", "resonator", "sample and hold"],
+      "controls": ["Model", "Colour", "Shape", "Drive"], "outputs": ["The selected model.", "Its complement: the notch, the difference of the two peaks, or a second independent sequence."],
+      "source": { "header": "plaits/dsp/engine2/noise_bank_engine.h", "className": "NoiseBankEngine", "member": "noise_bank_engine_", "files": ["plaits/dsp/engine2/noise_bank_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.8, "auxGain": 0.8 }
+    },
+    {
+      "id": "particle-burst", "packageId": "mutable-instruments/particle-burst", "name": "Particle Burst", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Noise",
+      "description": "Braids' PRTC: three fixed-interval resonant filters, a chord above the note, re-struck by a shared decaying noise burst at a random rate. Plaits' particle-noise scatters six particles around one pitch instead -- a cloud, not a chord.", "tags": ["braids", "particle", "resonator", "noise", "percussive"],
+      "controls": ["Scatter", "Density", "Chord width", "Decay"], "outputs": ["The three resonant filters, summed.", "Mono: the raw decaying-noise burst before filtering. Stereo: a second, fully independent filter bank and RNG stream, for genuinely decorrelated left and right bursts."],
+      "source": { "header": "plaits/dsp/engine2/particle_burst_engine.h", "className": "ParticleBurstEngine", "member": "particle_burst_engine_", "files": ["plaits/dsp/engine2/particle_burst_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 1.0, "auxGain": 1.0 }
+    },
+    {
+      "id": "saw-square", "packageId": "mutable-instruments/saw-square", "name": "Saw Square", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Subtractive",
+      "description": "Braids' variable saw and variable square, driven from one shared TIMBRE knob that opens one as it closes the other, crossfaded by COLOR. Virtual Analog runs the same pair of waveforms independently; this is the coupled, single-knob version.", "tags": ["braids", "saw", "square", "oscillator"],
+      "controls": ["Blend", "Shape", "Phase", "Square Level"], "outputs": ["The crossfaded pair.", "The complementary crossfade, always favouring the waveform MAIN does not."],
+      "source": { "header": "plaits/dsp/engine2/saw_square_engine.h", "className": "SawSquareEngine", "member": "saw_square_engine_", "files": ["plaits/dsp/engine2/saw_square_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.8, "auxGain": 0.8 }
+    },
+    {
+      "id": "saw-swarm", "packageId": "mutable-instruments/saw-swarm", "name": "Saw Swarm", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Subtractive",
+      "description": "Braids' seven-voice detuned sawtooth chorus, soft-clipped and carved by a resonant filter tracking the note. A fixed chorus, not the granular cloud Plaits' own Swarm engine is, and deliberately raw, aliasing sawtooths.", "tags": ["braids", "sawtooth", "detune", "filter", "digital"],
+      "controls": ["Color", "Detune", "Filter", "Resonance"], "outputs": ["The filtered swarm at the dialed-in Filter position.", "The same swarm through the mirrored filter position, always the tap MAIN is not favouring."],
+      "source": { "header": "plaits/dsp/engine2/saw_swarm_engine.h", "className": "SawSwarmEngine", "member": "saw_swarm_engine_", "files": ["plaits/dsp/engine2/saw_swarm_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": -0.7, "auxGain": -0.7 }
+    },
+    {
       "id": "bowed",
       "packageId": "mutable-instruments/bowed",
       "name": "Bowed",
@@ -2692,6 +2748,78 @@
         "macro": "Pushes the folders past the depth the module stops at, or holds them back below it."
       },
       "trigger": "Restarts the oscillator phase so each note folds from the same point."
+    },
+    "buzz": {
+      "controls": {
+        "harmonics": "Detunes the second voice from unison, within whatever reach MACRO sets.",
+        "timbre": "Sweeps harmonic count upward from a bare sine to the fullest stack the module holds for that note.",
+        "morph": "Offsets the second voice's harmonic content away from the first, zero at noon.",
+        "macro": "Widens the detune past the module's own sub-semitone ceiling, up to an octave apart."
+      },
+      "trigger": "Restarts the engine."
+    },
+    "dual-sync": {
+      "controls": {
+        "harmonics": "Crossfades from the master oscillator alone to the synced slave alone.",
+        "timbre": "Sets how far above the master the synced slave sits, from unison to just under 64 semitones.",
+        "morph": "Runs from the module's sync square to its sync saw, and through the blend between them that the module has no path to.",
+        "macro": "Moves where in its own cycle the slave restarts on each sync pulse; the module always restarts it at the beginning."
+      },
+      "trigger": "Restarts the engine."
+    },
+    "granular-cloud": {
+      "controls": {
+        "harmonics": "Widens the random pitch each grain takes when it respawns, from unison to a cloud with no pitch left.",
+        "timbre": "Sets grain length, from long overlapping windows down to short ones that respawn far more often.",
+        "morph": "Slides where the grain window peaks, from a reversed swell through the module's symmetric window to a struck grain.",
+        "macro": "Sets how readily a finished grain respawns, from a sputtering cloud full of gaps up to four voices that never leave one."
+      },
+      "trigger": "Restarts the engine."
+    },
+    "morph": {
+      "controls": {
+        "harmonics": "Closes the low-pass onto the note while raising the fuzz from dry to wet, welded as the module welds them.",
+        "timbre": "Walks one oscillator from triangle through saw to square, then narrows the square into a pulse.",
+        "morph": "Offsets the low-pass five octaves either side of where Fuzz put it -- the coupling the module cannot undo.",
+        "macro": "Gain into the overdrive, from a soft saturation up to a hard clip. The module welds it at unity."
+      },
+      "trigger": "Restarts the engine."
+    },
+    "noise-bank": {
+      "controls": {
+        "harmonics": "Selects filtered noise, twin peaks, or clocked noise.",
+        "timbre": "Resonance for the two filtered models; loop length of the random sequence for the clocked one.",
+        "morph": "Lowpass to bandpass to highpass, the second peak's interval, or the number of sample-and-hold levels.",
+        "macro": "Pushes the output through the module's overdrive shaper, or backs it out into the clean part of the curve."
+      },
+      "trigger": "Restarts the engine."
+    },
+    "particle-burst": {
+      "controls": {
+        "harmonics": "Jitters each filter around its own fixed interval; the lowest one jitters about three quarters as far as the other two.",
+        "timbre": "Sets how often a burst fires, from a few sparse ticks a second to a dense rattle.",
+        "morph": "Scales the three filters' fixed intervals from unison, through the module's own voicing, to double the spread.",
+        "macro": "Reshapes the burst envelope from a short tick, through the module's fixed length, to a long bloom."
+      },
+      "trigger": "Restarts the engine."
+    },
+    "saw-square": {
+      "controls": {
+        "harmonics": "Crossfades from the saw to the attenuated square.",
+        "timbre": "Opens the saw's pulse width as it narrows the square's, or the reverse -- one knob, two waveforms.",
+        "morph": "Offsets the square's phase against the saw's -- the module's two oscillators are always locked together.",
+        "macro": "Braids fixes the square at 58% of full level; this sweeps that attenuation from silent to unattenuated."
+      },
+      "trigger": "Restarts the engine."
+    },
+    "saw-swarm": {
+      "controls": {
+        "harmonics": "The filter's cutoff: on the note a third of the way up, closing below that twice as fast as it opens above.",
+        "timbre": "Spreads the seven saws apart in pitch, from unison to a wide, wavering chorus.",
+        "morph": "Sweeps the same filter's response from lowpass, through the module's own highpass at center, to bandpass.",
+        "macro": "The filter's resonance, fixed in the module -- calmer below center, a controlled peak above it."
+      },
+      "trigger": "Restarts the engine."
     },
     "bowed": {
       "controls": {

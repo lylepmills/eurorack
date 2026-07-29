@@ -1,0 +1,237 @@
+{
+  "shape": "MORPH",
+  "note": "Braids' TIMBRE is the shape walk (macro_oscillator.cc:74-92) and its COLOR drives BOTH the low-pass cutoff (:99) and the fuzz mix (:107), so p1 maps to the engine's TIMBRE and p2 to its HARMONICS. MORPH and MACRO sit at noon in every case: Tone is zero offset there and Drive is 1.0, which is the module exactly. There is a case in each of the three regions and one in the middle of each crossfade, because the boundaries at :74 and :80 are the only places the model changes what it is doing.",
+  "harnessCaveat": "Every case that mixes TWO oscillator shapes is out by 1.4 to 1.7 dB on AC RMS -- HIGH on the five saw-square mixes and 1.71 dB LOW on the one triangle-saw mix, since the sign of the cross term differs between the pairs -- and it is the reference, not the port, that is off. Braids' AnalogOscillator::Render calls Init() when the shape changes (analog_oscillator.cc:75-78) and Init() resets pitch_ to 60 << 7 (analog_oscillator.h:77) AFTER RenderMorph has already called set_pitch (:70-71), so whichever oscillator changed shape renders its first 24-sample block at MIDI 60 and stays permanently out of phase with the other. In the module that is bounded and note-dependent: braids.cc:58 declares the MacroOscillator as a zero-initialised global, so previous_shape_ is OSC_SHAPE_SAW and the offset is 24*(f60 - fnote)/96000 cycles -- measured 0.0378 at MIDI 45 against 0.0379 predicted, 0.0516 at MIDI 33 against 0.0517, and exactly zero at MIDI 60. render_braids_model.cc instead declares its MacroOscillator as a stack LOCAL; it does call Init() (:278), but AnalogOscillator::Init (analog_oscillator.h:70) sets neither previous_shape_ nor previous_phase_increment_, so both stay indeterminate and the offset it produces is about 0.166 cycles at EVERY note -- note-independent, which is the signature of a garbage phase-increment rather than the module's note-dependent Init bug. For a 50/50 saw-square mix the AC RMS follows RMS^2 = 1/12 + 1/4 + (0.5 - 2*delta)/2, which gives 0.7638 aligned and 0.6450 at delta = 0.167: a predicted +1.47 dB against +1.45 dB measured, and +1.39 / +1.46 dB measured an octave either side. The port keeps its saw, square and triangle on ONE phase accumulator, because there is no canonical offset to reproduce: Braids' own depends on the played note and on where TIMBRE has been, since crossing a region boundary re-Inits an oscillator and re-rolls it. This belongs fixed in the harness, not in the engine. The mixed-shape cases below therefore carry a 2.0 dB AC RMS tolerance; every single-shape case is held at 1.0 dB, and all ten musical cases hold pitch to 1.0 cent and spectrum to 1.5 dB. The eleventh, pulse-high, is the narrowest pulse two octaves up, where 1.2% of a cycle is under one 96 kHz sample and both sides alias; it declares no cents tolerance not because the estimator returns nothing -- it returns a number on both sides -- but because each side locks onto a DIFFERENT sub-harmonic of the played 1046.5 Hz on that aliased waveform (reference 149.5 Hz = f0/7, port 262.3 Hz = f0/4, a 969-cent gap that measures the estimator, not the oscillator); and 2.5 dB of spectrum because that is what was measured.",
+  "cases": [
+    {
+      "id": "stock-mid",
+      "name": "Mid shape, mid fuzz (mixed shapes, see harnessCaveat)",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 2.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "shape-triangle",
+      "name": "Bottom of the shape walk, the triangle alone",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.0,
+        "p2": 0.3
+      },
+      "engine": {
+        "timbre": 0.0,
+        "harmonics": 0.3,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "shape-tri-saw",
+      "name": "Middle of the first region, triangle against saw (mixed shapes)",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.1667,
+        "p2": 0.3
+      },
+      "engine": {
+        "timbre": 0.1667,
+        "harmonics": 0.3,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 2.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "shape-saw",
+      "name": "The saw alone, at the top of the first region",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.3333,
+        "p2": 0.3
+      },
+      "engine": {
+        "timbre": 0.3333,
+        "harmonics": 0.3,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "shape-pulse",
+      "name": "Top of the shape walk, the narrow pulse",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 1.0,
+        "p2": 0.3
+      },
+      "engine": {
+        "timbre": 1.0,
+        "harmonics": 0.3,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "fuzz-dry",
+      "name": "Fuzz fully down: no filter, no overdrive (mixed shapes)",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.0
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 2.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "fuzz-wet",
+      "name": "Fuzz fully up: the filter lands on the fundamental",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 1.0
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 1.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "dry-low",
+      "name": "The raw mix an octave lower: the harness offset is note-independent",
+      "seconds": 3,
+      "note": 33,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.0
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 2.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "dry-high",
+      "name": "The raw mix an octave higher: same offset again",
+      "seconds": 3,
+      "note": 57,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.0
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 2.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "guard-band",
+      "name": "Above MIDI 80, inside the fuzz roll-off (mixed shapes)",
+      "seconds": 2,
+      "note": 92,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.8
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.8,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 2.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "pulse-high",
+      "name": "The narrow pulse two octaves up, where both sides alias",
+      "seconds": 2,
+      "note": 84,
+      "braids": {
+        "p1": 1.0,
+        "p2": 0.3
+      },
+      "engine": {
+        "timbre": 1.0,
+        "harmonics": 0.3,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.5,
+        "spectrumDb": 2.5
+      }
+    }
+  ]
+}

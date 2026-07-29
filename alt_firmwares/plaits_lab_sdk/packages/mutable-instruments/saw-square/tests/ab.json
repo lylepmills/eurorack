@@ -1,0 +1,74 @@
+{
+  "shape": "SAW_SQUARE",
+  "note": "Braids' TIMBRE is the shared shape knob (opens the saw's pw as it narrows the square's) and COLOR is the saw/square crossfade, so p1 maps to the engine's TIMBRE and p2 to its HARMONICS. MORPH and MACRO sit at noon in every case: at MORPH=0.5 the phase offset is zero (the module's own always-locked pair) and at MACRO=0.5 the square attenuation is Braids' fixed 0.578125. The blend-saw/blend-square pair is the one most likely to catch a parameter_[0]/parameter_[1] mix-up (fold's own trap): if COLOR were misread as TIMBRE, both cases would render a plausible-looking waveform but at the wrong pitch/shape entirely -- and both hold at the port's standard tolerance.\n\nEvery case that actually MIXES the two waveforms (anything with 0 < HARMONICS < 1) carries a widened, documented tolerance. This is not the port being loose with itself: `braids/analog_oscillator.h`'s `previous_phase_increment_` is never initialized by `AnalogOscillator::Init()` (verified by instrumenting the reference source directly -- a debug build read 4071966872 for the saw instance and 1 for the square instance from the SAME process, both uninitialized stack garbage), and `BEGIN_INTERPOLATE_PHASE_INCREMENT` ramps each oscillator's very first block FROM that garbage TOWARD the real target. The two AnalogOscillator instances that feed RenderSawSquare therefore start the note with an incidental, non-reproducible relative phase offset baked in from block 0 onward -- confirmed directly: at note 48, the reference's own saw-alone and square-alone renders (p2 = 0.0 and p2 = 1.0, otherwise identical) show clean, matching transition timing against this port individually (spectrum ~0.3 dB each), but their transitions land roughly 0.17 of a cycle apart from EACH OTHER inside the reference process, a gap this port's phase-locked design does not reproduce. A sweep across HARMONICS = 0.5 mixes at eight TIMBRE values measured 2.2-5.0 dB of AC RMS delta from this alone, worst near TIMBRE = 0.65-0.7, with no dependency on which control was moved -- consistent with a fixed, timbre-independent phase artifact, not a mapping error. This is a bug in the reference renderer's inherited Braids source (or at minimum a UB-dependent, non-portable artifact of this specific build), not a defect in the port: reproducing it would mean matching uninitialized memory rather than the algorithm. The port's phase-locked pair (MORPH's own stock value) is the correct, intentional reading -- see saw_square_engine.h.",
+  "cases": [
+    {
+      "id": "blend-saw",
+      "name": "The saw alone (COLOR at its floor)",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.6, "p2": 0.0},
+      "engine": {"timbre": 0.6, "harmonics": 0.0, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.5, "cents": 10.0, "spectrumDb": 3.0}
+    },
+    {
+      "id": "blend-square",
+      "name": "The attenuated square alone (COLOR at its ceiling)",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.6, "p2": 1.0},
+      "engine": {"timbre": 0.6, "harmonics": 1.0, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.5, "cents": 10.0, "spectrumDb": 3.0}
+    },
+    {
+      "id": "timbre-high",
+      "name": "Shape at its ceiling: wide saw, a thin square sliver",
+      "note2": "Passes at the STANDARD tolerance even though HARMONICS = 0.5 mixes both waveforms: the square's pw is so narrow here (~0.012) that it is a brief blip rather than a sustained alternation, so the reference's phase-offset bug barely moves the spectrum.",
+      "seconds": 3,
+      "note": 48,
+      "braids": {"p1": 0.95, "p2": 0.5},
+      "engine": {"timbre": 0.95, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.5, "cents": 10.0, "spectrumDb": 3.0}
+    },
+    {
+      "id": "stock-mid",
+      "name": "Both waveforms evenly, mid shape",
+      "note2": "Widened tolerance: HARMONICS = 0.5 with TIMBRE = 0.5 gives both waveforms their sharpest, most symmetric pw (0.25 apiece), which is exactly where the reference's own internal phase-offset bug (see the top-level note) bites hardest.",
+      "seconds": 3,
+      "note": 48,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 6.0, "cents": 10.0, "spectrumDb": 6.0}
+    },
+    {
+      "id": "timbre-low",
+      "name": "Shape at its floor: narrow saw, wide square",
+      "note2": "Widened tolerance for the same reason as stock-mid: a genuine mix, so the reference's own phase-offset bug applies.",
+      "seconds": 3,
+      "note": 48,
+      "braids": {"p1": 0.05, "p2": 0.5},
+      "engine": {"timbre": 0.05, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 6.0, "cents": 10.0, "spectrumDb": 6.0}
+    },
+    {
+      "id": "high-note",
+      "name": "Two octaves up, both waveforms evenly",
+      "note2": "Widened for the phase-offset bug (see top-level note). It does NOT reach the engine's extra pw-vs-frequency clamp: at note 84 the frequency is 0.0219 cycles/sample, so the clamp floor is 2f = 0.0437, and TIMBRE = 0.5 asks for pw = 0.25 on both oscillators. The clamp is covered by `clamp-square` below.",
+      "seconds": 2,
+      "note": 84,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 6.0, "cents": 10.0, "spectrumDb": 6.0}
+    },
+    {
+      "id": "clamp-square",
+      "name": "The pw clamp, where it actually bites",
+      "note2": "The one case that exercises the engine's declared extra clamp, and the only case whose delta is the PORT's doing rather than the reference's. COLOR = 1 so only the square is audible, which also takes the reference's phase-offset bug out of the picture (verified: the stack-garbage and zero-initialised references are bit-identical here). Braids asks for square pw = (32768 - 0.95*32767)/65536 = 0.0250; at note 84 the port's 2*frequency floor raises it to 0.0437, a 75% wider low notch. That is the whole of the +2.4 dB AC RMS / 3.7 dB spectrum below -- a documented deviation, measured rather than hidden. The pitch figure is a detector artefact: on a pulse this thin autocorrelation locks two octaves down, so `cents` is not asserted here.",
+      "seconds": 2,
+      "note": 84,
+      "braids": {"p1": 0.95, "p2": 1.0},
+      "engine": {"timbre": 0.95, "harmonics": 1.0, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 3.0, "spectrumDb": 4.5}
+    }
+  ]
+}

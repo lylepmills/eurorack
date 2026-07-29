@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/morph",
+  "catalogId": "morph",
+  "version": "1.0.0",
+  "name": "Morph",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "Braids' one-knob walk from triangle through saw to a narrowing pulse, into a low-pass that tracks the note and a tanh fuzz. Virtual analog shares the waveforms and has neither.",
+  "family": "Virtual analog",
+  "tags": [
+    "braids",
+    "analog",
+    "morph",
+    "fuzz"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Fuzz",
+      "description": "Closes the low-pass onto the note while raising the fuzz from dry to wet, welded as the module welds them."
+    },
+    {
+      "id": "timbre",
+      "label": "Shape",
+      "description": "Walks one oscillator from triangle through saw to square, then narrows the square into a pulse."
+    },
+    {
+      "id": "morph",
+      "label": "Tone",
+      "description": "Offsets the low-pass five octaves either side of where Fuzz put it -- the coupling the module cannot undo."
+    },
+    {
+      "id": "macro",
+      "label": "Drive",
+      "description": "Gain into the overdrive, from a soft saturation up to a hard clip. The module welds it at unity."
+    }
+  ],
+  "outputs": {
+    "main": "The filtered and fuzzed voice.",
+    "aux": "The same morph oscillator dry, with neither the filter nor the fuzz on it."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/morph_engine.h",
+    "files": [
+      "plaits/dsp/engine2/morph_engine.cc"
+    ],
+    "className": "MorphEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": -0.45,
+    "auxGain": -0.45
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids MacroOscillator::RenderMorph over AnalogOscillator::RenderTriangle, RenderSaw and RenderSquare"
+}
