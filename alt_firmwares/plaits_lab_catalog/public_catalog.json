@@ -2345,7 +2345,7 @@
     },
     {
       "id": "helix",
-      "packageId": "community/helix",
+      "packageId": "rubato/helix",
       "name": "Helix",
       "author": "Lyle Mills",
       "origin": "Rubato Lab",
@@ -2374,8 +2374,8 @@
         "color": "#5796E4"
       },
       "version": "1.0.0",
-      "digest": "sha256:2cd10af1d76b9c93dd3d605cf3be87b4223252843c4a2d705bffd789510bf124",
-      "documentationDigest": "sha256:d4eae528ac4358656c87e19e629d50852940b6419b8eb93c5251dc6af022ef5a",
+      "digest": "sha256:841c872cdaeccde8dd024ea3b5eae02b68e96fad3aba45d8da1ff1280d071100",
+      "documentationDigest": "sha256:5b3fc620d9bdee21dd3dd37f25fb576d476edd92ba9f430898efaa55e84158cf",
       "manual": {
         "controls": {
           "harmonics": "Selects the chord, voiced at every octave of the helix at once.",
