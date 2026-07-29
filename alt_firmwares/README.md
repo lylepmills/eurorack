@@ -23,7 +23,14 @@ However my alt firmware had several other features that I felt were still worthw
 - **More convenient model switching.** - In revision 1.2 of the official firmware, an alternate mode for switching models was introduced. This mode was the only way of accessing the third bank of models. My assumption is that anyone using this alt firmware wants to be able to freely access all three banks of synthesis models, so in this alternate firmware, that mode is now the default. Additionally there is a new navigation mode (an alternative to the alternative), whereby the left button switches between models within a bank and the right button switches banks.
 
 ## How to access calibration
-Calibration has been removed from the alt firmware to save space. If you need to recalibrate, simply reinstall the official firmware first. Your calibration settings will be preserved if you then switch back to this alt firmware.
+Calibration is left out of this firmware by default, to save space. Your module keeps the calibration it already has either way — the settings live in a part of the module's memory that installing firmware never touches — so this only matters for a module that has never been calibrated (a fresh DIY build) or one that has stopped tracking V/Oct accurately.
+
+If you need to calibrate, there are two ways:
+
+- **Install the official Plaits firmware, calibrate there, then install this firmware again.** Your calibration carries over.
+- **Build a firmware that includes the procedure.** In [Plaits Palette](https://rubato.audio/plaits-palette), open *Advanced* under Firmware options and turn on *Include the calibration procedure*. It costs 512 bytes of flash, which is roughly a small model's worth — so you may have to drop a model to fit it. With it enabled, hold the **right button** while powering the module up to start calibrating: the first light pulses green, patch 1V into V/Oct and press either button, and when it turns yellow patch 3V and press again. If the two voltages aren't two octaves apart, every light flashes red and nothing is saved.
+
+Since calibration survives a firmware install, you can enable the procedure once, calibrate, then build again without it and give the space back to a model.
 
 ## How to access the menu / change options
 To access the menu of options for the various alt functionalities, simply short-press both buttons at once. To exit the menu, again press both buttons at once.
