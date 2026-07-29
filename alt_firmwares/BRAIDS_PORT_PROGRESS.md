@@ -97,32 +97,39 @@ keys off `origin === "Rubato Lab"` so they do not disturb it.
 
 ### Measured ARM flash — real, replacing every estimate
 
-Re-swept 2026-07-28 against a local builder container built from the branch
-head, AFTER the Pattern-B AUX rework (`c84a06a`), leave-one-out into Speech's
-slot in the stock-24 context. Baseline 181,216 B.
+Re-swept 2026-07-28 against a local builder container built from the head AFTER
+the `origin/master` merge, leave-one-out into Speech's slot in the stock-24
+context. **Baseline 205,136 B — the same baseline Helix was measured against**,
+so these sit on Helix's footing rather than the smaller pre-merge palette
+(181,216) an earlier pass used. Controls reproduced the published table within
+16 B (speech 23,296 vs 23,312, reed-pipe 2,000 exact, spectral-spiral 2,048 vs
+2,064).
 
 | engine | measured | spec estimate |
 |---|---:|---:|
-| raw-fm | 880 | 1,450 |
-| digital-modulation | 1,200 | 1,620 |
-| toy | 1,232 | 1,520 |
+| raw-fm | 912 | 1,450 |
+| digital-modulation | 1,216 | 1,620 |
+| toy | 1,248 | 1,520 |
 | csaw | 1,344 | 1,400 |
-| ring-mod | 1,680 | 1,700 |
+| ring-mod | 1,696 | 1,700 |
 | z-filter | 1,712 | 2,200 |
-| sub-oscillator | 2,256 | 1,300 |
-| saw-comb | 2,496 | 3,000 |
+| sub-oscillator | 2,224 | 1,300 |
+| saw-comb | 2,512 | 3,000 |
 | vowel-fof | 2,704 | 3,100 |
-| bowed | 2,928 | 2,400 |
-| triple | 3,408 | 2,800 |
-| **total** | **21,840** | 22,490 |
+| bowed | 2,944 | 2,400 |
+| triple | 3,424 | 2,800 |
+| **total** | **21,936** | 22,490 |
 
 The spec's AGGREGATE was within 3 %. Its PER-ENGINE numbers ranged −39 % to
 +74 %, so treat §1 as a ranking and never as a budget.
 
-**The AUX rework moved three of these**, so the first sweep's numbers are
-superseded: `csaw` 1,392 → 1,344, `ring-mod` 1,872 → 1,680, `vowel-fof`
-2,640 → 2,704. The other eight are unchanged. **A DSP change re-costs the
-engine** — re-sweep after any of them, not just after adding an engine.
+**These moved TWICE during the branch**, so any earlier number is superseded.
+The AUX rework re-costed `csaw` (1,392 → 1,344), `ring-mod` (1,872 → 1,680) and
+`vowel-fof` (2,640 → 2,704) because it changed their DSP; the `origin/master`
+merge then shifted eight of the eleven by ±16–32 B. **A DSP change re-costs the
+engine, and so does merging a moved main** — re-sweep after either, not just
+after adding an engine. `flash_sweep.py`'s controls now FAIL the run (exit 2) if
+the base drifted, so a stale comparison stops being silent.
 
 ### Measured stereo delta — six Pattern-B ports, and `toy` costs NOTHING
 
