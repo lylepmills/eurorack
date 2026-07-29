@@ -23,7 +23,7 @@
   "containers": [
     {
       "class_name": "FirmwareBuilder",
-      "image": "registry.cloudflare.com/256bac4d555b969399df16f575c5f464/plaits-lab-build-service-firmwarebuilder:rev-d43bb37fa88d",
+      "image": "registry.cloudflare.com/256bac4d555b969399df16f575c5f464/plaits-lab-build-service-firmwarebuilder:rev-b084d5007eed",
       "instance_type": "standard-4",
       "max_instances": 1
     }
