@@ -657,3 +657,118 @@ oscillation, and the unblocked tap measured RMS 27923 against DC 26548. It
 passed the audition and control-response gates, neither of which looks at DC.
 **Consider adding a DC check to the in-tree gates** -- `check --full` catches it
 per scenario, but `plaits_test` does not, and this would have shipped.
+
+---
+
+## 10. First listening pass (2026-07-28) — catalog is 55, not 56
+
+The six from sections 7–9 finally went through a speaker. Three outcomes, plus
+the two blockers that turned out not to be blockers.
+
+### banded-waveguide is CUT. Do not re-add it without a reason to.
+
+Lyle's call, and the numbers back it: it was the most expensive of the six
+(81% of CPU budget, error band running to **104%** — the only one whose band
+crosses the limit) and the least interesting to listen to. Cost is almost
+entirely per-mode — about **53 instructions per mode over ~103 fixed** — and
+HARMONICS selects presets of 4, 4, 5 and 6 modes, so the Prayer bowl is the
+worst case. Capping at 4 modes would have brought it to ~61%, but thinning the
+bowl is the opposite of making it more interesting, and nothing else on offer
+made it both cheaper and better.
+
+Removed from `catalog.json` / `public_catalog.json`, the SDK packages, the
+engine sources, and all three `plaits_test`/`cpu_bench` hooks. **The source is
+in this branch's history** (last present at `1b4bac3`), so re-adding is a
+revert, not a rewrite. Catalog validates at **55**.
+
+Worth keeping from it: the 16 KB arena being per-engine (§8) is still true and
+still what makes any waveguide model affordable.
+
+### shakers — two real defects, both fixed
+
+**It could not be struck.** The engine injected shake energy continuously
+regardless of trigger state — it never tested `TRIGGER_UNPATCHED`, even though
+the comment directly above the line already claimed it did. A patched trigger
+therefore got a drone with a bump on it, and the only way to hear a struck
+shaker was to turn TIMBRE fully down, which also gave up control of how hard it
+was struck. Now gated like every other sustaining engine here
+(`ReedPipeEngine`'s `blowing`): shaking while TRIG is unpatched **or** a patched
+gate is high. Every `triggerHz: 0` scenario renders byte-identical, so the drone
+is untouched. The ratchet instruments change and should — a triggered guiro
+scrapes once per trigger instead of rasping forever.
+
+*Generalises:* a comment asserting a conditional is not evidence the conditional
+exists. This one had been read and believed several times.
+
+**The selector ducked.** The makeup gains had been clamped to an arbitrary
+`[0.15, 20]`, leaving water drops 8.6 dB and little rocks 10.1 dB below the
+rest. **Nothing clamps makeup at runtime** — that ceiling bought nothing. The
+real constraint is *peak headroom*: a high-crest instrument clips before its RMS
+reaches the target. Re-measured against that constraint directly and re-baked:
+worst deviation **10.1 dB → 1.5 dB**, fourteen of sixteen inside 0.31 dB.
+Crunch and big rocks stay ~1.2 dB low deliberately — crest factors near 40 mean
+they are peak-limited, and for a sound that impulsive peak drives loudness more
+than RMS, so matching RMS would make them the loud ones.
+
+Harness committed at `alt_firmwares/research/shakers_levels/` (108 points per
+instrument), so a re-bake after any energy-model change is a re-run.
+
+### brass — still owed a buzz
+
+Accepted as musical, but Lyle's verdict is that it "lacks the buzz of brass",
+and he is right. The cause is structural rather than a bad constant: finding 3
+in §9 is that a *hard* valve nonlinearity destroys partial selection, so the
+valve was deliberately made gentle — and a gentle valve generates few upper
+harmonics. The brightness therefore cannot come from the valve.
+
+Where it should come from instead is **nonlinear wave propagation in the bore**:
+in a real instrument the compression phase travels faster than the rarefaction,
+the wavefront steepens toward a shock, and that is both the physical source of
+brassiness *and* why brass gets brighter the harder it is played. It lives in
+the propagation path, not the valve, so in principle it adds harmonics without
+touching the mode selection that was so hard to win.
+
+Two cautions for whoever picks this up. Implement it as an amplitude-dependent
+propagation *delay* rather than a waveshaper in the loop — a delay modulation
+is a timing effect, so it cannot raise the loop gain and cannot break passivity,
+where an in-loop waveshaper can do both. And re-run `zones.cc` and `signed.cc`
+afterwards regardless: lock zones are only `[0.90n, 1.01n]` wide and the tuning
+was nulled to a measured `-4.8 + 67.2/n` cents, so both are exactly what a new
+nonlinearity would disturb.
+
+### The two "blocked" items from §7–9, re-scoped
+
+**qemu was never blocked here** — `qemu-system-arm` is on PATH via Homebrew and
+`cycles_plugin.so` is already an arm64 Mach-O. The tooling was written for this
+Mac, not for a container. Measured worst case, all six:
+
+| engine | insn/sample | budget |
+|---|---:|---:|
+| bytebeat | 107.0 | 21% |
+| brass | 204.5 | 39% |
+| shakers | 225.5 | 43% |
+| scale-stack | 371.3 | 71% |
+| diatonic-chord | 371.9 | 72% |
+| ~~banded-waveguide~~ | 421.7 | 81% (cut) |
+
+**Flash is blocked on something else entirely.** Not the toolchain — `GET
+/v1/catalog` returns `approvedEngineIds`, the builder rejects anything outside
+it, and all six were absent. A not-yet-deployed engine's flash cost is
+unmeasurable by construction, so the order is: roll the builder image → sweep →
+extend `engineFlashBytes` → sync the catalog.
+
+Two corrections to §7–9 while doing this: the **eleven Braids engines are
+already measured** (all 40 catalog engines have costs and
+`plaitsFlashBudget.test.ts` is green), so the remaining job is the new engines
+only — about **8 builds**, not 110. And the sweep harness, which §5 assumed
+existed somewhere, was living in a session scratchpad under `/private/tmp`; it
+is now committed at `website/scripts/plaits-flash-sweep/` in the rubato-audio
+repo.
+
+### The DC check from §9 is in
+
+`plaits_test` now measures the mean of both taps across each audition render and
+fails above 0.2, matching what `plaits_lab.py` already applied to packaged
+engines. All 27 remaining audition engines pass; the largest is saw-comb at
++0.126, then ring-mod and csaw at +0.058, and brass sits at +0.003. It reports
+every offender before aborting rather than stopping at the first.

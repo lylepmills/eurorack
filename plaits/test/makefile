@@ -88,7 +88,6 @@ CC_FILES       = algorithms.cc \
 		diatonic_chord_engine.cc \
 		scale_stack_engine.cc \
 		shakers_engine.cc \
-		banded_waveguide_engine.cc \
 		brass_engine.cc \
 		z_filter_engine.cc
 OBJ_FILES      = $(CC_FILES:.cc=.o)
