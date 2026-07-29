@@ -63,11 +63,11 @@ test suite is the real contract here; §9 of the handoff is not.
    *(not in the handoff)*
 3. `flash-budget.ts` — real measurements, now via
    `alt_firmwares/plaits_lab_builder/flash_sweep.py`
-4. `previews.generated.json` + the mp3s — `render-previews.mjs`, **and**
-   `scripts/plaits-previews/render_previews.cc`, which keeps its own
-   HARDCODED engine list (includes, a mono `Emit<>` and a stereo `Emit<>`
-   per engine). *(not in the handoff, and it needs a C++ edit, not a script
-   run)*
+4. `previews.generated.json` + the mp3s — `render-previews.mjs`. *(not in the
+   handoff)* It used to be two registration points: `render_previews.cc` kept
+   its own HARDCODED engine list (includes, a mono `Emit<>` and a stereo
+   `Emit<>` per engine), so a new engine needed a C++ edit and was silently
+   skipped without one. That list is now generated — see open item 4 below.
 
 No changes were needed to `engines.ts`, `PlaitsEditor.tsx` or
 `plaits-palette.css`: with `origin: "Mutable Instruments"` and no `artwork`
@@ -138,16 +138,29 @@ missing-submodule guard.
 
 **Open work, in the order it should be picked up:**
 
-1. **Stereo preview control is gated on the wrong condition** (small, visible).
-   `PlaitsEditor` lines ~900 and ~964 gate it on `stereoToggleableEngineIds`,
-   which means "can be switched off per build", when the intended question is
-   "does a stereo clip exist" — what `hasStereoPreview()` answers, currently
-   exported but referenced nowhere outside `previewPlayer.tsx`. The two agreed
-   for every pre-existing engine because the toggle set happened to cover them.
-   **It also affects five STOCK engines** — pulsar, attractor, spectral-spiral,
-   phase-distortion, string-machine — whose stereo clips have been unplayable
-   all along. Read `previewPlayer.tsx` and both call sites properly first; this
-   file has been misread twice from greps alone.
+1. ~~**Stereo preview control is gated on the wrong condition**~~ — **DONE.**
+   `PlaitsEditor`'s `stereoButtonFor` now tests `stereoToggleableEngineIds`
+   FIRST (the build toggle, which edits the firmware recipe and charges flash)
+   and falls through to a derived `previewOnlyStereoEngine` — "no build macro,
+   but a stereo clip exists", i.e. `hasStereoPreview()`. The same predicate
+   replaced the hardcoded set in `engineStereoOn` (which picks the clip) and in
+   the localStorage restore filter, so a toggled chip now survives a refresh.
+   Verified in the running site: **50/50 models have a stereo control, up from
+   40/50** — 35 build toggles (unchanged) + 15 preview-only. `z-filter` and
+   `pulsar` both stream their `-stereo.mp3`; `virtual-analog` still charges its
+   flash delta and writes `stereoEngines`, and no preview-only toggle leaks
+   into the recipe. Regression guard: `website/src/lib/plaitsStereoControls.test.ts`
+   (confirmed failing against the old gate before the fix).
+
+   **Correction to this item as written:** the claim that it "also affects five
+   STOCK engines — pulsar, attractor, spectral-spiral, phase-distortion,
+   string-machine" was already stale. Commit `9e11adad` ("stereo previews +
+   toggle for the always-stereo engines") added `alwaysStereoEngineIds` and gave
+   exactly those five a working preview-only button; they were verified rendering
+   one *before* this change. The engines actually stranded were the ten Pattern A
+   Braids ports and only those — they were in neither set. `alwaysStereoEngineIds`
+   survives, but only as the seed for the stock-derived Stereo Dreams preset; it
+   no longer gates any button, so a future always-stereo engine needs no entry.
 
 2. ~~**Braids 14-segment icons.**~~ **DONE.** Both renderers ship: placed slots
    cycle the source codes, the library rail and catalog card show the static
@@ -198,14 +211,45 @@ missing-submodule guard.
    `stereoToggleableEngineIds`, so the editor shows them no stereo button at
    all) is item 1's business, not this one's.
 
-4. **`render_previews.cc` should read the catalog** rather than carry its own
-   hardcoded list. Design already worked out: `render-previews.mjs` reads the
-   catalog plus `plaits-engine-sources.generated.json` and emits
-   `preview_engine_list.generated.h` into the build dir, picked up with `-I`;
-   the `.cc` expands one `PREVIEW_ENGINE_LIST(X)` macro. `stereo_capable()` can
-   be probed on the engine, so the separate stereo list disappears too. An
-   attempt was reverted after the includes were stripped without the generated
-   header landing — do it with the file actually open.
+4. ~~**`render_previews.cc` should read the catalog**~~ **DONE.**
+   `render-previews.mjs` reads the catalog plus
+   `plaits-engine-sources.generated.json` and writes
+   `preview_engine_list.generated.h` into the build dir (picked up with `-I`);
+   the `.cc` expands one `PREVIEW_ENGINE_LIST(X)` macro, and emits a stereo
+   clip iff the constructed engine reports `stereo_capable()`, so the separate
+   stereo list is gone. 50 engines, 100 clips, manifest unchanged.
+
+   **It surfaced a latent bug, since fixed.** A clip was not a pure function of
+   its engine: renders changed content when the emission order changed, because
+   engines read state they never wrote. Verified in source: `FMEngine::Init`
+   never touches `sub_fir_` / `carrier_fir_`, which the downsamplers read on the
+   first block; `SixOpEngine::Init` and `ChiptuneEngine::Init` take scratch out
+   of the shared 16 KB `g_ram_block` arena and do not zero it. Every render
+   reused the same stack frame and the same arena, so each picked up what the
+   previous one left behind.
+
+   `RenderAudition` now resets all three carriers before each render: reseed the
+   PRNG (it already did), `memset` the arena, and placement-new the engine into
+   zeroed storage — placement-new because a `memset` over a CONSTRUCTED object
+   would clobber its vptr. The per-block `out`/`aux` scratch is hoisted and
+   zeroed once for the same reason. **Verified by rendering the catalog forwards
+   and fully reversed: 100/100 WAVs identical.** Re-rendering moved 8 of the 100
+   clips: `two-op-fm` and the DX7 banks differ only in a segment-0 startup
+   transient (−38 to −69 dB relative, later segments bit-identical), and
+   `chiptune` picks a different arpeggio through segment 1 at the same level and
+   envelope — deterministic now, rather than a readout of arena leftovers.
+
+   **This one took the slow route, and the lesson generalizes.** The fix already
+   existed in `rubato-audio`'s `plugins/palette`: its golden-parity harness
+   zeroed arena and engine storage from the start, and its CLAUDE.md carried a
+   "worth reporting upstream — the website renderer would be more robust doing
+   the same" note that sat unactioned. One product solving what a sibling is
+   still living with is this repo's standing failure mode. Palette's suite is
+   green against the fixed renderer (6/6, `engine_parity` included), and the one
+   remaining divergence — the reference leaves its per-block `out`/`aux`
+   uninitialized — was measured inert: poisoning both with `0x7F7F7F7F` before
+   every `Render` changed 0 of 100 clips, so no engine leaves a block sample
+   unwritten.
 
 5. ~~**AUX designs are all stereo-split shaped.**~~ — **RESOLVED 2026-07-28.**
    Design + costing in `BRAIDS_PORT_AUX_PROPOSAL.md`; the four recommended
