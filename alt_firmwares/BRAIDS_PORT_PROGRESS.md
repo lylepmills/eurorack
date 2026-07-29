@@ -751,19 +751,28 @@ Mac, not for a container. Measured worst case, all six:
 | diatonic-chord | 371.9 | 72% |
 | ~~banded-waveguide~~ | 421.7 | 81% (cut) |
 
-**Flash is blocked on something else entirely.** Not the toolchain — `GET
-/v1/catalog` returns `approvedEngineIds`, the builder rejects anything outside
-it, and all six were absent. A not-yet-deployed engine's flash cost is
-unmeasurable by construction, so the order is: roll the builder image → sweep →
-extend `engineFlashBytes` → sync the catalog.
+**Flash is not measurable against the deployed builder, but it never needed to
+be.** `GET /v1/catalog` returns `approvedEngineIds`, the builder rejects
+anything outside it, and every new engine was absent — so a not-yet-deployed
+engine's cost cannot be measured against production at all. The way through is
+`alt_firmwares/plaits_lab_builder/flash_sweep.py`, which runs INSIDE the builder
+image and gives byte-exact ARM numbers locally, no deploy involved. Measured
+values are in §11.
 
-Two corrections to §7–9 while doing this: the **eleven Braids engines are
-already measured** (all 40 catalog engines have costs and
-`plaitsFlashBudget.test.ts` is green), so the remaining job is the new engines
-only — about **8 builds**, not 110. And the sweep harness, which §5 assumed
-existed somewhere, was living in a session scratchpad under `/private/tmp`; it
-is now committed at `website/scripts/plaits-flash-sweep/` in the rubato-audio
-repo.
+The sweep harness that §5 assumed existed somewhere was living in a session
+scratchpad under `/private/tmp`, one reboot from gone; it is now committed at
+`website/scripts/plaits-flash-sweep/` in the rubato-audio repo.
+
+⚠️ **A correction to a correction.** An earlier draft of this section claimed
+the eleven Braids engines were "already measured", on the evidence that the
+website's catalog had 40 engines and `engineFlashBytes` had 40 entries with no
+gaps. That was wrong, and wrong in a way worth understanding: the website's
+sixteen Lab engines were a DIFFERENT sixteen (glisson, gendy, scanned, pulsar,
+loopback, lockstep, tapfield, phase-weave, sideband-bank, attractor, undertow,
+reed-pipe, phase-flock, rulefield, spectral-spiral, helix). The eleven had never
+been synced to the website at all, so nothing there could report them missing —
+a consistency check between two artifacts says nothing about a third that is
+absent from both. **The original brief was right: it is one batch of sixteen.**
 
 ### The DC check from §9 is in
 
@@ -772,3 +781,112 @@ fails above 0.2, matching what `plaits_lab.py` already applied to packaged
 engines. All 27 remaining audition engines pass; the largest is saw-comb at
 +0.126, then ring-mod and csaw at +0.058, and brass sits at +0.003. It reports
 every offender before aborting rather than stopping at the first.
+
+---
+
+## 11. First ARM build (2026-07-28) — two engines had never been linked
+
+### brass and shakers could not link, and nothing in-tree could have said so
+
+Both called libm — `sqrtf`, `powf`, `logf`, `cosf` — and the firmware is
+bare-metal, so those pull in `__errno` and fail at link. **Neither engine had
+ever been compiled for ARM.** The session that wrote them had no toolchain, and
+every gate they passed (`plaits_test`, `check --full`, `validate_catalog.py`) is
+host-only. They reached a flash sweep before anyone linked them for hardware.
+
+`helix_engine.cc` already documents the constraint in its opening comment, and
+it is the only other engine that needed those functions — because it was written
+*after* being built for ARM. **A green host suite says nothing about the target.
+Build for ARM before believing an engine exists.**
+
+Replaced with primitives already in the tree, no new machinery:
+
+| was | now |
+|---|---|
+| `sqrtf` (per sample) | `stmlib::Sqrt` — one `VSQRT`; links *and* beats the libm call |
+| `powf(2, cents/1200)` | `SemitonesToRatio` |
+| `cosf(2πx)` | `Sine(x + 0.25)` |
+| `logf` | `FastLog2 * ln2` |
+
+`Sine`'s out-of-bounds hazard from §7 was checked rather than assumed: the
+argument stays in (0.25, 0.74] because `f` is constrained to (0, 0.49·fs].
+
+### The precision trap inside the fix, which is the part that generalises
+
+The obvious replacement for `RateCorrect` — `Exp2Safe(r * FastLog2(c))` — is
+quietly catastrophic. It converts decay coefficients running to **0.9999**,
+where `ln(c)` is about −1e-4. An approximation carrying **1e-4 of ABSOLUTE
+error** is excellent for a pitch ratio, which is exactly what `FastLog2` and the
+`SemitonesToRatio` LUT are built for, and carries **100% error** here.
+
+It cost 20–40 dB across the instrument selector; worst deviation went from 1.5 dB
+to 39 dB. **Every gate still passed** — the output stayed finite, in bounds,
+DC-free and responsive on all four controls. Only re-running the level harness
+found it, and only because the swap touched the math the levels were measured
+against.
+
+Now a pair of series chosen to be exact where it matters: `ln` via
+`2·atanh((c−1)/(c+1))` (keeps |z| ≤ 0.25 for this table) and `exp` by Taylor to
+y⁶. Called a few times per instrument change, so the extra terms are free.
+Re-measured after: worst deviation **1.46 dB** against 1.53 before, and brass
+tuning **bit-identical**.
+
+**Rule: match the approximation to the SCALE of the quantity, not to how similar
+the operation looks.** A pitch LUT and a decay constant both go through `pow`.
+
+### Measured flash — all sixteen, at last
+
+Local, inside the builder image, leave-one-out into Speech's slot in the
+catalog's stock-24. Baseline **205,136** on every run, matching the baseline the
+Helix row used. Controls: `reed-pipe` exact, `speech` 23,296 vs 23,312,
+`spectral-spiral` 2,048 vs 2,064 — `flash_sweep.py` now exits non-zero if any
+control drifts past 64 B.
+
+| engine | bytes | engine | bytes |
+|---|---:|---|---:|
+| raw-fm | 912 | z-filter | 1,712 |
+| digital-modulation | 1,216 | ring-mod | 1,888 |
+| bytebeat | 1,232 | brass | 2,000 |
+| toy | 1,248 | sub-oscillator | 2,224 |
+| csaw | 1,392 | saw-comb | 2,512 |
+| vowel-fof | 2,640 | bowed | 2,976 |
+| scale-stack | 3,376 | triple | 3,424 |
+| diatonic-chord | 3,536 | **shakers** | **8,544** |
+
+Shakers rose 224 B from the accurate `RateCorrect`; worth it for 38 dB.
+
+**`flash_sweep.py` had been measuring in the wrong base.** It swept from
+`default_recipe.json`'s slots, which are NOT the catalog's stock-24 — the
+default carries glisson/gendy/scanned/pulsar where stock-24 carries the three
+DX7 banks and wave-terrain, about 24.6 KB of six-op core. A marginal only means
+something against the context it was measured in, and measuring in the wrong one
+is silent: the builds succeed and the numbers look plausible. Caught only by an
+absolute anchor reading 204,512 against a published 229,104. It now bases on the
+catalog preset.
+
+### Verifying an ARM build: two ways to fool yourself
+
+Both cost a wrong conclusion here.
+
+1. **The image bakes a COPY of the source at `/workspace`.** Mounting the live
+   tree at `/work` and running a build leaves it compiling the baked copy. Mount
+   over `/workspace` (and `touch plaits/resources.cc` first, per the Dockerfile
+   note) or rebuild the image.
+2. **A hand-rolled `make -f plaits/makefile` uses the DEFAULT linker script**,
+   not the builder's 224 KB region, and fails with a bogus FLASH overflow. Only
+   `container_server.build_firmware` is a valid ARM test.
+
+### Website state
+
+Catalog synced to 56 at the merge commit, `engineFlashBytes` extended to all
+sixteen, engine source paths regenerated, preview clips re-rendered for the whole
+catalog (the five engines changed this session would otherwise have kept clips
+that no longer represent them — shakers moved 38 dB).
+
+`gen-plaits-engine-sources.mjs` defaults to `--ref HEAD` of whatever checkout it
+is pointed at, so a stale local `master` silently produces a partial map that
+still fails the test. Pin it to the same commit the catalog is pinned to.
+
+**Still not deployed.** The builder image on Cloudflare is untouched, so the five
+new engines remain outside `approvedEngineIds` and the website catalog must not
+ship ahead of a matching builder rollout.
