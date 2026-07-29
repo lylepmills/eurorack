@@ -1356,3 +1356,78 @@ still fails the test. Pin it to the same commit the catalog is pinned to.
 **Still not deployed.** The builder image on Cloudflare is untouched, so the five
 new engines remain outside `approvedEngineIds` and the website catalog must not
 ship ahead of a matching builder rollout.
+
+---
+
+## 12. Brass grew a control (2026-07-29)
+
+`§10` and `§11` predate this and describe MACRO as the slide. It is not any more.
+
+### MACRO is the buzz
+
+The slide detuned the bore against the lips. It made a good growl and a good
+split note, and it left the instrument out of tune — its own README said so. It
+is gone, and MACRO now drives the valve's **rest opening**: how far the lips
+swing into closure each cycle.
+
+Measured across the range: closure **1.5% → 5.8%** of the cycle, energy above
+the 4th harmonic up about **20 dB**, and it gets *louder* toward the top, the way
+a horn does when you lean on it. The knob's midpoint is **bit-identical** to the
+instrument that shipped — necessary rather than tidy, because MACRO is Plaits'
+fourth control and rests at its midpoint whenever the menu is not set to expose
+it, so the default has to be the old instrument.
+
+The top stops at a rest opening of 0.90 with real margin, because **finding 3's
+cliff is right above it**: at 1.00 the level is already 11 dB down, and by 1.10
+the model has stopped selecting partials altogether — flat staircase, 65 Hz,
+near-silent.
+
+### Buzz is not brightness, and it is not geometry
+
+Two wrong turns, both corrected by measurement rather than by argument, and both
+generalise.
+
+**Brightness ≠ buzz.** The first attempt put nonlinear *steepening* on MACRO. It
+measured beautifully — 35 dB of range — and it was the wrong axis. Steepening is
+a PROPAGATION effect: it sharpens the wave travelling down the bore, so the tube
+brightens while the lip stays near-sinusoidal. Buzz is a SOURCE effect, the lips
+slamming shut and turning the flow into a pulse train. Nothing downstream
+manufactures it. Steepening stays, fixed at 112 — it did make the engine
+brighter, which was worth having.
+
+**Buzz comes from DRIVE, not from closing the valve.** The obvious move —
+narrow the rest opening so the lips sit nearer shut — does the opposite. A small
+opening passes a small flow, the lip barely swings, and closure *falls* to 1.4%.
+Opening the valve *further* passes more flow and swings the lip hard enough to
+slam shut.
+
+Buzz is measurable and did not need an ear to find: **AUX is the valve flow**, so
+"what fraction of the cycle are the lips shut" is directly observable. The engine
+as shipped closes for **1.9%** of the cycle, which is exactly why it did not buzz.
+
+### One measurement trap, because it will recur
+
+An 8-segment HARMONICS staircase shows dropouts **at every setting, including the
+shipped default**. Reading them as damage caused by a new control is a sampling
+artifact — the segments land on transitions. Always measure the SHIPPED value in
+the same harness before concluding a change broke selection. That check is the
+only thing that stopped a wrong conclusion here, and the same class of error had
+already cost a wrong conclusion once this session (`§11`, the brassiness harness
+measuring bare defaults instead of the real operating point).
+
+### Adding an engine touches more hand-kept lists than is obvious
+
+Four went stale behind engine changes in two days, and only some fail loudly:
+
+| list | how it failed |
+|---|---|
+| `plaits_test.cc` audition/extremes/control-response calls | compile error — loud |
+| `tests/test_cli.py` catalog count | assertion — loud, but **left red on master twice** |
+| `render_previews.cc` `Emit<>` list | **WARNED and exited 0**, writing a short manifest |
+| `catalog.json` control labels + manual copy | **nothing checks it at all** |
+
+That last one shipped: `catalog.json` described a "Slide" control the engine no
+longer had, and disagreed with the SDK package manifest, which said "Buzz".
+`validate_catalog.py` passed at 79 engines without noticing. **Nothing
+cross-validates the catalog's control labels against the package manifest's** —
+worth a check if this bites again.
