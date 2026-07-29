@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "rubato/shakers",
+  "catalogId": "shakers",
+  "version": "1.0.0",
+  "name": "Shakers",
+  "author": "Lyle Mills, after Perry R. Cook and Gary P. Scavone",
+  "origin": "Rubato Lab",
+  "license": "MIT",
+  "description": "Sixteen shaken and scraped instruments from Perry Cook's PhISEM, which models the statistics of colliding objects rather than any one object's shape.",
+  "family": "Percussion",
+  "tags": ["stk", "phisem", "percussion", "shaker", "stochastic", "physical"],
+  "controls": [
+    { "id": "harmonics", "label": "Instrument", "description": "Steps through sixteen instruments, from a maraca through bells and gravel to a guiro." },
+    { "id": "timbre", "label": "Shake", "description": "How hard it is being shaken. Energy is injected continuously, so it plays without a trigger." },
+    { "id": "morph", "label": "Decay", "description": "How long the instrument keeps ringing after each collision, around its measured decay." },
+    { "id": "macro", "label": "Objects", "description": "How many objects are inside, from a couple of large ones to a dense hiss of small ones." }
+  ],
+  "outputs": {
+    "main": "The instrument.",
+    "aux": "The bare collision train, before any resonance."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/shakers_engine.h",
+    "files": ["plaits/dsp/engine2/shakers_engine.cc"],
+    "className": "ShakersEngine"
+  },
+  "postProcessing": { "alreadyEnveloped": true, "outGain": 0.8, "auxGain": 0.8 },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "STK Shakers (PhISEM), thestk/stk"
+}

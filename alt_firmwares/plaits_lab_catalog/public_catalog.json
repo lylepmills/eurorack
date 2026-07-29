@@ -1695,52 +1695,6 @@
       }
     },
     {
-      "id": "helix",
-      "packageId": "community/helix",
-      "name": "Helix",
-      "author": "Lyle Mills",
-      "origin": "Rubato Lab",
-      "family": "Chords",
-      "description": "A chord stacked across octaves on a Shepard helix, gliding endlessly up or down without ever changing register.",
-      "tags": [
-        "shepard",
-        "chord",
-        "drone",
-        "glide"
-      ],
-      "controls": [
-        "Chord",
-        "Glide",
-        "Fold",
-        "Spread"
-      ],
-      "outputs": [
-        "Folded voices (left in stereo)",
-        "Unfolded voices (right in stereo)"
-      ],
-      "sharedModules": [
-        "chord-bank"
-      ],
-      "artwork": {
-        "color": "#5796E4"
-      },
-      "version": "1.0.0",
-      "digest": "sha256:2cd10af1d76b9c93dd3d605cf3be87b4223252843c4a2d705bffd789510bf124",
-      "documentationDigest": "sha256:d4eae528ac4358656c87e19e629d50852940b6419b8eb93c5251dc6af022ef5a",
-      "manual": {
-        "controls": {
-          "harmonics": "Selects the chord, voiced at every octave of the helix at once.",
-          "timbre": "Sets the glide: centred is still, either side sends the stack endlessly rising or falling.",
-          "morph": "Folds the summed voices, from clean through progressively harder wavefolding.",
-          "macro": "Sets how much of the helix you hear at once, from a tight chord to a wide cloud of octaves."
-        },
-        "trigger": "Strikes the low-pass gate while the helix keeps gliding underneath."
-      },
-      "implementation": {
-        "className": "HelixEngine"
-      }
-    },
-    {
       "id": "z-filter",
       "packageId": "mutable-instruments/z-filter",
       "name": "Z Filter",
@@ -1842,11 +1796,11 @@
       ],
       "outputs": [
         "Notched sawtooth",
-        "Variable-width pulse"
+        "Mirrored notch depth"
       ],
       "version": "1.0.0",
-      "digest": "sha256:ed76e28926f99210d4fb63572064f10fbb3989cd59dd60c4aba18e31aee63367",
-      "documentationDigest": "sha256:4605b54219c67b06d9e61f4da622b7889b99260bba50c152b940678d3f999a9e",
+      "digest": "sha256:6c63cb6f5f3bbf6b90b64440bdbbac7cb77012ae2e04c3ed8e1efc1c9c5bd41d",
+      "documentationDigest": "sha256:94e3aec1ce82bb8e0fc6857124dac5eacbf343bdd83fb17aae2edfe102db28a8",
       "manual": {
         "controls": {
           "harmonics": "Deepens the notch cut into each sawtooth cycle.",
@@ -1882,11 +1836,11 @@
       ],
       "outputs": [
         "Three-way ring product",
-        "First modulator"
+        "Carrier and first modulator"
       ],
       "version": "1.0.0",
-      "digest": "sha256:ce3151b69cbac74e9d189ec82991a66e7829791f742570df00ba55e34373604c",
-      "documentationDigest": "sha256:5626c10e5b454cf6c1dfe5cb9a97561ecb307bd983de813bf02982f52ba7ad36",
+      "digest": "sha256:f10a3f944678f5049c4c8f3721d9b7255594c1eead9d5687b84c89c165904df1",
+      "documentationDigest": "sha256:34eb5e33ad1392c007d88317ded14aab73de07e66e9102e8253ebfc20d0ae612",
       "manual": {
         "controls": {
           "harmonics": "Detunes the first modulator through harmonic and clangorous intervals.",
@@ -1922,11 +1876,11 @@
       ],
       "outputs": [
         "Bridge pickup",
-        "Bow exciter"
+        "Neck pickup"
       ],
       "version": "1.0.0",
-      "digest": "sha256:68e58454c54c7d270bdbc8538a523f396b67008ea470a70a106c5891528a155d",
-      "documentationDigest": "sha256:b560a43680ed253da063217c266dcd57434c83ef27bdb84ccf12a3f28247be12",
+      "digest": "sha256:b37b30efef39897c4f9b03590b5ef920e120cebc8dc9ca8c0d7d83acce743b98",
+      "documentationDigest": "sha256:b913cb9025a1b2ed2dee10c5c3c5f6e724a61c84404be673ed659bcdc981b08b",
       "manual": {
         "controls": {
           "harmonics": "Moves the bow from near the bridge to well up the neck.",
@@ -2005,7 +1959,7 @@
         "Symbol staircase"
       ],
       "version": "1.0.0",
-      "digest": "sha256:2b4cd4326ce213a23f6336c9161e54fa24ddb8c7fa168327a9ad39eec02f8f7c",
+      "digest": "sha256:fd9a8616025aa5c7cced5e447ba92f1b7ce3d228e229a24c2ceaecaadc7d8d80",
       "documentationDigest": "sha256:76ff0cca3dbaa7eccc97f7cce7f5569d5f9bf5d16c0ce7e668238f7435a63fdd",
       "manual": {
         "controls": {
@@ -2067,7 +2021,7 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Vocal",
-      "description": "Five very narrow filters sweeping five vowels across five vocal registers, with the formant balance Braids leaves flat. The ancestor of Speech's naive mode, on the same vowel and register grid, carried here at finer resolution.",
+      "description": "Five very narrow filters sweeping five vowels across five vocal registers, with the formant balance the stock model leaves flat.",
       "tags": [
         "braids",
         "formant",
@@ -2082,11 +2036,11 @@
       ],
       "outputs": [
         "Formant bank",
-        "Glottal source"
+        "Upper-formant weighting"
       ],
       "version": "1.0.0",
-      "digest": "sha256:6e0c393c732b8c4f5e38be817e002974e979e9e9d069cf066d8b29b6714ec590",
-      "documentationDigest": "sha256:6f690670b6d8ddfe42caa2d0fd92f824a98a1ddd876ffa7c1aa3a319c98bc9c1",
+      "digest": "sha256:eed70e864ce748413562e4460c563674b26782b18df9e4e0938e1d34aab08553",
+      "documentationDigest": "sha256:c6bb521ba1dcecf6cd7fe3158fae1f7b9288886732d0a3686549530bf7db5f7e",
       "manual": {
         "controls": {
           "harmonics": "Tilts the excitation from a dark buzz to a bright breathy hiss.",
@@ -2107,7 +2061,7 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "FM",
-      "description": "Braids' three FM models on one axis: self-feedback, plain two-operator FM, and chaotic frequency feedback. The ancestor of Two-op FM, sharing its ratio quantizer and feedback axis, but run raw: no oversampling, and free to alias.",
+      "description": "Braids' three FM models on one axis: self-feedback, plain two-operator FM, and chaotic frequency feedback, unfiltered and unoversampled.",
       "tags": [
         "braids",
         "fm",
@@ -2125,8 +2079,8 @@
         "Modulator"
       ],
       "version": "1.0.0",
-      "digest": "sha256:0636df95ccf5a557156537707310a59de5546b68e014ba73640e8082f15da763",
-      "documentationDigest": "sha256:431d4f7c5a7578a5e3f19af51ff5f962e7e6c03c8214e2fec9c3b41c9f7c7234",
+      "digest": "sha256:9add27f51fe1d0d57d692e80710f6a0870283b21041beb8b09c5bf56f485cdc5",
+      "documentationDigest": "sha256:9a85bb18834f4d7ba13311c07e67d1dc493f786d5b78622330827c9032d728a4",
       "manual": {
         "controls": {
           "harmonics": "Steps the modulator ratio through the tuned intervals.",
@@ -2147,7 +2101,7 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Polyphonic",
-      "description": "Three oscillators with two continuously swept interval knobs, morphing together through square, saw, triangle and sine. It overlaps Chords and Swarm in territory, not lineage: intervals you sweep rather than a table you author.",
+      "description": "Three oscillators with two continuously swept interval knobs, morphing together through square, saw, triangle and sine.",
       "tags": [
         "braids",
         "detune",
@@ -2165,8 +2119,8 @@
         "Undetuned root voice"
       ],
       "version": "1.0.0",
-      "digest": "sha256:0e8589137601f6a2fcbbab010e096ab335e5b212420a836136074c4dc5220379",
-      "documentationDigest": "sha256:8371f41177fbeea11c33b6ca6be4de2d8386e3e8b646eed6a2526ba4987de1c6",
+      "digest": "sha256:02cd8b2002acff98d98141d6eeaee385cd84fb7d03f3b3df9fefbbff6feb0f09",
+      "documentationDigest": "sha256:aa32b300d63abf627ac7324a7dfb7aeca8da416a6b7c752cdba1d713536e4f71",
       "manual": {
         "controls": {
           "harmonics": "Spreads the second voice through closely spaced and musical intervals.",
@@ -2178,6 +2132,261 @@
       },
       "implementation": {
         "className": "TripleEngine"
+      }
+    },
+    {
+      "id": "bytebeat",
+      "packageId": "bees-in-the-trees/bytebeat",
+      "name": "Bytebeat",
+      "author": "Tim Churches",
+      "origin": "Community",
+      "family": "Digital",
+      "description": "Four integer expressions read as audio, pitch-tracked and with an openable mask width. From Tim Churches' Bees-in-the-Trees firmware for Braids.",
+      "tags": [
+        "braids",
+        "bees-in-the-trees",
+        "bytebeat",
+        "lo-fi",
+        "digital"
+      ],
+      "controls": [
+        "Term A",
+        "Term B",
+        "Expression",
+        "Mask width"
+      ],
+      "outputs": [
+        "Bytebeat stream",
+        "Same stream a sub-octave down"
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:64433fb183db499f21d31140f638b3ce3232884676ab5ff0a0f130275d371a36",
+      "documentationDigest": "sha256:ac887d07f6694d81026170d837fa1d5f11e49a4d4e9b6b6c8527429619b939bd",
+      "manual": {
+        "controls": {
+          "harmonics": "Sets the first coefficient inside the expression, which mostly governs its harmonic density.",
+          "timbre": "Sets the second coefficient, which mostly governs how the pattern evolves over time.",
+          "morph": "Selects one of four expressions, from the softest and most tonal to the harshest.",
+          "macro": "Opens the mask from two bits of the expression to twelve, past the stock eight."
+        },
+        "trigger": "Restarts the stream past the silent opening of the expressions."
+      },
+      "implementation": {
+        "className": "BytebeatEngine"
+      }
+    },
+    {
+      "id": "diatonic-chord",
+      "packageId": "braids-renaissance/diatonic-chord",
+      "name": "Diatonic Chord",
+      "author": "Tom Burns",
+      "origin": "Community",
+      "family": "Polyphonic",
+      "description": "Chords stacked in scale degrees rather than fixed intervals, so the quality follows the played note. From Tom Burns' Braids Renaissance firmware.",
+      "tags": [
+        "braids",
+        "braids renaissance",
+        "chord",
+        "diatonic",
+        "polyphonic",
+        "scale"
+      ],
+      "controls": [
+        "Chord",
+        "Spread",
+        "Waveform",
+        "Scale"
+      ],
+      "outputs": [
+        "Chord",
+        "Root voice"
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:875ecc25966b0941c5e838c8615a097e4401a5ca37769c30681ab7236dbd6d2f",
+      "documentationDigest": "sha256:999bbe95b544ea91e22badfd7151d9ec2bb1cc06c7ff89114535321b90e1196e",
+      "manual": {
+        "controls": {
+          "harmonics": "Steps through sixteen chord shapes, from triads up through elevenths and the suspended set.",
+          "timbre": "Detunes the voices against each other, and folds them where the waveform is still a sine.",
+          "morph": "Morphs every voice from sine through triangle and saw to square.",
+          "macro": "Selects the scale the chord is built from, which is what decides its quality."
+        },
+        "trigger": "Realigns every voice so a struck chord starts the same way each time."
+      },
+      "implementation": {
+        "className": "DiatonicChordEngine"
+      }
+    },
+    {
+      "id": "scale-stack",
+      "packageId": "braids-renaissance/scale-stack",
+      "name": "Scale Stack",
+      "author": "Tom Burns",
+      "origin": "Community",
+      "family": "Polyphonic",
+      "description": "Five voices spaced an equal number of scale degrees apart, sweeping from cluster to wide chord without ever leaving the scale. From Braids Renaissance.",
+      "tags": [
+        "braids",
+        "braids renaissance",
+        "stack",
+        "polyphonic",
+        "scale",
+        "interval"
+      ],
+      "controls": [
+        "Span",
+        "Spread",
+        "Waveform",
+        "Scale"
+      ],
+      "outputs": [
+        "Stack",
+        "Root voice"
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:a45b875aa009a99ef27aee018733e186a2793f1c6bbcc77007efa66d1b666e2c",
+      "documentationDigest": "sha256:05c9ff10110f5559aa179e1d2abd702ff3fa75ca8119a7861c681ade98dca80d",
+      "manual": {
+        "controls": {
+          "harmonics": "Sets the spacing between voices, from one scale degree up to sixteen.",
+          "timbre": "Detunes the voices against each other, and folds them where the waveform is still a sine.",
+          "morph": "Morphs every voice from sine through triangle and saw to square.",
+          "macro": "Selects the scale the stack is quantised to, which is what the spacing counts in."
+        },
+        "trigger": "Realigns every voice so a struck stack starts the same way each time."
+      },
+      "implementation": {
+        "className": "ScaleStackEngine"
+      }
+    },
+    {
+      "id": "shakers",
+      "packageId": "rubato/shakers",
+      "name": "Shakers",
+      "author": "Lyle Mills, after Perry R. Cook and Gary P. Scavone",
+      "origin": "Rubato Lab",
+      "family": "Percussion",
+      "description": "Sixteen shaken and scraped instruments from Perry Cook's PhISEM, which models the statistics of colliding objects rather than any one object's shape.",
+      "tags": [
+        "stk",
+        "phisem",
+        "percussion",
+        "shaker",
+        "stochastic",
+        "physical"
+      ],
+      "controls": [
+        "Instrument",
+        "Shake",
+        "Decay",
+        "Objects"
+      ],
+      "outputs": [
+        "The instrument",
+        "Bare collisions"
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:4963d6a85e7b662e3911cc9fbd4f776791f4de1bf4aa9f236b230b1e9cb307e8",
+      "documentationDigest": "sha256:349a4181a3118a092a81b6d4bc347b7ca42bf075253ee6caa7f5a185cc84b468",
+      "manual": {
+        "controls": {
+          "harmonics": "Steps through sixteen instruments, from a maraca through bells and gravel to a guiro.",
+          "timbre": "How hard it is being shaken. It shakes while TRIG is unpatched or a patched gate is high, so it drones on its own.",
+          "morph": "How long the instrument keeps ringing after each collision, around its measured decay.",
+          "macro": "How many objects are inside, from a couple of large ones to a dense hiss of small ones."
+        },
+        "trigger": "Strikes it once and lets it ring out, or one pass of the stick for the guiro and wrench. Hold the gate to keep shaking."
+      },
+      "implementation": {
+        "className": "ShakersEngine"
+      }
+    },
+    {
+      "id": "brass",
+      "packageId": "rubato/brass",
+      "name": "Brass",
+      "author": "Lyle Mills, after Perry R. Cook and Gary P. Scavone",
+      "origin": "Rubato Lab",
+      "family": "Physical",
+      "description": "A lip-reed brass instrument. Breath makes it speak, and the lip knob climbs the bore's harmonic series the way a bugle player does.",
+      "tags": [
+        "brass",
+        "lip",
+        "physical",
+        "waveguide",
+        "wind",
+        "stk"
+      ],
+      "controls": [
+        "Lip",
+        "Breath",
+        "Bell",
+        "Slide"
+      ],
+      "outputs": [
+        "Mouthpiece",
+        "Valve buzz"
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:6ba04af9a132c2cb4e8a710ef0928cb5da3cf47ba1aa24fd8d9717794405491e",
+      "documentationDigest": "sha256:2e29a5c351344ffc48f40b4f77ba746e400eacfd525d93fade7817afddf2f980",
+      "manual": {
+        "controls": {
+          "harmonics": "Lip tension. Climbs the bore's partials -- unison, fifth, octave, tenth, twelfth -- and bends each one sharp as it rises.",
+          "timbre": "Breath pressure. Below the threshold the instrument does not speak, exactly as a real one does not.",
+          "morph": "Bell size, from a stopped horn that barely sustains to an open one that rings and overblows easily.",
+          "macro": "Slide. Detunes the bore against the lips, which is where the growl and the split note come from."
+        },
+        "trigger": "Empties the bore and resets the lips so each note starts the same way."
+      },
+      "implementation": {
+        "className": "BrassEngine"
+      }
+    },
+    {
+      "id": "helix",
+      "packageId": "rubato/helix",
+      "name": "Helix",
+      "author": "Lyle Mills",
+      "origin": "Rubato Lab",
+      "family": "Chords",
+      "description": "A chord stacked across octaves on a Shepard helix, gliding endlessly up or down without ever changing register.",
+      "tags": [
+        "shepard",
+        "chord",
+        "drone",
+        "glide"
+      ],
+      "controls": [
+        "Chord",
+        "Glide",
+        "Fold",
+        "Spread"
+      ],
+      "outputs": [
+        "Folded voices (left in stereo)",
+        "Unfolded voices (right in stereo)"
+      ],
+      "sharedModules": [
+        "chord-bank"
+      ],
+      "artwork": {
+        "color": "#5796E4"
+      },
+      "version": "1.0.0",
+      "digest": "sha256:841c872cdaeccde8dd024ea3b5eae02b68e96fad3aba45d8da1ff1280d071100",
+      "documentationDigest": "sha256:5b3fc620d9bdee21dd3dd37f25fb576d476edd92ba9f430898efaa55e84158cf",
+      "manual": {
+        "controls": {
+          "harmonics": "Selects the chord, voiced at every octave of the helix at once.",
+          "timbre": "Sets the glide: centred is still, either side sends the stack endlessly rising or falling.",
+          "morph": "Folds the summed voices, from clean through progressively harder wavefolding.",
+          "macro": "Sets how much of the helix you hear at once, from a tight chord to a wide cloud of octaves."
+        },
+        "trigger": "Strikes the low-pass gate while the helix keeps gliding underneath."
+      },
+      "implementation": {
+        "className": "HelixEngine"
       }
     }
   ],

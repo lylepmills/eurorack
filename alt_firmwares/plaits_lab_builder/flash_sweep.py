@@ -36,12 +36,27 @@ import container_server as cs
 from generate_engine_config import DEFAULT_CHORD_TABLES
 
 BASE = json.load(open('/work/alt_firmwares/plaits_lab_builder/default_recipe.json'))
+# The slots MUST be the catalog's stock-24 preset, not default_recipe.json's own
+# list. They differ: the default recipe carries glisson/gendy/scanned/pulsar
+# where stock-24 carries the three DX7 banks and wave-terrain, which is about
+# 24.6 KB of six-op core and factory patches. flash-budget.ts's marginals were
+# all measured in the stock-24 context, and a marginal only means anything
+# against the context it was measured in -- code shared with an engine that is
+# present is already paid for, so the same engine measures differently in a
+# palette that lacks its neighbours. Measuring in the wrong base is silent: the
+# builds succeed and the numbers look plausible.
+_CATALOG = json.load(open('/work/alt_firmwares/plaits_lab_catalog/catalog.json'))
+BASE['slots'] = list(_CATALOG['presets']['stock'])
 SPEECH = BASE['slots'].index('speech')
 # The duplicate that stands in for Speech in the baseline.
 FILLER = 'virtual-analog'
 
-NEW = ['z-filter', 'toy', 'csaw', 'bowed', 'ring-mod', 'sub-oscillator',
-       'digital-modulation', 'saw-comb', 'vowel-fof', 'raw-fm', 'triple']
+# Engines to measure. Override from the command line so a re-measure of a
+# handful of new engines does not need the image rebuilt:
+#   python3 flash_sweep.py brass shakers bytebeat
+NEW = sys.argv[1:] or [
+    'z-filter', 'toy', 'csaw', 'bowed', 'ring-mod', 'sub-oscillator',
+    'digital-modulation', 'saw-comb', 'vowel-fof', 'raw-fm', 'triple']
 
 # Engines to difference in --stereo mode: the five Pattern-B Braids ports, the
 # ones with a real second render path behind a PLAITS_STEREO_<X> gate. `toy`
@@ -64,9 +79,19 @@ NEW = ['z-filter', 'toy', 'csaw', 'bowed', 'ring-mod', 'sub-oscillator',
 # gap, re-read that file before believing the engine you actually came to
 # measure.
 STEREO_DEFAULT = ['toy', 'bowed', 'csaw', 'ring-mod', 'vowel-fof',
-                   'digital-modulation',
-                   'harmonic', 'glisson']
+                  'digital-modulation',
+                  'harmonic', 'glisson']
 STEREO_CONTROLS = {'harmonic': 2_560, 'glisson': 432}
+
+# The MONO sweep's controls, same idea: engines whose marginal flash-budget.ts
+# already records, measured in the same pair as the new engines. If they
+# reproduce their published values the method and the base line up and the new
+# numbers can be trusted as if measured against the deployed builder -- the same
+# check the Helix measurement used (Speech re-measured 23,296 against a published
+# 23,312, a 16 B agreement). If a control does NOT reproduce, stop: the toolchain
+# or the base moved, and every new marginal is being compared against a different
+# baseline than the rest of the table.
+CONTROLS = {'speech': 23_312, 'reed-pipe': 2_000, 'spectral-spiral': 2_064}
 
 
 def build_size(tag, recipe):
@@ -129,10 +154,38 @@ def stereo_recipe(slot_engine_id, stereo_engines):
     return recipe
 
 
+# A control that misses by more than this means the base moved under you.
+DRIFT_TOLERANCE = 64
+
+DRIFT_WARNING = (
+    'A CONTROL DRIFTED. Do not paste these into flash-budget.ts until the base '
+    'is reconciled -- the whole table would be inconsistent.'
+)
+
+
+def report_control(engine_id, got, published):
+    """Print one control line; return True if it DRIFTED."""
+    delta = got - published
+    drifted = abs(delta) > DRIFT_TOLERANCE
+    print('  %-18s %7d  published %7d  delta %+d%s'
+          % (engine_id, got, published, delta, '   <-- DRIFT' if drifted else ''),
+          flush=True)
+    return drifted
+
+
 def mono_sweep():
     base = measure('BASELINE(dup)', FILLER)
     if base is None:
         return 1
+    print('--- controls (expect the published value) ---', flush=True)
+    drift = False
+    for engine_id, published in CONTROLS.items():
+        total = measure(engine_id, engine_id)
+        if total is None:
+            drift = True
+            continue
+        drift |= report_control(engine_id, total - base, published)
+
     print('--- marginal cost, bytes ---', flush=True)
     results = {}
     for engine_id in NEW:
@@ -140,6 +193,9 @@ def mono_sweep():
         if total is not None:
             results[engine_id] = total - base
     print(json.dumps(results, indent=2), flush=True)
+    if drift:
+        print('\n' + DRIFT_WARNING, flush=True)
+        return 2
     return 0
 
 
@@ -156,6 +212,7 @@ def stereo_sweep(engine_ids):
     # that failure mode -- the extra build per engine is ~10 s and cached.
     print('--- per-engine stereo delta, bytes ---', flush=True)
     results = {}
+    drift = False
     for engine_id in engine_ids:
         mono = build_size('%s (mono)' % engine_id, stereo_recipe(engine_id, []))
         if mono is None:
@@ -165,12 +222,13 @@ def stereo_sweep(engine_ids):
         if stereo is None:
             continue
         results[engine_id] = stereo - mono
-        expected = STEREO_CONTROLS.get(engine_id)
-        if expected is not None:
-            print('%-22s control: published %d, measured %d (%+d)'
-                  % ('', expected, results[engine_id], results[engine_id] - expected),
-                  flush=True)
+        published = STEREO_CONTROLS.get(engine_id)
+        if published is not None:
+            drift |= report_control(engine_id, results[engine_id], published)
     print(json.dumps(results, indent=2), flush=True)
+    if drift:
+        print('\n' + DRIFT_WARNING, flush=True)
+        return 2
     return 0
 
 

@@ -63,6 +63,11 @@
 #include "plaits/dsp/engine2/vowel_fof_engine.h"
 #include "plaits/dsp/engine2/raw_fm_engine.h"
 #include "plaits/dsp/engine2/triple_engine.h"
+#include "plaits/dsp/engine2/bytebeat_engine.h"
+#include "plaits/dsp/engine2/diatonic_chord_engine.h"
+#include "plaits/dsp/engine2/scale_stack_engine.h"
+#include "plaits/dsp/engine2/shakers_engine.h"
+#include "plaits/dsp/engine2/brass_engine.h"
 #include "plaits/dsp/engine2/z_filter_engine.h"
 #include "plaits/dsp/engine2/string_machine_engine.h"
 #include "plaits/dsp/engine2/tapfield_engine.h"
@@ -164,6 +169,11 @@ int main() {
   bench<VowelFofEngine>("vowel-fof");
   bench<RawFmEngine>("raw-fm");
   bench<TripleEngine>("triple");
+  bench<BytebeatEngine>("bytebeat");
+  bench<DiatonicChordEngine>("diatonic-chord");
+  bench<ScaleStackEngine>("scale-stack");
+  bench<ShakersEngine>("shakers");
+  bench<BrassEngine>("brass");
   bench<ZFilterEngine>("z-filter");
   bench<LoopbackEngine>("loopback");
   bench<LockstepEngine>("lockstep");

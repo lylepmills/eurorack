@@ -1,0 +1,177 @@
+[
+  {
+    "id": "hero",
+    "name": "All sixteen instruments at a steady shake",
+    "durationSeconds": 6,
+    "note": 60,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [
+        0.0,
+        1.0
+      ],
+      "timbre": [
+        0.6,
+        0.6
+      ],
+      "morph": [
+        0.5,
+        0.5
+      ],
+      "macro": [
+        0.5,
+        0.5
+      ]
+    }
+  },
+  {
+    "id": "objects",
+    "name": "A maraca from two beans to a dense hiss",
+    "durationSeconds": 4,
+    "note": 60,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [
+        0.0,
+        0.0
+      ],
+      "timbre": [
+        0.6,
+        0.6
+      ],
+      "morph": [
+        0.5,
+        0.5
+      ],
+      "macro": [
+        0.0,
+        1.0
+      ]
+    }
+  },
+  {
+    "id": "struck",
+    "name": "Sleigh bells struck rather than shaken",
+    "durationSeconds": 4,
+    "note": 60,
+    "triggerHz": 2,
+    "controls": {
+      "harmonics": [
+        0.28,
+        0.28
+      ],
+      "timbre": [
+        0.0,
+        0.0
+      ],
+      "morph": [
+        0.3,
+        0.9
+      ],
+      "macro": [
+        0.5,
+        0.5
+      ]
+    }
+  },
+  {
+    "id": "struck-shaken",
+    "name": "Struck with TIMBRE up, where the drone used to bury the hit",
+    "durationSeconds": 4,
+    "note": 60,
+    "triggerHz": 2,
+    "controls": {
+      "harmonics": [
+        0.28,
+        0.28
+      ],
+      "timbre": [
+        0.6,
+        0.6
+      ],
+      "morph": [
+        0.5,
+        0.5
+      ],
+      "macro": [
+        0.5,
+        0.5
+      ]
+    }
+  },
+  {
+    "id": "ratchet",
+    "name": "The guiro and wrench, which ramp rather than decay",
+    "durationSeconds": 4,
+    "note": 60,
+    "triggerHz": 1,
+    "controls": {
+      "harmonics": [
+        0.9,
+        0.99
+      ],
+      "timbre": [
+        0.4,
+        0.4
+      ],
+      "morph": [
+        0.5,
+        0.5
+      ],
+      "macro": [
+        0.5,
+        0.5
+      ]
+    }
+  },
+  {
+    "id": "water",
+    "name": "Water drops, whose resonators are reborn and swept",
+    "durationSeconds": 5,
+    "note": 55,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [
+        0.85,
+        0.85
+      ],
+      "timbre": [
+        0.5,
+        0.5
+      ],
+      "morph": [
+        0.4,
+        0.8
+      ],
+      "macro": [
+        0.3,
+        0.3
+      ]
+    }
+  },
+  {
+    "id": "transpose",
+    "name": "A tuned bamboo scale across three octaves",
+    "durationSeconds": 4,
+    "note": 48,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [
+        0.4,
+        0.4
+      ],
+      "timbre": [
+        0.7,
+        0.7
+      ],
+      "morph": [
+        0.6,
+        0.6
+      ],
+      "macro": [
+        0.5,
+        0.5
+      ]
+    }
+  }
+]

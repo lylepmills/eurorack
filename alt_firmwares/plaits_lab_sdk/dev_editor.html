@@ -71,7 +71,7 @@
         <button class="primary" id="live-toggle">▶ Live audition</button>
         <button id="live-strike">Strike</button>
         <label>Envelope <select id="live-env"><option value="0">Sustained</option><option value="1">Plucked</option></select></label>
-        <label>Monitor <select id="live-monitor"><option value="main">Main only</option><option value="aux">Aux only</option><option value="mainaux">Main + Aux (L/R)</option><option value="stereo" id="monitor-stereo-opt" disabled>Stereo (mono engine)</option></select></label>
+        <label>Monitor <select id="live-monitor"><option value="main">Main only</option><option value="aux">Aux only</option><option value="mainaux">Main + Aux (L/R)</option><option value="stereo" id="monitor-stereo-opt" disabled>Stereo (start audition to detect)</option></select></label>
         <button id="live-reload">Reload edits</button>
         <span class="sub" id="live-status">Real time — tweak any control and hear it change.</span>
       </div>
@@ -398,6 +398,9 @@ $('live-monitor').addEventListener('change', applyMonitor);
 
 // The 'Stereo' monitor option is available only for an engine that renders a real
 // L/R pair; otherwise it's disabled and any stereo selection falls back to Main.
+// Capability is only known once the worklet loads the engine and reports it, so
+// until then the option says so rather than claiming the engine is mono — it read
+// as a statement of fact about the loaded engine and was believed as one.
 function applyStereoCapability(capable) {
   const opt = $('monitor-stereo-opt');
   opt.disabled = !capable;

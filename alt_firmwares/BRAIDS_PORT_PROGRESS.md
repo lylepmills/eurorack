@@ -823,3 +823,388 @@ for both landed engines) proves the ARM build, not the size.
   clean; `check --arm` and `qemu/estimate.py --sweep` both work locally.
 - `compare.py` needs numpy — the system python3 has none. Use
   `~/Desktop/claude/rubato-audio/plugins/just_play/.venv-bundler/bin/python3`.
+
+---
+
+## 7. The Community three (2026-07-28) — landed, unmeasured
+
+Not part of the twelve. These come from OTHER people's Braids firmwares and are
+the first engines in the catalog with `origin: "Community"`, seeding that
+category. Branch `claude/open-source-synth-models-hp0o6y`, off this one.
+
+| id | upstream | author | models |
+|---|---|---|---:|
+| `bytebeat` | Bees-in-the-Trees (`timchurches/Mutated-Mutables`) | Tim Churches | 4 |
+| `diatonic-chord` | Braids Renaissance (`boourns/eurorack-renaissance`) | Tom Burns | 5 |
+| `scale-stack` | Braids Renaissance | Tom Burns | 5 |
+
+Both upstreams are MIT. Bees carries Churches' copyright line beside Gillet's in
+every file he touched; Renaissance's README licenses its STM32F code MIT, but
+**its new files carry no per-file header** — worth a one-line confirmation from
+Tom Burns before this ships publicly. He is reachable and commercial
+(burns.ca).
+
+**Renaissance's SAM speech models are deliberately not ported.** SAM is
+proprietary to SoftVoice, Inc.; every circulating port descends from a
+reverse-engineering whose own README says it "cannot be put under any specific
+open source software license". Wrong risk for a firmware distributed under the
+LLC with a checkout attached.
+
+### What is verified, and what is not
+
+Verified in the cloud container: `plaits_test` (audition render, extremes, and
+the control-response gate on all four controls of all three engines);
+`validate_catalog.py` ok at 53; `plaits_lab.py check --full` clean on all three,
+including the licence check that LICENSE text and per-file SPDX tags agree;
+`sync_public_catalog.sh` regenerated; builder generator suite 48 green; SDK
+suite 57 green.
+
+Host CPU, ratios only (the file header is right that absolute ns mean nothing):
+`bytebeat` 0.29× triple, `diatonic-chord` 0.96×, `scale-stack` 0.97×. Stock
+`chords` is 1.78× triple, `two-op-fm` 5.4×.
+
+**Not verified — same gaps as §5, same reasons.** No ARM toolchain, no Docker,
+no qemu, no hardware in the container: flash cost, `qemu/estimate.py --sweep`,
+and the `build --hardware --cpu-probe` that publication requires. These three
+belong in the same leave-one-out batch as the twelve.
+
+### Website side is blocked on exactly that
+
+`website/src/lib/plaitsFlashBudget.test.ts` asserts *every catalog engine has a
+measured flash cost*, so syncing the catalog snapshot before the sweep reds
+`npm test`. Do the sweep first, extend `engineFlashBytes`, then sync.
+
+Good news found while checking: the Community path on the website is already
+built, not a stub — the origin filter chip, the `Community` label mapping, the
+solid identity chip for engines with no drawn symbol, and a dashed
+`.flash-chip.is-approx` ring for unmeasured community engines all exist
+already. `engines.ts` maps `origin === "Community"` to the `community` tone
+without an edit. So registration should be the flash numbers plus a colour
+choice, not new UI.
+
+### Two upstream defect classes worth carrying forward
+
+Both readmes have the full argument; the short version, because it generalises:
+
+1. **Renaissance's chord offsets are consumed cumulatively but written as
+   absolute scale degrees.** `RenderStack` pre-accumulates its own spans and
+   then `renderChord` accumulates them again; every label in `diatonic_chords`
+   only parses as absolute. The port does the intended thing. If anyone ever
+   wants the shipped-Renaissance voicings, that is a *different engine*.
+2. **Two divisions by zero and an out-of-bounds row read** across the two
+   firmwares, all reachable from a knob. Assume a dormant alt firmware has not
+   been fuzzed.
+
+And one of ours, caught by the in-tree audition gate rather than by review:
+`Sine()` is documented safe "for phase >= 0.0f", and a bipolar signal fed to it
+indexes `lut_sine` out of bounds — a ~5.0 spike on OUT. Same defect the earlier
+review found in `z-filter`. **Any new use of `Sine()` with a computed argument
+needs a whole-period offset.**
+
+---
+
+## 8. Outside Mutable: the STK two (2026-07-28), and the one that was dropped
+
+First engines from outside the Mutable world. STK
+(`thestk/stk`, Perry Cook and Gary Scavone) is MIT — the variant adding a
+non-binding request to send modifications upstream — and it is by a wide margin
+the largest permissively-licensed body of instrument models anywhere: about
+twenty-five physical models against a Braids fork scene that has been dormant
+since 2020.
+
+| id | upstream | fills |
+|---|---|---|
+| `shakers` | STK `Shakers` (PhISEM) | 16 acoustic percussion instruments; the catalog had none |
+| `banded-waveguide` | STK `BandedWG` | a bowed BAR; the catalog strikes bars and bows strings |
+
+**The patent note STK's headers carry is spent.** Stanford's waveguide patent is
+US 4,984,276, filed 1989-09-27 and issued 1991-01-08; under the pre-1995 rule
+(later of 17 years from issue, 20 from filing) it expired no later than
+2009-09-27. It never applied to `shakers` at all — PhISEM has no waveguide.
+
+### `brass` was specced, written, and DROPPED. Do not re-attempt it as a port.
+
+STK's `Brass` does not sustain. Built standalone and measured across nine
+(sample rate, pitch) combinations, it produces sound in exactly one — 22050 Hz
+at 440 Hz — and is silent at its own default 44.1 kHz. At 48 kHz it emits a
+0.019-peak blip for the first 100 ms and then *exact* silence; with vibrato it
+passes the vibrato through at 0.0048 and still does not oscillate.
+
+The mechanism: the lip filter is an all-pole resonator with a DC gain near 50,
+so a steady mouth pressure drives the squared lip position past the model's
+clamp of 1.0, the valve pins fully open, the output becomes a constant, the DC
+blocker removes it, and the bore never fills. It works only as long as the ADSR
+attack transient is still ringing the lip.
+
+A faithful port reproduced this exactly — the control-response gate caught it as
+a MORPH difference of literally 0.000000. **The gap is still real** (the catalog
+has a reed and a bow and no lip, and a lip valve is not a reed: it can be tuned
+away from the bore, which is what lipping and overblowing are). But closing it
+means a redesign — a DC-zeroed bandpass lip with a static opening bias and a
+tuned drive — which would be a Rubato Lab engine after Cook, not an STK port,
+and should be scoped as such.
+
+### What the two shipped engines needed beyond transcription
+
+Four defects, all found by SWEEPING the engine rather than by ear or review.
+Worth generalising: STK's control mappings assume a MIDI controller and a
+player, and re-exposed as four Plaits knobs they leave large dead regions.
+
+1. **STK's resonators are un-normalised.** All-pole, numerator 1, peak gain
+   1/(1−r²) — spanning 1.6 to 125 across the sixteen shaker instruments. Cook's
+   per-instrument gains only partly offset it because STK assumes a downstream
+   master gain; his own commented-out debug line in `tick` checks for output
+   over 1.0. Normalise to unit peak, then the instrument's gain means its
+   loudness.
+2. **A bow has a minimum speed.** The bow table's grip falls off as the *fourth
+   power* of the bow-to-bar velocity difference, so below ~0.055 a ringing bar
+   is damped rather than driven. Upstream's 0.03 floor = silence over the bottom
+   fifth of the knob.
+3. **Bow force costs grip.** Upstream runs the friction slope to 1.0, silent
+   from ~0.6 of the knob up. Stop at 3.0 and compensate velocity for force.
+4. **A preset can be inaudible in a mode upstream never used it in.** The
+   uniform bar's pow(0.9, i+1) gains give a loop gain of 0.899 against the other
+   presets' 0.999 — 600× quieter *under a bow*. Upstream never hits it because
+   that preset defaults to being struck.
+
+**Sample-rate correction is mandatory for anything from STK**, and it is easy to
+miss because nothing breaks: every decay constant and filter radius is a raw
+per-sample number tuned at 44.1 kHz, so carried to 48 kHz they are all ~8.8%
+wrong *in the same direction*. Raise to the power 44100/48000; scale event
+probabilities by the same ratio. Frequencies are in Hz and need nothing.
+
+**The 16 KB arena is per-engine, not shared.** `Voice::Init` calls
+`allocator->Free()` before each engine's `Init`, so `banded-waveguide` can take
+10.5 KB of delay lines without costing anything else. This is what makes
+waveguide models affordable at all, and it is worth knowing before rejecting one
+on memory grounds.
+
+### Taxonomy: SETTLED as Rubato Lab
+
+Both are `origin: "Rubato Lab"`, packages under `rubato/`, author
+"Lyle Mills, after Perry R. Cook and Gary P. Scavone", with STK's copyright and
+licence carried unchanged.
+
+Lyle's reasoning, and it is the right cut: nobody in the modular community
+arrives at these with prior expectations, unlike Bees-in-the-Trees and Braids
+Renaissance, which people have used for years and expect to behave a certain
+way. That frees these two to be *adapted* rather than matched -- and once
+adapted they are more Rubato than Community, which resolves the strain instead
+of papering over it. `Community` keeps meaning what the website's copy already
+implies.
+
+Practical rule that falls out: **an engine whose upstream is widely used stays
+Community and stays faithful; an engine whose upstream nobody here has heard of
+becomes Rubato Lab and gets tuned to be played.**
+
+### Still blocked on the same two things
+
+Flash and the hardware CPU probe, exactly as in §5 and §7 — and the website
+catalog sync behind them, since `plaitsFlashBudget.test.ts` reds on any catalog
+engine without a measured cost. These two join the same leave-one-out batch.
+
+
+---
+
+## 9. Adaptations after the rebadge (2026-07-28)
+
+Both STK engines were measured and adjusted rather than left faithful, per §8's
+taxonomy rule.
+
+**shakers -- level-matched.** The instrument selector spanned **46 dB**
+(cabasa +12.7, water drops -33.5 against the mean), because STK expects each
+instrument on its own fader rather than swept under one knob. Per-preset makeup
+gains measured across the shake/decay/object space, clamped to [0.15, 20] so
+the sparsest are lifted as far as their crest factor allows. Worst remaining
+deviation 6.5 dB; thirteen of sixteen inside 0.7 dB. Re-measure and re-bake if
+the resonator normalisation or the energy model ever changes.
+
+**banded-waveguide -- bow noise.** Upstream's bow velocity is perfectly smooth,
+which is the main reason a waveguide bow sounds synthetic. Noise on the
+*velocity* (not the output) modulates the friction curve, so it colours the
+attack rather than sitting on top as hiss.
+
+### brass -- BUILT (2026-07-28). The account below is how, kept because the
+### findings generalise to any waveguide work.
+
+Attempt 5 speaks, tunes and plays. What follows is the failure trail plus the
+six things that fixed it.
+
+Four structured attempts, all measured. Do not start from scratch; start from
+attempt 4, which was close.
+
+1. **Faithful port of STK Brass.** Silent, because upstream is (see §8).
+2. **DC-zeroed bandpass lip + mixing scattering** (`out = area*mouth +
+   (1-area)*bore`). Oscillates, but chaotically and at a frequency independent
+   of the bore -- the mixing form is not a scattering junction and has no
+   mechanism locking it to the delay.
+3. **STK Clarinet's reed-table topology, non-inverting for a brass harmonic
+   series.** A passive-loop diagnostic proved the waveguide itself correct
+   (inverting rings at fs/2L, non-inverting at fs/L). But a non-inverting loop
+   parks on its DC mode, so it needs an in-loop DC blocker -- and *with* the DC
+   blocker the reed table has no oscillation mechanism at all, because the
+   linear loop gain `|refl| * reflect * |lowpass|` is always below 1. It only
+   ever "worked" by ringing up DC.
+4. **Mass-spring lip valve + Bernoulli flow into a DC-blocked non-inverting
+   waveguide.** THIS IS THE RIGHT STRUCTURE. Confirmed by measurement: the
+   oscillation frequency tracks the bore length (MACRO sweep moved the ratio
+   0.89 -> 0.32) and tracks 1V/oct across the keyboard at a constant ratio.
+   The failure is gain staging only -- the window between "does not speak" and
+   "runs away into the clip" was narrower than the grid resolution used.
+
+5. **The junction was wrong in all four.** `p_plus = p_minus + Zc*u` with
+   `p = p_plus + p_minus`, and the VALVE reads the total junction pressure --
+   not the reflected wave. Fixing that alone turned chaos into locking.
+
+**The six findings, all measured, all reusable:**
+
+1. **Junction form** (above). Feeding a valve from the reflected wave decouples
+   the feedback that makes it lock to a bore at all.
+2. **A non-inverting loop needs an in-loop DC blocker.** Settled with a passive
+   probe: inverting rings at fs/2L, non-inverting at fs/L, and non-inverting
+   *without* the blocker rings at 0 Hz. Attempt 3 had only been ringing up DC,
+   which is why adding the blocker looked like it broke a working model.
+3. **A hard nonlinearity destroys mode selection.** Lips slamming shut every
+   cycle generate a full harmonic series and the fundamental wins every time,
+   whatever the lip is tuned to. Opening and stiffening the valve is what lets
+   the lip resonance decide.
+4. **Lock zones are narrow: partial n captures for lip/f_bore in
+   [0.90n, 1.01n].** About 40% of a linear lip sweep is silent, so the control
+   must map to a PARTIAL INDEX and place the lip inside the zone. Zones widen
+   with mouth pressure, so the softest playing sets the safe placement.
+5. **Partial 1 misbehaves** -- always sharp, erratic zone, exactly as a real
+   pedal tone does. Tune the bore an octave down and start at partial 2.
+6. **The lip pulls the pitch sharp by `-4.8 + 67.2/n` cents.** One partial
+   sounds at a time, so null it per partial. Final: mean 6.3 cents, worst 25.8,
+   ~1% cracks over 312 points.
+
+**The harness is committed** at `alt_firmwares/research/brass_lip/` -- the
+model, nine experiments, and a README saying which question each one answers.
+`passive_loop.cc` is the one to run first whenever a self-oscillating model goes
+quiet: it isolates the waveguide from the valve, and it is what settled findings
+1 and 2. `zones.cc` is the one that mattered most -- every control-mapping
+decision came out of its Arnold-tongue table.
+
+**Two more for any future waveguide engine.** The output tap is the MOUTHPIECE,
+not the bell -- the radiated signal is physically correct and slides 30 dB
+across the keyboard, while mouthpiece pressure is flat to 0.7 dB. And **both
+taps must be DC-blocked**: blowing makes a steady flow as well as an
+oscillation, and the unblocked tap measured RMS 27923 against DC 26548. It
+passed the audition and control-response gates, neither of which looks at DC.
+**Consider adding a DC check to the in-tree gates** -- `check --full` catches it
+per scenario, but `plaits_test` does not, and this would have shipped.
+
+---
+
+## 10. First listening pass (2026-07-28) — catalog is 55, not 56
+
+The six from sections 7–9 finally went through a speaker. Three outcomes, plus
+the two blockers that turned out not to be blockers.
+
+### banded-waveguide is CUT. Do not re-add it without a reason to.
+
+Lyle's call, and the numbers back it: it was the most expensive of the six
+(81% of CPU budget, error band running to **104%** — the only one whose band
+crosses the limit) and the least interesting to listen to. Cost is almost
+entirely per-mode — about **53 instructions per mode over ~103 fixed** — and
+HARMONICS selects presets of 4, 4, 5 and 6 modes, so the Prayer bowl is the
+worst case. Capping at 4 modes would have brought it to ~61%, but thinning the
+bowl is the opposite of making it more interesting, and nothing else on offer
+made it both cheaper and better.
+
+Removed from `catalog.json` / `public_catalog.json`, the SDK packages, the
+engine sources, and all three `plaits_test`/`cpu_bench` hooks. **The source is
+in this branch's history** (last present at `1b4bac3`), so re-adding is a
+revert, not a rewrite. Catalog validates at **55**.
+
+Worth keeping from it: the 16 KB arena being per-engine (§8) is still true and
+still what makes any waveguide model affordable.
+
+### shakers — two real defects, both fixed
+
+**It could not be struck.** The engine injected shake energy continuously
+regardless of trigger state — it never tested `TRIGGER_UNPATCHED`, even though
+the comment directly above the line already claimed it did. A patched trigger
+therefore got a drone with a bump on it, and the only way to hear a struck
+shaker was to turn TIMBRE fully down, which also gave up control of how hard it
+was struck. Now gated like every other sustaining engine here
+(`ReedPipeEngine`'s `blowing`): shaking while TRIG is unpatched **or** a patched
+gate is high. Every `triggerHz: 0` scenario renders byte-identical, so the drone
+is untouched. The ratchet instruments change and should — a triggered guiro
+scrapes once per trigger instead of rasping forever.
+
+*Generalises:* a comment asserting a conditional is not evidence the conditional
+exists. This one had been read and believed several times.
+
+**The selector ducked.** The makeup gains had been clamped to an arbitrary
+`[0.15, 20]`, leaving water drops 8.6 dB and little rocks 10.1 dB below the
+rest. **Nothing clamps makeup at runtime** — that ceiling bought nothing. The
+real constraint is *peak headroom*: a high-crest instrument clips before its RMS
+reaches the target. Re-measured against that constraint directly and re-baked:
+worst deviation **10.1 dB → 1.5 dB**, fourteen of sixteen inside 0.31 dB.
+Crunch and big rocks stay ~1.2 dB low deliberately — crest factors near 40 mean
+they are peak-limited, and for a sound that impulsive peak drives loudness more
+than RMS, so matching RMS would make them the loud ones.
+
+Harness committed at `alt_firmwares/research/shakers_levels/` (108 points per
+instrument), so a re-bake after any energy-model change is a re-run.
+
+### brass — still owed a buzz
+
+Accepted as musical, but Lyle's verdict is that it "lacks the buzz of brass",
+and he is right. The cause is structural rather than a bad constant: finding 3
+in §9 is that a *hard* valve nonlinearity destroys partial selection, so the
+valve was deliberately made gentle — and a gentle valve generates few upper
+harmonics. The brightness therefore cannot come from the valve.
+
+Where it should come from instead is **nonlinear wave propagation in the bore**:
+in a real instrument the compression phase travels faster than the rarefaction,
+the wavefront steepens toward a shock, and that is both the physical source of
+brassiness *and* why brass gets brighter the harder it is played. It lives in
+the propagation path, not the valve, so in principle it adds harmonics without
+touching the mode selection that was so hard to win.
+
+Two cautions for whoever picks this up. Implement it as an amplitude-dependent
+propagation *delay* rather than a waveshaper in the loop — a delay modulation
+is a timing effect, so it cannot raise the loop gain and cannot break passivity,
+where an in-loop waveshaper can do both. And re-run `zones.cc` and `signed.cc`
+afterwards regardless: lock zones are only `[0.90n, 1.01n]` wide and the tuning
+was nulled to a measured `-4.8 + 67.2/n` cents, so both are exactly what a new
+nonlinearity would disturb.
+
+### The two "blocked" items from §7–9, re-scoped
+
+**qemu was never blocked here** — `qemu-system-arm` is on PATH via Homebrew and
+`cycles_plugin.so` is already an arm64 Mach-O. The tooling was written for this
+Mac, not for a container. Measured worst case, all six:
+
+| engine | insn/sample | budget |
+|---|---:|---:|
+| bytebeat | 107.0 | 21% |
+| brass | 204.5 | 39% |
+| shakers | 225.5 | 43% |
+| scale-stack | 371.3 | 71% |
+| diatonic-chord | 371.9 | 72% |
+| ~~banded-waveguide~~ | 421.7 | 81% (cut) |
+
+**Flash is blocked on something else entirely.** Not the toolchain — `GET
+/v1/catalog` returns `approvedEngineIds`, the builder rejects anything outside
+it, and all six were absent. A not-yet-deployed engine's flash cost is
+unmeasurable by construction, so the order is: roll the builder image → sweep →
+extend `engineFlashBytes` → sync the catalog.
+
+Two corrections to §7–9 while doing this: the **eleven Braids engines are
+already measured** (all 40 catalog engines have costs and
+`plaitsFlashBudget.test.ts` is green), so the remaining job is the new engines
+only — about **8 builds**, not 110. And the sweep harness, which §5 assumed
+existed somewhere, was living in a session scratchpad under `/private/tmp`; it
+is now committed at `website/scripts/plaits-flash-sweep/` in the rubato-audio
+repo.
+
+### The DC check from §9 is in
+
+`plaits_test` now measures the mean of both taps across each audition render and
+fails above 0.2, matching what `plaits_lab.py` already applied to packaged
+engines. All 27 remaining audition engines pass; the largest is saw-comb at
++0.126, then ring-mod and csaw at +0.058, and brass sits at +0.003. It reports
+every offender before aborting rather than stopping at the first.

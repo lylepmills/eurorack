@@ -1,0 +1,67 @@
+[
+  {
+    "id": "hero",
+    "name": "Chord shapes sweeping through the waveform axis",
+    "durationSeconds": 4,
+    "note": 48,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.0, 0.7],
+      "timbre": [0.2, 0.5],
+      "morph": [0.0, 0.85],
+      "macro": [0.0, 0.0]
+    }
+  },
+  {
+    "id": "diatonic",
+    "name": "One chord shape held while the played note walks the scale",
+    "durationSeconds": 4,
+    "note": 48,
+    "triggerHz": 1,
+    "controls": {
+      "harmonics": [0.28, 0.28],
+      "timbre": [0.3, 0.3],
+      "morph": [0.15, 0.15],
+      "macro": [0.0, 0.0]
+    }
+  },
+  {
+    "id": "scales",
+    "name": "The same seventh chord through all eight scales",
+    "durationSeconds": 4,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.16, 0.16],
+      "timbre": [0.25, 0.25],
+      "morph": [0.3, 0.3],
+      "macro": [0.0, 1.0]
+    }
+  },
+  {
+    "id": "fold",
+    "name": "The sine-region fold, where the lut_sine wrap has to hold",
+    "durationSeconds": 3,
+    "note": 40,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.35, 0.35],
+      "timbre": [0.0, 1.0],
+      "morph": [0.02, 0.02],
+      "macro": [0.25, 0.25]
+    }
+  },
+  {
+    "id": "top-of-range",
+    "name": "A wide extension high up, where voices leave the audible range",
+    "durationSeconds": 3,
+    "note": 84,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.6, 0.99],
+      "timbre": [0.4, 0.4],
+      "morph": [0.75, 0.75],
+      "macro": [0.75, 0.75]
+    }
+  }
+]
