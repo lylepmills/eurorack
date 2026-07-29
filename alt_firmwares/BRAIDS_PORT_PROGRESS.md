@@ -9,6 +9,15 @@ spec; where the two conflict, this file is the one with numbers behind it.**
 
 Branch: `claude/braids-engines-plaits-palette-je03ac` (both repos).
 
+**This file is MIRRORED — edit both copies in the same change.** It lives at
+`eurorack:alt_firmwares/BRAIDS_PORT_PROGRESS.md` and at
+`rubato-audio:BRAIDS_PORT_PROGRESS.md`, because the work spans both repos and
+either side needs the whole picture. Nothing enforces the mirror, so it drifts
+silently: on 2026-07-28 the two had diverged in OPPOSITE directions — one repo's
+session closed open item 1 in its copy, another closed item 3 in the other, and
+each copy still listed the other's item as open. If you close an item, close it
+in both; `diff` the two before trusting either.
+
 ---
 
 ## 1. Status
