@@ -2021,7 +2021,7 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Vocal",
-      "description": "Five very narrow filters sweeping five vowels across five vocal registers, with the formant balance the stock model leaves flat.",
+      "description": "Five very narrow filters sweeping five vowels across five vocal registers, with the formant balance Braids leaves flat. The ancestor of Speech's naive mode, on the same vowel and register grid, carried here at finer resolution.",
       "tags": [
         "braids",
         "formant",
@@ -2039,8 +2039,8 @@
         "Upper-formant weighting"
       ],
       "version": "1.0.0",
-      "digest": "sha256:eed70e864ce748413562e4460c563674b26782b18df9e4e0938e1d34aab08553",
-      "documentationDigest": "sha256:c6bb521ba1dcecf6cd7fe3158fae1f7b9288886732d0a3686549530bf7db5f7e",
+      "digest": "sha256:a57b71cff7b2e57ff85df8f452bcbc9a442752b40bcc4c58a9c011d36d55a127",
+      "documentationDigest": "sha256:abbbbc4ebe6cc475dbe6849e67a43d2dc94dcd008285a508eb21d07d653af53c",
       "manual": {
         "controls": {
           "harmonics": "Tilts the excitation from a dark buzz to a bright breathy hiss.",
@@ -2061,7 +2061,7 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "FM",
-      "description": "Braids' three FM models on one axis: self-feedback, plain two-operator FM, and chaotic frequency feedback, unfiltered and unoversampled.",
+      "description": "Braids' three FM models on one axis: self-feedback, plain two-operator FM, and chaotic frequency feedback. The ancestor of Two-op FM, sharing its ratio quantizer and feedback axis, but run raw: no oversampling, and free to alias.",
       "tags": [
         "braids",
         "fm",
@@ -2079,8 +2079,8 @@
         "Modulator"
       ],
       "version": "1.0.0",
-      "digest": "sha256:9add27f51fe1d0d57d692e80710f6a0870283b21041beb8b09c5bf56f485cdc5",
-      "documentationDigest": "sha256:9a85bb18834f4d7ba13311c07e67d1dc493f786d5b78622330827c9032d728a4",
+      "digest": "sha256:0636df95ccf5a557156537707310a59de5546b68e014ba73640e8082f15da763",
+      "documentationDigest": "sha256:431d4f7c5a7578a5e3f19af51ff5f962e7e6c03c8214e2fec9c3b41c9f7c7234",
       "manual": {
         "controls": {
           "harmonics": "Steps the modulator ratio through the tuned intervals.",
@@ -2101,7 +2101,7 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Polyphonic",
-      "description": "Three oscillators with two continuously swept interval knobs, morphing together through square, saw, triangle and sine.",
+      "description": "Three oscillators with two continuously swept interval knobs, morphing together through square, saw, triangle and sine. It overlaps Chords and Swarm in territory, not lineage: intervals you sweep rather than a table you author.",
       "tags": [
         "braids",
         "detune",
@@ -2119,8 +2119,8 @@
         "Undetuned root voice"
       ],
       "version": "1.0.0",
-      "digest": "sha256:02cd8b2002acff98d98141d6eeaee385cd84fb7d03f3b3df9fefbbff6feb0f09",
-      "documentationDigest": "sha256:aa32b300d63abf627ac7324a7dfb7aeca8da416a6b7c752cdba1d713536e4f71",
+      "digest": "sha256:0e8589137601f6a2fcbbab010e096ab335e5b212420a836136074c4dc5220379",
+      "documentationDigest": "sha256:8371f41177fbeea11c33b6ca6be4de2d8386e3e8b646eed6a2526ba4987de1c6",
       "manual": {
         "controls": {
           "harmonics": "Spreads the second voice through closely spaced and musical intervals.",
