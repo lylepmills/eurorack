@@ -136,13 +136,13 @@ the useful proof case because it combines all three built-in DX banks with all
 four Rubato engines, which the former stock/experimental compile switch could
 not express.
 
-Verified mixed-recipe output at source revision `0c0c0f3ef835`:
+Verified mixed-recipe output at source revision `199eeaf14147`:
 
-- ARM text: 201,600 bytes
+- ARM text: 201,744 bytes
 - ARM data: 48 bytes
 - BSS: 27,840 bytes
-- Binary SHA-256: `32b14a031c5c9bb0e6a4cecefae84cfde35e8373c79b1ce7b03df967adab0028`
-- WAV SHA-256: `dddddb7f1400b8733a5c76f6a579c2c99eaf6b8568445650b944a97e8c1e3eed`
+- Binary SHA-256: `da9b46309dd179e3f41ea70df3216b88d91959e199cfe91e7bba3a640f5a71c0`
+- WAV SHA-256: `fa632d5369695478cff74b37ba228d2b32fa262b40992a567bbdb5825bf7b929`
 
 Measured by submitting `mixed_build_request.json` to the image under test. The
 same request gave 201,344 / 48 / 27,824 at `720d1406e87b` (binary `695eb862…`,
@@ -211,7 +211,7 @@ system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-0c0c0f3ef835` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-199eeaf14147` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a
 new image, wait for `wrangler containers list` to report `ready` before smoke
@@ -252,6 +252,7 @@ target.
 | July 28, 2026 (AUX rework allowlist regen) | `2782e70be79c` | `rev-2782e70be79c` |
 | July 29, 2026 (schema 14, optional calibration procedure, manual contract 7) | `9e04ca2bf0d5` | `rev-9e04ca2bf0d5` |
 | July 29, 2026 (complete Braids inventory, corrected A/B and hardware validation) | `0c0c0f3ef835` | `rev-0c0c0f3ef835` |
+| July 29, 2026 (Wave Paraphonic chord-table compatibility) | `199eeaf14147` | `rev-199eeaf14147` |
 
 Three consequences a rollback has that a forward deploy does not:
 
