@@ -18,9 +18,12 @@ ramp and a 0.05 one-pole on the feedback path; this runs none of them at
 48 kHz. That rawness is the reason to keep it *next to* `two-op-fm` rather
 than instead of it.
 
-One deviation: Braids centres WTFM's frequency feedback on 129/256 = 0.504,
-which slides the modulator a full octave across a knob sold purely as
-topology. The port centres the same feedback on 1.0, so the pitch is
-continuous.
+Braids centres WTFM's frequency feedback on 129/256 = 0.504, so its modulator
+slides an octave down as MORPH crosses into the chaotic region. The port keeps
+that centre — it ramps in with the feedback, so plain FM at noon is unaffected
+and MORPH 1 is the module — because the octave is part of the WTFM sound
+rather than an artefact to design out. The move is named on the MORPH control
+instead. Measured against the module, the six CHAOTIC_FEEDBACK_FM A/B cases
+agree to 0.03–0.10 dB (`tests/ab.json`).
 
 Both copyright lines are carried in `LICENSE` and in each source file.

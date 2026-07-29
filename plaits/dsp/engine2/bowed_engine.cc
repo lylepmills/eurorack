@@ -161,8 +161,9 @@ void BowedEngine::Render(
   // MORPH opens the nut reflection Braids welds to -1.0.
   const float nut_gain = 0.55f + 0.45f * parameters.morph;
 
-  // MACRO moves the body pole +-1 octave. At the detent the offset is zero
-  // and every coefficient reduces to Braids'.
+  // MACRO moves the body pole +-1 octave. At the detent the offset is zero,
+  // and the coefficients reduce to Braids' to within the 0.94% error in
+  // kBowedStockTheta itself -- see the header.
   const float body_offset = ApplyMacro(0.0f, -12.0f, 12.0f, parameters.macro);
   const float theta = kBowedStockTheta * SemitonesToRatio(body_offset);
   // cos(theta) without libm: Sine(x + 0.25) is cos(2*pi*x), and theta is far

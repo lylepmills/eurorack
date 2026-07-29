@@ -1,0 +1,116 @@
+{
+  "shape": "TRIPLE_RING_MOD",
+  "note": "Braids reads BOTH detunes off its two knobs and nothing else: digital_oscillator.cc:136-141 builds modulator 1's increment from parameter_[0] (TIMBRE, --p1) and modulator 2's from parameter_[1] (COLOR, --p2), each as `pitch_ + ((parameter_ - 16384) >> 2)` in 1/128-semitone units, so each axis is +-32 semitones of detune. The port puts modulator 1 on HARMONICS and modulator 2 on TIMBRE (ring_mod_engine.cc:116-117), which is why every case sets engine.harmonics from braids.p1 and engine.timbre from braids.p2. MACRO sits at 0.5 in every case because ApplyMacro(1.0, 0.5, 4.0, 0.5) returns drive 1.0, which is Braids' shaper exactly. MORPH sits at 1.0, NOT 0.5: MORPH is the port's depth fade (`m = 1 + morph * (sine - 1)`, ring_mod_engine.cc:156-157) and only morph 1.0 reduces it to Braids' bare `carrier * sine * sine`. MORPH has no detent (SPEC 2), so its Braids-equivalent position is its top, not its middle -- measured, a morph-0.5 case renders 5.21 dB of spectral difference and -1.08 dB of level against the module, so leaving it at noon would compare a sound Braids cannot make. Note the model is SYMMETRIC in its two modulators: OUT is carrier*m1*m2, so exchanging the two detunes leaves OUT bit-identical, and detune1-min/detune2-min and detune1-max/detune2-max come out numerically equal. A p1/p2 swap is therefore unobservable in OUT whatever is swept, so the mapping above rests on reading the source; both axes are still swept to both ends because an axis dropped, held constant or scaled wrongly IS observable. Every case uses triggerHz 0 deliberately: RenderTripleRingMod ignores strike_ entirely and only the sync input resets its phases (digital_oscillator.cc:145-149), while the port maps Plaits' TRIGGER_RISING_EDGE onto that sync, so a retriggered A/B would compare a phase reset against no phase reset.",
+  "cases": [
+    {
+      "id": "stock",
+      "name": "Both knobs centred",
+      "why": "The quantisation case. At knob centre `parameter_ - 16384` is -1, not 0, and the arithmetic >> 2 floors that to -1 rather than truncating toward zero, so both modulators sit 1/128 semitone FLAT of the carrier and the three oscillators beat with a ~20 s period instead of phase-locking into a static waveform. A port using a smooth float detune would render a dead-still tone here. Cents is declared at 2.0 rather than 1.0: with all three partials inside 0.8 cents of each other the output is a slow beat rather than a strictly periodic wave, and ab_compare's autocorrelation peak wanders about a cent as the beat evolves through its 0.25 s window.",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"harmonics": 0.5, "timbre": 0.5, "morph": 1.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.3, "cents": 2.0, "spectrumDb": 0.5}
+    },
+    {
+      "id": "detune1-min",
+      "name": "Modulator 1 32 semitones down",
+      "why": "p1 = 0 is the bottom of Braids' first detune axis: (0 - 16384) >> 2 = -4096, i.e. -32.000 semitones, putting modulator 1 at note 13 (17.3 Hz, measured off ComputePhaseIncrement). The result is a sub-audio double-sideband AM of the carrier. No cents tolerance, and the reason is measured rather than assumed: neither side reports the 110 Hz carrier at all. DSB-SC has no energy at the carrier, so ab_compare's autocorrelation locks to the |carrier| rate instead and both sides report ~222 Hz -- reference 222.007 Hz, port 222.935 Hz, +7.2 cents raw. At a 216-sample lag one whole-sample step is already ~8 cents, so what is left after the 4.61-cent kCorrectedSampleRate constant (+2.6 cents) is lag quantisation on a partial nobody plays, not a pitch error.",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.0, "p2": 0.5},
+      "engine": {"harmonics": 0.0, "timbre": 0.5, "morph": 1.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.3, "spectrumDb": 0.5}
+    },
+    {
+      "id": "detune1-max",
+      "name": "Modulator 1 32 semitones up",
+      "why": "p1 = 1 gives (32767 - 16384) >> 2 = 4095, i.e. +31.992 semitones, putting modulator 1 at note 76.99 (698 Hz) against a 110 Hz carrier. The sidebands are well clear of the carrier and the f0 estimator tracks them cleanly, so this is one of the four cases carrying a 1-cent tolerance; together they are the R5 rate check that the 2x inner loop really is running at Braids' 96 kHz.",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 1.0, "p2": 0.5},
+      "engine": {"harmonics": 1.0, "timbre": 0.5, "morph": 1.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.3, "cents": 1.0, "spectrumDb": 0.5}
+    },
+    {
+      "id": "detune2-min",
+      "name": "Modulator 2 32 semitones down",
+      "why": "The bottom of Braids' COLOR axis. Renders bit-identically to detune1-min because carrier*m1*m2 is symmetric under exchange of the modulators; it is here so the COLOR axis is swept rather than assumed. Cents omitted for the same measured reason as detune1-min: both sides report ~222 Hz, the |carrier| rate, not the carrier.",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.0},
+      "engine": {"harmonics": 0.5, "timbre": 0.0, "morph": 1.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.3, "spectrumDb": 0.5}
+    },
+    {
+      "id": "detune2-max",
+      "name": "Modulator 2 32 semitones up",
+      "why": "The top of Braids' COLOR axis, and the mirror of detune1-max.",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 1.0},
+      "engine": {"harmonics": 0.5, "timbre": 1.0, "morph": 1.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.3, "cents": 1.0, "spectrumDb": 0.5}
+    },
+    {
+      "id": "both-min",
+      "name": "Both modulators at the floor",
+      "why": "Two sub-audio modulators multiplying one carrier -- the deepest tremolo the module reaches, both at note 13 (17.3 Hz). Cents omitted, measured: this signal has no periodicity ab_compare can resolve, and BOTH sides rail at the estimator's min_lag, reporting exactly f_max = 2000.0 Hz. The 0.0-cent raw delta that produces is an artefact of both sides hitting the same wall -- the corrected figure the harness prints is then the -4.61-cent kCorrectedSampleRate constant on its own -- so the metric carries no information here and no tolerance is declared on it.",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.0, "p2": 0.0},
+      "engine": {"harmonics": 0.0, "timbre": 0.0, "morph": 1.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.3, "spectrumDb": 0.5}
+    },
+    {
+      "id": "both-max",
+      "name": "Both modulators at the ceiling",
+      "why": "Both modulators at note 76.99 against a note-45 carrier: the densest sideband cluster the module reaches without hitting the increment clamp, and the widest spectrum at this pitch.",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 1.0, "p2": 1.0},
+      "engine": {"harmonics": 1.0, "timbre": 1.0, "morph": 1.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.3, "cents": 1.0, "spectrumDb": 0.5}
+    },
+    {
+      "id": "spread",
+      "name": "One modulator at each extreme",
+      "why": "Opposite ends of the two axes at once. A port that read both detunes off a single parameter would collapse this onto both-min or both-max and fail here, which is the one mis-mapping the modulators' symmetry does not hide.",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.0, "p2": 1.0},
+      "engine": {"harmonics": 0.0, "timbre": 1.0, "morph": 1.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.3, "cents": 1.0, "spectrumDb": 0.5}
+    },
+    {
+      "id": "quarters",
+      "name": "Off-centre knobs, low carrier",
+      "why": "Quarter and three-quarter positions exercise the >> 2 floor away from the ends: p1 = 0.25 gives (8191 - 16384) >> 2 = -2049 (-16.008 semitones, where an un-floored divide would give -2048), p2 = 0.75 gives +2047 (+15.992). Cents omitted -- the two modulators are 32 semitones apart and neither is harmonically related to a note-36 carrier, so ab_compare has no carrier periodicity to lock to; measured, both sides rail at the estimator's min_lag and report exactly f_max = 2000.0 Hz, as in both-min.",
+      "seconds": 3,
+      "note": 36,
+      "braids": {"p1": 0.25, "p2": 0.75},
+      "engine": {"harmonics": 0.25, "timbre": 0.75, "morph": 1.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.3, "spectrumDb": 0.5}
+    },
+    {
+      "id": "high-fold",
+      "name": "Sum product above Nyquist, no clamp",
+      "why": "Note 96 plus the maximum +31.992 semitones puts both modulators at MIDI 127.992 -- exactly one 1/128-semitone step below ComputePhaseIncrement's kPitchTableStart ceiling, so nothing is clamped on either side and this case isolates the decimator. Carrier plus both modulators sums to 28.7 kHz, above the port's 24 kHz Nyquist: Braids simply emits it at 96 kHz, the reference's 127-tap decimator removes it, and the port's 15-tap halfband folds a residue back to 19.3 kHz. spectrumDb is 1.0 rather than 0.5 for exactly that, and --bands confirms the excess is confined to the top two bands (+6.8 dB at 10-20 kHz, +3.4 dB at 20.5-24 kHz) while the band carrying the fundamental reads -0.06 dB. Cents omitted: the carrier is 2093 Hz, above ab_compare's 2000 Hz f_max, so the estimator cannot report it at all.",
+      "seconds": 2,
+      "note": 96,
+      "braids": {"p1": 1.0, "p2": 1.0},
+      "engine": {"harmonics": 1.0, "timbre": 1.0, "morph": 1.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.3, "spectrumDb": 1.0}
+    },
+    {
+      "id": "clamp",
+      "name": "Both modulators against the increment ceiling",
+      "why": "Note 108 plus full detune asks for MIDI 139.99; ComputePhaseIncrement clamps to kPitchTableStart - 1 = MIDI 127.992 (digital_oscillator.cc:52-54) while the port clamps to kRingModMaxPitch = 128.0, so the port's two modulators run 0.78 cents high. This is the only case that reaches that ceiling. It is also the case with the most content above Nyquist -- 31% of the reference's energy sits in the 20.5-24 kHz band -- so it measures the two decimators' transition regions as much as it measures the model. Both tolerances are the loosest here for those two reasons together: acRmsDb 0.8 against a measured -0.51 dB, spectrumDb 1.5 against a measured 1.24 dB. Attributing them: the ceiling on its own (note 108, p1 1.0 / p2 0.0, whose products stay under Nyquist) costs -0.22 dB and 0.38 dB, and the fold on its own (high-fold, nothing clamped) costs 0.62 dB. Cents omitted: 4186 Hz carrier, again above f_max.",
+      "seconds": 2,
+      "note": 108,
+      "braids": {"p1": 1.0, "p2": 1.0},
+      "engine": {"harmonics": 1.0, "timbre": 1.0, "morph": 1.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.8, "spectrumDb": 1.5}
+    }
+  ]
+}

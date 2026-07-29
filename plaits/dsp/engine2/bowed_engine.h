@@ -28,15 +28,22 @@
 // own copy of the body filter -- a genuine pair of pickup positions at matched
 // gain, which the exciter would not be. Only one branch runs per block, so the
 // split costs no CPU; the stereo path is the more expensive of the two and
-// therefore still sets the engine's peak.
+// therefore still sets the engine's peak. NOTE the package manifest and the
+// catalog both describe AUX as the neck pickup unconditionally, which is only
+// the STEREO branch; EngineParameters::stereo defaults false and voice.cc:194
+// is the only thing that raises it, so a mono patch gets the exciter. Both
+// records feed a shipped digest, so the mismatch is reported, not corrected.
 //
 // MEMORY: the delay lines are int8 exactly as in Braids -- 1024 + 4096 = 5 KB
 // of the 16 KB arena. Braids quantizes every write to int8 anyway (R8 keeps
 // that, it is audibly part of the model), so storing float would spend 4x the
 // memory to hold values that have already been rounded. Keeping Braids' own
-// lengths means the octave-fold floor is Braids' 11.4 Hz, NOT the 17.2 Hz a
-// float line halved to fit the arena would give -- so the residual fidelity
-// gap the spec raised as an open question does not arise.
+// lengths keeps Braids' own octave-fold floor: 11.44 Hz at HARMONICS 0, 12.64
+// at HARMONICS 1, and a minimum of 9.38 Hz at parameter_1 = 51 where the neck
+// and bridge overflow thresholds cross. Float lines halved to fit the arena
+// (512 + 2048, 10 KB) would put that floor at 22.9 Hz at HARMONICS 0 and no
+// lower than 18.8 Hz anywhere -- so the residual fidelity gap the spec raised
+// as an open question does not arise.
 //
 // Declared deviations from Braids:
 //   - int8 writes FLOOR and SATURATE (R8). Braids floors and WRAPS; wrap
@@ -45,13 +52,32 @@
 //   - lut_bowing_friction (2,018 B) is replaced by min(1, 1/(d+0.75)^4),
 //     which is the curve the table holds: exact at both ends (32768 at d=0,
 //     64 at d=4). Flash, not speed -- a table lookup is not slower here.
+//     Braids' table is that curve FLOORED to integers, so this closed form
+//     reads up to one LSB high, worst +1.48% relative at index 253 where the
+//     entry is 66 and the exact value 66.97. Rebuilding this file with the
+//     floor restored moves every point of the 36-point note x COLOR x TIMBRE
+//     grid below by less than 0.06 dB, so it is a real but inaudible
+//     quantisation loss, not the one that matters (see KNOWN DEFECT).
 //   - lut_bowing_envelope (1,504 B) is replaced by three line segments. The
 //     table's 600-step rise is linear to under one LSB and its tail is
-//     constant; the 120-step decay between them is within 0.15%.
+//     constant; the 120-step decay between them is within 0.17% (measured:
+//     0.978 LSB worst on the rise, and 10.8 LSB of 6553 at BOTH ends of the
+//     decay -- the segment spans 599..720 where the table decays 600..719,
+//     so it runs low at the start and high at the finish).
 //   - the bridge tap is CLAMPED rather than allowed to go degenerate. In
 //     Braids a bridge delay under one sample wraps the modulo and reads
-//     1024 samples back instead; from about MIDI 85 upward at HARMONICS 0
+//     1024 samples back instead; from MIDI 84.5 upward at HARMONICS 0
 //     that is what the model actually does, and it is not worth reproducing.
+//     Note the clamp floor is TWO samples, not one, so it engages from
+//     MIDI 72.9 upward at HARMONICS 0 -- a full octave below the point Braids
+//     goes degenerate, and over that octave Braids' tap is a perfectly valid
+//     1..2 samples that the port lengthens. It is applied AFTER neck_delay
+//     has been taken from delay (bowed_engine.cc:142-146), so it lengthens
+//     the whole loop rather than moving the tap within it, and the note runs
+//     FLAT over that octave: 0.4 cents at MIDI 73, 36.3 cents at MIDI 84.
+//     The A/B corner is dead on both sides (-61 dBFS against -40), so nothing
+//     audible turns on it, but the deviation is wider than "where Braids goes
+//     degenerate" implies.
 //   - the output stage is re-derived. Braids' `(out + previous) >> 1` then
 //     `out` is a 2x linear-interpolating UPSAMPLER writing 96 kHz, not a
 //     filter; its baseband effect is -1.4 dB at 12 kHz. Re-implementing it
@@ -63,13 +89,50 @@
 //     about -15 dBFS and the palette expects near-full-scale engines.
 //
 // ON MATCHING THIS ONE AGAINST HARDWARE: bowed is a nonlinear self-oscillator,
-// not an oscillator. The port renders about 8 cents sharp -- the standard
+// not an oscillator. The port renders 4.61 cents sharp -- the standard
 // kCorrectedSampleRate offset every engine here carries -- and at MIDI 45 that
-// is half a percent of a 434-sample loop. In a stick-slip feedback system that
-// is enough to settle into a DIFFERENT limit cycle, so third-octave spectra
-// land 3-5 dB apart even when every coefficient agrees. Pitch, level and
-// gross spectral tilt track; sample- or bin-level agreement is not a
-// meaningful target for this engine and chasing it will mislead.
+// is a quarter of a percent of a 434-sample loop. In a stick-slip feedback
+// system that is enough to settle into a neighbouring limit cycle, so
+// sample- or bin-level agreement is not a meaningful target for this engine.
+//
+// It is now measured rather than asserted: tests/ab.json in the package runs
+// sixteen cases through ab_engine.py, sweeping both ends of both Braids axes,
+// four notes, a re-strike, and the octave fold. Where the model agrees, it
+// agrees more closely than this comment used to claim -- pitch inside
+// +-2 cents after the kCorrectedSampleRate correction (not 8), and
+// octave-band spectra 0.22 to 3.19 dB apart (not 3-5), with level running
+// +4.10 dB at stock, which is the declared 1.6x make-up almost exactly. Nine
+// cases agree, SIX FAIL on the defect below, and high-bridge-clamp declares no
+// tolerance because both sides are dead there.
+//
+// KNOWN DEFECT, NOT A DECLARED DEVIATION (found by that A/B, 2026-07; left
+// unfixed pending a decision, because a fix moves the package digest).
+// Braids' fractional-delay read is `Mix(a, b, frac) << 8`
+// (digital_oscillator.cc:1247), and stmlib::Mix (stmlib/utils/dsp.h:86)
+// returns an int16 -- so the interpolation between the two delay-line taps is
+// QUANTISED to whole int8 counts, 1/128 of full scale, before the shift. This
+// port interpolates in float (bowed_engine.cc:190). That truncation is a loss
+// term inside the feedback loop, and it is what lets Braids' bow SLIP.
+//
+// SCOPE, measured -- and wider than "the low-TIMBRE end". Braids is BISTABLE
+// along TIMBRE rather than uniformly quiet at the light-bow end: at note 45,
+// COLOR 0.5 it renders -44.1 / -18.4 / -41.3 / -19.1 / -18.0 / -15.1 / -13.2 /
+// -10.3 dBFS at TIMBRE 0 / .1 / .2 / .3 / .4 / .5 / .7 / 1, collapsing in
+// bands (TIMBRE 0 to .075 and .175 to .225) and bowing normally between them.
+// The port is flat across that axis, -14.2 to -7.5 dBFS, so it misses every
+// collapse. It also misses collapses at MID and HIGH bow force elsewhere on
+// the grid: over 36 points (notes 24/45/60 x COLOR 0/.5/1 x TIMBRE
+// .25/.4/.5/.75) the port breaks the A/B's 5 dB tolerance at 13 of them, worst
+// at note 24 / TIMBRE 0.5 / COLOR 0.0, where Braids slips to -49.1 dBFS and
+// the port sustains -11.9 (+37.2 dB).
+//
+// ISOLATION. Rebuilding THIS FILE with only the Mix truncation restored (the
+// exact integer `(a*(65535-bal) + b*bal) >> 16`) moves note 45 / TIMBRE 0 from
+// -14.21 to -39.96 dBFS against Braids' -44.08, and brings all 36 grid points
+// into -2.8 to +5.5 dB, i.e. back inside the declared 1.6x make-up. Rebuilding
+// it with Braids' int8 WRAP instead of saturation, or with the friction curve
+// floored to Braids' integer table, moves every one of those points by less
+// than 0.06 dB. The truncation is the whole of it.
 
 #ifndef PLAITS_DSP_ENGINE2_BOWED_ENGINE_H_
 #define PLAITS_DSP_ENGINE2_BOWED_ENGINE_H_
@@ -89,7 +152,11 @@ const float kBowedBridgeLpGain = 14008.0f / 32768.0f;
 const float kBowedBridgeLpPole = 18022.0f / 32768.0f;
 
 // Body biquad: r = sqrt(2959/4096), a1 = 6948/4096 = 2*r*cos(theta),
-// gain 6553/32768. theta = 0.06578 rad, about 502 Hz at 48 kHz.
+// gain 6553/32768. Braids' own pole angle is acos(a1 / 2r) = 0.0651607 rad,
+// which is 497.8 Hz at 48 kHz -- the constant below is 0.94% high, putting the
+// stock pole at 502.5 Hz and a1 at 1.696221 against Braids' 1.696289. On a
+// pole of radius 0.85, a resonance over 2 kHz wide, that is inaudible; but the
+// detent therefore does NOT reduce the biquad to Braids' coefficients exactly.
 const float kBowedBodyGain = 6553.0f / 32768.0f;
 const float kBowedBodyRadius = 0.849949f;
 const float kBowedStockTheta = 0.0657752f;

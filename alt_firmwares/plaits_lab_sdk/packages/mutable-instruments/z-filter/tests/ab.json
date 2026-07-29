@@ -1,0 +1,312 @@
+{
+  "shape": "DIGITAL_FILTER_LP",
+  "note": "PARAMETER MAP. Braids' RenderDigitalFilter (braids/digital_oscillator.cc:328-408) has two knobs and four shapes, and this engine merges all four into one slot, so every case names its own shape. parameter_[0] -- TIMBRE -- appears exactly once, at :332, as the resonator cutoff: shifted_pitch = pitch_ + ((parameter_[0] - 2048) >> 1), i.e. eight semitones below the note up to 119.99 semitones above it, clamped to 16383 at :333. It maps to the engine's TIMBRE. parameter_[1] -- COLOR -- appears twice: at :378 it picks the burst window (saw below 16384, triangle at or above it) and at :400 it becomes a triangle-shaped balance between the windowed resonator and the pulse train, peaking at the knob's centre. BOTH are the engine's MORPH, so MORPH is swept to 0, 0.25, 0.5, 0.75 and 1 at a fixed cutoff; the two quarter cases carry the SAME balance and differ only by the window, which is what separates a correct MORPH from one that only drives the mix. HARMONICS is not a Braids axis -- it picks which of the four shapes is rendered, so it sits at a quantiser bin centre (0.125 LP, 0.375 PK, 0.625 BP, 0.875 HP; HysteresisQuantizer2(4, 0.05, false) quantises on floor(4*harmonics)). MACRO is the only axis the port adds; it is 0.5 everywhere but in macro-below-noon, because ApplyMacro(1.0, 1.0, 4.0, macro) returns the stock exponent 1 at noon and the window is then Braids' unbent ramp. triggerHz is 0 in every case on purpose: RenderDigitalFilter ignores strike_ and reads only the sync buffer, which render_braids_model never raises, so a triggered case would compare a port that reset its state against a reference that did not. TOLERANCES. Cases with no integrator in the signal path measure within 0.08 dB and are held at 0.5 dB. Cases at the top of TIMBRE are held at 2.0 dB: the port decimates 96 kHz to 48 kHz with a 3-tap [0.25, 0.5, 0.25] filter whose amplitude response is cos^2(pi*f/96000), which is -1.70 dB at the 13.28 kHz the cutoff clamp puts the modulator at, while render_braids_model uses a 127-tap sinc that is flat there; BP and HP measure -1.67 dB in that corner with their spectra flat to 0.38 dB, which is that number and nothing else. cents is 1.5 rather than 1.0 because the material is a re-triggered burst rather than a steady tone and ab_compare's autocorrelation jitters by a few tenths on both sides; the R5 rate errors the metric exists to catch are tens of cents. cents is omitted wherever the modulator is at or near the clamp, because the output there is a 13 kHz burst train and the 20-2000 Hz estimator returns nonsense on both sides. THE TWO CORNER CASES FAIL ON PURPOSE. lp-integrator-corner and pk-integrator-corner are held to the ~1 dB / ~1.5 dB house target and do not meet it; they are the reproducible statement of a defect in the LP/PK integrator, not a tolerance to widen. bp-integrator-control is the same note, cutoff and MORPH on a model that has no integrator, and it passes at -1.67 dB, which is what proves the corner cases are not the decimator.",
+  "cases": [
+    {
+      "id": "lp-stock",
+      "name": "LP, mid cutoff, balance at its peak",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.125, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.5, "cents": 1.5, "spectrumDb": 1.0}
+    },
+    {
+      "id": "lp-cutoff-min",
+      "name": "LP, cutoff at the floor (eight semitones below the note)",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.0, "p2": 0.35},
+      "engine": {"timbre": 0.0, "harmonics": 0.125, "morph": 0.35, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.5, "cents": 1.5, "spectrumDb": 1.0}
+    },
+    {
+      "id": "lp-cutoff-max",
+      "name": "LP, cutoff at the ceiling",
+      "note-why": "Both sides clamp -- Braids pins shifted_pitch at 16383 (digital_oscillator.cc:333), the port at kZFilterMaxPitch -- so the modulator sits at 13.28 kHz. Reads -1.72 dB, of which -1.6 dB is the 3-tap decimator (BP and HP read -1.61 and -1.52 at the same setting) and the remainder is the LP/PK integrator difference that lp-integrator-corner isolates.",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 1.0, "p2": 0.35},
+      "engine": {"timbre": 1.0, "harmonics": 0.125, "morph": 0.35, "macro": 0.5},
+      "tolerance": {"acRmsDb": 2.0, "spectrumDb": 1.0}
+    },
+    {
+      "id": "lp-cutoff-sweep",
+      "name": "LP, cutoff swept across most of its range",
+      "note-why": "Exercises the increment glide. Braids ramps modulator_phase_increment to its target over one block (:344) and the port over one ParameterInterpolator span; plaits::kBlockSize is 12 output samples, which is 24 sub-samples, which is exactly Braids' block of 24 at 96 kHz, so the two ramps coincide. cents is omitted because the pitch is moving throughout.",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": [0.0, 0.8], "p2": 0.4},
+      "engine": {"timbre": [0.0, 0.8], "harmonics": 0.125, "morph": 0.4, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.5, "spectrumDb": 1.0}
+    },
+    {
+      "id": "lp-color-min",
+      "name": "LP, colour at zero (windowed resonator alone, saw window)",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.0},
+      "engine": {"timbre": 0.5, "harmonics": 0.125, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.5, "cents": 1.5, "spectrumDb": 1.0}
+    },
+    {
+      "id": "lp-color-quarter",
+      "name": "LP, colour at a quarter (half balance, saw window)",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.25},
+      "engine": {"timbre": 0.5, "harmonics": 0.125, "morph": 0.25, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.5, "cents": 1.5, "spectrumDb": 1.0}
+    },
+    {
+      "id": "lp-color-three-quarter",
+      "name": "LP, colour at three quarters (same balance, triangle window)",
+      "note-why": "The mirror of lp-color-quarter: :400 gives the two the same balance and :378 gives them different windows, so a MORPH that drove only the mix would render them identically.",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.75},
+      "engine": {"timbre": 0.5, "harmonics": 0.125, "morph": 0.75, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.5, "cents": 1.5, "spectrumDb": 1.0}
+    },
+    {
+      "id": "lp-color-max",
+      "name": "LP, colour at full (windowed resonator alone, triangle window)",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 1.0},
+      "engine": {"timbre": 0.5, "harmonics": 0.125, "morph": 1.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.5, "cents": 1.5, "spectrumDb": 1.0}
+    },
+    {
+      "id": "lp-macro-below-noon",
+      "name": "LP, MACRO at zero -- must be identical to lp-stock",
+      "note-why": "ApplyMacro's minimum and stock are both 1.0, so the whole lower half of MACRO is Braids' unbent ramp. This is lp-stock with MACRO at 0 and so must hit lp-stock's tolerances; if the bend leaked below noon it would fail here and nowhere else.",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.125, "morph": 0.5, "macro": 0.0},
+      "tolerance": {"acRmsDb": 0.5, "cents": 1.5, "spectrumDb": 1.0}
+    },
+    {
+      "id": "lp-low-note",
+      "name": "LP, an octave down",
+      "seconds": 3,
+      "note": 33,
+      "braids": {"p1": 0.35, "p2": 0.4},
+      "engine": {"timbre": 0.35, "harmonics": 0.125, "morph": 0.4, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.5, "cents": 1.5, "spectrumDb": 1.0}
+    },
+
+    {
+      "id": "pk-stock",
+      "name": "PK, mid cutoff, balance at its peak",
+      "shape": "DIGITAL_FILTER_PK",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.375, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.5, "cents": 1.5, "spectrumDb": 1.0}
+    },
+    {
+      "id": "pk-cutoff-min",
+      "name": "PK, cutoff at the floor",
+      "shape": "DIGITAL_FILTER_PK",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.0, "p2": 0.25},
+      "engine": {"timbre": 0.0, "harmonics": 0.375, "morph": 0.25, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.5, "cents": 1.5, "spectrumDb": 1.0}
+    },
+    {
+      "id": "pk-cutoff-max",
+      "name": "PK, cutoff at the ceiling",
+      "note-why": "Same split as lp-cutoff-max: mostly the decimator, plus the LP/PK integrator difference. cents omitted for the same reason.",
+      "shape": "DIGITAL_FILTER_PK",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 1.0, "p2": 0.75},
+      "engine": {"timbre": 1.0, "harmonics": 0.375, "morph": 0.75, "macro": 0.5},
+      "tolerance": {"acRmsDb": 2.0, "spectrumDb": 1.0}
+    },
+    {
+      "id": "pk-color-min",
+      "name": "PK, colour at zero",
+      "shape": "DIGITAL_FILTER_PK",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.0},
+      "engine": {"timbre": 0.5, "harmonics": 0.375, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.5, "cents": 1.5, "spectrumDb": 1.0}
+    },
+    {
+      "id": "pk-color-max",
+      "name": "PK, colour at full",
+      "shape": "DIGITAL_FILTER_PK",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 1.0},
+      "engine": {"timbre": 0.5, "harmonics": 0.375, "morph": 1.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.5, "cents": 1.5, "spectrumDb": 1.0}
+    },
+
+    {
+      "id": "bp-stock",
+      "name": "BP, mid cutoff, balance at its peak",
+      "shape": "DIGITAL_FILTER_BP",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.625, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.5, "cents": 1.5, "spectrumDb": 1.0}
+    },
+    {
+      "id": "bp-cutoff-min",
+      "name": "BP, cutoff at the floor",
+      "note-why": "cents is 5.0 here: with the resonator eight semitones below the note the burst is a slow sub-audio ring and the autocorrelation reads a couple of cents of jitter on both sides. A rate-constant error would still be tens or hundreds of cents.",
+      "shape": "DIGITAL_FILTER_BP",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.0, "p2": 0.35},
+      "engine": {"timbre": 0.0, "harmonics": 0.625, "morph": 0.35, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.5, "cents": 5.0, "spectrumDb": 1.0}
+    },
+    {
+      "id": "bp-cutoff-quarter",
+      "name": "BP, cutoff a quarter up (modulator at 440 Hz)",
+      "note-why": "Pins the cutoff MAPPING rather than its endpoints: note 45 with p1 0.25 puts Braids' shifted_pitch at exactly 69 semitones, so the resonator rings at 440 Hz while the carrier stays at 110 Hz. Colour is 0, so the output is the windowed resonator alone and the band breakdown locates the cutoff directly.",
+      "shape": "DIGITAL_FILTER_BP",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.25, "p2": 0.0},
+      "engine": {"timbre": 0.25, "harmonics": 0.625, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.5, "cents": 1.5, "spectrumDb": 1.0}
+    },
+    {
+      "id": "bp-cutoff-max",
+      "name": "BP, cutoff at the ceiling",
+      "note-why": "Pure decimator: BP has no integrator, so the -1.61 dB is cos^2(pi*13284/96000) and the spectrum stays flat to 0.35 dB. cents omitted as for lp-cutoff-max.",
+      "shape": "DIGITAL_FILTER_BP",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 1.0, "p2": 0.35},
+      "engine": {"timbre": 1.0, "harmonics": 0.625, "morph": 0.35, "macro": 0.5},
+      "tolerance": {"acRmsDb": 2.0, "spectrumDb": 1.0}
+    },
+    {
+      "id": "bp-color-min",
+      "name": "BP, colour at zero",
+      "shape": "DIGITAL_FILTER_BP",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.0},
+      "engine": {"timbre": 0.5, "harmonics": 0.625, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.5, "cents": 1.5, "spectrumDb": 1.0}
+    },
+    {
+      "id": "bp-color-max",
+      "name": "BP, colour at full",
+      "shape": "DIGITAL_FILTER_BP",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 1.0},
+      "engine": {"timbre": 0.5, "harmonics": 0.625, "morph": 1.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.5, "cents": 1.5, "spectrumDb": 1.0}
+    },
+
+    {
+      "id": "hp-stock",
+      "name": "HP, mid cutoff, balance at its peak",
+      "shape": "DIGITAL_FILTER_HP",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.875, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.5, "cents": 1.5, "spectrumDb": 1.0}
+    },
+    {
+      "id": "hp-cutoff-min",
+      "name": "HP, cutoff at the floor",
+      "shape": "DIGITAL_FILTER_HP",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.0, "p2": 0.25},
+      "engine": {"timbre": 0.0, "harmonics": 0.875, "morph": 0.25, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.5, "cents": 1.5, "spectrumDb": 1.0}
+    },
+    {
+      "id": "hp-cutoff-max",
+      "name": "HP, cutoff at the ceiling",
+      "note-why": "Pure decimator, as bp-cutoff-max. cents omitted for the same reason.",
+      "shape": "DIGITAL_FILTER_HP",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 1.0, "p2": 0.75},
+      "engine": {"timbre": 1.0, "harmonics": 0.875, "morph": 0.75, "macro": 0.5},
+      "tolerance": {"acRmsDb": 2.0, "spectrumDb": 1.0}
+    },
+    {
+      "id": "hp-color-min",
+      "name": "HP, colour at zero",
+      "shape": "DIGITAL_FILTER_HP",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.0},
+      "engine": {"timbre": 0.5, "harmonics": 0.875, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.5, "cents": 1.5, "spectrumDb": 1.0}
+    },
+    {
+      "id": "hp-color-max",
+      "name": "HP, colour at full",
+      "shape": "DIGITAL_FILTER_HP",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 1.0},
+      "engine": {"timbre": 0.5, "harmonics": 0.875, "morph": 1.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 0.5, "cents": 1.5, "spectrumDb": 1.0}
+    },
+    {
+      "id": "hp-high-note",
+      "name": "HP, top of TIMBRE three octaves up",
+      "note-why": "The scenarios' phase-wrap case as an A/B: the modulator is pinned at the clamp while the carrier is at 1046 Hz, so an unwrapped float phase would be obvious. Decimator allowance and omitted cents as for bp-cutoff-max.",
+      "shape": "DIGITAL_FILTER_HP",
+      "seconds": 2,
+      "note": 84,
+      "braids": {"p1": 1.0, "p2": 0.5},
+      "engine": {"timbre": 1.0, "harmonics": 0.875, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 2.0, "spectrumDb": 1.0}
+    },
+
+    {
+      "id": "bp-integrator-control",
+      "name": "BP, low note, top of TIMBRE, balance at its peak -- the control",
+      "note-why": "Identical note, cutoff and MORPH to the two corner cases below, on a model whose square_signal is the raw pulse rather than the integrator (:391-392). It measures -1.67 dB with the spectrum flat to 0.38 dB, which is exactly the 3-tap decimator at the clamped modulator frequency. That is what makes the corner cases below a statement about the integrator and not about the decimator or the note.",
+      "shape": "DIGITAL_FILTER_BP",
+      "seconds": 3,
+      "note": 24,
+      "braids": {"p1": 1.0, "p2": 0.5},
+      "engine": {"timbre": 1.0, "harmonics": 0.625, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 2.0, "spectrumDb": 1.0}
+    },
+    {
+      "id": "lp-integrator-corner",
+      "name": "LP, low note, top of TIMBRE, balance at its peak -- EXPECTED TO FAIL",
+      "note-why": "DEFECT CASE. MORPH 0.5 puts the balance at its peak, so the output is Braids' square_integrator alone (:395). Measured -5.70 dB AC RMS and 3.49 dB spectrum against bp-integrator-control's -1.67 dB and 0.38 dB at the same note and cutoff. The tolerance is deliberately left at the house target rather than widened. CAUSE: Braids' wav_sine is not a sine -- it is exactly 32639 * -cos(2*pi*x) + 127, i.e. a -0.034 dB gain and a +127 LSB (+0.00388 full-scale) DC OFFSET on every sample -- and the engine reads plaits' zero-mean lut_sine. square_carrier carries that offset into pulse (:383), pulse is integrated at a gain of 4 * increment per sample (:384), and the polarity latch (:366) flips its sign every half carrier cycle, so on hardware the offset alone ramps the integrator into BOTH rails once per half cycle at this note and cutoff. In a replica of both loops that reproduces the committed reference renderer's AC RMS to six decimals, Braids clips 8213 times per 288000 sub-samples, this engine 2; restoring ONLY the DC offset gives 8253 clips and closes the gap to +0.01 dB AC RMS / 0.02 dB bands. An earlier reading of this case blamed the arithmetic-shift floor at :384; restoring that floor alone instead makes LP WORSE (-5.20 dB) and reaches the rail 98 times, so it is a hundredth of the effect. The fix is a DSP change and so a digest move and a rollout; it is not this pass's to make.",
+      "seconds": 3,
+      "note": 24,
+      "braids": {"p1": 1.0, "p2": 0.5},
+      "engine": {"timbre": 1.0, "harmonics": 0.125, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "pk-integrator-corner",
+      "name": "PK, low note, top of TIMBRE, near the balance peak -- EXPECTED TO FAIL",
+      "note-why": "DEFECT CASE, the peaking model's half of the same finding: PK mixes pulse and integrator (:397), so it fails the same way, and for the same reason -- the wav_sine DC offset the engine does not reproduce. See lp-integrator-corner. Measured -4.82 dB AC RMS and 4.44 dB spectrum. In the replica Braids' accumulator reaches BOTH rails (4312 low, 3855 high per 288000 sub-samples) and this engine's reaches neither; restoring the DC offset alone gives 4312 / 4334 and +0.02 dB AC RMS / 0.02 dB bands.",
+      "shape": "DIGITAL_FILTER_PK",
+      "seconds": 3,
+      "note": 24,
+      "braids": {"p1": 1.0, "p2": 0.55},
+      "engine": {"timbre": 1.0, "harmonics": 0.375, "morph": 0.55, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.5}
+    }
+  ]
+}

@@ -1,0 +1,117 @@
+{
+  "shape": "TOY",
+  "note": "MAPPING. TIMBRE (p1) sets Braids' decimation_count = 512 - (parameter_[0] >> 6) [digital_oscillator.cc:296], the sample-and-hold rate, so p1 maps to the engine's TIMBRE. COLOR (p2) supplies x = parameter_[1] >> 8 [digital_oscillator.cc:307], the mangle operand, so p2 maps to HARMONICS. parameter_[] is int16_t clipped to [0,32767] by the harness's ToParameter (render_braids_model.cc:105), so parameter_[0]>>6 spans [0,511] (decimation_count 1..512) and x spans [0,127] -- monotonic staircases, not uint16 wraparound. MACRO and MORPH are new axes with no Braids equivalent and they do NOT share one stock value. MACRO's Braids-reproducing position is the usual detent 0.5: ApplyMacro(0.5, 0.0, 1.5, 0.5) returns 0.5 exactly, and static_cast<int>(x * 0.5f) == x >> 1 for every x in 0..127 (x*0.5f is exactly representable, and truncation toward zero is floor for x >= 0). MORPH's Braids-reproducing position is 0.0, NOT 0.5 -- Braids' hold clock is always free-running, and count = free_count + (tracked_count - free_count) * morph collapses to it only at morph == 0. Every case below holds morph 0.0 and macro 0.5.  ||  TOLERANCES. acRmsDb 1.3 dB: the port normalises the held uint8 to +/-1.0 where Braids' fixed-point path peaks at 28208/32768 = 0.861 of full scale (kFIR4Coefficients sums to 56416; (56416*255>>8) - 28208 = 27987 and 0 - 28208 = -28208), so the engine is +1.30 dB hot by construction. ab_engine.py undoes the catalog outGain before measuring, so it re-exposes that. Measured +1.12 to +1.25 dB here EXCEPT low-note-crush, which reads +0.35 dB -- that is a second, undeclared deviation and not scatter; see its own note. With the port's own DC blocker applied to the Braids reference every case collapses to +1.24..+1.29 dB, i.e. the constructed +1.30 dB and nothing else.  ||  CENTS. Where a 13.0 c tolerance is declared below the estimator is NOT failing: at TIMBRE 0.5 it locks onto the hold-clock beat near 55.1 Hz in both renders and correctly reports that Braids' clock (384000/257 = 1494.16 Hz) and the port's (192000/ceil(128.5) = 1488.37 Hz) differ by -6.72 cents. Measured raw -6.6 to -6.7 c, reproducing to 0.1 c across three independent COLOR settings, and tracking the same prediction at TIMBRE 0.25 (-4.4 measured vs -4.49 predicted) and 0.375 (-5.0 vs -5.38). ab_engine.py then subtracts its 4.61 c kCorrectedSampleRate correction, which does not apply to a pitch-independent hold clock, inflating the printed figure to about -11.3 c. So the 13.0 c covers a real, fully explained port deviation (toy_engine.h, KNOWN DEFECTS #3) plus a harness correction that should not have been applied -- it is not a blanket loosening. Cents is omitted only on the three cases where the estimator demonstrably fails or carries no information; each says which.",
+  "cases": [
+    {
+      "id": "stock",
+      "name": "Stock notch, mid crush and mid mangle",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.5, "morph": 0.0, "macro": 0.5},
+      "note_on_cents": "Measured -11.4 c, and it is real rather than noise: the estimator locks onto the hold-clock beat (f0 55.34 Hz Braids, 55.12 Hz port) and reports the -6.72 c hold-clock rate error described in the document note, plus the 4.61 c harness correction that does not belong here.",
+      "note_on_low_band": "The 20-40 Hz band (a single FFT bin at 23.4 Hz, 0.5% of the energy) reads -6.0 dB. This is NOT 'the decimator's low-frequency floor' -- a 4x decimation filter is unity at 23 Hz and cannot attenuate it at all. It is the port's undeclared one-pole DC blocker (a = 0.9975, corner about 19 Hz, toy_engine.cc) plus the hold-clock rate difference: applying that same DC blocker to the Braids reference moves the bin from -6.00 to -4.66 dB.",
+      "tolerance": {"acRmsDb": 1.3, "cents": 13.0, "spectrumDb": 1.2}
+    },
+    {
+      "id": "timbre-low",
+      "name": "TIMBRE at 0: slowest hold clock, coarsest stutter",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.0, "p2": 0.5},
+      "engine": {"timbre": 0.0, "harmonics": 0.5, "morph": 0.0, "macro": 0.5},
+      "note_on_cents": "The one TIMBRE setting where the two hold clocks agree exactly -- Braids 384000/512 = 750 Hz, port 192000/256 = 750 Hz -- so the residual is small.",
+      "tolerance": {"acRmsDb": 1.3, "cents": 10.0, "spectrumDb": 1.2}
+    },
+    {
+      "id": "timbre-high",
+      "name": "TIMBRE at 1: fastest hold clock, smoothest",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 1.0, "p2": 0.5},
+      "engine": {"timbre": 1.0, "harmonics": 0.5, "morph": 0.0, "macro": 0.5},
+      "note_on_cents": "Both clocks run far above Nyquist (Braids 384 kHz, port 192 kHz), so the sample-and-hold is effectively transparent and the estimator sees the note itself: 110.00 Hz against 110.31 Hz, exactly the harness's 4.61 c kCorrectedSampleRate offset. The most trustworthy pitch reading in the set.",
+      "tolerance": {"acRmsDb": 1.3, "cents": 5.0, "spectrumDb": 1.2}
+    },
+    {
+      "id": "color-low",
+      "name": "COLOR at 0: x=0, unmangled ramp",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.0},
+      "engine": {"timbre": 0.5, "harmonics": 0.0, "morph": 0.0, "macro": 0.5},
+      "note_on_cents": "Same mechanism as 'stock' -- TIMBRE is 0.5, so the -6.72 c hold-clock error dominates (measured raw -6.6 c).",
+      "tolerance": {"acRmsDb": 1.3, "cents": 13.0, "spectrumDb": 1.2}
+    },
+    {
+      "id": "color-high",
+      "name": "COLOR at 1: x=127, maximally mangled",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 1.0},
+      "engine": {"timbre": 0.5, "harmonics": 1.0, "morph": 0.0, "macro": 0.5},
+      "note_on_cents": "Same mechanism as 'stock' (measured raw -6.7 c).",
+      "tolerance": {"acRmsDb": 1.3, "cents": 13.0, "spectrumDb": 1.2}
+    },
+    {
+      "id": "color-interior",
+      "name": "COLOR at 0.7: an interior operand, port one mask short of Braids",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.7},
+      "engine": {"timbre": 0.5, "harmonics": 0.7, "morph": 0.0, "macro": 0.5},
+      "note_on_mapping": "COVERAGE. The endpoints alone cannot verify this axis. Braids takes x = floor(p2*32767) >> 8 while the port takes x = uint8(harmonics * 127.0f); the two disagree by 1 on 49.8% of the knob, and p2 in {0, 0.5, 0.6, 1.0} -- every point the first version of this file sampled -- happens to fall where they agree. Here Braids gets x=89 and the port x=88. Those two operands differ only in bit 0, so the audible cost is small and this case sits at the same 0.45 dB spectral delta as the aligned ones. The boundary case below is where it bites.",
+      "tolerance": {"acRmsDb": 1.3, "cents": 13.0, "spectrumDb": 1.2}
+    },
+    {
+      "id": "color-mask-boundary",
+      "name": "COLOR at 0.502: the 63/64 mask boundary, where the operand mismatch costs the most",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.502},
+      "engine": {"timbre": 0.5, "harmonics": 0.502, "morph": 0.0, "macro": 0.5},
+      "note_on_mapping": "KNOWN DEFECT, disclosed rather than absorbed (toy_engine.h, KNOWN DEFECTS #1). p2 = 0.502 puts Braids at x=64 (0b1000000: '& ~x' masks off bit 6 and keeps bits 0-5 and 7) and the port at x=63 (0b0111111: keeps only bits 6-7) -- the widest divergence the off-by-one can produce, because x is a bit MASK and not a magnitude. That is why this case's tolerances are wider than the rest: AC RMS reads +1.86 dB against the +1.19 dB baseline, and the spectral delta 1.26 dB against 0.44 dB. The extra error is the operand mismatch alone, not the decimator. It only affects p2 in [0.50002, 0.50394), but it is the reason this axis needs an interior sample at all. Tighten these tolerances to match the rest of the set if x is ever changed to min(127, int(harmonics * 128.0f)).",
+      "tolerance": {"acRmsDb": 2.0, "cents": 13.0, "spectrumDb": 1.4}
+    },
+    {
+      "id": "both-low",
+      "name": "Both axes at their low end together: slow clock, clean ramp",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.0, "p2": 0.0},
+      "engine": {"timbre": 0.0, "harmonics": 0.0, "morph": 0.0, "macro": 0.5},
+      "note_on_cents": "Cents omitted, genuine estimator failure: the two sides lock onto different periodicities (Braids 106.96 Hz, port 22.05 Hz) for a printed -2738 c. At COLOR 0 the mangler is a no-op (x=0, held == ramp), so the slowest hold clock is stepping a bare ramp with nothing to break up the staircase. Spectrum 0.59 dB shows the two renders still agree closely.",
+      "tolerance": {"acRmsDb": 1.3, "spectrumDb": 1.2}
+    },
+    {
+      "id": "both-high",
+      "name": "Both axes at their high end together: fast clock, max mangle",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 1.0, "p2": 1.0},
+      "engine": {"timbre": 1.0, "harmonics": 1.0, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.3, "cents": 5.0, "spectrumDb": 1.2}
+    },
+    {
+      "id": "low-note-crush",
+      "name": "A low note under the slowest hold clock -- several crush cycles per period",
+      "seconds": 3,
+      "note": 24,
+      "braids": {"p1": 0.0, "p2": 0.6},
+      "engine": {"timbre": 0.0, "harmonics": 0.6, "morph": 0.0, "macro": 0.5},
+      "note_on_cents": "Cents omitted. The first version of this file declared a 10 c tolerance here and called the reading trustworthy; it is not. ab_compare.autocorrelation_f0 searches f_min 20 Hz to f_max 2000 Hz, and BOTH sides return exactly 2000.0 Hz -- the estimator railed at the very first lag it is allowed to try, so the delta is identically zero and the 'pass' carried no information. The tolerance is removed rather than kept as a free pass.",
+      "note_on_level": "This is the case that exposes the port's undeclared DC blocker (toy_engine.h, KNOWN DEFECTS #2). AC RMS reads +0.35 dB where every other case reads about +1.19 dB, and the band profile tilts: -0.33 and -0.21 dB in the two lowest bands, which carry 32% of the energy, against +0.8 to +1.0 dB across the midrange. At note 24 the fundamental is 32.7 Hz and the port's one-pole high-pass at a = 0.9975 attenuates it about 1.26 dB, while Braids has no high-pass at all. Applying that same DC blocker to the Braids reference brings this case to +1.29 dB AC RMS and 0.44 dB spectral delta -- in line with every other case and with the constructed +1.30 dB. The two-sided 1.3 dB tolerance below does not fail on this, so it is recorded here instead of being smoothed away.",
+      "tolerance": {"acRmsDb": 1.3, "spectrumDb": 1.2}
+    },
+    {
+      "id": "high-note-mid",
+      "name": "A high note, mid crush and mangle",
+      "seconds": 2,
+      "note": 84,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.5, "morph": 0.0, "macro": 0.5},
+      "note_on_cents": "Cents omitted, genuine estimator failure: Braids reads 149.44 Hz against the port's 87.56 Hz for a printed -930 c, and neither is the ~880 Hz note. At note 84 the hold clock (~1.49 kHz at TIMBRE 0.5) sits under two octaves above the note, so the output is dominated by their beat and the autocorrelation has no dominant lag. Spectrum 1.06 dB is the largest in the set but still inside tolerance.",
+      "tolerance": {"acRmsDb": 1.3, "spectrumDb": 1.2}
+    }
+  ]
+}

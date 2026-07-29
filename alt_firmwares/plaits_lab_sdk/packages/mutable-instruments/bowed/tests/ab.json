@@ -1,0 +1,331 @@
+{
+  "shape": "BOWED",
+  "note": "PARAMETER MAP, read off braids/digital_oscillator.cc. Line 1209, `parameter_0 = 172 - (parameter_[0] >> 8)`: parameter_[0] is Braids' TIMBRE, and it is BOW FORCE -- the scaler on the friction argument at line 1259 -- read INVERTED, so TIMBRE 0 gives 172 (the steepest bow table, least grip, the bow slips) and TIMBRE 1 gives 45 (most grip, hardest scrape). Line 1210, `parameter_1 = 6 + (parameter_[1] >> 9)`: parameter_[1] is COLOR, and it is BOW POSITION -- the bridge-tap fraction of the loop at line 1220 -- read rising, COLOR 0 giving 6/256 and COLOR 1 giving 69/256. RenderBowed uses no INTERPOLATE_PARAMETER macro at all, so both are read raw and neither is smoothed. So p1 maps to the engine's TIMBRE (bowed_engine.cc:157) and p2 to its HARMONICS (bowed_engine.cc:127), and every case below pins one of the two at an end while the other moves: swapping them renders plausibly either way, which is exactly how the same misreading shipped in fold.\n\nCASE-ID WARNING. `pressure-hard` is TIMBRE 0.0, which is the LIGHTEST bow force (parameter_0 = 172), and `pressure-light` is TIMBRE 1.0, the HEAVIEST. The ids read off parameter_0's magnitude, not off the physical quantity, and are therefore backwards against the engine's own control copy ('Increases bow pressure from a thin whistle to a hard scrape'). They are kept for continuity with the port notes; read the case names, not the ids.\n\nMORPH SITS AT 1.0 IN EVERY CASE, NOT AT 0.5. bowed_engine.cc:162 is `nut_gain = 0.55f + 0.45f * morph`, and those two floats sum to exactly 1.0f, so Braids' welded `nut_reflection = -nut_value` (line 1252, gain exactly 1.0) is at MORPH 1.0. The port's added nut axis is one-sided -- it can only choke the nut below the module, never open it further -- so its stock position is the top of the range and not the detent. That is legal because MORPH has no detent (SPEC section 2); MACRO does, and MACRO is stock at 0.5, where ApplyMacro(0, -12, 12, 0.5) returns 0 semitones and the body biquad reduces to Braids' kBiquadPole1/kBiquadPole2 up to the 0.94% error in kBowedStockTheta. A/Bing at MORPH 0.5 would compare against a nut gain of 0.775, which is a sound the module cannot make.\n\nNO CENTS TOLERANCE ANYWHERE. BOWD is a stick-slip self-oscillator, not an oscillator: its pitch is the limit cycle of a nonlinear feedback loop, and the 4.61-cent kCorrectedSampleRate offset every port here carries is enough to settle it into a neighbouring cycle. The corrected figure is still printed and still worth reading -- a whole-semitone reading would mean an R5 rate bug -- but it is not a pass/fail metric for this engine. Measured across the grid below it stays inside +-2 cents.\n\nTOLERANCES. acRmsDb 5.0 and spectrumDb 4.0, uniform. Both are looser than the ~1 dB / ~1.5 dB house target, for two written reasons. (1) LEVEL: the port declares a 1.6x make-up Braids does not have, which is +4.08 dB before SoftClip compresses it unevenly; the cases that agree measure +4.10 dB at stock and -2.26 dB at the quietest corner. (2) SPECTRUM: a chaotic self-oscillator settles into a different cycle for a sub-cent pitch difference; the agreeing cases span 0.22 to 3.19 dB. Anything past those is a finding, and six cases below are.\n\nSIX CASES DELIBERATELY FAIL AT THESE TOLERANCES: pressure-hard, pressure-thin, corner-hard-bridge, low-at-bridge, firm-pressure and mid-neck, from +7.9 to +37.2 dB AC RMS. They are not absorbed into a wider tolerance; they are the finding. CAUSE, isolated in the port notes and re-confirmed by rebuilding the shipped bowed_engine.cc with one line changed: Braids' fractional-delay read is `Mix(a, b, frac) << 8` (line 1247), and stmlib::Mix (stmlib/utils/dsp.h:86) returns an int16 -- the interpolation between the two delay-line taps is quantised to whole int8 counts, 1/128 of full scale, before the shift -- while bowed_engine.cc:190 interpolates in float. That truncation is a loss term inside the feedback loop and it is what lets the module's bow SLIP.\n\nSCOPE OF THE DEFECT, measured rather than assumed. Braids is BISTABLE along TIMBRE, not uniformly quiet at the light end: at note 45, COLOR 0.5 it renders -44.1 / -18.4 / -41.3 / -19.1 / -18.0 / -15.1 / -13.2 / -10.3 dBFS at TIMBRE 0 / .1 / .2 / .3 / .4 / .5 / .7 / 1, collapsing in bands (TIMBRE 0 to .075 and .175 to .225) and bowing normally between them. The shipped port is flat across that axis (-14.2 to -7.5 dBFS), so it misses every collapse. AND THE DEFECT IS NOT CONFINED TO LOW TIMBRE: over a 36-point note x COLOR x TIMBRE grid (notes 24/45/60, COLOR 0/.5/1, TIMBRE .25/.4/.5/.75) the shipped port exceeds this file's own 5 dB tolerance at 13 points, the worst being note 24 / TIMBRE 0.5 / COLOR 0.0 at +37.2 dB -- MID bow force. With the Mix truncation restored, all 36 points fall between -2.8 and +5.5 dB, i.e. back inside the declared make-up. Rebuilding the same file with Braids' int8 WRAP instead of saturation, or with the friction curve floored to Braids' integer table, moves every one of those points by less than 0.06 dB: the truncation is the whole of it.\n\nLeft failing on purpose: the cases go green when the defect is fixed, and a fix moves the package digest.",
+  "cases": [
+    {
+      "id": "stock",
+      "name": "Mid pressure, mid bow position",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.5,
+        "morph": 1.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 5.0,
+        "spectrumDb": 4.0
+      }
+    },
+    {
+      "id": "pressure-light",
+      "name": "TIMBRE at 1.0 -- most grip, parameter_0 = 45",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 1.0,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 1.0,
+        "harmonics": 0.5,
+        "morph": 1.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 5.0,
+        "spectrumDb": 4.0
+      }
+    },
+    {
+      "id": "pressure-hard",
+      "name": "TIMBRE at 0.0 -- least grip, parameter_0 = 172, where Braids' bow slips",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.0,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.0,
+        "harmonics": 0.5,
+        "morph": 1.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 5.0,
+        "spectrumDb": 4.0
+      }
+    },
+    {
+      "id": "pressure-thin",
+      "name": "TIMBRE at 0.2 -- inside the slipping regime, not at its end",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.2,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.2,
+        "harmonics": 0.5,
+        "morph": 1.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 5.0,
+        "spectrumDb": 4.0
+      }
+    },
+    {
+      "id": "bow-at-bridge",
+      "name": "COLOR at 0.0 -- bow hard against the bridge, parameter_1 = 6",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.0
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.0,
+        "morph": 1.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 5.0,
+        "spectrumDb": 4.0
+      }
+    },
+    {
+      "id": "bow-up-neck",
+      "name": "COLOR at 1.0 -- bow well up the neck, parameter_1 = 69",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 1.0
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 1.0,
+        "morph": 1.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 5.0,
+        "spectrumDb": 4.0
+      }
+    },
+    {
+      "id": "corner-hard-bridge",
+      "name": "Both axes at one corner: least grip, at the bridge",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.0,
+        "p2": 0.0
+      },
+      "engine": {
+        "timbre": 0.0,
+        "harmonics": 0.0,
+        "morph": 1.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 5.0,
+        "spectrumDb": 4.0
+      }
+    },
+    {
+      "id": "corner-light-neck",
+      "name": "The opposite corner: most grip, up the neck",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 1.0,
+        "p2": 1.0
+      },
+      "engine": {
+        "timbre": 1.0,
+        "harmonics": 1.0,
+        "morph": 1.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 5.0,
+        "spectrumDb": 4.0
+      }
+    },
+    {
+      "id": "low",
+      "name": "Bottom of the keyboard, long delay lines",
+      "seconds": 3,
+      "note": 24,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.5,
+        "morph": 1.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 5.0,
+        "spectrumDb": 4.0
+      }
+    },
+    {
+      "id": "octave-fold",
+      "name": "Below the fold floor, where both sides halve the delay -- MIDI 4, not 21",
+      "seconds": 3,
+      "note": 4,
+      "braids": {
+        "p1": 0.5,
+        "p2": 1.0
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 1.0,
+        "morph": 1.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 5.0,
+        "spectrumDb": 4.0
+      }
+    },
+    {
+      "id": "high-clean",
+      "name": "High note with the bow off the bridge, where no tap is clamped",
+      "seconds": 2,
+      "note": 84,
+      "braids": {
+        "p1": 0.5,
+        "p2": 1.0
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 1.0,
+        "morph": 1.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 5.0,
+        "spectrumDb": 4.0
+      }
+    },
+    {
+      "id": "high-bridge-clamp",
+      "name": "The same high note at the bridge -- the clamped-tap corner, dead on both sides",
+      "seconds": 2,
+      "note": 84,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.0
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.0,
+        "morph": 1.0,
+        "macro": 0.5
+      }
+    },
+    {
+      "id": "low-at-bridge",
+      "name": "Low note with the bow at the bridge -- MID bow force, and the worst point found",
+      "seconds": 3,
+      "note": 24,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.0
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.0,
+        "morph": 1.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 5.0,
+        "spectrumDb": 4.0
+      }
+    },
+    {
+      "id": "firm-pressure",
+      "name": "TIMBRE at 0.75 -- the UPPER half of the bow-force axis",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.75,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.75,
+        "harmonics": 0.5,
+        "morph": 1.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 5.0,
+        "spectrumDb": 4.0
+      }
+    },
+    {
+      "id": "mid-neck",
+      "name": "A third note with the bow up the neck",
+      "seconds": 3,
+      "note": 60,
+      "braids": {
+        "p1": 0.4,
+        "p2": 1.0
+      },
+      "engine": {
+        "timbre": 0.4,
+        "harmonics": 1.0,
+        "morph": 1.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 5.0,
+        "spectrumDb": 4.0
+      }
+    },
+    {
+      "id": "retrigger",
+      "name": "Struck twice a second -- Braids memsets both delay lines on strike, the port Resets",
+      "seconds": 3,
+      "note": 45,
+      "triggerHz": 2,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.5,
+        "morph": 1.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 5.0,
+        "spectrumDb": 4.0
+      }
+    }
+  ],
+  "caseNotes": {
+    "octave-fold": "The fold floor is 9.4 to 12.6 Hz depending on COLOR -- 11.44 Hz at COLOR 0 where the NECK tap overflows first, 12.64 Hz at COLOR 1 where the BRIDGE tap does, and a minimum of 9.38 Hz at parameter_1 = 51 where the two thresholds cross -- so it is NOT reachable at MIDI 21: at MIDI 21 and COLOR 1 the bridge tap is 470 of 1023 and the neck tap 1273 of 4095, and nothing halves. tests/scenarios.json's scenario of that name renders at MIDI 21 and is misnamed. This case uses MIDI 4 with COLOR 1, where Braids' loop at digital_oscillator.cc:1222 and the port's at bowed_engine.cc:135 each halve exactly once.",
+    "high-bridge-clamp": "NO TOLERANCE DECLARED, on purpose. Both sides are dead here -- Braids falls to -61 dBFS and stops entirely after the attack, the port sustains a -40 dBFS whistle -- so the +22.8 dB level figure and the 10.7 dB spectrum figure are the ratio of two residuals, not a fidelity measurement. This case does NOT count among the agreeing cases. It is kept because it is the only coverage of the port's clamped bridge tap, and because the header's account of that deviation is incomplete: the clamp floor is 2.0 samples (bowed_engine.cc:145) and it is applied AFTER neck_delay has been taken from delay, so it lengthens the total loop rather than moving the tap within it. It engages from MIDI 72.9 upward at HARMONICS 0 -- a full octave below the MIDI 84.5 at which Braids' own tap drops under one sample -- and over that octave it renders flat, by 0.4 cents at MIDI 73 and 36.3 cents at MIDI 84.",
+    "low-at-bridge": "Added by the audit pass. The original twelve cases swept each axis end only at note 45, and swept notes only at COLOR 0.5 -- so this corner, low note AND bow at the bridge, was unsampled. Braids slips here at MID bow force (-49.1 dBFS at note 24 / TIMBRE 0.5 / COLOR 0.0) and the port sustains -11.9, the largest divergence anywhere on the grid. It is the case that falsifies 'the defect is the low-TIMBRE half of the axis'.",
+    "firm-pressure": "Added by the audit pass, to sample the UPPER half of the bow-force axis, which the original grid skipped between TIMBRE 0.5 and 1.0. Fails at +7.9 dB, so the divergence is not a light-bow phenomenon.",
+    "mid-neck": "Added by the audit pass. A third note at COLOR 1.0; the original grid only visited COLOR 1.0 at notes 45, 84 and 4. Fails at +8.4 dB.",
+    "retrigger": "Added by the audit pass, and it PASSES (+4.9 dB, 0.71 dB spectrum). It is the only case that exercises the reset path, which is worth pinning for this engine specifically: DigitalOscillator::Init() memsets state_ but NOT delay_lines_, and RenderBowed reads delay_lines_, so the delay lines are only cleared by its own `if (strike_)` branch (digital_oscillator.cc:1203). The port's Reset() clears both lines and every filter state on TRIGGER_RISING_EDGE, and the agreement here says the two strike behaviours match."
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "shape": "VOWEL_FOF",
+  "note": "MAPPING, read off the source and then proved by measurement. digital_oscillator.cc:652-662 calls InterpolateFormantParameter(table, parameter_[1], parameter_[0], i) -- x is COLOR, y is TIMBRE. In that helper (620-636) x indexes the OUTER dimension and y the middle one, and in formant_f_data (lines 520-573) the outer dimension is the REGISTER (the // bass .. // soprano block comments, confirmed by F1 rising from 601 Hz at bass /a/ to 795 Hz at soprano /a/) while the middle one is the VOWEL (row 3 of every block is /i/: F1 250 Hz, F2 2160 Hz). So Braids' TIMBRE = vowel and Braids' COLOR = register. The port's InterpolateFormant passes parameters.morph as the outer index and parameters.timbre as the middle one, over a table vendored from Braids WITHOUT transposing, so the port's TIMBRE is the vowel and its MORPH is the register -- the same assignment Braids has, and the OPPOSITE of what the engine header, the data header and the shipped control labels all claim. Measured: with timbre=p1/morph=p2 the /u/-at-bass corner reads 3.04 dB spectrum and /a/-at-soprano 2.32 dB; with the mapping swapped the same two corners read 5.37 dB and 8.54 dB. This file therefore maps p1 (TIMBRE) to the engine's TIMBRE and p2 (COLOR) to its MORPH, which is what the shipped DSP does.\n\nSTOCK POSITIONS for the two axes the port adds. HARMONICS is the breath crossfade and is NOT run through ApplyMacro (vowel_fof_engine.cc:140, `breath = parameters.harmonics`), so its Braids-equivalent position is 0.0, not 0.5: at 0 the excitation is the bare saw. MACRO is the formant tilt through ApplyMacro(0.0, -0.5, 1.0, macro) (line 111), which returns 0.0 tilt at the detent, so 0.5 is its stock position. Every case holds harmonics 0.0 and macro 0.5.\n\nTOLERANCES are set to what the engine achieves today, and the AC RMS figures are far outside the ~1 dB house target: -2.4 to -4.1 dB everywhere the excitation is dense, collapsing to -0.36 dB at note 81 where it is sparse. That level-dependence is the signature of a nonlinearity difference, and a standalone simulation of both inner loops attributes it: restoring Braids' UNIPOLAR 0..1 saw (the port subtracts the DC, vowel_fof_engine.h:70-72) recovers 2.0-2.9 dB, and removing the port's extra SoftClip on the bandpass tap (vowel_fof_engine.cc:75) recovers a further 0.6-1.5 dB. Braids' lowpass state therefore sits at half scale and hard-clips 5-21% of samples where the port's, centred at zero, clips 1-8%. Both are reported as defects; the tolerances below record the shipped behaviour so this file is a green regression baseline, and they should be TIGHTENED toward ~1 dB if either deviation is corrected. Pitch is kept as a tolerance and is tight: the material is a strongly pitched saw through resonators and every case reads within 0.2 cents of the corrected reference.",
+  "cases": [
+    {
+      "id": "stock-mid",
+      "name": "Mid grid: /i/ at countertenor",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.0, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 4.6, "cents": 1.0, "spectrumDb": 2.0}
+    },
+    {
+      "id": "vowel-a-bass",
+      "name": "TIMBRE 0, COLOR 0: /a/ at bass",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.0, "p2": 0.0},
+      "engine": {"timbre": 0.0, "harmonics": 0.0, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 4.0, "cents": 1.0, "spectrumDb": 2.6}
+    },
+    {
+      "id": "vowel-u-bass",
+      "name": "TIMBRE 1, COLOR 0: /u/ at bass",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 1.0, "p2": 0.0},
+      "engine": {"timbre": 1.0, "harmonics": 0.0, "morph": 0.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 3.0, "cents": 1.0, "spectrumDb": 3.6}
+    },
+    {
+      "id": "vowel-a-soprano",
+      "name": "TIMBRE 0, COLOR 1: /a/ at soprano",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.0, "p2": 1.0},
+      "engine": {"timbre": 0.0, "harmonics": 0.0, "morph": 1.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 3.7, "cents": 1.0, "spectrumDb": 2.9}
+    },
+    {
+      "id": "vowel-u-soprano",
+      "name": "TIMBRE 1, COLOR 1: /u/ at soprano",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 1.0, "p2": 1.0},
+      "engine": {"timbre": 1.0, "harmonics": 0.0, "morph": 1.0, "macro": 0.5},
+      "tolerance": {"acRmsDb": 3.1, "cents": 1.0, "spectrumDb": 2.4}
+    },
+    {
+      "id": "off-node",
+      "name": "Between grid nodes on both axes",
+      "seconds": 3,
+      "note": 45,
+      "braids": {"p1": 0.375, "p2": 0.625},
+      "engine": {"timbre": 0.375, "harmonics": 0.0, "morph": 0.625, "macro": 0.5},
+      "tolerance": {"acRmsDb": 3.6, "cents": 1.0, "spectrumDb": 2.8}
+    },
+    {
+      "id": "vowel-sweep",
+      "name": "TIMBRE swept end to end at a fixed register",
+      "seconds": 4,
+      "note": 45,
+      "braids": {"p1": [0.0, 1.0], "p2": 0.5},
+      "engine": {"timbre": [0.0, 1.0], "harmonics": 0.0, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 3.8, "cents": 1.0, "spectrumDb": 2.7}
+    },
+    {
+      "id": "register-sweep",
+      "name": "COLOR swept end to end at a fixed vowel",
+      "seconds": 4,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": [0.0, 1.0]},
+      "engine": {"timbre": 0.5, "harmonics": 0.0, "morph": [0.0, 1.0], "macro": 0.5},
+      "tolerance": {"acRmsDb": 4.1, "cents": 1.0, "spectrumDb": 2.1}
+    },
+    {
+      "id": "low-note",
+      "name": "Two octaves down, dense excitation",
+      "seconds": 3,
+      "note": 33,
+      "braids": {"p1": 0.75, "p2": 0.25},
+      "engine": {"timbre": 0.75, "harmonics": 0.0, "morph": 0.25, "macro": 0.5},
+      "tolerance": {"acRmsDb": 4.0, "cents": 1.0, "spectrumDb": 3.4}
+    },
+    {
+      "id": "high-note",
+      "name": "Three octaves up, sparse excitation",
+      "seconds": 2,
+      "note": 81,
+      "braids": {"p1": 0.25, "p2": 0.75},
+      "engine": {"timbre": 0.25, "harmonics": 0.0, "morph": 0.75, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "cents": 1.0, "spectrumDb": 2.4}
+    }
+  ]
+}

@@ -1,0 +1,575 @@
+{
+  "shape": "FM",
+  "note": "WHICH BRAIDS PARAMETER DRIVES WHAT, WITH LINE NUMBERS (braids/digital_oscillator.cc). TIMBRE is parameter_[0] and is the modulation INDEX in all three shapes: :728/:731 open BEGIN_INTERPOLATE_PARAMETER_0, and parameter_0 scales the modulator at :740 (FM, `<< 2` = a full cycle of deviation), :777/:780 (FBFM, `<< 1` = half) and :811 (WTFM, `<< 1`). COLOR is parameter_[1] and is the modulator RATIO: Render() quantizes it through lut_fm_frequency_quantizer at :99-107 before dispatch, and it is then added to the modulator's pitch at :726 (FM), :762 (FBFM) and :796 (WTFM). In FBFM it feeds one more thing -- the index attenuator at :756-759 -- which is why this file sweeps note and ratio together in that shape. So p1 -> the engine's TIMBRE and p2 -> its HARMONICS.\n\nMORPH IS NOT A SPARE MACRO HERE: it is the shape selector, and its three A/B positions are exactly the three Braids models. raw_fm_engine.cc:60-62 gives phase_feedback = 1 / frequency_feedback = 0 at MORPH 0 (FEEDBACK_FM), both zero at MORPH 0.5 (plain FM), and phase_feedback = 0 / frequency_feedback = 1 at MORPH 1 (CHAOTIC_FEEDBACK_FM). Every case pins MORPH to 0.0, 0.5 or 1.0 to match its own `shape`. MACRO is the one axis the port adds beyond Braids: feedback depth, ApplyMacro(1.0, 0.0, 1.5, macro) at raw_fm_engine.cc:66, which returns Braids' own depth of 1.0 at the 0.5 detent. It sits at 0.5 in every case but `fm-macro-min` and `fm-macro-max`, which drive it to both ends at MORPH 0.5 -- where depth multiplies two terms that are already zero -- to prove it is inert there. Both read 0.04 dB, identical to `fm-stock`.\n\nHARMONICS IS NOT SET EQUAL TO p2, AND THAT IS DELIBERATE. Braids quantizes COLOR through its OWN lut_fm_frequency_quantizer (129 entries, 25 plateaus of 3+ equal entries, spanning -36..+36 semitones); the port reads PLAITS' table of the same name (130 entries, 23 plateaus, spanning -12..+36) -- Braids' table with the -36 and -24 plateaus removed and the ramps between the survivors resampled about twice as finely. Same idea, different plateau positions, so equal knob angles are different ratios: p2 = 0.5 is +6 semitones on the module while HARMONICS = 0.5 is +12.16 in the port. Comparing knob angle to knob angle would measure only that remap and would hide every other defect behind it. Each case instead pins the two sides to the SAME modulator ratio, read off the two tables (each pair verified to agree to 0.00000 semitones by evaluating both quantizers):\n\n    ratio      Braids p2   port HARMONICS\n    -12 st     0.2815      0.0078\n      0 st     0.4299      0.2344\n    +12 st     0.5940      0.4766\n    +24 st     0.8282      0.7500\n    +36 st     0.9883      0.9883\n\nThe exception is `ratio-floor-knob-parity`, the only case that sets both sides to their own axis MINIMUM, because that is the one place the remap is not a relabelling: Braids reaches -36 semitones and the port's table bottoms out at -12, so the module's bottom two ratio plateaus are unreachable. It carries no tolerance -- it documents the table-span difference rather than gating on it.\n\nThe note is 45 (A2) unless a case says otherwise, low enough that neither side's aliasing dominates the spectral figure.\n\nTOLERANCES, AND WHY ANY OF THEM IS LOOSE. Twenty-four of the twenty-seven cases carry a tolerance. Nineteen of those carry the house numbers unchanged -- 1.0 dB AC RMS, 1.5 dB spectrum, and 1 cent where cents is measured at all -- and sixteen of the nineteen pass, most by a wide margin (fm-stock 0.04 dB, wtfm-stock 0.07 dB, wtfm-note72 0.03 dB). The three that fail are the two findings below: `fbfm-index-attenuator`, `fbfm-attenuator-note84` and `fm-modulator-clamp`. Five cases deviate from the house numbers, each for a stated reason:\n\n* The three index-0 cases carry `cents: 2.0`. All three render the bare carrier (index 0 collapses all three shapes to the same sine) and all three report the same +1.7 cents, while their spectra agree to 0.05 dB. A 65536-point windowed-FFT peak on the same two WAVs puts the real difference at -0.29 cents after the kCorrectedSampleRate offset, so the +1.7 is ab_compare's autocorrelation estimator biased on a single sinusoid, not a pitch error.\n* `fbfm-index-max` carries `acRmsDb: 1.5` and `spectrumDb: 2.0`. Measured in narrow bands, the port matches the reference to within 1.2 dB everywhere below 15 kHz (0-60 Hz -0.09, 60-140 +0.13, 140-600 +0.10, 600-2k -0.29, 2k-6k -0.59, 6k-15k -1.17) and is +5.9, +20.0 and +39.9 dB in 15-21k, 21-23k and 23-24k. That is the one-sample feedback loop running at 48 kHz: its near-Nyquist limit cycle lands at ~24 kHz, where Braids' identical loop at 96 kHz puts it at ~48 kHz and the reference decimator removes it. It is the declared no-oversampling deviation, confined to the top octave, and it is what the +1.31 dB of AC RMS is made of.\n* `fm-aliasing-note80` carries `spectrumDb: 2.0` and reads 1.47. This is the same no-oversampling deviation in PLAIN FM, which the FBFM case above does not cover: at note 80 with a +36 st ratio the modulator is 6.6 kHz and half a cycle of deviation throws sidebands past 27 kHz, so 14.6% of the port's energy lands in 20.5-24 kHz where Braids at 96 kHz has none. `fm-modulator-clamp-control` is the control -- same note region, +12 st, sidebands under Nyquist, 0.20 dB.\n* Cents is omitted, not widened, wherever the f0 estimator is unreliable: the four CHAOTIC_FEEDBACK_FM cases at non-zero index (chaotic frequency feedback, inharmonic by construction) and every deep-index or wide-ratio case at note 72 or above, where autocorrelation locks onto a sub-octave or super-octave lag. `fm-attenuator-control` is the proof: it reports +1200.0 cents while its spectrum agrees to 0.10 dB. Do not read the cents column on any of those cases as evidence in either direction -- see FINDING 1.\n\nFINDING 1: THE FBFM INDEX ATTENUATOR IS MISSING. Braids' RenderFeedbackFm scales the modulation index by a pitch- and ratio-dependent ramp (digital_oscillator.cc:756-759, applied at :777): attenuation = clamp(32767 - 4 * (pitch - 72*128 + ratio_offset), 0, 32767), i.e. 1.0 at or below note 72 with a ratio at or under 1:1, falling 1.5625% per semitone of MODULATOR pitch above that. raw_fm_engine.cc:70-71 has no equivalent term; its index depends only on TIMBRE and MORPH. Plaits' own `two-op-fm`, the direct descendant of this code, keeps the same device with the same note-72 pivot (fm_engine.cc:84-87, `hf_taming = 1 - (modulator_note - 72) * 0.025`, clamped and squared), so raw-fm is the only FM engine in the tree with no pitch-dependent index taming at all.\n\n  EVIDENCE. `fbfm-index-attenuator` (note 72, +24 st, index 1; attenuator 0.625) reads 5.81 dB. The excess is in the bands that carry the sound: +1.70 dB where 36.0% of the energy sits, +2.79 dB at 15.2%, +6.39 dB at 23.2%, +15.37 dB at 14.3%. `fbfm-attenuator-emulated` is the control -- the identical reference render with the port's TIMBRE set to 0.625, Braids' own attenuation factor there -- and it collapses to 1.01 dB with those same four bands at +0.11, -0.08, -0.41 and +2.77. `fbfm-attenuator-note84` (note 84, 1:1; attenuator 0.8125) reads 2.50 dB and the same emulation at TIMBRE 0.8125 gives 0.94. `fm-attenuator-control` -- plain FM at the same note and ratio, where Braids has no attenuator either -- reads 0.10 dB. The attenuator is inactive at note 45 with a ratio at or below 1:1, which is why every other FBFM case passes.\n\n  WHAT IS NOT EVIDENCE, because it is easy to reach for and it is wrong. (a) The sub-140 Hz bands read +35 to +43 dB on `fbfm-index-attenuator`, but they carry 0.0% of the energy on both sides; that is a ratio of two noise floors, and `fbfm-attenuator-note84` reads -9.68 dB in the same 80-160 Hz band, the opposite sign. (b) The cents column reads -1199.8 on `fbfm-index-attenuator`, which looks like a period-doubled subharmonic -- but `fbfm-attenuator-emulated`, which comes good at 1.01 dB, reads -1199.6 on the same reference. The octave is the estimator, not the defect.\n\nFINDING 2: BRAIDS' MODULATOR PITCH CEILING IS MISSING. All three shapes build the modulator increment as ComputePhaseIncrement((12 << 7) + pitch_ + ratio_offset) >> 1 (:726, :762, :796), and ComputePhaseIncrement clamps its argument at kPitchTableStart = 128 << 7 (:52-53). So the module's modulator saturates once carrier note + ratio reaches 116 semitones, at a fixed ~6.6 kHz, no matter how much further the ratio knob turns. raw_fm_engine.cc:56-57 instead caps the modulator at Nyquist (`min(frequency * SemitonesToRatio(ratio), 0.5f)`), which is 24 kHz -- nearly four octaves higher -- so above note 80 at the top of the ratio axis the two engines are running different modulators.\n\n  EVIDENCE. On the module, note 96 at +24 st and at +36 st render BIT-IDENTICAL WAVs (relative error below the float floor), because both clamp to the same modulator; the port cannot do that, since its ratio table hands it 24.0 and 36.0 semitones and it multiplies the carrier by both. `fm-modulator-clamp` (note 96, +36 st) reads 4.24 dB. `fm-modulator-clamp-control`, the same note and index at +12 st where the clamp is not yet reached, reads 0.20 dB. `fm-modulator-clamp-emulated` is the control that separates this from aliasing: the identical reference render with the port's HARMONICS set to 0.681297 = +19.99 semitones, the ratio Braids' clamp actually delivers at note 96, collapses the case to 0.68 dB with every energy-bearing band inside 1.6 dB.\n\n  SCOPE. The clamp engages when carrier note + ratio >= 116: from note 80 at the top of the ratio axis, note 92 at +24 st, note 104 at +12 st. It is not reachable at 1:1 within the playable range. Neither the engine header, the README nor plaits-engine.json mentions a modulator ceiling; raw_fm_engine.cc:56-57 presents its own cap as a Nyquist guard rather than as Braids parity.",
+  "cases": [
+    {
+      "id": "fm-stock",
+      "name": "Plain FM, 1:1, half index",
+      "shape": "FM",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.4299
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.2344,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "fm-index-min",
+      "name": "Plain FM, index 0 -- the bare carrier",
+      "shape": "FM",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 0.0,
+        "p2": 0.4299
+      },
+      "engine": {
+        "timbre": 0.0,
+        "harmonics": 0.2344,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 2.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "fm-index-max",
+      "name": "Plain FM, index 1 -- a full cycle of deviation",
+      "shape": "FM",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 1.0,
+        "p2": 0.4299
+      },
+      "engine": {
+        "timbre": 1.0,
+        "harmonics": 0.2344,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "fm-ratio-floor",
+      "name": "Plain FM at the port's lowest reachable ratio, -12 st",
+      "shape": "FM",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.2815
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.0078,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "fm-ratio-ceiling",
+      "name": "Plain FM at the top of the ratio axis, +36 st",
+      "shape": "FM",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.9883
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.9883,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "fm-macro-min",
+      "name": "MACRO 0 at noon: the port's one added axis must be inert where Braids has no feedback",
+      "shape": "FM",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.4299
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.2344,
+        "morph": 0.5,
+        "macro": 0.0
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "fm-macro-max",
+      "name": "MACRO 1 at noon: same, at the other end",
+      "shape": "FM",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.4299
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.2344,
+        "morph": 0.5,
+        "macro": 1.0
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "fbfm-stock",
+      "name": "Feedback FM, 1:1, half index",
+      "shape": "FEEDBACK_FM",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.4299
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.2344,
+        "morph": 0.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "fbfm-index-min",
+      "name": "Feedback FM, index 0 -- the loop has nothing to modulate",
+      "shape": "FEEDBACK_FM",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 0.0,
+        "p2": 0.4299
+      },
+      "engine": {
+        "timbre": 0.0,
+        "harmonics": 0.2344,
+        "morph": 0.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 2.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "fbfm-index-max",
+      "name": "Feedback FM, index 1 -- the excess is the 48 kHz loop's ~24 kHz limit cycle",
+      "shape": "FEEDBACK_FM",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 1.0,
+        "p2": 0.4299
+      },
+      "engine": {
+        "timbre": 1.0,
+        "harmonics": 0.2344,
+        "morph": 0.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.5,
+        "cents": 1.0,
+        "spectrumDb": 2.0
+      }
+    },
+    {
+      "id": "fbfm-ratio-floor",
+      "name": "Feedback FM at -12 st",
+      "shape": "FEEDBACK_FM",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.2815
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.0078,
+        "morph": 0.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "fbfm-ratio-ceiling",
+      "name": "Feedback FM at +36 st",
+      "shape": "FEEDBACK_FM",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.9883
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.9883,
+        "morph": 0.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "fbfm-index-attenuator",
+      "name": "FAILS BY DESIGN: note 72 at +24 st, where Braids' index attenuator is 0.625 and the port has none",
+      "shape": "FEEDBACK_FM",
+      "seconds": 2,
+      "note": 72,
+      "braids": {
+        "p1": 1.0,
+        "p2": 0.8282
+      },
+      "engine": {
+        "timbre": 1.0,
+        "harmonics": 0.75,
+        "morph": 0.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "fbfm-attenuator-note84",
+      "name": "FAILS BY DESIGN: the same omission at note 84, 1:1, where the attenuator is 0.8125",
+      "shape": "FEEDBACK_FM",
+      "seconds": 2,
+      "note": 84,
+      "braids": {
+        "p1": 1.0,
+        "p2": 0.4299
+      },
+      "engine": {
+        "timbre": 1.0,
+        "harmonics": 0.2344,
+        "morph": 0.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "fbfm-attenuator-emulated",
+      "name": "Diagnostic, not an A/B: port TIMBRE 0.625 reproduces Braids' attenuated index at note 72, and the case comes good",
+      "shape": "FEEDBACK_FM",
+      "seconds": 2,
+      "note": 72,
+      "braids": {
+        "p1": 1.0,
+        "p2": 0.8282
+      },
+      "engine": {
+        "timbre": 0.625,
+        "harmonics": 0.75,
+        "morph": 0.0,
+        "macro": 0.5
+      }
+    },
+    {
+      "id": "fm-attenuator-control",
+      "name": "Control: plain FM at the same note and ratio, where Braids has no attenuator either",
+      "shape": "FM",
+      "seconds": 2,
+      "note": 72,
+      "braids": {
+        "p1": 1.0,
+        "p2": 0.8282
+      },
+      "engine": {
+        "timbre": 1.0,
+        "harmonics": 0.75,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "wtfm-stock",
+      "name": "Chaotic feedback FM, 1:1, half index",
+      "shape": "CHAOTIC_FEEDBACK_FM",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.4299
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.2344,
+        "morph": 1.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "wtfm-index-min",
+      "name": "Chaotic feedback FM, index 0 -- the same bare carrier the other two shapes give",
+      "shape": "CHAOTIC_FEEDBACK_FM",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 0.0,
+        "p2": 0.4299
+      },
+      "engine": {
+        "timbre": 0.0,
+        "harmonics": 0.2344,
+        "morph": 1.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 2.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "wtfm-index-max",
+      "name": "Chaotic feedback FM, index 1",
+      "shape": "CHAOTIC_FEEDBACK_FM",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 1.0,
+        "p2": 0.4299
+      },
+      "engine": {
+        "timbre": 1.0,
+        "harmonics": 0.2344,
+        "morph": 1.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "wtfm-ratio-floor",
+      "name": "Chaotic feedback FM at -12 st",
+      "shape": "CHAOTIC_FEEDBACK_FM",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.2815
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.0078,
+        "morph": 1.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "wtfm-ratio-ceiling",
+      "name": "Chaotic feedback FM at +36 st",
+      "shape": "CHAOTIC_FEEDBACK_FM",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.9883
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.9883,
+        "morph": 1.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "wtfm-note72",
+      "name": "Chaotic feedback FM two octaves up -- the only WTFM case that leaves note 45",
+      "shape": "CHAOTIC_FEEDBACK_FM",
+      "seconds": 2,
+      "note": 72,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.4299
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.2344,
+        "morph": 1.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "fm-modulator-clamp-control",
+      "name": "Control: note 96 at +12 st, where Braids' modulator pitch is still below its table ceiling",
+      "shape": "FM",
+      "seconds": 2,
+      "note": 96,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.594
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.4766,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "fm-modulator-clamp",
+      "name": "FAILS BY DESIGN: note 96 at +36 st, where Braids' modulator saturates at note 128 and the port's does not",
+      "shape": "FM",
+      "seconds": 2,
+      "note": 96,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.9883
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.9883,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "fm-modulator-clamp-emulated",
+      "name": "Diagnostic, not an A/B: port HARMONICS 0.681297 = +19.99 st, the ratio Braids' clamp actually delivers, and the case comes good",
+      "shape": "FM",
+      "seconds": 2,
+      "note": 96,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.9883
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.681297,
+        "morph": 0.5,
+        "macro": 0.5
+      }
+    },
+    {
+      "id": "fm-aliasing-note80",
+      "name": "Note 80 at +36 st: no clamp yet, so this is the plain-FM half of the no-oversampling deviation",
+      "shape": "FM",
+      "seconds": 2,
+      "note": 80,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.9883
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.9883,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 2.0
+      }
+    },
+    {
+      "id": "ratio-floor-knob-parity",
+      "name": "No tolerance: both sides at their own ratio minimum, documenting the -36 vs -12 table span",
+      "shape": "FM",
+      "seconds": 2,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.0
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.0,
+        "morph": 0.5,
+        "macro": 0.5
+      }
+    }
+  ]
+}
