@@ -63,6 +63,10 @@ class BuildRecipe:
     chord_set_option: int
     hold_on_trigger_option: int
     options_profile_id: int
+    # v14: 1 compiles the CV calibration procedure in (held right button at
+    # power-up), 0 leaves it out. Not an options-menu setting and not part of the
+    # saved State — it is present in the binary or it is not.
+    enable_calibration: int = 0
     # v6 (index-keyed): built-in bank index (0..2) -> 4096 packed bytes, overriding
     # a factory bank globally for every slot that uses it.
     user_data_bank_overrides: tuple[tuple[int, bytes], ...] = ()
@@ -244,12 +248,15 @@ def normalize_slots(slots: list[Any], schema_version: int) -> list[str | None]:
     # so render_config can size each bank. v5/v6 are always fully filled. (v10 —
     # per-engine stereo — is a superset of v7/v8/v9 and must allow empties too;
     # the Worker contract already does, so omitting 10 here rejected a recipe the
-    # Worker had accepted, e.g. a stereo palette with a model deleted.)
+    # Worker had accepted, e.g. a stereo palette with a model deleted. Same
+    # reasoning admits 12 — a per-slot custom FM bank alongside a deleted model,
+    # which the Worker also accepts — and 14.)
     normalized: list[str | None] = []
     for reference in slots:
         if reference is None:
-            if schema_version not in (7, 8, 9, 10, 11, 13):
-                raise ValueError("empty slots require schemaVersion 7, 8, 9, 10, 11, or 13")
+            if schema_version not in (7, 8, 9, 10, 11, 12, 13, 14):
+                raise ValueError(
+                    "empty slots require schemaVersion 7, 8, 9, 10, 11, 12, 13, or 14")
             normalized.append(None)
             continue
         if isinstance(reference, str):
@@ -308,8 +315,9 @@ def validate_recipe(value: Any) -> BuildRecipe:
     if not isinstance(value, dict):
         raise ValueError("recipe must be a JSON object")
     schema_version = value.get("schemaVersion")
-    if schema_version not in (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13):
-        raise ValueError("recipe schemaVersion must be 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, or 13")
+    if schema_version not in (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14):
+        raise ValueError(
+            "recipe schemaVersion must be 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, or 14")
     if value.get("target") != "mutable-instruments-plaits":
         raise ValueError("unsupported firmware target")
     if value.get("firmware") != "rubato-plaits":
@@ -319,13 +327,14 @@ def validate_recipe(value: Any) -> BuildRecipe:
     slots = value.get("slots")
     if not isinstance(slots, list) or len(slots) not in (24, 32):
         raise ValueError("recipe must contain 24 slots, or 32 for a four-bank build")
-    if len(slots) == 32 and schema_version not in (6, 7, 8, 9, 10, 11, 12, 13):
-        raise ValueError("32-slot recipes require schemaVersion 6, 7, 8, 9, 10, 11, 12, or 13")
+    if len(slots) == 32 and schema_version not in (6, 7, 8, 9, 10, 11, 12, 13, 14):
+        raise ValueError(
+            "32-slot recipes require schemaVersion 6, 7, 8, 9, 10, 11, 12, 13, or 14")
     public_slots = normalize_slots(slots, schema_version)
     validate_bank_shape(public_slots, schema_version)
     user_data_banks: list[tuple[int, bytes]] = []   # v6 index-keyed
     slot_banks: list[tuple[int, bytes]] = []        # v12 slot-keyed
-    if schema_version in (5, 6, 7, 8, 9, 10, 11, 12, 13):
+    if schema_version in (5, 6, 7, 8, 9, 10, 11, 12, 13, 14):
         resources = value.get("resources")
         # v6 always carries the custom-FM-banks resource (its defining feature), and
         # v12 always carries per-slot banks (its defining feature — 24 or 32 slots).
@@ -333,12 +342,19 @@ def validate_recipe(value: Any) -> BuildRecipe:
         # recipe; a 24-slot v7-v11 carries chord tables only, like v5.
         expect_user_data_banks = schema_version in (6, 12, 13) \
             or (schema_version in (7, 8, 9, 10, 11) and len(slots) == 32)
-        expected_resource_keys = {"chordTables", "userDataBanks"} if expect_user_data_banks else {"chordTables"}
+        # v14 (the calibration procedure) is the one version whose defining
+        # feature says nothing about resources — any palette may want it, with or
+        # without custom FM banks — so it is the only one that accepts either
+        # resource shape. Mirrors the Worker contract.
+        carries_user_data_banks = expect_user_data_banks or (
+            schema_version == 14 and isinstance(resources, dict)
+            and set(resources) == {"chordTables", "userDataBanks"})
+        expected_resource_keys = {"chordTables", "userDataBanks"} if carries_user_data_banks else {"chordTables"}
         if not isinstance(resources, dict) or set(resources) != expected_resource_keys:
             raise ValueError("recipe must contain only supported firmware resources")
         chord_tables = validate_chord_tables(resources.get("chordTables"))
-        if expect_user_data_banks:
-            if schema_version in (12, 13):
+        if carries_user_data_banks:
+            if schema_version in (12, 13, 14):
                 slot_banks = validate_user_data_banks_v12(resources.get("userDataBanks"), len(slots))
             else:
                 user_data_banks = validate_user_data_banks(resources.get("userDataBanks"))
@@ -354,12 +370,12 @@ def validate_recipe(value: Any) -> BuildRecipe:
             raise ValueError("short (fewer than 32-patch) FM banks require schemaVersion 13")
     else:
         chord_tables = validate_chord_tables(DEFAULT_CHORD_TABLES)
-    configuration = value if schema_version in (4, 5, 6, 7, 8, 9, 10, 11, 12, 13) else DEFAULT_CONFIGURATION
+    configuration = value if schema_version in (4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14) else DEFAULT_CONFIGURATION
     preferences = configuration.get("preferences")
     options = configuration.get("initialOptions")
     if not isinstance(preferences, dict) or not isinstance(options, dict):
         raise ValueError("recipe must contain firmware preferences and starting options")
-    if set(preferences) != {"navigationMode"} or set(options) != {
+    if set(preferences) not in ({"navigationMode"}, {"navigationMode", "calibration"}) or set(options) != {
         "lockedFrequencyKnob", "modelInput", "levelInput", "auxOutput",
         "suboscillatorOctave", "chordTable", "holdOnTrigger",
     }:
@@ -454,10 +470,22 @@ def validate_recipe(value: Any) -> BuildRecipe:
     elif schema_version == 10:
         raise ValueError("schemaVersion 10 recipes must carry a stereoEngines list")
 
+    # The calibration procedure (v14). Deliberately NOT part of the profile-id
+    # fold above: that fold exists to reset a module's SAVED options when a
+    # stored value changes meaning, and calibration is not a stored option — it
+    # is compiled in or it is not. Folding it in would reset every user's options
+    # the first time they toggled it.
+    enable_calibration = bool(preferences.get("calibration", False))
+    if not isinstance(preferences.get("calibration", False), bool):
+        raise ValueError("recipe contains an unsupported firmware option")
+    if enable_calibration and schema_version < 14:
+        raise ValueError("the calibration procedure requires schemaVersion 14")
+
     return BuildRecipe(
         public_slots=public_slots,
         chord_tables=chord_tables,
         options_profile_id=profile_id,
+        enable_calibration=1 if enable_calibration else 0,
         user_data_bank_overrides=tuple(user_data_banks),
         slot_bank_overrides=tuple(slot_banks),
         stereo_engines=stereo_engines,
@@ -658,6 +686,7 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_BUILD_AUX_SUBOSC_OPTION {recipe.aux_subosc_option}
 #define PLAITS_BUILD_CHORD_SET_OPTION {recipe.chord_set_option}
 #define PLAITS_BUILD_HOLD_ON_TRIGGER_OPTION {recipe.hold_on_trigger_option}
+#define PLAITS_BUILD_ENABLE_CALIBRATION {recipe.enable_calibration}
 #define PLAITS_BUILD_OPTIONS_PROFILE_ID 0x{recipe.options_profile_id:04x}u
 
 #define PLAITS_ENGINE_MEMBERS \\

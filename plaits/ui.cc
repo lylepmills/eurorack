@@ -147,6 +147,25 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
   data_transfer_progress_ = 0.0f;
 
   locked_octave_ = 4;
+
+#if PLAITS_BUILD_ENABLE_CALIBRATION
+  // Calibration state is initialized under the gate along with everything else
+  // that touches it, so a build without the procedure emits no code for it at
+  // all and stays byte-identical to one built before this existed.
+  pitch_lp_calibration_ = 0.0f;
+  cv_c1_ = 0.0f;
+  calibration_step_ = 0;
+  calibration_armed_ = false;
+
+  // Holding the RIGHT button through power-up starts calibration — the mirror
+  // of the bootloader's left-button firmware-update gesture (bootloader.cc
+  // checks Switch(0); this is Switch(1)), so the two live in the same idiom and
+  // neither can be reached by accident while playing. Read straight off the
+  // GPIO: the debouncer has no history this early.
+  if (switches_.pressed_immediate(SWITCH_ROW_2)) {
+    StartCalibration();
+  }
+#endif  // PLAITS_BUILD_ENABLE_CALIBRATION
 #if PLAITS_CPU_PROBE
   cpu_usage_ = 0.0f;
 #endif
@@ -307,6 +326,21 @@ void Ui::UpdateLEDs() {
   int pwm_counter = pwm_counter_ & 15;
   int triangle = (pwm_counter_ >> 4) & 31;
   triangle = triangle < 16 ? triangle : 31 - triangle;
+
+#if PLAITS_BUILD_ENABLE_CALIBRATION
+  // Calibrating takes over the display entirely, like the probe meter above:
+  // the first light pulses green while the module waits for the low note's
+  // voltage and yellow for the high one. This is the stock firmware's display,
+  // so Mutable's published calibration instructions read correctly against a
+  // build that includes the procedure.
+  if (calibration_step_) {
+    if (pwm_counter < triangle) {
+      leds_.set(0, calibration_step_ == 1 ? LED_COLOR_GREEN : LED_COLOR_YELLOW);
+    }
+    leds_.Write();
+    return;
+  }
+#endif  // PLAITS_BUILD_ENABLE_CALIBRATION
 
   switch (mode_) {
     case UI_MODE_NORMAL:
@@ -504,6 +538,37 @@ void Ui::Navigate(int button) {
 
 void Ui::ReadSwitches() {
   switches_.Debounce();
+
+#if PLAITS_BUILD_ENABLE_CALIBRATION
+  if (calibration_step_) {
+    // The button that started this is still held down at power-up, and the
+    // debouncer reports it as a fresh press a few milliseconds in — which would
+    // capture the first voltage before the player has patched anything. So the
+    // steps stay disarmed until both buttons are physically up. pressed() needs
+    // eight consecutive samples of history the debouncer does not have yet this
+    // early, so arm off the raw GPIO instead.
+    if (!calibration_armed_) {
+      if (!switches_.pressed_immediate(SWITCH_ROW_1) &&
+          !switches_.pressed_immediate(SWITCH_ROW_2)) {
+        calibration_armed_ = true;
+      }
+      return;
+    }
+    for (int i = 0; i < SWITCH_LAST; ++i) {
+      if (switches_.just_pressed(Switch(i))) {
+        press_time_[i] = 0;
+        ignore_release_[i] = true;
+        if (calibration_step_ == 1) {
+          CalibrateC1();
+        } else {
+          CalibrateC3();
+        }
+        break;
+      }
+    }
+    return;
+  }
+#endif  // PLAITS_BUILD_ENABLE_CALIBRATION
 
   switch (mode_) {
     case UI_MODE_NORMAL:
@@ -730,6 +795,15 @@ void Ui::Poll() {
   ONE_POLE(pitch_lp_, modulations_->note, 0.7f);
   modulations_->note = pitch_lp_;
 
+#if PLAITS_BUILD_ENABLE_CALIBRATION
+  // A much slower filter than the playing one, on the RAW V/OCT reading (the
+  // calibration being measured is what turns that into a note), so that each
+  // step samples a settled voltage rather than whatever the pitch tracker is
+  // chasing.
+  ONE_POLE(
+      pitch_lp_calibration_, cv_adc_.float_value(CV_ADC_CHANNEL_V_OCT), 0.1f);
+#endif  // PLAITS_BUILD_ENABLE_CALIBRATION
+
   ui_task_ = (ui_task_ + 1) % 4;
   switch (ui_task_) {
     case 0:
@@ -771,5 +845,59 @@ void Ui::Poll() {
     patch_->note = fine + static_cast<float>(octave) * 12.0f;
   }
 }
+
+#if PLAITS_BUILD_ENABLE_CALIBRATION
+
+// The stock two-point CV calibration, restored verbatim in its arithmetic so
+// that a module calibrated here matches one calibrated under any other Plaits
+// firmware — the numbers land in the same PersistentData chunk (settings.h),
+// which no firmware install erases.
+void Ui::StartCalibration() {
+  calibration_step_ = 1;
+  calibration_armed_ = false;
+  // The probe injects a test signal into the normalized inputs; the offsets
+  // measured below have to see the patched voltages alone.
+  normalization_probe_.Disable();
+}
+
+void Ui::CalibrateC1() {
+  // Acquire offsets for all channels.
+  for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) {
+    if (i != CV_ADC_CHANNEL_V_OCT) {
+      ChannelCalibrationData* c = settings_->mutable_calibration_data(i);
+      c->offset = -cv_adc_.float_value(CvAdcChannel(i)) * c->scale;
+    }
+  }
+  cv_c1_ = pitch_lp_calibration_;
+  calibration_step_ = 2;
+}
+
+void Ui::CalibrateC3() {
+  // (-33/100.0*1 + -33/140.0 * -10.0) / 3.3 * 2.0 - 1 = 0.228
+  float c1 = cv_c1_;
+
+  // (-33/100.0*1 + -33/140.0 * -10.0) / 3.3 * 2.0 - 1 = -0.171
+  float c3 = pitch_lp_calibration_;
+  float delta = c3 - c1;
+
+  // Two octaves apart, within tolerance. Anything else is a mis-patched or
+  // wrongly-scaled source, and is rejected rather than written: on a bad pair
+  // the module shows the error display and the previous calibration — the one
+  // it has been playing in tune with — is left in flash untouched.
+  if (delta > -0.6f && delta < -0.2f) {
+    ChannelCalibrationData* c = settings_->mutable_calibration_data(
+        CV_ADC_CHANNEL_V_OCT);
+    c->scale = 24.0f / delta;
+    c->offset = 12.0f - c->scale * c1;
+    settings_->SavePersistentData();
+    mode_ = UI_MODE_NORMAL;
+  } else {
+    mode_ = UI_MODE_ERROR;
+  }
+  calibration_step_ = 0;
+  normalization_probe_.Init();
+}
+
+#endif  // PLAITS_BUILD_ENABLE_CALIBRATION
 
 }  // namespace plaits

@@ -58,6 +58,47 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertEqual(build.chord_set_option, 2)
         self.assertEqual(build.hold_on_trigger_option, 1)
 
+    def calibration_recipe(self, schema_version: int, calibration) -> dict:
+        recipe = self.load("default_recipe.json")
+        recipe["schemaVersion"] = schema_version
+        recipe["preferences"] = {"navigationMode": "linear", "calibration": calibration}
+        recipe["initialOptions"] = dict(DEFAULT_CONFIGURATION["initialOptions"])
+        # v5+ recipes carry their chord tables; v14 (like v5-v11) carries no
+        # custom FM banks unless the palette actually has one.
+        recipe["resources"] = {"chordTables": DEFAULT_CHORD_TABLES}
+        return recipe
+
+    def test_calibration_defaults_off_and_emits_the_define(self) -> None:
+        # A recipe minted before v14 has no calibration key at all and must mean
+        # off — the firmware has shipped without the procedure since 2023.
+        build = validate_recipe(self.load("default_recipe.json"))
+        self.assertEqual(build.enable_calibration, 0)
+        self.assertIn("#define PLAITS_BUILD_ENABLE_CALIBRATION 0", render_config(build))
+
+    def test_calibration_on_emits_the_define(self) -> None:
+        build = validate_recipe(self.calibration_recipe(14, True))
+        self.assertEqual(build.enable_calibration, 1)
+        self.assertIn("#define PLAITS_BUILD_ENABLE_CALIBRATION 1", render_config(build))
+
+    def test_calibration_does_not_move_the_options_profile_id(self) -> None:
+        # The profile id exists to reset a module's SAVED options when a stored
+        # value changes meaning. Calibration is compiled in or out, not stored,
+        # so folding it in would reset every user's options the first time they
+        # turned it on.
+        off = validate_recipe(self.calibration_recipe(14, False))
+        on = validate_recipe(self.calibration_recipe(14, True))
+        self.assertEqual(off.options_profile_id, on.options_profile_id)
+
+    def test_calibration_requires_schema_14(self) -> None:
+        with self.assertRaisesRegex(ValueError, "schemaVersion 14"):
+            validate_recipe(self.calibration_recipe(11, True))
+        # Explicitly off asks for nothing new, so it is fine under any version.
+        self.assertEqual(validate_recipe(self.calibration_recipe(11, False)).enable_calibration, 0)
+
+    def test_calibration_must_be_a_boolean(self) -> None:
+        with self.assertRaisesRegex(ValueError, "unsupported firmware option"):
+            validate_recipe(self.calibration_recipe(14, "yes"))
+
     def test_subosc_shape_and_octave_fold_into_one_firmware_value(self) -> None:
         # The recipe keeps the shape in auxOutput and the octave beside it; the
         # firmware wants one aux-output setting and one suboscillator setting

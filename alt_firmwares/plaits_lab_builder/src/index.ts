@@ -7,6 +7,7 @@ import {
   computeBuildKey,
   computeManualKey,
   isBuildKey,
+  maxRecipeSchemaVersion,
   normalizeRecipe,
   type NormalizedRecipe,
 } from "./contract";
@@ -573,7 +574,7 @@ export default {
       if (request.method === "GET" && url.pathname === "/v1/catalog") {
         response = json({
           schemaVersion: 2,
-          recipeSchemaVersion: 13,
+          recipeSchemaVersion: maxRecipeSchemaVersion,
           approvedEngineIds,
           chordTables: approvedChordTables,
           // userDataBanks: v12 keys banks per slot, so the ceiling is the slot
