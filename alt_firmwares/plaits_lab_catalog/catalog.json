@@ -1840,6 +1840,76 @@
       "postProcessing": { "alreadyEnveloped": false, "outGain": -0.7, "auxGain": -0.7 }
     },
     {
+      "id": "vowel", "packageId": "mutable-instruments/vowel", "name": "Vowel", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Vocal",
+      "description": "Braids' table-driven vowel synthesiser: three formants read at sixteen steps a cycle, gated by a ramp that restarts every pitch period, through a tanh shaper. The stepped ancestor of Speech's SAM mode.", "tags": ["braids", "formant", "vocal", "vowel"],
+      "controls": ["Spread", "Shift", "Vowel", "Grain"], "outputs": ["The shaped formant stack.", "The same stack ahead of the overdrive."],
+      "source": { "header": "plaits/dsp/engine2/vowel_engine.h", "className": "VowelEngine", "member": "vowel_engine_", "files": ["plaits/dsp/engine2/vowel_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": -0.7, "auxGain": -1.25 }
+    },
+    {
+      "id": "harmonics", "packageId": "mutable-instruments/harmonics", "name": "Harmonics", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Additive",
+      "description": "Braids' twelve-partial additive stack, with two Lorentzian bumps sliding over the harmonic series. Its integer amplitude slew gates quiet partials out entirely, which is the grain the Plaits harmonic engine's float smoothing does not have.", "tags": ["braids", "additive", "partials", "formant"],
+      "controls": ["Colour", "Peak", "Spread", "Width"], "outputs": ["The twelve partials under both bumps.", "The same stack with Peak reflected, so it holds the end of the series MAIN does not."],
+      "source": { "header": "plaits/dsp/engine2/harmonics_engine.h", "className": "HarmonicsEngine", "member": "harmonics_engine_", "files": ["plaits/dsp/engine2/harmonics_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 0.8, "auxGain": 0.8 }
+    },
+    {
+      "id": "vosim", "packageId": "mutable-instruments/vosim", "name": "VOSIM", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Vocal",
+      "description": "Braids' VOSM: two sine formants under a bell window the played note restarts. Both formant pitches are absolute and set independently, reaching pairs Granular Formant's ratio control cannot, and the 2:1 balance is a knob.", "tags": ["braids", "vosim", "formant", "grain"],
+      "controls": ["Formant 2", "Formant 1", "Window", "Balance"], "outputs": ["The grain train at the set balance.", "The same grain train with the balance mirrored, favouring the formant MAIN does not."],
+      "source": { "header": "plaits/dsp/engine2/vosim_engine.h", "className": "VosimEngine", "member": "vosim_engine_", "files": ["plaits/dsp/engine2/vosim_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": -0.8, "auxGain": -0.8 }
+    },
+    {
+      "id": "plucked", "packageId": "mutable-instruments/plucked", "name": "Plucked", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Physical",
+      "description": "Braids' PLUK: three round-robin Karplus-Strong voices, a noise burst dropped into a resonant loop per strike. Inharmonic-string is the same round robin with a far more elaborate model; this keeps PLUK's own stochastic damping instead.", "tags": ["braids", "karplus-strong", "pluck", "string", "percussive"],
+      "controls": ["Pluck", "Damping", "Spread", "Stretch"], "outputs": ["All three round-robin voices, summed.", "Mono: the raw noise excitation only, silent between strikes. Stereo: dropped in favour of panning each voice to a fixed round-robin position."],
+      "source": { "header": "plaits/dsp/engine2/plucked_engine.h", "className": "PluckedEngine", "member": "plucked_engine_", "files": ["plaits/dsp/engine2/plucked_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 1.0, "auxGain": 1.0 }
+    },
+    {
+      "id": "blown", "packageId": "mutable-instruments/blown", "name": "Blown", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Physical modelling",
+      "description": "Braids' blown bore: one delay line closed by an inverting reflection, driven by a clipped reed and a breath pressure the noise rides on. Its tone filter sits outside the loop, so the body colour and the pipe are separate controls.", "tags": ["braids", "physical", "waveguide", "wind"],
+      "controls": ["Body", "Focus", "Blow", "Reed"], "outputs": ["The bore heard through the body filter, which is what the module emits.", "Mono: the raw bore pressure, before the body filter. Stereo: a second pickup 0.62 of the way down the same bore, through its own copy of the body filter, so the two channels are one standing wave heard at two points."],
+      "source": { "header": "plaits/dsp/engine2/blown_engine.h", "className": "BlownEngine", "member": "blown_engine_", "files": ["plaits/dsp/engine2/blown_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": -0.8, "auxGain": -0.8 }
+    },
+    {
+      "id": "struck-bell", "packageId": "mutable-instruments/struck-bell", "name": "Struck Bell", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Additive",
+      "description": "Braids' BELL: eleven fixed inharmonic partials, additively synthesised and struck once per trigger, sharing one decay curve and one odd/even detune. A fixed hand-tuned voicing, not a stretched-harmonic formula.", "tags": ["braids", "bell", "additive", "percussive", "struck", "inharmonic"],
+      "controls": ["Detune", "Decay", "Brightness", "Decay spread"], "outputs": ["The eleven-partial sum. Tracks the module's own output closely; tests/ab.json carries the measured figures.", "Mono: the five highest partials alone, a bright fast-decaying companion voice. Stereo: a second, independently detuned eleven-partial render sharing the same amplitude envelope, for a wide chorused bell."],
+      "source": { "header": "plaits/dsp/engine2/struck_bell_engine.h", "className": "StruckBellEngine", "member": "struck_bell_engine_", "files": ["plaits/dsp/engine2/struck_bell_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": true, "outGain": 1.0, "auxGain": 1.0 }
+    },
+    {
+      "id": "struck-drum", "packageId": "mutable-instruments/struck-drum", "name": "Struck Drum", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Additive",
+      "description": "Braids' DRUM: six fixed partials struck once per trigger. Two are ring-modulated by lowpass-filtered noise instead of played straight -- a different mechanism from a resonator excited by noise.", "tags": ["braids", "drum", "additive", "percussive", "struck", "noise"],
+      "controls": ["Color", "Decay", "Spread", "Decay spread"], "outputs": ["The six-partial mix. Tracks the module's own output closely; tests/ab.json carries the measured figures.", "Mono: the two noise-ring-modulated partials alone, without the direct tone or the harmonics sum. Stereo: a second, independently-filtered noise realization for the right channel, sharing the same tonal partials as the left."],
+      "source": { "header": "plaits/dsp/engine2/struck_drum_engine.h", "className": "StruckDrumEngine", "member": "struck_drum_engine_", "files": ["plaits/dsp/engine2/struck_drum_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": true, "outGain": 1.0, "auxGain": 1.0 }
+    },
+    {
+      "id": "kick", "packageId": "mutable-instruments/kick", "name": "Kick", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Drums",
+      "description": "Braids' self-enveloping kick: two decaying pulses into a bandpass that jumps up in pitch for a brief click, then self-brightens. A different mechanism from Plaits' own analog-bass-drum, which clicks with FM rather than a retuned filter.", "tags": ["braids", "drum", "kick", "percussion"],
+      "controls": ["Tone", "Decay", "Balance", "Punch"], "outputs": ["The self-enveloped kick.", "The raw excitation pulses, before the resonator, soft-clipped."],
+      "source": { "header": "plaits/dsp/engine2/kick_engine.h", "className": "KickEngine", "member": "kick_engine_", "files": ["plaits/dsp/engine2/kick_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": true, "outGain": 1.0, "auxGain": 0.8 }
+    },
+    {
+      "id": "snare", "packageId": "mutable-instruments/snare", "name": "Snare", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Drums",
+      "description": "Braids' SNAR: two decaying pulses into two fixed-interval tonal resonators, and a decaying noise burst into a third, high resonator, all self-enveloping and summed. A note strikes shorter the higher it is played.", "tags": ["braids", "drum", "snare", "percussion", "noise"],
+      "controls": ["Snap", "Tone", "Snap balance", "Spread"], "outputs": ["The full self-enveloping mix.", "The snap resonator alone, soft-clipped."],
+      "source": { "header": "plaits/dsp/engine2/snare_engine.h", "className": "SnareEngine", "member": "snare_engine_", "files": ["plaits/dsp/engine2/snare_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": true, "outGain": 1.0, "auxGain": 1.0 }
+    },
+    {
+      "id": "cymbal", "packageId": "mutable-instruments/cymbal", "name": "Cymbal", "author": "Emilie Gillet", "origin": "Mutable Instruments", "family": "Drums",
+      "description": "Braids' CYMBAL: six square oscillators through a resonant bandpass, crossfaded against clocked noise through a resonant highpass. Free-running, not self-enveloping.", "tags": ["braids", "cymbal", "hihat", "noise", "metallic"],
+      "controls": ["Color", "Tone", "Spread", "Resonance"], "outputs": ["The crossfaded pair, Braids' own signal.", "Mono: the complementary crossfade, always favouring the side MAIN does not. Stereo: a second, independent raw-noise stream and a small opposing offset on Color."],
+      "source": { "header": "plaits/dsp/engine2/cymbal_engine.h", "className": "CymbalEngine", "member": "cymbal_engine_", "files": ["plaits/dsp/engine2/cymbal_engine.cc"] },
+      "postProcessing": { "alreadyEnveloped": false, "outGain": 1.0, "auxGain": 1.0 }
+    },
+    {
       "id": "bowed",
       "packageId": "mutable-instruments/bowed",
       "name": "Bowed",
@@ -2818,6 +2888,96 @@
         "timbre": "Spreads the seven saws apart in pitch, from unison to a wide, wavering chorus.",
         "morph": "Sweeps the same filter's response from lowpass, through the module's own highpass at center, to bandpass.",
         "macro": "The filter's resonance, fixed in the module -- calmer below center, a controlled peak above it."
+      },
+      "trigger": "Restarts the engine."
+    },
+    "vowel": {
+      "controls": {
+        "harmonics": "Pulls the upper two formants toward the first or pushes them apart, past the vowels in the module's list.",
+        "timbre": "Scales all three formants together, from a large vocal tract to a small one.",
+        "morph": "Walks the nine phoneme frames, crossfading between neighbours.",
+        "macro": "Shortens or stretches the burst inside each pitch period, from a tight grain to a ramp still open at the reset."
+      },
+      "trigger": "Restarts the engine."
+    },
+    "harmonics": {
+      "controls": {
+        "harmonics": "Braids' COLOR, welded as the module has it: the bumps narrow toward both ends while the second one grows.",
+        "timbre": "Slides the first bump from the fundamental to the twelfth partial; the second follows at half that index plus six.",
+        "morph": "Moves the second bump off the module's fixed relation, six partials either way. Centre is Braids.",
+        "macro": "Scales the bump width around whatever Colour chose, so the two stop sharing a knob. Noon is Braids."
+      },
+      "trigger": "Restarts the engine."
+    },
+    "vosim": {
+      "controls": {
+        "harmonics": "The second formant's pitch, also absolute and set independently of the first.",
+        "timbre": "The first formant's pitch, absolute rather than tracking the note.",
+        "morph": "Sets how much of each cycle the bell spends opening: a narrow spike, the module's one sixteenth, or half.",
+        "macro": "Shifts weight between the two formants, from formant 2 alone to formant 1 alone. The detent is the module's fixed 2:1."
+      },
+      "trigger": "Restarts the engine."
+    },
+    "plucked": {
+      "controls": {
+        "harmonics": "How much of one string period gets struck with noise, from a narrow flick to most of the cycle.",
+        "timbre": "Below noon, extra muting under the decay. Above noon, random skipped filter passes stretch and detune it toward metal.",
+        "morph": "Offsets each round-robin voice by a fixed interval, building a small chord. Unison, the module, at noon.",
+        "macro": "How far Damping's random detuning reaches: off at the bottom, the module's ceiling at noon, past it above."
+      },
+      "trigger": "Restarts the engine."
+    },
+    "blown": {
+      "controls": {
+        "harmonics": "Braids' COLOR: the corner of the body filter the bore is heard through. Its live travel narrows with the note.",
+        "timbre": "Braids' TIMBRE: how much noise rides on the breath. Low is turbulent, airy and quiet; high is steady and loud.",
+        "morph": "Mouth pressure, which Braids welds at 0.8. Down for an under-blown pipe, up to drive the reed into its clip.",
+        "macro": "The reed's rest offset, which Braids welds at 0.7. Down for a loose reed, up for one pinned open most of the cycle."
+      },
+      "trigger": "Restarts the engine."
+    },
+    "struck-bell": {
+      "controls": {
+        "harmonics": "Spreads alternate partials apart around the module's own fixed ratios: every other one up, the rest down.",
+        "timbre": "Blends the module's two decay tables, short at 0 to long near the top; past about 98% the bell drones forever.",
+        "morph": "Tilts each partial's strike amplitude by position: soft mallet toward 0, the module's amplitudes at noon, hard toward 1.",
+        "macro": "Sets how much faster high partials decay than low: uniform toward 0, the module's spread at noon, exaggerated toward 1."
+      },
+      "trigger": "Restarts the engine."
+    },
+    "struck-drum": {
+      "controls": {
+        "harmonics": "The noise's cutoff, the six-partial harmonics level, and a two-voice noise crossfade, coupled as the module does.",
+        "timbre": "Blends between the module's two decay tables; past about 98% the drum drones and never loses energy.",
+        "morph": "Scales the six fixed partial ratios together, from unison at 0 through the module's own voicing at noon to double at 1.",
+        "macro": "How much faster high partials decay than low: uniform toward 0, the module's own spread at noon, exaggerated toward 1."
+      },
+      "trigger": "Restarts the engine."
+    },
+    "kick": {
+      "controls": {
+        "harmonics": "The output filter's brightness -- Braids' COLOR, applied after the resonator.",
+        "timbre": "The resonator's decay -- Braids' TIMBRE. Turning it up lengthens the boom toward near-self-oscillation.",
+        "morph": "Crossfades the two excitation pulses. Centred is native level; the ends fade one out to just click or just thump.",
+        "macro": "Scales the self-brightening dynamic filter modulation around the module's one fixed amount, from off to 4x."
+      },
+      "trigger": "Restarts the engine."
+    },
+    "snare": {
+      "controls": {
+        "harmonics": "The noise burst's peak level, and past noon, how long both the snap and the tone ring.",
+        "timbre": "Balances the two tonal resonators, which sound at the note itself and an octave above it.",
+        "morph": "Crossfades the tonal sum against the snap resonator. Centred is the module's own unweighted sum.",
+        "macro": "Widens the interval between the two tonal resonators: unison at 0, the module's octave at noon, two at 1."
+      },
+      "trigger": "Restarts the engine."
+    },
+    "cymbal": {
+      "controls": {
+        "harmonics": "Crossfades from the resonant metallic noise to the resonant raw noise, the module's own COLOR.",
+        "timbre": "Sets the cutoff shared by both filters, from a dull thud to an open, bright hiss.",
+        "morph": "Scales the five detuned partials' distance from the root, from unison to double the module's own spread.",
+        "macro": "Scales both filters' resonance around the module's fixed setting, from damped and dull to near-ringing."
       },
       "trigger": "Restarts the engine."
     },

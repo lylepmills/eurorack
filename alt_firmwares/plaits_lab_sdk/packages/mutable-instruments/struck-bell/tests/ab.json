@@ -1,0 +1,153 @@
+{
+  "shape": "STRUCK_BELL",
+  "note": "Braids' TIMBRE is the decay balance and its COLOR is the odd/even detune, so p1 maps to the engine's TIMBRE and p2 to its HARMONICS. MORPH and MACRO sit at noon in every case (Brightness = the module's own fixed amplitudes, Decay spread = the module's own per-partial spread). Every case drives triggerHz > 0 rather than a single strike at t=0: this is a triggered/decaying model, and BELL's eleven partials are inharmonic ratios (-10.03 st through +24.30 st, none an integer multiple of another), not a harmonic series -- there is no periodic waveform for a single-lag autocorrelator to lock a fundamental onto, the same caveat particle-burst's ab.json documents for its own inharmonic resonators. No case declares a cents tolerance for that reason; ab_engine.py's raw f0 output was inspected by hand while writing these cases (not just assumed absent) and it does not track a stable value across the partial mix at any TIMBRE/COLOR setting tried. seconds/triggerHz are chosen so an exact whole number of strikes lands inside the window on both sides (the strike period always divides the case length), per the guide's note that a decaying model compared over a window with mismatched hit counts measures nothing. A note on TIMBRE coverage: p1=1.0 is past the drone threshold, so it exercises the SKIP branch, not the long end of the decay blend. decay-long fills that gap -- p1=0.93 puts `balance` at 0, i.e. exactly kBellPartialDecayLong, where Braids' int32 amplitude truncation dominates the multiply and the module falls silent in about two seconds; it is run over a single 10 s strike so the whole tail is inside the window. Without it the six shorter cases hid a missing-truncation port at +0.05..+0.37 dB.",
+  "cases": [
+    {
+      "id": "stock-mid",
+      "name": "TIMBRE and COLOR both at noon",
+      "seconds": 4,
+      "triggerHz": 1.0,
+      "note": 55,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "decay-short",
+      "name": "TIMBRE at 0: the shortest decay table alone",
+      "seconds": 4,
+      "triggerHz": 2.0,
+      "note": 55,
+      "braids": {
+        "p1": 0.0,
+        "p2": 0.3
+      },
+      "engine": {
+        "timbre": 0.0,
+        "harmonics": 0.3,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "decay-long",
+      "name": "TIMBRE at 0.93: the long decay table, one strike, whole tail in the window",
+      "seconds": 10,
+      "triggerHz": 0.1,
+      "note": 55,
+      "braids": {
+        "p1": 0.93,
+        "p2": 0.3
+      },
+      "engine": {
+        "timbre": 0.93,
+        "harmonics": 0.3,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "decay-drone",
+      "name": "TIMBRE at 1: past the drone threshold, no decay at all",
+      "seconds": 5,
+      "triggerHz": 0.4,
+      "note": 55,
+      "braids": {
+        "p1": 1.0,
+        "p2": 0.3
+      },
+      "engine": {
+        "timbre": 1.0,
+        "harmonics": 0.3,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "detune-none",
+      "name": "COLOR at 0: the module's own fixed ratios, no extra spread",
+      "seconds": 4,
+      "triggerHz": 1.0,
+      "note": 57,
+      "braids": {
+        "p1": 0.6,
+        "p2": 0.0
+      },
+      "engine": {
+        "timbre": 0.6,
+        "harmonics": 0.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "detune-max",
+      "name": "COLOR at 1: the widest odd/even spread",
+      "seconds": 4,
+      "triggerHz": 1.0,
+      "note": 57,
+      "braids": {
+        "p1": 0.6,
+        "p2": 1.0
+      },
+      "engine": {
+        "timbre": 0.6,
+        "harmonics": 1.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "high-register",
+      "name": "High note, well above the low partials' -10 st offset",
+      "seconds": 3,
+      "triggerHz": 1.0,
+      "note": 84,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.4
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.4,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    }
+  ]
+}

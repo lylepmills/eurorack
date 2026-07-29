@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/harmonics",
+  "catalogId": "harmonics",
+  "version": "1.0.0",
+  "name": "Harmonics",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "Braids' twelve-partial additive stack, with two Lorentzian bumps sliding over the harmonic series. Its integer amplitude slew gates quiet partials out entirely, which is the grain the Plaits harmonic engine's float smoothing does not have.",
+  "family": "Additive",
+  "tags": [
+    "braids",
+    "additive",
+    "partials",
+    "formant"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Colour",
+      "description": "Braids' COLOR, welded as the module has it: the bumps narrow toward both ends while the second one grows."
+    },
+    {
+      "id": "timbre",
+      "label": "Peak",
+      "description": "Slides the first bump from the fundamental to the twelfth partial; the second follows at half that index plus six."
+    },
+    {
+      "id": "morph",
+      "label": "Spread",
+      "description": "Moves the second bump off the module's fixed relation, six partials either way. Centre is Braids."
+    },
+    {
+      "id": "macro",
+      "label": "Width",
+      "description": "Scales the bump width around whatever Colour chose, so the two stop sharing a knob. Noon is Braids."
+    }
+  ],
+  "outputs": {
+    "main": "The twelve partials under both bumps.",
+    "aux": "The same stack with Peak reflected, so it holds the end of the series MAIN does not."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/harmonics_engine.h",
+    "files": [
+      "plaits/dsp/engine2/harmonics_engine.cc"
+    ],
+    "className": "HarmonicsEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": 0.8,
+    "auxGain": 0.8
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids DigitalOscillator::RenderHarmonics"
+}

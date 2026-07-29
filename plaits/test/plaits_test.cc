@@ -60,6 +60,16 @@
 #include "plaits/dsp/engine2/six_op_engine.h"
 #include "plaits/dsp/engine2/spectral_spiral_engine.h"
 #include "plaits/dsp/engine2/bowed_engine.h"
+#include "plaits/dsp/engine2/cymbal_engine.h"
+#include "plaits/dsp/engine2/snare_engine.h"
+#include "plaits/dsp/engine2/kick_engine.h"
+#include "plaits/dsp/engine2/struck_drum_engine.h"
+#include "plaits/dsp/engine2/struck_bell_engine.h"
+#include "plaits/dsp/engine2/blown_engine.h"
+#include "plaits/dsp/engine2/plucked_engine.h"
+#include "plaits/dsp/engine2/vosim_engine.h"
+#include "plaits/dsp/engine2/harmonics_engine.h"
+#include "plaits/dsp/engine2/vowel_engine.h"
 #include "plaits/dsp/engine2/saw_swarm_engine.h"
 #include "plaits/dsp/engine2/saw_square_engine.h"
 #include "plaits/dsp/engine2/particle_burst_engine.h"
@@ -2170,6 +2180,16 @@ void TestExperimentalEngines() {
   RenderAuditionEngine<CSawEngine>("14-csaw.wav");
   RenderAuditionEngine<RingModEngine>("15-ring-mod.wav");
   RenderAuditionEngine<BowedEngine>("16-bowed.wav");
+  RenderAuditionEngine<CymbalEngine>("47-cymbal.wav");
+  RenderAuditionEngine<SnareEngine>("46-snare.wav");
+  RenderAuditionEngine<KickEngine>("45-kick.wav");
+  RenderAuditionEngine<StruckDrumEngine>("44-struck-drum.wav");
+  RenderAuditionEngine<StruckBellEngine>("43-struck-bell.wav");
+  RenderAuditionEngine<BlownEngine>("42-blown.wav");
+  RenderAuditionEngine<PluckedEngine>("41-plucked.wav");
+  RenderAuditionEngine<VosimEngine>("40-vosim.wav");
+  RenderAuditionEngine<HarmonicsEngine>("39-harmonics.wav");
+  RenderAuditionEngine<VowelEngine>("38-vowel.wav");
   RenderAuditionEngine<SawSwarmEngine>("37-saw-swarm.wav");
   RenderAuditionEngine<SawSquareEngine>("36-saw-square.wav");
   RenderAuditionEngine<ParticleBurstEngine>("35-particle-burst.wav");
@@ -2221,6 +2241,16 @@ void TestExperimentalEngines() {
   ValidateExperimentalEngineExtremes<CSawEngine>();
   ValidateExperimentalEngineExtremes<RingModEngine>();
   ValidateExperimentalEngineExtremes<BowedEngine>();
+  ValidateExperimentalEngineExtremes<CymbalEngine>();
+  ValidateExperimentalEngineExtremes<SnareEngine>();
+  ValidateExperimentalEngineExtremes<KickEngine>();
+  ValidateExperimentalEngineExtremes<StruckDrumEngine>();
+  ValidateExperimentalEngineExtremes<StruckBellEngine>();
+  ValidateExperimentalEngineExtremes<BlownEngine>();
+  ValidateExperimentalEngineExtremes<PluckedEngine>();
+  ValidateExperimentalEngineExtremes<VosimEngine>();
+  ValidateExperimentalEngineExtremes<HarmonicsEngine>();
+  ValidateExperimentalEngineExtremes<VowelEngine>();
   ValidateExperimentalEngineExtremes<SawSwarmEngine>();
   ValidateExperimentalEngineExtremes<SawSquareEngine>();
   ValidateExperimentalEngineExtremes<ParticleBurstEngine>();
@@ -2257,6 +2287,16 @@ void TestExperimentalEngines() {
   ValidateExperimentalControlResponse<CSawEngine>("CSaw");
   ValidateExperimentalControlResponse<RingModEngine>("Ring Mod");
   ValidateExperimentalControlResponse<BowedEngine>("Bowed");
+  ValidateExperimentalControlResponse<CymbalEngine>("Cymbal");
+  ValidateExperimentalControlResponse<SnareEngine>("Snare");
+  ValidateExperimentalControlResponse<KickEngine>("Kick");
+  ValidateExperimentalControlResponse<StruckDrumEngine>("Struck Drum");
+  ValidateExperimentalControlResponse<StruckBellEngine>("Struck Bell");
+  ValidateExperimentalControlResponse<BlownEngine>("Blown");
+  ValidateExperimentalControlResponse<PluckedEngine>("Plucked");
+  ValidateExperimentalControlResponse<VosimEngine>("VOSIM");
+  ValidateExperimentalControlResponse<HarmonicsEngine>("Harmonics");
+  ValidateExperimentalControlResponse<VowelEngine>("Vowel");
   ValidateExperimentalControlResponse<SawSwarmEngine>("Saw Swarm");
   ValidateExperimentalControlResponse<SawSquareEngine>("Saw Square");
   ValidateExperimentalControlResponse<ParticleBurstEngine>("Particle Burst");

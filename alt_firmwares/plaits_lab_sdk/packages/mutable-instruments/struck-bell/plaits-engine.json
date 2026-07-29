@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/struck-bell",
+  "catalogId": "struck-bell",
+  "version": "1.0.0",
+  "name": "Struck Bell",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "Braids' BELL: eleven fixed inharmonic partials, additively synthesised and struck once per trigger, sharing one decay curve and one odd/even detune. A fixed hand-tuned voicing, not a stretched-harmonic formula.",
+  "family": "Additive",
+  "tags": [
+    "braids",
+    "bell",
+    "additive",
+    "percussive",
+    "struck",
+    "inharmonic"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Detune",
+      "description": "Spreads alternate partials apart around the module's own fixed ratios: every other one up, the rest down."
+    },
+    {
+      "id": "timbre",
+      "label": "Decay",
+      "description": "Blends the module's two decay tables, short at 0 to long near the top; past about 98% the bell drones forever."
+    },
+    {
+      "id": "morph",
+      "label": "Brightness",
+      "description": "Tilts each partial's strike amplitude by position: soft mallet toward 0, the module's amplitudes at noon, hard toward 1."
+    },
+    {
+      "id": "macro",
+      "label": "Decay spread",
+      "description": "Sets how much faster high partials decay than low: uniform toward 0, the module's spread at noon, exaggerated toward 1."
+    }
+  ],
+  "outputs": {
+    "main": "The eleven-partial sum. Tracks the module's own output closely; tests/ab.json carries the measured figures.",
+    "aux": "Mono: the five highest partials alone, a bright fast-decaying companion voice. Stereo: a second, independently detuned eleven-partial render sharing the same amplitude envelope, for a wide chorused bell."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/struck_bell_engine.h",
+    "files": [
+      "plaits/dsp/engine2/struck_bell_engine.cc"
+    ],
+    "className": "StruckBellEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": true,
+    "outGain": 1.0,
+    "auxGain": 1.0
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids DigitalOscillator::RenderStruckBell (BELL)"
+}

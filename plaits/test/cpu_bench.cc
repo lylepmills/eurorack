@@ -54,6 +54,16 @@
 #include "plaits/dsp/engine2/sideband_engine.h"
 #include "plaits/dsp/engine2/spectral_spiral_engine.h"
 #include "plaits/dsp/engine2/bowed_engine.h"
+#include "plaits/dsp/engine2/cymbal_engine.h"
+#include "plaits/dsp/engine2/snare_engine.h"
+#include "plaits/dsp/engine2/kick_engine.h"
+#include "plaits/dsp/engine2/struck_drum_engine.h"
+#include "plaits/dsp/engine2/struck_bell_engine.h"
+#include "plaits/dsp/engine2/blown_engine.h"
+#include "plaits/dsp/engine2/plucked_engine.h"
+#include "plaits/dsp/engine2/vosim_engine.h"
+#include "plaits/dsp/engine2/harmonics_engine.h"
+#include "plaits/dsp/engine2/vowel_engine.h"
 #include "plaits/dsp/engine2/saw_swarm_engine.h"
 #include "plaits/dsp/engine2/saw_square_engine.h"
 #include "plaits/dsp/engine2/particle_burst_engine.h"
@@ -169,6 +179,16 @@ int main() {
   bench<ScannedEngine>("scanned");
   bench<PulsarEngine>("pulsar");
   bench<BowedEngine>("bowed");
+  bench<CymbalEngine>("cymbal");
+  bench<SnareEngine>("snare");
+  bench<KickEngine>("kick");
+  bench<StruckDrumEngine>("struck-drum");
+  bench<StruckBellEngine>("struck-bell");
+  bench<BlownEngine>("blown");
+  bench<PluckedEngine>("plucked");
+  bench<VosimEngine>("vosim");
+  bench<HarmonicsEngine>("harmonics");
+  bench<VowelEngine>("vowel");
   bench<SawSwarmEngine>("saw-swarm");
   bench<SawSquareEngine>("saw-square");
   bench<ParticleBurstEngine>("particle-burst");

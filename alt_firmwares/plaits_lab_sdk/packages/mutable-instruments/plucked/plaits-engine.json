@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/plucked",
+  "catalogId": "plucked",
+  "version": "1.0.0",
+  "name": "Plucked",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "Braids' PLUK: three round-robin Karplus-Strong voices, a noise burst dropped into a resonant loop per strike. Inharmonic-string is the same round robin with a far more elaborate model; this keeps PLUK's own stochastic damping instead.",
+  "family": "Physical",
+  "tags": [
+    "braids",
+    "karplus-strong",
+    "pluck",
+    "string",
+    "percussive"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Pluck",
+      "description": "How much of one string period gets struck with noise, from a narrow flick to most of the cycle."
+    },
+    {
+      "id": "timbre",
+      "label": "Damping",
+      "description": "Below noon, extra muting under the decay. Above noon, random skipped filter passes stretch and detune it toward metal."
+    },
+    {
+      "id": "morph",
+      "label": "Spread",
+      "description": "Offsets each round-robin voice by a fixed interval, building a small chord. Unison, the module, at noon."
+    },
+    {
+      "id": "macro",
+      "label": "Stretch",
+      "description": "How far Damping's random detuning reaches: off at the bottom, the module's ceiling at noon, past it above."
+    }
+  ],
+  "outputs": {
+    "main": "All three round-robin voices, summed.",
+    "aux": "Mono: the raw noise excitation only, silent between strikes. Stereo: dropped in favour of panning each voice to a fixed round-robin position."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/plucked_engine.h",
+    "files": [
+      "plaits/dsp/engine2/plucked_engine.cc"
+    ],
+    "className": "PluckedEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": 1.0,
+    "auxGain": 1.0
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids DigitalOscillator::RenderPlucked (PLUK)"
+}

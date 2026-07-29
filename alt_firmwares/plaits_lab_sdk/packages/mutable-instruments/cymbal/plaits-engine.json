@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/cymbal",
+  "catalogId": "cymbal",
+  "version": "1.0.0",
+  "name": "Cymbal",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "Braids' CYMBAL: six square oscillators through a resonant bandpass, crossfaded against clocked noise through a resonant highpass. Free-running, not self-enveloping.",
+  "family": "Drums",
+  "tags": [
+    "braids",
+    "cymbal",
+    "hihat",
+    "noise",
+    "metallic"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Color",
+      "description": "Crossfades from the resonant metallic noise to the resonant raw noise, the module's own COLOR."
+    },
+    {
+      "id": "timbre",
+      "label": "Tone",
+      "description": "Sets the cutoff shared by both filters, from a dull thud to an open, bright hiss."
+    },
+    {
+      "id": "morph",
+      "label": "Spread",
+      "description": "Scales the five detuned partials' distance from the root, from unison to double the module's own spread."
+    },
+    {
+      "id": "macro",
+      "label": "Resonance",
+      "description": "Scales both filters' resonance around the module's fixed setting, from damped and dull to near-ringing."
+    }
+  ],
+  "outputs": {
+    "main": "The crossfaded pair, Braids' own signal.",
+    "aux": "Mono: the complementary crossfade, always favouring the side MAIN does not. Stereo: a second, independent raw-noise stream and a small opposing offset on Color."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/cymbal_engine.h",
+    "files": [
+      "plaits/dsp/engine2/cymbal_engine.cc"
+    ],
+    "className": "CymbalEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": 1.0,
+    "auxGain": 1.0
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids DigitalOscillator::RenderCymbal (CYMB)"
+}

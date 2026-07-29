@@ -1,0 +1,137 @@
+{
+  "shape": "SNARE",
+  "note": "Braids' TIMBRE is the live tonal balance and its COLOR is the snap level (plus, over its top half, the strike-time decay stretch), read directly (RenderSnare has no BEGIN_INTERPOLATE_PARAMETER macro to misread), so p1 maps to the engine's TIMBRE and p2 to HARMONICS. Both Braids axes are swept to BOTH ends: p1 at 0.0/0.5/1.0 (balance-low, stock-mid, balance-high) and p2 at 0.0/0.5/1.0 (snap-low, stock-mid, snap-high), which also straddles COLOR's own >= 16384 breakpoint in both directions. MORPH and MACRO sit at 0.5 in every case: Snap balance is the module's own unweighted sum there and Spread is the module's own voicing, which is the module exactly. triggerHz is nonzero in every case -- this is a self-enveloping, trigger-only model; an unpatched trigger renders silence on both sides and compares nothing. The trigger schedules line up (onsets measured at t=0 and every 1/triggerHz on BOTH sides), so the compared window holds the same whole hits either way. The `cents` tolerance IS declared on the five cases the estimator resolves, and it is a real check, not a formality: this model sits an octave below its own source constants (a 96 kHz coefficient table stepped at 48 kHz -- see the header's LINEAGE/RATE), so an octave slip is exactly the failure mode worth guarding. All five report -4.6 cents, which is ab_engine.py's own documented kCorrectedSampleRate offset (4.61 cents) and nothing else. `high-note-shorter-decay` alone declares no `cents`: at note 78 the estimator returns no usable f0 (its 0.25 s window lands in the noise-dominated part of a much shorter hit), and declaring a tolerance it cannot resolve would fail the case for a harness reason. Every case passes at the guide's standard targets with no widened tolerance; what residual remains is the top-octave zero-order-hold tilt quantified in the header's A/B NOTES.",
+  "cases": [
+    {
+      "id": "stock-mid",
+      "name": "Stock tone balance and snap",
+      "seconds": 3,
+      "note": 45,
+      "triggerHz": 2,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 10.0,
+        "spectrumDb": 1.0
+      }
+    },
+    {
+      "id": "snap-low",
+      "name": "Quietest snap",
+      "seconds": 3,
+      "note": 45,
+      "triggerHz": 2,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.0
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 10.0,
+        "spectrumDb": 1.0
+      }
+    },
+    {
+      "id": "snap-high",
+      "name": "Loudest snap, decay stretched by COLOR's top half",
+      "seconds": 4,
+      "note": 45,
+      "triggerHz": 1,
+      "braids": {
+        "p1": 0.5,
+        "p2": 1.0
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 1.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 10.0,
+        "spectrumDb": 1.0
+      }
+    },
+    {
+      "id": "balance-low",
+      "name": "Tonal resonators balanced equally",
+      "seconds": 3,
+      "note": 45,
+      "triggerHz": 2,
+      "braids": {
+        "p1": 0.0,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.0,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 10.0,
+        "spectrumDb": 1.0
+      }
+    },
+    {
+      "id": "balance-high",
+      "name": "Tonal resonators favouring the higher one (+24 source offset)",
+      "seconds": 3,
+      "note": 45,
+      "triggerHz": 2,
+      "braids": {
+        "p1": 1.0,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 1.0,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 10.0,
+        "spectrumDb": 1.0
+      }
+    },
+    {
+      "id": "high-note-shorter-decay",
+      "name": "A higher note strikes shorter (the pitch/decay coupling)",
+      "seconds": 3,
+      "note": 78,
+      "triggerHz": 2,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.0
+      }
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/vowel",
+  "catalogId": "vowel",
+  "version": "1.0.0",
+  "name": "Vowel",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "Braids' table-driven vowel synthesiser: three formants read at sixteen steps a cycle, gated by a ramp that restarts every pitch period, through a tanh shaper. The stepped ancestor of Speech's SAM mode.",
+  "family": "Vocal",
+  "tags": [
+    "braids",
+    "formant",
+    "vocal",
+    "vowel"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Spread",
+      "description": "Pulls the upper two formants toward the first or pushes them apart, past the vowels in the module's list."
+    },
+    {
+      "id": "timbre",
+      "label": "Shift",
+      "description": "Scales all three formants together, from a large vocal tract to a small one."
+    },
+    {
+      "id": "morph",
+      "label": "Vowel",
+      "description": "Walks the nine phoneme frames, crossfading between neighbours."
+    },
+    {
+      "id": "macro",
+      "label": "Grain",
+      "description": "Shortens or stretches the burst inside each pitch period, from a tight grain to a ramp still open at the reset."
+    }
+  ],
+  "outputs": {
+    "main": "The shaped formant stack.",
+    "aux": "The same stack ahead of the overdrive."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/vowel_engine.h",
+    "files": [
+      "plaits/dsp/engine2/vowel_engine.cc"
+    ],
+    "className": "VowelEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": -0.7,
+    "auxGain": -1.25
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids DigitalOscillator::RenderVowel (VOWL)"
+}

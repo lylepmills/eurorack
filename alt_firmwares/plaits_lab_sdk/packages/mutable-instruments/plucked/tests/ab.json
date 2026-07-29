@@ -1,0 +1,180 @@
+{
+  "shape": "PLUCKED",
+  "note": "Braids' TIMBRE is Damping and its COLOR is Pluck, so p1 maps to the engine's TIMBRE and p2 to its HARMONICS. MORPH and MACRO sit at noon in every case -- Spread is unison there (the module's own always-unison round robin) and Stretch reproduces Braids' own ceiling exactly, so these cases compare the same sound the module makes. This is a triggered/decaying model: every case sets triggerHz so both sides render a whole, matched number of strikes rather than one side catching a hit mid-decay. NOTE CHOICE MATTERS HERE: Braids runs its loop filter size/period times per output sample, a ratio that sweeps (1, 2] across each power-of-two band while the port always runs exactly 1 (engine header, DELAY-LINE MODEL item 1), so fidelity varies with WHERE a note sits in that ladder, not just with register. notes 21/45/69 are all A's and all sit at ratio 1.17; `ladder-worst` (note 54, ratio 1.97) samples the other end and is the worst case in the file. `low-register` drops `cents` because the port cannot reach that fundamental at all -- a real gap against a module that plays it in tune, not a shared limit (DELAY-LINE MODEL item 2).",
+  "cases": [
+    {
+      "id": "stock-mid",
+      "name": "Damping and Pluck both at noon",
+      "seconds": 3,
+      "note": 45,
+      "triggerHz": 2,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 2.0,
+        "cents": 2.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "damping-low",
+      "name": "Bottom of Damping -- a muted thump",
+      "seconds": 3,
+      "note": 45,
+      "triggerHz": 3,
+      "braids": {
+        "p1": 0.0,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.0,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 2.5,
+        "cents": 2.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "damping-high",
+      "name": "Top of Damping -- stochastic stretch",
+      "seconds": 4,
+      "note": 45,
+      "triggerHz": 1,
+      "braids": {
+        "p1": 1.0,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 1.0,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 2.0,
+        "spectrumDb": 2.5
+      }
+    },
+    {
+      "id": "pluck-narrow",
+      "name": "Narrowest excitation",
+      "seconds": 3,
+      "note": 45,
+      "triggerHz": 2,
+      "braids": {
+        "p1": 0.6,
+        "p2": 0.0
+      },
+      "engine": {
+        "timbre": 0.6,
+        "harmonics": 0.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.5,
+        "cents": 2.0,
+        "spectrumDb": 3.0
+      }
+    },
+    {
+      "id": "pluck-wide",
+      "name": "Widest excitation",
+      "seconds": 3,
+      "note": 45,
+      "triggerHz": 2,
+      "braids": {
+        "p1": 0.6,
+        "p2": 1.0
+      },
+      "engine": {
+        "timbre": 0.6,
+        "harmonics": 1.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.5,
+        "cents": 2.0,
+        "spectrumDb": 2.0
+      }
+    },
+    {
+      "id": "high-register",
+      "name": "Two octaves up -- the shortest period tested",
+      "seconds": 2,
+      "note": 69,
+      "triggerHz": 4,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 3.0,
+        "cents": 2.0,
+        "spectrumDb": 4.5
+      }
+    },
+    {
+      "id": "ladder-worst",
+      "name": "Note 54 -- the top of Braids' filter-rate ladder, worst measured",
+      "seconds": 3,
+      "note": 54,
+      "triggerHz": 2,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 3.6,
+        "cents": 2.0,
+        "spectrumDb": 4.8
+      }
+    },
+    {
+      "id": "low-register",
+      "name": "Below the delay line's period clamp",
+      "seconds": 4,
+      "note": 21,
+      "triggerHz": 1,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 2.5,
+        "spectrumDb": 3.0
+      }
+    }
+  ]
+}

@@ -1,0 +1,136 @@
+{
+  "shape": "BLOWN",
+  "note": "Braids' TIMBRE is the breath-noise depth and its COLOR is the body filter's corner, so p1 maps to the engine's TIMBRE and p2 to its HARMONICS, both 1:1. MORPH and MACRO sit at noon in every case, where Blow is 0.8 and Reed is 0.69995 -- the two constants the module welds.",
+
+  "whyMostCasesAreTriggered": "BLOWN is a noise-driven chaotic self-oscillator, and which limit cycle it settles into depends on the noise realisation. Measured by rendering the MODULE against ITSELF from twenty different RNG seeds (190 pairs), held and untriggered for 3 s at MIDI 45: at COLOR noon the AC RMS spreads 2.59 dB and the pairwise spectral difference reaches 8.49 dB; at COLOR 0 it spreads 10.49 dB and 9.86 dB. Longer renders make it worse, not better -- at 20 s one pair reads 2.05 dB and 8.74 dB -- because the model wanders rather than averaging. So a HELD A/B of this model cannot resolve anything finer than about 9 dB, no matter how correct the port is; a tolerance tighter than that would fail a bit-exact port, and one that loose is not a test. Retriggering fixes it. A strike flushes the bore and nothing else (digital_oscillator.cc:1311-1314), so both sides then average over many independent settlings, and the same twenty-seed module-against-itself measurement at triggerHz 8 reads at most 1.18 dB of AC RMS spread and 0.69 dB of spectral difference. The parameter-axis cases are therefore triggered and hold the guide's ordinary tolerances; two held cases are kept to record the phenomenon, with tolerances taken from that measurement rather than from what the port happens to do.",
+
+  "whereTheCentsToleranceIsOmitted": "ab_engine's f0 estimator is a 0.25 s autocorrelation with a 0.25 correlation floor and a 2000 Hz ceiling. Two of these cases defeat it, and the evidence is that they defeat the MODULE, not the port: across the twenty reference seeds the estimator's own reading spans 5019 cents at body-dark and 7420 cents at the low note, pinning at the 2000 Hz f_max on some seeds. body-dark is a 112 Hz-cornered tone with almost nothing above the fundamental to correlate; the low note is 27.5 Hz, four cycles per 0.25 s window. Those two cases therefore declare no cents tolerance, and low-sustained -- where the module's own reading spans 0.05 cents -- carries the low-octave pitch check instead. Everywhere else the module's own spread is under 0.5 cents and a 1.0 cent tolerance is real.",
+
+  "cases": [
+    {
+      "id": "stock-mid",
+      "name": "Both knobs at noon",
+      "seconds": 4,
+      "note": 45,
+      "triggerHz": 8,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.5, "cents": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "turbulent",
+      "name": "Maximum breath noise",
+      "seconds": 4,
+      "note": 45,
+      "triggerHz": 8,
+      "braids": {"p1": 0.0, "p2": 0.5},
+      "engine": {"timbre": 0.0, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.5, "cents": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "focused",
+      "name": "Minimum breath noise",
+      "seconds": 4,
+      "note": 45,
+      "triggerHz": 8,
+      "braids": {"p1": 1.0, "p2": 0.5},
+      "engine": {"timbre": 1.0, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.5, "cents": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "body-dark",
+      "name": "Body filter at its floor",
+      "seconds": 4,
+      "note": 45,
+      "triggerHz": 8,
+      "braids": {"p1": 0.5, "p2": 0.0},
+      "engine": {"timbre": 0.5, "harmonics": 0.0, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.5, "spectrumDb": 1.5},
+      "toleranceNote": "No cents tolerance -- see whereTheCentsToleranceIsOmitted. The level and spectrum tolerances are the ordinary ones and the port meets them."
+    },
+    {
+      "id": "body-open",
+      "name": "Body filter at its ceiling",
+      "seconds": 4,
+      "note": 45,
+      "triggerHz": 8,
+      "braids": {"p1": 0.5, "p2": 1.0},
+      "engine": {"timbre": 0.5, "harmonics": 1.0, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.5, "cents": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "body-mid-travel",
+      "name": "Body filter inside its live range at this note",
+      "seconds": 4,
+      "note": 45,
+      "triggerHz": 8,
+      "braids": {"p1": 0.6, "p2": 0.4},
+      "engine": {"timbre": 0.6, "harmonics": 0.4, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.5, "cents": 1.0, "spectrumDb": 1.5},
+      "toleranceNote": "COLOR 0.4 is inside the range that does anything at MIDI 45. Verified by rendering the module: COLOR 0.0, 0.10, 0.14, 0.15 and 0.156 come out bit-identical to each other and 0.157 differs, as do 0.766, 0.78, 0.80 and 1.0 while 0.75 differs, because the filter index stays clamped at 0 below COLOR 0.1563 (the raw sum crosses zero at 0.1484, but the >> 7 holds the index at 0 until it reaches 128) and the table saturates at entry 79 above COLOR 0.766."
+    },
+    {
+      "id": "low",
+      "name": "Two octaves down, a long bore",
+      "seconds": 6,
+      "note": 21,
+      "triggerHz": 2,
+      "braids": {"p1": 0.7, "p2": 0.6},
+      "engine": {"timbre": 0.7, "harmonics": 0.6, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.5, "spectrumDb": 1.5},
+      "toleranceNote": "Triggered at 2 Hz, not 8, so each strike gets enough cycles of a 27.5 Hz bore to settle. No cents tolerance -- see whereTheCentsToleranceIsOmitted."
+    },
+    {
+      "id": "low-sustained",
+      "name": "The low bore held, where its pitch is measurable",
+      "seconds": 3,
+      "note": 21,
+      "triggerHz": 0,
+      "braids": {"p1": 0.7, "p2": 0.6},
+      "engine": {"timbre": 0.7, "harmonics": 0.6, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 2.5, "cents": 1.0, "spectrumDb": 4.5},
+      "toleranceNote": "Held, so the level and spectrum tolerances come from the module against itself at this note: 2.23 dB of AC RMS spread and at most 4.32 dB of spectral difference across twenty seeds. The cents tolerance is the tight one, because f0 IS stable here on both sides -- the module's own reading spans 0.05 cents."
+    },
+    {
+      "id": "high",
+      "name": "Two octaves up, where the body filter is already open",
+      "seconds": 3,
+      "note": 69,
+      "triggerHz": 8,
+      "braids": {"p1": 0.7, "p2": 0.4},
+      "engine": {"timbre": 0.7, "harmonics": 0.4, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.5, "cents": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "sweep-timbre",
+      "name": "TIMBRE swept across the whole knob",
+      "seconds": 5,
+      "note": 45,
+      "triggerHz": 8,
+      "braids": {"p1": [0.0, 1.0], "p2": 0.5},
+      "engine": {"timbre": [0.0, 1.0], "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.5, "cents": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "sweep-color",
+      "name": "COLOR swept across the whole knob",
+      "seconds": 5,
+      "note": 45,
+      "triggerHz": 8,
+      "braids": {"p1": 0.6, "p2": [0.0, 1.0]},
+      "engine": {"timbre": 0.6, "harmonics": [0.0, 1.0], "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.5, "cents": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "sustained",
+      "name": "Held, untriggered, as the module is normally played",
+      "seconds": 3,
+      "note": 45,
+      "triggerHz": 0,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 3.0, "cents": 1.0, "spectrumDb": 9.0},
+      "toleranceNote": "Deliberately loose, and taken from the module against itself rather than from the port: 2.59 dB of AC RMS spread and up to 8.49 dB of pairwise spectral difference across twenty noise seeds. Anything tighter would fail a bit-exact port. Kept because the held tone is how the module is actually played, and because a change that broke it badly would still show here -- the port reads 0.0 to 1.3 dB and 2.7 to 6.3 dB depending on its own seed. The worst corner is worse still and is not given a case: held at COLOR 0, twenty module renders span 10.49 dB of AC RMS and 9.86 dB of spectral difference, which is no longer a test of anything. That corner is covered sharply by the triggered body-dark case instead."
+    }
+  ]
+}

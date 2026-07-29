@@ -203,6 +203,19 @@ void PrintUsage() {
 
 }  // namespace
 
+// Static storage duration, matching braids.cc:59's own `MacroOscillator osc;`
+// at file scope. A stack-local `osc` in main() left DigitalOscillator's
+// delay_lines_ union (digital_oscillator.h -- NOT part of the state_ union
+// Init() memsets) as uninitialized stack garbage on every model whose first
+// strike depends on a zeroed delay line, which on the real module's global
+// object is zero-initialized for free. Verified against PLUCKED: a
+// stack-local osc rendered a garbage-driven near-full-scale signal that
+// never decayed at ANY Damping/TIMBRE setting (flat within ~1 dB over 15 s,
+// note 45 and note 96 both), while this static osc decays exactly as the
+// TIMBRE/loss formula predicts (silent by ~800 ms at TIMBRE 0, a slow
+// multi-second decay at TIMBRE 0.5) -- see the plucked engine's port notes.
+static MacroOscillator osc;
+
 int main(int argc, char** argv) {
   std::string shape_name;
   std::string out_path;
@@ -274,7 +287,6 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  MacroOscillator osc;
   osc.Init();
   osc.set_shape(static_cast<MacroOscillatorShape>(shape));
   // Braids' pitch is 14-bit with 128 counts per semitone (braids.cc:258).

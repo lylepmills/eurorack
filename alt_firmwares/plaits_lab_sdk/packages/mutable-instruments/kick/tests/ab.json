@@ -1,0 +1,111 @@
+{
+  "shape": "KICK",
+  "note": "Braids' TIMBRE is the resonator's decay and its COLOR is the output filter's brightness, read directly (RenderKick has no BEGIN_INTERPOLATE_PARAMETER macro to misread), so p1 maps to the engine's TIMBRE and p2 to HARMONICS. MORPH and MACRO sit at 0.5 in every case: Balance is both pulses at Braids' native level there and Punch is the module's one fixed amount, which is the module exactly. triggerHz is nonzero in every case -- this is a self-enveloping, trigger-only model; an unpatched trigger renders silence on both sides and compares nothing. decay-high uses a slower triggerHz because at TIMBRE 0.85 the resonance sits close to the module's near-self-oscillation ceiling and needs longer to ring down. No case declares a cents tolerance, and the reason is a property of THIS harness, not of the model: with these triggerHz and durations ab_engine.py's fixed mid-file 0.25 s window lands in a tail 50-90 dB below the hit, where its autocorrelation does not lock onto the resonator at all. It reported the identical figure for the reference and the port in all five cases both before and after the port's PUNCH frequency-scaling fix, i.e. while the port was measurably tens of cents flat -- so the metric is inert here and a tolerance on it would assert a fidelity nothing is measuring. Pitch IS checked, out of band: a 60 ms Goertzel track on a single struck note (see kick_engine.h A/B NOTES) shows the reference gliding 271.3 -> 265.1 Hz over ~200 ms at note 60/TIMBRE 0.85 -- PUNCH bending the resonator up while the hit is loud -- settling to a constant centre frequency once PUNCH's lp_ reaches its 2048 floor, with the port tracking it to ~10 cents (SPEC R6's +4.6 plus the ~3 cents of lut_svf_cutoff truncation the port does not reproduce).",
+  "cases": [
+    {
+      "id": "stock-mid",
+      "name": "Stock decay and tone",
+      "seconds": 3,
+      "note": 36,
+      "triggerHz": 2,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 0.5,
+        "spectrumDb": 0.5
+      }
+    },
+    {
+      "id": "decay-low",
+      "name": "Shortest decay the module reaches",
+      "seconds": 3,
+      "note": 36,
+      "triggerHz": 2,
+      "braids": {
+        "p1": 0.0,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.0,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 0.5,
+        "spectrumDb": 0.5
+      }
+    },
+    {
+      "id": "decay-high",
+      "name": "Near the module's self-oscillation ceiling",
+      "seconds": 4,
+      "note": 36,
+      "triggerHz": 1,
+      "braids": {
+        "p1": 0.85,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.85,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 0.5,
+        "spectrumDb": 0.5
+      }
+    },
+    {
+      "id": "tone-low",
+      "name": "Dullest output filter",
+      "seconds": 3,
+      "note": 36,
+      "triggerHz": 2,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.0
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 0.5,
+        "spectrumDb": 0.5
+      }
+    },
+    {
+      "id": "tone-high",
+      "name": "Brightest output filter",
+      "seconds": 3,
+      "note": 36,
+      "triggerHz": 2,
+      "braids": {
+        "p1": 0.5,
+        "p2": 1.0
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 1.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 0.5,
+        "spectrumDb": 0.5
+      }
+    }
+  ]
+}

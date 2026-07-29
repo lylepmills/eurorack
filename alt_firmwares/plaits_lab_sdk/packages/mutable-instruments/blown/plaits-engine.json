@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/blown",
+  "catalogId": "blown",
+  "version": "1.0.0",
+  "name": "Blown",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "Braids' blown bore: one delay line closed by an inverting reflection, driven by a clipped reed and a breath pressure the noise rides on. Its tone filter sits outside the loop, so the body colour and the pipe are separate controls.",
+  "family": "Physical modelling",
+  "tags": [
+    "braids",
+    "physical",
+    "waveguide",
+    "wind"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Body",
+      "description": "Braids' COLOR: the corner of the body filter the bore is heard through. Its live travel narrows with the note."
+    },
+    {
+      "id": "timbre",
+      "label": "Focus",
+      "description": "Braids' TIMBRE: how much noise rides on the breath. Low is turbulent, airy and quiet; high is steady and loud."
+    },
+    {
+      "id": "morph",
+      "label": "Blow",
+      "description": "Mouth pressure, which Braids welds at 0.8. Down for an under-blown pipe, up to drive the reed into its clip."
+    },
+    {
+      "id": "macro",
+      "label": "Reed",
+      "description": "The reed's rest offset, which Braids welds at 0.7. Down for a loose reed, up for one pinned open most of the cycle."
+    }
+  ],
+  "outputs": {
+    "main": "The bore heard through the body filter, which is what the module emits.",
+    "aux": "Mono: the raw bore pressure, before the body filter. Stereo: a second pickup 0.62 of the way down the same bore, through its own copy of the body filter, so the two channels are one standing wave heard at two points."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/blown_engine.h",
+    "files": [
+      "plaits/dsp/engine2/blown_engine.cc"
+    ],
+    "className": "BlownEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": -0.8,
+    "auxGain": -0.8
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids DigitalOscillator::RenderBlown"
+}

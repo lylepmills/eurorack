@@ -1,0 +1,15 @@
+[
+  {
+    "id": "hero",
+    "name": "Stock hit, moderate decay",
+    "durationSeconds": 4,
+    "note": 45,
+    "triggerHz": 2,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.5, 0.5],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  }
+]

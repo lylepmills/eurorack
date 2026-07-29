@@ -1,0 +1,60 @@
+{
+  "shape": "CYMBAL",
+  "note": "Braids' TIMBRE is the shared filter cutoff and its COLOR is the crossfade ratio, so p1 maps to the engine's TIMBRE and p2 to its HARMONICS. MORPH and MACRO sit at noon in every case (Spread 1.0x and Resonance at the module's own fixed damp, both exactly the module). RenderCymbal never reads sync/strike_ at all (cymbal_engine.h), so triggerHz is left at 0 in every case -- it free-runs continuously and there is nothing to trigger. Only stock-mid and color-metal declare a cents tolerance. Those are the two cases where the comb-structured metallic side carries most of the energy, and they are the ones that actually pin the root mapping (`note = 40 + played/2`, digital_oscillator.cc:2468); they measure -0.9 and +0.1 cents. In the other four -- TIMBRE at either end, COLOR at 1, and the high register -- the filtered raw-noise side dominates and ab_engine.py's single-lag autocorrelator reports no f0 at all, so no cents tolerance is declarable there; that is the same caveat particle_burst_engine.h and granular_cloud_engine.h document for their own inharmonic/stochastic sources. Two band-level residuals are declared rather than hidden. (1) The bands below 160 Hz swing several dB on shot noise where they hold near-zero energy (tone-high +12 dB and color-metal +5.2 dB, both at 0.0% of energy); they are NOT near-zero in every case -- tone-low puts 3.2% of its energy below 160 Hz, and there the same bands sit within 0.34 dB. (2) The 20.48-24 kHz band runs +2.5 to +3.3 dB (color-metal, whose bandpassed metallic side reaches barely that high, only +0.3 dB): the port's SVF is 2x oversampled and decimated with a plain 2-tap box average rather than a real halfband FIR (see cymbal_engine.h RATE), so aliasing from just above 24 kHz folds back into it. That band holds 2.5-4.2% of total energy in most cases and 12.0% at TIMBRE=1, where the cutoff is fully open -- the largest single declared residual in this port, and the one to revisit first if a real halfband is ever worth its cycles.",
+  "cases": [
+    {
+      "id": "stock-mid",
+      "name": "Stock tone and color",
+      "seconds": 4,
+      "note": 45,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "cents": 10.0, "spectrumDb": 1.0}
+    },
+    {
+      "id": "tone-low",
+      "name": "TIMBRE at 0: the darkest cutoff",
+      "seconds": 4,
+      "note": 45,
+      "braids": {"p1": 0.0, "p2": 0.5},
+      "engine": {"timbre": 0.0, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.0}
+    },
+    {
+      "id": "tone-high",
+      "name": "TIMBRE at 1: the brightest cutoff, right at the shared 1/8 cap",
+      "seconds": 4,
+      "note": 45,
+      "braids": {"p1": 1.0, "p2": 0.5},
+      "engine": {"timbre": 1.0, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.5}
+    },
+    {
+      "id": "color-metal",
+      "name": "COLOR at 0: the metallic side alone",
+      "seconds": 4,
+      "note": 45,
+      "braids": {"p1": 0.6, "p2": 0.0},
+      "engine": {"timbre": 0.6, "harmonics": 0.0, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "cents": 10.0, "spectrumDb": 1.0}
+    },
+    {
+      "id": "color-noise",
+      "name": "COLOR at 1: the raw noise side alone",
+      "seconds": 4,
+      "note": 45,
+      "braids": {"p1": 0.6, "p2": 1.0},
+      "engine": {"timbre": 0.6, "harmonics": 1.0, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.0}
+    },
+    {
+      "id": "high-register",
+      "name": "High note, root well above the raw-noise clock's usual range",
+      "seconds": 3,
+      "note": 78,
+      "braids": {"p1": 0.5, "p2": 0.5},
+      "engine": {"timbre": 0.5, "harmonics": 0.5, "morph": 0.5, "macro": 0.5},
+      "tolerance": {"acRmsDb": 1.0, "spectrumDb": 1.0}
+    }
+  ]
+}

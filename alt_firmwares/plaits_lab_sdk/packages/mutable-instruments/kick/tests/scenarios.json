@@ -1,0 +1,54 @@
+[
+  {
+    "id": "hero",
+    "name": "Decay, as the module's single knob has it",
+    "durationSeconds": 4,
+    "note": 36,
+    "triggerHz": 2,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.0, 1.0],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "tone",
+    "name": "Tone, dull to bright",
+    "durationSeconds": 3,
+    "note": 36,
+    "triggerHz": 2,
+    "controls": {
+      "harmonics": [0.0, 1.0],
+      "timbre": [0.5, 0.5],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "balance",
+    "name": "Balance: click only through to thump only",
+    "durationSeconds": 3,
+    "note": 36,
+    "triggerHz": 2,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.5, 0.5],
+      "morph": [0.0, 1.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "punch-high",
+    "name": "Punch, at a long decay where it is easiest to hear",
+    "durationSeconds": 3,
+    "note": 36,
+    "triggerHz": 1.5,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.85, 0.85],
+      "morph": [0.5, 0.5],
+      "macro": [0.0, 1.0]
+    }
+  }
+]

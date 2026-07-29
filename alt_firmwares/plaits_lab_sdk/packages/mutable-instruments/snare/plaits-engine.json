@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/snare",
+  "catalogId": "snare",
+  "version": "1.0.0",
+  "name": "Snare",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "Braids' SNAR: two decaying pulses into two fixed-interval tonal resonators, and a decaying noise burst into a third, high resonator, all self-enveloping and summed. A note strikes shorter the higher it is played.",
+  "family": "Drums",
+  "tags": [
+    "braids",
+    "drum",
+    "snare",
+    "percussion",
+    "noise"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Snap",
+      "description": "The noise burst's peak level, and past noon, how long both the snap and the tone ring."
+    },
+    {
+      "id": "timbre",
+      "label": "Tone",
+      "description": "Balances the two tonal resonators, which sound at the note itself and an octave above it."
+    },
+    {
+      "id": "morph",
+      "label": "Snap balance",
+      "description": "Crossfades the tonal sum against the snap resonator. Centred is the module's own unweighted sum."
+    },
+    {
+      "id": "macro",
+      "label": "Spread",
+      "description": "Widens the interval between the two tonal resonators: unison at 0, the module's octave at noon, two at 1."
+    }
+  ],
+  "outputs": {
+    "main": "The full self-enveloping mix.",
+    "aux": "The snap resonator alone, soft-clipped."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/snare_engine.h",
+    "files": [
+      "plaits/dsp/engine2/snare_engine.cc"
+    ],
+    "className": "SnareEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": true,
+    "outGain": 1.0,
+    "auxGain": 1.0
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids DigitalOscillator::RenderSnare"
+}

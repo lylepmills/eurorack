@@ -1,0 +1,67 @@
+[
+  {
+    "id": "hero",
+    "name": "Snap, as the module's single knob has it",
+    "durationSeconds": 4,
+    "note": 44,
+    "triggerHz": 2,
+    "controls": {
+      "harmonics": [0.0, 1.0],
+      "timbre": [0.5, 0.5],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "tone",
+    "name": "Tone, low resonator to high",
+    "durationSeconds": 3,
+    "note": 44,
+    "triggerHz": 2,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.0, 1.0],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "snap-balance",
+    "name": "Snap balance: tone only through to snap only",
+    "durationSeconds": 3,
+    "note": 44,
+    "triggerHz": 2,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.5, 0.5],
+      "morph": [0.0, 1.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "spread",
+    "name": "Spread, unison through to double-wide",
+    "durationSeconds": 3,
+    "note": 44,
+    "triggerHz": 2,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.5, 0.5],
+      "morph": [0.5, 0.5],
+      "macro": [0.0, 1.0]
+    }
+  },
+  {
+    "id": "high-note-shorter",
+    "name": "A high note strikes shorter, by construction",
+    "durationSeconds": 3,
+    "note": 78,
+    "triggerHz": 1,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.5, 0.5],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  }
+]

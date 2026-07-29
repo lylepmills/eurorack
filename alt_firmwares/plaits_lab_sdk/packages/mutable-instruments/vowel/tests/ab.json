@@ -1,0 +1,160 @@
+{
+  "shape": "VOWEL",
+  "note": "Braids' TIMBRE is the phoneme and its COLOR is the formant shift, so p1 maps to the engine's MORPH and p2 to its TIMBRE -- swapped deliberately, so that the phoneme and the vocal-tract scale sit on the same knobs as speech and vowel-fof. HARMONICS and MACRO sit at noon in every case: Spread is 1.0 there and Grain is 1.0, which is the module exactly. The cases cover both ends of both Braids axes, a full sweep so every adjacent frame pair is crossed, and a triggered one because the consonant branch is a separate code path with its own randomly chosen frame and its own period jitter. Tolerances are set just above what the port measures (AC RMS 0.04 dB, pitch 0.2 cents, spectrum 0.21 dB at worst) so they fail on a regression rather than on platform float noise. The f0 estimate IS trustworthy here -- the ramp restarts on every pitch period, so the played note is present as a strong periodicity even under the consonants.",
+  "cases": [
+    {
+      "id": "stock-mid",
+      "name": "Mid vowel, mid formant shift",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 0.5,
+        "cents": 1.0,
+        "spectrumDb": 0.75
+      }
+    },
+    {
+      "id": "vowel-first",
+      "name": "The first phoneme frame",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.0,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.5,
+        "morph": 0.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 0.5,
+        "cents": 1.0,
+        "spectrumDb": 0.75
+      }
+    },
+    {
+      "id": "vowel-last",
+      "name": "The last phoneme frame",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 1.0,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.5,
+        "morph": 1.0,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 0.5,
+        "cents": 1.0,
+        "spectrumDb": 0.75
+      }
+    },
+    {
+      "id": "shift-low",
+      "name": "The largest vocal tract",
+      "seconds": 3,
+      "note": 40,
+      "braids": {
+        "p1": 0.35,
+        "p2": 0.0
+      },
+      "engine": {
+        "timbre": 0.0,
+        "harmonics": 0.5,
+        "morph": 0.35,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 0.5,
+        "cents": 1.0,
+        "spectrumDb": 0.75
+      }
+    },
+    {
+      "id": "shift-high",
+      "name": "The smallest vocal tract",
+      "seconds": 3,
+      "note": 40,
+      "braids": {
+        "p1": 0.35,
+        "p2": 1.0
+      },
+      "engine": {
+        "timbre": 1.0,
+        "harmonics": 0.5,
+        "morph": 0.35,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 0.5,
+        "cents": 1.0,
+        "spectrumDb": 0.75
+      }
+    },
+    {
+      "id": "vowel-sweep",
+      "name": "The whole phoneme walk, so every frame pair is crossed",
+      "seconds": 4,
+      "note": 45,
+      "braids": {
+        "p1": [
+          0.0,
+          1.0
+        ],
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.5,
+        "morph": [
+          0.0,
+          1.0
+        ],
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 0.5,
+        "cents": 1.0,
+        "spectrumDb": 0.75
+      }
+    },
+    {
+      "id": "consonants",
+      "name": "Retriggered at 4 Hz, so the consonant branch runs sixteen times",
+      "seconds": 4,
+      "note": 43,
+      "triggerHz": 4,
+      "braids": {
+        "p1": 0.45,
+        "p2": 0.45
+      },
+      "engine": {
+        "timbre": 0.45,
+        "harmonics": 0.5,
+        "morph": 0.45,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 0.5,
+        "cents": 1.0,
+        "spectrumDb": 0.75
+      }
+    }
+  ]
+}

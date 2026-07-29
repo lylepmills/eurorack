@@ -1,0 +1,54 @@
+[
+  {
+    "id": "hero",
+    "name": "Decay, short through the module's own length to a drone",
+    "durationSeconds": 8,
+    "note": 60,
+    "triggerHz": 0.8,
+    "controls": {
+      "harmonics": [0.3, 0.3],
+      "timbre": [0.0, 1.0],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "detune",
+    "name": "COLOR: the fixed ratios spreading apart",
+    "durationSeconds": 5,
+    "note": 52,
+    "triggerHz": 1.2,
+    "controls": {
+      "harmonics": [0.0, 1.0],
+      "timbre": [0.5, 0.5],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "brightness",
+    "name": "MORPH: soft mallet to hard mallet, at the strike",
+    "durationSeconds": 5,
+    "note": 48,
+    "triggerHz": 1.0,
+    "controls": {
+      "harmonics": [0.2, 0.2],
+      "timbre": [0.55, 0.55],
+      "morph": [0.0, 1.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "decay-spread",
+    "name": "MACRO: uniform decay through the module's own spread to exaggerated",
+    "durationSeconds": 6,
+    "note": 65,
+    "triggerHz": 0.8,
+    "controls": {
+      "harmonics": [0.0, 0.0],
+      "timbre": [0.5, 0.5],
+      "morph": [0.5, 0.5],
+      "macro": [0.0, 1.0]
+    }
+  }
+]

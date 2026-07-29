@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/kick",
+  "catalogId": "kick",
+  "version": "1.0.0",
+  "name": "Kick",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "Braids' self-enveloping kick: two decaying pulses into a bandpass that jumps up in pitch for a brief click, then self-brightens. A different mechanism from Plaits' own analog-bass-drum, which clicks with FM rather than a retuned filter.",
+  "family": "Drums",
+  "tags": [
+    "braids",
+    "drum",
+    "kick",
+    "percussion"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Tone",
+      "description": "The output filter's brightness -- Braids' COLOR, applied after the resonator."
+    },
+    {
+      "id": "timbre",
+      "label": "Decay",
+      "description": "The resonator's decay -- Braids' TIMBRE. Turning it up lengthens the boom toward near-self-oscillation."
+    },
+    {
+      "id": "morph",
+      "label": "Balance",
+      "description": "Crossfades the two excitation pulses. Centred is native level; the ends fade one out to just click or just thump."
+    },
+    {
+      "id": "macro",
+      "label": "Punch",
+      "description": "Scales the self-brightening dynamic filter modulation around the module's one fixed amount, from off to 4x."
+    }
+  ],
+  "outputs": {
+    "main": "The self-enveloped kick.",
+    "aux": "The raw excitation pulses, before the resonator, soft-clipped."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/kick_engine.h",
+    "files": [
+      "plaits/dsp/engine2/kick_engine.cc"
+    ],
+    "className": "KickEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": true,
+    "outGain": 1.0,
+    "auxGain": 0.8
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids DigitalOscillator::RenderKick"
+}

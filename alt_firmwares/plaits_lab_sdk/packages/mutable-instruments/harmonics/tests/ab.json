@@ -1,0 +1,151 @@
+{
+  "shape": "HARMONICS",
+  "note": "Braids' TIMBRE is the first bump's partial index and its COLOR is the bump width welded to the second bump's height, so p1 maps to the engine's TIMBRE and p2 to its HARMONICS. MORPH and MACRO sit at noon in every case: Spread is zero there and Width is 1.0x, which is the module exactly. RenderHarmonics carries no INTERPOLATE_PARAMETER macro, so the fold trap has no surface here -- the cases at both ends of both axes are what proves the mapping rather than the reading, and re-running the suite with the engine's TIMBRE and HARMONICS exchanged takes peak-low to 58.10 dB of spectral difference and +9.83 dB of AC RMS and peak-high to 25.62 dB and +5.13 dB, so a swap could not pass.",
+  "cases": [
+    {
+      "id": "stock-mid",
+      "name": "Both knobs at noon",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "peak-low",
+      "name": "Bump on the fundamental",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.0,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.0,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "peak-high",
+      "name": "Bump on the twelfth partial",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 1.0,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 1.0,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "colour-narrow",
+      "name": "Colour hard down: the narrowest bump, no second one",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.0
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "colour-two",
+      "name": "Colour hard up: two narrow bumps at equal height",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.5,
+        "p2": 1.0
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 1.0,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "colour-quarter",
+      "name": "A quarter turn of Colour, where the width truncation bites",
+      "seconds": 3,
+      "note": 45,
+      "braids": {
+        "p1": 0.25,
+        "p2": 0.25
+      },
+      "engine": {
+        "timbre": 0.25,
+        "harmonics": 0.25,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "cents": 1.0,
+        "spectrumDb": 1.5
+      }
+    },
+    {
+      "id": "guard-band",
+      "name": "High note, with the partial guard zeroing the top of the stack",
+      "rationale": "No cents tolerance, deliberately. Above roughly note 83 the partial guard at digital_oscillator.cc:956 strips the top of the stack, and what is left is a handful of high partials over a fundamental 15 dB below the loudest of them -- material ab_compare's 0.25 s autocorrelation cannot pitch. Measured directly, it reports 440.1 Hz for the Braids render and 352.9 Hz for the port, both sub-multiples of the true 1760 Hz, and it fails the same way on every high-note setting tried (note 84 and note 78 read -2400 and -1900 cents). A Goertzel probe at each render's own f0 shows both carry exactly partials 1-6 with 7 and above below -100 dB, so the pitch and the guard agree; the estimator does not. The spectrum tolerance is what covers this case.",
+      "seconds": 2,
+      "note": 93,
+      "braids": {
+        "p1": 0.5,
+        "p2": 0.5
+      },
+      "engine": {
+        "timbre": 0.5,
+        "harmonics": 0.5,
+        "morph": 0.5,
+        "macro": 0.5
+      },
+      "tolerance": {
+        "acRmsDb": 1.0,
+        "spectrumDb": 1.5
+      }
+    }
+  ]
+}

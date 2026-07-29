@@ -73,6 +73,16 @@ CC_FILES       = algorithms.cc \
 		waveshaping_engine.cc \
 		wavetable_engine.cc \
 		bowed_engine.cc \
+		cymbal_engine.cc \
+		snare_engine.cc \
+		kick_engine.cc \
+		struck_drum_engine.cc \
+		struck_bell_engine.cc \
+		blown_engine.cc \
+		plucked_engine.cc \
+		vosim_engine.cc \
+		harmonics_engine.cc \
+		vowel_engine.cc \
 		saw_swarm_engine.cc \
 		saw_square_engine.cc \
 		particle_burst_engine.cc \

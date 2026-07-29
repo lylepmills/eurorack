@@ -1,0 +1,67 @@
+[
+  {
+    "id": "hero",
+    "name": "The formant climbing the series, as the module has it",
+    "durationSeconds": 4,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.0, 1.0],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "colour",
+    "name": "Colour end to end at a fixed peak",
+    "durationSeconds": 3,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.0, 1.0],
+      "timbre": [0.35, 0.35],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "spread",
+    "name": "The second bump off its weld",
+    "durationSeconds": 3,
+    "note": 40,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.7, 0.7],
+      "timbre": [0.2, 0.2],
+      "morph": [0.0, 1.0],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "width",
+    "name": "Width opened past the module's widest",
+    "durationSeconds": 3,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.15, 0.15],
+      "timbre": [0.5, 0.5],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 1.0]
+    }
+  },
+  {
+    "id": "guard",
+    "name": "High enough for the partial guard to thin the stack",
+    "durationSeconds": 2,
+    "note": 93,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.0, 1.0],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  }
+]
