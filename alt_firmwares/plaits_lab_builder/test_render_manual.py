@@ -89,6 +89,34 @@ class RenderManualTest(unittest.TestCase):
             render_pdf(document, output)
             self.assertTrue(output.read_bytes().startswith(b"%PDF-"))
 
+    def calibration_recipe(self, calibration: bool) -> dict:
+        recipe = self.load("default_recipe.json")
+        recipe["schemaVersion"] = 14
+        recipe["preferences"] = {"navigationMode": "linear", "calibration": calibration}
+        recipe["initialOptions"] = dict(DEFAULT_CONFIGURATION["initialOptions"])
+        recipe["resources"] = {"chordTables": DEFAULT_CHORD_TABLES}
+        return recipe
+
+    def test_calibration_page_follows_the_build(self) -> None:
+        self.assertIs(manual_document(self.calibration_recipe(True))["calibration"], True)
+        self.assertIs(manual_document(self.calibration_recipe(False))["calibration"], False)
+        # A recipe from before v14 has no such key and no such page.
+        self.assertIs(manual_document(self.load("default_recipe.json"))["calibration"], False)
+
+    @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
+    def test_calibration_procedure_is_printed_only_when_the_build_has_it(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            on = Path(temp_dir) / "calibration-on.pdf"
+            render_pdf(manual_document(self.calibration_recipe(True)), on)
+            printed = pdf_strings(on)
+            self.assertIn("CALIBRATION", printed)
+            self.assertIn("RIGHT model button while powering", printed)
+
+            off = Path(temp_dir) / "calibration-off.pdf"
+            render_pdf(manual_document(self.calibration_recipe(False)), off)
+            # Not a word about a gesture this firmware does not answer.
+            self.assertNotIn("CALIBRATION", pdf_strings(off))
+
     def test_bank_positions_use_public_green_red_amber_order(self) -> None:
         document = manual_document(self.load("audition_recipe.json"))
         self.assertEqual(document["slots"][0]["position"], {

@@ -18,7 +18,7 @@
     "PLAITS_SOURCE_REVISION": "d43bb37fa88d",
     "PLAITS_TOOLCHAIN_ID": "gcc-arm-none-eabi-4.8-2013q4",
     "PLAITS_BUILD_CONTRACT": "2",
-    "PLAITS_MANUAL_CONTRACT": "6"
+    "PLAITS_MANUAL_CONTRACT": "7"
   },
   "containers": [
     {

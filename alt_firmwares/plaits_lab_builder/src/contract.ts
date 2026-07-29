@@ -630,6 +630,11 @@ export async function computeManualKey(
     documentation,
     chordTables: recipe.resources.chordTables.map((table) => table.name),
     customBanks,
+    // The guide documents the calibration procedure only for a build that has
+    // it, so two recipes differing only in this preference are different guides
+    // — without it they would share one cached PDF and half the readers would
+    // get a page describing a gesture their firmware does not answer.
+    calibration: recipe.preferences.calibration,
   });
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical));
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");

@@ -164,6 +164,9 @@ def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]
         ],
         "models": models,
         "chordTables": [table["name"] for table in build.chord_tables],
+        # Only a build that compiled the procedure in answers the power-up
+        # gesture, so only that build's guide documents it.
+        "calibration": build.enable_calibration == 1,
     }
 
 
@@ -504,6 +507,46 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
             "Model navigation (linear or banked) is chosen when you build the firmware, not from this menu.",
             small_muted_style,
         ),
+    ])
+
+    # Calibration, for the builds that asked for it. Most firmwares leave the
+    # procedure out — a module keeps the pitch-CV calibration it already has
+    # through any firmware install, so it is only needed by a module that has
+    # never been calibrated or was erased by a programmer — and a guide that
+    # described a gesture the firmware does not answer would be worse than no
+    # page at all.
+    if document.get("calibration"):
+        story.extend([
+            Spacer(1, 0.18 * inch),
+            Table(
+                [[
+                    Paragraph("CALIBRATION", table_header_style),
+                    Paragraph(
+                        "This build includes the pitch-CV calibration procedure. "
+                        "Hold the RIGHT model button while powering the module up to start it: the first light pulses green. "
+                        "Patch 1V into V/OCT and press either button — the light turns yellow. "
+                        "Patch 3V and press either button again. "
+                        "The lights return to normal and the new calibration is saved. "
+                        "If the two voltages are not two octaves apart, every light flashes red and nothing is written, "
+                        "so a mis-patched attempt leaves your module exactly as it was; press a button and try again. "
+                        "Powering the module off part-way through also changes nothing.",
+                        small_style,
+                    ),
+                ]],
+                colWidths=[1.1 * inch, 5.2 * inch],
+                style=TableStyle([
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#EFECE3")),
+                    ("BOX", (0, 0), (-1, -1), 0.5, line),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                    ("TOPPADDING", (0, 0), (-1, -1), 7),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+                ]),
+            ),
+        ])
+
+    story.extend([
         PageBreak(),
         Paragraph("Model reference", section_style),
     ])
