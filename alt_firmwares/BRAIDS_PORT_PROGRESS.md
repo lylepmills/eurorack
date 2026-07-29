@@ -99,6 +99,11 @@ The spec's AGGREGATE was within 2 %. Its PER-ENGINE numbers ranged −39 % to
 
 ### Measured stereo delta — `toy` costs NOTHING, and the sign is real
 
+Container built from this branch's head, `8328613`. That matters for layering
+the numbers onto the website: `8328613` CONTAINS the deployed re-calibration
+revision `94e84165`, so these sit on the same firmware lineage the flash meter
+is calibrated against, plus the eleven ports.
+
 `flash_sweep.py --stereo` differences two builds identical but for the recipe's
 `stereoEngines` list (both `auxOutput: "stereo"`, so whatever the stereo aux
 option itself costs cancels — and it costs nothing: the all-mono stereo arm
@@ -117,8 +122,19 @@ firmware SMALLER. That is not a mismeasurement:
   the delta is −144 on both a 3-engine palette and stock-24.
 
 Controls validate the harness: `harmonic` and `glisson` re-measure at 2,576 and
-416 against published production values of 2,592 and 432 — both exactly 16 B
-low, a consistent revision offset rather than noise.
+416, within 16 B of the website's published 2,560 and 432 — harmonic +16,
+glisson −16, i.e. inside the ±32 B quantization the rev-94e84165 pass already
+documents for this table.
+
+**Correction, worth keeping as a warning.** This was first written up as "both
+exactly 16 B low, a consistent revision offset" — because the controls were
+compared against the copy of `flash-budget.ts` on THIS BRANCH, which had gone
+stale: it still carried the 8b3e1cb table (harmonic 2,592) while `origin/main`
+had been re-calibrated to 94e84165 (harmonic 2,560). Against the stale table the
+two errors line up at −16 and look like a systematic offset; against the real
+one they are +16/−16 and are just quantization. When a control seems to reveal a
+neat systematic pattern, check that the published numbers you are differencing
+against are the CURRENT ones first.
 
 The website records this as `0`, not `−144`: `engineStereoBytes`' contract is a
 non-negative marginal (its test asserts it), and banking a 144 B saving — well
@@ -205,11 +221,14 @@ missing-submodule guard.
 3. ~~**`engineStereoBytes` has no entry for `toy`**~~ — **DONE 2026-07-28.**
    Swept with `flash_sweep.py --stereo`; the delta is −144 B (toy's stereo path
    compiles SMALLER), recorded on the website as `0`. See the measured-stereo
-   section above for the object-level proof and the controls. Note this closes
-   the FLASH question only — whether the ten Pattern-A ports belong in
-   `alwaysStereoEngineIds` (they are in neither that set nor
-   `stereoToggleableEngineIds`, so the editor shows them no stereo button at
-   all) is item 1's business, not this one's.
+   section above for the object-level proof and the controls. This closes the
+   FLASH question only; the ten Pattern-A ports' stereo BUTTON was item 1, and
+   is also now done — they get one from the derived `previewOnlyStereoEngine`,
+   and per item 1 they must NOT be added to `alwaysStereoEngineIds`, which no
+   longer gates any button.
+
+   The same sweep also found this branch's `flash-budget.ts` had gone stale
+   against `origin/main`'s 94e84165 re-calibration — see item 8.
 
 4. ~~**`render_previews.cc` should read the catalog**~~ **DONE.**
    `render-previews.mjs` reads the catalog plus
@@ -275,6 +294,20 @@ missing-submodule guard.
 7. **Deploy** — builder image from the branch head FIRST, then the site. Engine
    digests are the builder's allowlist. The site already surfaces "Builder
    update required" on its own when they disagree.
+
+8. **Merge `origin/main` into this branch before deploying** — the branch is
+   long-lived and main has moved under it. Found 2026-07-28: the branch was
+   still carrying the pre-`94e84165` flash table, so merging it would have
+   silently REVERTED the re-calibration on main — including
+   `flashSafetyMarginBytes` 192 → 512, which would have made the buildable
+   DEFAULT palette read "over" (the margin must stay under stock-24's headroom,
+   now 272 B, was 688). `flash-budget.ts` and its test anchors have since been
+   rebased onto main's values (rubato-audio `f1ecbead`), but that fixed ONE
+   file. Nothing else on the branch has been checked against main, and the
+   catalog snapshot here is still pre-`helix` — which is exactly why the branch
+   tests stayed green while the table was wrong. **The branch cannot self-
+   diagnose this: its own suite passes.** Do the merge, then re-run the website
+   tests, before item 7's deploy.
 
 
 ---

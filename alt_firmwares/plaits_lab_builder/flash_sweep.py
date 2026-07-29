@@ -46,11 +46,21 @@ NEW = ['z-filter', 'toy', 'csaw', 'bowed', 'ring-mod', 'sub-oscillator',
 # Engines to difference in --stereo mode. `toy` is the one Pattern-B Braids
 # port (a second sample-and-hold clock behind PLAITS_STEREO_TOY); the other ten
 # are Pattern A -- always a stereo pair at ~0 extra -- and so want no entry.
-# harmonic and glisson are CONTROLS: both are in the base palette and both are
-# already in engineStereoBytes (2,592 and 432 at production revision 8b3e1cb),
-# so reproducing them validates the harness before toy's number is trusted.
+#
+# harmonic and glisson are CONTROLS: both sit in the base palette and both are
+# already in the website's engineStereoBytes, so reproducing them validates the
+# harness before a new engine's number is trusted. Expect agreement to within
+# a few tens of bytes, not exactness -- this is a LOCAL container on a branch
+# head, against a table measured on the deployed builder.
+#
+# KEEP THESE IN SYNC with website/src/components/plaits-palette/flash-budget.ts.
+# They are a snapshot of someone else's table, so they rot on every flash-meter
+# re-calibration; a control that silently drifts is worse than no control. These
+# are the rev-94e84165 values (2026-07-27). If a run reports a large control
+# gap, re-read that file before believing the engine you actually came to
+# measure.
 STEREO_DEFAULT = ['toy', 'harmonic', 'glisson']
-STEREO_CONTROLS = {'harmonic': 2_592, 'glisson': 432}
+STEREO_CONTROLS = {'harmonic': 2_560, 'glisson': 432}
 
 
 def build_size(tag, recipe):
