@@ -446,14 +446,15 @@ missing-submodule guard.
    **Two follow-ups this leaves open.** (a) `previews.generated.json` is a UNION
    of two renders and its `sourceRevision` says so verbatim — a re-render from
    the merged head collapses it back to single-revision provenance. (b) The
-   local `npm test` could not run: `website/package.json` pinned
-   `devEngines.runtime` to node 24.15.0 with `onFail: error` and this machine
-   has 24.18.0, so the suites were run directly with `node --test`. **Fixed
-   2026-07-28** — `devEngines` is now a `^24.15.0` / `^11.12.1` range, which
-   still hard-blocks a wrong MAJOR while letting a forward patch through. The
-   deploy pins (`.nvmrc`, `engines`, `wrangler.toml`, CI) are untouched and
-   still exact; `devEngines` is a local-dev guard only. `npm test` now runs:
-   274 passing.
+   local `npm test` appeared unrunnable — `devEngines` is `onFail: error` at
+   node 24.15.0 / npm 11.12.1 and the shell was on 24.18.0 — so the suites were
+   run directly with `node --test`. **That diagnosis was wrong**: it is a PATH
+   problem, not a pin problem. `nvm use` in `website/` reads `.nvmrc` and gives
+   node 24.15.0 AND npm 11.12.1, satisfying both pins exactly; v24.15.0 is
+   installed for precisely this. `npm test` runs: 274 passing. The pins are a
+   deliberate deploy-parity contract and are unchanged. The trap for agent
+   sessions is that shell state does not survive between tool calls, so the
+   activation has to be in the same command — see `website/CLAUDE.md`.
 
 
 ---
