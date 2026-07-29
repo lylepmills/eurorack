@@ -43,9 +43,13 @@ FILLER = 'virtual-analog'
 NEW = ['z-filter', 'toy', 'csaw', 'bowed', 'ring-mod', 'sub-oscillator',
        'digital-modulation', 'saw-comb', 'vowel-fof', 'raw-fm', 'triple']
 
-# Engines to difference in --stereo mode. `toy` is the one Pattern-B Braids
-# port (a second sample-and-hold clock behind PLAITS_STEREO_TOY); the other ten
-# are Pattern A -- always a stereo pair at ~0 extra -- and so want no entry.
+# Engines to difference in --stereo mode: the five Pattern-B Braids ports, the
+# ones with a real second render path behind a PLAITS_STEREO_<X> gate. `toy`
+# shipped as the only one (a second sample-and-hold clock); bowed, csaw,
+# ring-mod and vowel-fof joined it in c84a06a, which gave each a distinct mono
+# AUX voice. The other six are Pattern A -- always a stereo pair at ~0 extra --
+# and so want no entry. Keep this list matching STEREO_MACROS below in
+# container_server.py.
 #
 # harmonic and glisson are CONTROLS: both sit in the base palette and both are
 # already in the website's engineStereoBytes, so reproducing them validates the
@@ -59,7 +63,9 @@ NEW = ['z-filter', 'toy', 'csaw', 'bowed', 'ring-mod', 'sub-oscillator',
 # are the rev-94e84165 values (2026-07-27). If a run reports a large control
 # gap, re-read that file before believing the engine you actually came to
 # measure.
-STEREO_DEFAULT = ['toy', 'harmonic', 'glisson']
+STEREO_DEFAULT = ['toy', 'bowed', 'csaw', 'ring-mod', 'vowel-fof',
+                   'digital-modulation',
+                   'harmonic', 'glisson']
 STEREO_CONTROLS = {'harmonic': 2_560, 'glisson': 432}
 
 
@@ -138,20 +144,27 @@ def mono_sweep():
 
 
 def stereo_sweep(engine_ids):
-    # Every arm holds the palette fixed with `toy` in Speech's slot, so `toy`
-    # is present to have its stereo path enabled and the controls are measured
-    # against the identical 24 engines. The all-mono arm is the shared baseline.
-    slot = 'toy'
-    base = build_size('STEREO-BASE(none)', stereo_recipe(slot, []))
-    if base is None:
-        return 1
+    # TWO builds per engine, both with THAT engine in Speech's slot, differing
+    # only in whether its stereo macro is on.
+    #
+    # The engine has to be IN the palette or the measurement is silently
+    # meaningless: enabling PLAITS_STEREO_<X> for an engine no slot references
+    # links no object, so the delta is exactly 0 and looks like a real "costs
+    # nothing" result. An earlier version of this pinned one engine in the slot
+    # and swept `stereoEngines` against it, which reported a clean 0 for four
+    # engines that simply were not in the build. A shared baseline is not worth
+    # that failure mode -- the extra build per engine is ~10 s and cached.
     print('--- per-engine stereo delta, bytes ---', flush=True)
     results = {}
     for engine_id in engine_ids:
-        total = build_size(engine_id, stereo_recipe(slot, [engine_id]))
-        if total is None:
+        mono = build_size('%s (mono)' % engine_id, stereo_recipe(engine_id, []))
+        if mono is None:
             continue
-        results[engine_id] = total - base
+        stereo = build_size('%s (stereo)' % engine_id,
+                            stereo_recipe(engine_id, [engine_id]))
+        if stereo is None:
+            continue
+        results[engine_id] = stereo - mono
         expected = STEREO_CONTROLS.get(engine_id)
         if expected is not None:
             print('%-22s control: published %d, measured %d (%+d)'

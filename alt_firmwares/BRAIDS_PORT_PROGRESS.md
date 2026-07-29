@@ -97,42 +97,71 @@ keys off `origin === "Rubato Lab"` so they do not disturb it.
 
 ### Measured ARM flash — real, replacing every estimate
 
-Swept 2026-07-28 against a local builder container built from `dc1650c14`,
-leave-one-out into Speech's slot in the stock-24 context. Baseline 181,216 B.
+Re-swept 2026-07-28 against a local builder container built from the branch
+head, AFTER the Pattern-B AUX rework (`c84a06a`), leave-one-out into Speech's
+slot in the stock-24 context. Baseline 181,216 B.
 
 | engine | measured | spec estimate |
 |---|---:|---:|
 | raw-fm | 880 | 1,450 |
 | digital-modulation | 1,200 | 1,620 |
 | toy | 1,232 | 1,520 |
-| csaw | 1,392 | 1,400 |
+| csaw | 1,344 | 1,400 |
+| ring-mod | 1,680 | 1,700 |
 | z-filter | 1,712 | 2,200 |
-| ring-mod | 1,872 | 1,700 |
 | sub-oscillator | 2,256 | 1,300 |
 | saw-comb | 2,496 | 3,000 |
-| vowel-fof | 2,640 | 3,100 |
+| vowel-fof | 2,704 | 3,100 |
 | bowed | 2,928 | 2,400 |
 | triple | 3,408 | 2,800 |
-| **total** | **22,016** | 22,490 |
+| **total** | **21,840** | 22,490 |
 
-The spec's AGGREGATE was within 2 %. Its PER-ENGINE numbers ranged −39 % to
+The spec's AGGREGATE was within 3 %. Its PER-ENGINE numbers ranged −39 % to
 +74 %, so treat §1 as a ranking and never as a budget.
 
-### Measured stereo delta — `toy` costs NOTHING, and the sign is real
+**The AUX rework moved three of these**, so the first sweep's numbers are
+superseded: `csaw` 1,392 → 1,344, `ring-mod` 1,872 → 1,680, `vowel-fof`
+2,640 → 2,704. The other eight are unchanged. **A DSP change re-costs the
+engine** — re-sweep after any of them, not just after adding an engine.
 
-Container built from this branch's head, `8328613`. That matters for layering
-the numbers onto the website: `8328613` CONTAINS the deployed re-calibration
-revision `94e84165`, so these sit on the same firmware lineage the flash meter
-is calibrated against, plus the eleven ports.
+### Measured stereo delta — five Pattern-B ports, and `toy` costs NOTHING
+
+Container built from the branch head. That matters for layering the numbers
+onto the website: the head CONTAINS the deployed re-calibration revision
+`94e84165`, so these sit on the same firmware lineage the flash meter is
+calibrated against, plus the eleven ports.
 
 `flash_sweep.py --stereo` differences two builds identical but for the recipe's
 `stereoEngines` list (both `auxOutput: "stereo"`, so whatever the stereo aux
 option itself costs cancels — and it costs nothing: the all-mono stereo arm
 lands at 182,448, exactly the baseline 181,216 plus toy's 1,232 mono marginal).
 
-`toy` is the only Pattern-B port, so it was the only one that could cost
-anything. It measures **−144 bytes** — compiling the stereo path makes the
-firmware SMALLER. That is not a mismeasurement:
+| engine | stereo delta |
+|---|---:|
+| toy | **−144** |
+| bowed | 112 |
+| csaw | 208 |
+| ring-mod | 272 |
+| vowel-fof | 496 |
+
+`toy` shipped as the only Pattern-B port; `bowed`, `csaw`, `ring-mod` and
+`vowel-fof` joined it in `c84a06a`, which gave each a distinct mono AUX voice
+and therefore a second render path worth gating. All five are in the builder's
+`STEREO_MACROS` and in the website's `stereoToggleableEngineIds`; the remaining
+six are Pattern A and want no entry.
+
+**⚠ The measurement is silently meaningless if the engine is not IN the
+palette.** Enabling `PLAITS_STEREO_<X>` for an engine no slot references links
+no object, so the delta is exactly 0 — indistinguishable from a real "costs
+nothing" result. The first run of this sweep pinned one engine in Speech's slot
+and swept `stereoEngines` against it, and duly reported a confident 0 for all
+four of the engines above, none of which were in the build. The controls did not
+catch it, because `harmonic` and `glisson` happen to be in the base palette.
+`flash_sweep.py` now builds a per-engine mono/stereo pair with the target in the
+slot; a shared baseline is not worth that failure mode.
+
+`toy` measures **−144 bytes** — compiling the stereo path makes the firmware
+SMALLER. That is not a mismeasurement:
 
 - Object-level diff moves exactly ONE object, `toy_engine.o` (1,200 → 1,052),
   and within it exactly one symbol, `ToyEngine::Render`. That is precisely the
@@ -256,9 +285,10 @@ missing-submodule guard.
    prominent again.
 
 3. ~~**`engineStereoBytes` has no entry for `toy`**~~ — **DONE 2026-07-28.**
-   Swept with `flash_sweep.py --stereo`; the delta is −144 B (toy's stereo path
+   Swept with `flash_sweep.py --stereo`; toy's delta is −144 B (its stereo path
    compiles SMALLER), recorded on the website as `0`. See the measured-stereo
-   section above for the object-level proof and the controls.
+   section above for the object-level proof, the controls, and the
+   not-in-the-palette trap that made a first pass report a false 0.
 
    Recorded as `0`, not `−144` (`c1c6d975`), because the table's contract is a
    non-negative marginal (`plaitsFlashBudget.test.ts` asserts it), and banking a
@@ -267,7 +297,14 @@ missing-submodule guard.
    a missing entry already meant 0, and the true value is negative, so the meter
    was never under-reading a toy-stereo palette.
 
-   This closes the FLASH question only; the ten Pattern-A ports' stereo BUTTON
+   **It widened twice while being fixed.** `toy` was the only Pattern-B port
+   when this item was written; `c84a06a` added `bowed`, `csaw`, `ring-mod` and
+   `vowel-fof`, and the `digital-modulation` stereo fix added a sixth. Those
+   five DO cost flash and were genuinely uncosted. All six are now measured, in
+   `engineStereoBytes` and in `stereoToggleableEngineIds`; the mono marginals
+   the AUX rework moved are re-swept too, since a DSP change re-costs an engine.
+
+   This closes the FLASH question only; the Pattern-A ports' stereo BUTTON
    was item 1, and is also now done — they get one from `previewOnlyStereoEngine`,
    and per item 1 they must NOT be added to `alwaysStereoEngineIds`, which no
    longer gates any button.
