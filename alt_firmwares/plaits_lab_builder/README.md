@@ -14,8 +14,10 @@ at the firmware's linked application address and deliberately excludes the
 bootloader.
 
 Schema-15/Ro'Ved support passed its hardware checklist on July 30, 2026 and is
-available in production. Schema 16 remains a source-only rollout until its
-container, Worker, and hardware-canary gates are complete.
+available in production. Schema 16 remains a source-only rollout: its container
+and Worker gates pass locally, including one/eight/sixteen-scale ARM builds and
+the scale-order field guide, while the hardware canary and coordinated
+production rollout remain.
 
 The service is split across two isolation layers:
 
