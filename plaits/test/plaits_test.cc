@@ -2108,6 +2108,8 @@ void ValidateSixOpBankSwitch() {
 }
 
 void ValidateScaleVoiceBank() {
+  int microtonal_scale = -1;
+  int microtonal_degree = -1;
   for (int scale = 0; scale < kScaleVoicesNumScales; ++scale) {
     const Scale& definition = kScaleVoicesScales[scale];
     if (definition.num_degrees < 1 ||
@@ -2126,6 +2128,11 @@ void ValidateScaleVoiceBank() {
         fprintf(stderr, "Scale %d has an invalid degree at %d\n", scale, degree);
         abort();
       }
+      if (microtonal_scale < 0
+          && definition.pitches[degree] % kScaleVoicesUnitsPerSemitone != 0) {
+        microtonal_scale = scale;
+        microtonal_degree = degree;
+      }
       previous = note;
     }
     if (fabsf(ScaleDegreeToNote(definition.num_degrees, scale) - 12.0f) >
@@ -2135,21 +2142,28 @@ void ValidateScaleVoiceBank() {
     }
   }
 
-  // Bhairav is the first microtonal scale in the prototype bank. Pin its 115
-  // unit second so a later "simplification" back to integer semitones cannot
-  // silently erase the feature this bank exists to audition.
-  const int kBhairavScale = 13;
-  const float bhairav_second = 115.0f /
-      static_cast<float>(kScaleVoicesUnitsPerSemitone);
-  if (fabsf(ScaleDegreeToNote(1, kBhairavScale) - bhairav_second) > 1e-6f) {
-    fprintf(stderr, "Bhairav lost its 1/128-semitone tuning\n");
-    abort();
-  }
-  float residual = 0.0f;
-  if (QuantizeToScale(bhairav_second, kBhairavScale, &residual) != 1 ||
-      fabsf(residual) > 1e-6f) {
-    fprintf(stderr, "The scale quantizer does not preserve a microtonal degree\n");
-    abort();
+  // If this recipe carries any microtonal pitch, pin the first one through both
+  // conversion paths so a later "simplification" back to integer semitones
+  // cannot silently erase its precision. The ordinary eight-scale fallback is
+  // all 12-TET, so it legitimately has no candidate here.
+  if (microtonal_scale >= 0) {
+    const float microtonal_note =
+        static_cast<float>(
+            kScaleVoicesScales[microtonal_scale].pitches[microtonal_degree]) /
+        static_cast<float>(kScaleVoicesUnitsPerSemitone);
+    if (fabsf(
+            ScaleDegreeToNote(microtonal_degree, microtonal_scale)
+            - microtonal_note) > 1e-6f) {
+      fprintf(stderr, "A scale lost its 1/128-semitone tuning\n");
+      abort();
+    }
+    float residual = 0.0f;
+    if (QuantizeToScale(microtonal_note, microtonal_scale, &residual)
+            != microtonal_degree
+        || fabsf(residual) > 1e-6f) {
+      fprintf(stderr, "The scale quantizer does not preserve a microtonal degree\n");
+      abort();
+    }
   }
 }
 

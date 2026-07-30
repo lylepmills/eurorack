@@ -9,7 +9,11 @@ import unittest
 import zlib
 from pathlib import Path
 
-from generate_engine_config import DEFAULT_CHORD_TABLES, DEFAULT_CONFIGURATION
+from generate_engine_config import (
+    DEFAULT_CHORD_TABLES,
+    DEFAULT_CONFIGURATION,
+    DEFAULT_SCALE_BANK,
+)
 from render_manual import CONTROL_IDS, _clip, display_name, manual_document, render_pdf
 
 
@@ -70,6 +74,38 @@ class RenderManualTest(unittest.TestCase):
             "initialOptions": dict(DEFAULT_CONFIGURATION["initialOptions"]),
             "resources": {"chordTables": [dict(table) for table in DEFAULT_CHORD_TABLES]},
         }
+
+    def scale_bank_recipe(self) -> dict:
+        recipe = self.load("default_recipe.json")
+        recipe["schemaVersion"] = 16
+        recipe["slots"][0] = "diatonic-chord"
+        recipe["preferences"] = {"navigationMode": "linear"}
+        recipe["initialOptions"] = dict(DEFAULT_CONFIGURATION["initialOptions"])
+        recipe["resources"] = {
+            "chordTables": DEFAULT_CHORD_TABLES,
+            "scaleBank": [
+                DEFAULT_SCALE_BANK[1],
+                DEFAULT_SCALE_BANK[0],
+            ],
+        }
+        return recipe
+
+    def test_scale_bank_order_is_printable_only_for_scale_engines(self) -> None:
+        document = manual_document(self.scale_bank_recipe())
+        self.assertEqual(document["scaleBank"], ["Natural minor", "Major"])
+        self.assertEqual(
+            manual_document(self.load("default_recipe.json"))["scaleBank"],
+            [],
+        )
+
+    @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
+    def test_scale_bank_pdf_lists_macro_order(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "scales.pdf"
+            render_pdf(manual_document(self.scale_bank_recipe()), output)
+            printed = pdf_strings(output)
+            self.assertIn("Scale bank", printed)
+            self.assertLess(printed.index("Natural minor"), printed.index("Major"))
 
     def test_v7_short_bank_skips_empty_slots(self) -> None:
         # Empty slots must not crash the manual (was KeyError: None, which failed

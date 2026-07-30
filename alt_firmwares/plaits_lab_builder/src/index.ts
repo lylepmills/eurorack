@@ -606,7 +606,13 @@ export default {
           chordTables: approvedChordTables,
           // userDataBanks: v12 keys banks per slot, so the ceiling is the slot
           // count (32); the flash budget is the real limit the ARM build enforces.
-          limits: { chordTables: 9, chordsPerTable: 24, userDataBanks: 32 },
+          limits: {
+            chordTables: 9,
+            chordsPerTable: 24,
+            scales: 16,
+            degreesPerScale: 7,
+            userDataBanks: 32,
+          },
           buildContract: env.PLAITS_BUILD_CONTRACT,
         });
       } else if (request.method === "POST" && url.pathname === "/v1/builds") {

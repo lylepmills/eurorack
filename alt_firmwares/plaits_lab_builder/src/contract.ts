@@ -36,7 +36,7 @@ export type NormalizedChordTable = {
 // feature gates below use minimums so a newly supported schema cannot get
 // stranded behind an old "10, 11, 12..." whitelist.
 export const minRecipeSchemaVersion = 2;
-export const maxRecipeSchemaVersion = 15;
+export const maxRecipeSchemaVersion = 16;
 const configurationMinSchemaVersion = 4;
 const resourcesMinSchemaVersion = 5;
 const fourBankMinSchemaVersion = 6;       // 32 slots
@@ -48,6 +48,23 @@ const shortBankMinSchemaVersion = 13;     // fewer than 32 FM voices
 const calibrationMinSchemaVersion = 14;   // CV calibration procedure
 const rovedMinSchemaVersion = 15;         // four-knob Ro'Ved panel
 const colorBlindModeMinSchemaVersion = 15; // brightness-coded banks
+const scaleBankMinSchemaVersion = 16;      // recipe-driven scale bank
+
+export const minScaleBankSize = 1;
+export const maxScaleBankSize = 16;
+export const minScaleDegrees = 2;
+export const maxScaleDegrees = 7;
+export const scaleUnitsPerSemitone = 128;
+export const scaleUnitsPerOctave = 12 * scaleUnitsPerSemitone;
+
+export type NormalizedScale = {
+  id: string;
+  name: string;
+  description: string;
+  pitches: number[];
+  tuning: "12-TET" | "Microtonal";
+  source: "Shipped" | "Braids" | "Rubato" | "Local";
+};
 
 function isSupportedSchemaVersion(value: unknown): value is number {
   return Number.isInteger(value)
@@ -93,7 +110,7 @@ export type NormalizedSlotBank = {
 };
 
 export type NormalizedRecipe = {
-  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15;
+  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16;
   target: "mutable-instruments-plaits" | "plum-audio-roved";
   firmware: "rubato-plaits";
   // A null entry is an empty slot (v7 short banks); filled slots are engine ids.
@@ -121,6 +138,7 @@ export type NormalizedRecipe = {
   };
   resources: {
     chordTables: NormalizedChordTable[];
+    scaleBank?: NormalizedScale[];
     // v6 carries index-keyed banks; v12 carries per-slot banks. (The empty
     // fourth-bank marker on a 32-slot v7-v11 recipe is an empty array.)
     userDataBanks?: NormalizedUserDataBank[] | NormalizedSlotBank[];
@@ -216,6 +234,60 @@ function normalizeChordTables(value: unknown): NormalizedChordTable[] {
       throw new ContractError("invalid_chord_table", "Editable chord tables must be device-local drafts.");
     }
     return normalized;
+  });
+}
+
+function normalizeScaleBank(value: unknown): NormalizedScale[] {
+  if (!Array.isArray(value)
+      || value.length < minScaleBankSize
+      || value.length > maxScaleBankSize) {
+    throw new ContractError(
+      "invalid_scale_bank",
+      `A firmware must contain between ${minScaleBankSize} and ${maxScaleBankSize} scales.`,
+    );
+  }
+  const scaleIds = new Set<string>();
+  return value.map((item) => {
+    if (!item || typeof item !== "object") {
+      throw new ContractError("invalid_scale", "The recipe contains an invalid scale.");
+    }
+    const scale = item as Record<string, unknown>;
+    const rawPitches = scale.pitches;
+    if (!shortText(scale.id, 80) || !idPattern.test(scale.id) || scaleIds.has(scale.id)
+        || !shortText(scale.name, 80) || !shortText(scale.description, 240)
+        || !["12-TET", "Microtonal"].includes(String(scale.tuning))
+        || !["Shipped", "Braids", "Rubato", "Local"].includes(String(scale.source))
+        || !Array.isArray(rawPitches)
+        || rawPitches.length < minScaleDegrees
+        || rawPitches.length > maxScaleDegrees
+        || rawPitches.some((pitch) => !Number.isInteger(pitch))
+        || rawPitches[0] !== 0
+        || rawPitches.some((pitch, index) =>
+          index > 0 && Number(pitch) <= Number(rawPitches[index - 1]))
+        || Number(rawPitches.at(-1)) >= scaleUnitsPerOctave) {
+      throw new ContractError(
+        "invalid_scale",
+        `A scale must contain ${minScaleDegrees} to ${maxScaleDegrees} strictly ascending pitches below the octave.`,
+      );
+    }
+    const pitches = [...rawPitches] as number[];
+    const tuning = pitches.every((pitch) => pitch % scaleUnitsPerSemitone === 0)
+      ? "12-TET" : "Microtonal";
+    if (scale.tuning !== tuning) {
+      throw new ContractError(
+        "invalid_scale",
+        "A scale's tuning label does not match its pitches.",
+      );
+    }
+    scaleIds.add(scale.id);
+    return {
+      id: scale.id,
+      name: scale.name,
+      description: scale.description,
+      pitches,
+      tuning,
+      source: scale.source as NormalizedScale["source"],
+    };
   });
 }
 
@@ -532,6 +604,7 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
       });
   validateBankShape(slots, schemaVersion);
   let chordTables: NormalizedChordTable[];
+  let scaleBank: NormalizedScale[] | undefined;
   let userDataBanks: NormalizedUserDataBank[] | undefined;   // v6 index-keyed
   let slotBanks: NormalizedSlotBank[] | undefined;           // v12 slot-keyed
   if (schemaVersion >= resourcesMinSchemaVersion) {
@@ -553,14 +626,20 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
       throw new ContractError("invalid_resources", "The recipe must contain only supported firmware resources.");
     }
     const resourceValues = resources as Record<string, unknown>;
+    const baseKeys = schemaVersion >= scaleBankMinSchemaVersion
+      ? ["chordTables", "scaleBank"] : ["chordTables"];
     const carriesUserDataBanks = expectsUserDataBanks
       || (schemaVersion >= calibrationMinSchemaVersion
-        && hasExactKeys(resourceValues, ["chordTables", "userDataBanks"]));
-    const expectedKeys = carriesUserDataBanks ? ["chordTables", "userDataBanks"] : ["chordTables"];
+        && hasExactKeys(resourceValues, [...baseKeys, "userDataBanks"]));
+    const expectedKeys = carriesUserDataBanks
+      ? [...baseKeys, "userDataBanks"] : baseKeys;
     if (!hasExactKeys(resourceValues, expectedKeys)) {
       throw new ContractError("invalid_resources", "The recipe must contain only supported firmware resources.");
     }
     chordTables = normalizeChordTables(resourceValues.chordTables);
+    if (schemaVersion >= scaleBankMinSchemaVersion) {
+      scaleBank = normalizeScaleBank(resourceValues.scaleBank);
+    }
     if (carriesUserDataBanks) {
       const rawBanks = resourceValues.userDataBanks;
       if (schemaVersion >= slotBankMinSchemaVersion) {
@@ -596,7 +675,8 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     configuration.initialOptions.auxOutput,
   );
   return {
-    // Newest first: Ro'Ved's four-clickable-knob UI and the accessible display
+    // Newest first: a recipe-driven scale bank requires v16. Ro'Ved's
+    // four-clickable-knob UI and the accessible display
     // each require v15 and dominate all lower feature rungs. Then the optional
     // calibration procedure needs v14. All three say nothing about the recipe's
     // resource shape. A per-slot custom bank with fewer than 32 patches (a
@@ -608,7 +688,8 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     // (v8); a short-bank recipe (a trailing empty slot) stays v7; a candidate that
     // carried v6 resources (even an empty custom-bank list, e.g. a 32-slot recipe)
     // stays v6; else v5.
-    schemaVersion: candidate.target === "plum-audio-roved"
+    schemaVersion: scaleBank !== undefined ? 16
+      : candidate.target === "plum-audio-roved"
         || configuration.preferences.colorBlindMode ? 15
       : configuration.preferences.calibration ? 14
       : slotBanks !== undefined
@@ -625,9 +706,13 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     preferences: { ...configuration.preferences },
     initialOptions: { ...configuration.initialOptions },
     ...(stereoEngines !== undefined ? { stereoEngines } : {}),
-    resources: (userDataBanks ?? slotBanks)
-      ? { chordTables, userDataBanks: userDataBanks ?? slotBanks }
-      : { chordTables },
+    resources: {
+      chordTables,
+      ...(scaleBank !== undefined ? { scaleBank } : {}),
+      ...((userDataBanks ?? slotBanks)
+        ? { userDataBanks: userDataBanks ?? slotBanks }
+        : {}),
+    },
     output: candidate.output,
   };
 }
@@ -670,6 +755,7 @@ export async function computeManualKey(
     slots: recipe.slots,
     documentation,
     chordTables: recipe.resources.chordTables.map((table) => table.name),
+    scaleBank: recipe.resources.scaleBank?.map((scale) => scale.name) ?? [],
     customBanks,
     // The control instructions differ completely: Plaits has two buttons;
     // Ro'Ved has four clickable knobs. Never share a cached guide between them.

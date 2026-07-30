@@ -10,6 +10,7 @@ from generate_engine_config import (
     CATALOG,
     DEFAULT_CHORD_TABLES,
     DEFAULT_CONFIGURATION,
+    DEFAULT_SCALE_BANK,
     MAX_RECIPE_SCHEMA_VERSION,
     MIN_RECIPE_SCHEMA_VERSION,
     render_config,
@@ -91,6 +92,8 @@ class GenerateEngineConfigTest(unittest.TestCase):
         # v5+ recipes carry their chord tables; v14 (like v5-v11) carries no
         # custom FM banks unless the palette actually has one.
         recipe["resources"] = {"chordTables": DEFAULT_CHORD_TABLES}
+        if schema_version >= 16:
+            recipe["resources"]["scaleBank"] = DEFAULT_SCALE_BANK
         return recipe
 
     def test_calibration_defaults_off_and_emits_the_define(self) -> None:
@@ -164,6 +167,61 @@ class GenerateEngineConfigTest(unittest.TestCase):
         build = validate_recipe(self.load("default_recipe.json"))
         self.assertEqual(build.color_blind_mode, 0)
         self.assertIn("#define PLAITS_BUILD_COLOR_BLIND_MODE 0", render_config(build))
+
+    def test_legacy_recipe_emits_the_original_eight_scale_bank(self) -> None:
+        build = validate_recipe(self.load("default_recipe.json"))
+        config = render_config(build)
+        self.assertEqual(build.scale_bank, DEFAULT_SCALE_BANK)
+        self.assertIn("#define PLAITS_SCALE_BANK_COUNT 8", config)
+        self.assertIn(
+            "{ { 0, 256, 512, 896, 1152, 0, 0 }, 5 }",
+            config,
+        )
+
+    def test_v16_scale_bank_is_validated_and_rendered_in_recipe_order(self) -> None:
+        recipe = self.calibration_recipe(16, False)
+        recipe["resources"]["scaleBank"] = [
+            {
+                "id": "just-five",
+                "name": "Just five",
+                "description": "A local microtonal five-note scale.",
+                "pitches": [0, 261, 637, 899, 1393],
+                "tuning": "Microtonal",
+                "source": "Local",
+            },
+            {
+                "id": "whole-tone",
+                "name": "Whole tone",
+                "description": "Six evenly spaced whole tones.",
+                "pitches": [0, 256, 512, 768, 1024, 1280],
+                "tuning": "12-TET",
+                "source": "Shipped",
+            },
+        ]
+        build = validate_recipe(recipe)
+        config = render_config(build)
+        self.assertEqual([scale["id"] for scale in build.scale_bank], ["just-five", "whole-tone"])
+        self.assertIn("#define PLAITS_SCALE_BANK_COUNT 2", config)
+        self.assertIn("{ { 0, 261, 637, 899, 1393, 0, 0 }, 5 }", config)
+        self.assertLess(config.index("0, 261, 637"), config.index("0, 256, 512, 768"))
+
+    def test_v16_scale_bank_rejects_invalid_data(self) -> None:
+        recipe = self.calibration_recipe(16, False)
+        del recipe["resources"]["scaleBank"]
+        with self.assertRaisesRegex(ValueError, "supported firmware resources"):
+            validate_recipe(recipe)
+
+        recipe = self.calibration_recipe(16, False)
+        recipe["resources"]["scaleBank"] = [DEFAULT_SCALE_BANK[0], DEFAULT_SCALE_BANK[0]]
+        with self.assertRaisesRegex(ValueError, "duplicate scale ID"):
+            validate_recipe(recipe)
+
+        recipe = self.calibration_recipe(16, False)
+        mismatched = dict(DEFAULT_SCALE_BANK[0])
+        mismatched["pitches"] = [0, 261]
+        recipe["resources"]["scaleBank"] = [mismatched, DEFAULT_SCALE_BANK[1]]
+        with self.assertRaisesRegex(ValueError, "tuning label"):
+            validate_recipe(recipe)
 
     def test_color_blind_mode_on_emits_the_define_and_composes_with_calibration(self) -> None:
         recipe = self.color_blind_recipe(15, True, calibration=True)

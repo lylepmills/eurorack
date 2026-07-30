@@ -15,12 +15,11 @@
 // anywhere, it falls out of where the played note lands in the scale, so one
 // knob position gives Cmaj7 on the tonic and Am7 on the sixth.
 //
-// Plaits has no quantizer and no scale setting, so the scale ships with the
-// engine and MACRO selects it. This prototype bank keeps the original eight
-// positions and adds five strongly contrasting 12-TET scales plus three
-// genuinely microtonal scales from Braids. In a pentatonic, whole-tone, or
-// microtonal scale a "third" is not a 12-TET third, and the chord shapes bend
-// accordingly.
+// Plaits has no quantizer and no scale setting, so the scale bank is compiled
+// into the engine and MACRO selects its entries. Hosted builds can supply two
+// to sixteen scales; ordinary builds retain the original eight. In a
+// pentatonic, whole-tone, or microtonal scale a "third" is not a 12-TET third,
+// and the chord shapes bend accordingly.
 //
 // SCALE PITCHES USE BRAIDS' 1/128-SEMITONE UNITS. Keeping the source precision
 // is what makes the raga-derived scales genuinely microtonal; an int8 semitone
@@ -44,7 +43,6 @@
 
 namespace plaits {
 
-const int kScaleVoicesNumScales = 16;
 const int kScaleVoicesMaxDegrees = 7;
 const int kScaleVoicesMaxVoices = 6;
 const int kScaleVoicesUnitsPerSemitone = 128;
@@ -69,12 +67,13 @@ const float kScaleVoicesMaxFoldDrive = 4.0f;
 const float kScaleVoicesMaxVoiceFrequency = 0.45f;
 
 struct Scale {
-  const int16_t* pitches;
+  int16_t pitches[kScaleVoicesMaxDegrees];
   int num_degrees;
 };
 
-// The sixteen MACRO positions, in order.
-extern const Scale kScaleVoicesScales[kScaleVoicesNumScales];
+// The recipe's MACRO positions, in order.
+extern const int kScaleVoicesNumScales;
+extern const Scale kScaleVoicesScales[];
 
 // Resolves a played note onto the scale: returns the index of the nearest
 // scale degree (counting across octaves, so degree n + num_degrees is one

@@ -1,10 +1,11 @@
 # Plaits Lab firmware build service
 
 This directory contains the approved-engine backend for Plaits Lab. It accepts
-legacy recipes and manifests through schema 15 containing 24 or 32 immutable
+legacy recipes and manifests through schema 16 containing 24 or 32 immutable
 engine references, firmware preferences and starting options, and bounded
-chord-table/custom-FM resources. Schema 15 can target either Mutable
-Instruments Plaits or Plum Audio Ro'Ved. It generates a compile-time configuration,
+chord-table/custom-FM/scale-bank resources. Schema 15 can target either Mutable
+Instruments Plaits or Plum Audio Ro'Ved; schema 16 adds an ordered bank of up to
+16 editable scales shared by Diatonic Chord and Scale Stack. It generates a compile-time configuration,
 builds with the pinned Mutable
 Instruments ARM toolchain, enforces the Plaits flash and RAM limits, and returns
 either the default 48 kHz audio updater or, when explicitly requested, an
@@ -13,7 +14,8 @@ at the firmware's linked application address and deliberately excludes the
 bootloader.
 
 Schema-15/Ro'Ved support passed its hardware checklist on July 30, 2026 and is
-available in production.
+available in production. Schema 16 remains a source-only rollout until its
+container, Worker, and hardware-canary gates are complete.
 
 The service is split across two isolation layers:
 
@@ -28,7 +30,7 @@ The service is split across two isolation layers:
 The browser-facing API is public at `https://plaits-api.rubato.audio`. It does
 not require an account, email address, cookie, API token, or customer identity.
 
-- `GET /v1/catalog` returns the approved engine and chord-table contract.
+- `GET /v1/catalog` returns the approved engine, chord-table, and scale-bank limits.
 - `POST /v1/builds` accepts a Plaits Lab manifest and returns a deterministic
   build ID with `queued`, `building`, or `succeeded` status.
 - `GET /v1/builds/:buildKey` returns durable job state.
@@ -68,7 +70,8 @@ firmware build), stores it in R2 under `manuals/<manualKey>.pdf`, reports
 `GET /v1/builds/:buildKey/manual`, and backfills the PDF for already-cached
 firmware via `manualOnly` queue messages. `computeManualKey` hashes everything
 the PDF PRINTS — the slot layout, each engine's DOCUMENTATION digest, the chord
-tables the options-menu page lists, each custom FM bank's credit, and
+tables the options-menu page lists, the scale order when a scale-aware engine is
+present, each custom FM bank's credit, and
 `PLAITS_MANUAL_CONTRACT` — deliberately not the firmware source revision or
 toolchain, so prose-only edits never invalidate firmware and firmware rollouts
 keep reusing cached manuals. It is likewise NOT the packed patch bytes: the
@@ -79,7 +82,7 @@ changes — or when the key's inputs change, so cached PDFs re-render (contract 
 covers the FM-bank credits, and the chord-table fold that fixed guides served
 from cache with another recipe's LIGHT 1 row; contract 6 renames a customized
 six-op slot "Custom 6-Op FM Bank" in the bank map and the model reference,
-subtitled with the bank's own name).
+subtitled with the bank's own name; contract 10 adds the recipe's scale order).
 
 The contract is the Worker's alone, and in source (`a0c0791`) it rides in the
 `POST /manual` body as `manualContract` for the container to echo on
@@ -111,8 +114,8 @@ catalog was unaffected: `catalog:check` and the website `--check` both confirmed
 byte-identical snapshots at the new revision, so no engine digest moved.
 
 The build key covers the normalized slots, preferences, starting options,
-ordered chord-table data (without `createdAt`), requested output format, source
-revision, toolchain identity, and build-contract version. Identical recipes
+ordered chord-table and scale-bank data (without `createdAt`), requested output
+format, source revision, toolchain identity, and build-contract version. Identical recipes
 therefore share the same immutable artifact; WAV and HEX requests remain
 separate cache entries while sharing their field-guide PDF.
 

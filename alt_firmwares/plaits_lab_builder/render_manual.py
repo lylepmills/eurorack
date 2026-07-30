@@ -178,6 +178,11 @@ def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]
         ],
         "models": models,
         "chordTables": [table["name"] for table in build.chord_tables],
+        "scaleBank": (
+            [scale["name"] for scale in build.scale_bank]
+            if any(engine_id in ("diatonic-chord", "scale-stack") for engine_id in slots)
+            else []
+        ),
         # Only a build that compiled the procedure in answers the power-up
         # gesture, so only that build's guide documents it.
         "calibration": build.enable_calibration == 1,
@@ -604,6 +609,41 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         Spacer(1, 0.1 * inch),
         Paragraph(options_note, small_muted_style),
     ])
+
+    if document["scaleBank"]:
+        scale_rows: list[list[Any]] = [[
+            Paragraph("MACRO", table_header_style),
+            Paragraph("SCALE", table_header_style),
+        ]]
+        for index, name in enumerate(document["scaleBank"], start=1):
+            scale_rows.append([
+                Paragraph(str(index), small_muted_style),
+                Paragraph(_escape(name), small_style),
+            ])
+        scale_table = Table(
+            scale_rows,
+            colWidths=[0.7 * inch, 5.6 * inch],
+            repeatRows=1,
+        )
+        scale_table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#EFECE3")),
+            ("GRID", (0, 0), (-1, -1), 0.35, line),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 5),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ]))
+        story.extend([
+            PageBreak(),
+            Paragraph("Scale bank", section_style),
+            Paragraph(
+                "Diatonic Chord and Scale Stack use the same scale bank. "
+                "Turn MACRO from left to right to move through these scales in order.",
+                intro_style,
+            ),
+            scale_table,
+        ])
 
     # Calibration, for the builds that asked for it. Most firmwares leave the
     # procedure out — a module keeps the pitch-CV calibration it already has

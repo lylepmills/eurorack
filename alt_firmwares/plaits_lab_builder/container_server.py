@@ -48,10 +48,10 @@ BUILD_KEY_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 MANUAL_CONTRACT_PATTERN = re.compile(r"^[0-9A-Za-z._-]{1,32}$")
 FirmwareOutput = Literal["audio-wav", "intel-hex"]
 
-# Route the ARM compiler through ccache when it is installed. Only the three
-# recipe-dependent translation units (voice/plaits/ui) see the generated
-# engine_config.h, so every other object hits the image-baked warm cache and a
-# novel recipe recompiles just those three plus the link and WAV encode.
+# Route the ARM compiler through ccache when it is installed. Only the units in
+# plaits/makefile's RECIPE_CONFIG_OBJS see the generated engine_config.h, so
+# every other object hits the image-baked warm cache and a novel recipe
+# recompiles that small set plus the link and WAV encode.
 _CCACHE = shutil.which("ccache")
 
 

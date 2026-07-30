@@ -12,6 +12,7 @@
 
 #include "stmlib/dsp/dsp.h"
 
+#include "plaits/build_config.h"
 #include "plaits/dsp/engine/engine.h"
 #include "plaits/dsp/oscillator/sine_oscillator.h"
 
@@ -21,26 +22,6 @@ using namespace std;
 using namespace stmlib;
 
 namespace {
-
-// Values are copied from Braids' quantizer_scales.h and remain in its native
-// 1/128-semitone pitch units. The first eight preserve the shipped bank order;
-// the remainder are the Phase 0 listening set.
-const int16_t kMajor[] = { 0, 256, 512, 640, 896, 1152, 1408 };
-const int16_t kNaturalMinor[] = { 0, 256, 384, 640, 896, 1024, 1280 };
-const int16_t kDorian[] = { 0, 256, 384, 640, 896, 1152, 1280 };
-const int16_t kMixolydian[] = { 0, 256, 512, 640, 896, 1152, 1280 };
-const int16_t kHarmonicMinor[] = { 0, 256, 384, 640, 896, 1024, 1408 };
-const int16_t kMelodicMinor[] = { 0, 256, 384, 640, 896, 1152, 1408 };
-const int16_t kMajorPentatonic[] = { 0, 256, 512, 896, 1152 };
-const int16_t kWholeTone[] = { 0, 256, 512, 768, 1024, 1280 };
-const int16_t kBluesMinor[] = { 0, 384, 640, 768, 896, 1280 };
-const int16_t kJapanese[] = { 0, 128, 640, 896, 1024 };
-const int16_t kGamelan[] = { 0, 128, 384, 896, 1024 };
-const int16_t kGypsy[] = { 0, 256, 384, 768, 896, 1024, 1408 };
-const int16_t kArabian[] = { 0, 128, 512, 640, 896, 1024, 1408 };
-const int16_t kBhairav[] = { 0, 115, 494, 637, 899, 1014, 1393 };
-const int16_t kYaman[] = { 0, 261, 522, 783, 899, 1160, 1421 };
-const int16_t kBairagi[] = { 0, 115, 637, 899, 1275 };
 
 // One-sided PolyBLEP. `t` is the phase, `dt` the per-sample increment.
 inline float PolyBlep(float t, float dt) {
@@ -93,24 +74,12 @@ inline float Waveform(float phase, float dt, float waveform) {
 
 }  // namespace
 
-const Scale kScaleVoicesScales[kScaleVoicesNumScales] = {
-  { kMajor, 7 },
-  { kNaturalMinor, 7 },
-  { kDorian, 7 },
-  { kMixolydian, 7 },
-  { kHarmonicMinor, 7 },
-  { kMelodicMinor, 7 },
-  { kMajorPentatonic, 5 },
-  { kWholeTone, 6 },
-  { kBluesMinor, 6 },
-  { kJapanese, 5 },
-  { kGamelan, 5 },
-  { kGypsy, 7 },
-  { kArabian, 7 },
-  { kBhairav, 7 },
-  { kBairagi, 5 },
-  { kYaman, 7 },
-};
+static_assert(
+    PLAITS_SCALE_BANK_COUNT >= 1 && PLAITS_SCALE_BANK_COUNT <= 16,
+    "Scale bank must contain between 1 and 16 entries");
+
+const int kScaleVoicesNumScales = PLAITS_SCALE_BANK_COUNT;
+const Scale kScaleVoicesScales[PLAITS_SCALE_BANK_COUNT] = PLAITS_SCALE_BANK;
 
 float ScaleDegreeToNote(int degree, int scale) {
   const Scale& s = kScaleVoicesScales[scale];
