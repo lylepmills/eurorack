@@ -96,9 +96,9 @@ test("calibration is carried, version-gated, and type-checked", async () => {
     resources: { chordTables: [publishedTable] },
   });
 
-  // Asking for it lifts the recipe to v14 — and v14 is the one version whose
-  // feature says nothing about resources, so unlike v12/v13 it must not demand a
-  // userDataBanks list.
+  // Asking for it lifts the recipe to v14. Its feature says nothing about
+  // resources, so unlike v12/v13 it must not demand a userDataBanks list; later
+  // resource-independent schemas inherit that behavior.
   const on = normalizeRecipe(makeRecipe(14, true));
   assert.equal(on.preferences.calibration, true);
   assert.equal(on.schemaVersion, 14);

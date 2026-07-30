@@ -125,9 +125,9 @@ export type NormalizedRecipe = {
     // fourth-bank marker on a 32-slot v7-v11 recipe is an empty array.)
     userDataBanks?: NormalizedUserDataBank[] | NormalizedSlotBank[];
   };
-  // Catalog ids of the engines built with the stereo render path (schema 10).
-  // Absent on schema <= 9 (the global-stereo recipes, which the builder treats
-  // as all stereo-capable engines when the aux option is stereo).
+  // Catalog ids of the engines built with the stereo render path (introduced in
+  // schema 10). Absent on schema <= 9 (the global-stereo recipes, which the
+  // builder treats as all stereo-capable engines when the aux option is stereo).
   stereoEngines?: string[];
   output: FirmwareOutput;
 };
@@ -427,10 +427,11 @@ function normalizeConfiguration(
   };
 }
 
-// Per-engine stereo (schema 10). A stereoEngines list names the approved engines
-// built with the stereo render path; it is only meaningful with the stereo aux
-// option. Returns the deduped list, or undefined for a schema <= 9 recipe (which
-// the builder treats as all stereo-capable engines when aux is stereo).
+// Per-engine stereo (introduced in schema 10). A stereoEngines list names the
+// approved engines built with the stereo render path; it is only meaningful with
+// the stereo aux option. Returns the deduped list, or undefined for a schema <= 9
+// recipe (which the builder treats as all stereo-capable engines when aux is
+// stereo).
 function normalizeStereoEngines(
   candidate: Record<string, unknown>,
   schemaVersion: number,
@@ -441,8 +442,8 @@ function normalizeStereoEngines(
     throw new ContractError("invalid_recipe", "A version 10 recipe must carry a stereoEngines list.");
   }
   if (!present) return undefined;
-  // v10's defining feature; a v11 (sparse) recipe may also carry it when its aux
-  // output is stereo, since v11 is a superset of v10.
+  // v10's defining feature; every later supported schema inherits it and may
+  // carry the list when its aux output is stereo.
   if (schemaVersion < stereoEngineMinSchemaVersion) {
     throw new ContractError(
       "unsupported_schema",
@@ -586,8 +587,9 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
   const configuration = schemaVersion >= configurationMinSchemaVersion
     ? normalizeConfiguration(candidate, chordTables)
     : defaultConfiguration;
-  // Per-engine stereo (schema 10): a stereoEngines list names the engines built
-  // with the stereo render path. Only valid when the aux option is stereo.
+  // Per-engine stereo (introduced in schema 10): a stereoEngines list names the
+  // engines built with the stereo render path. Only valid when the aux option is
+  // stereo.
   const stereoEngines = normalizeStereoEngines(
     candidate,
     schemaVersion,

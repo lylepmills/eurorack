@@ -297,7 +297,7 @@ def build_firmware(payload: Any) -> tuple[Path, FirmwareOutput, dict[str, str]]:
     #   - aux != stereo: nothing is stereo -> disable every engine.
     #   - aux == stereo, stereo_engines is None (schema <= 9): the global-stereo
     #     back-compat case -> enable all.
-    #   - aux == stereo, stereo_engines given (schema 10): enable exactly those.
+    #   - aux == stereo, stereo_engines given (schema 10+): enable exactly those.
     command.extend(_stereo_disable_flags(
         _recipe_is_stereo(validated_recipe),
         validated_recipe.stereo_engines,
