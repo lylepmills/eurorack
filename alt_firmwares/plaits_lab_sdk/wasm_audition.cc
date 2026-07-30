@@ -150,6 +150,13 @@ void set_modulation_targets(
   g_mod_decay_per_block = decay_per_block;
 }
 
+// Restart only the attenurandomizer trajectory. Unlike trigger(), this does not
+// send a rising edge to the engine or reopen the audition amplitude envelope,
+// so dragging a randomizer previews timbral movement without restriking a note.
+void restart_modulation() {
+  g_mod_envelope = 1.0f;
+}
+
 // Fire a single trigger rising edge on the next rendered block (re-strike).
 // In plucked mode this also re-opens the LPG envelope.
 void trigger() {
