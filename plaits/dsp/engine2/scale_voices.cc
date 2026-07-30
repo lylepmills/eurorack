@@ -74,9 +74,9 @@ inline float Waveform(float phase, float dt, float waveform) {
 
 }  // namespace
 
-static_assert(
-    PLAITS_SCALE_BANK_COUNT >= 1 && PLAITS_SCALE_BANK_COUNT <= 16,
-    "Scale bank must contain between 1 and 16 entries");
+#if PLAITS_SCALE_BANK_COUNT < 1 || PLAITS_SCALE_BANK_COUNT > 16
+#error "Scale bank must contain between 1 and 16 entries"
+#endif
 
 const int kScaleVoicesNumScales = PLAITS_SCALE_BANK_COUNT;
 const Scale kScaleVoicesScales[PLAITS_SCALE_BANK_COUNT] = PLAITS_SCALE_BANK;

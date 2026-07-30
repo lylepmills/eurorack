@@ -16,7 +16,7 @@
 // knob position gives Cmaj7 on the tonic and Am7 on the sixth.
 //
 // Plaits has no quantizer and no scale setting, so the scale bank is compiled
-// into the engine and MACRO selects its entries. Hosted builds can supply two
+// into the engine and MACRO selects its entries. Hosted builds can supply one
 // to sixteen scales; ordinary builds retain the original eight. In a
 // pentatonic, whole-tone, or microtonal scale a "third" is not a 12-TET third,
 // and the chord shapes bend accordingly.
