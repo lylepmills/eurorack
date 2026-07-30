@@ -16,11 +16,10 @@ application-only Intel HEX file for a direct hardware programmer. The HEX starts
 at the firmware's linked application address and deliberately excludes the
 bootloader.
 
-Schema-15/Ro'Ved support passed its hardware checklist on July 30, 2026 and is
-available in production. Schema 16 remains a source-only rollout: its container
-and Worker gates pass locally, including one/eight/sixteen-scale ARM builds,
-automatic LEVEL routing, and the generated field guides, while the hardware
-canary and coordinated production rollout remain.
+Schema-15/Ro'Ved support passed its hardware checklist on July 30, 2026.
+Schema 16 is available in production with recipe-driven scale banks, automatic
+LEVEL routing, the right-button + MORPH locked-octave shortcut, and their
+generated field-guide coverage.
 
 The service is split across two isolation layers:
 
@@ -228,16 +227,17 @@ system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-21eea00866b0` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-07c108dd71b7` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a
 new image, wait for `wrangler containers list` to report `ready` before smoke
 testing; requests made while the application was still `provisioning` reached
 the previous live instance during the schema-5 rollout.
 
-Schema 15, including per-engine stereo, is live. The generalized
+Schema 16, including per-engine stereo, recipe-driven scale banks, and automatic
+LEVEL routing, is live. The generalized
 schema-inheritance hardening from `5b2b077` is also live: current production
-source `1d1c2ff82b34` descends from that commit, so future supported schemas
+source `07c108dd71b7` descends from that commit, so future supported schemas
 inherit older feature shapes without another version-list edit.
 
 ### Rolling back
@@ -281,6 +281,7 @@ target.
 | July 30, 2026 (schema 15, color-blind brightness display + Intel HEX, manual contract 9) | `1d1c2ff82b34` | `rev-1d1c2ff82b34` |
 | July 30, 2026 (quarantine Undertow and Phase Flock) | `b7708ec67487` | `rev-b7708ec67487` |
 | July 30, 2026 (restore optimized Undertow and Phase Flock; sync scale-bank digests) | `21eea00866b0` | `rev-21eea00866b0` |
+| July 30, 2026 (schema 16 Auto LEVEL + locked-octave shortcut, manual contract 11) | `07c108dd71b7` | `rev-07c108dd71b7` |
 
 Three consequences a rollback has that a forward deploy does not:
 
