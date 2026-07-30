@@ -19,6 +19,10 @@ const int kHelixOctaves = 4;  // 16 voices -- the ship config. QEMU-estimated 80
                               // alone and overruns once ISR overhead lands on top
                               // (hardware-validated, ~1% over the deadline).
 
+// Equal-power L/R panning makes 16 voices miss the deadline; stereo uses the
+// proven 12-voice fallback while mono keeps the full four-octave cloud.
+const int kHelixStereoOctaves = 3;
+
 class HelixEngine : public Engine {
  public:
   HelixEngine() { }
@@ -55,6 +59,7 @@ class HelixEngine : public Engine {
   int setup_phase_;
   float weight_half_[2];
   float shift_;                                  // continuous octave glide, [0,1)
+  int active_octaves_;
   DISALLOW_COPY_AND_ASSIGN(HelixEngine);
 };
 

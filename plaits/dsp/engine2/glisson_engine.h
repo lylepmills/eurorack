@@ -14,9 +14,11 @@
 
 namespace plaits {
 
-// Five grains keep the densest setting inside a safer real-time CPU budget on
-// the STM32F3 while still producing a continuous cloud.
-const int kNumGlissonGrains = 5;
+// Four grains keep the densest MONO setting below the practical 90% red line
+// on the STM32F3. Stereo is cheaper because it pans one chirp rather than
+// rendering separate forward/reverse chirps, and four still form a continuous
+// cloud at the top of TIMBRE.
+const int kNumGlissonGrains = 4;
 
 class GlissonEngine : public Engine {
  public:

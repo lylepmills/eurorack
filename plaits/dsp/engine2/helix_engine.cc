@@ -87,6 +87,7 @@ void HelixEngine::Reset() {
   inv_w_ = 1.0f;
   setup_phase_ = 0;
   weight_half_[0] = weight_half_[1] = 0.0f;
+  active_octaves_ = 0;
 }
 
 void HelixEngine::Render(const EngineParameters& parameters, float* out,
@@ -108,9 +109,22 @@ void HelixEngine::Render(const EngineParameters& parameters, float* out,
   // MACRO = window width. Raised cosine (silent at both edges -> seamless wrap),
   // raised to a power: wide/low-power = shimmering cloud, narrow = tight chord.
   const float peak = 1.0f + (1.0f - parameters.macro) * 4.0f;
-  const float inv_octaves = 1.0f / static_cast<float>(kHelixOctaves);
-
   const bool stereo = parameters.stereo;
+  // Equal-power L/R panning adds two gain multiplies per voice and pushes the
+  // four-octave stereo path over the audio deadline. Keep the full 16-voice
+  // cloud in mono, but use the already-auditioned three-octave fallback (12
+  // voices) for stereo. Its window still wraps seamlessly over its own span.
+  const int active_octaves = stereo
+      ? kHelixStereoOctaves
+      : kHelixOctaves;
+  const float active_octaves_f = static_cast<float>(active_octaves);
+  const float inv_octaves = 1.0f / active_octaves_f;
+  if (active_octaves_ != active_octaves) {
+    active_octaves_ = active_octaves;
+    setup_phase_ = 0;
+    weight_half_[0] = weight_half_[1] = 0.0f;
+    if (shift_ >= active_octaves_f) shift_ -= active_octaves_f;
+  }
 
   // PER-BLOCK voice setup. A voice's window gain and frequency depend only on
   // its position p on the helix, and the glide moves p by at most ~3.5e-4
@@ -138,13 +152,13 @@ void HelixEngine::Render(const EngineParameters& parameters, float* out,
   // circle at a new rate, which is what makes it safe under Helix's constant
   // glide. Only the two coefficients need a table lookup, once per block instead
   // of every sample.
-  const int kVoices = kHelixOctaves * kChordNumNotes;
+  const int kVoices = active_octaves * kChordNumNotes;
   const float shift_mid = shift_ + shift_inc * (static_cast<float>(size) * 0.5f);
   // Refresh HALF the palette's coefficients each block (staggered): every
   // voice still updates at 2 kHz, but the setup cost is flat across blocks
   // instead of spiking on alternate ones -- the deadline is per block, and a
   // flat load is what keeps the worst block under it.
-  const int kHalfVoices = (kHelixOctaves * kChordNumNotes) / 2;
+  const int kHalfVoices = kVoices / 2;
   {
     const int start = setup_phase_ * kHalfVoices;
     float weight = 0.0f;
@@ -161,12 +175,12 @@ void HelixEngine::Render(const EngineParameters& parameters, float* out,
         // genuinely endless. (The previous design let the whole palette jump
         // an octave at once, which both clicked and read as a "reset".)
         float p = static_cast<float>(oct) + shift_mid + pitch_class[n];
-        if (p >= static_cast<float>(kHelixOctaves)) {
-          p -= static_cast<float>(kHelixOctaves);
+        if (p >= active_octaves_f) {
+          p -= active_octaves_f;
         }
         const float inc = f0 * Exp2(p);        // 2^p — this voice's frequency
         float w = 0.0f;
-        if (p > 0.0f && p < kHelixOctaves) {
+        if (p > 0.0f && p < active_octaves_f) {
           const float rc = 0.5f - 0.5f * Sine(p * inv_octaves + 0.25f);  // raised cosine
           if (rc > 1.0e-4f) w = Power(rc, peak);
           // Six stacked octaves reach past Nyquist well inside the module's
@@ -287,10 +301,10 @@ void HelixEngine::Render(const EngineParameters& parameters, float* out,
   // snapped every position down an octave at once: an audible click and a
   // perceptible reset in what should be an endless glide.
   shift_ += shift_inc * static_cast<float>(size);
-  if (shift_ >= static_cast<float>(kHelixOctaves)) {
-    shift_ -= static_cast<float>(kHelixOctaves);
+  if (shift_ >= active_octaves_f) {
+    shift_ -= active_octaves_f;
   } else if (shift_ < 0.0f) {
-    shift_ += static_cast<float>(kHelixOctaves);
+    shift_ += active_octaves_f;
   }
   *already_enveloped = false;
 }
