@@ -457,10 +457,12 @@ def validate_recipe(value: Any) -> BuildRecipe:
     # treats as "all stereo-capable engines" (back-compat with the global gate).
     stereo_engines: tuple[str, ...] | None = None
     if "stereoEngines" in value:
-        # v10's defining feature; a v11 (sparse) or v12 (per-slot banks) recipe may
-        # also carry it when its aux output is stereo, since each is a superset of v10.
-        if schema_version not in (10, 11, 12):
-            raise ValueError("stereoEngines requires schemaVersion 10, 11, or 12")
+        # v10's defining feature. Every later supported schema is a superset and
+        # may also carry the list when its aux output is stereo. Gate on the
+        # minimum so adding a new schema cannot strand the container behind the
+        # Worker's validator again.
+        if schema_version < 10:
+            raise ValueError("stereoEngines requires schemaVersion 10 or newer")
         raw = value.get("stereoEngines")
         if not isinstance(raw, list) or not all(
             isinstance(engine_id, str) and engine_id in PUBLIC_ENGINES for engine_id in raw

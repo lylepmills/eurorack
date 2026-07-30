@@ -766,6 +766,33 @@ class GenerateEngineConfigTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "schemaVersion 10"):
             validate_recipe(recipe)
 
+    def test_v13_short_fm_bank_allows_per_engine_stereo(self) -> None:
+        # v13 adds variable-length FM banks on top of v12 and v10. The Worker
+        # accepts this combination, so the container must preserve both features.
+        slots = ["dx7-bank-a"] + ["virtual-analog"] * 23
+        recipe = self.v13_recipe(
+            slots, [{"slot": 0, "bank": self.short_bank_document(4)}])
+        recipe["initialOptions"]["auxOutput"] = "stereo"
+        recipe["stereoEngines"] = ["virtual-analog"]
+
+        built = validate_recipe(recipe)
+
+        self.assertEqual(built.stereo_engines, ("virtual-analog",))
+        self.assertEqual(len(built.slot_bank_overrides[0][1]), 4 * 128)
+
+    def test_v14_calibration_allows_per_engine_stereo(self) -> None:
+        # v14 adds the optional calibration procedure on top of every prior
+        # feature. A calibrated stereo build must not be rejected by the
+        # container after it has passed the Worker's superset-aware contract.
+        recipe = self.calibration_recipe(14, True)
+        recipe["initialOptions"]["auxOutput"] = "stereo"
+        recipe["stereoEngines"] = ["virtual-analog"]
+
+        built = validate_recipe(recipe)
+
+        self.assertEqual(built.stereo_engines, ("virtual-analog",))
+        self.assertEqual(built.enable_calibration, 1)
+
     def test_v10_allows_empty_slots(self) -> None:
         # Per-engine stereo (v10) is a superset of v7-v9 and must accept empty
         # slots — a stereo palette with a model deleted (e.g. the Stereo Dreams
