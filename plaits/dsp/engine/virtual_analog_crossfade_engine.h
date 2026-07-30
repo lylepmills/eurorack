@@ -56,6 +56,7 @@ class VirtualAnalogCrossfadeEngine : public Engine {
   virtual bool stereo_capable() const {
     return PLAITS_STEREO_VIRTUAL_ANALOG_CROSSFADE;
   }
+  virtual bool hard_sync_capable() const { return true; }
 
  private:
   float ComputeDetuning(float detune) const;

@@ -51,6 +51,7 @@ class VirtualAnalogEngine : public Engine {
   // OUT/AUX carry L/R when stereo is requested: the engine's saw and sync
   // square are panned across the field, and the monster-sync AUX is dropped.
   virtual bool stereo_capable() const { return PLAITS_STEREO_VIRTUAL_ANALOG; }
+  virtual bool hard_sync_capable() const { return true; }
 
  private:
   float ComputeDetuning(float detune) const;

@@ -37,6 +37,7 @@
 #include "plaits/drivers/leds.h"
 #include "plaits/drivers/normalization_probe.h"
 #include "plaits/drivers/pots_adc.h"
+#include "plaits/drivers/sync_input.h"
 #include "plaits/drivers/switches.h"
 #include "plaits/dsp/voice.h"
 #include "plaits/pitch_range.h"
@@ -143,6 +144,7 @@ class Ui {
 
   CvAdc cv_adc_;
   PotsAdc pots_adc_;
+  SyncInput sync_input_;
   Leds leds_;
   Switches switches_;
 

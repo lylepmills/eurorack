@@ -68,8 +68,10 @@ class VariableShapeOscillator {
       float pw,
       float waveshape,
       float* out,
-      size_t size) {
-    Render<false, false>(0.0f, frequency, pw, waveshape, 0.0f, out, size);
+      size_t size,
+      uint32_t hard_sync = 0) {
+    Render<false, false>(
+        0.0f, frequency, pw, waveshape, 0.0f, out, size, hard_sync);
   }
   
   void Render(
@@ -78,14 +80,17 @@ class VariableShapeOscillator {
       float pw,
       float waveshape,
       float* out,
-      size_t size) {
+      size_t size,
+      uint32_t hard_sync = 0) {
     Render<true, false>(
         master_frequency,
         frequency,
         pw,
         waveshape,
         0.0f,
-        out, size);
+        out,
+        size,
+        hard_sync);
   }
   
   template<bool enable_sync, bool output_phase>
@@ -96,7 +101,8 @@ class VariableShapeOscillator {
       float waveshape,
       float phase_modulation_amount,
       float* out,
-      size_t size) {
+      size_t size,
+      uint32_t hard_sync = 0) {
     if (master_frequency >= kMaxFrequency) {
       master_frequency = kMaxFrequency;
     }
@@ -139,6 +145,26 @@ class VariableShapeOscillator {
       
       const float slope_up = 1.0f / (pw);
       const float slope_down = 1.0f / (1.0f - pw);
+
+      if (hard_sync & 1) {
+        // The external edge is quantized to this sample boundary. Apply the
+        // same two-sample polyBLEP used by the oscillator's internal master
+        // sync, then reset both master and slave phase without touching the
+        // parameter interpolators.
+        const float value = ComputeNaiveSample(
+            slave_phase_,
+            pw,
+            slope_up,
+            slope_down,
+            triangle_amount,
+            square_amount);
+        this_sample -= value * stmlib::ThisBlepSample(1.0f);
+        next_sample -= value * stmlib::NextBlepSample(1.0f);
+        master_phase_ = 0.0f;
+        slave_phase_ = 0.0f;
+        high_ = false;
+      }
+      hard_sync >>= 1;
 
       if (enable_sync) {
         master_phase_ += master_frequency;

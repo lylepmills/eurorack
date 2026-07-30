@@ -116,7 +116,7 @@ bool Settings::Init() {
       state_.locked_frequency_pot_option,
       0,
       3 + 2 * PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE);
-  CONSTRAIN(state_.model_cv_option, 0, 3);
+  CONSTRAIN(state_.model_cv_option, 0, 4);
   CONSTRAIN(state_.level_cv_option, 0, 2);
   CONSTRAIN(state_.aux_output_option, 0, 2);
   CONSTRAIN(state_.aux_subosc_option, 0, 5);

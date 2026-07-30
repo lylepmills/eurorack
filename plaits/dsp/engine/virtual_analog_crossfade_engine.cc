@@ -107,8 +107,16 @@ void VirtualAnalogCrossfadeEngine::Render(
   float pw = 0.5f + (parameters.morph - 0.66f) * 1.4f;
   CONSTRAIN(pw, 0.5f, 0.99f);
 
-  primary_.Render(primary_f, pw, shape, out, size);
-  sync_.Render(primary_f, sync_f, pw, shape, temp_buffer_, size);
+  primary_.Render(
+      primary_f, pw, shape, out, size, parameters.hard_sync);
+  sync_.Render(
+      primary_f,
+      sync_f,
+      pw,
+      shape,
+      temp_buffer_,
+      size,
+      parameters.hard_sync);
 
   ParameterInterpolator xmod_amount_modulation(
       &xmod_amount_,
@@ -118,7 +126,8 @@ void VirtualAnalogCrossfadeEngine::Render(
     out[i] += (temp_buffer_[i] - out[i]) * xmod_amount_modulation.Next();
   }
 
-  auxiliary_.Render(auxiliary_f, pw, shape, aux, size);
+  auxiliary_.Render(
+      auxiliary_f, pw, shape, aux, size, parameters.hard_sync);
 
   ParameterInterpolator auxiliary_amount_modulation(
       &auxiliary_amount_,

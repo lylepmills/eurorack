@@ -77,6 +77,7 @@ struct EngineParameters {
   EngineParameters()
       : articulation_envelope(0.0f),
         articulation_envelope_active(false),
+        hard_sync(0),
         stereo(false) { }
 
   int trigger;
@@ -99,6 +100,10 @@ struct EngineParameters {
   // alt firmware
   uint8_t chord_set_option;
 
+  // Per-sample rising edges from the optional audio-rate sync input. Bit n
+  // requests a phase reset immediately before sample n is rendered. The voice
+  // only forwards this to engines that explicitly report hard_sync_capable().
+  uint32_t hard_sync;
   // alt firmware: when true, the voice requests a true stereo render — OUT
   // becomes the left channel and AUX the right channel. The voice only sets
   // this for engines reporting stereo_capable(); an engine that ignores the
@@ -193,6 +198,11 @@ class Engine {
   // that the voice post-processes both channels symmetrically. Engines that
   // keep the default also keep their regular aux in stereo mode.
   virtual bool stereo_capable() const { return false; }
+  // alt firmware: engines opt in only after their oscillator state has an
+  // explicit, sample-accurate phase-reset path. Unsupported engines safely
+  // ignore MODEL-input edges rather than abusing Reset(), which is a model
+  // lifecycle hook and would create block-boundary clicks/state loss.
+  virtual bool hard_sync_capable() const { return false; }
   PostProcessingSettings post_processing_settings;
 };
 

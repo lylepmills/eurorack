@@ -146,6 +146,7 @@ struct Patch {
   // 1 - cv control of the fourth synthesis macro
   // 2 - cv control of aux crossfade
   // 3 - cv control of lpg colour
+  // 4 - audio-rate hard sync (supported engines only)
   uint8_t model_cv_option;
   // 0 - cv control of level (original)
   // 1 - cv control of decay
@@ -195,6 +196,8 @@ struct Modulations {
   float trigger;
   float level;
 
+  // Sample-position bit mask filled by the MODEL-input sync detector.
+  uint32_t hard_sync;
   bool frequency_patched;
   bool timbre_patched;
   bool morph_patched;

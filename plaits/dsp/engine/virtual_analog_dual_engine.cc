@@ -100,11 +100,21 @@ void VirtualAnalogDualEngine::Render(
   CONSTRAIN(auxiliary_pw, 0.5f, 0.99f);
 
   primary_.Render(
-      primary_f, primary_pw, primary_shape, temp_buffer_, size);
+      primary_f,
+      primary_pw,
+      primary_shape,
+      temp_buffer_,
+      size,
+      parameters.hard_sync);
   // OUT is scratch until the final mix. Keeping the normal secondary here
   // leaves AUX available for the synchronized secondary in mono.
   auxiliary_.Render(
-      auxiliary_f, auxiliary_pw, auxiliary_shape, out, size);
+      auxiliary_f,
+      auxiliary_pw,
+      auxiliary_shape,
+      out,
+      size,
+      parameters.hard_sync);
 
   if (PLAITS_STEREO_VIRTUAL_ANALOG_DUAL && parameters.stereo) {
     // Both channels are complementary views of the same original 50/50 mix.
@@ -119,7 +129,13 @@ void VirtualAnalogDualEngine::Render(
     }
   } else {
     sync_.Render(
-        primary_f, sync_f, auxiliary_pw, auxiliary_shape, aux, size);
+        primary_f,
+        sync_f,
+        auxiliary_pw,
+        auxiliary_shape,
+        aux,
+        size,
+        parameters.hard_sync);
     for (size_t i = 0; i < size; ++i) {
       const float primary = temp_buffer_[i];
       out[i] = (out[i] + primary) * 0.5f;
