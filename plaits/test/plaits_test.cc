@@ -161,6 +161,149 @@ void TestOscillator() {
   }
 }
 
+void ValidateLinearTzfmOscillator() {
+  Oscillator positive;
+  Oscillator negative;
+  Oscillator stopped;
+  positive.Init();
+  negative.Init();
+  stopped.Init();
+
+  float positive_fm[kAudioBlockSize];
+  float negative_fm[kAudioBlockSize];
+  float stopped_fm[kAudioBlockSize];
+  fill(positive_fm, positive_fm + kAudioBlockSize, 0.0f);
+  fill(negative_fm, negative_fm + kAudioBlockSize, -0.02f);
+  fill(stopped_fm, stopped_fm + kAudioBlockSize, -0.01f);
+
+  int positive_steps = 0;
+  int negative_steps = 0;
+  float stopped_min = 1.0e9f;
+  float stopped_max = -1.0e9f;
+  for (int block = 0; block < 100; ++block) {
+    float positive_out[kAudioBlockSize];
+    float negative_out[kAudioBlockSize];
+    float stopped_out[kAudioBlockSize];
+    positive.RenderLinearFm<OSCILLATOR_SHAPE_SAW>(
+        0.01f, 0.5f, positive_fm, positive_out, kAudioBlockSize);
+    negative.RenderLinearFm<OSCILLATOR_SHAPE_SAW>(
+        0.01f, 0.5f, negative_fm, negative_out, kAudioBlockSize);
+    stopped.RenderLinearFm<OSCILLATOR_SHAPE_SAW>(
+        0.01f, 0.5f, stopped_fm, stopped_out, kAudioBlockSize);
+
+    for (size_t i = 0; i < kAudioBlockSize; ++i) {
+      if (!isfinite(positive_out[i]) || !isfinite(negative_out[i]) ||
+          !isfinite(stopped_out[i])) {
+        fprintf(stderr, "Linear TZFM oscillator produced a non-finite sample\n");
+        abort();
+      }
+      if (block >= 4) {
+        stopped_min = min(stopped_min, stopped_out[i]);
+        stopped_max = max(stopped_max, stopped_out[i]);
+      }
+      if (block >= 4 && i) {
+        const float up = positive_out[i] - positive_out[i - 1];
+        const float down = negative_out[i] - negative_out[i - 1];
+        // Ignore the bandlimited wrap transient; ordinary saw samples reveal
+        // the phase direction directly.
+        if (fabsf(up) < 0.08f && up > 0.001f) {
+          ++positive_steps;
+        }
+        if (fabsf(down) < 0.08f && down < -0.001f) {
+          ++negative_steps;
+        }
+      }
+    }
+  }
+
+  if (positive_steps < 1000 || negative_steps < 1000 ||
+      stopped_max - stopped_min > 1.0e-6f) {
+    fprintf(
+        stderr,
+        "Linear TZFM direction failed: +steps=%d -steps=%d zero_span=%g\n",
+        positive_steps,
+        negative_steps,
+        stopped_max - stopped_min);
+    abort();
+  }
+}
+
+void ValidateLinearTzfmTwoOpFm() {
+  FMEngine forward;
+  FMEngine reverse;
+  FMEngine stopped;
+  forward.Init(NULL);
+  reverse.Init(NULL);
+  stopped.Init(NULL);
+
+  EngineParameters p;
+  p.note = 36.0f;
+  p.harmonics = 0.25f;
+  p.timbre = 0.0f;
+  p.morph = 0.5f;
+  p.macro = 0.5f;
+
+  const float base_frequency = NoteToFrequency(p.note);
+  float forward_fm[kAudioBlockSize];
+  float reverse_fm[kAudioBlockSize];
+  float stopped_fm[kAudioBlockSize];
+  fill(forward_fm, forward_fm + kAudioBlockSize, 0.0f);
+  fill(reverse_fm, reverse_fm + kAudioBlockSize, -2.0f * base_frequency);
+  fill(stopped_fm, stopped_fm + kAudioBlockSize, -base_frequency);
+
+  double direction_dot = 0.0;
+  double forward_energy = 0.0;
+  double reverse_energy = 0.0;
+  float stopped_min = 1.0e9f;
+  float stopped_max = -1.0e9f;
+  for (int block = 0; block < 100; ++block) {
+    float forward_out[kAudioBlockSize];
+    float reverse_out[kAudioBlockSize];
+    float stopped_out[kAudioBlockSize];
+    float aux[kAudioBlockSize];
+
+    p.linear_fm = forward_fm;
+    forward.Render(
+        p, forward_out, aux, kAudioBlockSize, NULL);
+    p.linear_fm = reverse_fm;
+    reverse.Render(
+        p, reverse_out, aux, kAudioBlockSize, NULL);
+    p.linear_fm = stopped_fm;
+    stopped.Render(
+        p, stopped_out, aux, kAudioBlockSize, NULL);
+
+    for (size_t i = 0; i < kAudioBlockSize; ++i) {
+      if (!isfinite(forward_out[i]) || !isfinite(reverse_out[i]) ||
+          !isfinite(stopped_out[i])) {
+        fprintf(stderr, "Two-op FM linear TZFM produced a non-finite sample\n");
+        abort();
+      }
+      if (block >= 10) {
+        direction_dot += forward_out[i] * reverse_out[i];
+        forward_energy += forward_out[i] * forward_out[i];
+        reverse_energy += reverse_out[i] * reverse_out[i];
+        stopped_min = min(stopped_min, stopped_out[i]);
+        stopped_max = max(stopped_max, stopped_out[i]);
+      }
+    }
+  }
+
+  // With modulation index and feedback at zero, equal forward and reverse
+  // phase speeds should be opposite-polarity sines.  A cancellation offset
+  // should leave the phase stationary after interpolation/filter warm-up.
+  const double normalized_dot = direction_dot /
+      sqrt(forward_energy * reverse_energy);
+  const float stopped_span = stopped_max - stopped_min;
+  if (normalized_dot > -0.8 || stopped_span > 1.0e-4f) {
+    fprintf(
+        stderr,
+        "Two-op FM TZFM direction failed: correlation=%f stopped_span=%g\n",
+        normalized_dot,
+        stopped_span);
+    abort();
+  }
+}
+
 void TestVariableShapeOscillator() {
   WavWriter wav_writer(1, kSampleRate, 20);
   wav_writer.Open("plaits_variable_shape_oscillator.wav");
@@ -3202,6 +3345,10 @@ void TestExperimentalEngines() {
   fflush(stdout);
   ValidateOneKnobEnvelope();
   ValidateModalContourExcitation();
+  printf("Validating linear through-zero oscillator core...\n");
+  fflush(stdout);
+  ValidateLinearTzfmOscillator();
+  ValidateLinearTzfmTwoOpFm();
   printf("Validating selectable chord tables...\n");
   fflush(stdout);
   BufferAllocator chord_allocator(ram_block, sizeof(ram_block));

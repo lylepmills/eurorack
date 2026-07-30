@@ -159,6 +159,12 @@ cpu-bench:  $(CPU_BENCH_OBJS)
 	g++ -g -O2 -o cpu_bench $(CPU_BENCH_OBJS) $(HOST_LINK_FLAGS) $(CXXFLAGS) -lm
 	./cpu_bench
 
+# Focused relative benchmark for the two linear-TZFM-capable engines.
+LINEAR_TZFM_BENCH_OBJS = $(filter-out $(BUILD_DIR)plaits_test.o,$(OBJS)) $(BUILD_DIR)linear_tzfm_bench.o
+linear-tzfm-bench:  $(LINEAR_TZFM_BENCH_OBJS)
+	g++ -g -O2 -o linear_tzfm_bench $(LINEAR_TZFM_BENCH_OBJS) $(HOST_LINK_FLAGS) $(CXXFLAGS) -lm
+	./linear_tzfm_bench
+
 depends:  $(DEPS)
 	cat $(DEPS) > $(DEP_FILE)
 

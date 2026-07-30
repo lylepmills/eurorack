@@ -236,6 +236,7 @@ class VowelFofEngine : public Engine {
   // Pattern B: mono AUX is the glottal source; the stereo branch replaces it
   // with the reversed formant weighting so L/R stay a matched pair.
   virtual bool stereo_capable() const { return PLAITS_STEREO_VOWEL_FOF; }
+  virtual bool linear_tzfm_capable() const { return true; }
 
  private:
   Oscillator excitation_;

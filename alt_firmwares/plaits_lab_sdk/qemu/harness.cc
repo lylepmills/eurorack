@@ -73,6 +73,13 @@ using namespace plaits;
 #define PLAITS_QEMU_STEREO 0
 #endif
 
+// Feed a bipolar, audio-rate absolute-frequency offset through the engine's
+// linear-TZFM path.  The peak is about 1 kHz at the Plaits sample rate, matching
+// the firmware's full-scale FM calibration.
+#ifndef PLAITS_QEMU_LINEAR_TZFM
+#define PLAITS_QEMU_LINEAR_TZFM 0
+#endif
+
 // Semihosting: the only way out of a bare-metal guest. bkpt 0xAB is the ARM
 // convention; QEMU implements it when started with -semihosting-config.
 static inline int Semihost(int op, void* arg) {
@@ -109,6 +116,13 @@ int main() {
   p.macro = PLAITS_QEMU_MACRO;
   p.chord_set_option = 0;
   p.stereo = PLAITS_QEMU_STEREO != 0;
+
+  float linear_fm[kBlockSize] = {
+    0.0000f,  0.0104f,  0.0181f,  0.0209f,
+    0.0181f,  0.0104f,  0.0000f, -0.0104f,
+   -0.0181f, -0.0209f, -0.0181f, -0.0104f,
+  };
+  p.linear_fm = PLAITS_QEMU_LINEAR_TZFM ? linear_fm : NULL;
 
   float out[kBlockSize];
   float aux[kBlockSize];

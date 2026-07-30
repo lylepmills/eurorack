@@ -161,6 +161,15 @@
 #define PLAITS_ROVED_PANEL 0
 #endif
 
+// Sample the FM input at the audio rate and route it as linear, through-zero
+// frequency modulation to engines that explicitly support it. SDADC2 can reach
+// the module's 47.872 kHz audio rate only when it converts one channel, so this
+// build mode dedicates it to FM and deliberately disables the LEVEL CV input.
+// The regular exponential/control-rate FM path remains the default.
+#ifndef PLAITS_BUILD_LINEAR_TZFM
+#define PLAITS_BUILD_LINEAR_TZFM 0
+#endif
+
 // The id a locally built (non-hosted) firmware stamps into saved settings. It
 // must equal what the builder mints for an all-default recipe, or switching
 // between a local build and a hosted default build resets options each way.
