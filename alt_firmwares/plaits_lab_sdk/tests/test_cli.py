@@ -759,31 +759,30 @@ class PackageTests(unittest.TestCase):
         self.assertIn("'env'", worklet)
 
     def test_attenurandomizer_prototype_surface_is_wired(self) -> None:
-        # Experimental only: the page samples Near/Far TIMBRE/MORPH targets,
-        # the worklet forwards them, and the harness decays them back to the
-        # panel values. No firmware or package contract depends on this yet.
-        self.assertIn("_set_modulation_targets", plaits_lab.WASM_EXPORTS)
-        self.assertIn("_restart_modulation", plaits_lab.WASM_EXPORTS)
+        # Experimental only: signed TIMBRE/MORPH depths select continuously
+        # evolving Near/Far voltages in the audio engine. Triggers do not clock
+        # or restart either process. No firmware contract depends on this yet.
+        self.assertIn("_set_randomizer_amounts", plaits_lab.WASM_EXPORTS)
         self.assertIn("_current_timbre", plaits_lab.WASM_EXPORTS)
         self.assertIn("_current_morph", plaits_lab.WASM_EXPORTS)
         harness = (plaits_lab.SDK_DIR / "wasm_audition.cc").read_text(encoding="utf-8")
-        self.assertIn("set_modulation_targets", harness)
-        self.assertIn("restart_modulation", harness)
-        self.assertIn("g_mod_envelope", harness)
+        self.assertIn("set_randomizer_amounts", harness)
+        self.assertIn("AdvanceRandomSource", harness)
+        self.assertIn("PeakyBipolar", harness)
+        self.assertIn("RandomizedParameter", harness)
         self.assertIn("current_timbre", harness)
         worklet = (plaits_lab.SDK_DIR / "audition_worklet.js").read_text(encoding="utf-8")
-        self.assertIn("'modulation'", worklet)
-        self.assertIn("data.restart", worklet)
+        self.assertIn("'randomization'", worklet)
+        self.assertIn("set_randomizer_amounts", worklet)
         self.assertIn("'modulation-state'", worklet)
         html = (plaits_lab.SDK_DIR / "dev_editor.html").read_text(encoding="utf-8")
         self.assertIn("randomizer-timbre", html)
         self.assertIn("randomizer-morph", html)
-        self.assertIn("randomizer-hold", html)
-        self.assertIn("randomizer-auto", html)
         self.assertIn("Engine now", html)
-        self.assertIn("postRandomizerTargets(targets, true)", html)
+        self.assertIn("postRandomizerAmounts()", html)
         self.assertIn("await ensureLive()", html)
-        self.assertIn("}, 250)", html)
+        self.assertNotIn("setInterval", html)
+        self.assertNotIn("randomizer-auto", html)
         self.assertIn("'Near' : 'Far'", html)
 
     def test_live_audition_stereo_surface_is_wired(self) -> None:

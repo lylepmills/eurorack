@@ -39,10 +39,81 @@ PLAITS_LAB_ENGINE_CLASS* g_engine = nullptr;
 EngineParameters g_params;
 float g_base_timbre = 0.5f;
 float g_base_morph = 0.5f;
-float g_target_timbre = 0.5f;
-float g_target_morph = 0.5f;
-float g_mod_envelope = 0.0f;
-float g_mod_decay_per_block = 0.997f;
+float g_randomizer_timbre = 0.0f;
+float g_randomizer_morph = 0.0f;
+
+// Four independent smooth random-voltage sources. "Near" uses a compact,
+// center-heavy distribution; "Far" glides between uniform destinations. The
+// time constants differ for TIMBRE and MORPH so texture moves faster than the
+// more structural MORPH parameter.
+struct SmoothRandomSource {
+  float value;
+  float target;
+  int blocks_until_target;
+};
+
+SmoothRandomSource g_timbre_near;
+SmoothRandomSource g_timbre_far;
+SmoothRandomSource g_morph_near;
+SmoothRandomSource g_morph_far;
+uint32_t g_random_state = 0x6d2b79f5u;
+
+float RandomUnit() {
+  uint32_t x = g_random_state;
+  x ^= x << 13;
+  x ^= x >> 17;
+  x ^= x << 5;
+  g_random_state = x;
+  return static_cast<float>(x >> 8) * (1.0f / 16777216.0f);
+}
+
+float RandomBipolar() {
+  return RandomUnit() * 2.0f - 1.0f;
+}
+
+float PeakyBipolar() {
+  return (RandomUnit() + RandomUnit() + RandomUnit()) * (2.0f / 3.0f) - 1.0f;
+}
+
+void ResetRandomSource(SmoothRandomSource* source) {
+  source->value = 0.0f;
+  source->target = 0.0f;
+  source->blocks_until_target = 1;
+}
+
+void AdvanceRandomSource(
+    SmoothRandomSource* source,
+    int minimum_blocks,
+    int variable_blocks,
+    float slew,
+    bool peaky) {
+  --source->blocks_until_target;
+  if (source->blocks_until_target <= 0) {
+    source->target = peaky ? PeakyBipolar() : RandomBipolar();
+    source->blocks_until_target = minimum_blocks +
+        static_cast<int>(RandomUnit() * static_cast<float>(variable_blocks));
+  }
+  source->value += (source->target - source->value) * slew;
+}
+
+float RandomizedParameter(
+    float base,
+    float amount,
+    const SmoothRandomSource& near_source,
+    const SmoothRandomSource& far_source) {
+  if (amount > -0.0001f && amount < 0.0001f) return base;
+  const float depth = amount < 0.0f ? -amount : amount;
+  // Near deliberately occupies less of the available headroom even at full
+  // depth. Its center-heavy targets make it a quiver, not a range explorer.
+  const float voltage = amount < 0.0f
+      ? near_source.value * 0.45f
+      : far_source.value;
+  const float headroom = voltage < 0.0f ? base : 1.0f - base;
+  float value = base + voltage * headroom * depth;
+  if (value < 0.0f) value = 0.0f;
+  if (value > 1.0f) value = 1.0f;
+  return value;
+}
 
 // The engine renders in fixed kBlockSize (12) chunks; an audio quantum is 128,
 // so we drain a one-block scratch buffer into arbitrary-length requests.
@@ -93,10 +164,15 @@ void init() {
   g_params.chord_set_option = 0;
   g_params.trigger = TRIGGER_UNPATCHED;
   g_params.stereo = false;
-  g_base_timbre = g_target_timbre = 0.5f;
-  g_base_morph = g_target_morph = 0.5f;
-  g_mod_envelope = 0.0f;
-  g_mod_decay_per_block = 0.997f;
+  g_base_timbre = 0.5f;
+  g_base_morph = 0.5f;
+  g_randomizer_timbre = 0.0f;
+  g_randomizer_morph = 0.0f;
+  g_random_state = 0x6d2b79f5u;
+  ResetRandomSource(&g_timbre_near);
+  ResetRandomSource(&g_timbre_far);
+  ResetRandomSource(&g_morph_near);
+  ResetRandomSource(&g_morph_far);
   g_block_fill = 0;
   g_block_pos = 0;
   g_retrigger = false;
@@ -133,35 +209,21 @@ void set_params(float note, float harmonics, float timbre, float morph, float ma
   g_params.macro = macro;
 }
 
-// Set per-strike TIMBRE/MORPH destinations for the unpatched-attenuverter
-// prototype. The browser chooses the policy and targets; this harness performs
-// the Plaits-native part of the experiment by decaying them back to the panel
-// values once per engine block.
-void set_modulation_targets(
-    float timbre, float morph, float decay_per_block) {
-  if (timbre < 0.0f) timbre = 0.0f;
+// Signed attenuverter positions: negative selects the close, center-heavy
+// process; positive selects the wide roaming process; zero is exactly off.
+void set_randomizer_amounts(float timbre, float morph) {
+  if (timbre < -1.0f) timbre = -1.0f;
   if (timbre > 1.0f) timbre = 1.0f;
-  if (morph < 0.0f) morph = 0.0f;
+  if (morph < -1.0f) morph = -1.0f;
   if (morph > 1.0f) morph = 1.0f;
-  if (decay_per_block < 0.0f) decay_per_block = 0.0f;
-  if (decay_per_block > 1.0f) decay_per_block = 1.0f;
-  g_target_timbre = timbre;
-  g_target_morph = morph;
-  g_mod_decay_per_block = decay_per_block;
-}
-
-// Restart only the attenurandomizer trajectory. Unlike trigger(), this does not
-// send a rising edge to the engine or reopen the audition amplitude envelope,
-// so dragging a randomizer previews timbral movement without restriking a note.
-void restart_modulation() {
-  g_mod_envelope = 1.0f;
+  g_randomizer_timbre = timbre;
+  g_randomizer_morph = morph;
 }
 
 // Fire a single trigger rising edge on the next rendered block (re-strike).
 // In plucked mode this also re-opens the LPG envelope.
 void trigger() {
   g_retrigger = true;
-  g_mod_envelope = 1.0f;
   if (g_env_mode == ENV_PLUCKED) g_env = 1.0f;
 }
 
@@ -172,18 +234,22 @@ void render(int size) {
   int produced = 0;
   while (produced < size) {
     if (g_block_fill == 0) {
-      g_params.timbre = g_base_timbre +
-          g_mod_envelope * (g_target_timbre - g_base_timbre);
-      g_params.morph = g_base_morph +
-          g_mod_envelope * (g_target_morph - g_base_morph);
+      // 48 kHz / 12 samples = 4 kHz control rate. Target intervals and slew
+      // constants are intentionally parameter-specific listening choices.
+      AdvanceRandomSource(&g_timbre_near, 320, 960, 0.006f, true);
+      AdvanceRandomSource(&g_timbre_far, 2400, 4800, 0.001f, false);
+      AdvanceRandomSource(&g_morph_near, 1200, 2400, 0.0025f, true);
+      AdvanceRandomSource(&g_morph_far, 5200, 6800, 0.0005f, false);
+      g_params.timbre = RandomizedParameter(
+          g_base_timbre, g_randomizer_timbre, g_timbre_near, g_timbre_far);
+      g_params.morph = RandomizedParameter(
+          g_base_morph, g_randomizer_morph, g_morph_near, g_morph_far);
       g_params.trigger = g_retrigger
           ? static_cast<TriggerState>(TRIGGER_HIGH | TRIGGER_RISING_EDGE)
           : TRIGGER_UNPATCHED;
       g_retrigger = false;
       bool already = false;
       g_engine->Render(g_params, g_block_main, g_block_aux, kBlockSize, &already);
-      g_mod_envelope *= g_mod_decay_per_block;
-      if (g_mod_envelope < 0.0001f) g_mod_envelope = 0.0f;
       g_block_already = already;
       g_block_fill = static_cast<int>(kBlockSize);
       g_block_pos = 0;

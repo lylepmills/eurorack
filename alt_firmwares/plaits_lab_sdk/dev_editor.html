@@ -35,9 +35,7 @@
   .prototype-grid .row { display:flex; justify-content:space-between; align-items:baseline; }
   .prototype-grid output { color:var(--muted); font-variant-numeric:tabular-nums; }
   .prototype-grid small { color:var(--subtle); font-size:11px; }
-  .prototype-grid .return { grid-column:1 / -1; }
-  .prototype-grid .hold { grid-column:1 / -1; display:flex; align-items:center; gap:7px; color:var(--muted); font-size:12px; }
-  @media (max-width:560px) { .prototype-grid { grid-template-columns:1fr; } .prototype-grid .return, .prototype-grid .hold { grid-column:auto; } }
+  @media (max-width:560px) { .prototype-grid { grid-template-columns:1fr; } }
   .actions { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:16px; }
   button { border:1px solid var(--border); border-radius:9px; padding:9px 15px; background:var(--card); color:var(--ink); font-size:13px; font-weight:600; cursor:pointer; }
   button:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
@@ -99,25 +97,18 @@
         <h2>Unpatched attenuverters</h2>
         <span class="pill">Audition prototype</span>
       </div>
-      <p class="prototype-copy">Assumes the TIMBRE and MORPH CV inputs are unpatched. Noon is off; turn CCW for nearby, peaky variations or CW to roam across the control’s range. Dragging either attenuverter starts audition; Auto preview keeps resampling so the movement is easy to tune.</p>
+      <p class="prototype-copy">Assumes the TIMBRE and MORPH CV inputs are unpatched. Noon is off. CCW adds a close, center-seeking drift; CW adds a wider, slower roam. Both are continuous smooth random voltages, independent of Strike.</p>
       <div class="prototype-grid">
         <label>
           <span class="row"><strong>TIMBRE</strong><output id="randomizer-timbre-value">Off</output></span>
           <input id="randomizer-timbre" type="range" min="-1" max="1" step="0.01" value="0" />
-          <small>Target <output id="randomizer-timbre-target">—</output> · Engine now <output id="randomizer-timbre-active">—</output></small>
+          <small>Faster texture motion · Engine now <output id="randomizer-timbre-active">—</output></small>
         </label>
         <label>
           <span class="row"><strong>MORPH</strong><output id="randomizer-morph-value">Off</output></span>
           <input id="randomizer-morph" type="range" min="-1" max="1" step="0.01" value="0" />
-          <small>Target <output id="randomizer-morph-target">—</output> · Engine now <output id="randomizer-morph-active">—</output></small>
+          <small>Slower structural motion · Engine now <output id="randomizer-morph-active">—</output></small>
         </label>
-        <label class="return">
-          <span class="row"><strong>Return</strong><output id="randomizer-return-value">0.60 s</output></span>
-          <input id="randomizer-return" type="range" min="0.05" max="4" step="0.05" value="0.6" />
-          <small>Time constant: after this long, 37% of the deviation remains.</small>
-        </label>
-        <label class="hold"><input id="randomizer-hold" type="checkbox" /> Hold each sampled target until the next one (sample-and-hold).</label>
-        <label class="hold"><input id="randomizer-auto" type="checkbox" checked /> Auto preview at 4 Hz (audition only); uncheck for Strike-only behavior.</label>
       </div>
     </div>
     <div class="card">
@@ -144,10 +135,6 @@ const state = {
   randomizers: {
     timbre: 0,
     morph: 0,
-    returnSeconds: 0.6,
-    hold: false,
-    autoPreview: true,
-    targets: { timbre: null, morph: null },
   },
 };
 const $ = (id) => document.getElementById(id);
@@ -155,53 +142,13 @@ const $ = (id) => document.getElementById(id);
 function setPill(text, kind) { const p = $('pill'); p.textContent = text; p.className = 'pill' + (kind ? ' ' + kind : ''); }
 function notice(text, isErr) { const n = $('notice'); n.textContent = text || ''; n.className = 'notice' + (isErr ? ' err' : ''); }
 
-function clamp01(value) { return Math.max(0, Math.min(1, value)); }
-
-// Three averaged uniform samples form a compact, center-heavy distribution.
-// It is intentionally not Gaussian: the prototype needs an inexpensive shape
-// we can plausibly carry into the Cortex-M4 firmware if it earns its place.
-function peakyBipolarSample() {
-  return ((Math.random() + Math.random() + Math.random()) / 3) * 2 - 1;
-}
-
 function randomizerLabel(value) {
   if (Math.abs(value) < 0.005) return 'Off';
   return `${value < 0 ? 'Near' : 'Far'} ${Math.round(Math.abs(value) * 100)}%`;
 }
 
-function sampleRandomizerTarget(base, attenuverter) {
-  const depth = Math.abs(attenuverter);
-  if (depth < 0.005) return base;
-  if (attenuverter < 0) {
-    const deviation = peakyBipolarSample();
-    const headroom = deviation < 0 ? base : 1 - base;
-    return clamp01(base + deviation * headroom * depth);
-  }
-  // "Far" is deliberately the naive baseline for this first listening pass:
-  // a uniform destination, interpolated toward the panel value by depth.
-  // Engine-aware landmarks can replace this without changing the UI contract.
-  const destination = Math.random();
-  return clamp01(base + (destination - base) * depth);
-}
-
 function updateRandomizerReadout(id) {
   $(`randomizer-${id}-value`).textContent = randomizerLabel(state.randomizers[id]);
-}
-
-function sampleRandomizerTargets() {
-  for (const id of ['timbre', 'morph']) {
-    const target = sampleRandomizerTarget(state.controls[id], state.randomizers[id]);
-    state.randomizers.targets[id] = target;
-    $(`randomizer-${id}-target`).textContent = target.toFixed(2);
-  }
-  return state.randomizers.targets;
-}
-
-function modulationDecayPerBlock(seconds) {
-  // Treat the UI value as the exponential time constant, not the time to
-  // -60 dB. The old mapping made a displayed 0.60 s return half over in 60 ms,
-  // which hid most of the movement. Plaits updates parameters every 12 samples.
-  return Math.exp(-12 / (Math.max(0.05, seconds) * 48000));
 }
 
 function drawAudio(buffer, spectrum) {
@@ -373,39 +320,12 @@ for (const id of ['timbre', 'morph']) {
   $(`randomizer-${id}`).addEventListener('input', async (event) => {
     state.randomizers[id] = Number(event.target.value);
     updateRandomizerReadout(id);
-    const targets = sampleRandomizerTargets();
     if (await ensureLive()) {
-      postRandomizerTargets(targets, true);
-      liveStatus(state.randomizers.hold
-        ? 'Fresh random target applied and held.'
-        : `Fresh random target applied; returning with a ${state.randomizers.returnSeconds.toFixed(2)} s time constant.`);
+      postRandomizerAmounts();
+      liveStatus('Continuous random voltages running — no trigger or clock involved.');
     }
   });
 }
-$('randomizer-return').addEventListener('input', (event) => {
-  state.randomizers.returnSeconds = Number(event.target.value);
-  $('randomizer-return-value').textContent = `${state.randomizers.returnSeconds.toFixed(2)} s`;
-});
-$('randomizer-hold').addEventListener('change', (event) => {
-  state.randomizers.hold = event.target.checked;
-  if (!(audio.running && audio.node)) return;
-  if (state.randomizers.targets.timbre === null) {
-    liveStatus('Hold enabled — press Strike to sample a target.');
-    return;
-  }
-  postRandomizerTargets(state.randomizers.targets, state.randomizers.hold);
-  liveStatus(state.randomizers.hold
-    ? (state.randomizers.autoPreview
-      ? 'Sample-and-hold on — a new target arrives at 4 Hz.'
-      : 'Holding the current target. Press Strike to resample.')
-    : 'Returning to the panel values.');
-});
-$('randomizer-auto').addEventListener('change', (event) => {
-  state.randomizers.autoPreview = event.target.checked;
-  liveStatus(state.randomizers.autoPreview
-    ? 'Auto preview on — active randomizers resample at 4 Hz.'
-    : 'Auto preview off — press Strike to resample.');
-});
 
 // ---- Live audition (WebAssembly + AudioWorklet) ----------------------------
 const audio = { ctx: null, node: null, gain: null, analyser: null, running: false, starting: null, moduleAdded: false, raf: 0 };
@@ -415,24 +335,14 @@ function liveParamsMsg() {
 }
 function pushLiveParams() { if (audio.running && audio.node) audio.node.port.postMessage(liveParamsMsg()); }
 function liveStatus(text, isErr) { const s = $('live-status'); s.textContent = text || ''; s.classList.toggle('err', !!isErr); }
-function postRandomizerTargets(targets, restartModulation) {
+function postRandomizerAmounts() {
   if (!(audio.running && audio.node)) return;
   audio.node.port.postMessage({
-    type: 'modulation',
-    timbre: targets.timbre,
-    morph: targets.morph,
-    decayPerBlock: state.randomizers.hold
-      ? 1
-      : modulationDecayPerBlock(state.randomizers.returnSeconds),
-    restart: !!restartModulation,
+    type: 'randomization',
+    timbre: state.randomizers.timbre,
+    morph: state.randomizers.morph,
   });
 }
-window.setInterval(() => {
-  if (!state.randomizers.autoPreview || !(audio.running && audio.node)) return;
-  if (Math.abs(state.randomizers.timbre) < 0.005 &&
-      Math.abs(state.randomizers.morph) < 0.005) return;
-  postRandomizerTargets(sampleRandomizerTargets(), true);
-}, 250);
 
 function drawLiveFrame() {
   if (!audio.running || !audio.analyser) return;
@@ -520,6 +430,7 @@ async function startLive() {
     node.connect(audio.gain);
     node.connect(audio.analyser);
     audio.node = node; audio.running = true;
+    postRandomizerAmounts();
     $('live-toggle').textContent = '■ Stop live'; $('live-toggle').classList.add('primary');
     liveStatus('Live — move any control to hear it change.');
     cancelAnimationFrame(audio.raf); audio.raf = requestAnimationFrame(drawLiveFrame);
@@ -544,17 +455,10 @@ function stopLive() {
 }
 $('live-toggle').addEventListener('click', () => { audio.running ? stopLive() : ensureLive(); });
 $('live-strike').addEventListener('click', async () => {
-  // Sample at the gesture itself, before any asynchronous audio startup. The
-  // readout therefore always tells the player what this strike chose, and the
-  // same targets are waiting if Strike also has to start the AudioContext.
-  const targets = sampleRandomizerTargets();
   if (!audio.running) await ensureLive();   // Strike turns audition on if it isn't — the click is the gesture.
   if (audio.running && audio.node) {
-    postRandomizerTargets(targets, false);
     audio.node.port.postMessage({ type: 'trigger' });
-    liveStatus(state.randomizers.hold
-      ? 'New target applied and held.'
-      : `New target applied; returning with a ${state.randomizers.returnSeconds.toFixed(2)} s time constant.`);
+    liveStatus('Strike sent; the continuous random voltages keep running independently.');
   }
 });
 $('live-env').addEventListener('change', (e) => { if (audio.running && audio.node) audio.node.port.postMessage({ type: 'env', value: Number(e.target.value) }); });
