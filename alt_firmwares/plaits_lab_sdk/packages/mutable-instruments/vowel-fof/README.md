@@ -257,3 +257,13 @@ error on a quarter-semitone filter is a different formant, not a rounding
 difference.
 
 Both copyright lines are carried in `LICENSE` and in each source file.
+
+## Hardware validation
+
+Lyle auditioned this engine on Plaits hardware on 2026-07-29 in a dedicated
+six-model CPU-risk firmware alongside Dual Sync, Harmonics, Ring Mod, Snare,
+and Z Filter. The firmware exercised Vowel FOF's gated true-stereo path, and
+all six played correctly with no audible real-time overruns. This also closes
+the earlier listening question around the glottal-source AUX voice. It was a
+listening/soak check, not a DWT cycle measurement, so the calibrated CPU
+estimate remains the performance figure.

@@ -33,3 +33,12 @@ within 0.25 dB wherever the output stays under Nyquist, and pitch within
 `python3 ab_engine.py packages/mutable-instruments/ring-mod --bands`.
 
 Both copyright lines are carried in `LICENSE` and in each source file.
+
+## Hardware validation
+
+Lyle auditioned this engine on Plaits hardware on 2026-07-29 in a dedicated
+six-model CPU-risk firmware alongside Dual Sync, Harmonics, Vowel FOF, Snare,
+and Z Filter. The firmware exercised Ring Mod's gated true-stereo path, and
+all six played correctly with no audible real-time overruns. This was a
+listening/soak check, not a DWT cycle measurement, so the calibrated CPU
+estimate remains the performance figure.
