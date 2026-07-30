@@ -359,7 +359,15 @@ void Ui::UpdateLEDs() {
   // build that includes the procedure.
   if (calibration_step_) {
     if (pwm_counter < triangle) {
+#if PLAITS_BUILD_COLOR_BLIND_MODE
+      // In an accessible build the first step is brightest and the second is
+      // dim. The outer triangle remains the slow "waiting" pulse.
+      if (calibration_step_ == 1 || !(pwm_counter_ & 3)) {
+        leds_.set(0, LED_COLOR_YELLOW);
+      }
+#else
       leds_.set(0, calibration_step_ == 1 ? LED_COLOR_GREEN : LED_COLOR_YELLOW);
+#endif
     }
     leds_.Write();
     return;
@@ -483,16 +491,24 @@ void Ui::UpdateLEDs() {
           option_value = patch_->hold_on_trigger_option;
         }
 
-        // Each option value encodes as a hue (green/red/yellow) crossed with a
-        // blink tier: solid (0-2), slow blink (3-5), fast blink (6-8). Only
-        // chord_set_option ranges past 5, so every other option stays within
-        // the solid+slow-blink range.
+        // Each option value encodes as one of three appearances crossed with a
+        // blink tier: solid (0-2), slow blink (3-5), fast blink (6-8). Normal
+        // builds use green/red/yellow; accessible builds use brightest/medium/
+        // dim yellow PWM so the setting never depends on hue. Only
+        // chord_set_option ranges past 5.
         LedColor color = LED_COLOR_OFF;
+#if PLAITS_BUILD_COLOR_BLIND_MODE
+        static const uint8_t kOptionBrightnessDuty[3] = { 16, 8, 4 };
+        if ((pwm_counter_ & 15) < kOptionBrightnessDuty[option_value % 3]) {
+          color = LED_COLOR_YELLOW;
+        }
+#else
         switch (option_value % 3) {
           case 0: color = LED_COLOR_GREEN; break;
           case 1: color = LED_COLOR_RED; break;
           case 2: color = LED_COLOR_YELLOW; break;
         }
+#endif
         const int blink_tier = option_value / 3;  // 0 solid, 1 slow, 2 fast
         if (blink_tier == 1 && (pwm_counter_ & 128)) {
           color = LED_COLOR_OFF;  // slow blink (values 3-5)

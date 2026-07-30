@@ -49,12 +49,13 @@
 #define PLAITS_BUILD_NAVIGATION_MODE 0
 #endif
 
-// Replace the bank hues with four yellow brightness levels. The public palette
-// order is green, red, amber, orange; the firmware registry is amber, green,
-// red, orange, so Ui::BankToColor maps those internal indices to 25%, 100%,
-// 50%, and 12.5% duty respectively. This is baked into the firmware rather than
-// stored in settings: the right-button power-up gesture remains available for
-// the optional calibration procedure.
+// Replace hue-dependent UI states with yellow brightness levels. Banks use
+// 100%, 50%, 25%, and 12.5% in public palette order; the options menu uses
+// 100%, 50%, and 25% within each blink tier. The firmware registry is ordered
+// amber, green, red, orange, so Ui::BankToColor maps those internal indices to
+// 25%, 100%, 50%, and 12.5% duty respectively. This is baked into the firmware
+// rather than stored in settings: the right-button power-up gesture remains
+// available for the optional calibration procedure.
 #ifndef PLAITS_BUILD_COLOR_BLIND_MODE
 #define PLAITS_BUILD_COLOR_BLIND_MODE 0
 #endif

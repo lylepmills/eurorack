@@ -149,12 +149,12 @@ class RenderManualTest(unittest.TestCase):
             self.assertIn("Hold the MORPH knob down while powering", printed)
             self.assertNotIn("RIGHT model button while powering", printed)
 
-    def color_blind_recipe(self, enabled: bool) -> dict:
+    def color_blind_recipe(self, enabled: bool, calibration: bool = False) -> dict:
         recipe = self.load("default_recipe.json")
         recipe["schemaVersion"] = 15
         recipe["preferences"] = {
             "navigationMode": "linear",
-            "calibration": False,
+            "calibration": calibration,
             "colorBlindMode": enabled,
         }
         recipe["initialOptions"] = dict(DEFAULT_CONFIGURATION["initialOptions"])
@@ -162,7 +162,20 @@ class RenderManualTest(unittest.TestCase):
         return recipe
 
     def test_color_blind_bank_note_follows_the_build(self) -> None:
-        self.assertIs(manual_document(self.color_blind_recipe(True))["colorBlindMode"], True)
+        document = manual_document(self.color_blind_recipe(True))
+        self.assertIs(document["colorBlindMode"], True)
+        self.assertEqual(
+            [document["slots"][index * 8]["position"]["bankName"] for index in range(3)],
+            ["BRIGHTEST", "BRIGHT", "DIM"],
+        )
+        self.assertEqual(
+            [document["slots"][index * 8]["position"]["brightness"] for index in range(3)],
+            ["100%", "50%", "25%"],
+        )
+        four_bank_recipe = self.color_blind_recipe(True)
+        four_bank_recipe["slots"] += ["virtual-analog"] * 8
+        fourth = manual_document(four_bank_recipe)["slots"][24]["position"]
+        self.assertEqual((fourth["bankName"], fourth["brightness"]), ("DIMMEST", "12.5%"))
         self.assertIs(manual_document(self.color_blind_recipe(False))["colorBlindMode"], False)
         self.assertIs(manual_document(self.load("default_recipe.json"))["colorBlindMode"], False)
 
@@ -172,13 +185,29 @@ class RenderManualTest(unittest.TestCase):
             on = Path(temp_dir) / "color-blind-on.pdf"
             render_pdf(manual_document(self.color_blind_recipe(True)), on)
             printed = pdf_strings(on)
+            joined = printed.replace(")(", " ")
             self.assertIn("BANK LIGHTS", printed)
-            self.assertIn("GREEN is brightest", printed)
-            self.assertIn("ORANGE bank is 12.5%", printed)
+            self.assertIn("BRIGHTEST is 100%", joined)
+            self.assertIn("DIMMEST is 12.5%", joined)
+            self.assertIn(r"Medium \(50%\)", printed)
+            for color_name in ("GREEN", "RED", "YELLOW", "AMBER", "ORANGE"):
+                self.assertNotIn(color_name, printed)
 
             off = Path(temp_dir) / "color-blind-off.pdf"
             render_pdf(manual_document(self.color_blind_recipe(False)), off)
             self.assertNotIn("BANK LIGHTS", pdf_strings(off))
+
+    @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
+    def test_color_blind_calibration_uses_brightness_language(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "color-blind-calibration.pdf"
+            render_pdf(manual_document(self.color_blind_recipe(True, calibration=True)), output)
+            printed = pdf_strings(output)
+            self.assertIn("pulses at the brightest level", printed)
+            self.assertIn("light becomes dim", printed)
+            self.assertNotIn("pulses green", printed)
+            self.assertNotIn("turns yellow", printed)
+            self.assertNotIn("flashes red", printed)
 
     def test_bank_positions_use_public_green_red_amber_order(self) -> None:
         document = manual_document(self.load("audition_recipe.json"))

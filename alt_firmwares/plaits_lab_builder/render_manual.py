@@ -20,6 +20,9 @@ BANKS = (
     # The opt-in fourth bank; matches the editor's orange (plaits-palette.css).
     {"id": "orange", "name": "ORANGE", "start": 24, "color": "#D96F35"},
 )
+ACCESSIBLE_BANK_NAMES = ("BRIGHTEST", "BRIGHT", "DIM", "DIMMEST")
+ACCESSIBLE_BANK_LEVELS = ("100%", "50%", "25%", "12.5%")
+ACCESSIBLE_BANK_COLOR = "#687069"
 CONTROL_IDS = ("harmonics", "timbre", "morph", "macro")
 PANEL_LABELS = ("HARMONICS", "TIMBRE", "MORPH", "FOURTH")
 
@@ -66,9 +69,18 @@ def load_catalog() -> dict[str, Any]:
     return json.loads(PUBLIC_CATALOG_PATH.read_text(encoding="utf-8"))
 
 
-def position(slot: int) -> dict[str, Any]:
+def position(slot: int, color_blind_mode: bool = False) -> dict[str, Any]:
     bank = BANKS[slot // 8]
-    return {"bank": bank["id"], "bankName": bank["name"], "color": bank["color"], "number": slot % 8 + 1}
+    bank_index = slot // 8
+    result = {
+        "bank": bank["id"],
+        "bankName": ACCESSIBLE_BANK_NAMES[bank_index] if color_blind_mode else bank["name"],
+        "color": ACCESSIBLE_BANK_COLOR if color_blind_mode else bank["color"],
+        "number": slot % 8 + 1,
+    }
+    if color_blind_mode:
+        result["brightness"] = ACCESSIBLE_BANK_LEVELS[bank_index]
+    return result
 
 
 def _bank_credit(bank: Any) -> dict[str, Any]:
@@ -126,6 +138,7 @@ def custom_bank_credits(recipe: Any, slots: list[str | None], by_id: dict[str, A
 
 def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]:
     build = validate_recipe(recipe)
+    color_blind_mode = build.color_blind_mode == 1
     slots = build.public_slots
     catalog = load_catalog()
     by_id = {engine["id"]: engine for engine in catalog["engines"]}
@@ -147,7 +160,7 @@ def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]
         seen.add(key)
         engine = by_id[engine_id]
         locations = [
-            position(index)
+            position(index, color_blind_mode)
             for index, value in enumerate(slots)
             if value == engine_id and (credits.get(index) or None) == credit
         ]
@@ -158,7 +171,7 @@ def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]
         "slots": [
             {
                 "engine": by_id[engine_id] if engine_id is not None else None,
-                "position": position(slot),
+                "position": position(slot, color_blind_mode),
                 "customBank": credits.get(slot),
             }
             for slot, engine_id in enumerate(slots)
@@ -168,10 +181,7 @@ def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]
         # Only a build that compiled the procedure in answers the power-up
         # gesture, so only that build's guide documents it.
         "calibration": build.enable_calibration == 1,
-        # The bank map's printed colors remain useful as bank names, but a build
-        # with the accessible display needs the real on-module brightness map
-        # stated explicitly beside it.
-        "colorBlindMode": build.color_blind_mode == 1,
+        "colorBlindMode": color_blind_mode,
     }
 
 
@@ -344,11 +354,14 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         canvas.restoreState()
 
     bank_count = len(document["slots"]) // 8
-    bank_phrase = (
-        "green, red, and amber"
-        if bank_count == 3
-        else "green, red, amber, and orange"
-    )
+    if document.get("colorBlindMode"):
+        bank_phrase = "three-bank brightness" if bank_count == 3 else "four-bank brightness"
+    else:
+        bank_phrase = (
+            "green, red, and amber"
+            if bank_count == 3
+            else "green, red, amber, and orange"
+        )
     story: list[Any] = [
         Paragraph("RUBATO AUDIO  /  PLAITS PALETTE", kicker_style),
         Paragraph("Your Ro'Ved Field Guide" if roved else "Your Plaits Field Guide", title_style),
@@ -371,7 +384,12 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
 
     bank_tables = []
     for bank_index, bank in enumerate(BANKS[:bank_count]):
-        rows: list[list[Any]] = [[Paragraph(bank["name"], bank_name_style)]]
+        display_position = document["slots"][bank_index * 8]["position"]
+        display_bank_name = display_position["bankName"]
+        if display_position.get("brightness"):
+            display_bank_name += f"  {display_position['brightness']}"
+        display_color = display_position["color"]
+        rows: list[list[Any]] = [[Paragraph(display_bank_name, bank_name_style)]]
         for bank_slot in range(8):
             entry = document["slots"][bank_index * 8 + bank_slot]
             engine = entry["engine"]
@@ -404,9 +422,9 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
             ])
         bank_table = Table(rows, colWidths=[2.05 * inch], rowHeights=[0.26 * inch] + [slot_row_height] * 8)
         bank_table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(bank["color"])),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(display_color)),
             ("BACKGROUND", (0, 1), (-1, -1), colors.white),
-            ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor(bank["color"])),
+            ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor(display_color)),
             ("INNERGRID", (0, 1), (-1, -1), 0.35, line),
             ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
             ("LEFTPADDING", (0, 0), (-1, -1), 6),
@@ -438,6 +456,12 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
     # the color word tinted to the LED and "(blink)"/"(fast blink)" for the
     # blinking values.
     def led_setting(index: int, meaning: str) -> str:
+        if document.get("colorBlindMode"):
+            brightness = ("Brightest (100%)", "Medium (50%)", "Dim (25%)")[index % 3]
+            blink_tier = index // 3
+            blink = (None, "slow blink", "fast blink")[blink_tier]
+            state = f"{brightness}, {blink}" if blink else brightness
+            return f"<b>{state}</b>: {_escape(meaning)}"
         label, hex_color, blink = LED_STATES[index]
         state = f"{label} ({blink})" if blink else label
         return f'<font color="{hex_color}"><b>{state}</b></font>: {_escape(meaning)}'
@@ -471,26 +495,49 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
     ]))
 
-    fourth_control = (
-        "Press the HARMONICS knob down, keep holding it, and turn until the model LEDs blink yellow; this selects the octave-switching frequency range. "
-        "Click TIMBRE + FREQUENCY together to open the alternate-firmware options menu. Click TIMBRE to walk forward to LIGHT 4, then click HARMONICS once, until it turns red. "
-        "Click TIMBRE + FREQUENCY again to exit. The FREQUENCY knob now controls the selected model's fourth parameter; for Mutable Instruments models, noon preserves the original sound."
-        if roved else
-        "Hold the right model button and turn HARMONICS until the model LEDs blink yellow; this selects the octave-switching frequency range. "
-        "Short-press both model buttons to open the alternate-firmware options menu. Use the left button to walk to LIGHT 4, then press the right button once, until it turns red. "
-        "Press both buttons again to exit. The FREQUENCY knob now controls the selected model's fourth parameter; for Mutable Instruments models, noon preserves the original sound."
-    )
-    options_intro = (
-        "Click TIMBRE + FREQUENCY together to enter or exit the options menu. The first seven lights are the menu: "
-        "click FREQUENCY/TIMBRE for the previous/next light, and MORPH/HARMONICS for the previous/next setting. "
-        "The light's color shows the current setting — green, red, and yellow, then the same three colors blinking for a fourth, fifth, or sixth setting — "
-        "and, on LIGHT 1, blinking fast for a seventh, eighth, or ninth."
-        if roved else
-        "Short-press both buttons at once to enter or exit the options menu. The first seven lights are the menu: "
-        "the left button moves between them, the right button steps through a light's settings, and the light's color shows the current one — "
-        "green, red, and yellow, then the same three colors blinking for a fourth, fifth, or sixth setting — "
-        "and, on LIGHT 1, blinking fast for a seventh, eighth, or ninth."
-    )
+    color_blind_mode = document.get("colorBlindMode")
+    if color_blind_mode:
+        fourth_control = (
+            "Press the HARMONICS knob down, keep holding it, and turn until the model LEDs blink; this selects the octave-switching frequency range. "
+            "Click TIMBRE + FREQUENCY together to open the alternate-firmware options menu. Click TIMBRE to walk forward to LIGHT 4, then click HARMONICS once, until it uses medium brightness. "
+            "Click TIMBRE + FREQUENCY again to exit. The FREQUENCY knob now controls the selected model's fourth parameter; for Mutable Instruments models, noon preserves the original sound."
+            if roved else
+            "Hold the right model button and turn HARMONICS until the model LEDs blink; this selects the octave-switching frequency range. "
+            "Short-press both model buttons to open the alternate-firmware options menu. Use the left button to walk to LIGHT 4, then press the right button once, until it uses medium brightness. "
+            "Press both buttons again to exit. The FREQUENCY knob now controls the selected model's fourth parameter; for Mutable Instruments models, noon preserves the original sound."
+        )
+        options_intro = (
+            "Click TIMBRE + FREQUENCY together to enter or exit the options menu. The first seven lights are the menu: "
+            "click FREQUENCY/TIMBRE for the previous/next light, and MORPH/HARMONICS for the previous/next setting. "
+            "The first three settings use brightest, medium, and dim; settings four through six repeat those levels with a slow blink; "
+            "and, on LIGHT 1, settings seven through nine repeat them with a fast blink."
+            if roved else
+            "Short-press both buttons at once to enter or exit the options menu. The first seven lights are the menu: "
+            "the left button moves between them, and the right button steps through a light's settings. "
+            "The first three settings use brightest, medium, and dim; settings four through six repeat those levels with a slow blink; "
+            "and, on LIGHT 1, settings seven through nine repeat them with a fast blink."
+        )
+    else:
+        fourth_control = (
+            "Press the HARMONICS knob down, keep holding it, and turn until the model LEDs blink yellow; this selects the octave-switching frequency range. "
+            "Click TIMBRE + FREQUENCY together to open the alternate-firmware options menu. Click TIMBRE to walk forward to LIGHT 4, then click HARMONICS once, until it turns red. "
+            "Click TIMBRE + FREQUENCY again to exit. The FREQUENCY knob now controls the selected model's fourth parameter; for Mutable Instruments models, noon preserves the original sound."
+            if roved else
+            "Hold the right model button and turn HARMONICS until the model LEDs blink yellow; this selects the octave-switching frequency range. "
+            "Short-press both model buttons to open the alternate-firmware options menu. Use the left button to walk to LIGHT 4, then press the right button once, until it turns red. "
+            "Press both buttons again to exit. The FREQUENCY knob now controls the selected model's fourth parameter; for Mutable Instruments models, noon preserves the original sound."
+        )
+        options_intro = (
+            "Click TIMBRE + FREQUENCY together to enter or exit the options menu. The first seven lights are the menu: "
+            "click FREQUENCY/TIMBRE for the previous/next light, and MORPH/HARMONICS for the previous/next setting. "
+            "The light's color shows the current setting — green, red, and yellow, then the same three colors blinking for a fourth, fifth, or sixth setting — "
+            "and, on LIGHT 1, blinking fast for a seventh, eighth, or ninth."
+            if roved else
+            "Short-press both buttons at once to enter or exit the options menu. The first seven lights are the menu: "
+            "the left button moves between them, the right button steps through a light's settings, and the light's color shows the current one — "
+            "green, red, and yellow, then the same three colors blinking for a fourth, fifth, or sixth setting — "
+            "and, on LIGHT 1, blinking fast for a seventh, eighth, or ninth."
+        )
     options_note = (
         "LIGHT 1 applies to chord-capable models and lists the chord tables loaded in this build (up to nine). "
         "LIGHT 3 stays dark, and the light navigation skips it, unless LIGHT 2 is set to a suboscillator — it has nothing to act on otherwise. "
@@ -505,16 +552,17 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
     )
 
     story.append(bank_map)
-    if document.get("colorBlindMode"):
+    if color_blind_mode:
         story.extend([
             Spacer(1, 0.12 * inch),
             Table(
                 [[
                     Paragraph("BANK LIGHTS", table_header_style),
                     Paragraph(
-                        "This build uses the color-blind bank display: every model light is yellow, "
-                        "and brightness identifies the bank. GREEN is brightest (100%), RED is 50%, "
-                        "AMBER is 25%, and the optional ORANGE bank is 12.5%. "
+                        "This build uses the color-blind display: every model light uses one hue, "
+                        "and brightness identifies the bank. From the first bank to the optional "
+                        "fourth: BRIGHTEST is 100%, BRIGHT is 50%, DIM is 25%, and DIMMEST is 12.5%. "
+                        "The options menu uses brightest, medium, and dim within each blink tier. "
                         "The setting is built into this firmware; no power-up gesture is required.",
                         small_style,
                     ),
@@ -564,30 +612,52 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
     # described a gesture the firmware does not answer would be worse than no
     # page at all.
     if document.get("calibration"):
-        calibration_instructions = (
-            "This build includes the pitch-CV calibration procedure. "
-            "Hold the MORPH knob down while powering the module up to start it: the first light pulses green. "
-            "Patch 1V into V/OCT and click any knob — the light turns yellow. "
-            "Patch 3V and click any knob again. "
-            if roved else
-            "This build includes the pitch-CV calibration procedure. "
-            "Hold the RIGHT model button while powering the module up to start it: the first light pulses green. "
-            "Patch 1V into V/OCT and press either button — the light turns yellow. "
-            "Patch 3V and press either button again. "
-        )
+        if color_blind_mode:
+            calibration_instructions = (
+                "This build includes the pitch-CV calibration procedure. "
+                "Hold the MORPH knob down while powering the module up to start it: the first light pulses at the brightest level. "
+                "Patch 1V into V/OCT and click any knob — the light becomes dim. "
+                "Patch 3V and click any knob again. "
+                "The lights return to normal and the new calibration is saved. "
+                "If the two voltages are not two octaves apart, every light flashes and nothing is written, "
+                "so a mis-patched attempt leaves your module exactly as it was; use any click and try again. "
+                "Powering the module off part-way through also changes nothing."
+                if roved else
+                "This build includes the pitch-CV calibration procedure. "
+                "Hold the RIGHT model button while powering the module up to start it: the first light pulses at the brightest level. "
+                "Patch 1V into V/OCT and press either button — the light becomes dim. "
+                "Patch 3V and press either button again. "
+                "The lights return to normal and the new calibration is saved. "
+                "If the two voltages are not two octaves apart, every light flashes and nothing is written, "
+                "so a mis-patched attempt leaves your module exactly as it was; press a button and try again. "
+                "Powering the module off part-way through also changes nothing."
+            )
+        else:
+            calibration_instructions = (
+                "This build includes the pitch-CV calibration procedure. "
+                "Hold the MORPH knob down while powering the module up to start it: the first light pulses green. "
+                "Patch 1V into V/OCT and click any knob — the light turns yellow. "
+                "Patch 3V and click any knob again. "
+                "The lights return to normal and the new calibration is saved. "
+                "If the two voltages are not two octaves apart, every light flashes red and nothing is written, "
+                "so a mis-patched attempt leaves your module exactly as it was; use any click and try again. "
+                "Powering the module off part-way through also changes nothing."
+                if roved else
+                "This build includes the pitch-CV calibration procedure. "
+                "Hold the RIGHT model button while powering the module up to start it: the first light pulses green. "
+                "Patch 1V into V/OCT and press either button — the light turns yellow. "
+                "Patch 3V and press either button again. "
+                "The lights return to normal and the new calibration is saved. "
+                "If the two voltages are not two octaves apart, every light flashes red and nothing is written, "
+                "so a mis-patched attempt leaves your module exactly as it was; press a button and try again. "
+                "Powering the module off part-way through also changes nothing."
+            )
         story.extend([
             Spacer(1, 0.18 * inch),
             Table(
                 [[
                     Paragraph("CALIBRATION", table_header_style),
-                    Paragraph(
-                        calibration_instructions +
-                        "The lights return to normal and the new calibration is saved. "
-                        "If the two voltages are not two octaves apart, every light flashes red and nothing is written, "
-                        "so a mis-patched attempt leaves your module exactly as it was; use any click and try again. "
-                        "Powering the module off part-way through also changes nothing.",
-                        small_style,
-                    ),
+                    Paragraph(calibration_instructions, small_style),
                 ]],
                 colWidths=[1.1 * inch, 5.2 * inch],
                 style=TableStyle([
