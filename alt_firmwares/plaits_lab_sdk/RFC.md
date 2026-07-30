@@ -84,7 +84,8 @@ Publication advances an immutable version through these gates:
 2. Pinned host and ARM compilation with an allowlisted SDK surface.
 3. Sanitizers and deterministic reset, trigger, and parameter-sweep tests.
 4. Finite-output, peak, DC, silence, denormal, and stuck-output checks.
-5. Flash delta, allocator high-water mark, stack, and worst-case CPU budgets.
+5. Flash delta and worst-case CPU budgets. Allocator high-water and stack
+   measurement remain planned publication gates.
 6. Complete firmware link and reproducible audio-update generation.
 7. Human source, licensing, sound, switching, and hardware review.
 
@@ -112,10 +113,31 @@ warnings rather than automatic rejection.
 - Community catalog cards remain typographic; preview audio is generated from
   declared scenarios rather than accepting arbitrary artwork or media.
 
-## Remaining production work
+## Production safeguards and remaining work
 
-The v0 deliberately leaves maintainer review as an operational action. Before
-opening submissions broadly, add queued server-side revalidation, CPU-cycle and
-allocator/stack instrumentation on the pinned ARM build, malware/abuse limits,
-maintainer audit history, catalog signing, and a hardware beta cohort. The
-existing public recipe builder remains approved-package-only throughout.
+Source intake is open, but publication remains maintainer-controlled. The
+shipped safeguards are:
+
+- every uploaded ZIP is opened server-side, structurally checked, and
+  digest-matched to the source the contributor checked;
+- the maintainer reruns `plaits-lab check --full --arm` before advancing a
+  submission to `checks-passed`;
+- QEMU cost estimation and the on-module DWT cycle probe measure CPU risk, and
+  the review lifecycle requires a `hardware-beta` stage before publication;
+- source-policy checks, upload caps, networkless/resource-limited builds,
+  public-endpoint rate limits, review state/notes, and the immutable approved
+  package-digest allowlist constrain intake and publication; and
+- the public recipe builder continues to compile approved package digests only,
+  never arbitrary submitted C++.
+
+Still open:
+
+- queue and run the full host/sanitizer/ARM revalidation server-side instead of
+  relying on the maintainer's operational rerun;
+- add allocator high-water and stack measurements as enforced publication
+  budgets;
+- keep append-only maintainer audit history rather than only the current review
+  state, note, and timestamps;
+- cryptographically sign the published catalog; and
+- establish a broader hardware beta cohort beyond the maintainer-operated
+  lifecycle stage.
