@@ -162,6 +162,55 @@ test("Ro'Ved is a schema-15 hardware target and changes build/manual identity", 
   assert.notEqual(await computeManualKey(plaits, "8"), await computeManualKey(roved, "8"));
 });
 
+test("the color-blind bank display is baked, version-gated, and type-checked", async () => {
+  const publicCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const chordCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_chord_tables/catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const byId = new Map(publicCatalog.engines.map((engine: { id: string }) => [engine.id, engine]));
+  const publishedTable = structuredClone(chordCatalog.tables[0]);
+  const makeRecipe = (schemaVersion: number, colorBlindMode: unknown, calibration = false) => ({
+    ...fixture,
+    schemaVersion,
+    slots: fixture.slots.map((engineId: string) => {
+      const engine = byId.get(engineId) as { packageId: string; version: string; digest: string };
+      return { engine: engineId, package: engine.packageId, version: engine.version, digest: engine.digest };
+    }),
+    preferences: { navigationMode: "linear", calibration, colorBlindMode },
+    initialOptions: {
+      lockedFrequencyKnob: "octaves", modelInput: "model", levelInput: "level",
+      auxOutput: "alternate-model", suboscillatorOctave: 0, chordTable: publishedTable.id,
+      holdOnTrigger: false,
+    },
+    resources: { chordTables: [publishedTable] },
+  });
+
+  const on = normalizeRecipe(makeRecipe(15, true, true));
+  assert.equal(on.preferences.colorBlindMode, true);
+  assert.equal(on.preferences.calibration, true);
+  assert.equal(on.schemaVersion, 15);
+
+  const off = normalizeRecipe(makeRecipe(15, false));
+  assert.equal(off.preferences.colorBlindMode, false);
+  assert.equal(off.schemaVersion, 5);
+
+  assert.throws(
+    () => normalizeRecipe(makeRecipe(14, true)),
+    (error: { code?: string }) => error.code === "unsupported_schema",
+  );
+  assert.throws(
+    () => normalizeRecipe(makeRecipe(15, "yes")),
+    (error: { code?: string }) => error.code === "invalid_preferences",
+  );
+
+  const identity = { sourceRevision: "source", toolchain: "toolchain", contract: "15" };
+  assert.notEqual(await computeBuildKey(on, identity), await computeBuildKey(off, identity));
+});
+
 test("build keys are stable and include the build identity", async () => {
   const recipe = normalizeRecipe(fixture);
   const identity = { sourceRevision: "source-a", toolchain: "toolchain-a", contract: "1" };
@@ -570,11 +619,16 @@ test("manual keys derive from documentation identity, not build identity", async
   [reordered.slots[0], reordered.slots[1]] = [reordered.slots[1], reordered.slots[0]];
   assert.notEqual(first, await computeManualKey(reordered, "1"));
 
-  // …but firmware options do not — nothing on the page reports them.
+  // …but unprinted firmware options do not.
   const optionsChanged = normalizeRecipe(fixture);
   optionsChanged.preferences = { ...optionsChanged.preferences, navigationMode: "banked" };
   optionsChanged.initialOptions = { ...optionsChanged.initialOptions, holdOnTrigger: true };
   assert.equal(first, await computeManualKey(optionsChanged, "1"));
+
+  // The accessible bank display IS printed beside the bank map.
+  const displayChanged = normalizeRecipe(fixture);
+  displayChanged.preferences = { ...displayChanged.preferences, colorBlindMode: true };
+  assert.notEqual(first, await computeManualKey(displayChanged, "1"));
 
   // The options-menu page lists LIGHT 1's chord tables by name, so a table swap
   // is a different guide. (It shared a key until 2026-07, which served the wrong

@@ -54,6 +54,7 @@ SLOT_BANK_MIN_SCHEMA_VERSION = 12
 SHORT_BANK_MIN_SCHEMA_VERSION = 13
 CALIBRATION_MIN_SCHEMA_VERSION = 14
 ROVED_MIN_SCHEMA_VERSION = 15
+COLOR_BLIND_MODE_MIN_SCHEMA_VERSION = 15
 
 # Bumped whenever a stored option value changes meaning in the firmware (see the
 # value tables in plaits/dsp/voice.h). It seeds the options profile-id fold, so a
@@ -86,6 +87,10 @@ class BuildRecipe:
     # v15: 1 compiles the four-clickable-knob Plum Audio Ro'Ved panel UI and
     # extra switch GPIOs; 0 keeps the two-button Mutable Instruments panel.
     roved_panel: int = 0
+    # v15: 1 bakes the accessible bank display into the firmware (one yellow hue,
+    # four brightness levels), 0 keeps the normal bank colors. Like calibration,
+    # this is not stored and does not belong in the options profile-id fold.
+    color_blind_mode: int = 0
     # v6 (index-keyed): built-in bank index (0..2) -> 4096 packed bytes, overriding
     # a factory bank globally for every slot that uses it.
     user_data_bank_overrides: tuple[tuple[int, bytes], ...] = ()
@@ -373,10 +378,9 @@ def validate_recipe(value: Any) -> BuildRecipe:
             SPARSE_SLOT_MIN_SCHEMA_VERSION <= schema_version < SLOT_BANK_MIN_SCHEMA_VERSION
             and len(slots) == 32
         )
-        # v14 (the calibration procedure) is the first version whose defining
-        # feature says nothing about resources — any palette may want it, with or
-        # without custom FM banks — so it and later schemas accept either
-        # resource shape. Mirrors the Worker contract.
+        # v14+ compile-time features say nothing about resources: calibration,
+        # the Ro'Ved panel, and the color-blind display can each compose with any
+        # palette, with or without custom FM banks. Mirrors the Worker contract.
         carries_user_data_banks = expect_user_data_banks or (
             schema_version >= CALIBRATION_MIN_SCHEMA_VERSION and isinstance(resources, dict)
             and set(resources) == {"chordTables", "userDataBanks"})
@@ -408,7 +412,11 @@ def validate_recipe(value: Any) -> BuildRecipe:
     options = configuration.get("initialOptions")
     if not isinstance(preferences, dict) or not isinstance(options, dict):
         raise ValueError("recipe must contain firmware preferences and starting options")
-    if set(preferences) not in ({"navigationMode"}, {"navigationMode", "calibration"}) or set(options) != {
+    if set(preferences) not in (
+        {"navigationMode"},
+        {"navigationMode", "calibration"},
+        {"navigationMode", "calibration", "colorBlindMode"},
+    ) or set(options) != {
         "lockedFrequencyKnob", "modelInput", "levelInput", "auxOutput",
         "suboscillatorOctave", "chordTable", "holdOnTrigger",
     }:
@@ -520,12 +528,23 @@ def validate_recipe(value: Any) -> BuildRecipe:
             f"the calibration procedure requires schemaVersion "
             f"{CALIBRATION_MIN_SCHEMA_VERSION}")
 
+    # The accessible bank display (v15). Also compile-time-only, so changing it
+    # must not reset the module's saved starting options.
+    color_blind_mode = bool(preferences.get("colorBlindMode", False))
+    if not isinstance(preferences.get("colorBlindMode", False), bool):
+        raise ValueError("recipe contains an unsupported firmware option")
+    if color_blind_mode and schema_version < COLOR_BLIND_MODE_MIN_SCHEMA_VERSION:
+        raise ValueError(
+            f"color-blind bank display requires schemaVersion "
+            f"{COLOR_BLIND_MODE_MIN_SCHEMA_VERSION}")
+
     return BuildRecipe(
         public_slots=public_slots,
         chord_tables=chord_tables,
         options_profile_id=profile_id,
         enable_calibration=1 if enable_calibration else 0,
         roved_panel=1 if target == "plum-audio-roved" else 0,
+        color_blind_mode=1 if color_blind_mode else 0,
         user_data_bank_overrides=tuple(user_data_banks),
         slot_bank_overrides=tuple(slot_banks),
         stereo_engines=stereo_engines,
@@ -719,6 +738,7 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_CHORD_ARP_LENGTHS {{ {", ".join(chord_arp_lengths)} }}
 
 #define PLAITS_BUILD_NAVIGATION_MODE {recipe.navigation_mode}
+#define PLAITS_BUILD_COLOR_BLIND_MODE {recipe.color_blind_mode}
 #define PLAITS_BUILD_LOCKED_FREQUENCY_POT_OPTION {recipe.locked_frequency_pot_option}
 #define PLAITS_BUILD_MODEL_CV_OPTION {recipe.model_cv_option}
 #define PLAITS_BUILD_LEVEL_CV_OPTION {recipe.level_cv_option}

@@ -47,6 +47,7 @@ const slotBankMinSchemaVersion = 12;      // banks keyed by palette slot
 const shortBankMinSchemaVersion = 13;     // fewer than 32 FM voices
 const calibrationMinSchemaVersion = 14;   // CV calibration procedure
 const rovedMinSchemaVersion = 15;         // four-knob Ro'Ved panel
+const colorBlindModeMinSchemaVersion = 15; // brightness-coded banks
 
 function isSupportedSchemaVersion(value: unknown): value is number {
   return Number.isInteger(value)
@@ -103,6 +104,10 @@ export type NormalizedRecipe = {
     // this is only for a module that has never been calibrated or was erased
     // over SWD — and it costs flash a full palette does not have to spare.
     calibration: boolean;
+    // Bake an accessible model-bank display into the firmware (v15): all model
+    // lights use yellow, with one steady PWM brightness per bank. It deliberately
+    // has no power-up gesture, leaving right-button boot available to calibration.
+    colorBlindMode: boolean;
   };
   initialOptions: {
     lockedFrequencyKnob: "octaves" | "decay" | "aux-crossfade" | "macro-4";
@@ -127,7 +132,7 @@ export type NormalizedRecipe = {
 };
 
 const defaultConfiguration: Pick<NormalizedRecipe, "preferences" | "initialOptions"> = {
-  preferences: { navigationMode: "linear", calibration: false },
+  preferences: { navigationMode: "linear", calibration: false, colorBlindMode: false },
   initialOptions: {
     lockedFrequencyKnob: "octaves",
     modelInput: "model",
@@ -356,11 +361,19 @@ function normalizeConfiguration(
   }
   const preferenceValues = preferences as Record<string, unknown>;
   const optionValues = initialOptions as Record<string, unknown>;
-  // `calibration` is optional: recipes minted before v14 have no such key and
-  // mean false. Anything else in preferences is still rejected.
+  // Compile-time preferences arrived incrementally: pre-v14 recipes carry only
+  // navigationMode; v14 adds calibration; v15 adds colorBlindMode. Missing keys
+  // mean false, while every other shape remains closed and rejected.
+  const legacyPreferences = hasExactKeys(preferenceValues, ["navigationMode"]);
   const carriesCalibration = hasExactKeys(preferenceValues, ["calibration", "navigationMode"]);
-  if ((!carriesCalibration && !hasExactKeys(preferenceValues, ["navigationMode"]))
-      || (carriesCalibration && typeof preferenceValues.calibration !== "boolean")
+  const carriesColorBlindMode = hasExactKeys(
+    preferenceValues,
+    ["calibration", "colorBlindMode", "navigationMode"],
+  );
+  if ((!legacyPreferences && !carriesCalibration && !carriesColorBlindMode)
+      || ((carriesCalibration || carriesColorBlindMode)
+        && typeof preferenceValues.calibration !== "boolean")
+      || (carriesColorBlindMode && typeof preferenceValues.colorBlindMode !== "boolean")
       || !hasExactKeys(optionValues, [
         "auxOutput", "chordTable", "holdOnTrigger", "levelInput",
         "lockedFrequencyKnob", "modelInput", "suboscillatorOctave",
@@ -376,7 +389,9 @@ function normalizeConfiguration(
       || typeof optionValues.holdOnTrigger !== "boolean") {
     throw new ContractError("invalid_preferences", "The recipe contains an unsupported firmware option.");
   }
-  const calibration = carriesCalibration && preferenceValues.calibration === true;
+  const calibration = (carriesCalibration || carriesColorBlindMode)
+    && preferenceValues.calibration === true;
+  const colorBlindMode = carriesColorBlindMode && preferenceValues.colorBlindMode === true;
   // Same shape as the sparse-bank and short-FM-bank gates: a recipe may only ask
   // for a feature its declared schema version covers, so a client that has not
   // been told this builder understands calibration cannot slip it in under an
@@ -387,8 +402,18 @@ function normalizeConfiguration(
       `The calibration procedure requires recipe schema version ${calibrationMinSchemaVersion}.`,
     );
   }
+  if (colorBlindMode && Number(candidate.schemaVersion) < colorBlindModeMinSchemaVersion) {
+    throw new ContractError(
+      "unsupported_schema",
+      `The color-blind bank display requires recipe schema version ${colorBlindModeMinSchemaVersion}.`,
+    );
+  }
   return {
-    preferences: { navigationMode: preferenceValues.navigationMode, calibration },
+    preferences: {
+      navigationMode: preferenceValues.navigationMode,
+      calibration,
+      colorBlindMode,
+    },
     initialOptions: {
       lockedFrequencyKnob: optionValues.lockedFrequencyKnob,
       modelInput: optionValues.modelInput,
@@ -515,11 +540,10 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
       || schemaVersion === shortBankMinSchemaVersion
       || (schemaVersion >= sparseSlotMinSchemaVersion
         && schemaVersion < slotBankMinSchemaVersion && candidate.slots.length === 32);
-    // v14 is the first version whose defining feature says nothing about
-    // resources: it means "this recipe wants the calibration procedure", which
-    // any palette may want, with or without custom FM banks. It and every later
-    // schema accept either resource shape — the banks themselves are validated
-    // exactly as under v13 when they are there.
+    // v14+ compile-time features say nothing about resources: calibration,
+    // the Ro'Ved panel, and the color-blind display can each compose with any
+    // palette, with or without custom FM banks. Banks still validate exactly
+    // as under v13 when present.
     if (!resources || typeof resources !== "object") {
       throw new ContractError("invalid_resources", "The recipe must contain only supported firmware resources.");
     }
@@ -566,10 +590,10 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     configuration.initialOptions.auxOutput,
   );
   return {
-    // Newest first: Ro'Ved needs the four-clickable-knob panel UI compiled in
-    // (v15) and dominates all. Then the calibration procedure needs v14; both
-    // say nothing about the recipe's resource shape. A per-slot custom bank
-    // with fewer than 32 patches (a
+    // Newest first: Ro'Ved's four-clickable-knob UI and the accessible display
+    // each require v15 and dominate all lower feature rungs. Then the optional
+    // calibration procedure needs v14. All three say nothing about the recipe's
+    // resource shape. A per-slot custom bank with fewer than 32 patches (a
     // "short" FM bank) needs the firmware's variable-length Harmonics quantizer,
     // v13. Any other per-slot custom bank needs a v12 builder (only v12
     // keys banks by slot). Then a sparse bank (a gap kept in place) needs v11;
@@ -578,7 +602,8 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     // (v8); a short-bank recipe (a trailing empty slot) stays v7; a candidate that
     // carried v6 resources (even an empty custom-bank list, e.g. a 32-slot recipe)
     // stays v6; else v5.
-    schemaVersion: candidate.target === "plum-audio-roved" ? 15
+    schemaVersion: candidate.target === "plum-audio-roved"
+        || configuration.preferences.colorBlindMode ? 15
       : configuration.preferences.calibration ? 14
       : slotBanks !== undefined
         ? (slotBanks.some((b) => b.bank.voices.length < patchesPerBank) ? 13 : 12)
@@ -643,11 +668,10 @@ export async function computeManualKey(
     // The control instructions differ completely: Plaits has two buttons;
     // Ro'Ved has four clickable knobs. Never share a cached guide between them.
     target: recipe.target,
-    // The guide documents the calibration procedure only for a build that has
-    // it, so two recipes differing only in this preference are different guides
-    // — without it they would share one cached PDF and half the readers would
-    // get a page describing a gesture their firmware does not answer.
+    // Both compile-time display/procedure preferences change what the guide
+    // prints, so they must change its cache identity.
     calibration: recipe.preferences.calibration,
+    colorBlindMode: recipe.preferences.colorBlindMode,
   });
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical));
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
