@@ -200,7 +200,7 @@
       ],
       "outputs": [
         "Additive partial bank",
-        "Complementary partial mixture"
+        "Mono: complementary organ subset. Stereo: magnitude-matched phase-rotated copy of the full partial bank."
       ],
       "artwork": {
         "icon": "/model-icons/harmonic.png",
@@ -208,8 +208,8 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:8bba819ce9f3eba0b92885faeef0d0bd9bf6034c7fc10f7328b915f3d5cc0b94",
-      "documentationDigest": "sha256:75b3aca9d32d75590ff5dfe569bf4a07679e7bebca39d7c1d37f49f5047f2248",
+      "digest": "sha256:c65985f905c88e5f151826214b8c17b364a2f718a21c23cdd025c175687c14be",
+      "documentationDigest": "sha256:501260b9f2acd02a7691959cec24033d1c5b5837ac12a59463786669fa1da7ff",
       "manual": {
         "controls": {
           "harmonics": "Changes the number and distribution of active additive partials.",
@@ -244,7 +244,7 @@
       ],
       "outputs": [
         "Interpolated wavetable",
-        "Related table position"
+        "Mono: 5-bit version of the wavetable. Stereo: magnitude-matched phase-rotated copy."
       ],
       "artwork": {
         "icon": "/model-icons/wavetable.png",
@@ -252,8 +252,8 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:309143fd65c27cfe472a8348850b49c8a9a36023d02f97356f45cae7ef27013f",
-      "documentationDigest": "sha256:2a38be7a26f865c6af7c0d8812fb8c9b09d9f6ade4431dc316a7fd97e1249041",
+      "digest": "sha256:45b57d4370c4f9341304bd42f7518d8584191d88a56b40176059e0e785118bc6",
+      "documentationDigest": "sha256:630d5b540d55f0d184fd5054c16712ba7b1f8a9a6af9c5c8d661dbc96685f049",
       "manual": {
         "controls": {
           "harmonics": "Selects a family within the integrated wavetable collection.",
@@ -974,7 +974,7 @@
       ],
       "outputs": [
         "Wave-terrain scan",
-        "Orthogonal terrain scan"
+        "The alternate Sine(y + z) projection of the same trajectory; used as the right channel in stereo."
       ],
       "artwork": {
         "icon": "/model-icons/wave-terrain.png",
@@ -982,8 +982,8 @@
         "tone": "amber"
       },
       "version": "1.0.0",
-      "digest": "sha256:07c8d5de95d750f6c98badc4186eb4a6471837f0bf06b2dab4d9fc12736ce84b",
-      "documentationDigest": "sha256:aa33d560ecd3a260dd428f195af0cc595cda11f9682931504663db9bbcf2380f",
+      "digest": "sha256:a3281a1f26393aa4bba39fcee0475aa92de8055335a8ceed0fb2a8abbd03b750",
+      "documentationDigest": "sha256:bfe5da7317fbf725f5fa804efa089c258a712f3d4d041ddcdbad9e24ca3de942",
       "manual": {
         "controls": {
           "harmonics": "Selects the terrain or waveform family used by the two-dimensional scan.",
@@ -2200,11 +2200,11 @@
       ],
       "outputs": [
         "The filtered swarm at the dialed-in Filter position.",
-        "The same swarm through the mirrored filter position, always the tap MAIN is not favouring."
+        "Mono: the mirrored filter position. Stereo: a magnitude-matched phase-rotated copy of the filtered swarm."
       ],
       "version": "1.0.0",
-      "digest": "sha256:bbe25bd88cebe810a2a413691050379d8b6087f6ed8d08b15ca4f9f7f6bf1256",
-      "documentationDigest": "sha256:45d716b39594a8f00adb943fa090d2b60fb53964bcb2fd083298669f956ed9d0",
+      "digest": "sha256:3acdddc97b6771abc9d62e852ee9e130c2d768c83a504b2fc068e24ee67a58e2",
+      "documentationDigest": "sha256:c806efae971a8b6d17fa98c851d8025efba78e7519f1bf10216e842316525874",
       "manual": {
         "controls": {
           "harmonics": "The filter's cutoff: on the note a third of the way up, closing below that twice as fast as it opens above.",
@@ -2443,11 +2443,11 @@
       ],
       "outputs": [
         "The eleven-partial sum. Tracks the module's own output closely; tests/ab.json carries the measured figures.",
-        "Mono: the five highest partials alone, a bright fast-decaying companion voice. Stereo: a second, independently detuned eleven-partial render sharing the same amplitude envelope, for a wide chorused bell."
+        "Mono: the five highest partials alone, a bright fast-decaying companion voice. Stereo: a magnitude-matched phase-rotated copy of the full bell, widening the same eleven partials without retuning them."
       ],
       "version": "1.0.0",
-      "digest": "sha256:ac71525bd8fb216b839c2ea70660d54c144acf01272eb78b0f36867ee93c9b8b",
-      "documentationDigest": "sha256:846dd12f1e7b0fa20bf9051bc91d3cfd20c543d4a57022fa7e3917fd9c8e37bd",
+      "digest": "sha256:5b98042541f4bde6207e0195e0d4c03493b31e9930f0ba1bd6d21872b68eb74f",
+      "documentationDigest": "sha256:5851d07835ede3f8764569362bbb8b11467699af61dc07af91bf92f0e20f626d",
       "manual": {
         "controls": {
           "harmonics": "Spreads alternate partials apart around the module's own fixed ratios: every other one up, the rest down.",
