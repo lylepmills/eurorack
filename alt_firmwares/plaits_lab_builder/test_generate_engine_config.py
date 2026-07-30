@@ -99,6 +99,30 @@ class GenerateEngineConfigTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unsupported firmware option"):
             validate_recipe(self.calibration_recipe(14, "yes"))
 
+    def roved_recipe(self, schema_version: int = 15) -> dict:
+        recipe = self.calibration_recipe(schema_version, False)
+        recipe["target"] = "plum-audio-roved"
+        return recipe
+
+    def test_roved_target_emits_the_panel_define(self) -> None:
+        roved = validate_recipe(self.roved_recipe())
+        plaits = validate_recipe(self.calibration_recipe(15, False))
+        self.assertEqual(roved.roved_panel, 1)
+        self.assertEqual(plaits.roved_panel, 0)
+        self.assertIn("#define PLAITS_ROVED_PANEL 1", render_config(roved))
+        self.assertIn("#define PLAITS_ROVED_PANEL 0", render_config(plaits))
+
+    def test_roved_target_requires_schema_15(self) -> None:
+        with self.assertRaisesRegex(ValueError, "schemaVersion 15"):
+            validate_recipe(self.roved_recipe(14))
+
+    def test_roved_panel_does_not_move_the_options_profile_id(self) -> None:
+        # The panel changes physical gestures, not the meaning of any saved
+        # option value, so moving the profile would needlessly reset settings.
+        roved = validate_recipe(self.roved_recipe())
+        plaits = validate_recipe(self.calibration_recipe(15, False))
+        self.assertEqual(roved.options_profile_id, plaits.options_profile_id)
+
     def test_subosc_shape_and_octave_fold_into_one_firmware_value(self) -> None:
         # The recipe keeps the shape in auxOutput and the octave beside it; the
         # firmware wants one aux-output setting and one suboscillator setting

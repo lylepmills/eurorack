@@ -171,9 +171,10 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
 
   // Holding the RIGHT button through power-up starts calibration — the mirror
   // of the bootloader's left-button firmware-update gesture (bootloader.cc
-  // checks Switch(0); this is Switch(1)), so the two live in the same idiom and
-  // neither can be reached by accident while playing. Read straight off the
-  // GPIO: the debouncer has no history this early.
+  // checks Switch(0); this is Switch(1)). On Ro'Ved, Switch(1) is the MORPH
+  // knob click. Both variants therefore use an intentional held-at-power-up
+  // gesture. Read straight off the GPIO: the debouncer has no history this
+  // early.
   if (switches_.pressed_immediate(SWITCH_ROW_2)) {
     StartCalibration();
   }
@@ -527,7 +528,7 @@ void Ui::Navigate(int button) {
   }
   RealignPots();
 
-#ifdef PLAITS_ROVED_PANEL
+#if PLAITS_ROVED_PANEL
   // Four clickable knobs give both traversals at once, so the build-time
   // navigation mode is not consulted. TIMBRE/FREQUENCY step one engine
   // globally; HARMONICS/MORPH change bank with the same per-bank memory used
@@ -602,7 +603,7 @@ void Ui::ReadSwitches() {
   switch (mode_) {
     case UI_MODE_NORMAL:
       {
-#ifdef PLAITS_ROVED_PANEL
+#if PLAITS_ROVED_PANEL
         // TIMBRE + FREQUENCY enters the options menu.
         if ((switches_.just_pressed(Switch(0)) && switches_.pressed(Switch(3))) ||
             (switches_.just_pressed(Switch(3)) && switches_.pressed(Switch(0)))) {
@@ -638,7 +639,7 @@ void Ui::ReadSwitches() {
           }
         }
 
-#ifdef PLAITS_ROVED_PANEL
+#if PLAITS_ROVED_PANEL
         // Each click locks its own knob; FREQUENCY is not locked on press
         // because its click is the backward-navigation control.
         if (switches_.just_pressed(Switch(0))) {
@@ -740,7 +741,7 @@ void Ui::ReadSwitches() {
       break;
 
     case UI_MODE_CHANGE_OPTIONS_PRE_RELEASE:
-#ifdef PLAITS_ROVED_PANEL
+#if PLAITS_ROVED_PANEL
       if ((!switches_.pressed(Switch(0)) && !switches_.pressed(Switch(3))) &&
           (switches_.released(Switch(0)) || switches_.released(Switch(3)))) {
 #else  // PLAITS_ROVED_PANEL
@@ -758,7 +759,7 @@ void Ui::ReadSwitches() {
 
     case UI_MODE_CHANGE_OPTIONS:
       {
-#ifdef PLAITS_ROVED_PANEL
+#if PLAITS_ROVED_PANEL
         // TIMBRE + FREQUENCY leaves the menu, matching the gesture that opens
         // it. MORPH/HARMONICS step the value of the selected option.
         if (switches_.pressed(Switch(3)) && switches_.pressed(Switch(0))) {

@@ -1,12 +1,17 @@
 # Plaits Lab firmware build service
 
 This directory contains the approved-engine backend for Plaits Lab. It accepts
-legacy recipes and version 5 manifests containing 24 immutable engine
-references, a fixed navigation preference, seven starting options, and one to
-six bounded chord-table documents. It generates a compile-time configuration,
+legacy recipes and manifests through schema 15 containing 24 or 32 immutable
+engine references, firmware preferences and starting options, and bounded
+chord-table/custom-FM resources. Schema 15 can target either Mutable
+Instruments Plaits or Plum Audio Ro'Ved. It generates a compile-time configuration,
 builds with the pinned Mutable
 Instruments ARM toolchain, enforces the Plaits flash and RAM limits, and returns
 the 48 kHz audio updater.
+
+Schema-15/Ro'Ved support is present in source but intentionally not deployed
+until the hardware checklist in `../PLAITS_LAB_PROJECT.md` passes. Production
+continues to advertise schema 14 in the meantime.
 
 The service is split across two isolation layers:
 

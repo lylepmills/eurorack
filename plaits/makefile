@@ -78,7 +78,7 @@ $(BUILD_DIR)user_data_receiver.o: CCFLAGS += -Os
 # instead of the recipe's. check_config_scope.py enforces that at build time.
 # ENGINE_CONFIG is empty for ordinary firmware builds, which fall back to the
 # checked-in default headers via each unit's own #include.
-RECIPE_CONFIG_OBJS = voice.o plaits.o ui.o settings.o chord_bank.o
+RECIPE_CONFIG_OBJS = voice.o plaits.o ui.o settings.o chord_bank.o switches.o
 ifneq ($(ENGINE_CONFIG),)
 $(patsubst %,$(BUILD_DIR)%,$(RECIPE_CONFIG_OBJS)): CPPFLAGS += -include $(ENGINE_CONFIG)
 endif

@@ -67,6 +67,9 @@ class BuildRecipe:
     # power-up), 0 leaves it out. Not an options-menu setting and not part of the
     # saved State — it is present in the binary or it is not.
     enable_calibration: int = 0
+    # v15: 1 compiles the four-clickable-knob Plum Audio Ro'Ved panel UI and
+    # extra switch GPIOs; 0 keeps the two-button Mutable Instruments panel.
+    roved_panel: int = 0
     # v6 (index-keyed): built-in bank index (0..2) -> 4096 packed bytes, overriding
     # a factory bank globally for every slot that uses it.
     user_data_bank_overrides: tuple[tuple[int, bytes], ...] = ()
@@ -254,9 +257,9 @@ def normalize_slots(slots: list[Any], schema_version: int) -> list[str | None]:
     normalized: list[str | None] = []
     for reference in slots:
         if reference is None:
-            if schema_version not in (7, 8, 9, 10, 11, 12, 13, 14):
+            if schema_version not in (7, 8, 9, 10, 11, 12, 13, 14, 15):
                 raise ValueError(
-                    "empty slots require schemaVersion 7, 8, 9, 10, 11, 12, 13, or 14")
+                    "empty slots require schemaVersion 7, 8, 9, 10, 11, 12, 13, 14, or 15")
             normalized.append(None)
             continue
         if isinstance(reference, str):
@@ -315,11 +318,14 @@ def validate_recipe(value: Any) -> BuildRecipe:
     if not isinstance(value, dict):
         raise ValueError("recipe must be a JSON object")
     schema_version = value.get("schemaVersion")
-    if schema_version not in (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14):
+    if schema_version not in (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15):
         raise ValueError(
-            "recipe schemaVersion must be 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, or 14")
-    if value.get("target") != "mutable-instruments-plaits":
+            "recipe schemaVersion must be 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, or 15")
+    target = value.get("target")
+    if target not in ("mutable-instruments-plaits", "plum-audio-roved"):
         raise ValueError("unsupported firmware target")
+    if target == "plum-audio-roved" and schema_version < 15:
+        raise ValueError("Ro'Ved builds require schemaVersion 15")
     if value.get("firmware") != "rubato-plaits":
         raise ValueError("unsupported firmware family")
     if value.get("output") != "audio-wav":
@@ -327,14 +333,14 @@ def validate_recipe(value: Any) -> BuildRecipe:
     slots = value.get("slots")
     if not isinstance(slots, list) or len(slots) not in (24, 32):
         raise ValueError("recipe must contain 24 slots, or 32 for a four-bank build")
-    if len(slots) == 32 and schema_version not in (6, 7, 8, 9, 10, 11, 12, 13, 14):
+    if len(slots) == 32 and schema_version not in (6, 7, 8, 9, 10, 11, 12, 13, 14, 15):
         raise ValueError(
-            "32-slot recipes require schemaVersion 6, 7, 8, 9, 10, 11, 12, 13, or 14")
+            "32-slot recipes require schemaVersion 6, 7, 8, 9, 10, 11, 12, 13, 14, or 15")
     public_slots = normalize_slots(slots, schema_version)
     validate_bank_shape(public_slots, schema_version)
     user_data_banks: list[tuple[int, bytes]] = []   # v6 index-keyed
     slot_banks: list[tuple[int, bytes]] = []        # v12 slot-keyed
-    if schema_version in (5, 6, 7, 8, 9, 10, 11, 12, 13, 14):
+    if schema_version in (5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15):
         resources = value.get("resources")
         # v6 always carries the custom-FM-banks resource (its defining feature), and
         # v12 always carries per-slot banks (its defining feature — 24 or 32 slots).
@@ -342,19 +348,17 @@ def validate_recipe(value: Any) -> BuildRecipe:
         # recipe; a 24-slot v7-v11 carries chord tables only, like v5.
         expect_user_data_banks = schema_version in (6, 12, 13) \
             or (schema_version in (7, 8, 9, 10, 11) and len(slots) == 32)
-        # v14 (the calibration procedure) is the one version whose defining
-        # feature says nothing about resources — any palette may want it, with or
-        # without custom FM banks — so it is the only one that accepts either
-        # resource shape. Mirrors the Worker contract.
+        # v14+ features say nothing about resources: calibration and the Ro'Ved
+        # panel can each compose with any palette, with or without custom banks.
         carries_user_data_banks = expect_user_data_banks or (
-            schema_version == 14 and isinstance(resources, dict)
+            schema_version in (14, 15) and isinstance(resources, dict)
             and set(resources) == {"chordTables", "userDataBanks"})
         expected_resource_keys = {"chordTables", "userDataBanks"} if carries_user_data_banks else {"chordTables"}
         if not isinstance(resources, dict) or set(resources) != expected_resource_keys:
             raise ValueError("recipe must contain only supported firmware resources")
         chord_tables = validate_chord_tables(resources.get("chordTables"))
         if carries_user_data_banks:
-            if schema_version in (12, 13, 14):
+            if schema_version in (12, 13, 14, 15):
                 slot_banks = validate_user_data_banks_v12(resources.get("userDataBanks"), len(slots))
             else:
                 user_data_banks = validate_user_data_banks(resources.get("userDataBanks"))
@@ -370,7 +374,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
             raise ValueError("short (fewer than 32-patch) FM banks require schemaVersion 13")
     else:
         chord_tables = validate_chord_tables(DEFAULT_CHORD_TABLES)
-    configuration = value if schema_version in (4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14) else DEFAULT_CONFIGURATION
+    configuration = value if schema_version in (4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15) else DEFAULT_CONFIGURATION
     preferences = configuration.get("preferences")
     options = configuration.get("initialOptions")
     if not isinstance(preferences, dict) or not isinstance(options, dict):
@@ -488,6 +492,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
         chord_tables=chord_tables,
         options_profile_id=profile_id,
         enable_calibration=1 if enable_calibration else 0,
+        roved_panel=1 if target == "plum-audio-roved" else 0,
         user_data_bank_overrides=tuple(user_data_banks),
         slot_bank_overrides=tuple(slot_banks),
         stereo_engines=stereo_engines,
@@ -689,6 +694,7 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_BUILD_CHORD_SET_OPTION {recipe.chord_set_option}
 #define PLAITS_BUILD_HOLD_ON_TRIGGER_OPTION {recipe.hold_on_trigger_option}
 #define PLAITS_BUILD_ENABLE_CALIBRATION {recipe.enable_calibration}
+#define PLAITS_ROVED_PANEL {recipe.roved_panel}
 #define PLAITS_BUILD_OPTIONS_PROFILE_ID 0x{recipe.options_profile_id:04x}u
 
 #define PLAITS_ENGINE_MEMBERS \\

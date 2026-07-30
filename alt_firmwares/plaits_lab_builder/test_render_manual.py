@@ -103,6 +103,22 @@ class RenderManualTest(unittest.TestCase):
         # A recipe from before v14 has no such key and no such page.
         self.assertIs(manual_document(self.load("default_recipe.json"))["calibration"], False)
 
+    def roved_recipe(self, calibration: bool = False) -> dict:
+        recipe = self.calibration_recipe(calibration)
+        recipe["schemaVersion"] = 15
+        recipe["target"] = "plum-audio-roved"
+        return recipe
+
+    def test_manual_document_carries_the_hardware_target(self) -> None:
+        self.assertEqual(
+            manual_document(self.roved_recipe())["target"],
+            "plum-audio-roved",
+        )
+        self.assertEqual(
+            manual_document(self.calibration_recipe(False))["target"],
+            "mutable-instruments-plaits",
+        )
+
     @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
     def test_calibration_procedure_is_printed_only_when_the_build_has_it(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -116,6 +132,18 @@ class RenderManualTest(unittest.TestCase):
             render_pdf(manual_document(self.calibration_recipe(False)), off)
             # Not a word about a gesture this firmware does not answer.
             self.assertNotIn("CALIBRATION", pdf_strings(off))
+
+    @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
+    def test_roved_guide_prints_clickable_knob_instructions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "roved.pdf"
+            render_pdf(manual_document(self.roved_recipe(True)), path)
+            printed = pdf_strings(path)
+            self.assertIn("Your Ro'Ved Field Guide", printed)
+            self.assertIn("TIMBRE + FREQUENCY", printed)
+            self.assertIn("HARMONICS/MORPH", printed)
+            self.assertIn("Hold the MORPH knob down while powering", printed)
+            self.assertNotIn("RIGHT model button while powering", printed)
 
     def test_bank_positions_use_public_green_red_amber_order(self) -> None:
         document = manual_document(self.load("audition_recipe.json"))

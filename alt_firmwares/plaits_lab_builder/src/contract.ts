@@ -35,12 +35,13 @@ export type NormalizedChordTable = {
 // individual features. Every guard below tests against one of these lists AND
 // renders its rejection message from the same list, so the accepted range and
 // the text a caller of plaits-api.rubato.audio reads can never drift apart.
-const supportedSchemaVersions: readonly number[] = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
-const fourBankSchemaVersions: readonly number[] = [6, 7, 8, 9, 10, 11, 12, 13, 14];  // 32 slots
-const sparseSlotSchemaVersions: readonly number[] = [7, 8, 9, 10, 11, 12, 13, 14];   // empty slots
-const stereoEngineSchemaVersions: readonly number[] = [10, 11, 12, 13, 14];          // stereoEngines list; v13 = short FM bank
+const supportedSchemaVersions: readonly number[] = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+const fourBankSchemaVersions: readonly number[] = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15];  // 32 slots
+const sparseSlotSchemaVersions: readonly number[] = [7, 8, 9, 10, 11, 12, 13, 14, 15];   // empty slots
+const stereoEngineSchemaVersions: readonly number[] = [10, 11, 12, 13, 14, 15];          // stereoEngines list; v13 = short FM bank
 const sparseBankMinSchemaVersion = 11;                                       // gaps inside a bank
 const calibrationMinSchemaVersion = 14;                                      // CV calibration procedure
+const rovedMinSchemaVersion = 15;                                             // four-knob Ro'Ved panel
 
 // What /v1/catalog advertises as the newest recipe this builder understands.
 // Derived, not restated: the editor decides whether it may offer a feature by
@@ -90,8 +91,8 @@ export type NormalizedSlotBank = {
 };
 
 export type NormalizedRecipe = {
-  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14;
-  target: "mutable-instruments-plaits";
+  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15;
+  target: "mutable-instruments-plaits" | "plum-audio-roved";
   firmware: "rubato-plaits";
   // A null entry is an empty slot (v7 short banks); filled slots are engine ids.
   slots: (string | null)[];
@@ -443,8 +444,16 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
       `Only Plaits Palette recipe schema versions ${describeSchemaVersions(supportedSchemaVersions)} can be built.`,
     );
   }
-  if (candidate.target !== "mutable-instruments-plaits" || candidate.firmware !== "rubato-plaits") {
+  if (!["mutable-instruments-plaits", "plum-audio-roved"].includes(String(candidate.target))
+      || candidate.firmware !== "rubato-plaits") {
     throw new ContractError("unsupported_target", "That recipe targets a different firmware family.");
+  }
+  if (candidate.target === "plum-audio-roved"
+      && Number(candidate.schemaVersion) < rovedMinSchemaVersion) {
+    throw new ContractError(
+      "unsupported_schema",
+      `Ro'Ved builds require recipe schema version ${rovedMinSchemaVersion}.`,
+    );
   }
   if (candidate.output !== "audio-wav") {
     throw new ContractError("unsupported_output", "Only audio-installable WAV firmware is supported.");
@@ -497,7 +506,8 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
       || candidate.schemaVersion === 7 || candidate.schemaVersion === 8
       || candidate.schemaVersion === 9 || candidate.schemaVersion === 10
       || candidate.schemaVersion === 11 || candidate.schemaVersion === 12
-      || candidate.schemaVersion === 13 || candidate.schemaVersion === 14) {
+      || candidate.schemaVersion === 13 || candidate.schemaVersion === 14
+      || candidate.schemaVersion === 15) {
     const resources = candidate.resources;
     // v6 always carries index-keyed banks; v12 always carries per-slot banks (its
     // defining feature, 24 or 32 slots). v7-v11 mirror the editor: userDataBanks
@@ -508,17 +518,15 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
       || ((candidate.schemaVersion === 7 || candidate.schemaVersion === 8
         || candidate.schemaVersion === 9 || candidate.schemaVersion === 10
         || candidate.schemaVersion === 11) && candidate.slots.length === 32);
-    // v14 is the one version whose defining feature says nothing about
-    // resources: it means "this recipe wants the calibration procedure", which
-    // any palette may want, with or without custom FM banks. So it is the only
-    // version that accepts either resource shape — the banks themselves are
-    // validated exactly as under v13 when they are there.
+    // v14+ features say nothing about resources: v14 means "include the
+    // calibration procedure" and v15 means "target the Ro'Ved panel." Either
+    // can compose with any palette, with or without custom FM banks.
     if (!resources || typeof resources !== "object") {
       throw new ContractError("invalid_resources", "The recipe must contain only supported firmware resources.");
     }
     const resourceValues = resources as Record<string, unknown>;
     const carriesUserDataBanks = expectsUserDataBanks
-      || (candidate.schemaVersion === 14
+      || ((candidate.schemaVersion === 14 || candidate.schemaVersion === 15)
         && hasExactKeys(resourceValues, ["chordTables", "userDataBanks"]));
     const expectedKeys = carriesUserDataBanks ? ["chordTables", "userDataBanks"] : ["chordTables"];
     if (!hasExactKeys(resourceValues, expectedKeys)) {
@@ -528,7 +536,7 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     if (carriesUserDataBanks) {
       const rawBanks = resourceValues.userDataBanks;
       if (candidate.schemaVersion === 12 || candidate.schemaVersion === 13
-          || candidate.schemaVersion === 14) {
+          || candidate.schemaVersion === 14 || candidate.schemaVersion === 15) {
         slotBanks = normalizeSlotBanks(rawBanks, candidate.slots.length);
       } else {
         userDataBanks = normalizeUserDataBanks(rawBanks);
@@ -550,17 +558,17 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
       || candidate.schemaVersion === 6 || candidate.schemaVersion === 7 || candidate.schemaVersion === 8
       || candidate.schemaVersion === 9 || candidate.schemaVersion === 10 || candidate.schemaVersion === 11
       || candidate.schemaVersion === 12 || candidate.schemaVersion === 13
-      || candidate.schemaVersion === 14
+      || candidate.schemaVersion === 14 || candidate.schemaVersion === 15
     ? normalizeConfiguration(candidate, chordTables)
     : defaultConfiguration;
   // Per-engine stereo (schema 10): a stereoEngines list names the engines built
   // with the stereo render path. Only valid when the aux option is stereo.
   const stereoEngines = normalizeStereoEngines(candidate, configuration.initialOptions.auxOutput);
   return {
-    // Newest first: the calibration procedure needs a firmware that still has it
-    // compiled in, v14, and dominates all — unlike the rungs below it says
-    // nothing about the recipe's shape, only that the build must include the
-    // procedure. Then a per-slot custom bank with fewer than 32 patches (a
+    // Newest first: Ro'Ved needs the four-clickable-knob panel UI compiled in
+    // (v15) and dominates all. Then the calibration procedure needs v14; both
+    // say nothing about the recipe's resource shape. A per-slot custom bank
+    // with fewer than 32 patches (a
     // "short" FM bank) needs the firmware's variable-length Harmonics quantizer,
     // v13. Any other per-slot custom bank needs a v12 builder (only v12
     // keys banks by slot). Then a sparse bank (a gap kept in place) needs v11;
@@ -569,7 +577,8 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     // (v8); a short-bank recipe (a trailing empty slot) stays v7; a candidate that
     // carried v6 resources (even an empty custom-bank list, e.g. a 32-slot recipe)
     // stays v6; else v5.
-    schemaVersion: configuration.preferences.calibration ? 14
+    schemaVersion: candidate.target === "plum-audio-roved" ? 15
+      : configuration.preferences.calibration ? 14
       : slotBanks !== undefined
         ? (slotBanks.some((b) => b.bank.voices.length < patchesPerBank) ? 13 : 12)
       : hasSparseBank(slots) ? 11
@@ -578,7 +587,7 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
       : chordTables.length > maxLegacyChordTables ? 8
       : slots.some((slot) => slot === null) ? 7
       : (userDataBanks !== undefined ? 6 : 5),
-    target: "mutable-instruments-plaits",
+    target: candidate.target as NormalizedRecipe["target"],
     firmware: "rubato-plaits",
     slots,
     preferences: { ...configuration.preferences },
@@ -630,6 +639,9 @@ export async function computeManualKey(
     documentation,
     chordTables: recipe.resources.chordTables.map((table) => table.name),
     customBanks,
+    // The control instructions differ completely: Plaits has two buttons;
+    // Ro'Ved has four clickable knobs. Never share a cached guide between them.
+    target: recipe.target,
     // The guide documents the calibration procedure only for a build that has
     // it, so two recipes differing only in this preference are different guides
     // — without it they would share one cached PDF and half the readers would

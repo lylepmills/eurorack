@@ -154,6 +154,7 @@ def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]
         models.append({**engine, "locations": locations, "customBank": credit})
     return {
         "buildKey": build_key,
+        "target": recipe.get("target"),
         "slots": [
             {
                 "engine": by_id[engine_id] if engine_id is not None else None,
@@ -216,6 +217,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
     )
 
     output.parent.mkdir(parents=True, exist_ok=True)
+    roved = document.get("target") == "plum-audio-roved"
     page_width, page_height = letter
     margin = 0.56 * inch
     styles = getSampleStyleSheet()
@@ -345,7 +347,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
     )
     story: list[Any] = [
         Paragraph("RUBATO AUDIO  /  PLAITS PALETTE", kicker_style),
-        Paragraph("Your Plaits Field Guide", title_style),
+        Paragraph("Your Ro'Ved Field Guide" if roved else "Your Plaits Field Guide", title_style),
         Paragraph(
             f"A rack-side reference generated from the exact {bank_phrase} layout in this firmware recipe. "
             f"This guide contains {len(document['models'])} unique synthesis models.",
@@ -465,18 +467,45 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
     ]))
 
+    fourth_control = (
+        "Press and turn the HARMONICS knob until the model LEDs blink yellow; this selects the octave-switching frequency range. "
+        "Click TIMBRE + FREQUENCY together to open the alternate-firmware options menu. Click TIMBRE to walk forward to LIGHT 4, then click HARMONICS once, until it turns red. "
+        "Click TIMBRE + FREQUENCY again to exit. The FREQUENCY knob now controls the selected model's fourth parameter; for Mutable Instruments models, noon preserves the original sound."
+        if roved else
+        "Hold the right model button and turn HARMONICS until the model LEDs blink yellow; this selects the octave-switching frequency range. "
+        "Short-press both model buttons to open the alternate-firmware options menu. Use the left button to walk to LIGHT 4, then press the right button once, until it turns red. "
+        "Press both buttons again to exit. The FREQUENCY knob now controls the selected model's fourth parameter; for Mutable Instruments models, noon preserves the original sound."
+    )
+    options_intro = (
+        "Click TIMBRE + FREQUENCY together to enter or exit the options menu. The first seven lights are the menu: "
+        "click TIMBRE/FREQUENCY to move forward/backward between lights, and HARMONICS/MORPH to step forward/backward through a light's settings. "
+        "The light's color shows the current setting — green, red, and yellow, then the same three colors blinking for a fourth, fifth, or sixth setting — "
+        "and, on LIGHT 1, blinking fast for a seventh, eighth, or ninth."
+        if roved else
+        "Short-press both buttons at once to enter or exit the options menu. The first seven lights are the menu: "
+        "the left button moves between them, the right button steps through a light's settings, and the light's color shows the current one — "
+        "green, red, and yellow, then the same three colors blinking for a fourth, fifth, or sixth setting — "
+        "and, on LIGHT 1, blinking fast for a seventh, eighth, or ninth."
+    )
+    options_note = (
+        "LIGHT 1 applies to chord-capable models and lists the chord tables loaded in this build (up to nine). "
+        "LIGHT 3 stays dark, and the light navigation skips it, unless LIGHT 2 is set to a suboscillator — it has nothing to act on otherwise. "
+        "LIGHT 4 applies in octave-switching (frequency-locked) mode. LIGHT 6's LPG-decay setting applies only when TRIG is patched. "
+        "Outside the menu, click TIMBRE/FREQUENCY for next/previous model and HARMONICS/MORPH for next/previous bank."
+        if roved else
+        "LIGHT 1 applies to chord-capable models and lists the chord tables loaded in this build (up to nine). "
+        "LIGHT 3 stays dark, and the left button walks past it, unless LIGHT 2 is set to a suboscillator — it has nothing to act on otherwise. "
+        "LIGHT 4 applies in octave-switching (frequency-locked) mode. LIGHT 6's LPG-decay setting applies only when TRIG is patched. "
+        "Model navigation (linear or banked) is chosen when you build the firmware, not from this menu."
+    )
+
     story.extend([
         bank_map,
         Spacer(1, 0.18 * inch),
         Table(
             [[
                 Paragraph("FOURTH CONTROL", table_header_style),
-                Paragraph(
-                    "Hold the right model button and turn HARMONICS until the model LEDs blink yellow; this selects the octave-switching frequency range. "
-                    "Short-press both model buttons to open the alternate-firmware options menu. Use the left button to walk to LIGHT 4, then press the right button once, until it turns red. "
-                    "Press both buttons again to exit. The FREQUENCY knob now controls the selected model's fourth parameter; for Mutable Instruments models, noon preserves the original sound.",
-                    small_style,
-                ),
+                Paragraph(fourth_control, small_style),
             ]],
             colWidths=[1.1 * inch, 5.2 * inch],
             style=TableStyle([
@@ -491,22 +520,10 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         ),
         PageBreak(),
         Paragraph("Options menu", section_style),
-        Paragraph(
-            "Short-press both buttons at once to enter or exit the options menu. The first seven lights are the menu: "
-            "the left button moves between them, the right button steps through a light's settings, and the light's color shows the current one — "
-            "green, red, and yellow, then the same three colors blinking for a fourth, fifth, or sixth setting — "
-            "and, on LIGHT 1, blinking fast for a seventh, eighth, or ninth.",
-            intro_style,
-        ),
+        Paragraph(options_intro, intro_style),
         menu_table,
         Spacer(1, 0.1 * inch),
-        Paragraph(
-            "LIGHT 1 applies to chord-capable models and lists the chord tables loaded in this build (up to nine). "
-            "LIGHT 3 stays dark, and the left button walks past it, unless LIGHT 2 is set to a suboscillator — it has nothing to act on otherwise. "
-            "LIGHT 4 applies in octave-switching (frequency-locked) mode. LIGHT 6's LPG-decay setting applies only when TRIG is patched. "
-            "Model navigation (linear or banked) is chosen when you build the firmware, not from this menu.",
-            small_muted_style,
-        ),
+        Paragraph(options_note, small_muted_style),
     ])
 
     # Calibration, for the builds that asked for it. Most firmwares leave the
@@ -516,19 +533,27 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
     # described a gesture the firmware does not answer would be worse than no
     # page at all.
     if document.get("calibration"):
+        calibration_instructions = (
+            "This build includes the pitch-CV calibration procedure. "
+            "Hold the MORPH knob down while powering the module up to start it: the first light pulses green. "
+            "Patch 1V into V/OCT and click any knob — the light turns yellow. "
+            "Patch 3V and click any knob again. "
+            if roved else
+            "This build includes the pitch-CV calibration procedure. "
+            "Hold the RIGHT model button while powering the module up to start it: the first light pulses green. "
+            "Patch 1V into V/OCT and press either button — the light turns yellow. "
+            "Patch 3V and press either button again. "
+        )
         story.extend([
             Spacer(1, 0.18 * inch),
             Table(
                 [[
                     Paragraph("CALIBRATION", table_header_style),
                     Paragraph(
-                        "This build includes the pitch-CV calibration procedure. "
-                        "Hold the RIGHT model button while powering the module up to start it: the first light pulses green. "
-                        "Patch 1V into V/OCT and press either button — the light turns yellow. "
-                        "Patch 3V and press either button again. "
+                        calibration_instructions +
                         "The lights return to normal and the new calibration is saved. "
                         "If the two voltages are not two octaves apart, every light flashes red and nothing is written, "
-                        "so a mis-patched attempt leaves your module exactly as it was; press a button and try again. "
+                        "so a mis-patched attempt leaves your module exactly as it was; use any click and try again. "
                         "Powering the module off part-way through also changes nothing.",
                         small_style,
                     ),
@@ -682,7 +707,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         rightMargin=margin,
         topMargin=0.48 * inch,
         bottomMargin=0.52 * inch,
-        title="Your Plaits Field Guide",
+        title="Your Ro'Ved Field Guide" if roved else "Your Plaits Field Guide",
         author="Rubato Audio",
         subject="Recipe-specific Plaits Palette synthesis-model reference",
     )

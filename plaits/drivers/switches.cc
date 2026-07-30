@@ -26,6 +26,7 @@
 //
 // Driver for the 2 switches.
 
+#include "plaits/build_config.h"
 #include "plaits/drivers/switches.h"
 
 #include <algorithm>
@@ -42,7 +43,7 @@ struct SwitchDefinition {
 const SwitchDefinition switch_definitions[] = {
   { GPIOB, GPIO_Pin_7 },
   { GPIOB, GPIO_Pin_6 },
-#ifdef PLAITS_ROVED_PANEL
+#if PLAITS_ROVED_PANEL
   { GPIOB, GPIO_Pin_5 },
   { GPIOB, GPIO_Pin_4 },
 #endif  // PLAITS_ROVED_PANEL

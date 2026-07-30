@@ -95,6 +95,14 @@
 #define PLAITS_BUILD_ENABLE_CALIBRATION 0
 #endif
 
+// Plum Audio Ro'Ved replaces Plaits' two model buttons with four clickable
+// knobs. The DSP and analog hardware are Plaits-compatible; only the switch
+// GPIOs and UI gestures differ. Hosted recipes select this panel variant with
+// the `plum-audio-roved` target (schema v15).
+#ifndef PLAITS_ROVED_PANEL
+#define PLAITS_ROVED_PANEL 0
+#endif
+
 // The id a locally built (non-hosted) firmware stamps into saved settings. It
 // must equal what the builder mints for an all-default recipe, or switching
 // between a local build and a hosted default build resets options each way.

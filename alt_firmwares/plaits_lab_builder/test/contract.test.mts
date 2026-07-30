@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { approvedEngineIds, computeBuildKey, normalizeRecipe } from "../src/contract.ts";
+import { approvedEngineIds, computeBuildKey, computeManualKey, normalizeRecipe } from "../src/contract.ts";
 
 const fixture = JSON.parse(await readFile(new URL("../default_recipe.json", import.meta.url), "utf8"));
 
@@ -102,6 +102,57 @@ test("calibration is carried, version-gated, and type-checked", async () => {
   // served to someone who asked for the procedure.
   const identity = { sourceRevision: "source", toolchain: "toolchain", contract: "14" };
   assert.notEqual(await computeBuildKey(on, identity), await computeBuildKey(off, identity));
+});
+
+test("Ro'Ved is a schema-15 hardware target and changes build/manual identity", async () => {
+  const publicCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const chordCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_chord_tables/catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const byId = new Map(publicCatalog.engines.map((engine: {
+    id: string; packageId: string; version: string; digest: string;
+  }) => [engine.id, engine]));
+  const recipe = {
+    ...fixture,
+    schemaVersion: 15,
+    slots: fixture.slots.map((engineId: string) => {
+      const engine = byId.get(engineId)!;
+      return {
+        engine: engineId,
+        package: engine.packageId,
+        version: engine.version,
+        digest: engine.digest,
+      };
+    }),
+    preferences: { navigationMode: "linear", calibration: false },
+    initialOptions: {
+      lockedFrequencyKnob: "octaves", modelInput: "model", levelInput: "level",
+      auxOutput: "alternate-model", suboscillatorOctave: 0,
+      chordTable: chordCatalog.tables[0].id, holdOnTrigger: false,
+    },
+    resources: { chordTables: [structuredClone(chordCatalog.tables[0])] },
+  };
+  const plaits = normalizeRecipe(recipe);
+  const roved = normalizeRecipe({
+    ...recipe,
+    target: "plum-audio-roved",
+  });
+  assert.equal(plaits.schemaVersion, 5);
+  assert.equal(plaits.target, "mutable-instruments-plaits");
+  assert.equal(roved.schemaVersion, 15);
+  assert.equal(roved.target, "plum-audio-roved");
+  assert.throws(
+    () => normalizeRecipe({ ...recipe, schemaVersion: 14, target: "plum-audio-roved" }),
+    (error: { code?: string }) => error.code === "unsupported_schema",
+  );
+
+  const identity = { sourceRevision: "source", toolchain: "toolchain", contract: "15" };
+  assert.notEqual(await computeBuildKey(plaits, identity), await computeBuildKey(roved, identity));
+  assert.notEqual(await computeManualKey(plaits, "8"), await computeManualKey(roved, "8"));
 });
 
 test("build keys are stable and include the build identity", async () => {
@@ -746,7 +797,7 @@ test("per-engine stereo (stereoEngines) requires and normalizes to v10", async (
 // must name the range the guard actually accepts — it once still said "2
 // through 11" after v12 (per-slot custom FM banks) had been accepted.
 test("the unsupported-schema message names the range the guard accepts", () => {
-  const highest = 14;
+  const highest = 15;
   // Reports the schema code a version is rejected with, or null if the version
   // itself was accepted (a later invalid_slots / unapproved_package complaint
   // about the fixture's shape means the version passed this guard).
