@@ -36,7 +36,8 @@
   .prototype-grid output { color:var(--muted); font-variant-numeric:tabular-nums; }
   .prototype-grid small { color:var(--subtle); font-size:11px; }
   .prototype-grid .return { grid-column:1 / -1; }
-  @media (max-width:560px) { .prototype-grid { grid-template-columns:1fr; } .prototype-grid .return { grid-column:auto; } }
+  .prototype-grid .hold { grid-column:1 / -1; display:flex; align-items:center; gap:7px; color:var(--muted); font-size:12px; }
+  @media (max-width:560px) { .prototype-grid { grid-template-columns:1fr; } .prototype-grid .return, .prototype-grid .hold { grid-column:auto; } }
   .actions { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:16px; }
   button { border:1px solid var(--border); border-radius:9px; padding:9px 15px; background:var(--card); color:var(--ink); font-size:13px; font-weight:600; cursor:pointer; }
   button:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
@@ -98,23 +99,24 @@
         <h2>Unpatched attenuverters</h2>
         <span class="pill">Audition prototype</span>
       </div>
-      <p class="prototype-copy">Assumes the TIMBRE and MORPH CV inputs are unpatched. Noon is off; turn CCW for nearby, peaky variations or CW to roam across the control’s range. A new target is sampled on every Strike and returns to the panel value.</p>
+      <p class="prototype-copy">Assumes the TIMBRE and MORPH CV inputs are unpatched. Noon is off; turn CCW for nearby, peaky variations or CW to roam across the control’s range. Changing a randomizer sets its range; <strong>Strike</strong> samples the next target.</p>
       <div class="prototype-grid">
         <label>
           <span class="row"><strong>TIMBRE</strong><output id="randomizer-timbre-value">Off</output></span>
           <input id="randomizer-timbre" type="range" min="-1" max="1" step="0.01" value="0" />
-          <small>Last target <output id="randomizer-timbre-target">—</output></small>
+          <small>Target <output id="randomizer-timbre-target">—</output> · Engine now <output id="randomizer-timbre-active">—</output></small>
         </label>
         <label>
           <span class="row"><strong>MORPH</strong><output id="randomizer-morph-value">Off</output></span>
           <input id="randomizer-morph" type="range" min="-1" max="1" step="0.01" value="0" />
-          <small>Last target <output id="randomizer-morph-target">—</output></small>
+          <small>Target <output id="randomizer-morph-target">—</output> · Engine now <output id="randomizer-morph-active">—</output></small>
         </label>
         <label class="return">
           <span class="row"><strong>Return</strong><output id="randomizer-return-value">0.60 s</output></span>
           <input id="randomizer-return" type="range" min="0.05" max="4" step="0.05" value="0.6" />
-          <small>Prototype stand-in for Plaits’ internal decay envelope.</small>
+          <small>Time constant: after this long, 37% of the deviation remains.</small>
         </label>
+        <label class="hold"><input id="randomizer-hold" type="checkbox" /> Hold target for an unmistakable A/B; uncheck to return.</label>
       </div>
     </div>
     <div class="card">
@@ -142,6 +144,7 @@ const state = {
     timbre: 0,
     morph: 0,
     returnSeconds: 0.6,
+    hold: false,
     targets: { timbre: null, morph: null },
   },
 };
@@ -193,9 +196,10 @@ function sampleRandomizerTargets() {
 }
 
 function modulationDecayPerBlock(seconds) {
-  // Reach -60 dB after the selected return time. Plaits updates synthesis
-  // parameters once per 12-sample engine block, so send the block multiplier.
-  return Math.exp(Math.log(0.001) * 12 / (Math.max(0.05, seconds) * 48000));
+  // Treat the UI value as the exponential time constant, not the time to
+  // -60 dB. The old mapping made a displayed 0.60 s return half over in 60 ms,
+  // which hid most of the movement. Plaits updates parameters every 12 samples.
+  return Math.exp(-12 / (Math.max(0.05, seconds) * 48000));
 }
 
 function drawAudio(buffer, spectrum) {
@@ -367,11 +371,31 @@ for (const id of ['timbre', 'morph']) {
   $(`randomizer-${id}`).addEventListener('input', (event) => {
     state.randomizers[id] = Number(event.target.value);
     updateRandomizerReadout(id);
+    if (audio.running) liveStatus('Randomizer changed — press Strike to sample a new target.');
   });
 }
 $('randomizer-return').addEventListener('input', (event) => {
   state.randomizers.returnSeconds = Number(event.target.value);
   $('randomizer-return-value').textContent = `${state.randomizers.returnSeconds.toFixed(2)} s`;
+});
+$('randomizer-hold').addEventListener('change', (event) => {
+  state.randomizers.hold = event.target.checked;
+  if (!(audio.running && audio.node)) return;
+  if (state.randomizers.targets.timbre === null) {
+    liveStatus('Hold enabled — press Strike to sample a target.');
+    return;
+  }
+  audio.node.port.postMessage({
+    type: 'modulation',
+    timbre: state.randomizers.targets.timbre,
+    morph: state.randomizers.targets.morph,
+    decayPerBlock: state.randomizers.hold
+      ? 1
+      : modulationDecayPerBlock(state.randomizers.returnSeconds),
+  });
+  liveStatus(state.randomizers.hold
+    ? 'Holding the current target. Press Strike to resample.'
+    : 'Returning to the panel values.');
 });
 
 // ---- Live audition (WebAssembly + AudioWorklet) ----------------------------
@@ -455,6 +479,10 @@ async function startLive() {
       if (!e.data) return;
       if (e.data.type === 'error') liveStatus('engine error: ' + e.data.message, true);
       else if (e.data.type === 'ready') applyStereoCapability(e.data.stereoCapable);
+      else if (e.data.type === 'modulation-state') {
+        $('randomizer-timbre-active').textContent = e.data.timbre.toFixed(2);
+        $('randomizer-morph-active').textContent = e.data.morph.toFixed(2);
+      }
     };
     applyMonitor();
     node.port.postMessage({ type: 'env', value: Number($('live-env').value) });
@@ -489,9 +517,14 @@ $('live-strike').addEventListener('click', async () => {
       type: 'modulation',
       timbre: targets.timbre,
       morph: targets.morph,
-      decayPerBlock: modulationDecayPerBlock(state.randomizers.returnSeconds),
+      decayPerBlock: state.randomizers.hold
+        ? 1
+        : modulationDecayPerBlock(state.randomizers.returnSeconds),
     });
     audio.node.port.postMessage({ type: 'trigger' });
+    liveStatus(state.randomizers.hold
+      ? 'New target applied and held.'
+      : `New target applied; returning with a ${state.randomizers.returnSeconds.toFixed(2)} s time constant.`);
   }
 });
 $('live-env').addEventListener('change', (e) => { if (audio.running && audio.node) audio.node.port.postMessage({ type: 'env', value: Number(e.target.value) }); });
