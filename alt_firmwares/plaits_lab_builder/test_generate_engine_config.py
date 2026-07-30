@@ -25,7 +25,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
         return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
 
     def test_catalog_matches_the_approved_product_catalog(self) -> None:
-        self.assertEqual(len(CATALOG), 79)
+        self.assertEqual(len(CATALOG), 77)
 
     def test_worker_and_container_schema_ranges_stay_in_sync(self) -> None:
         # The public Worker validates first, then sends its normalized recipe to
@@ -496,9 +496,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
             "PhaseWeaveEngine",
             "SidebandEngine",
             "AttractorEngine",
-            "UndertowEngine",
             "ReedPipeEngine",
-            "PhaseFlockEngine",
             "RulefieldEngine",
             "SpectralSpiralEngine",
         ]
@@ -526,7 +524,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
     def fourth_bank_slots(self) -> list[str]:
         return self.load("default_recipe.json")["slots"] + [
             "loopback", "lockstep", "tapfield", "phase-weave",
-            "sideband-bank", "attractor", "undertow", "reed-pipe",
+            "sideband-bank", "attractor", "gendy", "reed-pipe",
         ]
 
     def test_fourth_bank_recipe_renders_a_32_engine_registry(self) -> None:

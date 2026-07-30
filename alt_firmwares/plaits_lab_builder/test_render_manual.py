@@ -44,7 +44,7 @@ class RenderManualTest(unittest.TestCase):
             "output": "audio-wav",
             "slots": self.load("default_recipe.json")["slots"] + [
                 "loopback", "lockstep", "tapfield", "phase-weave",
-                "sideband-bank", "attractor", "undertow", "reed-pipe",
+                "sideband-bank", "attractor", "gendy", "reed-pipe",
             ],
             "preferences": dict(DEFAULT_CONFIGURATION["preferences"]),
             "initialOptions": dict(DEFAULT_CONFIGURATION["initialOptions"]),
