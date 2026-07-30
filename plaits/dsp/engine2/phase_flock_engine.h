@@ -39,7 +39,8 @@ class PhaseFlockEngine : public Engine {
  private:
   void Scatter();
 
-  float phase_[kNumPhaseFlockOscillators];
+  float sine_[kNumPhaseFlockOscillators];
+  float cosine_[kNumPhaseFlockOscillators];
   int scatter_count_;
   bool reset_pending_;
 

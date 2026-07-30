@@ -41,7 +41,11 @@ class UndertowEngine : public Engine {
   float frequency_[kNumUndertowVoices];
   float main_amplitude_[kNumUndertowVoices];
   float aux_amplitude_[kNumUndertowVoices];
+  float next_blep_[kNumUndertowVoices];
+  bool pulse_high_[kNumUndertowVoices];
   float colour_;
+  float pulse_width_[kNumUndertowVoices];
+  bool pulse_mode_;
 
   DISALLOW_COPY_AND_ASSIGN(UndertowEngine);
 };
