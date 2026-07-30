@@ -2524,6 +2524,106 @@ void ValidateLPCDiscreteFrameBounds() {
       kAudioBlockSize);
 }
 
+void ValidateOneKnobEnvelope() {
+  // The compact tables must remain perceptually transparent relative to the
+  // original Elements formulas.
+  float max_quartic_error = 0.0f;
+  float max_exponential_error = 0.0f;
+  float max_rate_relative_error = 0.0f;
+  const float normalization = 1.0f - expf(-4.0f);
+  const float control_rate = kSampleRate / static_cast<float>(kBlockSize);
+  const float min_increment = 1.0f / (8.0f * control_rate);
+  const float max_increment = 1.0f / (0.0005f * control_rate);
+  const float gamma = 0.175f;
+  const float a = powf(max_increment, -gamma);
+  const float b = powf(min_increment, -gamma);
+  for (int i = 0; i <= 10000; ++i) {
+    const float t = static_cast<float>(i) / 10000.0f;
+    const float expected_quartic = powf(t, 3.32f);
+    const float expected_exponential =
+        (1.0f - expf(-4.0f * t)) / normalization;
+    const float expected_rate =
+        powf(a + (b - a) * t, -1.0f / gamma);
+    max_quartic_error = max(
+        max_quartic_error,
+        fabsf(OneKnobEnvelope::TestQuarticCurve(t) - expected_quartic));
+    max_exponential_error = max(
+        max_exponential_error,
+        fabsf(
+            OneKnobEnvelope::TestExponentialCurve(t) -
+            expected_exponential));
+    max_rate_relative_error = max(
+        max_rate_relative_error,
+        fabsf(OneKnobEnvelope::TestTimeIncrement(t) / expected_rate - 1.0f));
+  }
+  if (max_quartic_error > 0.00025f ||
+      max_exponential_error > 0.00050f ||
+      max_rate_relative_error > 0.0017f) {
+    fprintf(
+        stderr,
+        "One-knob envelope table error: quartic=%f exponential=%f rate=%f\n",
+        max_quartic_error,
+        max_exponential_error,
+        max_rate_relative_error);
+    abort();
+  }
+
+  // A narrow trigger at the pluck end must complete the one-shot; treating
+  // Plaits' usual 1 ms trigger as an ADSR gate would cut the attack off.
+  OneKnobEnvelope envelope;
+  envelope.Init();
+  float peak = 0.0f;
+  for (int block = 0; block < 800; ++block) {
+    const bool rising = block == 0;
+    const bool gate = block == 0;
+    peak = max(peak, envelope.Process(0.0f, gate, rising));
+  }
+  if (peak < 0.999f || envelope.value() > 0.001f) {
+    fprintf(
+        stderr,
+        "One-knob pluck did not complete: peak=%f tail=%f\n",
+        peak,
+        envelope.value());
+    abort();
+  }
+
+  // The midpoint settles at half sustain while held, then follows the same
+  // slow Elements release when the gate falls.
+  envelope.Init();
+  for (int block = 0; block < 16000; ++block) {
+    envelope.Process(0.5f, true, block == 0);
+  }
+  if (fabsf(envelope.value() - 0.5f) > 0.001f) {
+    fprintf(stderr, "One-knob midpoint sustain=%f\n", envelope.value());
+    abort();
+  }
+  for (int block = 0; block < 16000; ++block) {
+    envelope.Process(0.5f, false, false);
+  }
+  if (envelope.value() > 0.001f) {
+    fprintf(stderr, "One-knob midpoint release tail=%f\n", envelope.value());
+    abort();
+  }
+
+  // The right edge is a fast gate: full sustain while high, silence shortly
+  // after release.
+  envelope.Init();
+  for (int block = 0; block < 500; ++block) {
+    envelope.Process(1.0f, true, block == 0);
+  }
+  if (envelope.value() < 0.999f) {
+    fprintf(stderr, "One-knob gated sustain=%f\n", envelope.value());
+    abort();
+  }
+  for (int block = 0; block < 500; ++block) {
+    envelope.Process(1.0f, false, false);
+  }
+  if (envelope.value() > 0.001f) {
+    fprintf(stderr, "One-knob gated release tail=%f\n", envelope.value());
+    abort();
+  }
+}
+
 void TestExperimentalEngines() {
   printf("Validating LPC discrete frame bounds...\n");
   fflush(stdout);
@@ -2541,6 +2641,9 @@ void TestExperimentalEngines() {
   fflush(stdout);
   ValidateClockedChiptuneLevelVca();
   ValidateAutoLevelDecayRouting();
+  printf("Validating one-knob envelope...\n");
+  fflush(stdout);
+  ValidateOneKnobEnvelope();
   printf("Validating selectable chord tables...\n");
   fflush(stdout);
   BufferAllocator chord_allocator(ram_block, sizeof(ram_block));

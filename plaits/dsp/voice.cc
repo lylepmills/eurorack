@@ -69,6 +69,10 @@ void Voice::Init(BufferAllocator* allocator) {
 
   decay_envelope_.Init();
   lpg_envelope_.Init();
+#if PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE
+  one_knob_envelope_.Init();
+  one_knob_envelope_active_ = false;
+#endif
   
   trigger_state_ = false;
   previous_note_ = 0.0f;
@@ -157,6 +161,10 @@ void Voice::Render(
 #endif
 
   bool level_patched = modulations.level_patched;
+#if PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE
+  const bool one_knob_envelope_mode =
+      patch.locked_frequency_pot_option == 4;
+#endif
   float patch_decay = patch.decay;
   if (patch.locked_frequency_pot_option == 3) {
     patch_decay = patch.freqlock_param;
@@ -173,7 +181,15 @@ void Voice::Render(
 
   const bool rising_edge = trigger_state_ && !previous_trigger_state;
   if (rising_edge && !level_patched) {
+#if PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE
+    // The alternate envelope supplies the LPG's input level directly. Stock
+    // mode keeps the original vactrol ping.
+    if (!one_knob_envelope_mode) {
+      lpg_envelope_.Trigger();
+    }
+#else
     lpg_envelope_.Trigger();
+#endif
   }
   if (patch.attenuverter_mode != previous_attenuverter_mode_) {
     if (patch.attenuverter_mode == ATTENUVERTER_MODE_STEP) {
@@ -267,6 +283,28 @@ void Voice::Render(
 
   decay_envelope_.Process(short_decay * 2.0f);
 
+  float internal_envelope = decay_envelope_.value();
+#if PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE
+  // The option is meaningful only with TRIG patched. Reset it when inactive so
+  // selecting the mode later never revives an envelope from an old note. If it
+  // is selected while a gate is already high, start an attack immediately
+  // rather than waiting for a second gate cycle.
+  const bool use_one_knob_envelope =
+      one_knob_envelope_mode && modulations.trigger_patched;
+  const bool start_one_knob_envelope =
+      rising_edge ||
+      (use_one_knob_envelope && !one_knob_envelope_active_ && trigger_state_);
+  if (use_one_knob_envelope) {
+    internal_envelope = one_knob_envelope_.Process(
+        patch.freqlock_param,
+        trigger_state_,
+        start_one_knob_envelope);
+  } else if (one_knob_envelope_active_) {
+    one_knob_envelope_.Init();
+  }
+  one_knob_envelope_active_ = use_one_knob_envelope;
+#endif
+
   float compressed_level = 1.3f * modulations_level / (0.3f + fabsf(modulations_level));
   CONSTRAIN(compressed_level, 0.0f, 1.0f);
   p.accent = level_patched ? compressed_level : 0.8f;
@@ -345,7 +383,7 @@ void Voice::Render(
       modulations.frequency,
       use_internal_envelope,
       internal_envelope_amplitude * \
-          decay_envelope_.value() * decay_envelope_.value() * 48.0f,
+          internal_envelope * internal_envelope * 48.0f,
       1.0f,
       -119.0f,
       120.0f);
@@ -356,7 +394,7 @@ void Voice::Render(
       modulations.timbre_patched || randomize_timbre,
       modulations_timbre,
       use_internal_envelope,
-      internal_envelope_amplitude_timbre * decay_envelope_.value(),
+      internal_envelope_amplitude_timbre * internal_envelope,
       0.0f,
       0.0f,
       1.0f);
@@ -367,7 +405,7 @@ void Voice::Render(
       modulations.morph_patched || randomize_morph,
       modulations_morph,
       use_internal_envelope,
-      internal_envelope_amplitude * decay_envelope_.value(),
+      internal_envelope_amplitude * internal_envelope,
       0.0f,
       0.0f,
       1.0f);
@@ -459,6 +497,15 @@ void Voice::Render(
     
     if (level_patched) {
       lpg_envelope_.ProcessLP(compressed_level, short_decay, decay_tail, hf);
+#if PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE
+    } else if (use_one_knob_envelope) {
+      // Feed the same envelope to the synthesis modulations and to the LPG.
+      // ProcessLP retains Plaits' colour-dependent vactrol tail, so LPG COLOUR
+      // and the regular DECAY setting remain useful rather than being silently
+      // replaced by the new shape control.
+      lpg_envelope_.ProcessLP(
+          internal_envelope, short_decay, decay_tail, hf);
+#endif
     } else {
       const float attack = NoteToFrequency(p.note) * float(kBlockSize) * 2.0f;
       lpg_envelope_.ProcessPing(attack, short_decay, decay_tail, hf);

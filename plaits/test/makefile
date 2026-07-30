@@ -23,6 +23,7 @@ CC_FILES       = algorithms.cc \
 		chord_bank.cc \
 		chord_engine.cc \
 		dx_units.cc \
+		envelope.cc \
 		fm_engine.cc \
 		formant_speech_engine.cc \
 		gendy_engine.cc \

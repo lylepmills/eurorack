@@ -112,7 +112,10 @@ bool Settings::Init() {
   CONSTRAIN(attenuverter_mode, 0, 2);
   state_.engine = static_cast<uint8_t>(
       saved_engine | (attenuverter_mode << 5));
-  CONSTRAIN(state_.locked_frequency_pot_option, 0, 3);
+  CONSTRAIN(
+      state_.locked_frequency_pot_option,
+      0,
+      3 + PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE);
   CONSTRAIN(state_.model_cv_option, 0, 3);
   CONSTRAIN(state_.level_cv_option, 0, 2);
   CONSTRAIN(state_.aux_output_option, 0, 2);

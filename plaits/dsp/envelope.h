@@ -125,6 +125,62 @@ class DecayEnvelope {
   DISALLOW_COPY_AND_ASSIGN(DecayEnvelope);
 };
 
+// Gate-aware, one-knob envelope adapted from Elements' exciter envelope.
+//
+// The control travels through three regions:
+//   0.0 .. 0.4  one-shot AD, from a short pluck to a slow swell
+//   0.4 .. 0.6  the same slow attack/decay, with sustain rising from 0 to 1
+//   0.6 .. 1.0  full sustain, with attack/release accelerating toward the end
+//
+// Elements treats the whole range as an ADSR. Plaits is normally driven by
+// short trigger pulses rather than keyboard gates, so the zero-sustain region
+// deliberately ignores the falling edge and completes its AD cycle. The
+// sustain region follows the gate and releases as soon as it goes low.
+//
+// Process is called once per Plaits audio block. Curve and rate lookup tables
+// live in envelope.cc; their compact fixed-point representation keeps the
+// complete feature below 1 KB of table data without evaluating powf/expf in the
+// audio callback.
+class OneKnobEnvelope {
+ public:
+  OneKnobEnvelope() { }
+  ~OneKnobEnvelope() { }
+
+  void Init();
+
+  float Process(float shape, bool gate, bool rising_edge);
+
+  inline float value() const { return value_; }
+
+#if defined(TEST)
+  // Host-test access to the two approximations. These are not part of the
+  // firmware API and compile out of production builds.
+  static float TestQuarticCurve(float phase);
+  static float TestExponentialCurve(float phase);
+  static float TestTimeIncrement(float time);
+#endif
+
+ private:
+  enum Segment {
+    SEGMENT_ATTACK,
+    SEGMENT_DECAY,
+    SEGMENT_SUSTAIN,
+    SEGMENT_RELEASE,
+    SEGMENT_DONE
+  };
+
+  static float QuarticCurve(float phase);
+  static float ExponentialCurve(float phase);
+  static float TimeIncrement(float time);
+
+  Segment segment_;
+  float phase_;
+  float start_value_;
+  float value_;
+
+  DISALLOW_COPY_AND_ASSIGN(OneKnobEnvelope);
+};
+
 }  // namespace plaits
 
 #endif  // PLAITS_DSP_ENVELOPE_H_
