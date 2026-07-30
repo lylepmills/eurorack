@@ -187,6 +187,7 @@ def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]
         # gesture, so only that build's guide documents it.
         "calibration": build.enable_calibration == 1,
         "colorBlindMode": color_blind_mode,
+        "lockedFrequencyPotOption": build.locked_frequency_pot_option,
     }
 
 
@@ -507,7 +508,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
             "Click TIMBRE + FREQUENCY together to open the alternate-firmware options menu. Click TIMBRE to walk forward to LIGHT 4, then click HARMONICS once, until it uses medium brightness. "
             "Click TIMBRE + FREQUENCY again to exit. The FREQUENCY knob now controls the selected model's fourth parameter; for Mutable Instruments models, noon preserves the original sound."
             if roved else
-            "Hold the right model button and turn HARMONICS until the model LEDs blink; this selects the octave-switching frequency range. "
+            "Hold the right button and turn HARMONICS until the model LEDs blink; this selects the octave-switching frequency range. "
             "Short-press both model buttons to open the alternate-firmware options menu. Use the left button to walk to LIGHT 4, then press the right button once, until it uses medium brightness. "
             "Press both buttons again to exit. The FREQUENCY knob now controls the selected model's fourth parameter; for Mutable Instruments models, noon preserves the original sound."
         )
@@ -528,7 +529,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
             "Click TIMBRE + FREQUENCY together to open the alternate-firmware options menu. Click TIMBRE to walk forward to LIGHT 4, then click HARMONICS once, until it turns red. "
             "Click TIMBRE + FREQUENCY again to exit. The FREQUENCY knob now controls the selected model's fourth parameter; for Mutable Instruments models, noon preserves the original sound."
             if roved else
-            "Hold the right model button and turn HARMONICS until the model LEDs blink yellow; this selects the octave-switching frequency range. "
+            "Hold the right button and turn HARMONICS until the model LEDs blink yellow; this selects the octave-switching frequency range. "
             "Short-press both model buttons to open the alternate-firmware options menu. Use the left button to walk to LIGHT 4, then press the right button once, until it turns red. "
             "Press both buttons again to exit. The FREQUENCY knob now controls the selected model's fourth parameter; for Mutable Instruments models, noon preserves the original sound."
         )
@@ -553,7 +554,8 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         if roved else
         "LIGHT 1 applies to chord-capable models and lists the chord tables loaded in this build (up to nine). "
         "LIGHT 3 stays dark, and the left button walks past it, unless LIGHT 2 is set to a suboscillator — it has nothing to act on otherwise. "
-        "LIGHT 4 applies in octave-switching (frequency-locked) mode. LIGHT 6's LPG-decay and Auto settings apply only when TRIG is patched. "
+        "LIGHT 4 applies in octave-switching (frequency-locked) mode. Whenever LIGHT 4 is not Octaves, hold the right button and turn MORPH to change octaves. "
+        "LIGHT 6's LPG-decay and Auto settings apply only when TRIG is patched. "
         "Auto sends LEVEL to LPG decay on ordinary oscillator models, but keeps LEVEL as velocity/accent on models with their own envelope. "
         "Model navigation (linear or banked) is chosen when you build the firmware, not from this menu."
     )
@@ -604,6 +606,33 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
             ]),
         ),
+    ])
+    if not roved and document.get("lockedFrequencyPotOption") != 0:
+        story.extend([
+            Spacer(1, 0.12 * inch),
+            Table(
+                [[
+                    Paragraph("LOCKED OCTAVES", table_header_style),
+                    Paragraph(
+                        "This build gives FREQUENCY another job, but octave switching is still available. "
+                        "Hold the right button and turn MORPH. The lights climb with the selected octave; "
+                        "all eight lights means the highest octave.",
+                        small_style,
+                    ),
+                ]],
+                colWidths=[1.1 * inch, 5.2 * inch],
+                style=TableStyle([
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#EFECE3")),
+                    ("BOX", (0, 0), (-1, -1), 0.5, line),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                    ("TOPPADDING", (0, 0), (-1, -1), 7),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+                ]),
+            ),
+        ])
+    story.extend([
         PageBreak(),
         Paragraph("Options menu", section_style),
         Paragraph(options_intro, intro_style),
@@ -666,7 +695,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
                 "Powering the module off part-way through also changes nothing."
                 if roved else
                 "This build includes the pitch-CV calibration procedure. "
-                "Hold the RIGHT model button while powering the module up to start it: the first light pulses at the brightest level. "
+                "Hold the RIGHT button while powering the module up to start it: the first light pulses at the brightest level. "
                 "Patch 1V into V/OCT and press either button — the light becomes dim. "
                 "Patch 3V and press either button again. "
                 "The lights return to normal and the new calibration is saved. "
@@ -686,7 +715,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
                 "Powering the module off part-way through also changes nothing."
                 if roved else
                 "This build includes the pitch-CV calibration procedure. "
-                "Hold the RIGHT model button while powering the module up to start it: the first light pulses green. "
+                "Hold the RIGHT button while powering the module up to start it: the first light pulses green. "
                 "Patch 1V into V/OCT and press either button — the light turns yellow. "
                 "Patch 3V and press either button again. "
                 "The lights return to normal and the new calibration is saved. "

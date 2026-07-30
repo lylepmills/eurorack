@@ -66,6 +66,7 @@ class PotController {
     was_catching_up_ = false;
 
     main_parameter_ = main_parameter;
+    default_hidden_parameter_ = hidden_parameter;
     hidden_parameter_ = hidden_parameter;
     lp_coefficient_ = lp_coefficient;
 
@@ -77,10 +78,19 @@ class PotController {
   }
   
   inline void Lock() {
+    Lock(default_hidden_parameter_);
+  }
+
+  // Temporarily route this gesture to a different hidden parameter. Unlock()
+  // restores the binding supplied to Init(), so one physical knob can expose
+  // different held-button controls without changing its normal catch-up
+  // behavior.
+  inline void Lock(float* hidden_parameter) {
     if (state_ == POT_STATE_LOCKING || state_ == POT_STATE_HIDDEN_PARAMETER) {
       return;
     }
-    if (hidden_parameter_) {
+    if (hidden_parameter) {
+      hidden_parameter_ = hidden_parameter;
       was_catching_up_ = state_ == POT_STATE_CATCHING_UP;
       state_ = POT_STATE_LOCKING;
     }
@@ -96,10 +106,12 @@ class PotController {
     } else {
       state_ = POT_STATE_TRACKING;
     }
+    hidden_parameter_ = default_hidden_parameter_;
   }
   
   inline void Realign() {
     state_ = POT_STATE_TRACKING;
+    hidden_parameter_ = default_hidden_parameter_;
   }
   
   inline void ProcessControlRate(float adc_value) {
@@ -158,6 +170,7 @@ class PotController {
   bool was_catching_up_;
   
   float* main_parameter_;
+  float* default_hidden_parameter_;
   float* hidden_parameter_;
   float lp_coefficient_;
   float value_;

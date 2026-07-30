@@ -158,7 +158,11 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
   pitch_lp_ = 0.0f;
   data_transfer_progress_ = 0.0f;
 
-  locked_octave_ = 4;
+  // LoadState() restored locked_octave_. Keep its continuous counterpart ready
+  // for the right-button + MORPH shortcut without overwriting the saved octave.
+  locked_octave_control_ = static_cast<float>(locked_octave_) / 8.0f;
+  locked_octave_gesture_armed_ = false;
+  editing_locked_octave_ = false;
 
 #if PLAITS_BUILD_ENABLE_CALIBRATION
   // Calibration state is initialized under the gate along with everything else
@@ -444,7 +448,13 @@ void Ui::UpdateLEDs() {
 
     case UI_MODE_DISPLAY_OCTAVE:
       {
-        int octave = static_cast<float>(octave_ * 11.0f);
+        // The right-button + MORPH shortcut has nine octave choices but only
+        // eight model lights. The first eight choices climb one light at a
+        // time; all lights indicate the ninth/highest octave. Existing hidden
+        // octave/range editing keeps its original display.
+        int octave = editing_locked_octave_
+            ? (locked_octave_ == 8 ? 10 : locked_octave_ + 1)
+            : static_cast<int>(octave_ * 11.0f);
         for (int i = 0; i < 8; ++i) {
           LedColor color = LED_COLOR_OFF;
           if (octave == 0) {
@@ -720,14 +730,28 @@ void Ui::ReadSwitches() {
           pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].Lock();
           pots_[POTS_ADC_CHANNEL_HARMONICS_POT].Lock();
           pots_[POTS_ADC_CHANNEL_FM_ATTENUVERTER].Lock();
+          // Once FREQUENCY is assigned to the fourth macro, aux crossfade, or
+          // decay, preserve octave access with right button + MORPH. The
+          // dynamic hidden target freezes MORPH itself and restores its normal
+          // decay binding on release.
+          if (patch_->locked_frequency_pot_option != 0) {
+            locked_octave_control_ =
+                static_cast<float>(locked_octave_) / 8.0f;
+            pots_[POTS_ADC_CHANNEL_MORPH_POT].Lock(
+                &locked_octave_control_);
+            locked_octave_gesture_armed_ = true;
+          }
         }
 
-        if (pots_[POTS_ADC_CHANNEL_MORPH_POT].editing_hidden_parameter() ||
+        if ((pots_[POTS_ADC_CHANNEL_MORPH_POT].editing_hidden_parameter() &&
+             !editing_locked_octave_) ||
             pots_[POTS_ADC_CHANNEL_TIMBRE_POT].editing_hidden_parameter()) {
           mode_ = UI_MODE_DISPLAY_ALTERNATE_PARAMETERS;
         }
 
-        if (pots_[POTS_ADC_CHANNEL_HARMONICS_POT].editing_hidden_parameter() ||
+        if ((pots_[POTS_ADC_CHANNEL_MORPH_POT].editing_hidden_parameter() &&
+             editing_locked_octave_) ||
+            pots_[POTS_ADC_CHANNEL_HARMONICS_POT].editing_hidden_parameter() ||
             pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].editing_hidden_parameter() ||
             pots_[POTS_ADC_CHANNEL_FM_ATTENUVERTER].editing_hidden_parameter()) {
           mode_ = UI_MODE_DISPLAY_OCTAVE;
@@ -747,6 +771,8 @@ void Ui::ReadSwitches() {
         if (switches_.released(Switch(0)) && !ignore_release_[0]) {
           Navigate(0);
         } else if (switches_.released(Switch(1)) && !ignore_release_[1]) {
+          locked_octave_gesture_armed_ = false;
+          editing_locked_octave_ = false;
           Navigate(1);
         }
 #endif  // PLAITS_ROVED_PANEL
@@ -757,13 +783,19 @@ void Ui::ReadSwitches() {
     case UI_MODE_DISPLAY_OCTAVE:
       for (int i = 0; i < SWITCH_LAST; ++i) {
         if (switches_.released(Switch(i))) {
+          const bool save_locked_octave = editing_locked_octave_;
           pots_[POTS_ADC_CHANNEL_TIMBRE_POT].Unlock();
           pots_[POTS_ADC_CHANNEL_MORPH_POT].Unlock();
           pots_[POTS_ADC_CHANNEL_HARMONICS_POT].Unlock();
           pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].Unlock();
           pots_[POTS_ADC_CHANNEL_FM_ATTENUVERTER].Unlock();
+          locked_octave_gesture_armed_ = false;
+          editing_locked_octave_ = false;
           press_time_[i] = 0;
           mode_ = UI_MODE_NORMAL;
+          if (save_locked_octave) {
+            SaveState();
+          }
         }
       }
       break;
@@ -903,6 +935,12 @@ void Ui::ReadSwitches() {
 void Ui::ProcessPotsHiddenParameters() {
   for (int i = 0; i < POTS_ADC_CHANNEL_LAST; ++i) {
     pots_[i].ProcessUIRate();
+  }
+  if (locked_octave_gesture_armed_ &&
+      pots_[POTS_ADC_CHANNEL_MORPH_POT].editing_hidden_parameter()) {
+    editing_locked_octave_ = true;
+    locked_octave_ = static_cast<uint8_t>(
+        octave_quantizer_.Process(locked_octave_control_));
   }
 }
 

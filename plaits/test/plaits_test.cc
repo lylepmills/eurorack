@@ -24,6 +24,7 @@
 
 #include "plaits/dsp/dsp.h"
 #include "plaits/build_config.h"
+#include "plaits/pot_controller.h"
 
 #include "plaits/dsp/chords/chord_bank.h"
 
@@ -2176,6 +2177,51 @@ int PeakFrameAmplitude(const Voice::Frame* frames, size_t size) {
   return peak;
 }
 
+void ValidateDynamicHiddenPotRouting() {
+  float main = 0.5f;
+  float default_hidden = 0.3f;
+  float temporary_hidden = 0.0f;
+  PotController pot;
+  pot.Init(&main, &default_hidden, 1.0f, 1.0f, 0.0f);
+
+  pot.ProcessControlRate(0.5f);
+  pot.ProcessUIRate();
+  pot.Lock(&temporary_hidden);
+  pot.ProcessControlRate(0.75f);
+  pot.ProcessUIRate();
+  if (!pot.editing_hidden_parameter() ||
+      fabsf(main - 0.5f) > 0.001f ||
+      fabsf(default_hidden - 0.3f) > 0.001f ||
+      fabsf(temporary_hidden - 0.75f) > 0.001f) {
+    fprintf(stderr,
+        "Temporary hidden pot routing changed the wrong parameter\n");
+    abort();
+  }
+
+  // Releasing after an edited gesture must restore the knob's ordinary hidden
+  // target.
+  pot.Unlock();
+  pot.Lock();
+  pot.ProcessControlRate(1.0f);
+  pot.ProcessUIRate();
+  if (!pot.editing_hidden_parameter() ||
+      fabsf(default_hidden - 1.0f) > 0.001f ||
+      fabsf(temporary_hidden - 0.75f) > 0.001f) {
+    fprintf(stderr,
+        "Temporary hidden pot routing did not restore the default target\n");
+    abort();
+  }
+
+  // A short right-button press takes the Realign path through Navigate.
+  pot.Realign();
+  pot.ProcessControlRate(0.25f);
+  if (fabsf(main - 0.25f) > 0.001f) {
+    fprintf(stderr,
+        "Temporary hidden pot routing did not restore normal tracking\n");
+    abort();
+  }
+}
+
 void ValidateClockedChiptuneLevelVca() {
   BufferAllocator allocator(ram_block, sizeof(ram_block));
   Voice voice;
@@ -2284,6 +2330,9 @@ void TestExperimentalEngines() {
   printf("Validating the shared scale bank...\n");
   fflush(stdout);
   ValidateScaleVoiceBank();
+  printf("Validating held-button pot routing...\n");
+  fflush(stdout);
+  ValidateDynamicHiddenPotRouting();
   printf("Validating automatic LEVEL routing and clocked Chiptune VCA...\n");
   fflush(stdout);
   ValidateClockedChiptuneLevelVca();

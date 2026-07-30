@@ -148,10 +148,35 @@ class RenderManualTest(unittest.TestCase):
             output = Path(temp_dir) / "auto-level.pdf"
             render_pdf(manual_document(recipe), output)
             printed = pdf_strings(output)
-            self.assertIn("Auto: decay or velocity", printed)
-            self.assertIn("Auto sends LEVEL to LPG decay", printed)
-            self.assertIn("but keeps LEVEL as", printed)
-            self.assertIn("velocity/accent on models with their own envelope", printed)
+            joined = printed.replace(")(", " ")
+            self.assertIn("Auto: decay or velocity", joined)
+            self.assertIn("Auto sends LEVEL to LPG decay", joined)
+            self.assertIn("but keeps LEVEL as", joined)
+            self.assertIn("velocity/accent on models with their own envelope", joined)
+
+    @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
+    def test_locked_frequency_build_prints_the_right_button_octave_shortcut(self) -> None:
+        recipe = self.calibration_recipe(False)
+        recipe["initialOptions"]["lockedFrequencyKnob"] = "decay"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            locked = Path(temp_dir) / "locked-frequency.pdf"
+            render_pdf(manual_document(recipe), locked)
+            printed = pdf_strings(locked)
+            joined = printed.replace(")(", " ")
+            self.assertIn("LOCKED OCTAVES", joined)
+            self.assertIn("Hold the right button and turn MORPH", joined)
+            self.assertIn("all eight lights means the highest octave", joined)
+
+            octaves = Path(temp_dir) / "octaves.pdf"
+            normal_recipe = self.calibration_recipe(False)
+            render_pdf(manual_document(normal_recipe), octaves)
+            self.assertNotIn("LOCKED OCTAVES", pdf_strings(octaves))
+
+            roved = Path(temp_dir) / "roved-locked-frequency.pdf"
+            roved_recipe = self.roved_recipe()
+            roved_recipe["initialOptions"]["lockedFrequencyKnob"] = "decay"
+            render_pdf(manual_document(roved_recipe), roved)
+            self.assertNotIn("LOCKED OCTAVES", pdf_strings(roved))
 
     def roved_recipe(self, calibration: bool = False) -> dict:
         recipe = self.calibration_recipe(calibration)
@@ -176,7 +201,7 @@ class RenderManualTest(unittest.TestCase):
             render_pdf(manual_document(self.calibration_recipe(True)), on)
             printed = pdf_strings(on)
             self.assertIn("CALIBRATION", printed)
-            self.assertIn("RIGHT model button while powering", printed)
+            self.assertIn("RIGHT button while powering", printed)
 
             off = Path(temp_dir) / "calibration-off.pdf"
             render_pdf(manual_document(self.calibration_recipe(False)), off)
@@ -197,7 +222,7 @@ class RenderManualTest(unittest.TestCase):
             self.assertIn("MORPH/HARMONICS for the previous/next setting", printed)
             self.assertIn("keep holding it", printed)
             self.assertIn("Hold the MORPH knob down while powering", printed)
-            self.assertNotIn("RIGHT model button while powering", printed)
+            self.assertNotIn("RIGHT button while powering", printed)
 
     def color_blind_recipe(self, enabled: bool, calibration: bool = False) -> dict:
         recipe = self.load("default_recipe.json")
@@ -257,7 +282,7 @@ class RenderManualTest(unittest.TestCase):
             printed = pdf_strings(output)
             self.assertIn("Your Ro'Ved Field Guide", printed)
             self.assertIn("Hold the MORPH knob down while powering", printed)
-            self.assertNotIn("RIGHT model button while powering", printed)
+            self.assertNotIn("RIGHT button while powering", printed)
             self.assertIn("pulses at the brightest level", printed)
             self.assertIn("light becomes dim", printed)
             self.assertNotIn("pulses green", printed)

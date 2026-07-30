@@ -186,8 +186,14 @@ class Ui {
   // not to be confused with the octave setting (octave_) -
   // when frequency is locked (by being in octave switch mode)
   // but using manual aux crossfade, stores the last octave
-  // chosen by manually selection using the frequency pot
+  // chosen manually with the frequency pot or right-button + MORPH shortcut.
   uint8_t locked_octave_;
+  // MORPH writes here while the right button is held and FREQUENCY has another
+  // assignment. The quantized result is copied into locked_octave_; keeping the
+  // raw control separate gives the nine octave steps normal hysteresis.
+  float locked_octave_control_;
+  bool locked_octave_gesture_armed_;
+  bool editing_locked_octave_;
 #if PLAITS_CPU_PROBE
   float cpu_usage_;
 #endif
