@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import unittest
 from itertools import product
 from pathlib import Path
@@ -9,6 +10,8 @@ from generate_engine_config import (
     CATALOG,
     DEFAULT_CHORD_TABLES,
     DEFAULT_CONFIGURATION,
+    MAX_RECIPE_SCHEMA_VERSION,
+    MIN_RECIPE_SCHEMA_VERSION,
     render_config,
     validate_recipe,
 )
@@ -23,6 +26,19 @@ class GenerateEngineConfigTest(unittest.TestCase):
 
     def test_catalog_matches_the_approved_product_catalog(self) -> None:
         self.assertEqual(len(CATALOG), 79)
+
+    def test_worker_and_container_schema_ranges_stay_in_sync(self) -> None:
+        # The public Worker validates first, then sends its normalized recipe to
+        # this Python container. A ceiling mismatch lets the API accept a recipe
+        # that the actual firmware build rejects, which was the v13/v14 stereo
+        # incident. Pin both endpoints here so changing either one alone fails CI.
+        source = (FIXTURES / "src" / "contract.ts").read_text(encoding="utf-8")
+        minimum = re.search(r"export const minRecipeSchemaVersion = (\d+);", source)
+        maximum = re.search(r"export const maxRecipeSchemaVersion = (\d+);", source)
+        self.assertIsNotNone(minimum)
+        self.assertIsNotNone(maximum)
+        self.assertEqual(int(minimum.group(1)), MIN_RECIPE_SCHEMA_VERSION)
+        self.assertEqual(int(maximum.group(1)), MAX_RECIPE_SCHEMA_VERSION)
 
     def test_legacy_recipes_receive_the_stable_default_option_profile(self) -> None:
         # Also the value PLAITS_BUILD_OPTIONS_PROFILE_ID carries in
@@ -816,6 +832,21 @@ class GenerateEngineConfigTest(unittest.TestCase):
 
         self.assertEqual(built.stereo_engines, ("virtual-analog",))
         self.assertEqual(built.enable_calibration, 1)
+
+    def test_every_later_supported_schema_inherits_per_engine_stereo(self) -> None:
+        # Adding a schema should require changing only the shared ceiling, not
+        # discovering another stale stereo whitelist in this container.
+        for version in range(10, MAX_RECIPE_SCHEMA_VERSION + 1):
+            recipe = self.calibration_recipe(version, False)
+            recipe["initialOptions"]["auxOutput"] = "stereo"
+            recipe["stereoEngines"] = ["virtual-analog"]
+            if version in (12, 13):
+                recipe["resources"]["userDataBanks"] = []
+            with self.subTest(schema_version=version):
+                self.assertEqual(
+                    validate_recipe(recipe).stereo_engines,
+                    ("virtual-analog",),
+                )
 
     def test_v10_allows_empty_slots(self) -> None:
         # Per-engine stereo (v10) is a superset of v7-v9 and must accept empty

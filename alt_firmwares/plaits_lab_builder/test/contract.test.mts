@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { approvedEngineIds, computeBuildKey, computeManualKey, normalizeRecipe } from "../src/contract.ts";
+import {
+  approvedEngineIds,
+  computeBuildKey,
+  computeManualKey,
+  maxRecipeSchemaVersion,
+  minRecipeSchemaVersion,
+  normalizeRecipe,
+} from "../src/contract.ts";
 
 const fixture = JSON.parse(await readFile(new URL("../default_recipe.json", import.meta.url), "utf8"));
 
@@ -791,13 +798,31 @@ test("per-engine stereo (stereoEngines) requires and normalizes to v10", async (
 
   // A schema-9 recipe with a stereoEngines list is refused (needs v10).
   assert.throws(() => normalizeRecipe({ ...recipe, schemaVersion: 9 }), /requires recipe schema version 10/);
+
+  // Every later supported schema inherits v10's feature. This loop grows
+  // automatically with the ceiling, so a future upper whitelist cannot silently
+  // strand stereoEngines again.
+  for (let version = 10; version <= maxRecipeSchemaVersion; version += 1) {
+    const laterRecipe = {
+      ...recipe,
+      schemaVersion: version,
+      resources: version === 12 || version === 13
+        ? { chordTables: [table], userDataBanks: [] }
+        : { chordTables: [table] },
+    };
+    assert.deepEqual(
+      normalizeRecipe(laterRecipe).stereoEngines,
+      ["chiptune", "modal-resonator"],
+      `schema version ${version} must inherit per-engine stereo`,
+    );
+  }
 });
 
 // The rejection message is what a plaits-api.rubato.audio caller reads, so it
 // must name the range the guard actually accepts — it once still said "2
 // through 11" after v12 (per-slot custom FM banks) had been accepted.
 test("the unsupported-schema message names the range the guard accepts", () => {
-  const highest = 15;
+  const highest = maxRecipeSchemaVersion;
   // Reports the schema code a version is rejected with, or null if the version
   // itself was accepted (a later invalid_slots / unapproved_package complaint
   // about the fixture's shape means the version passed this guard).
@@ -812,9 +837,12 @@ test("the unsupported-schema message names the range the guard accepts", () => {
   };
   // One past the top is refused, and the message names the true upper bound.
   const refused = rejection(highest + 1);
-  assert.match(String(refused), new RegExp(`versions 2 through ${highest} can be built`));
+  assert.match(
+    String(refused),
+    new RegExp(`versions ${minRecipeSchemaVersion} through ${highest} can be built`),
+  );
   // ...and the guard really does accept every version that message claims.
-  for (let version = 2; version <= highest; version += 1) {
+  for (let version = minRecipeSchemaVersion; version <= highest; version += 1) {
     assert.equal(rejection(version), null, `schema version ${version} must not be rejected as unsupported`);
   }
 });

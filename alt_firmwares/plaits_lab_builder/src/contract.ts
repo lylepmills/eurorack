@@ -31,31 +31,31 @@ export type NormalizedChordTable = {
   chords: NormalizedChord[];
 };
 
-// Recipe schema versions this builder accepts, plus the subsets that gate
-// individual features. Every guard below tests against one of these lists AND
-// renders its rejection message from the same list, so the accepted range and
-// the text a caller of plaits-api.rubato.audio reads can never drift apart.
-const supportedSchemaVersions: readonly number[] = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-const fourBankSchemaVersions: readonly number[] = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15];  // 32 slots
-const sparseSlotSchemaVersions: readonly number[] = [7, 8, 9, 10, 11, 12, 13, 14, 15];   // empty slots
-const stereoEngineSchemaVersions: readonly number[] = [10, 11, 12, 13, 14, 15];          // stereoEngines list; v13 = short FM bank
-const sparseBankMinSchemaVersion = 11;                                       // gaps inside a bank
-const calibrationMinSchemaVersion = 14;                                      // CV calibration procedure
-const rovedMinSchemaVersion = 15;                                             // four-knob Ro'Ved panel
+// Recipe schemas are monotonic: a later schema inherits every earlier feature.
+// Keep one deliberate supported range for rejecting genuinely unknown formats;
+// feature gates below use minimums so a newly supported schema cannot get
+// stranded behind an old "10, 11, 12..." whitelist.
+export const minRecipeSchemaVersion = 2;
+export const maxRecipeSchemaVersion = 15;
+const configurationMinSchemaVersion = 4;
+const resourcesMinSchemaVersion = 5;
+const fourBankMinSchemaVersion = 6;       // 32 slots
+const sparseSlotMinSchemaVersion = 7;     // empty slots
+const stereoEngineMinSchemaVersion = 10; // stereoEngines list
+const sparseBankMinSchemaVersion = 11;    // gaps inside a bank
+const slotBankMinSchemaVersion = 12;      // banks keyed by palette slot
+const shortBankMinSchemaVersion = 13;     // fewer than 32 FM voices
+const calibrationMinSchemaVersion = 14;   // CV calibration procedure
+const rovedMinSchemaVersion = 15;         // four-knob Ro'Ved panel
 
-// What /v1/catalog advertises as the newest recipe this builder understands.
-// Derived, not restated: the editor decides whether it may offer a feature by
-// comparing against this, and a hand-written copy would keep building recipes
-// the deployed builder cannot read (or hide one it can).
-export const maxRecipeSchemaVersion = Math.max(...supportedSchemaVersions);
+function isSupportedSchemaVersion(value: unknown): value is number {
+  return Number.isInteger(value)
+    && Number(value) >= minRecipeSchemaVersion
+    && Number(value) <= maxRecipeSchemaVersion;
+}
 
-// "2 through 12" for a long contiguous run, "10, 11, or 12" for a short list.
-function describeSchemaVersions(versions: readonly number[]): string {
-  const sorted = [...versions].sort((a, b) => a - b);
-  const contiguous = sorted.every((v, i) => i === 0 || v === sorted[i - 1]! + 1);
-  if (sorted.length >= 4 && contiguous) return `${sorted[0]} through ${sorted[sorted.length - 1]}`;
-  if (sorted.length === 1) return String(sorted[0]);
-  return `${sorted.slice(0, -1).join(", ")}, or ${sorted[sorted.length - 1]}`;
+function describeSchemaRange(minimum: number, maximum = maxRecipeSchemaVersion): string {
+  return `${minimum} through ${maximum}`;
 }
 
 export const maxUserDataBanks = 3;
@@ -407,19 +407,20 @@ function normalizeConfiguration(
 // the builder treats as all stereo-capable engines when aux is stereo).
 function normalizeStereoEngines(
   candidate: Record<string, unknown>,
+  schemaVersion: number,
   auxOutput: string,
 ): string[] | undefined {
   const present = "stereoEngines" in candidate;
-  if (candidate.schemaVersion === 10 && !present) {
+  if (schemaVersion === stereoEngineMinSchemaVersion && !present) {
     throw new ContractError("invalid_recipe", "A version 10 recipe must carry a stereoEngines list.");
   }
   if (!present) return undefined;
   // v10's defining feature; a v11 (sparse) recipe may also carry it when its aux
   // output is stereo, since v11 is a superset of v10.
-  if (!stereoEngineSchemaVersions.includes(Number(candidate.schemaVersion))) {
+  if (schemaVersion < stereoEngineMinSchemaVersion) {
     throw new ContractError(
       "unsupported_schema",
-      `stereoEngines requires recipe schema version ${describeSchemaVersions(stereoEngineSchemaVersions)}.`,
+      `stereoEngines requires recipe schema version ${stereoEngineMinSchemaVersion} or newer.`,
     );
   }
   if (auxOutput !== "stereo") {
@@ -438,12 +439,13 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     throw new ContractError("invalid_recipe", "The build recipe must be a JSON object.");
   }
   const candidate = value as Record<string, unknown>;
-  if (!supportedSchemaVersions.includes(Number(candidate.schemaVersion))) {
+  if (!isSupportedSchemaVersion(candidate.schemaVersion)) {
     throw new ContractError(
       "unsupported_schema",
-      `Only Plaits Palette recipe schema versions ${describeSchemaVersions(supportedSchemaVersions)} can be built.`,
+      `Only Plaits Palette recipe schema versions ${describeSchemaRange(minRecipeSchemaVersion)} can be built.`,
     );
   }
+  const schemaVersion = candidate.schemaVersion;
   if (!["mutable-instruments-plaits", "plum-audio-roved"].includes(String(candidate.target))
       || candidate.firmware !== "rubato-plaits") {
     throw new ContractError("unsupported_target", "That recipe targets a different firmware family.");
@@ -461,13 +463,13 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
   if (!Array.isArray(candidate.slots) || (candidate.slots.length !== 24 && candidate.slots.length !== 32)) {
     throw new ContractError("invalid_slots", "A firmware recipe must contain 24 engine slots, or 32 for a four-bank build.");
   }
-  if (candidate.slots.length === 32 && !fourBankSchemaVersions.includes(Number(candidate.schemaVersion))) {
+  if (candidate.slots.length === 32 && schemaVersion < fourBankMinSchemaVersion) {
     throw new ContractError(
       "invalid_slots",
-      `32-slot recipes require recipe schema versions ${describeSchemaVersions(fourBankSchemaVersions)}.`,
+      `32-slot recipes require recipe schema versions ${describeSchemaRange(fourBankMinSchemaVersion)}.`,
     );
   }
-  const slots: (string | null)[] = candidate.schemaVersion === 2
+  const slots: (string | null)[] = schemaVersion === 2
     ? candidate.slots.map((id) => {
         if (typeof id !== "string" || !approvedEngineIdSet.has(id)) {
           throw new ContractError("unapproved_engine", "The recipe contains an engine that is not approved for builds.");
@@ -477,10 +479,10 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     : candidate.slots.map((value) => {
         if (value === null) {
           // An empty slot — only short-bank / sparse (v7+) recipes may carry them.
-          if (!sparseSlotSchemaVersions.includes(Number(candidate.schemaVersion))) {
+          if (schemaVersion < sparseSlotMinSchemaVersion) {
             throw new ContractError(
               "invalid_slots",
-              `Empty slots require recipe schema versions ${describeSchemaVersions(sparseSlotSchemaVersions)}.`,
+              `Empty slots require recipe schema versions ${describeSchemaRange(sparseSlotMinSchemaVersion)}.`,
             );
           }
           return null;
@@ -498,35 +500,32 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
         }
         return approved.id;
       });
-  validateBankShape(slots, Number(candidate.schemaVersion));
+  validateBankShape(slots, schemaVersion);
   let chordTables: NormalizedChordTable[];
   let userDataBanks: NormalizedUserDataBank[] | undefined;   // v6 index-keyed
   let slotBanks: NormalizedSlotBank[] | undefined;           // v12 slot-keyed
-  if (candidate.schemaVersion === 5 || candidate.schemaVersion === 6
-      || candidate.schemaVersion === 7 || candidate.schemaVersion === 8
-      || candidate.schemaVersion === 9 || candidate.schemaVersion === 10
-      || candidate.schemaVersion === 11 || candidate.schemaVersion === 12
-      || candidate.schemaVersion === 13 || candidate.schemaVersion === 14
-      || candidate.schemaVersion === 15) {
+  if (schemaVersion >= resourcesMinSchemaVersion) {
     const resources = candidate.resources;
     // v6 always carries index-keyed banks; v12 always carries per-slot banks (its
     // defining feature, 24 or 32 slots). v7-v11 mirror the editor: userDataBanks
     // only for a 32-slot (fourth-bank) recipe; a 24-slot v7-v11 carries chord
     // tables only, like v5.
-    const expectsUserDataBanks = candidate.schemaVersion === 6 || candidate.schemaVersion === 12
-      || candidate.schemaVersion === 13
-      || ((candidate.schemaVersion === 7 || candidate.schemaVersion === 8
-        || candidate.schemaVersion === 9 || candidate.schemaVersion === 10
-        || candidate.schemaVersion === 11) && candidate.slots.length === 32);
-    // v14+ features say nothing about resources: v14 means "include the
-    // calibration procedure" and v15 means "target the Ro'Ved panel." Either
-    // can compose with any palette, with or without custom FM banks.
+    const expectsUserDataBanks = schemaVersion === fourBankMinSchemaVersion
+      || schemaVersion === slotBankMinSchemaVersion
+      || schemaVersion === shortBankMinSchemaVersion
+      || (schemaVersion >= sparseSlotMinSchemaVersion
+        && schemaVersion < slotBankMinSchemaVersion && candidate.slots.length === 32);
+    // v14 is the first version whose defining feature says nothing about
+    // resources: it means "this recipe wants the calibration procedure", which
+    // any palette may want, with or without custom FM banks. It and every later
+    // schema accept either resource shape — the banks themselves are validated
+    // exactly as under v13 when they are there.
     if (!resources || typeof resources !== "object") {
       throw new ContractError("invalid_resources", "The recipe must contain only supported firmware resources.");
     }
     const resourceValues = resources as Record<string, unknown>;
     const carriesUserDataBanks = expectsUserDataBanks
-      || ((candidate.schemaVersion === 14 || candidate.schemaVersion === 15)
+      || (schemaVersion >= calibrationMinSchemaVersion
         && hasExactKeys(resourceValues, ["chordTables", "userDataBanks"]));
     const expectedKeys = carriesUserDataBanks ? ["chordTables", "userDataBanks"] : ["chordTables"];
     if (!hasExactKeys(resourceValues, expectedKeys)) {
@@ -535,8 +534,7 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     chordTables = normalizeChordTables(resourceValues.chordTables);
     if (carriesUserDataBanks) {
       const rawBanks = resourceValues.userDataBanks;
-      if (candidate.schemaVersion === 12 || candidate.schemaVersion === 13
-          || candidate.schemaVersion === 14 || candidate.schemaVersion === 15) {
+      if (schemaVersion >= slotBankMinSchemaVersion) {
         slotBanks = normalizeSlotBanks(rawBanks, candidate.slots.length);
       } else {
         userDataBanks = normalizeUserDataBanks(rawBanks);
@@ -547,23 +545,26 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
       // the container-side generator.
       const banks = [...(userDataBanks ?? []), ...(slotBanks ?? [])];
       if (banks.some((b) => b.bank.voices.length < patchesPerBank)
-          && Number(candidate.schemaVersion) < 13) {
-        throw new ContractError("unsupported_schema", "Short FM banks require recipe schema version 13.");
+          && schemaVersion < shortBankMinSchemaVersion) {
+        throw new ContractError(
+          "unsupported_schema",
+          `Short FM banks require recipe schema version ${shortBankMinSchemaVersion}.`,
+        );
       }
     }
   } else {
     chordTables = normalizeChordTables(structuredClone(chordCatalog.tables));
   }
-  const configuration = candidate.schemaVersion === 4 || candidate.schemaVersion === 5
-      || candidate.schemaVersion === 6 || candidate.schemaVersion === 7 || candidate.schemaVersion === 8
-      || candidate.schemaVersion === 9 || candidate.schemaVersion === 10 || candidate.schemaVersion === 11
-      || candidate.schemaVersion === 12 || candidate.schemaVersion === 13
-      || candidate.schemaVersion === 14 || candidate.schemaVersion === 15
+  const configuration = schemaVersion >= configurationMinSchemaVersion
     ? normalizeConfiguration(candidate, chordTables)
     : defaultConfiguration;
   // Per-engine stereo (schema 10): a stereoEngines list names the engines built
   // with the stereo render path. Only valid when the aux option is stereo.
-  const stereoEngines = normalizeStereoEngines(candidate, configuration.initialOptions.auxOutput);
+  const stereoEngines = normalizeStereoEngines(
+    candidate,
+    schemaVersion,
+    configuration.initialOptions.auxOutput,
+  );
   return {
     // Newest first: Ro'Ved needs the four-clickable-knob panel UI compiled in
     // (v15) and dominates all. Then the calibration procedure needs v14; both

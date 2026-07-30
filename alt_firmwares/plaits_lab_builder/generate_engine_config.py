@@ -39,6 +39,22 @@ PATCHES_PER_BANK = 32
 PACKED_PATCH_SIZE = 128
 PACKED_BANK_SIZE = PATCHES_PER_BANK * PACKED_PATCH_SIZE  # 4096
 
+# Keep this ceiling in lockstep with src/contract.ts. Feature gates use minimum
+# versions so adding a schema at the ceiling does not require extending a trail
+# of "10, 11, 12..." whitelists in the build container.
+MIN_RECIPE_SCHEMA_VERSION = 2
+MAX_RECIPE_SCHEMA_VERSION = 15
+CONFIGURATION_MIN_SCHEMA_VERSION = 4
+RESOURCES_MIN_SCHEMA_VERSION = 5
+FOUR_BANK_MIN_SCHEMA_VERSION = 6
+SPARSE_SLOT_MIN_SCHEMA_VERSION = 7
+STEREO_ENGINES_MIN_SCHEMA_VERSION = 10
+SPARSE_BANK_MIN_SCHEMA_VERSION = 11
+SLOT_BANK_MIN_SCHEMA_VERSION = 12
+SHORT_BANK_MIN_SCHEMA_VERSION = 13
+CALIBRATION_MIN_SCHEMA_VERSION = 14
+ROVED_MIN_SCHEMA_VERSION = 15
+
 # Bumped whenever a stored option value changes meaning in the firmware (see the
 # value tables in plaits/dsp/voice.h). It seeds the options profile-id fold, so a
 # bump moves every build to an id no old firmware ever minted — which is what
@@ -252,14 +268,13 @@ def normalize_slots(slots: list[Any], schema_version: int) -> list[str | None]:
     # per-engine stereo — is a superset of v7/v8/v9 and must allow empties too;
     # the Worker contract already does, so omitting 10 here rejected a recipe the
     # Worker had accepted, e.g. a stereo palette with a model deleted. Same
-    # reasoning admits 12 — a per-slot custom FM bank alongside a deleted model,
-    # which the Worker also accepts — and 14.)
+    # reasoning admits every later schema too.)
     normalized: list[str | None] = []
     for reference in slots:
         if reference is None:
-            if schema_version not in (7, 8, 9, 10, 11, 12, 13, 14, 15):
+            if schema_version < SPARSE_SLOT_MIN_SCHEMA_VERSION:
                 raise ValueError(
-                    "empty slots require schemaVersion 7, 8, 9, 10, 11, 12, 13, 14, or 15")
+                    f"empty slots require schemaVersion {SPARSE_SLOT_MIN_SCHEMA_VERSION} or newer")
             normalized.append(None)
             continue
         if isinstance(reference, str):
@@ -309,23 +324,27 @@ def validate_bank_shape(public_slots: list[str | None], schema_version: int) -> 
     shape the pre-sparse navigation assumed."""
     if all(engine_id is None for engine_id in public_slots):
         raise ValueError("recipe must contain at least one engine")
-    if has_sparse_bank(public_slots) and schema_version < 11:
+    if has_sparse_bank(public_slots) and schema_version < SPARSE_BANK_MIN_SCHEMA_VERSION:
         raise ValueError("a bank's engines must be contiguous (empty slots only "
-                         "at the end) unless the recipe uses schemaVersion 11")
+                         f"at the end) unless the recipe uses schemaVersion "
+                         f"{SPARSE_BANK_MIN_SCHEMA_VERSION}")
 
 
 def validate_recipe(value: Any) -> BuildRecipe:
     if not isinstance(value, dict):
         raise ValueError("recipe must be a JSON object")
     schema_version = value.get("schemaVersion")
-    if schema_version not in (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15):
+    if (type(schema_version) is not int
+            or not MIN_RECIPE_SCHEMA_VERSION <= schema_version <= MAX_RECIPE_SCHEMA_VERSION):
         raise ValueError(
-            "recipe schemaVersion must be 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, or 15")
+            f"recipe schemaVersion must be {MIN_RECIPE_SCHEMA_VERSION} through "
+            f"{MAX_RECIPE_SCHEMA_VERSION}")
     target = value.get("target")
     if target not in ("mutable-instruments-plaits", "plum-audio-roved"):
         raise ValueError("unsupported firmware target")
-    if target == "plum-audio-roved" and schema_version < 15:
-        raise ValueError("Ro'Ved builds require schemaVersion 15")
+    if target == "plum-audio-roved" and schema_version < ROVED_MIN_SCHEMA_VERSION:
+        raise ValueError(
+            f"Ro'Ved builds require schemaVersion {ROVED_MIN_SCHEMA_VERSION}")
     if value.get("firmware") != "rubato-plaits":
         raise ValueError("unsupported firmware family")
     if value.get("output") != "audio-wav":
@@ -333,32 +352,40 @@ def validate_recipe(value: Any) -> BuildRecipe:
     slots = value.get("slots")
     if not isinstance(slots, list) or len(slots) not in (24, 32):
         raise ValueError("recipe must contain 24 slots, or 32 for a four-bank build")
-    if len(slots) == 32 and schema_version not in (6, 7, 8, 9, 10, 11, 12, 13, 14, 15):
+    if len(slots) == 32 and schema_version < FOUR_BANK_MIN_SCHEMA_VERSION:
         raise ValueError(
-            "32-slot recipes require schemaVersion 6, 7, 8, 9, 10, 11, 12, 13, 14, or 15")
+            f"32-slot recipes require schemaVersion {FOUR_BANK_MIN_SCHEMA_VERSION} or newer")
     public_slots = normalize_slots(slots, schema_version)
     validate_bank_shape(public_slots, schema_version)
     user_data_banks: list[tuple[int, bytes]] = []   # v6 index-keyed
     slot_banks: list[tuple[int, bytes]] = []        # v12 slot-keyed
-    if schema_version in (5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15):
+    if schema_version >= RESOURCES_MIN_SCHEMA_VERSION:
         resources = value.get("resources")
         # v6 always carries the custom-FM-banks resource (its defining feature), and
         # v12 always carries per-slot banks (its defining feature — 24 or 32 slots).
         # v7-v11 mirror the editor: userDataBanks only for a 32-slot (fourth-bank)
         # recipe; a 24-slot v7-v11 carries chord tables only, like v5.
-        expect_user_data_banks = schema_version in (6, 12, 13) \
-            or (schema_version in (7, 8, 9, 10, 11) and len(slots) == 32)
-        # v14+ features say nothing about resources: calibration and the Ro'Ved
-        # panel can each compose with any palette, with or without custom banks.
+        expect_user_data_banks = schema_version in (
+            FOUR_BANK_MIN_SCHEMA_VERSION,
+            SLOT_BANK_MIN_SCHEMA_VERSION,
+            SHORT_BANK_MIN_SCHEMA_VERSION,
+        ) or (
+            SPARSE_SLOT_MIN_SCHEMA_VERSION <= schema_version < SLOT_BANK_MIN_SCHEMA_VERSION
+            and len(slots) == 32
+        )
+        # v14 (the calibration procedure) is the first version whose defining
+        # feature says nothing about resources — any palette may want it, with or
+        # without custom FM banks — so it and later schemas accept either
+        # resource shape. Mirrors the Worker contract.
         carries_user_data_banks = expect_user_data_banks or (
-            schema_version in (14, 15) and isinstance(resources, dict)
+            schema_version >= CALIBRATION_MIN_SCHEMA_VERSION and isinstance(resources, dict)
             and set(resources) == {"chordTables", "userDataBanks"})
         expected_resource_keys = {"chordTables", "userDataBanks"} if carries_user_data_banks else {"chordTables"}
         if not isinstance(resources, dict) or set(resources) != expected_resource_keys:
             raise ValueError("recipe must contain only supported firmware resources")
         chord_tables = validate_chord_tables(resources.get("chordTables"))
         if carries_user_data_banks:
-            if schema_version in (12, 13, 14, 15):
+            if schema_version >= SLOT_BANK_MIN_SCHEMA_VERSION:
                 slot_banks = validate_user_data_banks_v12(resources.get("userDataBanks"), len(slots))
             else:
                 user_data_banks = validate_user_data_banks(resources.get("userDataBanks"))
@@ -370,11 +397,13 @@ def validate_recipe(value: Any) -> BuildRecipe:
             ((slot, len(data)) for slot, data in (user_data_banks + slot_banks))
             if length < PACKED_BANK_SIZE
         ]
-        if short_banks and schema_version < 13:
-            raise ValueError("short (fewer than 32-patch) FM banks require schemaVersion 13")
+        if short_banks and schema_version < SHORT_BANK_MIN_SCHEMA_VERSION:
+            raise ValueError(
+                f"short (fewer than 32-patch) FM banks require schemaVersion "
+                f"{SHORT_BANK_MIN_SCHEMA_VERSION}")
     else:
         chord_tables = validate_chord_tables(DEFAULT_CHORD_TABLES)
-    configuration = value if schema_version in (4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15) else DEFAULT_CONFIGURATION
+    configuration = value if schema_version >= CONFIGURATION_MIN_SCHEMA_VERSION else DEFAULT_CONFIGURATION
     preferences = configuration.get("preferences")
     options = configuration.get("initialOptions")
     if not isinstance(preferences, dict) or not isinstance(options, dict):
@@ -465,15 +494,17 @@ def validate_recipe(value: Any) -> BuildRecipe:
         # may also carry the list when its aux output is stereo. Gate on the
         # minimum so adding a new schema cannot strand the container behind the
         # Worker's validator again.
-        if schema_version < 10:
-            raise ValueError("stereoEngines requires schemaVersion 10 or newer")
+        if schema_version < STEREO_ENGINES_MIN_SCHEMA_VERSION:
+            raise ValueError(
+                f"stereoEngines requires schemaVersion "
+                f"{STEREO_ENGINES_MIN_SCHEMA_VERSION} or newer")
         raw = value.get("stereoEngines")
         if not isinstance(raw, list) or not all(
             isinstance(engine_id, str) and engine_id in PUBLIC_ENGINES for engine_id in raw
         ):
             raise ValueError("stereoEngines must list approved engine ids")
         stereo_engines = tuple(dict.fromkeys(raw))
-    elif schema_version == 10:
+    elif schema_version == STEREO_ENGINES_MIN_SCHEMA_VERSION:
         raise ValueError("schemaVersion 10 recipes must carry a stereoEngines list")
 
     # The calibration procedure (v14). Deliberately NOT part of the profile-id
@@ -484,8 +515,10 @@ def validate_recipe(value: Any) -> BuildRecipe:
     enable_calibration = bool(preferences.get("calibration", False))
     if not isinstance(preferences.get("calibration", False), bool):
         raise ValueError("recipe contains an unsupported firmware option")
-    if enable_calibration and schema_version < 14:
-        raise ValueError("the calibration procedure requires schemaVersion 14")
+    if enable_calibration and schema_version < CALIBRATION_MIN_SCHEMA_VERSION:
+        raise ValueError(
+            f"the calibration procedure requires schemaVersion "
+            f"{CALIBRATION_MIN_SCHEMA_VERSION}")
 
     return BuildRecipe(
         public_slots=public_slots,
