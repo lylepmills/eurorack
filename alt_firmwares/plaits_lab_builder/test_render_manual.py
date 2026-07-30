@@ -201,8 +201,13 @@ class RenderManualTest(unittest.TestCase):
     def test_color_blind_calibration_uses_brightness_language(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "color-blind-calibration.pdf"
-            render_pdf(manual_document(self.color_blind_recipe(True, calibration=True)), output)
+            recipe = self.color_blind_recipe(True, calibration=True)
+            recipe["target"] = "plum-audio-roved"
+            render_pdf(manual_document(recipe), output)
             printed = pdf_strings(output)
+            self.assertIn("Your Ro'Ved Field Guide", printed)
+            self.assertIn("Hold the MORPH knob down while powering", printed)
+            self.assertNotIn("RIGHT model button while powering", printed)
             self.assertIn("pulses at the brightest level", printed)
             self.assertIn("light becomes dim", printed)
             self.assertNotIn("pulses green", printed)

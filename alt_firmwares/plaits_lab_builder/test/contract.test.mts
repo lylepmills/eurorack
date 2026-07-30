@@ -194,6 +194,15 @@ test("the color-blind bank display is baked, version-gated, and type-checked", a
   assert.equal(on.preferences.calibration, true);
   assert.equal(on.schemaVersion, 15);
 
+  const roved = normalizeRecipe({
+    ...makeRecipe(15, true, true),
+    target: "plum-audio-roved",
+  });
+  assert.equal(roved.target, "plum-audio-roved");
+  assert.equal(roved.preferences.colorBlindMode, true);
+  assert.equal(roved.preferences.calibration, true);
+  assert.equal(roved.schemaVersion, 15);
+
   const off = normalizeRecipe(makeRecipe(15, false));
   assert.equal(off.preferences.colorBlindMode, false);
   assert.equal(off.schemaVersion, 5);
@@ -209,6 +218,8 @@ test("the color-blind bank display is baked, version-gated, and type-checked", a
 
   const identity = { sourceRevision: "source", toolchain: "toolchain", contract: "15" };
   assert.notEqual(await computeBuildKey(on, identity), await computeBuildKey(off, identity));
+  assert.notEqual(await computeBuildKey(on, identity), await computeBuildKey(roved, identity));
+  assert.notEqual(await computeManualKey(on, "9"), await computeManualKey(roved, "9"));
 });
 
 test("build keys are stable and include the build identity", async () => {

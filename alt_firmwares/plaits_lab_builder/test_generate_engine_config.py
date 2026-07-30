@@ -157,12 +157,16 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertIn("#define PLAITS_BUILD_COLOR_BLIND_MODE 0", render_config(build))
 
     def test_color_blind_mode_on_emits_the_define_and_composes_with_calibration(self) -> None:
-        build = validate_recipe(self.color_blind_recipe(15, True, calibration=True))
+        recipe = self.color_blind_recipe(15, True, calibration=True)
+        recipe["target"] = "plum-audio-roved"
+        build = validate_recipe(recipe)
         self.assertEqual(build.color_blind_mode, 1)
         self.assertEqual(build.enable_calibration, 1)
+        self.assertEqual(build.roved_panel, 1)
         config = render_config(build)
         self.assertIn("#define PLAITS_BUILD_COLOR_BLIND_MODE 1", config)
         self.assertIn("#define PLAITS_BUILD_ENABLE_CALIBRATION 1", config)
+        self.assertIn("#define PLAITS_ROVED_PANEL 1", config)
 
     def test_color_blind_mode_composes_with_per_engine_stereo(self) -> None:
         recipe = self.color_blind_recipe(15, True)
