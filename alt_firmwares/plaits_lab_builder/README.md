@@ -7,7 +7,10 @@ chord-table/custom-FM resources. Schema 15 can target either Mutable
 Instruments Plaits or Plum Audio Ro'Ved. It generates a compile-time configuration,
 builds with the pinned Mutable
 Instruments ARM toolchain, enforces the Plaits flash and RAM limits, and returns
-the 48 kHz audio updater.
+either the default 48 kHz audio updater or, when explicitly requested, an
+application-only Intel HEX file for a direct hardware programmer. The HEX starts
+at the firmware's linked application address and deliberately excludes the
+bootloader.
 
 Schema-15/Ro'Ved support passed its hardware checklist on July 30, 2026 and is
 available in production.
@@ -15,7 +18,7 @@ available in production.
 The service is split across two isolation layers:
 
 - A Cloudflare Worker validates and hashes recipes, stores job state in Durable
-  Objects, schedules work through Queues, and caches successful WAV files in R2.
+  Objects, schedules work through Queues, and caches successful WAV/HEX files in R2.
 - A non-root Cloudflare Container has no runtime internet access. It owns the
   allowlisted C++ registry generator and the compiler. The request cannot
   provide source, paths, make targets, flags, or shell fragments.
@@ -29,7 +32,8 @@ not require an account, email address, cookie, API token, or customer identity.
 - `POST /v1/builds` accepts a Plaits Lab manifest and returns a deterministic
   build ID with `queued`, `building`, or `succeeded` status.
 - `GET /v1/builds/:buildKey` returns durable job state.
-- `GET /v1/builds/:buildKey/firmware` streams the cached WAV from R2.
+- `GET /v1/builds/:buildKey/firmware` streams the recipe's cached WAV or HEX
+  artifact from R2 with the matching content type and filename.
 
 ## Personalized manual prototype
 
@@ -107,9 +111,10 @@ catalog was unaffected: `catalog:check` and the website `--check` both confirmed
 byte-identical snapshots at the new revision, so no engine digest moved.
 
 The build key covers the normalized slots, preferences, starting options,
-ordered chord-table data (without `createdAt`), source revision, toolchain
-identity, and build-contract version. Identical recipes therefore share the
-same immutable artifact.
+ordered chord-table data (without `createdAt`), requested output format, source
+revision, toolchain identity, and build-contract version. Identical recipes
+therefore share the same immutable artifact; WAV and HEX requests remain
+separate cache entries while sharing their field-guide PDF.
 
 ## Local validation
 

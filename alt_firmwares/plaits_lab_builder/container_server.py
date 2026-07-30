@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from generate_engine_config import render_config, validate_recipe
 from render_manual import manual_document, render_pdf
@@ -46,6 +46,7 @@ BUILD_KEY_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 # The contract is echoed into a response header, so it is held to a short
 # printable token rather than trusted verbatim — no CRLF, no header injection.
 MANUAL_CONTRACT_PATTERN = re.compile(r"^[0-9A-Za-z._-]{1,32}$")
+FirmwareOutput = Literal["audio-wav", "intel-hex"]
 
 # Route the ARM compiler through ccache when it is installed. Only the three
 # recipe-dependent translation units (voice/plaits/ui) see the generated
@@ -70,7 +71,8 @@ class BuildError(Exception):
 @dataclass
 class BuildRecord:
     status: str = "building"
-    wav_path: Path | None = None
+    artifact_path: Path | None = None
+    output: FirmwareOutput = "audio-wav"
     metadata: dict[str, str] | None = None
     error: BuildError | None = None
 
@@ -237,7 +239,14 @@ def _stereo_disable_flags(aux_stereo: bool, stereo_engines: Any) -> list[str]:
     return [f"PLAITS_STEREO_{macro}=0" for macro in sorted(ALL_STEREO_MACROS - enabled)]
 
 
-def build_firmware(payload: Any) -> tuple[Path, dict[str, str]]:
+def _build_targets(output: FirmwareOutput) -> list[str]:
+    # `hex` is the application-only objcopy target. Do not use a combo/upload
+    # target here: the advanced download must never add or overwrite a
+    # bootloader. `bin` is also needed for the parity digest both formats report.
+    return ["wav"] if output == "audio-wav" else ["bin", "hex"]
+
+
+def build_firmware(payload: Any) -> tuple[Path, FirmwareOutput, dict[str, str]]:
     if not isinstance(payload, dict):
         raise BuildError("invalid_request", "The build request must be a JSON object.")
     build_key = payload.get("buildKey")
@@ -249,6 +258,7 @@ def build_firmware(payload: Any) -> tuple[Path, dict[str, str]]:
         validated_recipe = validate_recipe(recipe)
     except ValueError as error:
         raise BuildError("invalid_recipe", str(error)) from error
+    output: FirmwareOutput = recipe["output"]
 
     build_dir = BUILD_ROOT / build_key
     if build_dir.exists():
@@ -273,8 +283,12 @@ def build_firmware(payload: Any) -> tuple[Path, dict[str, str]]:
         # bare `cat`, which reads the closed stdin below and writes nothing.
         "DEPS=",
         "-j4",
-        "wav",
     ]
+    # Both formats come from the same application ELF. WAV encodes its raw
+    # binary for Plaits' audio bootloader; Intel HEX preserves the linked
+    # application addresses for a direct programmer. The HEX deliberately does
+    # not merge in the bootloader.
+    command.extend(_build_targets(output))
     # Per-engine stereo. The stereo render path (OUT/AUX as an L/R pair) costs
     # flash per engine, so it is compiled only for the engines a recipe enables.
     # The makefile turns each PLAITS_STEREO_<MACRO>=0 make var into a -D on that
@@ -327,10 +341,10 @@ def build_firmware(payload: Any) -> tuple[Path, dict[str, str]]:
         raise BuildError(code, message, log)
 
     artifact_dir = build_dir / "plaits"
-    wav_path = artifact_dir / "plaits.wav"
     bin_path = artifact_dir / "plaits.bin"
     elf_path = artifact_dir / "plaits.elf"
-    if not wav_path.is_file() or not bin_path.is_file() or not elf_path.is_file():
+    artifact_path = artifact_dir / ("plaits.wav" if output == "audio-wav" else "plaits.hex")
+    if not artifact_path.is_file() or not bin_path.is_file() or not elf_path.is_file():
         raise BuildError("invalid_artifact", "The compiler did not produce every required firmware artifact.", log)
 
     text_bytes, data_bytes, bss_bytes = parse_size(elf_path)
@@ -354,7 +368,6 @@ def build_firmware(payload: Any) -> tuple[Path, dict[str, str]]:
 
     metadata = {
         "X-Plaits-Binary-Sha256": sha256_file(bin_path),
-        "X-Plaits-Wav-Sha256": sha256_file(wav_path),
         "X-Plaits-Text-Bytes": str(text_bytes),
         "X-Plaits-Data-Bytes": str(data_bytes),
         "X-Plaits-Bss-Bytes": str(bss_bytes),
@@ -362,7 +375,10 @@ def build_firmware(payload: Any) -> tuple[Path, dict[str, str]]:
         "X-Plaits-Toolchain": TOOLCHAIN_ID,
         "X-Plaits-Build-Contract": BUILD_CONTRACT_VERSION,
     }
-    return wav_path, metadata
+    metadata[
+        "X-Plaits-Wav-Sha256" if output == "audio-wav" else "X-Plaits-Hex-Sha256"
+    ] = sha256_file(artifact_path)
+    return artifact_path, output, metadata
 
 
 def render_manual_bytes(manual_key: str, recipe: Any) -> bytes:
@@ -381,8 +397,13 @@ def render_manual_bytes(manual_key: str, recipe: Any) -> bytes:
 
 def run_build(build_key: str, payload: Any) -> None:
     try:
-        wav_path, metadata = build_firmware(payload)
-        result = BuildRecord(status="succeeded", wav_path=wav_path, metadata=metadata)
+        artifact_path, output, metadata = build_firmware(payload)
+        result = BuildRecord(
+            status="succeeded",
+            artifact_path=artifact_path,
+            output=output,
+            metadata=metadata,
+        )
     except BuildError as error:
         result = BuildRecord(status="failed", error=error)
     except Exception:
@@ -417,10 +438,10 @@ class Handler(BaseHTTPRequestHandler):
             status = HTTPStatus.BAD_REQUEST if record.error.code in {"invalid_request", "invalid_recipe"} else HTTPStatus.UNPROCESSABLE_ENTITY
             self.send_json_error(record.error, status)
             return
-        if record.wav_path is None or record.metadata is None:
+        if record.artifact_path is None or record.metadata is None:
             self.send_json_error(BuildError("internal_error", "The compiler result is incomplete."), HTTPStatus.INTERNAL_SERVER_ERROR)
             return
-        self.send_artifact(record.wav_path, record.metadata)
+        self.send_artifact(record.artifact_path, record.output, record.metadata)
 
     def do_POST(self) -> None:  # noqa: N802
         if self.path == "/manual":
@@ -496,15 +517,22 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(pdf)
 
-    def send_artifact(self, wav_path: Path, metadata: dict[str, str]) -> None:
+    def send_artifact(
+        self,
+        artifact_path: Path,
+        output: FirmwareOutput,
+        metadata: dict[str, str],
+    ) -> None:
+        content_type = "audio/wav" if output == "audio-wav" else "application/octet-stream"
+        filename = "rubato-plaits-firmware.wav" if output == "audio-wav" else "rubato-plaits-firmware.hex"
         self.send_response(HTTPStatus.OK)
-        self.send_header("Content-Type", "audio/wav")
-        self.send_header("Content-Length", str(wav_path.stat().st_size))
-        self.send_header("Content-Disposition", 'attachment; filename="rubato-plaits-firmware.wav"')
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(artifact_path.stat().st_size))
+        self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
         for name, value in metadata.items():
             self.send_header(name, value)
         self.end_headers()
-        with wav_path.open("rb") as artifact:
+        with artifact_path.open("rb") as artifact:
             shutil.copyfileobj(artifact, self.wfile, length=1024 * 1024)
 
     def send_json(self, value: Any, status: HTTPStatus) -> None:

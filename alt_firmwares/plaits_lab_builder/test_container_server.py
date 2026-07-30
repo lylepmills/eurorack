@@ -7,6 +7,7 @@ from pathlib import Path
 from container_server import (
     ALL_STEREO_MACROS,
     MAX_REQUEST_BYTES,
+    _build_targets,
     _recipe_is_stereo,
     _stereo_disable_flags,
     classify_link_failure,
@@ -127,6 +128,17 @@ class RequestSizeBudgetTest(unittest.TestCase):
         self.assertFalse(request_size_is_valid(0))
         self.assertTrue(request_size_is_valid(MAX_REQUEST_BYTES))
         self.assertFalse(request_size_is_valid(MAX_REQUEST_BYTES + 1))
+
+
+class FirmwareOutputTargetTest(unittest.TestCase):
+    def test_wav_uses_the_audio_encoder_target(self) -> None:
+        self.assertEqual(_build_targets("audio-wav"), ["wav"])
+
+    def test_hex_is_application_only_and_keeps_the_binary_digest(self) -> None:
+        targets = _build_targets("intel-hex")
+        self.assertEqual(targets, ["bin", "hex"])
+        self.assertNotIn("wav", targets)
+        self.assertFalse(any("combo" in target or "bootloader" in target for target in targets))
 
 
 class StereoSelectionTest(unittest.TestCase):

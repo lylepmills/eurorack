@@ -33,6 +33,23 @@ test("normalization removes nondeterministic manifest fields", () => {
   assert.equal(normalized.initialOptions.lockedFrequencyKnob, "octaves");
 });
 
+test("WAV and application-only Intel HEX are the only output formats", async () => {
+  const wav = normalizeRecipe(fixture);
+  const hex = normalizeRecipe({ ...fixture, output: "intel-hex" });
+  assert.equal(wav.output, "audio-wav");
+  assert.equal(hex.output, "intel-hex");
+  assert.throws(
+    () => normalizeRecipe({ ...fixture, output: "raw-binary" }),
+    (error: { code?: string }) => error.code === "unsupported_output",
+  );
+
+  const identity = { sourceRevision: "source", toolchain: "toolchain", contract: "15" };
+  assert.notEqual(await computeBuildKey(wav, identity), await computeBuildKey(hex, identity));
+  // File format changes no controls or documentation, so both downloads share
+  // the exact same field-guide PDF.
+  assert.equal(await computeManualKey(wav, "9"), await computeManualKey(hex, "9"));
+});
+
 // The calibration procedure (v14). It is a firmware PREFERENCE, not a stored
 // option, so the whole contract for it is: absent means off, asking for it lifts
 // the recipe to v14, and an older declared version cannot smuggle it in.

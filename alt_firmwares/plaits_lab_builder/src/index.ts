@@ -9,6 +9,7 @@ import {
   isBuildKey,
   maxRecipeSchemaVersion,
   normalizeRecipe,
+  type FirmwareOutput,
   type NormalizedRecipe,
 } from "./contract";
 import { deadLetterAction } from "./dead_letter";
@@ -29,9 +30,12 @@ type JobState = {
   createdAt: string;
   updatedAt: string;
   cacheHit: boolean;
+  // Missing only on WAV jobs stored before selectable output formats shipped.
+  output?: FirmwareOutput;
   artifact?: {
     bytes: number;
     wavSha256: string;
+    hexSha256: string;
     binarySha256: string;
     textBytes: number;
     dataBytes: number;
@@ -84,8 +88,21 @@ function corsHeaders(request: Request, env: Env): Headers {
   return headers;
 }
 
-function artifactKey(buildId: string): string {
-  return `firmware/${buildId}.wav`;
+function outputDetails(output: FirmwareOutput): {
+  extension: "wav" | "hex";
+  contentType: "audio/wav" | "application/octet-stream";
+} {
+  return output === "intel-hex"
+    ? { extension: "hex", contentType: "application/octet-stream" }
+    : { extension: "wav", contentType: "audio/wav" };
+}
+
+function stateOutput(state: JobState): FirmwareOutput {
+  return state.output ?? "audio-wav";
+}
+
+function artifactKey(buildId: string, output: FirmwareOutput): string {
+  return `firmware/${buildId}.${outputDetails(output).extension}`;
 }
 
 // Manuals are keyed by DOCUMENTATION identity, not build identity — many
@@ -99,6 +116,7 @@ function artifactSummary(artifact: R2Object): NonNullable<JobState["artifact"]> 
   return {
     bytes: artifact.size,
     wavSha256: artifact.customMetadata?.wavSha256 ?? "",
+    hexSha256: artifact.customMetadata?.hexSha256 ?? "",
     binarySha256: artifact.customMetadata?.binarySha256 ?? "",
     textBytes: Number(artifact.customMetadata?.textBytes ?? 0),
     dataBytes: Number(artifact.customMetadata?.dataBytes ?? 0),
@@ -114,6 +132,7 @@ function jobResponse(state: JobState): Record<string, unknown> {
     createdAt: state.createdAt,
     updatedAt: state.updatedAt,
     cacheHit: state.cacheHit,
+    output: stateOutput(state),
     artifact: state.artifact,
     manual: state.manual
       ? {
@@ -145,7 +164,7 @@ async function createBuild(request: Request, env: Env): Promise<Response> {
     const manualKey = await computeManualKey(recipe, env.PLAITS_MANUAL_CONTRACT);
     const job = env.BUILD_JOBS.getByName(buildId);
     const [existingArtifact, existingManual, previousState] = await Promise.all([
-      env.ARTIFACTS.head(artifactKey(buildId)),
+      env.ARTIFACTS.head(artifactKey(buildId, recipe.output)),
       env.ARTIFACTS.head(manualArtifactKey(manualKey)),
       job.getState(),
     ]);
@@ -174,6 +193,7 @@ async function createBuild(request: Request, env: Env): Promise<Response> {
         createdAt: previousState?.createdAt ?? now,
         updatedAt: now,
         cacheHit: true,
+        output: recipe.output,
         artifact: artifactSummary(existingArtifact),
         manual,
       };
@@ -205,6 +225,7 @@ async function createBuild(request: Request, env: Env): Promise<Response> {
       createdAt: previousState?.createdAt ?? now,
       updatedAt: now,
       cacheHit: false,
+      output: recipe.output,
       manual: { status: "pending", manualKey },
     };
     await job.setState(state);
@@ -252,7 +273,9 @@ async function downloadFirmware(buildId: string, env: Env): Promise<Response> {
   if (!state || state.status !== "succeeded") {
     return json({ error: { code: "build_not_found", message: "That firmware build does not exist." } }, { status: 404 });
   }
-  const artifact = await env.ARTIFACTS.get(artifactKey(state.buildId));
+  const output = stateOutput(state);
+  const details = outputDetails(output);
+  const artifact = await env.ARTIFACTS.get(artifactKey(state.buildId, output));
   if (!artifact) {
     return json({ error: { code: "artifact_not_found", message: "That firmware artifact is not available." } }, { status: 404 });
   }
@@ -260,7 +283,7 @@ async function downloadFirmware(buildId: string, env: Env): Promise<Response> {
   artifact.writeHttpMetadata(headers);
   headers.set("ETag", artifact.httpEtag);
   headers.set("Content-Length", String(artifact.size));
-  headers.set("Content-Disposition", 'attachment; filename="rubato-plaits-firmware.wav"');
+  headers.set("Content-Disposition", `attachment; filename="rubato-plaits-firmware.${details.extension}"`);
   headers.set("Cache-Control", "public, max-age=3600, immutable");
   return new Response(artifact.body, { headers });
 }
@@ -341,6 +364,7 @@ async function processBuild(message: Message<BuildMessage>, env: Env): Promise<v
     buildId,
     createdAt: prior?.createdAt ?? now,
     cacheHit: false,
+    output: recipe.output,
   };
   const expectedBuildKey = await computeBuildKey(recipe, {
     sourceRevision: env.PLAITS_SOURCE_REVISION,
@@ -358,7 +382,7 @@ async function processBuild(message: Message<BuildMessage>, env: Env): Promise<v
     return;
   }
   const manualKey = await computeManualKey(recipe, env.PLAITS_MANUAL_CONTRACT);
-  const existingArtifact = await env.ARTIFACTS.head(artifactKey(buildId));
+  const existingArtifact = await env.ARTIFACTS.head(artifactKey(buildId, recipe.output));
 
   if (message.body.manualOnly && !existingArtifact) {
     // A manual backfill for firmware that no longer exists documents nothing.
@@ -444,7 +468,8 @@ async function processBuild(message: Message<BuildMessage>, env: Env): Promise<v
       message.ack();
       return;
     }
-    if (!response.body || response.headers.get("Content-Type") !== "audio/wav") {
+    const details = outputDetails(recipe.output);
+    if (!response.body || response.headers.get("Content-Type") !== details.contentType) {
       throw new Error("Compiler returned an invalid artifact");
     }
 
@@ -454,6 +479,7 @@ async function processBuild(message: Message<BuildMessage>, env: Env): Promise<v
     }
     const metadata = {
       wavSha256: response.headers.get("X-Plaits-Wav-Sha256") ?? "",
+      hexSha256: response.headers.get("X-Plaits-Hex-Sha256") ?? "",
       binarySha256: response.headers.get("X-Plaits-Binary-Sha256") ?? "",
       textBytes: response.headers.get("X-Plaits-Text-Bytes") ?? "0",
       dataBytes: response.headers.get("X-Plaits-Data-Bytes") ?? "0",
@@ -463,8 +489,8 @@ async function processBuild(message: Message<BuildMessage>, env: Env): Promise<v
       buildContract: response.headers.get("X-Plaits-Build-Contract") ?? env.PLAITS_BUILD_CONTRACT,
     };
     console.log(JSON.stringify({ message: "compiler artifact buffered", buildId, bytes: artifactBytes.byteLength }));
-    const artifact = await env.ARTIFACTS.put(artifactKey(buildId), artifactBytes, {
-      httpMetadata: { contentType: "audio/wav" },
+    const artifact = await env.ARTIFACTS.put(artifactKey(buildId, recipe.output), artifactBytes, {
+      httpMetadata: { contentType: details.contentType },
       customMetadata: metadata,
     });
     await env.ARTIFACTS.put(
@@ -489,6 +515,7 @@ async function processBuild(message: Message<BuildMessage>, env: Env): Promise<v
       artifact: {
         bytes: artifact.size,
         wavSha256: metadata.wavSha256,
+        hexSha256: metadata.hexSha256,
         binarySha256: metadata.binarySha256,
         textBytes: Number(metadata.textBytes),
         dataBytes: Number(metadata.dataBytes),

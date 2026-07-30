@@ -62,6 +62,7 @@ function describeSchemaRange(minimum: number, maximum = maxRecipeSchemaVersion):
 export const maxUserDataBanks = 3;
 export const patchesPerBank = 32;
 export const packedPatchSize = 128;
+export type FirmwareOutput = "audio-wav" | "intel-hex";
 
 export type NormalizedBankVoice = {
   name: string;
@@ -128,7 +129,7 @@ export type NormalizedRecipe = {
   // Absent on schema <= 9 (the global-stereo recipes, which the builder treats
   // as all stereo-capable engines when the aux option is stereo).
   stereoEngines?: string[];
-  output: "audio-wav";
+  output: FirmwareOutput;
 };
 
 const defaultConfiguration: Pick<NormalizedRecipe, "preferences" | "initialOptions"> = {
@@ -482,8 +483,11 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
       `Ro'Ved builds require recipe schema version ${rovedMinSchemaVersion}.`,
     );
   }
-  if (candidate.output !== "audio-wav") {
-    throw new ContractError("unsupported_output", "Only audio-installable WAV firmware is supported.");
+  if (candidate.output !== "audio-wav" && candidate.output !== "intel-hex") {
+    throw new ContractError(
+      "unsupported_output",
+      "Firmware output must be an audio-installable WAV or an application-only Intel HEX file.",
+    );
   }
   if (!Array.isArray(candidate.slots) || (candidate.slots.length !== 24 && candidate.slots.length !== 32)) {
     throw new ContractError("invalid_slots", "A firmware recipe must contain 24 engine slots, or 32 for a four-bank build.");
@@ -622,7 +626,7 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     resources: (userDataBanks ?? slotBanks)
       ? { chordTables, userDataBanks: userDataBanks ?? slotBanks }
       : { chordTables },
-    output: "audio-wav",
+    output: candidate.output,
   };
 }
 

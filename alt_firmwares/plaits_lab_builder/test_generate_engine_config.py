@@ -40,6 +40,15 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertEqual(int(minimum.group(1)), MIN_RECIPE_SCHEMA_VERSION)
         self.assertEqual(int(maximum.group(1)), MAX_RECIPE_SCHEMA_VERSION)
 
+    def test_output_format_accepts_wav_and_intel_hex_only(self) -> None:
+        recipe = self.load("default_recipe.json")
+        validate_recipe(recipe)
+        recipe["output"] = "intel-hex"
+        validate_recipe(recipe)
+        recipe["output"] = "raw-binary"
+        with self.assertRaisesRegex(ValueError, "unsupported output format"):
+            validate_recipe(recipe)
+
     def test_legacy_recipes_receive_the_stable_default_option_profile(self) -> None:
         # Also the value PLAITS_BUILD_OPTIONS_PROFILE_ID carries in
         # plaits/build_config.h, so a local build and a hosted default build

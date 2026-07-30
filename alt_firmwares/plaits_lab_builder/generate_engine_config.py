@@ -352,7 +352,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
             f"Ro'Ved builds require schemaVersion {ROVED_MIN_SCHEMA_VERSION}")
     if value.get("firmware") != "rubato-plaits":
         raise ValueError("unsupported firmware family")
-    if value.get("output") != "audio-wav":
+    if value.get("output") not in ("audio-wav", "intel-hex"):
         raise ValueError("unsupported output format")
     slots = value.get("slots")
     if not isinstance(slots, list) or len(slots) not in (24, 32):
