@@ -20,6 +20,7 @@ class PlaitsAuditionProcessor extends AudioWorkletProcessor {
     this.mainPtr = 0;
     this.auxPtr = 0;
     this.monitor = 0; // 0 main only (default), 1 aux only, 2 stereo (main L / aux R)
+    this.telemetryCountdown = 0;
 
     const module = options && options.processorOptions && options.processorOptions.wasmModule;
     if (module) {
@@ -77,6 +78,18 @@ class PlaitsAuditionProcessor extends AudioWorkletProcessor {
       return true;
     }
     this.exports.render(frames);
+    if (this.telemetryCountdown <= 0 &&
+        typeof this.exports.current_timbre === 'function' &&
+        typeof this.exports.current_morph === 'function') {
+      this.port.postMessage({
+        type: 'modulation-state',
+        timbre: this.exports.current_timbre(),
+        morph: this.exports.current_morph(),
+      });
+      this.telemetryCountdown = 15;
+    } else {
+      this.telemetryCountdown -= 1;
+    }
     // Re-view each block: wasm memory could in principle detach on growth.
     const main = new Float32Array(this.exports.memory.buffer, this.mainPtr, frames);
     const aux = new Float32Array(this.exports.memory.buffer, this.auxPtr, frames);

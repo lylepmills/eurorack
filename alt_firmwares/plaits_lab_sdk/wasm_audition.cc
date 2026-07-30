@@ -199,4 +199,10 @@ void render(int size) {
 float* main_out() { return g_out_main; }
 float* aux_out() { return g_out_aux; }
 
+// Audition-only telemetry. These expose the parameters actually supplied to the
+// engine, allowing the browser to distinguish subtle synthesis response from a
+// broken control/message path.
+float current_timbre() { return g_params.timbre; }
+float current_morph() { return g_params.morph; }
+
 }  // extern "C"

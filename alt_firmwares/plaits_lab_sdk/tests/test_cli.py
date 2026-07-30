@@ -763,14 +763,20 @@ class PackageTests(unittest.TestCase):
         # the worklet forwards them, and the harness decays them back to the
         # panel values. No firmware or package contract depends on this yet.
         self.assertIn("_set_modulation_targets", plaits_lab.WASM_EXPORTS)
+        self.assertIn("_current_timbre", plaits_lab.WASM_EXPORTS)
+        self.assertIn("_current_morph", plaits_lab.WASM_EXPORTS)
         harness = (plaits_lab.SDK_DIR / "wasm_audition.cc").read_text(encoding="utf-8")
         self.assertIn("set_modulation_targets", harness)
         self.assertIn("g_mod_envelope", harness)
+        self.assertIn("current_timbre", harness)
         worklet = (plaits_lab.SDK_DIR / "audition_worklet.js").read_text(encoding="utf-8")
         self.assertIn("'modulation'", worklet)
+        self.assertIn("'modulation-state'", worklet)
         html = (plaits_lab.SDK_DIR / "dev_editor.html").read_text(encoding="utf-8")
         self.assertIn("randomizer-timbre", html)
         self.assertIn("randomizer-morph", html)
+        self.assertIn("randomizer-hold", html)
+        self.assertIn("Engine now", html)
         self.assertIn("'Near' : 'Far'", html)
 
     def test_live_audition_stereo_surface_is_wired(self) -> None:
