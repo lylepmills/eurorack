@@ -12,10 +12,12 @@ namespace plaits {
 const int kHelixOctaves = 4;  // 16 voices -- the ship config. QEMU-estimated 80%
                               // of budget, hardware-verified clean after the
                               // staggered setup (flat per-block load) and the
-                              // seamless Shepard wrap landed; the earlier 4-octave
-                              // pops came from those two bugs, not headroom. 3
-                              // octaves runs at 62-75% (fallback with margin);
-                              // 6 octaves measures ~95% on the engine bracket
+                              // seamless Shepard wrap landed; the earlier
+                              // 4-octave pops came from those two bugs, not
+                              // headroom. Three mono octaves run at 62-75%;
+                              // stereo panning raises that fallback to an
+                              // estimated 85%. Six octaves measure ~95% on the
+                              // engine bracket
                               // alone and overruns once ISR overhead lands on top
                               // (hardware-validated, ~1% over the deadline).
 
