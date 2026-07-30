@@ -634,7 +634,12 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
       throw new ContractError("invalid_resources", "The recipe must contain only supported firmware resources.");
     }
     const resourceValues = resources as Record<string, unknown>;
-    const baseKeys = schemaVersion >= scaleBankMinSchemaVersion
+    // Schema 16 can be reached by automatic LEVEL routing without a custom
+    // scale bank. In that case scaleBank stays absent and the container compiles
+    // its shipped default bank.
+    const carriesScaleBank = schemaVersion >= scaleBankMinSchemaVersion
+      && Object.hasOwn(resourceValues, "scaleBank");
+    const baseKeys = carriesScaleBank
       ? ["chordTables", "scaleBank"] : ["chordTables"];
     const carriesUserDataBanks = expectsUserDataBanks
       || (schemaVersion >= calibrationMinSchemaVersion
@@ -645,7 +650,7 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
       throw new ContractError("invalid_resources", "The recipe must contain only supported firmware resources.");
     }
     chordTables = normalizeChordTables(resourceValues.chordTables);
-    if (schemaVersion >= scaleBankMinSchemaVersion) {
+    if (carriesScaleBank) {
       scaleBank = normalizeScaleBank(resourceValues.scaleBank);
     }
     if (carriesUserDataBanks) {
@@ -773,6 +778,8 @@ export async function computeManualKey(
     // prints, so they must change its cache identity.
     calibration: recipe.preferences.calibration,
     colorBlindMode: recipe.preferences.colorBlindMode,
+    // A non-Octaves starting assignment adds the locked-octave shortcut callout.
+    lockedFrequencyKnob: recipe.initialOptions.lockedFrequencyKnob,
   });
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical));
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");

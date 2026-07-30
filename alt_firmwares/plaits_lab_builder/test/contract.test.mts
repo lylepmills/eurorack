@@ -485,7 +485,7 @@ test("version 16 validates, normalizes, and hashes the scale bank", async () => 
 
   const missing = structuredClone(recipe);
   delete (missing.resources as { scaleBank?: unknown }).scaleBank;
-  assert.throws(() => normalizeRecipe(missing), /supported firmware resources/);
+  assert.equal(normalizeRecipe(missing).resources.scaleBank, undefined);
 
   const duplicate = structuredClone(recipe);
   duplicate.resources.scaleBank[1].id = duplicate.resources.scaleBank[0].id;
@@ -779,6 +779,15 @@ test("manual keys derive from documentation identity, not build identity", async
   optionsChanged.preferences = { ...optionsChanged.preferences, navigationMode: "banked" };
   optionsChanged.initialOptions = { ...optionsChanged.initialOptions, holdOnTrigger: true };
   assert.equal(first, await computeManualKey(optionsChanged, "1"));
+
+  // The locked-frequency assignment controls whether the guide adds the
+  // right-button + MORPH octave shortcut callout.
+  const lockedFrequencyChanged = normalizeRecipe(fixture);
+  lockedFrequencyChanged.initialOptions = {
+    ...lockedFrequencyChanged.initialOptions,
+    lockedFrequencyKnob: "decay",
+  };
+  assert.notEqual(first, await computeManualKey(lockedFrequencyChanged, "1"));
 
   // The accessible bank display IS printed beside the bank map.
   const displayChanged = normalizeRecipe(fixture);

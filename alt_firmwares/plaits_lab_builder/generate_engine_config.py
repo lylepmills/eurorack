@@ -464,8 +464,16 @@ def validate_recipe(value: Any) -> BuildRecipe:
         # v14+ compile-time features say nothing about resources: calibration,
         # the Ro'Ved panel, and the color-blind display can each compose with any
         # palette, with or without custom FM banks. Mirrors the Worker contract.
+        # Schema 16 can be reached either by a custom scale bank or by another
+        # v16 feature such as automatic LEVEL routing. A missing scaleBank means
+        # "compile the shipped default bank"; it is not an invalid v16 recipe.
+        carries_scale_bank = (
+            schema_version >= SCALE_BANK_MIN_SCHEMA_VERSION
+            and isinstance(resources, dict)
+            and "scaleBank" in resources
+        )
         base_resource_keys = {"chordTables"}
-        if schema_version >= SCALE_BANK_MIN_SCHEMA_VERSION:
+        if carries_scale_bank:
             base_resource_keys.add("scaleBank")
         carries_user_data_banks = expect_user_data_banks or (
             schema_version >= CALIBRATION_MIN_SCHEMA_VERSION
@@ -478,7 +486,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
         if not isinstance(resources, dict) or set(resources) != expected_resource_keys:
             raise ValueError("recipe must contain only supported firmware resources")
         chord_tables = validate_chord_tables(resources.get("chordTables"))
-        if schema_version >= SCALE_BANK_MIN_SCHEMA_VERSION:
+        if carries_scale_bank:
             scale_bank = validate_scale_bank(resources.get("scaleBank"))
         if carries_user_data_banks:
             if schema_version >= SLOT_BANK_MIN_SCHEMA_VERSION:

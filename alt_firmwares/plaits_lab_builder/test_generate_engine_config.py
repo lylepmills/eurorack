@@ -222,11 +222,13 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertIn("{ { 0, 261, 637, 899, 1393, 0, 0 }, 5 }", config)
         self.assertLess(config.index("0, 261, 637"), config.index("0, 256, 512, 768"))
 
-    def test_v16_scale_bank_rejects_invalid_data(self) -> None:
+    def test_v16_scale_bank_defaults_when_absent_and_rejects_invalid_data(self) -> None:
         recipe = self.calibration_recipe(16, False)
         del recipe["resources"]["scaleBank"]
-        with self.assertRaisesRegex(ValueError, "supported firmware resources"):
-            validate_recipe(recipe)
+        self.assertEqual(
+            validate_recipe(recipe).scale_bank,
+            DEFAULT_SCALE_BANK,
+        )
 
         recipe = self.calibration_recipe(16, False)
         recipe["resources"]["scaleBank"] = [DEFAULT_SCALE_BANK[0], DEFAULT_SCALE_BANK[0]]
