@@ -478,7 +478,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
     )
     options_intro = (
         "Click TIMBRE + FREQUENCY together to enter or exit the options menu. The first seven lights are the menu: "
-        "click TIMBRE/FREQUENCY to move forward/backward between lights, and HARMONICS/MORPH to step forward/backward through a light's settings. "
+        "click FREQUENCY/TIMBRE for the previous/next light, and MORPH/HARMONICS for the previous/next setting. "
         "The light's color shows the current setting — green, red, and yellow, then the same three colors blinking for a fourth, fifth, or sixth setting — "
         "and, on LIGHT 1, blinking fast for a seventh, eighth, or ninth."
         if roved else
@@ -491,8 +491,8 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         "LIGHT 1 applies to chord-capable models and lists the chord tables loaded in this build (up to nine). "
         "LIGHT 3 stays dark, and the light navigation skips it, unless LIGHT 2 is set to a suboscillator — it has nothing to act on otherwise. "
         "LIGHT 4 applies in octave-switching (frequency-locked) mode. LIGHT 6's LPG-decay setting applies only when TRIG is patched. "
-        "Outside the menu, the left pair changes banks: click FREQUENCY/HARMONICS for previous/next bank. "
-        "The right pair changes models: click TIMBRE/MORPH for previous/next model."
+        "Outside the menu, click FREQUENCY/TIMBRE for previous/next bank and "
+        "MORPH/HARMONICS for previous/next model."
         if roved else
         "LIGHT 1 applies to chord-capable models and lists the chord tables loaded in this build (up to nine). "
         "LIGHT 3 stays dark, and the left button walks past it, unless LIGHT 2 is set to a suboscillator — it has nothing to act on otherwise. "

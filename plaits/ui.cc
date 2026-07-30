@@ -530,20 +530,20 @@ void Ui::Navigate(int button) {
 
 #if PLAITS_ROVED_PANEL
   // Four clickable knobs give both traversals at once, so the build-time
-  // navigation mode is not consulted. The left pair, FREQUENCY/HARMONICS,
-  // change bank; the right pair, TIMBRE/MORPH, step one engine globally. The
-  // left knob in each pair goes backward and the right knob goes forward.
+  // navigation mode is not consulted. In physical left-to-right order,
+  // FREQUENCY/TIMBRE change bank and MORPH/HARMONICS step one engine globally.
+  // The left knob in each pair goes backward and the right knob goes forward.
   // Bank changes use the same per-bank memory as stock Plaits and work with
   // short, empty, sparse, and fourth banks.
-  if (button == 0 || button == 1) {
-    const uint8_t increment =
-        button == 1 ? 1 : PLAITS_ENGINE_COUNT - 1;
-    patch_->engine =
-        (patch_->engine + increment) % PLAITS_ENGINE_COUNT;
-  } else {
-    const int direction = button == 2 ? 1 : -1;
+  if (button == 0 || button == 3) {
+    const int direction = button == 0 ? 1 : -1;
     patch_->engine = ChangeBank(
         kBankSizes, kNumBanks, patch_->engine, bank_last_row_, direction);
+  } else {
+    const uint8_t increment =
+        button == 2 ? 1 : PLAITS_ENGINE_COUNT - 1;
+    patch_->engine =
+        (patch_->engine + increment) % PLAITS_ENGINE_COUNT;
   }
 #else  // PLAITS_ROVED_PANEL
   if (PLAITS_BUILD_NAVIGATION_MODE == 1) {
