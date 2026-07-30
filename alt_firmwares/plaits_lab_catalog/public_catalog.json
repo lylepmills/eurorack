@@ -1495,46 +1495,6 @@
       }
     },
     {
-      "id": "undertow",
-      "packageId": "rubato/undertow",
-      "name": "Undertow",
-      "author": "Lyle Mills",
-      "origin": "Rubato Lab",
-      "family": "Subharmonic",
-      "description": "Six integer undertones blend through original registrations and a warped divider lattice.",
-      "tags": [
-        "experimental",
-        "subharmonic",
-        "undertone",
-        "divider"
-      ],
-      "controls": [
-        "Registration",
-        "Wave colour",
-        "Anchor balance",
-        "Lattice stretch"
-      ],
-      "outputs": [
-        "Registered undertone mixture",
-        "Hollow alternating lattice"
-      ],
-      "version": "1.0.0",
-      "digest": "sha256:cee4301588fe9387b1e54b8259ee0cffabc53bd81a48767d526eee1f35ab9872",
-      "documentationDigest": "sha256:3e748cb431557f1ebbc5aa571a96cbfda606309739dad48016ea44ce03fe4686",
-      "manual": {
-        "controls": {
-          "harmonics": "Moves through five interpolated undertone registrations.",
-          "timbre": "Changes the divider voices from triangle through BLEP saw to pulse.",
-          "morph": "Balances the pitch anchor against the undertone lattice.",
-          "macro": "Contracts or expands the deepest divider relationships."
-        },
-        "trigger": "Phase-aligns all divider voices."
-      },
-      "implementation": {
-        "className": "UndertowEngine"
-      }
-    },
-    {
       "id": "reed-pipe",
       "packageId": "rubato/reed-pipe",
       "name": "Reed Pipe",
@@ -1572,46 +1532,6 @@
       },
       "implementation": {
         "className": "ReedPipeEngine"
-      }
-    },
-    {
-      "id": "phase-flock",
-      "packageId": "rubato/phase-flock",
-      "name": "Phase Flock",
-      "author": "Lyle Mills",
-      "origin": "Rubato Lab",
-      "family": "Coupled",
-      "description": "Seven mean-field phase oscillators disperse, synchronize, and split into antipodal clusters.",
-      "tags": [
-        "experimental",
-        "kuramoto",
-        "coupled",
-        "synchronization"
-      ],
-      "controls": [
-        "Frequency spread",
-        "Coupling",
-        "Cluster order",
-        "Phase lag"
-      ],
-      "outputs": [
-        "First circular moment",
-        "Second circular moment"
-      ],
-      "version": "1.0.0",
-      "digest": "sha256:fb08ee3b4f8a95c934f2bb0a82c5022399abf8151ea169311010d2b7b3b98e4c",
-      "documentationDigest": "sha256:387d248ab03674076425e1a9c8b3ff143dcd17a74d47b0377d40773774d8cc4b",
-      "manual": {
-        "controls": {
-          "harmonics": "Spreads the seven oscillators' natural frequencies.",
-          "timbre": "Raises mean-field coupling from dispersion toward synchronization.",
-          "morph": "Moves attraction from a single cluster toward antipodal two-cluster order.",
-          "macro": "Adds phase lag and frustration to the coupling field."
-        },
-        "trigger": "Scatters the oscillator phases."
-      },
-      "implementation": {
-        "className": "PhaseFlockEngine"
       }
     },
     {
@@ -3356,8 +3276,8 @@
       "reed-pipe",
       "phase-weave",
       "sideband-bank",
-      "undertow",
-      "phase-flock",
+      "gendy",
+      "rulefield",
       "spectral-spiral"
     ],
     "stock": [
@@ -3391,9 +3311,9 @@
       "lockstep",
       "phase-weave",
       "sideband-bank",
-      "undertow",
+      "shakers",
       "reed-pipe",
-      "phase-flock",
+      "brass",
       "spectral-spiral",
       "tapfield",
       "attractor",
