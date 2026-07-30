@@ -29,6 +29,8 @@
 #ifndef PLAITS_DRIVERS_CV_ADC_H_
 #define PLAITS_DRIVERS_CV_ADC_H_
 
+#include <stddef.h>
+
 #include "stmlib/stmlib.h"
 
 namespace plaits {
@@ -47,12 +49,18 @@ enum CvAdcChannel {
 
 class CvAdc {
  public:
+  static const size_t kAudioRateFmBufferSize = 24;
+
   CvAdc() { }
   ~CvAdc() { }
   
   void Init();
   void DeInit();
   void Convert();
+  // Copies the newest `size` audio-rate FM conversions in chronological order.
+  // In a regular build this simply repeats the latest control-rate reading,
+  // which keeps the driver API and class layout recipe-independent.
+  void CopyAudioRateFm(int16_t* destination, size_t size) const;
 
   inline int16_t value(CvAdcChannel channel) const {
     return values_[channel_map_[channel]];
@@ -65,6 +73,7 @@ class CvAdc {
  private:
   int channel_map_[CV_ADC_CHANNEL_LAST];
   int16_t values_[CV_ADC_CHANNEL_LAST];
+  int16_t audio_rate_fm_[kAudioRateFmBufferSize];
   
   DISALLOW_COPY_AND_ASSIGN(CvAdc);
 };

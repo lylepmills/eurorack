@@ -81,10 +81,10 @@ void WaveshapingEngine::Render(
   
   // Start from bandlimited slope signal.
   const uint32_t hard_sync = PLAITS_HARD_SYNC_EVENTS(parameters);
-  slope_.Render<OSCILLATOR_SHAPE_SLOPE>(
-      f0, pw, out, size, hard_sync);
-  triangle_.Render<OSCILLATOR_SHAPE_SLOPE>(
-      f0, 0.5f, aux, size, hard_sync);
+  slope_.RenderLinearFm<OSCILLATOR_SHAPE_SLOPE>(
+      f0, pw, parameters.linear_fm, out, size, hard_sync);
+  triangle_.RenderLinearFm<OSCILLATOR_SHAPE_SLOPE>(
+      f0, 0.5f, parameters.linear_fm, aux, size, hard_sync);
 
   // Try to estimate how rich the spectrum is, and reduce the range of the
   // waveshaping control accordingly.

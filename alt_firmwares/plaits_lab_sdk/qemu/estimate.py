@@ -235,6 +235,8 @@ def main() -> int:
         help="periodic-trigger interval in audio blocks (default: 16)")
     parser.add_argument("--stereo", action="store_true",
         help="measure the stereo (OUT/AUX as L/R) render path instead of mono")
+    parser.add_argument("--linear-tzfm", action="store_true",
+        help="feed a bipolar audio-rate +/-1 kHz absolute-frequency offset")
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--sweep", nargs="?", const="extreme", choices=("quick", "extreme"),
         help="measure parameter extremes and report the worst (default: extreme; pass quick for the legacy short sweep)")
@@ -318,6 +320,7 @@ def main() -> int:
             f'-DPLAITS_LAB_ENGINE_HEADER="{header_define}"',
             f"-DPLAITS_LAB_ENGINE_CLASS=plaits::{package['manifest']['source']['className']}",
             f"-DPLAITS_LAB_USER_DATA_BANK={package.get('user_data_bank', -1)}",
+            f"-DPLAITS_BUILD_LINEAR_TZFM={1 if args.linear_tzfm else 0}",
         ]
         includes = ["/workspace", "/contributor/src", "/qemu"]
         compile_prefix = ["/usr/local/arm-4.8.3/bin/arm-none-eabi-g++", *ARCH_FLAGS,
@@ -355,6 +358,7 @@ def main() -> int:
                         f"-DPLAITS_QEMU_TRIGGER={trigger_value}",
                         f"-DPLAITS_QEMU_TRIGGER_PERIOD={trigger_period}",
                         f"-DPLAITS_QEMU_STEREO={1 if args.stereo else 0}",
+                        f"-DPLAITS_QEMU_LINEAR_TZFM={1 if args.linear_tzfm else 0}",
                     ]
                     commands.append(" ".join(shlex.quote(c) for c in [
                         *compile_prefix, *defines, "-c", mapped_harness, "-o", harness_obj,

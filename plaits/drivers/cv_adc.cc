@@ -30,6 +30,9 @@
 
 #include <stm32f37x_conf.h>
 
+#include "plaits/build_config.h"
+#include "plaits/drivers/audio_rate_timer.h"
+
 namespace plaits {
 
 struct ChannelConfiguration {
@@ -70,6 +73,14 @@ const ConverterConfiguration converter_configuration[3] = {
 };
 
 void CvAdc::Init() {
+  for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) {
+    channel_map_[i] = 0;
+    values_[i] = 0;
+  }
+  for (size_t i = 0; i < kAudioRateFmBufferSize; ++i) {
+    audio_rate_fm_[i] = 0;
+  }
+
   // Power all the SDADCs.
   RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR, ENABLE);
   PWR_SDADCAnalogCmd(PWR_SDADCAnalog_1, ENABLE);
@@ -112,6 +123,7 @@ void CvAdc::Init() {
   // Configure all SDADCs, all their input channels, and all the DMA channels.
   for (int i = 0; i < 3; ++i) {
     const ConverterConfiguration& config = converter_configuration[i];
+    const bool audio_rate_fm = PLAITS_BUILD_LINEAR_TZFM && i == 1;
 
     // Wait for SDADC to stabilize.
     SDADC_Cmd(config.sdadc, ENABLE);
@@ -130,9 +142,13 @@ void CvAdc::Init() {
     // Configure DMA to read injected values into a slice of the
     // values_ array.
     dma_init.DMA_PeripheralBaseAddr = (uint32_t)&(config.sdadc->JDATAR);
-    dma_init.DMA_MemoryBaseAddr = (uint32_t)(&values_[current_channel]);
+    dma_init.DMA_MemoryBaseAddr = audio_rate_fm
+        ? (uint32_t)(&audio_rate_fm_[0])
+        : (uint32_t)(&values_[current_channel]);
     dma_init.DMA_DIR = DMA_DIR_PeripheralSRC;
-    dma_init.DMA_BufferSize = config.num_channels;
+    dma_init.DMA_BufferSize = audio_rate_fm
+        ? kAudioRateFmBufferSize
+        : config.num_channels;
     dma_init.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
     dma_init.DMA_MemoryInc = DMA_MemoryInc_Enable;
     dma_init.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
@@ -147,9 +163,14 @@ void CvAdc::Init() {
     uint32_t channels = 0;
     for (int j = 0; j < config.num_channels; ++j) {
       channel_map_[config.channel[j].map_to] = current_channel++;
-      channels |= config.channel[j].channel;
       SDADC_ChannelConfig(
           config.sdadc, config.channel[j].channel, SDADC_Conf_0);
+      // At 47.872 kHz SDADC2 has time for one conversion only. LEVEL remains
+      // configured as an analog pin but is intentionally not selected.
+      if (!audio_rate_fm ||
+          config.channel[j].map_to == CV_ADC_CHANNEL_FM) {
+        channels |= config.channel[j].channel;
+      }
     }
     
     // Select injected channels.
@@ -158,6 +179,12 @@ void CvAdc::Init() {
     // Disable continuous mode - the conversions are restarted every time
     // we render a block of samples.
     SDADC_InjectedContinuousModeCmd(config.sdadc, DISABLE);
+    if (audio_rate_fm) {
+      SDADC_ExternalTrigInjectedConvConfig(
+          config.sdadc, SDADC_ExternalTrigInjecConv_T2_CC3);
+      SDADC_ExternalTrigInjectedConvEdgeConfig(
+          config.sdadc, SDADC_ExternalTrigInjecConvEdge_Rising);
+    }
     
     // Terminate initialization sequence.
     SDADC_CalibrationSequenceConfig(config.sdadc, SDADC_CalibrationSequence_3);
@@ -172,10 +199,19 @@ void CvAdc::Init() {
     DMA_Cmd(config.dma_channel, ENABLE);
     SDADC_DMAConfig(config.sdadc, SDADC_DMATransfer_Injected, ENABLE);
   }
+
+#if PLAITS_BUILD_LINEAR_TZFM
+  // The shared timer's CC3 event is exactly phase-stable with the I2S clock.
+  // Sync input can share the same base through TRGO without resetting us.
+  AudioRateTimer::SetClientActive(AudioRateTimer::CLIENT_TZFM_CV, true);
+#endif
   Convert();
 }
 
 void CvAdc::DeInit() {
+#if PLAITS_BUILD_LINEAR_TZFM
+  AudioRateTimer::SetClientActive(AudioRateTimer::CLIENT_TZFM_CV, false);
+#endif
   for (int i = 0; i < 3; ++i) {
     const ConverterConfiguration& config = converter_configuration[i];
     SDADC_Cmd(config.sdadc, DISABLE);
@@ -186,8 +222,47 @@ void CvAdc::DeInit() {
 
 void CvAdc::Convert() {
   SDADC_SoftwareStartInjectedConv(SDADC1);
+#if PLAITS_BUILD_LINEAR_TZFM
+  // Cache a scalar reading for normalization detection and for engines that do
+  // not implement linear TZFM. The continuous DMA remains the source used by
+  // capable engines; LEVEL is unavailable in this build mode.
+  const size_t next = (
+      kAudioRateFmBufferSize - DMA_GetCurrDataCounter(DMA2_Channel4)) %
+      kAudioRateFmBufferSize;
+  values_[channel_map_[CV_ADC_CHANNEL_FM]] =
+      audio_rate_fm_[(next + kAudioRateFmBufferSize - 1) %
+                     kAudioRateFmBufferSize];
+  values_[channel_map_[CV_ADC_CHANNEL_LEVEL]] = 0;
+#else
   SDADC_SoftwareStartInjectedConv(SDADC2);
+#endif
   SDADC_SoftwareStartInjectedConv(SDADC3);
+}
+
+void CvAdc::CopyAudioRateFm(int16_t* destination, size_t size) const {
+  if (size > kAudioRateFmBufferSize) {
+    size = kAudioRateFmBufferSize;
+  }
+#if PLAITS_BUILD_LINEAR_TZFM
+  // CNDTR points to the NEXT DMA write. Looking one block backwards therefore
+  // returns the newest completed samples in chronological order. The copy is
+  // far shorter than one conversion period; a sample completing during it can
+  // only defer that newest sample to the following audio block.
+  const size_t next = (
+      kAudioRateFmBufferSize - DMA_GetCurrDataCounter(DMA2_Channel4)) %
+      kAudioRateFmBufferSize;
+  const size_t first =
+      (next + kAudioRateFmBufferSize - size) % kAudioRateFmBufferSize;
+  for (size_t i = 0; i < size; ++i) {
+    destination[i] =
+        audio_rate_fm_[(first + i) % kAudioRateFmBufferSize];
+  }
+#else
+  const int16_t value = values_[channel_map_[CV_ADC_CHANNEL_FM]];
+  for (size_t i = 0; i < size; ++i) {
+    destination[i] = value;
+  }
+#endif
 }
 
 }  // namespace plaits

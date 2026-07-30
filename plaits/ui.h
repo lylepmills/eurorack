@@ -78,6 +78,10 @@ class Ui {
 
   void Poll();
 
+  // Transform the newest audio-rate FM ADC block with the module's stored FM
+  // calibration. Kept public for the audio callback's diagnostics/tests.
+  void ReadAudioRateFm(float* destination, size_t size);
+
   void set_active_engine(int active_engine) {
     active_engine_ = active_engine;
   }

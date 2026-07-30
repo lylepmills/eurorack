@@ -106,8 +106,9 @@ void FMEngine::RenderInternal(
   CONSTRAIN(hf_taming, 0.0f, 1.0f);
   hf_taming *= hf_taming;
   
+  const float target_carrier_frequency = NoteToFrequency(note);
   ParameterInterpolator carrier_frequency(
-      &previous_carrier_frequency_, NoteToFrequency(note), size);
+      &previous_carrier_frequency_, target_carrier_frequency, size);
   ParameterInterpolator modulator_frequency(
       &previous_modulator_frequency_, target_modulator_frequency, size);
   ParameterInterpolator amount_modulation(
@@ -118,6 +119,11 @@ void FMEngine::RenderInternal(
       &previous_feedback_, 2.0f * parameters.morph - 1.0f, size);
   Downsampler carrier_downsampler(&carrier_fir_);
   Downsampler sub_downsampler(&sub_fir_);
+  const float modulator_ratio = target_modulator_frequency /
+      (target_carrier_frequency > 1.0e-9f
+          ? target_carrier_frequency
+          : 1.0e-9f);
+  const float* linear_fm = parameters.linear_fm;
 
   // Equal-power pan gains for the stereo octave-spread, computed once at
   // control rate. The carrier sits slightly left of centre, the sub slightly
@@ -148,15 +154,30 @@ void FMEngine::RenderInternal(
     const float amount = amount_modulation.Next();
     const float feedback = feedback_modulation.Next();
     float phase_feedback = feedback < 0.0f ? 0.5f * feedback * feedback : 0.0f;
-    const uint32_t carrier_increment = static_cast<uint32_t>(
-        max_uint32 * carrier_frequency.Next());
-    float _modulator_frequency = modulator_frequency.Next();
+    // This engine renders four internal samples per output sample. The
+    // external offset is expressed at the output sample rate, so divide by
+    // four before applying it to each oversampled phase step. Apply the same
+    // root-frequency displacement to the modulator, scaled by the selected
+    // operator ratio, so the entire FM voice crosses zero coherently.
+    const float root_offset = linear_fm ? *linear_fm++ * 0.25f : 0.0f;
+    float _carrier_frequency = carrier_frequency.Next() + root_offset;
+    float _modulator_frequency =
+        modulator_frequency.Next() + root_offset * modulator_ratio;
+    CONSTRAIN(_carrier_frequency, -0.5f, 0.499999f);
+    CONSTRAIN(_modulator_frequency, -0.5f, 0.499999f);
+    const int32_t carrier_increment = static_cast<int32_t>(
+        max_uint32 * _carrier_frequency);
 
     for (size_t j = 0; j < kOversampling; ++j) {
-      modulator_phase_ += static_cast<uint32_t>(max_uint32 * \
-           _modulator_frequency * (1.0f + previous_sample_ * phase_feedback));
+      float modulator_phase_frequency =
+          _modulator_frequency *
+          (1.0f + previous_sample_ * phase_feedback);
+      CONSTRAIN(modulator_phase_frequency, -0.5f, 0.499999f);
+      const int32_t modulator_increment = static_cast<int32_t>(
+          max_uint32 * modulator_phase_frequency);
+      modulator_phase_ += modulator_increment;
       carrier_phase_ += carrier_increment;
-      sub_phase_ += carrier_increment >> 1;
+      sub_phase_ += carrier_increment / 2;
       float modulator_fb = feedback > 0.0f ? 0.25f * feedback * feedback : 0.0f;
       float modulator = SinePM(
           modulator_phase_, modulator_fb * previous_sample_);
