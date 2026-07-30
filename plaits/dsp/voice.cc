@@ -222,7 +222,29 @@ void Voice::Render(
     macro_cv = modulations.engine;
   }
   CONSTRAIN(patch_lpg_colour, 0.0f, 1.0f);
-  
+
+#if PLAITS_BUILD_LINEAR_TZFM
+  // The FM attenuverter controls a fixed Hz/volt slope instead of a semitone
+  // span for engines that opt in. The ADC calibration expresses FM in
+  // semitones (12 per volt), so 1000 / 12 / sample-rate converts it to signed
+  // cycles/sample. A fixed Hz slope is what makes this linear FM; dividing by
+  // the carrier here would turn it back into exponential/ratio modulation.
+  float linear_fm[kMaxBlockSize];
+  const bool use_linear_tzfm =
+      modulations.frequency_patched && e->linear_tzfm_capable();
+  if (use_linear_tzfm) {
+    float amount = patch.frequency_modulation_amount;
+    amount *= std::max(fabsf(amount) - 0.05f, 0.05f);
+    amount *= 1.05f;
+    const float scale = amount * (1000.0f / 12.0f) / kCorrectedSampleRate;
+    for (size_t i = 0; i < size; ++i) {
+      linear_fm[i] = modulations.frequency_audio[i] * scale;
+    }
+  }
+#else
+  const bool use_linear_tzfm = false;
+#endif
+
   if (engine_index != previous_engine_index_ || reload_user_data_) {
     if (patch.attenuverter_mode == ATTENUVERTER_MODE_STEP) {
       parameter_randomizer_.Trigger();
@@ -281,6 +303,9 @@ void Voice::Render(
   // PLAITS_STEREO_<X> flag off, so stereo is never routed to it.
   const bool stereo_render = patch.aux_is_stereo() && e->stereo_capable();
   p.stereo = stereo_render;
+#if PLAITS_BUILD_LINEAR_TZFM
+  p.linear_fm = use_linear_tzfm ? linear_fm : NULL;
+#endif
   p.macro = patch.locked_frequency_pot_option == 1
       ? patch.freqlock_param
       : 0.5f;
@@ -435,7 +460,7 @@ void Voice::Render(
   p.note = ApplyModulations(
       patch.note + note,
       patch.frequency_modulation_amount,
-      modulations.frequency_patched,
+      modulations.frequency_patched && !use_linear_tzfm,
       modulations.frequency,
       use_internal_frequency_envelope,
       internal_envelope_amplitude * \

@@ -78,6 +78,7 @@ struct EngineParameters {
       : articulation_envelope(0.0f),
         articulation_envelope_active(false),
         hard_sync(0),
+        linear_fm(NULL),
         stereo(false) { }
 
   int trigger;
@@ -105,6 +106,11 @@ struct EngineParameters {
   // reporting hard_sync_capable() consume the complete mask themselves. The
   // voice adapts every other engine through the bounded fallback below.
   uint32_t hard_sync;
+
+  // Optional per-sample absolute frequency offsets, in cycles per sample.
+  // Engines advertise support with linear_tzfm_capable(); unsupported engines
+  // keep the stock exponential/control-rate FM path in Voice.
+  const float* linear_fm;
   // alt firmware: when true, the voice requests a true stereo render — OUT
   // becomes the left channel and AUX the right channel. The voice only sets
   // this for engines reporting stereo_capable(); an engine that ignores the
@@ -208,6 +214,9 @@ class Engine {
   // audio-rate sync source is connected. Trigger-aware engines leave this as a
   // no-op and receive a synthetic rising edge instead.
   virtual void HardSync() { }
+  // Engines returning true consume EngineParameters::linear_fm as signed,
+  // audio-rate frequency offsets and must preserve negative increments.
+  virtual bool linear_tzfm_capable() const { return false; }
   PostProcessingSettings post_processing_settings;
 };
 

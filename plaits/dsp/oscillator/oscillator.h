@@ -68,7 +68,7 @@ class Oscillator {
 
   template<OscillatorShape shape>
   void Render(float frequency, float pw, float* out, size_t size) {
-    RenderInternal<shape, false, false, false>(
+    RenderInternal<shape, false, false, false, false>(
         frequency, pw, NULL, out, size, 0);
   }
 
@@ -80,10 +80,10 @@ class Oscillator {
       size_t size,
       uint32_t hard_sync) {
     if (hard_sync) {
-      RenderInternal<shape, false, false, true>(
+      RenderInternal<shape, false, false, false, true>(
           frequency, pw, NULL, out, size, hard_sync);
     } else {
-      RenderInternal<shape, false, false, false>(
+      RenderInternal<shape, false, false, false, false>(
           frequency, pw, NULL, out, size, 0);
     }
   }
@@ -96,23 +96,33 @@ class Oscillator {
       float* out,
       size_t size) {
     if (!fm) {
-      RenderInternal<shape, false, false, false>(
+      RenderInternal<shape, false, false, false, false>(
           frequency, pw, NULL, out, size, 0);
     } else {
-      RenderInternal<shape, true, true, false>(
+      RenderInternal<shape, true, true, false, false>(
           frequency, pw, fm, out, size, 0);
     }
   }
 
-  template<OscillatorShape shape, bool has_external_fm, bool through_zero_fm>
-  void Render(
+  // Like the existing FM overload, but each sample is an absolute signed
+  // frequency offset (cycles/sample) rather than a ratio of the carrier.
+  template<OscillatorShape shape>
+  void RenderLinearFm(
       float frequency,
       float pw,
-      const float* external_fm,
+      const float* fm,
       float* out,
-      size_t size) {
-    RenderInternal<shape, has_external_fm, through_zero_fm, false>(
-        frequency, pw, external_fm, out, size, 0);
+      size_t size,
+      uint32_t hard_sync = 0) {
+    if (!fm) {
+      Render<shape>(frequency, pw, out, size, hard_sync);
+    } else if (hard_sync) {
+      RenderInternal<shape, true, true, true, true>(
+          frequency, pw, fm, out, size, hard_sync);
+    } else {
+      RenderInternal<shape, true, true, true, false>(
+          frequency, pw, fm, out, size, 0);
+    }
   }
 
  private:
@@ -120,6 +130,7 @@ class Oscillator {
       OscillatorShape shape,
       bool has_external_fm,
       bool through_zero_fm,
+      bool absolute_fm,
       bool process_hard_sync>
   void RenderInternal(
       float frequency,
@@ -149,7 +160,11 @@ class Oscillator {
 
       float frequency = fm.Next();
       if (has_external_fm) {
-        frequency *= (1.0f + *external_fm++);
+        if (absolute_fm) {
+          frequency += *external_fm++;
+        } else {
+          frequency *= (1.0f + *external_fm++);
+        }
         if (!through_zero_fm) {
           CONSTRAIN(frequency, kMinFrequency, kMaxFrequency);
         } else {

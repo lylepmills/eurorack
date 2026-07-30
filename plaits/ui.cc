@@ -1008,6 +1008,14 @@ void Ui::DetectNormalization() {
   bool expected_value = normalization_probe_state_ >> 31;
   for (int i = 0; i < kNumNormalizedChannels; ++i) {
     CvAdcChannel channel = normalized_channels_[i];
+#if PLAITS_BUILD_LINEAR_TZFM
+    // SDADC2 is dedicated to FM in this build, so LEVEL cannot participate in
+    // normalization detection and must always behave as unpatched.
+    if (channel == CV_ADC_CHANNEL_LEVEL) {
+      normalization_detection_mismatches_[i] = 0;
+      continue;
+    }
+#endif
     bool read_value = cv_adc_.value(channel) < \
         settings_->calibration_data(channel).normalization_detection_threshold;
     if (expected_value != read_value) {
@@ -1029,12 +1037,29 @@ void Ui::DetectNormalization() {
   normalization_probe_.Write(normalization_probe_state_ >> 31);
 }
 
+void Ui::ReadAudioRateFm(float* destination, size_t size) {
+  int16_t raw[CvAdc::kAudioRateFmBufferSize];
+  if (size > CvAdc::kAudioRateFmBufferSize) {
+    size = CvAdc::kAudioRateFmBufferSize;
+  }
+  cv_adc_.CopyAudioRateFm(raw, size);
+  const ChannelCalibrationData& calibration =
+      settings_->calibration_data(CV_ADC_CHANNEL_FM);
+  for (size_t i = 0; i < size; ++i) {
+    destination[i] = calibration.Transform(
+        static_cast<float>(raw[i]) / 32768.0f);
+  }
+}
+
 void Ui::Poll() {
 #if PLAITS_BUILD_ENABLE_SYNC_INPUT
   sync_input_.SetEnabled(patch_->model_cv_option == 4);
   modulations_->hard_sync = sync_input_.ReadEvents(kBlockSize);
 #else
   modulations_->hard_sync = 0;
+#endif
+#if PLAITS_BUILD_LINEAR_TZFM
+  ReadAudioRateFm(modulations_->frequency_audio, kBlockSize);
 #endif
   for (int i = 0; i < POTS_ADC_CHANNEL_LAST; ++i) {
     pots_[i].ProcessControlRate(pots_adc_.float_value(PotsAdcChannel(i)));
@@ -1045,6 +1070,13 @@ void Ui::Poll() {
     destination[i] = settings_->calibration_data(i).Transform(
         cv_adc_.float_value(CvAdcChannel(i)));
   }
+#if PLAITS_BUILD_LINEAR_TZFM
+  // The Level jack shares SDADC2 with FM and is intentionally unavailable.
+  // Zeroing both fields also prevents a recipe whose saved level-input option
+  // was "decay" from applying a phantom modulation.
+  modulations_->level = 0.0f;
+  modulations_->level_patched = false;
+#endif
 
   ONE_POLE(pitch_lp_, modulations_->note, 0.7f);
   modulations_->note = pitch_lp_;
