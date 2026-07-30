@@ -33,7 +33,14 @@ BUILD_CONTRACT_VERSION = os.environ.get("PLAITS_BUILD_CONTRACT", "2")
 MANUAL_CONTRACT_FALLBACK = os.environ.get("PLAITS_MANUAL_CONTRACT", "1")
 TOOLCHAIN_ID = "gcc-arm-none-eabi-4.8-2013q4"
 TOOLCHAIN_BIN = os.environ.get("PLAITS_TOOLCHAIN_BIN", "/usr/local/arm-4.8.3/bin")
-MAX_REQUEST_BYTES = 32 * 1024
+# The Worker has already normalized and structurally bounded the recipe before
+# it reaches this private container. A schema-v12 recipe can carry one inline
+# 32-voice FM bank per palette slot; those 7-bit bytes expand to decimal JSON,
+# so the old 32 KiB transport cap rejected valid recipes long before the
+# contract's 32-bank ceiling. The maximum normalized shape is under 1 MiB
+# (including nine full chord tables), leaving this as a meaningful defence
+# against malformed internal requests without contradicting the public schema.
+MAX_REQUEST_BYTES = 1024 * 1024
 MAX_BUILD_SECONDS = 12 * 60
 BUILD_KEY_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 # The contract is echoed into a response header, so it is held to a short
@@ -83,6 +90,10 @@ def sha256_file(path: Path) -> str:
 def redact_log(value: str) -> str:
     redacted = value.replace(str(WORKSPACE), "<workspace>").replace(str(BUILD_ROOT), "<build-root>")
     return redacted[-8000:]
+
+
+def request_size_is_valid(content_length: int) -> bool:
+    return 0 < content_length <= MAX_REQUEST_BYTES
 
 
 def parse_size(elf_path: Path) -> tuple[int, int, int]:
@@ -420,7 +431,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         try:
             content_length = int(self.headers.get("Content-Length", "0"))
-            if content_length <= 0 or content_length > MAX_REQUEST_BYTES:
+            if not request_size_is_valid(content_length):
                 raise BuildError("invalid_request", "The build request size is invalid.")
             payload = json.loads(self.rfile.read(content_length))
             build_key = payload.get("buildKey") if isinstance(payload, dict) else None
@@ -445,7 +456,7 @@ class Handler(BaseHTTPRequestHandler):
         # answers synchronously with the finished PDF.
         try:
             content_length = int(self.headers.get("Content-Length", "0"))
-            if content_length <= 0 or content_length > MAX_REQUEST_BYTES:
+            if not request_size_is_valid(content_length):
                 raise BuildError("invalid_request", "The manual request size is invalid.")
             payload = json.loads(self.rfile.read(content_length))
             manual_key = payload.get("manualKey") if isinstance(payload, dict) else None

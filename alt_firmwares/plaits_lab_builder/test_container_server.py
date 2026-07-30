@@ -6,11 +6,17 @@ from pathlib import Path
 
 from container_server import (
     ALL_STEREO_MACROS,
+    MAX_REQUEST_BYTES,
     _recipe_is_stereo,
     _stereo_disable_flags,
     classify_link_failure,
+    request_size_is_valid,
 )
-from generate_engine_config import DEFAULT_CONFIGURATION, validate_recipe
+from generate_engine_config import (
+    DEFAULT_CHORD_TABLES,
+    DEFAULT_CONFIGURATION,
+    validate_recipe,
+)
 
 
 class ClassifyLinkFailureTest(unittest.TestCase):
@@ -52,6 +58,75 @@ class ClassifyLinkFailureTest(unittest.TestCase):
             "make: *** [voice.o] Error 1\n"
         )
         self.assertIsNone(classify_link_failure(log))
+
+
+class RequestSizeBudgetTest(unittest.TestCase):
+    """The container transport limit must cover every normalized recipe shape.
+
+    FM patches are 4 KiB as binary data, but the Worker forwards their packed
+    bytes as decimal JSON arrays. The original 32 KiB cap predated custom banks
+    and rejected valid one- and two-bank recipes before compilation.
+    """
+
+    @staticmethod
+    def bank_document(index: int) -> dict:
+        return {
+            "id": f"bank-{index}",
+            "packageId": f"local/bank-{index}",
+            "version": "1.0.0",
+            "digest": None,
+            "name": "N" * 80,
+            "author": "A" * 80,
+            "license": "Private",
+            "origin": "Local",
+            "description": "D" * 240,
+            "voices": [
+                {
+                    "name": "V" * 16,
+                    "algorithm": 32,
+                    # Three decimal digits per byte exercises the largest
+                    # canonical JSON representation a valid patch can have.
+                    "packed": [127] * 128,
+                }
+                for _voice in range(32)
+            ],
+        }
+
+    def maximum_bank_recipe_request(self) -> bytes:
+        recipe = {
+            "schemaVersion": 12,
+            "target": "mutable-instruments-plaits",
+            "firmware": "rubato-plaits",
+            "output": "audio-wav",
+            "slots": ["dx7-bank-a"] * 32,
+            "preferences": dict(DEFAULT_CONFIGURATION["preferences"]),
+            "initialOptions": dict(DEFAULT_CONFIGURATION["initialOptions"]),
+            "resources": {
+                "chordTables": [dict(table) for table in DEFAULT_CHORD_TABLES],
+                "userDataBanks": [
+                    {"slot": slot, "bank": self.bank_document(slot)}
+                    for slot in range(32)
+                ],
+            },
+        }
+        # Prove this is a contract-valid recipe before measuring the exact
+        # compact JSON shape the Worker forwards to the container.
+        validate_recipe(recipe)
+        return json.dumps(
+            {"buildKey": "a" * 64, "recipe": recipe},
+            separators=(",", ":"),
+        ).encode("utf-8")
+
+    def test_all_32_supported_custom_banks_fit_the_transport_budget(self) -> None:
+        request = self.maximum_bank_recipe_request()
+        self.assertGreater(len(request), 32 * 1024)
+        self.assertLessEqual(len(request), MAX_REQUEST_BYTES)
+        self.assertTrue(request_size_is_valid(len(request)))
+
+    def test_transport_budget_still_rejects_empty_and_oversized_bodies(self) -> None:
+        self.assertFalse(request_size_is_valid(0))
+        self.assertTrue(request_size_is_valid(MAX_REQUEST_BYTES))
+        self.assertFalse(request_size_is_valid(MAX_REQUEST_BYTES + 1))
 
 
 class StereoSelectionTest(unittest.TestCase):
