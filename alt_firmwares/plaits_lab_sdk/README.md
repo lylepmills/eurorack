@@ -114,6 +114,12 @@ continuous drone (**Sustained**) and a struck note (**Plucked**, where **Strike*
 opens a low-pass-gate decay) — the same low-pass-gate behavior Plaits applies to a
 patched trigger, so sustained engines respond to Strike too.
 
+The live page also carries an **audition-only unpatched-attenuverter
+prototype** for TIMBRE and MORPH. Noon is off, CCW samples nearby peaky targets,
+and CW samples across the control range; Strike applies each target and returns
+to the panel value over the selected time. This is a listening experiment, not
+part of the firmware, recipe schema, or engine-package contract.
+
 ## Validation and submission
 
 ```sh
