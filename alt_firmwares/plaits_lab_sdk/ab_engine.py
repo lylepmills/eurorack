@@ -13,8 +13,8 @@ and compares them:
 
   * the Braids side, via `braids/test/render_braids_model` (built on demand),
     always at `--rate 48000` so the reference is decimated to the port's rate
-    (BRAIDS_PORT_SPEC.md R7 — comparing against the native 96 kHz render
-    charges everything above 24 kHz to the port);
+    (comparing against the native 96 kHz render would charge everything above
+    24 kHz to the port);
   * the port side, via the same `render_model.cc` host renderer `plaits_lab.py
     render` uses, so the numbers describe the engine as the SDK builds it.
 

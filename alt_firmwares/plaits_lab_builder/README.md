@@ -276,6 +276,4 @@ the source revision.
 
 The July 17 production smoke test completed build
 `76e8c1c9dde6b238be377994dc27d62116acaa67f585547d6823afa1b40447cb`
-and confirmed an immediate R2 cache hit on repeat submission. The complete
-cross-repository loose-end list is maintained in
-`../PLAITS_LAB_PROJECT.md`.
+and confirmed an immediate R2 cache hit on repeat submission.

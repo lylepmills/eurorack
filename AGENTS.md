@@ -1,16 +1,16 @@
 # Plaits Lab contributor guide
 
-This fork is primarily being used for the Rubato Audio Plaits Lab project.
+This fork contains the firmware and model tooling behind Rubato Audio's
+Plaits Palette.
 Before changing Plaits, read:
 
-- `alt_firmwares/PLAITS_LAB_PROJECT.md` for the current project state,
-  validation commands, hardware-test status, and next milestones.
-- `alt_firmwares/README.md` for firmware behavior and control mappings.
+- `alt_firmwares/plaits_lab_builder/README.md` for firmware-builder
+  architecture and validation.
+- `alt_firmwares/plaits_lab_sdk/README.md` for model development and
+  contributor tooling.
+- `alt_firmwares/README.md` for legacy alternate-firmware information.
 
-The production editor is an unlisted page in the sibling `../rubato-audio`
-repository at <https://rubato.audio/plaits-lab>. The sibling `../plaits-editor`
-repository is the legacy prototype and schema-development source; do not deploy
-it to Sites or treat its authenticated proxy as the production architecture.
+The production editor is at <https://rubato.audio/plaits-palette/>.
 
 ## Project invariants
 

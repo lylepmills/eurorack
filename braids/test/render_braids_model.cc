@@ -5,8 +5,7 @@
 //
 // Renders any Braids MacroOscillator shape to a WAV so a ported engine can be
 // compared against the model it comes from. Wave 1 of the port did this in a
-// throwaway scratchpad, so every A/B number in BRAIDS_PORT_PROGRESS.md rests
-// on a harness nobody can rerun. This is that harness, committed.
+// throwaway scratchpad. This is the reproducible harness that replaced it.
 //
 // Two properties matter for the comparison to mean anything:
 //

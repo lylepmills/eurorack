@@ -19,7 +19,7 @@ and it reports the same three things wave 1 reported:
 Both files must share a sample rate. Render the reference with
 `braids/test/render_braids_model --rate 48000` when the port runs at 48 kHz;
 comparing a 48 kHz port against a 96 kHz reference charges everything above
-24 kHz to the port and is meaningless (BRAIDS_PORT_SPEC.md R7).
+24 kHz to the port and is meaningless.
 
 No third-party dependencies, matching the rest of the SDK.
 
@@ -287,7 +287,7 @@ def main():
     if rate_a != rate_b:
         raise SystemExit(
             "sample rates differ (%d vs %d). Render the reference with "
-            "--rate %d; see BRAIDS_PORT_SPEC.md R7." % (rate_a, rate_b, rate_b))
+            "--rate %d." % (rate_a, rate_b, rate_b))
 
     length = min(len(reference), len(port))
     if length == 0:

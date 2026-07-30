@@ -124,8 +124,14 @@ instead of interpolating it per sample — matching Braids' own once-per-call
 retuning, and costing nothing audible since a hand-turned macro stepping at
 Plaits' sub-millisecond block rate is inaudible — cut that to 42-62%. The
 excitation truncation above adds 16 instructions/sample back, for a current
-estimate of 45-66%. Not yet measured on hardware
-(`build --hardware --cpu-probe`).
+estimate of 45-66%.
+
+Lyle auditioned Snare on Plaits hardware on 2026-07-29 in a dedicated
+six-model CPU-risk firmware alongside Dual Sync, Harmonics, Vowel FOF, Ring
+Mod, and Z Filter. All six played correctly with no audible real-time
+overruns. This was a listening/soak check rather than
+`build --hardware --cpu-probe`, so the direct DWT cycle measurement remains
+unrecorded and 45-66% remains the calibrated estimate.
 
 Full deviations, the exact line-by-line parameter mapping, and the table
 verification (under 1 LSB against the real generated `lut_svf_cutoff` /

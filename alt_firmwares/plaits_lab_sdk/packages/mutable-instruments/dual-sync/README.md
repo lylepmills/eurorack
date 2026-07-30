@@ -114,3 +114,11 @@ gains and takes the limiter path.
 Both copyright lines are carried in `LICENSE` and in each source file; the
 declared deviations are listed in that header, and `tests/ab.json` holds the
 measured comparison against both modules.
+
+## Hardware validation
+
+Lyle auditioned this engine on Plaits hardware on 2026-07-29 in a dedicated
+six-model CPU-risk firmware alongside Harmonics, Vowel FOF, Ring Mod, Snare,
+and Z Filter. All six played correctly with no audible real-time overruns.
+This was a listening/soak check, not a DWT cycle measurement, so the 76% figure
+above remains the calibrated performance estimate.

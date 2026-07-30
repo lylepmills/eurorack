@@ -81,3 +81,11 @@ The source stays in `plaits/dsp/engine2` while this reference manifest proves
 the package contract and supplies the render scenarios — including
 `phase-wrap`, which pins the top of TIMBRE at a high note where an unwrapped
 float phase would walk off the end of `lut_sine`.
+
+## Hardware validation
+
+Lyle auditioned this engine on Plaits hardware on 2026-07-29 in a dedicated
+six-model CPU-risk firmware alongside Dual Sync, Harmonics, Vowel FOF, Ring
+Mod, and Snare. All six played correctly with no audible real-time overruns.
+This was a listening/soak check, not a DWT cycle measurement, so the calibrated
+CPU estimate remains the performance figure.

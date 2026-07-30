@@ -1,7 +1,7 @@
 // Copyright 2026 Lyle Mills.
 // SPDX-License-Identifier: MIT
 //
-// MEASUREMENT PROBE for BRAIDS_PORT_SPEC.md section 3.11 -- the `fluted` gate.
+// MEASUREMENT PROBE for evaluating the proposed `fluted` port.
 // This is not engine code. It exists to answer one question: across the MORPH
 // range, does the dominant partial track the played note?
 //
