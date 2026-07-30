@@ -9,9 +9,8 @@ builds with the pinned Mutable
 Instruments ARM toolchain, enforces the Plaits flash and RAM limits, and returns
 the 48 kHz audio updater.
 
-Schema-15/Ro'Ved support is present in source but intentionally not deployed
-until the hardware checklist in `../PLAITS_LAB_PROJECT.md` passes. Production
-continues to advertise schema 14 in the meantime.
+Schema-15/Ro'Ved support passed its hardware checklist on July 30, 2026 and is
+available in production.
 
 The service is split across two isolation layers:
 
@@ -216,7 +215,7 @@ system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-c5ec5ef1d4f1` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-0032af8067d9` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a
 new image, wait for `wrangler containers list` to report `ready` before smoke
@@ -260,6 +259,7 @@ target.
 | July 29, 2026 (Wave Paraphonic chord-table compatibility) | `199eeaf14147` | `rev-199eeaf14147` |
 | July 30, 2026 (custom FM-bank request-size fix) | `28f77ed4f416` | `rev-28f77ed4f416` |
 | July 30, 2026 (schema 13/14 per-engine stereo validator fix) | `c5ec5ef1d4f1` | `rev-c5ec5ef1d4f1` |
+| July 30, 2026 (schema 15, Plum Audio Ro'Ved target) | `0032af8067d9` | `rev-0032af8067d9` |
 
 Three consequences a rollback has that a forward deploy does not:
 
