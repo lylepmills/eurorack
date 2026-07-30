@@ -225,7 +225,7 @@ system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-c08fc4e31589` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-21eea00866b0` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a
 new image, wait for `wrangler containers list` to report `ready` before smoke
@@ -277,7 +277,7 @@ target.
 | July 30, 2026 (schema 15, Plum Audio Ro'Ved target) | `0032af8067d9` | `rev-0032af8067d9` |
 | July 30, 2026 (schema 15, color-blind brightness display + Intel HEX, manual contract 9) | `1d1c2ff82b34` | `rev-1d1c2ff82b34` |
 | July 30, 2026 (quarantine Undertow and Phase Flock) | `b7708ec67487` | `rev-b7708ec67487` |
-| July 30, 2026 (restore optimized Undertow and Phase Flock) | `c08fc4e31589` | `rev-c08fc4e31589` |
+| July 30, 2026 (restore optimized Undertow and Phase Flock; sync scale-bank digests) | `21eea00866b0` | `rev-21eea00866b0` |
 
 Three consequences a rollback has that a forward deploy does not:
 
