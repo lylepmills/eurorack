@@ -177,6 +177,8 @@ STEREO_MACROS = {
     "vowel-fof": "VOWEL_FOF",
     "digital-modulation": "DIGITAL_MODULATION",
     "virtual-analog": "VIRTUAL_ANALOG",
+    "virtual-analog-dual": "VIRTUAL_ANALOG_DUAL",
+    "virtual-analog-crossfade": "VIRTUAL_ANALOG_CROSSFADE",
     "waveshaping": "WAVESHAPING",
     "two-op-fm": "TWO_OP_FM",
     "granular-formant": "GRANULAR_FORMANT",
