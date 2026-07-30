@@ -39,7 +39,7 @@ test("the Worker and compiler catalogs contain the same approved IDs", async () 
     approvedEngineIds,
     compilerCatalog.engines.map((engine: { id: string }) => engine.id),
   );
-  assert.equal(approvedEngineIds.length, 77);
+  assert.equal(approvedEngineIds.length, 79);
 });
 
 test("normalization removes nondeterministic manifest fields", () => {
@@ -575,7 +575,7 @@ test("version 6 accepts a 32-slot fourth-bank recipe with no custom banks", asyn
   };
   const fourthBank = [
     "loopback", "lockstep", "tapfield", "phase-weave",
-    "sideband-bank", "attractor", "gendy", "reed-pipe",
+    "sideband-bank", "attractor", "undertow", "reed-pipe",
   ];
   const makeRecipe = (slotIds: string[], schemaVersion = 6) => ({
     ...fixture,

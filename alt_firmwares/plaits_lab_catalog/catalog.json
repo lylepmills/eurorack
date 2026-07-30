@@ -1435,6 +1435,44 @@
       }
     },
     {
+      "id": "undertow",
+      "packageId": "rubato/undertow",
+      "name": "Undertow",
+      "author": "Lyle Mills",
+      "origin": "Rubato Lab",
+      "family": "Subharmonic",
+      "description": "Six integer undertones blend through original registrations and a warped divider lattice.",
+      "tags": [
+        "experimental",
+        "subharmonic",
+        "undertone",
+        "divider"
+      ],
+      "controls": [
+        "Registration",
+        "Wave colour",
+        "Anchor balance",
+        "Lattice stretch"
+      ],
+      "outputs": [
+        "Registered undertone mixture",
+        "Hollow alternating lattice"
+      ],
+      "source": {
+        "header": "plaits/dsp/engine2/undertow_engine.h",
+        "className": "UndertowEngine",
+        "member": "undertow_engine_",
+        "files": [
+          "plaits/dsp/engine2/undertow_engine.cc"
+        ]
+      },
+      "postProcessing": {
+        "alreadyEnveloped": false,
+        "outGain": 0.7,
+        "auxGain": 0.7
+      }
+    },
+    {
       "id": "reed-pipe",
       "packageId": "rubato/reed-pipe",
       "name": "Reed Pipe",
@@ -1470,6 +1508,44 @@
         "alreadyEnveloped": false,
         "outGain": 0.8,
         "auxGain": 0.8
+      }
+    },
+    {
+      "id": "phase-flock",
+      "packageId": "rubato/phase-flock",
+      "name": "Phase Flock",
+      "author": "Lyle Mills",
+      "origin": "Rubato Lab",
+      "family": "Coupled",
+      "description": "Seven mean-field phase oscillators disperse, synchronize, and split into antipodal clusters.",
+      "tags": [
+        "experimental",
+        "kuramoto",
+        "coupled",
+        "synchronization"
+      ],
+      "controls": [
+        "Frequency spread",
+        "Coupling",
+        "Cluster order",
+        "Phase lag"
+      ],
+      "outputs": [
+        "First circular moment",
+        "Second circular moment"
+      ],
+      "source": {
+        "header": "plaits/dsp/engine2/phase_flock_engine.h",
+        "className": "PhaseFlockEngine",
+        "member": "phase_flock_engine_",
+        "files": [
+          "plaits/dsp/engine2/phase_flock_engine.cc"
+        ]
+      },
+      "postProcessing": {
+        "alreadyEnveloped": false,
+        "outGain": 0.7,
+        "auxGain": 0.7
       }
     },
     {
@@ -3410,6 +3486,15 @@
       },
       "trigger": "Deterministically reseeds the three-state flow."
     },
+    "undertow": {
+      "controls": {
+        "harmonics": "Moves through five interpolated undertone registrations.",
+        "timbre": "Changes the divider voices from triangle through BLEP saw to pulse.",
+        "morph": "Balances the pitch anchor against the undertone lattice.",
+        "macro": "Contracts or expands the deepest divider relationships."
+      },
+      "trigger": "Phase-aligns all divider voices."
+    },
     "reed-pipe": {
       "controls": {
         "harmonics": "Moves the pressure pickup through the bore and changes its contribution.",
@@ -3418,6 +3503,15 @@
         "macro": "Changes bore reflection loss and high-frequency brightness."
       },
       "trigger": "Adds a brief pressure tongue to articulate the modeled pipe."
+    },
+    "phase-flock": {
+      "controls": {
+        "harmonics": "Spreads the seven oscillators' natural frequencies.",
+        "timbre": "Raises mean-field coupling from dispersion toward synchronization.",
+        "morph": "Moves attraction from a single cluster toward antipodal two-cluster order.",
+        "macro": "Adds phase lag and frustration to the coupling field."
+      },
+      "trigger": "Scatters the oscillator phases."
     },
     "rulefield": {
       "controls": {
@@ -3829,8 +3923,8 @@
       "reed-pipe",
       "phase-weave",
       "sideband-bank",
-      "gendy",
-      "rulefield",
+      "undertow",
+      "phase-flock",
       "spectral-spiral"
     ],
     "stock": [
@@ -3864,9 +3958,9 @@
       "lockstep",
       "phase-weave",
       "sideband-bank",
-      "shakers",
+      "undertow",
       "reed-pipe",
-      "brass",
+      "phase-flock",
       "spectral-spiral",
       "tapfield",
       "attractor",
