@@ -37,72 +37,73 @@ float g_base_morph = 0.5f;
 float g_randomizer_timbre = 0.0f;
 float g_randomizer_morph = 0.0f;
 
-// Four independent smooth random-voltage sources. "Near" uses a compact,
-// center-heavy distribution; "Far" glides between uniform destinations. The
-// time constants differ for TIMBRE and MORPH so texture moves faster than the
-// more structural MORPH parameter.
-struct SmoothRandomSource {
-  float value;
-  float target;
-  int blocks_until_target;
+// Four independent, autonomous chaotic orbits. There are no sampled targets,
+// countdowns, or slew stages: each x/y/z state evolves continuously on every
+// control block. This borrows the slow, bounded, never-settling behaviour of a
+// Sloth without attempting to emulate its analogue circuit.
+struct ChaosOrbit {
+  float x;
+  float y;
+  float z;
 };
 
-SmoothRandomSource g_timbre_near;
-SmoothRandomSource g_timbre_far;
-SmoothRandomSource g_morph_near;
-SmoothRandomSource g_morph_far;
-uint32_t g_random_state = 0x6d2b79f5u;
+ChaosOrbit g_timbre_near;
+ChaosOrbit g_timbre_far;
+ChaosOrbit g_morph_near;
+ChaosOrbit g_morph_far;
 
-float RandomUnit() {
-  uint32_t x = g_random_state;
-  x ^= x << 13;
-  x ^= x >> 17;
-  x ^= x << 5;
-  g_random_state = x;
-  return static_cast<float>(x >> 8) * (1.0f / 16777216.0f);
+float Absolute(float value) {
+  return value < 0.0f ? -value : value;
 }
 
-float RandomBipolar() {
-  return RandomUnit() * 2.0f - 1.0f;
+void ResetChaosOrbit(ChaosOrbit* orbit, float x, float y, float z) {
+  orbit->x = x;
+  orbit->y = y;
+  orbit->z = z;
 }
 
-float PeakyBipolar() {
-  return (RandomUnit() + RandomUnit() + RandomUnit()) * (2.0f / 3.0f) - 1.0f;
+// One Euler step of the Lorenz system. At these deliberately tiny dt values,
+// it behaves as a continuously curved slow-control orbit while needing only
+// multiplies and adds that are realistic on the Cortex-M4.
+void AdvanceChaosOrbit(ChaosOrbit* orbit, float dt) {
+  const float x = orbit->x;
+  const float y = orbit->y;
+  const float z = orbit->z;
+  const float dx = 10.0f * (y - x);
+  const float dy = x * (28.0f - z) - y;
+  const float dz = x * y - 2.6666667f * z;
+  orbit->x = x + dx * dt;
+  orbit->y = y + dy * dt;
+  orbit->z = z + dz * dt;
 }
 
-void ResetRandomSource(SmoothRandomSource* source) {
-  source->value = 0.0f;
-  source->target = 0.0f;
-  source->blocks_until_target = 1;
-}
-
-void AdvanceRandomSource(
-    SmoothRandomSource* source,
-    int minimum_blocks,
-    int variable_blocks,
-    float slew,
-    bool peaky) {
-  --source->blocks_until_target;
-  if (source->blocks_until_target <= 0) {
-    source->target = peaky ? PeakyBipolar() : RandomBipolar();
-    source->blocks_until_target = minimum_blocks +
-        static_cast<int>(RandomUnit() * static_cast<float>(variable_blocks));
+void SettleChaosOrbit(ChaosOrbit* orbit) {
+  // Discard the deterministic startup transient and begin on the attractor.
+  // This happens once in init(), never on the audio path.
+  for (int i = 0; i < 20000; ++i) {
+    AdvanceChaosOrbit(orbit, 0.001f);
   }
-  source->value += (source->target - source->value) * slew;
+}
+
+// Smoothly map an unbounded attractor coordinate into a bipolar control
+// voltage. Unlike a hard clip, this retains motion near the orbit's extremes.
+float SoftBipolar(float value, float scale) {
+  const float normalized = value * scale;
+  return normalized / (0.4f + Absolute(normalized));
 }
 
 float RandomizedParameter(
     float base,
     float amount,
-    const SmoothRandomSource& near_source,
-    const SmoothRandomSource& far_source) {
+    const ChaosOrbit& near_orbit,
+    const ChaosOrbit& far_orbit) {
   if (amount > -0.0001f && amount < 0.0001f) return base;
   const float depth = amount < 0.0f ? -amount : amount;
-  // Near deliberately occupies less of the available headroom even at full
-  // depth. Its center-heavy targets make it a quiver, not a range explorer.
+  // Near reads a compact z-axis undulation. Far reads the broad bipolar x-axis
+  // motion between the orbit's two lobes.
   const float voltage = amount < 0.0f
-      ? near_source.value * 0.45f
-      : far_source.value;
+      ? SoftBipolar(near_orbit.z - 25.0f, 0.05f) * 0.35f
+      : SoftBipolar(far_orbit.x, 0.08f);
   const float headroom = voltage < 0.0f ? base : 1.0f - base;
   float value = base + voltage * headroom * depth;
   if (value < 0.0f) value = 0.0f;
@@ -159,11 +160,14 @@ void init() {
   g_base_morph = 0.5f;
   g_randomizer_timbre = 0.0f;
   g_randomizer_morph = 0.0f;
-  g_random_state = 0x6d2b79f5u;
-  ResetRandomSource(&g_timbre_near);
-  ResetRandomSource(&g_timbre_far);
-  ResetRandomSource(&g_morph_near);
-  ResetRandomSource(&g_morph_far);
+  ResetChaosOrbit(&g_timbre_near, 1.0f, 1.0f, 20.0f);
+  ResetChaosOrbit(&g_timbre_far, -8.0f, 7.0f, 27.0f);
+  ResetChaosOrbit(&g_morph_near, 5.0f, -3.0f, 18.0f);
+  ResetChaosOrbit(&g_morph_far, -4.0f, -6.0f, 24.0f);
+  SettleChaosOrbit(&g_timbre_near);
+  SettleChaosOrbit(&g_timbre_far);
+  SettleChaosOrbit(&g_morph_near);
+  SettleChaosOrbit(&g_morph_far);
   g_block_fill = 0;
   g_block_pos = 0;
   g_retrigger = false;
@@ -225,12 +229,12 @@ void render(int size) {
   int produced = 0;
   while (produced < size) {
     if (g_block_fill == 0) {
-      // 48 kHz / 12 samples = 4 kHz control rate. Target intervals and slew
-      // constants are intentionally parameter-specific listening choices.
-      AdvanceRandomSource(&g_timbre_near, 320, 960, 0.006f, true);
-      AdvanceRandomSource(&g_timbre_far, 2400, 4800, 0.001f, false);
-      AdvanceRandomSource(&g_morph_near, 1200, 2400, 0.0025f, true);
-      AdvanceRandomSource(&g_morph_far, 5200, 6800, 0.0005f, false);
+      // 48 kHz / 12 samples = 4 kHz control rate. TIMBRE gets the quicker
+      // orbits; MORPH moves more slowly because it tends to alter structure.
+      AdvanceChaosOrbit(&g_timbre_near, 0.000012f);
+      AdvanceChaosOrbit(&g_timbre_far, 0.000008f);
+      AdvanceChaosOrbit(&g_morph_near, 0.000008f);
+      AdvanceChaosOrbit(&g_morph_far, 0.000004f);
       g_params.timbre = RandomizedParameter(
           g_base_timbre, g_randomizer_timbre, g_timbre_near, g_timbre_far);
       g_params.morph = RandomizedParameter(
