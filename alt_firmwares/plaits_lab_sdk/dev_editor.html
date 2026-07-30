@@ -26,6 +26,17 @@
   .controls .row output { font-variant-numeric:tabular-nums; color:var(--muted); }
   .controls small { color:var(--subtle); font-size:11px; }
   input[type=range] { width:100%; accent-color:var(--accent); }
+  .prototype-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:12px; }
+  .prototype-head h2 { margin:0; font-size:15px; font-weight:600; }
+  .prototype-head .pill { padding:2px 9px; }
+  .prototype-copy { margin:0 0 14px; color:var(--muted); font-size:12px; }
+  .prototype-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 22px; }
+  .prototype-grid label { display:grid; gap:5px; }
+  .prototype-grid .row { display:flex; justify-content:space-between; align-items:baseline; }
+  .prototype-grid output { color:var(--muted); font-variant-numeric:tabular-nums; }
+  .prototype-grid small { color:var(--subtle); font-size:11px; }
+  .prototype-grid .return { grid-column:1 / -1; }
+  @media (max-width:560px) { .prototype-grid { grid-template-columns:1fr; } .prototype-grid .return { grid-column:auto; } }
   .actions { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:16px; }
   button { border:1px solid var(--border); border-radius:9px; padding:9px 15px; background:var(--card); color:var(--ink); font-size:13px; font-weight:600; cursor:pointer; }
   button:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
@@ -82,6 +93,30 @@
         <label>A/B against <select id="ab"><option value="">None</option></select></label>
       </div>
     </div>
+    <div class="card hidden" id="randomizer-card">
+      <div class="prototype-head">
+        <h2>Unpatched attenuverters</h2>
+        <span class="pill">Audition prototype</span>
+      </div>
+      <p class="prototype-copy">Assumes the TIMBRE and MORPH CV inputs are unpatched. Noon is off; turn CCW for nearby, peaky variations or CW to roam across the control’s range. A new target is sampled on every Strike and returns to the panel value.</p>
+      <div class="prototype-grid">
+        <label>
+          <span class="row"><strong>TIMBRE</strong><output id="randomizer-timbre-value">Off</output></span>
+          <input id="randomizer-timbre" type="range" min="-1" max="1" step="0.01" value="0" />
+          <small>Last target <output id="randomizer-timbre-target">—</output></small>
+        </label>
+        <label>
+          <span class="row"><strong>MORPH</strong><output id="randomizer-morph-value">Off</output></span>
+          <input id="randomizer-morph" type="range" min="-1" max="1" step="0.01" value="0" />
+          <small>Last target <output id="randomizer-morph-target">—</output></small>
+        </label>
+        <label class="return">
+          <span class="row"><strong>Return</strong><output id="randomizer-return-value">0.60 s</output></span>
+          <input id="randomizer-return" type="range" min="0.05" max="4" step="0.05" value="0.6" />
+          <small>Prototype stand-in for Plaits’ internal decay envelope.</small>
+        </label>
+      </div>
+    </div>
     <div class="card">
       <div class="scope-tabs">
         <button id="tab-scope" class="active">Scope</button>
@@ -103,11 +138,65 @@ const state = {
   scope: 'scope',
   comparison: '',
   pkg: null,
+  randomizers: {
+    timbre: 0,
+    morph: 0,
+    returnSeconds: 0.6,
+    targets: { timbre: null, morph: null },
+  },
 };
 const $ = (id) => document.getElementById(id);
 
 function setPill(text, kind) { const p = $('pill'); p.textContent = text; p.className = 'pill' + (kind ? ' ' + kind : ''); }
 function notice(text, isErr) { const n = $('notice'); n.textContent = text || ''; n.className = 'notice' + (isErr ? ' err' : ''); }
+
+function clamp01(value) { return Math.max(0, Math.min(1, value)); }
+
+// Three averaged uniform samples form a compact, center-heavy distribution.
+// It is intentionally not Gaussian: the prototype needs an inexpensive shape
+// we can plausibly carry into the Cortex-M4 firmware if it earns its place.
+function peakyBipolarSample() {
+  return ((Math.random() + Math.random() + Math.random()) / 3) * 2 - 1;
+}
+
+function randomizerLabel(value) {
+  if (Math.abs(value) < 0.005) return 'Off';
+  return `${value < 0 ? 'Near' : 'Far'} ${Math.round(Math.abs(value) * 100)}%`;
+}
+
+function sampleRandomizerTarget(base, attenuverter) {
+  const depth = Math.abs(attenuverter);
+  if (depth < 0.005) return base;
+  if (attenuverter < 0) {
+    const deviation = peakyBipolarSample();
+    const headroom = deviation < 0 ? base : 1 - base;
+    return clamp01(base + deviation * headroom * depth);
+  }
+  // "Far" is deliberately the naive baseline for this first listening pass:
+  // a uniform destination, interpolated toward the panel value by depth.
+  // Engine-aware landmarks can replace this without changing the UI contract.
+  const destination = Math.random();
+  return clamp01(base + (destination - base) * depth);
+}
+
+function updateRandomizerReadout(id) {
+  $(`randomizer-${id}-value`).textContent = randomizerLabel(state.randomizers[id]);
+}
+
+function sampleRandomizerTargets() {
+  for (const id of ['timbre', 'morph']) {
+    const target = sampleRandomizerTarget(state.controls[id], state.randomizers[id]);
+    state.randomizers.targets[id] = target;
+    $(`randomizer-${id}-target`).textContent = target.toFixed(2);
+  }
+  return state.randomizers.targets;
+}
+
+function modulationDecayPerBlock(seconds) {
+  // Reach -60 dB after the selected return time. Plaits updates synthesis
+  // parameters once per 12-sample engine block, so send the block multiplier.
+  return Math.exp(Math.log(0.001) * 12 / (Math.max(0.05, seconds) * 48000));
+}
 
 function drawAudio(buffer, spectrum) {
   const canvas = $('scope');
@@ -173,6 +262,7 @@ async function refreshPackage() {
     // Live audition is the primary path when the wasm build is available; the
     // render-and-listen controls only appear as the fallback (no emcc).
     $('live-actions').classList.toggle('hidden', !value.live);
+    $('randomizer-card').classList.toggle('hidden', !value.live);
     $('offline-actions').classList.toggle('hidden', !!value.live);
     if (value.live) {
       $('preview-wrap').classList.add('hidden');
@@ -273,6 +363,16 @@ $('trigger').addEventListener('change', (e) => { state.triggerHz = e.target.chec
 $('ab').addEventListener('change', (e) => { state.comparison = e.target.value; });
 $('tab-scope').addEventListener('click', () => { state.scope = 'scope'; $('tab-scope').classList.add('active'); $('tab-spectrum').classList.remove('active'); });
 $('tab-spectrum').addEventListener('click', () => { state.scope = 'spectrum'; $('tab-spectrum').classList.add('active'); $('tab-scope').classList.remove('active'); });
+for (const id of ['timbre', 'morph']) {
+  $(`randomizer-${id}`).addEventListener('input', (event) => {
+    state.randomizers[id] = Number(event.target.value);
+    updateRandomizerReadout(id);
+  });
+}
+$('randomizer-return').addEventListener('input', (event) => {
+  state.randomizers.returnSeconds = Number(event.target.value);
+  $('randomizer-return-value').textContent = `${state.randomizers.returnSeconds.toFixed(2)} s`;
+});
 
 // ---- Live audition (WebAssembly + AudioWorklet) ----------------------------
 const audio = { ctx: null, node: null, gain: null, analyser: null, running: false, moduleAdded: false, raf: 0 };
@@ -379,8 +479,20 @@ function stopLive() {
 }
 $('live-toggle').addEventListener('click', () => { audio.running ? stopLive() : startLive(); });
 $('live-strike').addEventListener('click', async () => {
+  // Sample at the gesture itself, before any asynchronous audio startup. The
+  // readout therefore always tells the player what this strike chose, and the
+  // same targets are waiting if Strike also has to start the AudioContext.
+  const targets = sampleRandomizerTargets();
   if (!audio.running) await startLive();   // Strike turns audition on if it isn't — the click is the gesture.
-  if (audio.running && audio.node) audio.node.port.postMessage({ type: 'trigger' });
+  if (audio.running && audio.node) {
+    audio.node.port.postMessage({
+      type: 'modulation',
+      timbre: targets.timbre,
+      morph: targets.morph,
+      decayPerBlock: modulationDecayPerBlock(state.randomizers.returnSeconds),
+    });
+    audio.node.port.postMessage({ type: 'trigger' });
+  }
 });
 $('live-env').addEventListener('change', (e) => { if (audio.running && audio.node) audio.node.port.postMessage({ type: 'env', value: Number(e.target.value) }); });
 $('live-reload').addEventListener('click', refreshPackage);

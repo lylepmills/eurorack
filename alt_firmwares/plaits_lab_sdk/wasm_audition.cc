@@ -37,6 +37,12 @@ alignas(PLAITS_LAB_ENGINE_CLASS) char g_engine_storage[sizeof(PLAITS_LAB_ENGINE_
 PLAITS_LAB_ENGINE_CLASS* g_engine = nullptr;
 
 EngineParameters g_params;
+float g_base_timbre = 0.5f;
+float g_base_morph = 0.5f;
+float g_target_timbre = 0.5f;
+float g_target_morph = 0.5f;
+float g_mod_envelope = 0.0f;
+float g_mod_decay_per_block = 0.997f;
 
 // The engine renders in fixed kBlockSize (12) chunks; an audio quantum is 128,
 // so we drain a one-block scratch buffer into arbitrary-length requests.
@@ -87,6 +93,10 @@ void init() {
   g_params.chord_set_option = 0;
   g_params.trigger = TRIGGER_UNPATCHED;
   g_params.stereo = false;
+  g_base_timbre = g_target_timbre = 0.5f;
+  g_base_morph = g_target_morph = 0.5f;
+  g_mod_envelope = 0.0f;
+  g_mod_decay_per_block = 0.997f;
   g_block_fill = 0;
   g_block_pos = 0;
   g_retrigger = false;
@@ -118,15 +128,33 @@ void set_env_mode(int mode) {
 void set_params(float note, float harmonics, float timbre, float morph, float macro) {
   g_params.note = note;
   g_params.harmonics = harmonics;
-  g_params.timbre = timbre;
-  g_params.morph = morph;
+  g_base_timbre = timbre;
+  g_base_morph = morph;
   g_params.macro = macro;
+}
+
+// Set per-strike TIMBRE/MORPH destinations for the unpatched-attenuverter
+// prototype. The browser chooses the policy and targets; this harness performs
+// the Plaits-native part of the experiment by decaying them back to the panel
+// values once per engine block.
+void set_modulation_targets(
+    float timbre, float morph, float decay_per_block) {
+  if (timbre < 0.0f) timbre = 0.0f;
+  if (timbre > 1.0f) timbre = 1.0f;
+  if (morph < 0.0f) morph = 0.0f;
+  if (morph > 1.0f) morph = 1.0f;
+  if (decay_per_block < 0.0f) decay_per_block = 0.0f;
+  if (decay_per_block > 1.0f) decay_per_block = 1.0f;
+  g_target_timbre = timbre;
+  g_target_morph = morph;
+  g_mod_decay_per_block = decay_per_block;
 }
 
 // Fire a single trigger rising edge on the next rendered block (re-strike).
 // In plucked mode this also re-opens the LPG envelope.
 void trigger() {
   g_retrigger = true;
+  g_mod_envelope = 1.0f;
   if (g_env_mode == ENV_PLUCKED) g_env = 1.0f;
 }
 
@@ -137,12 +165,18 @@ void render(int size) {
   int produced = 0;
   while (produced < size) {
     if (g_block_fill == 0) {
+      g_params.timbre = g_base_timbre +
+          g_mod_envelope * (g_target_timbre - g_base_timbre);
+      g_params.morph = g_base_morph +
+          g_mod_envelope * (g_target_morph - g_base_morph);
       g_params.trigger = g_retrigger
           ? static_cast<TriggerState>(TRIGGER_HIGH | TRIGGER_RISING_EDGE)
           : TRIGGER_UNPATCHED;
       g_retrigger = false;
       bool already = false;
       g_engine->Render(g_params, g_block_main, g_block_aux, kBlockSize, &already);
+      g_mod_envelope *= g_mod_decay_per_block;
+      if (g_mod_envelope < 0.0001f) g_mod_envelope = 0.0f;
       g_block_already = already;
       g_block_fill = static_cast<int>(kBlockSize);
       g_block_pos = 0;

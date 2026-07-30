@@ -51,6 +51,11 @@ class PlaitsAuditionProcessor extends AudioWorkletProcessor {
       if (!this.ready) return;
       if (data.type === 'params') {
         this.exports.set_params(data.note, data.harmonics, data.timbre, data.morph, data.macro);
+      } else if (data.type === 'modulation') {
+        if (typeof this.exports.set_modulation_targets === 'function') {
+          this.exports.set_modulation_targets(
+              data.timbre, data.morph, data.decayPerBlock);
+        }
       } else if (data.type === 'trigger') {
         this.exports.trigger();
       } else if (data.type === 'env') {
