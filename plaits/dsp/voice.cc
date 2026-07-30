@@ -96,37 +96,13 @@ void Voice::Render(
     modulations_level = held_level_;
     modulations_note = held_note_;
   }
-  bool level_patched = modulations.level_patched;
-  float patch_decay = patch.decay;
-  if (patch.locked_frequency_pot_option == 3) {
-    patch_decay = patch.freqlock_param;
-  }
-  float macro_cv = 0.0f;
-  if (modulations.trigger_patched && patch.level_cv_option == 1) {
-    level_patched = false;
-    patch_decay += modulations_level;
-    modulations_level = 0.0f;
-  }
-  CONSTRAIN(patch_decay, 0.0f, 1.0f);
-
-  float patch_lpg_colour = patch.lpg_colour;
-  if (patch.model_cv_option == 3) {
-    patch_lpg_colour += modulations.engine;
-  } else if (patch.model_cv_option == 1) {
-    // Repurpose the MODEL CV input as the fourth synthesis macro. Unlike the
-    // LEVEL macro option this does not require TRIG to be patched, since the
-    // MODEL input never drives the internal VCA.
-    macro_cv = modulations.engine;
-  }
-  CONSTRAIN(patch_lpg_colour, 0.0f, 1.0f);
-  
+  // Resolve the trigger and selected engine before deciding what Auto does
+  // with LEVEL. Model CV is sampled on the same edge, so the routing decision
+  // follows the engine that will actually sound, not merely the panel setting.
   bool previous_trigger_state = trigger_state_;
   if (!previous_trigger_state) {
     if (trigger_high) {
       trigger_state_ = true;
-      if (!level_patched) {
-        lpg_envelope_.Trigger();
-      }
       decay_envelope_.Trigger();
       engine_cv_ = modulations.engine;
     }
@@ -145,6 +121,54 @@ void Voice::Render(
       patch.model_cv_option == 0 ? engine_cv_ : 0.0f);
   
   Engine* e = engines_.get(engine_index);
+  const PostProcessingSettings& pp_s = e->post_processing_settings;
+
+  // LEVEL option 2 is Auto: feed the outer envelope's decay on ordinary
+  // oscillator engines, but preserve LEVEL as accent/velocity whenever the
+  // engine owns its amplitude envelope. Speech and Chiptune declare that
+  // dynamically while rendering, so their behavior masks supplement the
+  // registry's static already_enveloped flag.
+  bool auto_preserves_level = pp_s.already_enveloped;
+#if PLAITS_HAS_SPEECH_ENGINE
+  auto_preserves_level = auto_preserves_level || \
+      (kSpeechEngineMask & (1u << engine_index));
+#endif
+#if PLAITS_HAS_CHIPTUNE_ENGINE
+  auto_preserves_level = auto_preserves_level || \
+      (kChiptuneEngineMask & (1u << engine_index));
+#endif
+
+  bool level_patched = modulations.level_patched;
+  float patch_decay = patch.decay;
+  if (patch.locked_frequency_pot_option == 3) {
+    patch_decay = patch.freqlock_param;
+  }
+  const bool level_cv_to_decay = modulations.trigger_patched && \
+      (patch.level_cv_option == 1 || \
+       (patch.level_cv_option == 2 && !auto_preserves_level));
+  if (level_cv_to_decay) {
+    level_patched = false;
+    patch_decay += modulations_level;
+    modulations_level = 0.0f;
+  }
+  CONSTRAIN(patch_decay, 0.0f, 1.0f);
+
+  const bool rising_edge = trigger_state_ && !previous_trigger_state;
+  if (rising_edge && !level_patched) {
+    lpg_envelope_.Trigger();
+  }
+
+  float macro_cv = 0.0f;
+  float patch_lpg_colour = patch.lpg_colour;
+  if (patch.model_cv_option == 3) {
+    patch_lpg_colour += modulations.engine;
+  } else if (patch.model_cv_option == 1) {
+    // Repurpose the MODEL CV input as the fourth synthesis macro. Unlike the
+    // LEVEL macro option this does not require TRIG to be patched, since the
+    // MODEL input never drives the internal VCA.
+    macro_cv = modulations.engine;
+  }
+  CONSTRAIN(patch_lpg_colour, 0.0f, 1.0f);
   
   if (engine_index != previous_engine_index_ || reload_user_data_) {
     UserData user_data;
@@ -198,10 +222,8 @@ void Voice::Render(
   p.macro += macro_cv;
   CONSTRAIN(p.macro, 0.0f, 1.0f);
 
-  bool rising_edge = trigger_state_ && !previous_trigger_state;
   float note = (modulations_note + previous_note_) * 0.5f;
   previous_note_ = modulations_note;
-  const PostProcessingSettings& pp_s = e->post_processing_settings;
 
   if (modulations.trigger_patched) {
     p.trigger = (rising_edge ? TRIGGER_RISING_EDGE : TRIGGER_LOW) | \
@@ -289,6 +311,22 @@ void Voice::Render(
 
   bool already_enveloped = pp_s.already_enveloped;
   e->Render(p, out_buffer_, aux_buffer_, size, &already_enveloped);
+
+#if PLAITS_HAS_CHIPTUNE_ENGINE
+  // Clocked Chiptune bypasses the outer LPG because it owns its note envelope,
+  // but historically ignored EngineParameters::accent too, leaving a patched
+  // LEVEL jack dead. Restore its VCA role without putting the signal through a
+  // second LPG: scale both of the engine's real outputs here. A suboscillator,
+  // when selected below, deliberately replaces AUX after this stage and keeps
+  // its existing envelope-bypass behavior.
+  if (already_enveloped && level_patched && \
+      (kChiptuneEngineMask & (1u << engine_index))) {
+    for (size_t i = 0; i < size; ++i) {
+      out_buffer_[i] *= compressed_level;
+      aux_buffer_[i] *= compressed_level;
+    }
+  }
+#endif
 
   if (patch.aux_is_subosc()) {
     float frequency = NoteToFrequency(p.note);

@@ -146,6 +146,7 @@ struct Patch {
   uint8_t model_cv_option;
   // 0 - cv control of level (original)
   // 1 - cv control of decay
+  // 2 - auto: decay on outer-LPG engines, level/accent on self-enveloped ones
   uint8_t level_cv_option;
   // 0 - regular aux model
   // 1 - stereo: OUT/AUX become a true L/R pair on stereo-capable engines

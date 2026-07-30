@@ -139,6 +139,20 @@ class RenderManualTest(unittest.TestCase):
         # A recipe from before v14 has no such key and no such page.
         self.assertIs(manual_document(self.load("default_recipe.json"))["calibration"], False)
 
+    @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
+    def test_auto_level_routing_is_printed_in_the_options_reference(self) -> None:
+        recipe = self.calibration_recipe(False)
+        recipe["schemaVersion"] = 16
+        recipe["initialOptions"]["levelInput"] = "auto"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "auto-level.pdf"
+            render_pdf(manual_document(recipe), output)
+            printed = pdf_strings(output)
+            self.assertIn("Auto: decay or velocity", printed)
+            self.assertIn("Auto sends LEVEL to LPG decay", printed)
+            self.assertIn("but keeps LEVEL as", printed)
+            self.assertIn("velocity/accent on models with their own envelope", printed)
+
     def roved_recipe(self, calibration: bool = False) -> dict:
         recipe = self.calibration_recipe(calibration)
         recipe["schemaVersion"] = 15

@@ -51,6 +51,55 @@ test("normalization removes nondeterministic manifest fields", () => {
   assert.equal(normalized.initialOptions.lockedFrequencyKnob, "octaves");
 });
 
+test("automatic LEVEL routing is carried only by schema 16", async () => {
+  const publicCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const chordCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_chord_tables/catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const engines = new Map(
+    publicCatalog.engines.map((engine: { id: string }) => [engine.id, engine]),
+  );
+  const recipe = structuredClone(fixture);
+  recipe.schemaVersion = 16;
+  recipe.slots = fixture.slots.map((engineId: string) => {
+    const engine = engines.get(engineId) as {
+      packageId: string;
+      version: string;
+      digest: string;
+    };
+    return {
+      engine: engineId,
+      package: engine.packageId,
+      version: engine.version,
+      digest: engine.digest,
+    };
+  });
+  recipe.preferences = { navigationMode: "linear" };
+  recipe.initialOptions = {
+    lockedFrequencyKnob: "octaves",
+    modelInput: "model",
+    levelInput: "auto",
+    auxOutput: "alternate-model",
+    suboscillatorOctave: 0,
+    chordTable: "original",
+    holdOnTrigger: false,
+  };
+  recipe.resources = { chordTables: chordCatalog.tables };
+  const normalized = normalizeRecipe(recipe);
+  assert.equal(normalized.schemaVersion, 16);
+  assert.equal(normalized.initialOptions.levelInput, "auto");
+
+  recipe.schemaVersion = 15;
+  assert.throws(
+    () => normalizeRecipe(recipe),
+    (error: { code?: string }) => error.code === "unsupported_schema",
+  );
+});
+
 test("WAV and application-only Intel HEX are the only output formats", async () => {
   const wav = normalizeRecipe(fixture);
   const hex = normalizeRecipe({ ...fixture, output: "intel-hex" });

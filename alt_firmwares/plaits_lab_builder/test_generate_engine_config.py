@@ -53,10 +53,9 @@ class GenerateEngineConfigTest(unittest.TestCase):
     def test_legacy_recipes_receive_the_stable_default_option_profile(self) -> None:
         # Also the value PLAITS_BUILD_OPTIONS_PROFILE_ID carries in
         # plaits/build_config.h, so a local build and a hosted default build
-        # agree and do not reset each other's saved options. Moves only with
-        # OPTIONS_LAYOUT_VERSION.
+        # agree and do not reset each other's saved options.
         recipe = validate_recipe(self.load("default_recipe.json"))
-        self.assertEqual(recipe.options_profile_id, 0x51A4)
+        self.assertEqual(recipe.options_profile_id, 0xB7B0)
 
     def test_option_values_match_the_firmware_numbering(self) -> None:
         # These numbers are the firmware's (plaits/dsp/voice.h): they pick the
@@ -83,6 +82,24 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertEqual(build.aux_subosc_option, 2)
         self.assertEqual(build.chord_set_option, 2)
         self.assertEqual(build.hold_on_trigger_option, 1)
+
+    def test_auto_level_routing_is_schema_16_and_firmware_value_two(self) -> None:
+        recipe = self.load("default_recipe.json")
+        recipe["schemaVersion"] = 16
+        recipe["preferences"] = {"navigationMode": "linear"}
+        recipe["initialOptions"] = dict(
+            DEFAULT_CONFIGURATION["initialOptions"], levelInput="auto"
+        )
+        recipe["resources"] = {"chordTables": DEFAULT_CHORD_TABLES}
+
+        build = validate_recipe(recipe)
+
+        self.assertEqual(build.level_cv_option, 2)
+        self.assertIn("#define PLAITS_BUILD_LEVEL_CV_OPTION 2", render_config(build))
+
+        recipe["schemaVersion"] = 15
+        with self.assertRaisesRegex(ValueError, "schemaVersion 16"):
+            validate_recipe(recipe)
 
     def calibration_recipe(self, schema_version: int, calibration) -> dict:
         recipe = self.load("default_recipe.json")
@@ -313,12 +330,13 @@ class GenerateEngineConfigTest(unittest.TestCase):
 
     def test_every_option_profile_has_a_unique_legacy_safe_marker(self) -> None:
         recipe = self.load("default_recipe.json")
-        recipe["schemaVersion"] = 4
+        recipe["schemaVersion"] = 16
         recipe["preferences"] = {"navigationMode": "linear"}
+        recipe["resources"] = {"chordTables": DEFAULT_CHORD_TABLES}
         option_values = (
             ("lockedFrequencyKnob", ["octaves", "decay", "aux-crossfade", "macro-4"]),
             ("modelInput", ["model", "lpg-colour", "aux-crossfade", "macro-4"]),
-            ("levelInput", ["level", "decay"]),
+            ("levelInput", ["level", "decay", "auto"]),
             ("auxOutput", ["alternate-model", "square-subosc", "sine-subosc", "stereo"]),
             ("suboscillatorOctave", [0, -1, -2]),
             ("chordTable", ["original", "jon-butler", "joe-mcmullen"]),
@@ -333,8 +351,8 @@ class GenerateEngineConfigTest(unittest.TestCase):
             self.assertGreater(marker & 0xff, 1)
             markers.add(marker)
         # Every option combination must map to a distinct profile marker.
-        # Product of the option cardinalities: 4 * 4 * 2 * 4 * 3 * 3 * 2.
-        self.assertEqual(len(markers), 2304)
+        # Product of the cardinalities: 4 * 4 * 3 * 4 * 3 * 3 * 2.
+        self.assertEqual(len(markers), 3456)
 
     def test_registry_translates_green_red_amber_to_amber_green_red(self) -> None:
         recipe = self.load("mixed_recipe.json")

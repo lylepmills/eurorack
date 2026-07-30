@@ -49,6 +49,7 @@ const calibrationMinSchemaVersion = 14;   // CV calibration procedure
 const rovedMinSchemaVersion = 15;         // four-knob Ro'Ved panel
 const colorBlindModeMinSchemaVersion = 15; // brightness-coded banks
 const scaleBankMinSchemaVersion = 16;      // recipe-driven scale bank
+export const levelAutoMinSchemaVersion = 16; // engine-aware LEVEL routing
 
 export const minScaleBankSize = 1;
 export const maxScaleBankSize = 16;
@@ -130,7 +131,7 @@ export type NormalizedRecipe = {
   initialOptions: {
     lockedFrequencyKnob: "octaves" | "decay" | "aux-crossfade" | "macro-4";
     modelInput: "model" | "lpg-colour" | "aux-crossfade" | "macro-4";
-    levelInput: "level" | "decay";
+    levelInput: "level" | "decay" | "auto";
     auxOutput: "alternate-model" | "square-subosc" | "sine-subosc" | "stereo";
     suboscillatorOctave: 0 | -1 | -2;
     chordTable: string;
@@ -454,7 +455,7 @@ function normalizeConfiguration(
       || !isOneOf(preferenceValues.navigationMode, ["linear", "banked"] as const)
       || !isOneOf(optionValues.lockedFrequencyKnob, ["octaves", "decay", "aux-crossfade", "macro-4"] as const)
       || !isOneOf(optionValues.modelInput, ["model", "lpg-colour", "aux-crossfade", "macro-4"] as const)
-      || !isOneOf(optionValues.levelInput, ["level", "decay"] as const)
+      || !isOneOf(optionValues.levelInput, ["level", "decay", "auto"] as const)
       || !isOneOf(optionValues.auxOutput, ["alternate-model", "square-subosc", "sine-subosc", "stereo"] as const)
       || !isOneOf(optionValues.suboscillatorOctave, [0, -1, -2] as const)
       || typeof optionValues.chordTable !== "string"
@@ -479,6 +480,13 @@ function normalizeConfiguration(
     throw new ContractError(
       "unsupported_schema",
       `The color-blind bank display requires recipe schema version ${colorBlindModeMinSchemaVersion}.`,
+    );
+  }
+  if (optionValues.levelInput === "auto"
+      && Number(candidate.schemaVersion) < levelAutoMinSchemaVersion) {
+    throw new ContractError(
+      "unsupported_schema",
+      `Automatic LEVEL routing requires recipe schema version ${levelAutoMinSchemaVersion}.`,
     );
   }
   return {
@@ -675,11 +683,11 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     configuration.initialOptions.auxOutput,
   );
   return {
-    // Newest first: a recipe-driven scale bank requires v16. Ro'Ved's
-    // four-clickable-knob UI and the accessible display
-    // each require v15 and dominate all lower feature rungs. Then the optional
-    // calibration procedure needs v14. All three say nothing about the recipe's
-    // resource shape. A per-slot custom bank with fewer than 32 patches (a
+    // Newest first: a recipe-driven scale bank or engine-aware automatic LEVEL
+    // routing requires v16. Ro'Ved's four-clickable-knob UI and the accessible
+    // display each require v15, followed by the optional v14 calibration
+    // procedure. These say nothing about the recipe's resource shape. A
+    // per-slot custom bank with fewer than 32 patches (a
     // "short" FM bank) needs the firmware's variable-length Harmonics quantizer,
     // v13. Any other per-slot custom bank needs a v12 builder (only v12
     // keys banks by slot). Then a sparse bank (a gap kept in place) needs v11;
@@ -688,7 +696,8 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     // (v8); a short-bank recipe (a trailing empty slot) stays v7; a candidate that
     // carried v6 resources (even an empty custom-bank list, e.g. a 32-slot recipe)
     // stays v6; else v5.
-    schemaVersion: scaleBank !== undefined ? 16
+    schemaVersion: scaleBank !== undefined
+        || configuration.initialOptions.levelInput === "auto" ? 16
       : candidate.target === "plum-audio-roved"
         || configuration.preferences.colorBlindMode ? 15
       : configuration.preferences.calibration ? 14

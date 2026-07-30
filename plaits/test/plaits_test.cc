@@ -2167,10 +2167,127 @@ void ValidateScaleVoiceBank() {
   }
 }
 
+int PeakFrameAmplitude(const Voice::Frame* frames, size_t size) {
+  int peak = 0;
+  for (size_t i = 0; i < size; ++i) {
+    peak = max(peak, abs(static_cast<int>(frames[i].out)));
+    peak = max(peak, abs(static_cast<int>(frames[i].aux)));
+  }
+  return peak;
+}
+
+void ValidateClockedChiptuneLevelVca() {
+  BufferAllocator allocator(ram_block, sizeof(ram_block));
+  Voice voice;
+  voice.Init(&allocator);
+
+  Patch patch;
+  memset(&patch, 0, sizeof(patch));
+  patch.engine = 7;  // Chiptune in both generated and stock registries.
+  patch.note = 48.0f;
+  patch.harmonics = 0.4f;
+  patch.timbre = 0.5f;
+  patch.morph = 0.5f;
+  patch.decay = 0.5f;
+  patch.lpg_colour = 0.5f;
+  patch.level_cv_option = 0;
+
+  Modulations modulations;
+  memset(&modulations, 0, sizeof(modulations));
+  modulations.trigger = 1.0f;
+  modulations.trigger_patched = true;
+  modulations.level_patched = true;
+  // Keep Chiptune's optional internal TIMBRE envelope out of this test: LEVEL
+  // must be a VCA whether that envelope is enabled or not.
+  modulations.timbre_patched = true;
+  modulations.level = 1.0f;
+
+  Voice::Frame frames[kAudioBlockSize];
+  int audible_peak = 0;
+  // The firmware deliberately delays trigger recognition by five blocks.
+  for (int block = 0; block < 12; ++block) {
+    voice.Render(patch, modulations, frames, kAudioBlockSize);
+    audible_peak = max(
+        audible_peak, PeakFrameAmplitude(frames, kAudioBlockSize));
+  }
+  if (audible_peak < 100) {
+    fprintf(stderr,
+        "Clocked Chiptune LEVEL VCA test never produced an audible signal\n");
+    abort();
+  }
+
+  modulations.level = 0.0f;
+  voice.Render(patch, modulations, frames, kAudioBlockSize);
+  if (PeakFrameAmplitude(frames, kAudioBlockSize) > 1) {
+    fprintf(stderr,
+        "Clocked Chiptune ignored LEVEL CV in the explicit Level mode\n");
+    abort();
+  }
+
+  // Auto must classify clocked Chiptune as self-enveloped and preserve the
+  // same LEVEL VCA instead of stealing the input for decay.
+  patch.level_cv_option = 2;
+  modulations.level = 1.0f;
+  voice.Render(patch, modulations, frames, kAudioBlockSize);
+  if (PeakFrameAmplitude(frames, kAudioBlockSize) < 100) {
+    fprintf(stderr,
+        "Clocked Chiptune Auto LEVEL mode did not restore its audible signal\n");
+    abort();
+  }
+  modulations.level = 0.0f;
+  voice.Render(patch, modulations, frames, kAudioBlockSize);
+  if (PeakFrameAmplitude(frames, kAudioBlockSize) > 1) {
+    fprintf(stderr,
+        "Clocked Chiptune Auto LEVEL mode did not preserve the VCA\n");
+    abort();
+  }
+}
+
+void ValidateAutoLevelDecayRouting() {
+  BufferAllocator allocator(ram_block, sizeof(ram_block));
+  Voice voice;
+  voice.Init(&allocator);
+
+  Patch patch;
+  memset(&patch, 0, sizeof(patch));
+  patch.engine = 8;  // Virtual Analog, an ordinary outer-LPG engine.
+  patch.note = 48.0f;
+  patch.harmonics = 0.4f;
+  patch.timbre = 0.5f;
+  patch.morph = 0.5f;
+  patch.decay = 0.5f;
+  patch.lpg_colour = 0.5f;
+  patch.level_cv_option = 2;
+
+  Modulations modulations;
+  memset(&modulations, 0, sizeof(modulations));
+  modulations.trigger = 1.0f;
+  modulations.trigger_patched = true;
+  modulations.level_patched = true;
+  modulations.level = 0.0f;
+
+  Voice::Frame frames[kAudioBlockSize];
+  int audible_peak = 0;
+  for (int block = 0; block < 12; ++block) {
+    voice.Render(patch, modulations, frames, kAudioBlockSize);
+    audible_peak = max(
+        audible_peak, PeakFrameAmplitude(frames, kAudioBlockSize));
+  }
+  if (audible_peak < 100) {
+    fprintf(stderr,
+        "Auto LEVEL mode did not route an ordinary oscillator to LPG decay\n");
+    abort();
+  }
+}
+
 void TestExperimentalEngines() {
   printf("Validating the shared scale bank...\n");
   fflush(stdout);
   ValidateScaleVoiceBank();
+  printf("Validating automatic LEVEL routing and clocked Chiptune VCA...\n");
+  fflush(stdout);
+  ValidateClockedChiptuneLevelVca();
+  ValidateAutoLevelDecayRouting();
   printf("Validating selectable chord tables...\n");
   fflush(stdout);
   BufferAllocator chord_allocator(ram_block, sizeof(ram_block));

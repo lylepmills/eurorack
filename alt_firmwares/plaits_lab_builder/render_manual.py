@@ -45,7 +45,7 @@ MENU_LIGHTS = (
     )),
     ("FREQUENCY knob", ("Octaves", "Fourth macro", "Aux crossfade", "LPG decay")),
     ("MODEL input", ("Model select", "Fourth macro", "Aux crossfade", "LPG colour (VCFA->VCA)")),
-    ("LEVEL input", ("Level", "LPG decay")),
+    ("LEVEL input", ("Level", "LPG decay", "Auto: decay or velocity")),
     ("Hold on trigger", ("Off (live CV)", "Sample & hold")),
 )
 
@@ -546,13 +546,15 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
     options_note = (
         "LIGHT 1 applies to chord-capable models and lists the chord tables loaded in this build (up to nine). "
         "LIGHT 3 stays dark, and the light navigation skips it, unless LIGHT 2 is set to a suboscillator — it has nothing to act on otherwise. "
-        "LIGHT 4 applies in octave-switching (frequency-locked) mode. LIGHT 6's LPG-decay setting applies only when TRIG is patched. "
+        "LIGHT 4 applies in octave-switching (frequency-locked) mode. LIGHT 6's LPG-decay and Auto settings apply only when TRIG is patched. "
+        "Auto sends LEVEL to LPG decay on ordinary oscillator models, but keeps LEVEL as velocity/accent on models with their own envelope. "
         "Outside the menu, click FREQUENCY/TIMBRE for previous/next bank and "
         "MORPH/HARMONICS for previous/next model."
         if roved else
         "LIGHT 1 applies to chord-capable models and lists the chord tables loaded in this build (up to nine). "
         "LIGHT 3 stays dark, and the left button walks past it, unless LIGHT 2 is set to a suboscillator — it has nothing to act on otherwise. "
-        "LIGHT 4 applies in octave-switching (frequency-locked) mode. LIGHT 6's LPG-decay setting applies only when TRIG is patched. "
+        "LIGHT 4 applies in octave-switching (frequency-locked) mode. LIGHT 6's LPG-decay and Auto settings apply only when TRIG is patched. "
+        "Auto sends LEVEL to LPG decay on ordinary oscillator models, but keeps LEVEL as velocity/accent on models with their own envelope. "
         "Model navigation (linear or banked) is chosen when you build the firmware, not from this menu."
     )
 

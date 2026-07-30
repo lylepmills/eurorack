@@ -56,6 +56,7 @@ CALIBRATION_MIN_SCHEMA_VERSION = 14
 ROVED_MIN_SCHEMA_VERSION = 15
 COLOR_BLIND_MODE_MIN_SCHEMA_VERSION = 15
 SCALE_BANK_MIN_SCHEMA_VERSION = 16
+LEVEL_AUTO_MIN_SCHEMA_VERSION = 16
 
 MIN_SCALE_BANK_SIZE = 1
 MAX_SCALE_BANK_SIZE = 16
@@ -71,8 +72,9 @@ SCALE_UNITS_PER_OCTAVE = 12 * SCALE_UNITS_PER_SEMITONE
 # reinterpreting the old numbers. Version 1: options menu reordered, and the
 # fourth macro / stereo promoted to value 1 on their lights (2026-07). Version 2:
 # the aux output holds one suboscillator value instead of two (square/sine), and
-# the suboscillator light carries shape and octave together (2026-07).
-OPTIONS_LAYOUT_VERSION = 2
+# the suboscillator light carries shape and octave together (2026-07). Version 3:
+# the LEVEL light adds Auto as value 2, expanding that digit's radix (2026-07).
+OPTIONS_LAYOUT_VERSION = 3
 
 
 @dataclass(frozen=True)
@@ -520,7 +522,10 @@ def validate_recipe(value: Any) -> BuildRecipe:
         # invisible to the recipe format - but see OPTIONS_LAYOUT_VERSION.
         "locked_frequency_pot_option": (options.get("lockedFrequencyKnob"), {"octaves": 0, "macro-4": 1, "aux-crossfade": 2, "decay": 3}),
         "model_cv_option": (options.get("modelInput"), {"model": 0, "macro-4": 1, "aux-crossfade": 2, "lpg-colour": 3}),
-        "level_cv_option": (options.get("levelInput"), {"level": 0, "decay": 1}),
+        "level_cv_option": (
+            options.get("levelInput"),
+            {"level": 0, "decay": 1, "auto": 2},
+        ),
         # The recipe records the suboscillator's SHAPE inside auxOutput and its
         # octave beside it; the firmware splits the pair the other way, into one
         # aux-output setting (regular / stereo / subosc) and one suboscillator
@@ -539,6 +544,10 @@ def validate_recipe(value: Any) -> BuildRecipe:
         if selected not in allowed or (name == "hold_on_trigger_option" and not isinstance(selected, bool)):
             raise ValueError("recipe contains an unsupported firmware option")
         normalized_options[name] = allowed[selected]
+    if options.get("levelInput") == "auto" and schema_version < LEVEL_AUTO_MIN_SCHEMA_VERSION:
+        raise ValueError(
+            f"automatic LEVEL routing requires schemaVersion "
+            f"{LEVEL_AUTO_MIN_SCHEMA_VERSION} or newer")
     # Shape and octave share one firmware value (plaits/dsp/voice.h): 0-2 square
     # at 0/-1/-2 octaves, 3-5 sine at the same three. The octave landed above;
     # the shape comes from auxOutput, the only place the recipe records it. It
@@ -555,12 +564,14 @@ def validate_recipe(value: Any) -> BuildRecipe:
     # the fold with a new layout version makes every id disjoint from every id
     # minted under the old numbering, forcing that reset exactly once. Without
     # it an unchanged recipe keeps its id and the module silently re-reads old
-    # numbers under new meanings.
+    # numbers under new meanings. Appending Auto to LEVEL changes this fold's
+    # radix from two to three, so every profile id moves without renumbering the
+    # two existing stored values.
     profile_code = OPTIONS_LAYOUT_VERSION
     profile_code = profile_code * 4 + normalized_options["locked_frequency_pot_option"]
     for name, radix in (
         ("model_cv_option", 4),
-        ("level_cv_option", 2),
+        ("level_cv_option", 3),
         # Regular aux model, stereo OUT/AUX, suboscillator.
         ("aux_output_option", 3),
         # Square/sine crossed with 0, -1 and -2 octaves.
@@ -576,9 +587,9 @@ def validate_recipe(value: Any) -> BuildRecipe:
     # The reversible encoding has to stay under the reserved range (profile code
     # < 254*256 = 65024) to fit the legacy navigation and padding bytes, while
     # reserving low bytes 0 and 1 so saved states from the old navigation setting
-    # can never look initialized. The option digits span 10368 values per layout
-    # version, so the ceiling arrives at layout version 6 — the assertion is
-    # here so that lands as a build error rather than as colliding profile ids.
+    # can never look initialized. The option digits now span 15552 values per
+    # layout version; the assertion is here so any future growth lands as a build
+    # error rather than as colliding profile ids.
     if profile_code >= 254 * 256:
         raise ValueError("options profile code has outgrown the reserved range")
     profile_id = ((profile_code // 254) << 8) | (2 + profile_code % 254)

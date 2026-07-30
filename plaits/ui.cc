@@ -85,7 +85,7 @@ enum OptionLight {
 static const uint8_t kNumOptions = OPTION_LIGHT_LAST;
 static const uint8_t kNumLockedFrequencyPotOptions = 4;
 static const uint8_t kNumModelCVOptions = 4;
-static const uint8_t kNumLevelCVOptions = 2;
+static const uint8_t kNumLevelCVOptions = 3;
 // Aux output: regular aux model, stereo (true L/R pair on stereo-capable
 // engines), suboscillator. The suboscillator's own light then carries shape
 // and octave together - square/sine crossed with 0, -1 and -2 octaves.

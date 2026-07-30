@@ -4,9 +4,12 @@ This directory contains the approved-engine backend for Plaits Lab. It accepts
 legacy recipes and manifests through schema 16 containing 24 or 32 immutable
 engine references, firmware preferences and starting options, and bounded
 chord-table/custom-FM/scale-bank resources. Schema 15 can target either Mutable
-Instruments Plaits or Plum Audio Ro'Ved; schema 16 adds an ordered bank of up to
-16 editable scales shared by Diatonic Chord and Scale Stack. It generates a compile-time configuration,
-builds with the pinned Mutable
+Instruments Plaits or Plum Audio Ro'Ved and adds the color-blind bank display.
+Schema 16 adds an ordered bank of up to 16 editable scales shared by Diatonic
+Chord and Scale Stack, plus automatic LEVEL routing, which
+uses LPG decay on ordinary oscillator models and preserves LEVEL as
+velocity/accent on self-enveloped models. It generates a compile-time
+configuration, builds with the pinned Mutable
 Instruments ARM toolchain, enforces the Plaits flash and RAM limits, and returns
 either the default 48 kHz audio updater or, when explicitly requested, an
 application-only Intel HEX file for a direct hardware programmer. The HEX starts
@@ -15,9 +18,9 @@ bootloader.
 
 Schema-15/Ro'Ved support passed its hardware checklist on July 30, 2026 and is
 available in production. Schema 16 remains a source-only rollout: its container
-and Worker gates pass locally, including one/eight/sixteen-scale ARM builds and
-the scale-order field guide, while the hardware canary and coordinated
-production rollout remain.
+and Worker gates pass locally, including one/eight/sixteen-scale ARM builds,
+automatic LEVEL routing, and the generated field guides, while the hardware
+canary and coordinated production rollout remain.
 
 The service is split across two isolation layers:
 
