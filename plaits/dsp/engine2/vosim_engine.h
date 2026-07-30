@@ -9,13 +9,13 @@
 // The algorithm is Emilie Gillet's DigitalOscillator::RenderVosim
 // (braids/digital_oscillator.cc:410-438).
 //
-// LINEAGE, and the drop that was reversed. BRAIDS_PORT_SPEC.md §7.1 dropped
-// VOSM in wave 1 because granular-formant already ships the topology: two
+// LINEAGE, and the drop that was reversed. The initial port evaluation dropped
+// VOSM because granular-formant already ships the topology: two
 // GrainletOscillators share an f0-locked window and carry one sine formant
 // each, so the only unreachable content looked like an absolute rather than
-// ratio second formant plus the 2:1 amplitude balance. §7.1 named a
-// reinstatement condition -- an A/B against granular-formant with TIMBRE at the
-// same absolute formant pitch, HARMONICS at the f2/f1 ratio, MORPH in the
+// ratio second formant plus the 2:1 amplitude balance. The reinstatement
+// condition was an A/B against granular-formant with TIMBRE at the same
+// absolute formant pitch, HARMONICS at the f2/f1 ratio, MORPH in the
 // shape-branch-1 region near breakpoint 0.0625, and MACRO at full carrier
 // bleed. That was run, and it does not all go one way.
 //
@@ -28,7 +28,8 @@
 // prescribed point is not granular-formant's best: a coordinate-descent search
 // over all four of its macros, level-matched, gets to 0.63 dB. Under a metric
 // where the port reads 0.06, 0.63 dB is close. For the pairs granular-formant
-// can set, §7.1's "re-macro of granular-formant" reading is basically right.
+// can set, the original "re-macro of granular-formant" reasoning is basically
+// right.
 //
 // Where it stops being right is the ratio limit. granular-formant's HARMONICS
 // spans -24 to +24 semitones -- a hard 4:1 cap on f2/f1 either way -- and its

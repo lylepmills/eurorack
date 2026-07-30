@@ -1,8 +1,7 @@
 # `fluted` gate measurement
 
-The measurement `BRAIDS_PORT_SPEC.md` §3.11 demanded before any `fluted` code
-was written, and the evidence behind the decision to **drop the engine**. The
-verdict and the numbers are written up in `BRAIDS_PORT_PROGRESS.md` §3.16.
+This directory contains the measurement behind the decision to **drop the
+`fluted` engine** from the Braids port.
 
 Nothing here is engine code. `fluted_probe.cc` is a measurement instrument: it
 renders either the proposed 48 kHz float port or Braids' own fixed-point FLUT,

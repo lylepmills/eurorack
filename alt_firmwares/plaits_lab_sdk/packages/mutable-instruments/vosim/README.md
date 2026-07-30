@@ -38,14 +38,14 @@ discontinuity at every grain edge.
 
 ## The drop, and what the measurement says about it
 
-`BRAIDS_PORT_SPEC.md` §7.1 dropped this model in wave 1: the topology already
-ships as `granular-formant`, whose two grainlets share one f0-locked window and
-carry one sine formant each, so what Braids has and Granular Formant does not
-looked like just (a) an absolute rather than ratio second formant and (b) the
-2:1 balance. §7.1 set a reinstatement condition — an A/B with TIMBRE at the same
-absolute formant pitch, HARMONICS at the f2/f1 ratio, MORPH in the
-shape-branch-1 region near breakpoint 0.0625, and MACRO at full carrier bleed.
-That comparison was run. It does not all go one way.
+The initial port evaluation dropped this model: the topology already ships as
+`granular-formant`, whose two grainlets share one f0-locked window and carry one
+sine formant each, so what Braids has and Granular Formant does not looked like
+just (a) an absolute rather than ratio second formant and (b) the 2:1 balance.
+The reinstatement condition was an A/B with TIMBRE at the same absolute formant
+pitch, HARMONICS at the f2/f1 ratio, MORPH in the shape-branch-1 region near
+breakpoint 0.0625, and MACRO at full carrier bleed. That comparison was run. It
+does not all go one way.
 
 Solving those four settings exactly — breakpoint 0.0625 needs
 `carrier_shape` 0.500783, which at note 40 is MORPH 0.5081 — and rendering
@@ -55,7 +55,8 @@ Formant lands **1.88 dB** away where this port is at **0.06 dB**. But the
 prescribed point is not Granular Formant's best. A level-matched coordinate
 descent over all four of its macros gets it to **0.63 dB**. Under a metric where
 the port reads 0.06, that is close — so for the formant pairs Granular Formant
-can set, §7.1's "re-macro of Granular Formant" reading is basically right.
+can set, the original "re-macro of Granular Formant" reasoning is basically
+right.
 
 Where it stops being right is the ratio limit. Granular Formant's HARMONICS
 spans −24 to +24 semitones — a hard 4:1 cap on f2/f1 in either direction — and
