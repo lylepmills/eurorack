@@ -222,6 +222,11 @@ new image, wait for `wrangler containers list` to report `ready` before smoke
 testing; requests made while the application was still `provisioning` reached
 the previous live instance during the schema-5 rollout.
 
+Schema 15, including per-engine stereo, is live. The generalized
+schema-inheritance hardening from `5b2b077` is also live: current production
+source `14251e51d34e` descends from that commit, so future supported schemas
+inherit older feature shapes without another version-list edit.
+
 ### Rolling back
 
 Immutable `rev-<commit>` tags make a rollback a configuration change rather

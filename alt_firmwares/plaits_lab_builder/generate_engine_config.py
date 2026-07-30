@@ -101,7 +101,7 @@ class BuildRecipe:
     # Catalog ids of engines built with the stereo (OUT/AUX L/R) render path.
     # None means "not specified" — a pre-per-engine (schema <= 9) recipe, which
     # the builder treats as all stereo-capable engines when the aux option is
-    # stereo. A tuple (schema 10) lists exactly the enabled engines.
+    # stereo. A tuple (schema 10+) lists exactly the enabled engines.
     stereo_engines: tuple[str, ...] | None = None
 
 
@@ -493,9 +493,10 @@ def validate_recipe(value: Any) -> BuildRecipe:
         raise ValueError("options profile code has outgrown the reserved range")
     profile_id = ((profile_code // 254) << 8) | (2 + profile_code % 254)
 
-    # Per-engine stereo (schema 10): stereoEngines lists the catalog ids built
-    # with the stereo render path. Absent on schema <= 9, which the container
-    # treats as "all stereo-capable engines" (back-compat with the global gate).
+    # Per-engine stereo (introduced in schema 10): stereoEngines lists the
+    # catalog ids built with the stereo render path. Absent on schema <= 9, which
+    # the container treats as "all stereo-capable engines" (back-compat with the
+    # global gate).
     stereo_engines: tuple[str, ...] | None = None
     if "stereoEngines" in value:
         # v10's defining feature. Every later supported schema is a superset and
