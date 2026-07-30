@@ -167,6 +167,10 @@ def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]
         # Only a build that compiled the procedure in answers the power-up
         # gesture, so only that build's guide documents it.
         "calibration": build.enable_calibration == 1,
+        # The bank map's printed colors remain useful as bank names, but a build
+        # with the accessible display needs the real on-module brightness map
+        # stated explicitly beside it.
+        "colorBlindMode": build.color_blind_mode == 1,
     }
 
 
@@ -465,8 +469,34 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
     ]))
 
+    story.append(bank_map)
+    if document.get("colorBlindMode"):
+        story.extend([
+            Spacer(1, 0.12 * inch),
+            Table(
+                [[
+                    Paragraph("BANK LIGHTS", table_header_style),
+                    Paragraph(
+                        "This build uses the color-blind bank display: every model light is yellow, "
+                        "and brightness identifies the bank. GREEN is brightest (100%), RED is 50%, "
+                        "AMBER is 25%, and the optional ORANGE bank is 12.5%. "
+                        "The setting is built into this firmware; no power-up gesture is required.",
+                        small_style,
+                    ),
+                ]],
+                colWidths=[1.1 * inch, 5.2 * inch],
+                style=TableStyle([
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#EFECE3")),
+                    ("BOX", (0, 0), (-1, -1), 0.5, line),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                    ("TOPPADDING", (0, 0), (-1, -1), 7),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+                ]),
+            ),
+        ])
     story.extend([
-        bank_map,
         Spacer(1, 0.18 * inch),
         Table(
             [[

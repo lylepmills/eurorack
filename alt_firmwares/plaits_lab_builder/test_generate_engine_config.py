@@ -99,6 +99,49 @@ class GenerateEngineConfigTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unsupported firmware option"):
             validate_recipe(self.calibration_recipe(14, "yes"))
 
+    def color_blind_recipe(self, schema_version: int, color_blind_mode, calibration=False) -> dict:
+        recipe = self.load("default_recipe.json")
+        recipe["schemaVersion"] = schema_version
+        recipe["preferences"] = {
+            "navigationMode": "linear",
+            "calibration": calibration,
+            "colorBlindMode": color_blind_mode,
+        }
+        recipe["initialOptions"] = dict(DEFAULT_CONFIGURATION["initialOptions"])
+        recipe["resources"] = {"chordTables": DEFAULT_CHORD_TABLES}
+        return recipe
+
+    def test_color_blind_mode_defaults_off_and_emits_the_define(self) -> None:
+        build = validate_recipe(self.load("default_recipe.json"))
+        self.assertEqual(build.color_blind_mode, 0)
+        self.assertIn("#define PLAITS_BUILD_COLOR_BLIND_MODE 0", render_config(build))
+
+    def test_color_blind_mode_on_emits_the_define_and_composes_with_calibration(self) -> None:
+        build = validate_recipe(self.color_blind_recipe(15, True, calibration=True))
+        self.assertEqual(build.color_blind_mode, 1)
+        self.assertEqual(build.enable_calibration, 1)
+        config = render_config(build)
+        self.assertIn("#define PLAITS_BUILD_COLOR_BLIND_MODE 1", config)
+        self.assertIn("#define PLAITS_BUILD_ENABLE_CALIBRATION 1", config)
+
+    def test_color_blind_mode_composes_with_per_engine_stereo(self) -> None:
+        recipe = self.color_blind_recipe(15, True)
+        recipe["stereoEngines"] = ["chiptune", "modal-resonator", "chiptune"]
+        build = validate_recipe(recipe)
+        self.assertEqual(build.stereo_engines, ("chiptune", "modal-resonator"))
+        self.assertEqual(build.color_blind_mode, 1)
+
+    def test_color_blind_mode_does_not_move_the_options_profile_id(self) -> None:
+        off = validate_recipe(self.color_blind_recipe(15, False))
+        on = validate_recipe(self.color_blind_recipe(15, True))
+        self.assertEqual(off.options_profile_id, on.options_profile_id)
+
+    def test_color_blind_mode_requires_schema_15_and_a_boolean(self) -> None:
+        with self.assertRaisesRegex(ValueError, "schemaVersion 15"):
+            validate_recipe(self.color_blind_recipe(14, True))
+        with self.assertRaisesRegex(ValueError, "unsupported firmware option"):
+            validate_recipe(self.color_blind_recipe(15, "yes"))
+
     def test_subosc_shape_and_octave_fold_into_one_firmware_value(self) -> None:
         # The recipe keeps the shape in auxOutput and the octave beside it; the
         # firmware wants one aux-output setting and one suboscillator setting

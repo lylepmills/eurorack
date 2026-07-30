@@ -117,6 +117,37 @@ class RenderManualTest(unittest.TestCase):
             # Not a word about a gesture this firmware does not answer.
             self.assertNotIn("CALIBRATION", pdf_strings(off))
 
+    def color_blind_recipe(self, enabled: bool) -> dict:
+        recipe = self.load("default_recipe.json")
+        recipe["schemaVersion"] = 15
+        recipe["preferences"] = {
+            "navigationMode": "linear",
+            "calibration": False,
+            "colorBlindMode": enabled,
+        }
+        recipe["initialOptions"] = dict(DEFAULT_CONFIGURATION["initialOptions"])
+        recipe["resources"] = {"chordTables": DEFAULT_CHORD_TABLES}
+        return recipe
+
+    def test_color_blind_bank_note_follows_the_build(self) -> None:
+        self.assertIs(manual_document(self.color_blind_recipe(True))["colorBlindMode"], True)
+        self.assertIs(manual_document(self.color_blind_recipe(False))["colorBlindMode"], False)
+        self.assertIs(manual_document(self.load("default_recipe.json"))["colorBlindMode"], False)
+
+    @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
+    def test_color_blind_brightness_map_is_printed_only_when_enabled(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            on = Path(temp_dir) / "color-blind-on.pdf"
+            render_pdf(manual_document(self.color_blind_recipe(True)), on)
+            printed = pdf_strings(on)
+            self.assertIn("BANK LIGHTS", printed)
+            self.assertIn("GREEN is brightest", printed)
+            self.assertIn("ORANGE bank is 12.5%", printed)
+
+            off = Path(temp_dir) / "color-blind-off.pdf"
+            render_pdf(manual_document(self.color_blind_recipe(False)), off)
+            self.assertNotIn("BANK LIGHTS", pdf_strings(off))
+
     def test_bank_positions_use_public_green_red_amber_order(self) -> None:
         document = manual_document(self.load("audition_recipe.json"))
         self.assertEqual(document["slots"][0]["position"], {
