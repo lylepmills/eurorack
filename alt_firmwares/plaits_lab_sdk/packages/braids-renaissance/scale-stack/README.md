@@ -46,9 +46,10 @@ is supposed to thin out, not swell.
 
 ## Implementation notes
 
-Shares `scale_voices.cc` with `diatonic-chord`: the eight scales, the degree
-quantiser that preserves fine pitch as a residual, and the naive-plus-PolyBLEP
-voice bank. Those notes live in that engine's README.
+Shares `scale_voices.cc` with `diatonic-chord`: the sixteen scales, including
+three kept in Braids' 1/128-semitone microtonal tuning; the degree quantiser
+that preserves fine pitch as a residual; and the naive-plus-PolyBLEP voice
+bank. The full scale list and the remaining notes live in that engine's README.
 
 Braids' `kStackSize` was 6 but `RenderStack` only ever filled five voices; five
 is what this ports.

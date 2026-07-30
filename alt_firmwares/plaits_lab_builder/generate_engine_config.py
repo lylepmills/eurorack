@@ -43,7 +43,7 @@ PACKED_BANK_SIZE = PATCHES_PER_BANK * PACKED_PATCH_SIZE  # 4096
 # versions so adding a schema at the ceiling does not require extending a trail
 # of "10, 11, 12..." whitelists in the build container.
 MIN_RECIPE_SCHEMA_VERSION = 2
-MAX_RECIPE_SCHEMA_VERSION = 15
+MAX_RECIPE_SCHEMA_VERSION = 16
 CONFIGURATION_MIN_SCHEMA_VERSION = 4
 RESOURCES_MIN_SCHEMA_VERSION = 5
 FOUR_BANK_MIN_SCHEMA_VERSION = 6
@@ -55,6 +55,14 @@ SHORT_BANK_MIN_SCHEMA_VERSION = 13
 CALIBRATION_MIN_SCHEMA_VERSION = 14
 ROVED_MIN_SCHEMA_VERSION = 15
 COLOR_BLIND_MODE_MIN_SCHEMA_VERSION = 15
+SCALE_BANK_MIN_SCHEMA_VERSION = 16
+
+MIN_SCALE_BANK_SIZE = 1
+MAX_SCALE_BANK_SIZE = 16
+MIN_SCALE_DEGREES = 2
+MAX_SCALE_DEGREES = 7
+SCALE_UNITS_PER_SEMITONE = 128
+SCALE_UNITS_PER_OCTAVE = 12 * SCALE_UNITS_PER_SEMITONE
 
 # Bumped whenever a stored option value changes meaning in the firmware (see the
 # value tables in plaits/dsp/voice.h). It seeds the options profile-id fold, so a
@@ -71,6 +79,7 @@ OPTIONS_LAYOUT_VERSION = 2
 class BuildRecipe:
     public_slots: list[str]
     chord_tables: list[dict[str, Any]]
+    scale_bank: list[dict[str, Any]]
     navigation_mode: int
     locked_frequency_pot_option: int
     model_cv_option: int
@@ -150,6 +159,30 @@ DEFAULT_CONFIGURATION = {
     },
 }
 DEFAULT_CHORD_TABLES = list(APPROVED_CHORD_TABLES.values())
+DEFAULT_SCALE_BANK = [
+    {"id": "major", "name": "Major", "description": "The familiar seven-note major scale.",
+     "pitches": [0, 256, 512, 640, 896, 1152, 1408], "tuning": "12-TET", "source": "Shipped"},
+    {"id": "natural-minor", "name": "Natural minor",
+     "description": "The familiar seven-note natural minor scale.",
+     "pitches": [0, 256, 384, 640, 896, 1024, 1280], "tuning": "12-TET", "source": "Shipped"},
+    {"id": "dorian", "name": "Dorian", "description": "A minor mode with a raised sixth.",
+     "pitches": [0, 256, 384, 640, 896, 1152, 1280], "tuning": "12-TET", "source": "Shipped"},
+    {"id": "mixolydian", "name": "Mixolydian",
+     "description": "A major mode with a lowered seventh.",
+     "pitches": [0, 256, 512, 640, 896, 1152, 1280], "tuning": "12-TET", "source": "Shipped"},
+    {"id": "harmonic-minor", "name": "Harmonic minor",
+     "description": "Natural minor with a raised seventh.",
+     "pitches": [0, 256, 384, 640, 896, 1024, 1408], "tuning": "12-TET", "source": "Shipped"},
+    {"id": "melodic-minor", "name": "Jazz melodic minor",
+     "description": "The ascending melodic-minor collection, used unchanged in jazz.",
+     "pitches": [0, 256, 384, 640, 896, 1152, 1408], "tuning": "12-TET", "source": "Shipped"},
+    {"id": "major-pentatonic", "name": "Major pentatonic",
+     "description": "An open five-note major scale.",
+     "pitches": [0, 256, 512, 896, 1152], "tuning": "12-TET", "source": "Shipped"},
+    {"id": "whole-tone", "name": "Whole tone",
+     "description": "Six evenly spaced whole tones.",
+     "pitches": [0, 256, 512, 768, 1024, 1280], "tuning": "12-TET", "source": "Shipped"},
+]
 
 
 def validate_chord_tables(value: Any) -> list[dict[str, Any]]:
@@ -196,6 +229,53 @@ def validate_chord_tables(value: Any) -> list[dict[str, Any]]:
             raise ValueError("editable chord tables must be device-local drafts")
         table_ids.add(table_id)
         result.append(table)
+    return result
+
+
+def validate_scale_bank(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list) or not MIN_SCALE_BANK_SIZE <= len(value) <= MAX_SCALE_BANK_SIZE:
+        raise ValueError(
+            f"recipe must contain between {MIN_SCALE_BANK_SIZE} and "
+            f"{MAX_SCALE_BANK_SIZE} scales")
+    result: list[dict[str, Any]] = []
+    scale_ids: set[str] = set()
+    for scale in value:
+        if not isinstance(scale, dict) or set(scale) != {
+            "id", "name", "description", "pitches", "tuning", "source",
+        }:
+            raise ValueError("recipe contains invalid scale metadata")
+        scale_id = scale.get("id")
+        if (not isinstance(scale_id, str) or not scale_id or len(scale_id) > 80
+                or scale_id in scale_ids
+                or any(not (character.islower() or character.isdigit() or character == "-")
+                       for character in scale_id)):
+            raise ValueError("recipe contains an invalid or duplicate scale ID")
+        if (not isinstance(scale.get("name"), str) or not scale["name"]
+                or len(scale["name"]) > 80
+                or not isinstance(scale.get("description"), str) or not scale["description"]
+                or len(scale["description"]) > 240
+                or scale.get("tuning") not in ("12-TET", "Microtonal")
+                or scale.get("source") not in ("Shipped", "Braids", "Rubato", "Local")):
+            raise ValueError("recipe contains invalid scale metadata")
+        pitches = scale.get("pitches")
+        if (not isinstance(pitches, list)
+                or not MIN_SCALE_DEGREES <= len(pitches) <= MAX_SCALE_DEGREES
+                or any(type(pitch) is not int for pitch in pitches)
+                or pitches[0] != 0
+                or any(right <= left for left, right in zip(pitches, pitches[1:]))
+                or pitches[-1] >= SCALE_UNITS_PER_OCTAVE):
+            raise ValueError(
+                f"a scale must contain {MIN_SCALE_DEGREES} to {MAX_SCALE_DEGREES} "
+                "strictly ascending pitches below the octave")
+        expected_tuning = (
+            "12-TET"
+            if all(pitch % SCALE_UNITS_PER_SEMITONE == 0 for pitch in pitches)
+            else "Microtonal"
+        )
+        if scale["tuning"] != expected_tuning:
+            raise ValueError("a scale's tuning label does not match its pitches")
+        scale_ids.add(scale_id)
+        result.append(scale)
     return result
 
 
@@ -364,6 +444,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
     validate_bank_shape(public_slots, schema_version)
     user_data_banks: list[tuple[int, bytes]] = []   # v6 index-keyed
     slot_banks: list[tuple[int, bytes]] = []        # v12 slot-keyed
+    scale_bank = validate_scale_bank(DEFAULT_SCALE_BANK)
     if schema_version >= RESOURCES_MIN_SCHEMA_VERSION:
         resources = value.get("resources")
         # v6 always carries the custom-FM-banks resource (its defining feature), and
@@ -381,13 +462,22 @@ def validate_recipe(value: Any) -> BuildRecipe:
         # v14+ compile-time features say nothing about resources: calibration,
         # the Ro'Ved panel, and the color-blind display can each compose with any
         # palette, with or without custom FM banks. Mirrors the Worker contract.
+        base_resource_keys = {"chordTables"}
+        if schema_version >= SCALE_BANK_MIN_SCHEMA_VERSION:
+            base_resource_keys.add("scaleBank")
         carries_user_data_banks = expect_user_data_banks or (
-            schema_version >= CALIBRATION_MIN_SCHEMA_VERSION and isinstance(resources, dict)
-            and set(resources) == {"chordTables", "userDataBanks"})
-        expected_resource_keys = {"chordTables", "userDataBanks"} if carries_user_data_banks else {"chordTables"}
+            schema_version >= CALIBRATION_MIN_SCHEMA_VERSION
+            and isinstance(resources, dict)
+            and set(resources) == base_resource_keys | {"userDataBanks"})
+        expected_resource_keys = (
+            base_resource_keys | {"userDataBanks"}
+            if carries_user_data_banks else base_resource_keys
+        )
         if not isinstance(resources, dict) or set(resources) != expected_resource_keys:
             raise ValueError("recipe must contain only supported firmware resources")
         chord_tables = validate_chord_tables(resources.get("chordTables"))
+        if schema_version >= SCALE_BANK_MIN_SCHEMA_VERSION:
+            scale_bank = validate_scale_bank(resources.get("scaleBank"))
         if carries_user_data_banks:
             if schema_version >= SLOT_BANK_MIN_SCHEMA_VERSION:
                 slot_banks = validate_user_data_banks_v12(resources.get("userDataBanks"), len(slots))
@@ -542,6 +632,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
     return BuildRecipe(
         public_slots=public_slots,
         chord_tables=chord_tables,
+        scale_bank=scale_bank,
         options_profile_id=profile_id,
         enable_calibration=1 if enable_calibration else 0,
         roved_panel=1 if target == "plum-audio-roved" else 0,
@@ -629,6 +720,14 @@ def render_config(recipe: BuildRecipe) -> str:
             chord_cents.append("{ " + ", ".join(str(value) for value in chord["voices"]) + " }")
             chord_arp_lengths.append(str(chord["arpLength"]))
             chord_offset += 1
+
+    scale_entries: list[str] = []
+    for scale in recipe.scale_bank:
+        padded = [*scale["pitches"], *([0] * (MAX_SCALE_DEGREES - len(scale["pitches"])))]
+        scale_entries.append(
+            "{ { " + ", ".join(str(pitch) for pitch in padded)
+            + f" }}, {len(scale['pitches'])} }}"
+        )
 
     # Assign every placed FM-bank engine a bank index for kEngineUserDataBank:
     #   * an un-customized preset slot keeps its factory index (0/1/2), so the
@@ -737,6 +836,9 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_CHORD_TABLE_SIZES {{ {", ".join(str(value) for value in chord_sizes)} }}
 #define PLAITS_CHORD_CENTS {{ {", ".join(chord_cents)} }}
 #define PLAITS_CHORD_ARP_LENGTHS {{ {", ".join(chord_arp_lengths)} }}
+
+#define PLAITS_SCALE_BANK_COUNT {len(recipe.scale_bank)}
+#define PLAITS_SCALE_BANK {{ {", ".join(scale_entries)} }}
 
 #define PLAITS_BUILD_NAVIGATION_MODE {recipe.navigation_mode}
 #define PLAITS_BUILD_COLOR_BLIND_MODE {recipe.color_blind_mode}

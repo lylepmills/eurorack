@@ -25,10 +25,10 @@ That is the entire argument for the slot. If you want a fixed voicing, use
 
 HARMONICS steps sixteen chord shapes (triads, sixths, sevenths, ninths,
 elevenths, thirteenths, and the suspended block). MACRO picks the scale from
-eight: major, natural minor, dorian, mixolydian, harmonic minor, melodic minor,
-major pentatonic, whole tone. The last two are the interesting ones — in a
-pentatonic or whole-tone scale a "third" is not a third, and every chord shape
-bends with it.
+sixteen: major, natural minor, dorian, mixolydian, harmonic minor, melodic
+minor, major pentatonic, whole tone, blues minor, Japanese, Gamelan, Gypsy,
+Arabian, Bhairav, Bairagi, and Yaman. The final three retain Braids' original
+1/128-semitone tuning instead of being rounded to 12-TET.
 
 TIMBRE detunes the voices symmetrically against each other (so the chord's
 centre of mass does not move — it beats rather than going out of tune) and folds

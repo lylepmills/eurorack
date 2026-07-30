@@ -74,11 +74,11 @@ ENV PATH="/usr/local/arm-4.8.3/bin:${PATH}" \
     CCACHE_COMPILERCHECK="content" \
     CCACHE_MAXSIZE="2G"
 
-# Only voice/plaits/ui see the recipe's engine_config.h, so every other object
-# is recipe-independent. Warm ccache with one default build at image time; each
-# fresh container then starts with those ~91 objects cached and a novel recipe
-# recompiles only the three that changed. The cache is baked into the image and
-# owned by the build user so it is readable when the server runs unprivileged.
+# Only the units listed in plaits/makefile's RECIPE_CONFIG_OBJS see the generated
+# engine_config.h; every other object is recipe-independent. Warm ccache with one
+# default build at image time so a novel recipe recompiles only those seven units.
+# The cache is baked into the image and owned by the build user so it is readable
+# when the server runs unprivileged.
 RUN mkdir -p /opt/ccache && chown -R builder:builder /opt/ccache
 USER builder
 # The locale must match container_server.py's build environment exactly: ccache

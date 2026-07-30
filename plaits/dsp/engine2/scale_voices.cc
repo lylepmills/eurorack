@@ -12,6 +12,7 @@
 
 #include "stmlib/dsp/dsp.h"
 
+#include "plaits/build_config.h"
 #include "plaits/dsp/engine/engine.h"
 #include "plaits/dsp/oscillator/sine_oscillator.h"
 
@@ -21,15 +22,6 @@ using namespace std;
 using namespace stmlib;
 
 namespace {
-
-const int8_t kMajor[] = { 0, 2, 4, 5, 7, 9, 11 };
-const int8_t kNaturalMinor[] = { 0, 2, 3, 5, 7, 8, 10 };
-const int8_t kDorian[] = { 0, 2, 3, 5, 7, 9, 10 };
-const int8_t kMixolydian[] = { 0, 2, 4, 5, 7, 9, 10 };
-const int8_t kHarmonicMinor[] = { 0, 2, 3, 5, 7, 8, 11 };
-const int8_t kMelodicMinor[] = { 0, 2, 3, 5, 7, 9, 11 };
-const int8_t kMajorPentatonic[] = { 0, 2, 4, 7, 9 };
-const int8_t kWholeTone[] = { 0, 2, 4, 6, 8, 10 };
 
 // One-sided PolyBLEP. `t` is the phase, `dt` the per-sample increment.
 inline float PolyBlep(float t, float dt) {
@@ -82,16 +74,12 @@ inline float Waveform(float phase, float dt, float waveform) {
 
 }  // namespace
 
-const Scale kScaleVoicesScales[kScaleVoicesNumScales] = {
-  { kMajor, 7 },
-  { kNaturalMinor, 7 },
-  { kDorian, 7 },
-  { kMixolydian, 7 },
-  { kHarmonicMinor, 7 },
-  { kMelodicMinor, 7 },
-  { kMajorPentatonic, 5 },
-  { kWholeTone, 6 },
-};
+#if PLAITS_SCALE_BANK_COUNT < 1 || PLAITS_SCALE_BANK_COUNT > 16
+#error "Scale bank must contain between 1 and 16 entries"
+#endif
+
+const int kScaleVoicesNumScales = PLAITS_SCALE_BANK_COUNT;
+const Scale kScaleVoicesScales[PLAITS_SCALE_BANK_COUNT] = PLAITS_SCALE_BANK;
 
 float ScaleDegreeToNote(int degree, int scale) {
   const Scale& s = kScaleVoicesScales[scale];
@@ -103,7 +91,9 @@ float ScaleDegreeToNote(int degree, int scale) {
     index += s.num_degrees;
     --octave;
   }
-  return static_cast<float>(octave * 12 + s.semitones[index]);
+  const int pitch = octave * kScaleVoicesUnitsPerOctave + s.pitches[index];
+  return static_cast<float>(pitch) /
+      static_cast<float>(kScaleVoicesUnitsPerSemitone);
 }
 
 int QuantizeToScale(float note, int scale, float* residual) {

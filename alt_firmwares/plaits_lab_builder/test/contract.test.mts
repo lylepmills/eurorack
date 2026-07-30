@@ -11,6 +11,24 @@ import {
 } from "../src/contract.ts";
 
 const fixture = JSON.parse(await readFile(new URL("../default_recipe.json", import.meta.url), "utf8"));
+const scaleBank = [
+  {
+    id: "major",
+    name: "Major",
+    description: "The familiar seven-note major scale.",
+    pitches: [0, 256, 512, 640, 896, 1152, 1408],
+    tuning: "12-TET",
+    source: "Shipped",
+  },
+  {
+    id: "just-five",
+    name: "Just five",
+    description: "A local microtonal five-note scale.",
+    pitches: [0, 261, 637, 899, 1393],
+    tuning: "Microtonal",
+    source: "Local",
+  },
+];
 
 test("the Worker and compiler catalogs contain the same approved IDs", async () => {
   const compilerCatalog = JSON.parse(await readFile(
@@ -367,6 +385,66 @@ test("version 5 accepts bounded local chord-table edits and hashes their musical
 
   recipe.resources.chordTables[0].chords[0].voices[1] = 9000;
   assert.throws(() => normalizeRecipe(recipe), /bounded cent offsets/);
+});
+
+test("version 16 validates, normalizes, and hashes the scale bank", async () => {
+  const publicCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const chordCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_chord_tables/catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const byId = new Map(publicCatalog.engines.map((engine: {
+    id: string; packageId: string; version: string; digest: string;
+  }) => [engine.id, engine]));
+  const recipe = {
+    ...fixture,
+    schemaVersion: 16,
+    slots: fixture.slots.map((engineId: string) => {
+      const engine = byId.get(engineId)!;
+      return {
+        engine: engineId,
+        package: engine.packageId,
+        version: engine.version,
+        digest: engine.digest,
+      };
+    }),
+    preferences: { navigationMode: "linear" },
+    initialOptions: {
+      lockedFrequencyKnob: "octaves", modelInput: "model", levelInput: "level",
+      auxOutput: "alternate-model", suboscillatorOctave: 0,
+      chordTable: chordCatalog.tables[0].id, holdOnTrigger: false,
+    },
+    resources: {
+      chordTables: [structuredClone(chordCatalog.tables[0])],
+      scaleBank: structuredClone(scaleBank),
+    },
+  };
+  const normalized = normalizeRecipe(recipe);
+  assert.equal(normalized.schemaVersion, 16);
+  assert.deepEqual(normalized.resources.scaleBank, scaleBank);
+
+  const identity = { sourceRevision: "source", toolchain: "toolchain", contract: "16" };
+  const changed = structuredClone(recipe);
+  changed.resources.scaleBank[1].pitches[1] += 1;
+  assert.notEqual(
+    await computeBuildKey(normalized, identity),
+    await computeBuildKey(normalizeRecipe(changed), identity),
+  );
+
+  const missing = structuredClone(recipe);
+  delete (missing.resources as { scaleBank?: unknown }).scaleBank;
+  assert.throws(() => normalizeRecipe(missing), /supported firmware resources/);
+
+  const duplicate = structuredClone(recipe);
+  duplicate.resources.scaleBank[1].id = duplicate.resources.scaleBank[0].id;
+  assert.throws(() => normalizeRecipe(duplicate), /strictly ascending pitches|invalid scale/i);
+
+  const mismatched = structuredClone(recipe);
+  mismatched.resources.scaleBank[1].tuning = "12-TET";
+  assert.throws(() => normalizeRecipe(mismatched), /tuning label/);
 });
 
 test("version 6 carries a validated custom FM bank and hashes its packed bytes", async () => {
@@ -890,7 +968,9 @@ test("per-engine stereo (stereoEngines) requires and normalizes to v10", async (
       schemaVersion: version,
       resources: version === 12 || version === 13
         ? { chordTables: [table], userDataBanks: [] }
-        : { chordTables: [table] },
+        : version === 16
+          ? { chordTables: [table], scaleBank: structuredClone(scaleBank) }
+          : { chordTables: [table] },
     };
     assert.deepEqual(
       normalizeRecipe(laterRecipe).stereoEngines,
