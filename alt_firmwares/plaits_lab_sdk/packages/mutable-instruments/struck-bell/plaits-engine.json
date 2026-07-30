@@ -43,7 +43,7 @@
   ],
   "outputs": {
     "main": "The eleven-partial sum. Tracks the module's own output closely; tests/ab.json carries the measured figures.",
-    "aux": "Mono: the five highest partials alone, a bright fast-decaying companion voice. Stereo: a second, independently detuned eleven-partial render sharing the same amplitude envelope, for a wide chorused bell."
+    "aux": "Mono: the five highest partials alone, a bright fast-decaying companion voice. Stereo: a magnitude-matched phase-rotated copy of the full bell, widening the same eleven partials without retuning them."
   },
   "source": {
     "root": "../../../../..",

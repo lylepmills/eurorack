@@ -63,7 +63,7 @@ void WavetableEngine::Init(BufferAllocator* allocator) {
   previous_f0_ = a0;
 
   diff_out_.Init();
-  diff_out_r_.Init();
+  stereo_allpass_.Init();
 
   wave_map_ = allocator->Allocate<const int16_t*>(kNumWavesPerBank);
 }
@@ -100,16 +100,37 @@ inline float Clamp(float x, float amount) {
   return x;
 }
 
-inline float WavetableEngine::ReadWave(
-    int x,
-    int y,
-    int z,
-    int phase_integral,
-    float phase_fractional) {
-  return InterpolateWaveHermite(
-      wave_map_[x + y * 8 + z * kNumWavesPerBank],
-      phase_integral,
-      phase_fractional);
+inline float WavetableEngine::ReadCell(
+    int x0, int x1, int y0, int y1, int z0, int z1,
+    float x_fractional, float y_fractional, float z_fractional,
+    int phase_integral, float phase_fractional) {
+  const int16_t* waves[8] = {
+    wave_map_[x0 + y0 * 8 + z0 * kNumWavesPerBank],
+    wave_map_[x1 + y0 * 8 + z0 * kNumWavesPerBank],
+    wave_map_[x0 + y1 * 8 + z0 * kNumWavesPerBank],
+    wave_map_[x1 + y1 * 8 + z0 * kNumWavesPerBank],
+    wave_map_[x0 + y0 * 8 + z1 * kNumWavesPerBank],
+    wave_map_[x1 + y0 * 8 + z1 * kNumWavesPerBank],
+    wave_map_[x0 + y1 * 8 + z1 * kNumWavesPerBank],
+    wave_map_[x1 + y1 * 8 + z1 * kNumWavesPerBank],
+  };
+  float phase_samples[4];
+  for (int tap = 0; tap < 4; ++tap) {
+    const int p = phase_integral + tap;
+    const float x00 = waves[0][p] +
+        (waves[1][p] - waves[0][p]) * x_fractional;
+    const float x10 = waves[2][p] +
+        (waves[3][p] - waves[2][p]) * x_fractional;
+    const float z0_sample = x00 + (x10 - x00) * y_fractional;
+    const float x01 = waves[4][p] +
+        (waves[5][p] - waves[4][p]) * x_fractional;
+    const float x11 = waves[6][p] +
+        (waves[7][p] - waves[6][p]) * x_fractional;
+    const float z1_sample = x01 + (x11 - x01) * y_fractional;
+    phase_samples[tap] =
+        z0_sample + (z1_sample - z0_sample) * z_fractional;
+  }
+  return InterpolateWaveHermite(phase_samples, 0, phase_fractional);
 }
 
 void WavetableEngine::Render(
@@ -152,7 +173,6 @@ void WavetableEngine::Render(
   
   while (size--) {
     const float f0 = f0_modulation.Next();
-    
     const float gain = (1.0f / (f0 * 131072.0f)) * (0.95f - f0);
     const float cutoff = min(kTableSizeF * f0, 1.0f);
     
@@ -192,62 +212,14 @@ void WavetableEngine::Render(
         z1 = 7 - z1;
       }
       
-      float x0y0z0 = ReadWave(x0, y0, z0, p_integral, p_fractional);
-      float x1y0z0 = ReadWave(x1, y0, z0, p_integral, p_fractional);
-      float xy0z0 = x0y0z0 + (x1y0z0 - x0y0z0) * x_fractional;
-
-      float x0y1z0 = ReadWave(x0, y1, z0, p_integral, p_fractional);
-      float x1y1z0 = ReadWave(x1, y1, z0, p_integral, p_fractional);
-      float xy1z0 = x0y1z0 + (x1y1z0 - x0y1z0) * x_fractional;
-
-      float xyz0 = xy0z0 + (xy1z0 - xy0z0) * y_fractional;
-
-      float x0y0z1 = ReadWave(x0, y0, z1, p_integral, p_fractional);
-      float x1y0z1 = ReadWave(x1, y0, z1, p_integral, p_fractional);
-      float xy0z1 = x0y0z1 + (x1y0z1 - x0y0z1) * x_fractional;
-
-      float x0y1z1 = ReadWave(x0, y1, z1, p_integral, p_fractional);
-      float x1y1z1 = ReadWave(x1, y1, z1, p_integral, p_fractional);
-      float xy1z1 = x0y1z1 + (x1y1z1 - x0y1z1) * x_fractional;
-      
-      float xyz1 = xy0z1 + (xy1z1 - xy0z1) * y_fractional;
-
-      float mix = xyz0 + (xyz1 - xyz0) * z_fractional;
+      float mix = ReadCell(
+          x0, x1, y0, y1, z0, z1,
+          x_fractional, y_fractional, z_fractional,
+          p_integral, p_fractional);
       mix = diff_out_.Process(cutoff, mix) * gain;
       *out++ = mix;
       if ((PLAITS_STEREO_WAVETABLE && parameters.stereo)) {
-        // OUT/AUX become L/R: the (x, y, z) cell and wave phase advance once
-        // (shared), and the R channel reads the same cell half a wave-cycle
-        // away -- the wave phase offset by half the table -- combined
-        // identically and filtered by a second differentiator. This decorrelates
-        // the two channels while tracking the same terrain. The bitcrush AUX is
-        // dropped.
-        const int p_integral_r =
-            (p_integral + int(kTableSize) / 2) & (int(kTableSize) - 1);
-
-        float x0y0z0_r = ReadWave(x0, y0, z0, p_integral_r, p_fractional);
-        float x1y0z0_r = ReadWave(x1, y0, z0, p_integral_r, p_fractional);
-        float xy0z0_r = x0y0z0_r + (x1y0z0_r - x0y0z0_r) * x_fractional;
-
-        float x0y1z0_r = ReadWave(x0, y1, z0, p_integral_r, p_fractional);
-        float x1y1z0_r = ReadWave(x1, y1, z0, p_integral_r, p_fractional);
-        float xy1z0_r = x0y1z0_r + (x1y1z0_r - x0y1z0_r) * x_fractional;
-
-        float xyz0_r = xy0z0_r + (xy1z0_r - xy0z0_r) * y_fractional;
-
-        float x0y0z1_r = ReadWave(x0, y0, z1, p_integral_r, p_fractional);
-        float x1y0z1_r = ReadWave(x1, y0, z1, p_integral_r, p_fractional);
-        float xy0z1_r = x0y0z1_r + (x1y0z1_r - x0y0z1_r) * x_fractional;
-
-        float x0y1z1_r = ReadWave(x0, y1, z1, p_integral_r, p_fractional);
-        float x1y1z1_r = ReadWave(x1, y1, z1, p_integral_r, p_fractional);
-        float xy1z1_r = x0y1z1_r + (x1y1z1_r - x0y1z1_r) * x_fractional;
-
-        float xyz1_r = xy0z1_r + (xy1z1_r - xy0z1_r) * y_fractional;
-
-        float mix_r = xyz0_r + (xyz1_r - xyz0_r) * z_fractional;
-        mix_r = diff_out_r_.Process(cutoff, mix_r) * gain;
-        *aux++ = mix_r;
+        *aux++ = stereo_allpass_.Process(mix);
       } else {
         *aux++ = static_cast<float>(static_cast<int>(mix * 32.0f)) / 32.0f;
       }

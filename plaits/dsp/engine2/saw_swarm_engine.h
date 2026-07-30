@@ -177,11 +177,10 @@
 //     1 dB of level and 2 dB of low-band error in the A/B (see MEASURED).
 //     On TRIGGER_RISING_EDGE the port still randomizes all seven uniformly,
 //     which is the one place it differs from Braids' six-plus-one.
-//   - alt firmware, stereo mode: not in the module. The seven voices pan
-//     across the field by detune rank, as Plaits' own SWARM engine's alt
-//     stereo mode already does for its voices; each side runs its own copy
-//     of the shaper and filter (independent state) on its own panned sum.
-//     OUT/AUX become L/R, both using the SAME (unmirrored) MORPH position.
+//   - alt firmware, stereo mode: not in the module. OUT carries the filtered
+//     swarm and AUX carries a short all-pass phase rotation of it. The first
+//     implementation panned the seven voices and ran a second shaper/filter,
+//     but measured at 102% of the CPU budget and audibly missed deadlines.
 //
 // MEASURED. All six of tests/ab.json's cases hold to <=1.5 dB AC RMS /
 // <=10 cents / <=1.5 dB spectrum: AC RMS +0.05 / -0.53 / +0.04 / +0.03 /
@@ -282,12 +281,6 @@ const float kSawSwarmSumGain = 4096.0f / 32768.0f;
 // normalizes it to full scale (braids/resources/waveshapers.py:40, 62).
 const float kSawSwarmShaperPeak = 0.9640275800758169f;
 
-// alt firmware, stereo: pan position per voice (rank -3..3, i.e. index
-// 0..6), mirroring how Plaits' own SWARM engine spreads its voices by rank.
-const float kSawSwarmPan[kNumSawSwarmVoices] = {
-  0.05f, 0.2f, 0.35f, 0.5f, 0.65f, 0.8f, 0.95f
-};
-
 class SawSwarmEngine : public Engine {
  public:
   SawSwarmEngine() { }
@@ -307,12 +300,12 @@ class SawSwarmEngine : public Engine {
   float phase_[kNumSawSwarmVoices];
   float frequency_[kNumSawSwarmVoices];
 
-  float cutoff_note_;
+  float cutoff_frequency_;
   float resonance_;
   float morph_;
 
   stmlib::Svf svf_;
-  stmlib::Svf svf_aux_;
+  StereoPhaseAllpass<5> stereo_allpass_;
 
   DISALLOW_COPY_AND_ASSIGN(SawSwarmEngine);
 };

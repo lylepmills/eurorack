@@ -192,7 +192,7 @@
       ],
       "outputs": [
         "Additive partial bank",
-        "Complementary partial mixture"
+        "Mono: complementary organ subset. Stereo: magnitude-matched phase-rotated copy of the full partial bank."
       ],
       "artwork": {
         "icon": "/model-icons/harmonic.png",
@@ -234,7 +234,7 @@
       ],
       "outputs": [
         "Interpolated wavetable",
-        "Related table position"
+        "Mono: 5-bit version of the wavetable. Stereo: magnitude-matched phase-rotated copy."
       ],
       "artwork": {
         "icon": "/model-icons/wavetable.png",
@@ -939,7 +939,7 @@
       ],
       "outputs": [
         "Wave-terrain scan",
-        "Orthogonal terrain scan"
+        "The alternate Sine(y + z) projection of the same trajectory; used as the right channel in stereo."
       ],
       "artwork": {
         "icon": "/model-icons/wave-terrain.png",
@@ -2106,7 +2106,7 @@
       ],
       "outputs": [
         "The filtered swarm at the dialed-in Filter position.",
-        "The same swarm through the mirrored filter position, always the tap MAIN is not favouring."
+        "Mono: the mirrored filter position. Stereo: a magnitude-matched phase-rotated copy of the filtered swarm."
       ],
       "source": {
         "header": "plaits/dsp/engine2/saw_swarm_engine.h",
@@ -2337,7 +2337,7 @@
       ],
       "outputs": [
         "The eleven-partial sum. Tracks the module's own output closely; tests/ab.json carries the measured figures.",
-        "Mono: the five highest partials alone, a bright fast-decaying companion voice. Stereo: a second, independently detuned eleven-partial render sharing the same amplitude envelope, for a wide chorused bell."
+        "Mono: the five highest partials alone, a bright fast-decaying companion voice. Stereo: a magnitude-matched phase-rotated copy of the full bell, widening the same eleven partials without retuning them."
       ],
       "source": {
         "header": "plaits/dsp/engine2/struck_bell_engine.h",

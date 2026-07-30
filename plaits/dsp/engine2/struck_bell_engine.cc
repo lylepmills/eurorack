@@ -36,26 +36,19 @@ namespace {
 const float kBellWavSineScale = 32638.0f / 32768.0f;
 const float kBellWavSinePedestal = 127.0f / 32768.0f;
 
-inline float BraidsSine(float phase) {
-  // -cos(x) is -sin(x + pi/2). SineNoWrap is safe below phase 1.25, and
-  // phase is always in [0, 1), so this expresses Braids' convention without
-  // a wrap branch in each of the eleven per-sample reads.
-  return -SineNoWrap(phase + 0.25f) * kBellWavSineScale
-      + kBellWavSinePedestal;
-}
-
 }  // namespace
 
 void StruckBellEngine::Init(BufferAllocator* allocator) {
   (void) allocator;
+  stereo_allpass_.Init();
   Reset();
 }
 
 void StruckBellEngine::Reset() {
   for (size_t i = 0; i < kNumBellPartials; ++i) {
     amplitude_[i] = 0;
-    phase_[0][i] = 0.0f;
-    phase_[1][i] = 0.0f;
+    phase_sin_[i] = 0.0f;
+    phase_cos_[i] = 1.0f;
   }
   ever_struck_ = false;
 }
@@ -98,8 +91,8 @@ void StruckBellEngine::Render(
       amplitude_[i] = static_cast<int32_t>(kBellPartialAmplitudes[i] * gain);
       // digital_oscillator.cc:874, `(1L << 30)` of a 32-bit phase
       // accumulator -- a quarter cycle, not phase zero (see the header).
-      phase_[0][i] = kBellStrikePhase;
-      phase_[1][i] = kBellStrikePhase;
+      phase_sin_[i] = 1.0f;
+      phase_cos_[i] = 0.0f;
     }
     ever_struck_ = true;
   }
@@ -181,10 +174,9 @@ void StruckBellEngine::Render(
   const float color16 = floorf(parameters.harmonics * 32767.0f);
   const float detune_units = floorf(color16 / 128.0f);
   const float detune_semitones = detune_units / 128.0f;
-  const float half_stereo = stereo ? kBellStereoDetuneSemitones * 0.5f : 0.0f;
 
-  float increment_l[kNumBellPartials];
-  float increment_r[kNumBellPartials];
+  float increment_sin[kNumBellPartials];
+  float increment_cos[kNumBellPartials];
   // Braids' int32 Q15 amplitude, read out as the float gain the sample loop
   // wants. Held constant across the block exactly as Braids holds it.
   float partial_gain[kNumBellPartials];
@@ -194,34 +186,34 @@ void StruckBellEngine::Render(
     const float sign = (i & 1) ? 1.0f : -1.0f;
     const float base_note = parameters.note + ratio_semitones +
         sign * detune_semitones;
-    increment_l[i] = NoteToFrequency(base_note - half_stereo);
-    if (stereo) {
-      increment_r[i] = NoteToFrequency(base_note + half_stereo);
-    }
+    const float increment = NoteToFrequency(base_note);
+    increment_sin[i] = Sine(increment);
+    increment_cos[i] = Sine(increment + 0.25f);
+    const float rotation_norm = 1.0f / Sqrt(
+        increment_sin[i] * increment_sin[i] +
+        increment_cos[i] * increment_cos[i]);
+    increment_sin[i] *= rotation_norm;
+    increment_cos[i] *= rotation_norm;
   }
 
   for (size_t s = 0; s < size; ++s) {
     float sum_l = 0.0f;
-    float sum_r = 0.0f;
     float upper = 0.0f;
     for (size_t i = 0; i < kNumBellPartials; ++i) {
-      phase_[0][i] += increment_l[i];
-      if (phase_[0][i] >= 1.0f) {
-        phase_[0][i] -= 1.0f;
-      }
-      const float contribution = BraidsSine(phase_[0][i]) * partial_gain[i];
+      const float phase_sin = phase_sin_[i];
+      const float phase_cos = phase_cos_[i];
+      phase_sin_[i] = phase_sin * increment_cos[i] +
+          phase_cos * increment_sin[i];
+      phase_cos_[i] = phase_cos * increment_cos[i] -
+          phase_sin * increment_sin[i];
+      const float contribution =
+          (-phase_cos_[i] * kBellWavSineScale + kBellWavSinePedestal) *
+          partial_gain[i];
       sum_l += contribution;
       // The five highest partials (+12 st and up) -- AUX's mono voice, see
       // the header's OUT/AUX note.
       if (i >= kNumBellPartials - 5) {
         upper += contribution;
-      }
-      if (stereo) {
-        phase_[1][i] += increment_r[i];
-        if (phase_[1][i] >= 1.0f) {
-          phase_[1][i] -= 1.0f;
-        }
-        sum_r += BraidsSine(phase_[1][i]) * partial_gain[i];
       }
     }
 
@@ -232,7 +224,9 @@ void StruckBellEngine::Render(
     CONSTRAIN(out_sample, -1.0f, 1.0f);
     *out++ = out_sample;
 
-    float aux_sample = (stereo ? sum_r : upper) * kBellOutputScale;
+    float aux_sample = stereo
+        ? stereo_allpass_.Process(out_sample)
+        : upper * kBellOutputScale;
     CONSTRAIN(aux_sample, -1.0f, 1.0f);
     *aux++ = aux_sample;
   }

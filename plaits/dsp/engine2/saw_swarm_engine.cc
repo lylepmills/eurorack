@@ -56,7 +56,7 @@ inline void SawSwarmFilterTaps(
 void SawSwarmEngine::Init(BufferAllocator* allocator) {
   (void) allocator;
   svf_.Init();
-  svf_aux_.Init();
+  stereo_allpass_.Init();
   Reset();
 }
 
@@ -82,11 +82,10 @@ void SawSwarmEngine::Reset() {
   // very first block's cutoff up from silence would pass the raw,
   // unfiltered swarm through for a few samples -- a startup transient
   // Braids' own reference never shows.
-  cutoff_note_ = 69.0f;
+  cutoff_frequency_ = 440.0f / kSampleRate;
   resonance_ = kSawSwarmResonanceStock;
   morph_ = 0.5f;
   svf_.Reset();
-  svf_aux_.Reset();
 }
 
 void SawSwarmEngine::Render(
@@ -130,6 +129,12 @@ void SawSwarmEngine::Render(
       : (color - kSawSwarmColorPivot) * kSawSwarmColorSlopeAbove;
   float target_cutoff_note = parameters.note + cutoff_offset;
   CONSTRAIN(target_cutoff_note, 0.0f, kSawSwarmCutoffNoteMax);
+  float target_cutoff_hz = 440.0f * SemitonesToRatioSafe(
+      target_cutoff_note - 69.0f);
+  if (target_cutoff_hz > kSawSwarmCutoffHzMax) {
+    target_cutoff_hz = kSawSwarmCutoffHzMax;
+  }
+  const float target_cutoff_frequency = target_cutoff_hz / kSampleRate;
 
   const float target_morph = parameters.morph;
   const float target_resonance = ApplyMacro(
@@ -141,77 +146,40 @@ void SawSwarmEngine::Render(
     freq_mod[i].Init(&frequency_[i], target_frequency[i], size);
   }
   ParameterInterpolator cutoff_modulation(
-      &cutoff_note_, target_cutoff_note, size);
+      &cutoff_frequency_, target_cutoff_frequency, size);
   ParameterInterpolator resonance_modulation(
       &resonance_, target_resonance, size);
   ParameterInterpolator morph_modulation(&morph_, target_morph, size);
 
   while (size--) {
-    const float cutoff_note = cutoff_modulation.Next();
+    const float f_norm = cutoff_modulation.Next();
     const float resonance = resonance_modulation.Next();
     const float morph = morph_modulation.Next();
 
     // Cutoff-to-note mapping re-derived directly (SPEC R5); the topology
     // that carries the rate-dependence is the filter itself -- see THE
     // FILTER in the header.
-    float cutoff_hz = 440.0f * SemitonesToRatioSafe(cutoff_note - 69.0f);
-    if (cutoff_hz > kSawSwarmCutoffHzMax) {
-      cutoff_hz = kSawSwarmCutoffHzMax;
-    }
-    const float f_norm = cutoff_hz / kSampleRate;
     svf_.set_f_q<FREQUENCY_FAST>(f_norm, resonance);
 
-    if (stereo) {
-      float left_sum = 0.0f;
-      float right_sum = 0.0f;
-      for (int i = 0; i < kNumSawSwarmVoices; ++i) {
-        phase_[i] += freq_mod[i].Next();
-        if (phase_[i] >= 1.0f) {
-          phase_[i] -= 1.0f;
-        }
-        const float voice = 2.0f * phase_[i] - 1.0f;
-        float left_gain, right_gain;
-        StereoPanGains(kSawSwarmPan[i], &left_gain, &right_gain);
-        left_sum += voice * left_gain;
-        right_sum += voice * right_gain;
+    float sum = 0.0f;
+    for (int i = 0; i < kNumSawSwarmVoices; ++i) {
+      phase_[i] += freq_mod[i].Next();
+      if (phase_[i] >= 1.0f) {
+        phase_[i] -= 1.0f;
       }
-
-      const float input_l = SawSwarmShape(left_sum * kSawSwarmSumGain);
-      const float input_r = SawSwarmShape(right_sum * kSawSwarmSumGain);
-
-      svf_aux_.set_f_q<FREQUENCY_FAST>(f_norm, resonance);
-
-      float lp_l, hp_l, bp_l;
-      SawSwarmFilterTaps(&svf_, input_l, &lp_l, &hp_l, &bp_l);
-      float out_l = SawSwarmFilterMix(morph, lp_l, hp_l, bp_l);
-
-      float lp_r, hp_r, bp_r;
-      SawSwarmFilterTaps(&svf_aux_, input_r, &lp_r, &hp_r, &bp_r);
-      float out_r = SawSwarmFilterMix(morph, lp_r, hp_r, bp_r);
-
-      *out++ = out_l;
-      *aux++ = out_r;
-    } else {
-      float sum = 0.0f;
-      for (int i = 0; i < kNumSawSwarmVoices; ++i) {
-        phase_[i] += freq_mod[i].Next();
-        if (phase_[i] >= 1.0f) {
-          phase_[i] -= 1.0f;
-        }
-        sum += 2.0f * phase_[i] - 1.0f;
-      }
-
-      const float input = SawSwarmShape(sum * kSawSwarmSumGain);
-
-      float lp, hp, bp;
-      SawSwarmFilterTaps(&svf_, input, &lp, &hp, &bp);
-
-      float out_main = SawSwarmFilterMix(morph, lp, hp, bp);
-      float out_comp = SawSwarmFilterMix(1.0f - morph, lp, hp, bp);
-
-      *out++ = out_main;
-      *aux++ = out_comp;
+      sum += 2.0f * phase_[i] - 1.0f;
     }
+
+    const float input = SawSwarmShape(sum * kSawSwarmSumGain);
+
+    float lp, hp, bp;
+    SawSwarmFilterTaps(&svf_, input, &lp, &hp, &bp);
+
+    float out_main = SawSwarmFilterMix(morph, lp, hp, bp);
+    float out_comp = SawSwarmFilterMix(1.0f - morph, lp, hp, bp);
+
+    *out++ = out_main;
+    *aux++ = stereo ? stereo_allpass_.Process(out_main) : out_comp;
   }
 }
 

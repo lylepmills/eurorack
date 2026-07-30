@@ -34,10 +34,9 @@
 // interpolation of the terrain data.
 //
 // OUT: the terrain height z at the trajectory point (x, y). AUX: Sine(y + z).
-// In stereo mode, OUT/AUX become L/R: the trajectory and terrain index run
-// once (shared), and the R channel reads a second terrain pickup at the sample
-// point rotated 90 degrees about the origin, landing on a decorrelated region
-// of the same terrain; the Sine(y + z) AUX is skipped.
+// In stereo mode, OUT/AUX become L/R using these same two stock outputs. The
+// alternate Sine(y + z) projection is already a distinct view of the same
+// trajectory, so a second terrain evaluation is unnecessary.
 
 #ifndef PLAITS_DSP_ENGINE_WAVE_TERRAIN_ENGINE_H_
 #define PLAITS_DSP_ENGINE_WAVE_TERRAIN_ENGINE_H_

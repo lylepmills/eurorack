@@ -27,9 +27,9 @@
 // Additive synthesis with 24+8 partials.
 //
 // OUT: 24 integer harmonics. AUX: 8 harmonics of the organ subset.
-// alt firmware, stereo mode: the 24 integer harmonics are spread across the
-// stereo field - fundamental at the center, width increasing with the
-// harmonic index, sides alternating - and the organ subset is not rendered.
+// alt firmware, stereo mode: OUT carries the 24-harmonic voice and AUX carries
+// a short all-pass phase rotation of it. This keeps the spectrum and level
+// matched while avoiding a second 24-partial accumulation.
 
 #ifndef PLAITS_DSP_ENGINE_ADDITIVE_ENGINE_H_
 #define PLAITS_DSP_ENGINE_ADDITIVE_ENGINE_H_
@@ -72,8 +72,7 @@ class AdditiveEngine : public Engine {
 
   float* amplitudes_;
 
-  float pan_gain_left_[kNumIntegerHarmonics];
-  float pan_gain_right_[kNumIntegerHarmonics];
+  StereoPhaseAllpass<7> stereo_allpass_;
 
   DISALLOW_COPY_AND_ASSIGN(AdditiveEngine);
 };

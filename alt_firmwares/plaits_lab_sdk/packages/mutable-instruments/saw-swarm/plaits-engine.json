@@ -42,7 +42,7 @@
   ],
   "outputs": {
     "main": "The filtered swarm at the dialed-in Filter position.",
-    "aux": "The same swarm through the mirrored filter position, always the tap MAIN is not favouring."
+    "aux": "Mono: the mirrored filter position. Stereo: a magnitude-matched phase-rotated copy of the filtered swarm."
   },
   "source": {
     "root": "../../../../..",

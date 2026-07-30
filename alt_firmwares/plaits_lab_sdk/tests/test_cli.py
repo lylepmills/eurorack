@@ -850,16 +850,18 @@ class PackageTests(unittest.TestCase):
                     self.assertTrue(renderer.exists())
 
     @unittest.skipUnless(shutil.which("c++") or shutil.which("g++"), "host C++ compiler required")
-    def test_six_op_reference_survives_null_user_data(self) -> None:
+    def test_six_op_reference_loads_factory_bank_and_renders_audio(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             package = plaits_lab.builtin_package("dx7-bank-a")
+            self.assertEqual(package["user_data_bank"], 0)
             renderer = plaits_lab.host_binary(Path(temp_dir), "reference-dx7")
             plaits_lab.compile_renderer(package, renderer, None)
             scenario = package["scenarios"][0]
             output = Path(temp_dir) / "dx7.wav"
-            # Before the LoadUserData null-guard this render SIGSEGVs.
-            plaits_lab.run_scenario(package, renderer, scenario, output)
-            self.assertTrue(output.exists())
+            elapsed = plaits_lab.run_scenario(package, renderer, scenario, output)
+            analysis = plaits_lab.analyze_wav(
+                output, scenario["durationSeconds"], elapsed)
+            self.assertGreater(analysis["peak"], 0.01)
 
     def _community_package(self, temp_dir: str, slug: str) -> dict:
         pkg_dir = Path(temp_dir) / slug

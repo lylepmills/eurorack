@@ -251,24 +251,11 @@
 // fast-decaying companion voice OUT does not foreground, cheap because it
 // reuses the same per-sample partial values OUT's loop already computed.
 //
-// In stereo, AUX drops the upper-partial subset for a second, fully
-// independent eleven-partial render (its own phase and pitch state, sharing
-// the SAME amplitude envelope as the left channel -- decay does not need a
-// second copy, only detuned pitch does): every partial's pitch is offset by
-// -+kBellStereoDetuneSemitones/2 between channels (left gets the negative
-// half, matching fold_engine.cc's `blend_main`/`blend_aux` split, which
-// shifts ITS main output too, not just aux), a fixed, ungrounded (no Braids
-// equivalent -- the module has no stereo output at all) chorus-width
-// choice, not derived from anything. The offset on both sides is exactly
-// zero whenever `stereo` is false, so a MONO render (parameters.stereo
-// unset, which is what tests/ab.json exercises) matches Braids' tuning
-// precisely; enabling stereo shifts OUT's own tuning by -kBellStereo
-// DetuneSemitones/2 as part of widening it, verified by direct comparison
-// (a standalone host build, not part of this SDK's tooling): first-block
-// L/R differ by up to 0.00196 and mono-OUT differs from stereo-run OUT by
-// up to 0.00103 at note 57, HARMONICS 0.6, full 4000-block run -- small,
-// expected, and exactly the size a +-0.04 semitone-ish pitch offset over a
-// held partial predicts, not a bug.
+// In stereo, AUX drops the upper-partial subset for a short all-pass phase
+// rotation of the full eleven-partial OUT. A second detuned render was the
+// first implementation, but it measured at 147% of the CPU budget and audibly
+// missed deadlines. The all-pass preserves magnitude and keeps both channels
+// on the exact Braids tuning while adding a frequency-dependent phase spread.
 //
 // Declared deviations from Braids:
 //   - all eleven partials retune every block; Braids staggers three per
@@ -348,9 +335,6 @@ const float kBellDroneThreshold = 32000.0f;
 // general `round(size / kBellBlockSamples)` step count used otherwise.
 const float kBellBlockSamples = 12.0f;
 
-// digital_oscillator.cc:874, `(1L << 30)` of a 32-bit phase accumulator.
-const float kBellStrikePhase = 0.25f;
-
 // See OUTPUT SCALE above: partial_f * amplitude_f * 8192, normalised to a
 // +-32767 sample by /32768.
 const float kBellOutputScale = 0.25f;
@@ -370,11 +354,6 @@ const float kBellMaxDecaySpread = 4.0f;
 // MORPH's Brightness tilt (see THE FOURTH MACRO above). Chosen to taste.
 const float kBellBrightnessDepth = 1.5f;
 
-// Stereo chorus width (see the OUT/AUX note above) -- ungrounded in Braids,
-// which has no stereo output. Small enough to read as one wide bell, not
-// two different ones.
-const float kBellStereoDetuneSemitones = 0.08f;
-
 class StruckBellEngine : public Engine {
  public:
   StruckBellEngine() { }
@@ -392,11 +371,11 @@ class StruckBellEngine : public Engine {
 
  private:
   // Braids' own int32 Q15 amplitude counter (digital_oscillator.h:134), not
-  // a normalised float -- see AMPLITUDE STATE above. Shared between channels;
-  // only pitch/phase differ L/R (see the stereo note above).
+  // a normalised float -- see AMPLITUDE STATE above.
   int32_t amplitude_[kNumBellPartials];
-  // [0] = mono/left, [1] = right (stereo only).
-  float phase_[2][kNumBellPartials];
+  float phase_sin_[kNumBellPartials];
+  float phase_cos_[kNumBellPartials];
+  StereoPhaseAllpass<11> stereo_allpass_;
 
   bool ever_struck_;
 

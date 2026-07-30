@@ -168,16 +168,36 @@ def builtin_engine(identifier: str) -> tuple[dict[str, Any], dict[str, Any]]:
 
 
 def builtin_package(identifier: str) -> dict[str, Any]:
-    engine, _ = builtin_engine(identifier)
+    engine, public = builtin_engine(identifier)
     source = engine["source"]
+    control_ids = ("harmonics", "timbre", "morph", "macro")
+    manual_controls = public.get("manual", {}).get("controls", {})
     return {
         "directory": REPO_ROOT,
         "manifest": {
             "packageType": "builtin-reference",
+            "id": engine["packageId"],
+            "catalogId": engine["id"],
+            "version": public.get("version", "1.0.0"),
+            "name": engine["name"],
+            "controls": [
+                {
+                    "id": control_id,
+                    "label": engine["controls"][index],
+                    "description": manual_controls.get(control_id, ""),
+                }
+                for index, control_id in enumerate(control_ids)
+            ],
+            "outputs": {
+                "main": engine["outputs"][0],
+                "aux": engine["outputs"][1],
+            },
             "source": {"className": source["className"]},
             "postProcessing": engine["postProcessing"],
             "sharedModules": list(engine.get("sharedModules", [])),
         },
+        "user_data_bank": source.get("userDataBank", -1),
+        "autodeclared": [],
         "repo_root": REPO_ROOT,
         "source_root": REPO_ROOT,
         "header": REPO_ROOT / source["header"],
@@ -916,6 +936,7 @@ def compile_renderer(
         "-Wno-unused-local-typedefs", "-Wno-deprecated-declarations",
         f'-DPLAITS_LAB_ENGINE_HEADER="{engine_header_define(package)}"',
         f'-DPLAITS_LAB_ENGINE_CLASS=plaits::{manifest["source"]["className"]}',
+        f'-DPLAITS_LAB_USER_DATA_BANK={package.get("user_data_bank", -1)}',
         "-I", str(package["repo_root"]),
         "-I", str(package["source_root"]),
         *compiled,
@@ -955,6 +976,7 @@ def compile_wasm(package: dict[str, Any], output: Path) -> None:
         "-std=c++11", MATH_CONSTANTS_DEFINE, "-DTEST", "-O2",
         f'-DPLAITS_LAB_ENGINE_HEADER="{engine_header_define(package)}"',
         f'-DPLAITS_LAB_ENGINE_CLASS=plaits::{manifest["source"]["className"]}',
+        f'-DPLAITS_LAB_USER_DATA_BANK={package.get("user_data_bank", -1)}',
         "-I", str(package["repo_root"]),
         "-I", str(package["source_root"]),
         *compiled,
@@ -2423,7 +2445,10 @@ class DevSession:
         self.temp_dir.cleanup()
 
     def package(self) -> dict[str, Any]:
-        package = load_package(self.package_arg, autodeclare=True)
+        package_path = Path(self.package_arg)
+        package = load_package(self.package_arg, autodeclare=True) \
+            if (package_path / "plaits-engine.json").is_file() \
+            else builtin_package(self.package_arg)
         report_autodeclared(package)
         return package
 
@@ -2434,6 +2459,11 @@ class DevSession:
         for path in [package["header"], *package["source_files"]]:
             digest.update(path.read_bytes())
         return digest.hexdigest()
+
+    def package_digest(self, package: dict[str, Any]) -> str:
+        if package["manifest"]["packageType"] == "builtin-reference":
+            return "sha256:" + self.source_fingerprint(package)
+        return package_content_digest(package["directory"])
 
     def ensure_renderer(self) -> tuple[dict[str, Any], bool]:
         package = self.package()
@@ -2564,7 +2594,7 @@ def dev_command(args: argparse.Namespace) -> int:
                     self.send_json({
                         "manifest": current["manifest"],
                         "scenarios": current["scenarios"],
-                        "digest": package_content_digest(current["directory"]),
+                        "digest": session.package_digest(current),
                         "sourceRevision": session.fingerprint,
                         "recompiled": recompiled,
                         "live": session.wasm_available,

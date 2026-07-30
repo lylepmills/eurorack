@@ -6,6 +6,7 @@
 #include <cstdlib>
 
 #include "plaits/dsp/dsp.h"
+#include "plaits/resources.h"
 #include "stmlib/test/wav_writer.h"
 
 #ifndef PLAITS_LAB_ENGINE_HEADER
@@ -16,6 +17,10 @@
 #endif
 
 #include PLAITS_LAB_ENGINE_HEADER
+
+#ifndef PLAITS_LAB_USER_DATA_BANK
+#define PLAITS_LAB_USER_DATA_BANK -1
+#endif
 
 namespace {
 
@@ -61,7 +66,11 @@ int main(int argc, char** argv) {
   stmlib::BufferAllocator allocator(allocator_memory, sizeof(allocator_memory));
   PLAITS_LAB_ENGINE_CLASS engine;
   engine.Init(&allocator);
+#if PLAITS_LAB_USER_DATA_BANK >= 0
+  engine.LoadUserData(plaits::fm_patches_table[PLAITS_LAB_USER_DATA_BANK]);
+#else
   engine.LoadUserData(NULL);
+#endif
   engine.Reset();
 
   stmlib::WavWriter writer(2, static_cast<size_t>(plaits::kSampleRate), duration_seconds);

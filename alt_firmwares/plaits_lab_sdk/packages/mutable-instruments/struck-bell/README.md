@@ -68,6 +68,13 @@ outweighs the multiply, so the module's partials fall linearly and reach
 exact silence, where a float amplitude would ring on asymptotically. The
 port carries Braids' integer counter for that reason.
 
+The oscillator advances each partial with a normalised sine/cosine rotation
+instead of performing eleven table lookups for every sample. Stereo derives
+its right channel with a short all-pass decorrelator rather than rendering a
+second detuned bell. Together those changes reduce the calibrated worst-case
+stereo estimate from about 147% of the module's synthesis budget to about
+69%, while the seven Braids A/B cases remain within their original limits.
+
 Full derivation, the amplitude-quantisation note, the strike-phase detail
 (partials start at a quarter cycle, not zero), the `TRIGGER_UNPATCHED`
 sustain convention, and every declared deviation are in the header comment of

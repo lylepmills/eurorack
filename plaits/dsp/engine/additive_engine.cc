@@ -27,9 +27,9 @@
 // Additive synthesis with 24+8 partials.
 //
 // OUT: 24 integer harmonics. AUX: 8 harmonics of the organ subset.
-// alt firmware, stereo mode: the 24 integer harmonics are spread across the
-// stereo field - fundamental at the center, width increasing with the
-// harmonic index, sides alternating - and the organ subset is not rendered.
+// alt firmware, stereo mode: OUT carries the 24-harmonic voice and AUX carries
+// a short all-pass phase rotation of it. This keeps the spectrum and level
+// matched while avoiding a second 24-partial accumulation.
 
 #include "plaits/dsp/engine/additive_engine.h"
 
@@ -48,13 +48,7 @@ void AdditiveEngine::Init(BufferAllocator* allocator) {
   for (int i = 0; i < kNumHarmonicOscillators; ++i) {
     harmonic_oscillator_[i].Init();
   }
-  for (int i = 0; i < kNumIntegerHarmonics; ++i) {
-    const float width = 0.4f * static_cast<float>(i) / \
-        static_cast<float>(kNumIntegerHarmonics - 1);
-    const float side = (i & 1) ? -1.0f : 1.0f;
-    StereoPanGains(
-        0.5f + side * width, &pan_gain_left_[i], &pan_gain_right_[i]);
-  }
+  stereo_allpass_.Init();
 }
 
 void AdditiveEngine::Reset() {
@@ -155,16 +149,11 @@ void AdditiveEngine::Render(
   }
 
   if ((PLAITS_STEREO_HARMONIC && parameters.stereo)) {
-    float left_amplitudes[kNumIntegerHarmonics];
-    float right_amplitudes[kNumIntegerHarmonics];
-    for (int i = 0; i < kNumIntegerHarmonics; ++i) {
-      left_amplitudes[i] = amplitudes_[i] * pan_gain_left_[i];
-      right_amplitudes[i] = amplitudes_[i] * pan_gain_right_[i];
+    harmonic_oscillator_[0].Render<1>(f0, &amplitudes_[0], out, size);
+    harmonic_oscillator_[1].Render<13>(f0, &amplitudes_[12], out, size);
+    for (size_t i = 0; i < size; ++i) {
+      aux[i] = stereo_allpass_.Process(out[i]);
     }
-    harmonic_oscillator_[0].RenderStereo<1>(
-        f0, &left_amplitudes[0], &right_amplitudes[0], out, aux, size);
-    harmonic_oscillator_[1].RenderStereo<13>(
-        f0, &left_amplitudes[12], &right_amplitudes[12], out, aux, size);
     return;
   }
 

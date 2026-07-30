@@ -108,6 +108,35 @@ inline void StereoPanGains(float position, float* left, float* right) {
   *right = stmlib::Sqrt(position);
 }
 
+// Short Schroeder all-pass for stereo paths where a second synthesis pass
+// would exceed the audio deadline. Magnitude is preserved while phase is
+// rotated by a frequency-dependent amount.
+template<size_t delay>
+class StereoPhaseAllpass {
+ public:
+  void Init() {
+    index_ = 0;
+    for (size_t i = 0; i < delay; ++i) {
+      buffer_[i] = 0.0f;
+    }
+  }
+
+  inline float Process(float input) {
+    const float coefficient = 0.62f;
+    const float delayed = buffer_[index_];
+    const float output = delayed - coefficient * input;
+    buffer_[index_] = input + coefficient * output;
+    if (++index_ >= delay) {
+      index_ = 0;
+    }
+    return output;
+  }
+
+ private:
+  float buffer_[delay];
+  size_t index_;
+};
+
 struct PostProcessingSettings {
   // A negative value indicates that a limiter must be used.
   float out_gain;

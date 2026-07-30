@@ -86,6 +86,12 @@ place the filter substitution is visible is the near-unison case's
 fundamental, which at that color setting sits on the filter's steep
 skirt where the two topologies differ most.
 
+The stereo implementation deliberately synthesises and filters the swarm
+once, then derives the right channel with a short all-pass decorrelator.
+The earlier independently panned and filtered right channel measured about
+102% of the module's synthesis budget and produced audible overload; the
+replacement measures about 56% in the calibrated QEMU sweep.
+
 Both copyright lines are carried in `LICENSE` and in each source file;
 declared deviations are listed in the header comment of
 `plaits/dsp/engine2/saw_swarm_engine.h`, and `tests/ab.json` holds the

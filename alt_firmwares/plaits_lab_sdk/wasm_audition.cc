@@ -12,6 +12,7 @@
 #include <new>
 
 #include "plaits/dsp/dsp.h"
+#include "plaits/resources.h"
 
 #ifndef PLAITS_LAB_ENGINE_HEADER
 #error PLAITS_LAB_ENGINE_HEADER must name the package engine header
@@ -20,6 +21,10 @@
 #error PLAITS_LAB_ENGINE_CLASS must name the package engine class
 #endif
 #include PLAITS_LAB_ENGINE_HEADER
+
+#ifndef PLAITS_LAB_USER_DATA_BANK
+#define PLAITS_LAB_USER_DATA_BANK -1
+#endif
 
 using namespace plaits;
 
@@ -67,7 +72,11 @@ void init() {
   stmlib::BufferAllocator allocator(g_allocator_memory, sizeof(g_allocator_memory));
   g_engine = new (g_engine_storage) PLAITS_LAB_ENGINE_CLASS();
   g_engine->Init(&allocator);
+#if PLAITS_LAB_USER_DATA_BANK >= 0
+  g_engine->LoadUserData(plaits::fm_patches_table[PLAITS_LAB_USER_DATA_BANK]);
+#else
   g_engine->LoadUserData(NULL);
+#endif
   g_engine->Reset();
   g_params.note = 48.0f;
   g_params.harmonics = 0.5f;

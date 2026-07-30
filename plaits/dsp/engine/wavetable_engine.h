@@ -28,11 +28,9 @@
 //
 // OUT: an 8-point (x, y, z) interpolation of the 3-D wavetable at the wave
 // phase, differentiated and gain-scaled. AUX: a 5-bit bitcrush of OUT. In
-// stereo mode, OUT/AUX become L/R: the (x, y, z) cell and wave phase advance
-// once (shared), and the R channel takes a second 8-point read of the same
-// cell half a wave-cycle away (wave phase offset by half the table) with its
-// own differentiator; the bitcrush AUX is dropped. This doubles the wavetable
-// interpolation cost in stereo.
+// stereo mode, OUT/AUX become L/R: the wavetable is evaluated once and the
+// right channel is a short all-pass phase rotation of the left. This preserves
+// the interpolated spectrum without doubling the 8-wave Hermite read.
 
 #ifndef PLAITS_DSP_ENGINE_WAVETABLE_ENGINE_H_
 #define PLAITS_DSP_ENGINE_WAVETABLE_ENGINE_H_
@@ -58,7 +56,10 @@ class WavetableEngine : public Engine {
   virtual bool stereo_capable() const { return PLAITS_STEREO_WAVETABLE; }
 
  private:
-  float ReadWave(int x, int y, int z, int phase_i, float phase_f);
+  float ReadCell(
+      int x0, int x1, int y0, int y1, int z0, int z1,
+      float x_fractional, float y_fractional, float z_fractional,
+      int phase_integral, float phase_fractional);
    
   float phase_;
   
@@ -80,8 +81,7 @@ class WavetableEngine : public Engine {
   const int16_t** wave_map_;
   
   Differentiator diff_out_;
-  // Second differentiator for the R-channel readout, used only in stereo.
-  Differentiator diff_out_r_;
+  StereoPhaseAllpass<7> stereo_allpass_;
 
   DISALLOW_COPY_AND_ASSIGN(WavetableEngine);
 };
