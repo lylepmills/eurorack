@@ -468,7 +468,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
     ]))
 
     fourth_control = (
-        "Press and turn the HARMONICS knob until the model LEDs blink yellow; this selects the octave-switching frequency range. "
+        "Press the HARMONICS knob down, keep holding it, and turn until the model LEDs blink yellow; this selects the octave-switching frequency range. "
         "Click TIMBRE + FREQUENCY together to open the alternate-firmware options menu. Click TIMBRE to walk forward to LIGHT 4, then click HARMONICS once, until it turns red. "
         "Click TIMBRE + FREQUENCY again to exit. The FREQUENCY knob now controls the selected model's fourth parameter; for Mutable Instruments models, noon preserves the original sound."
         if roved else
@@ -491,7 +491,8 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         "LIGHT 1 applies to chord-capable models and lists the chord tables loaded in this build (up to nine). "
         "LIGHT 3 stays dark, and the light navigation skips it, unless LIGHT 2 is set to a suboscillator — it has nothing to act on otherwise. "
         "LIGHT 4 applies in octave-switching (frequency-locked) mode. LIGHT 6's LPG-decay setting applies only when TRIG is patched. "
-        "Outside the menu, click TIMBRE/FREQUENCY for next/previous model and HARMONICS/MORPH for next/previous bank."
+        "Outside the menu, the left pair changes banks: click FREQUENCY/HARMONICS for previous/next bank. "
+        "The right pair changes models: click TIMBRE/MORPH for previous/next model."
         if roved else
         "LIGHT 1 applies to chord-capable models and lists the chord tables loaded in this build (up to nine). "
         "LIGHT 3 stays dark, and the left button walks past it, unless LIGHT 2 is set to a suboscillator — it has nothing to act on otherwise. "

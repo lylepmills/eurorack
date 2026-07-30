@@ -142,6 +142,9 @@ class RenderManualTest(unittest.TestCase):
             self.assertIn("Your Ro'Ved Field Guide", printed)
             self.assertIn("TIMBRE + FREQUENCY", printed)
             self.assertIn("HARMONICS/MORPH", printed)
+            self.assertIn("FREQUENCY/HARMONICS for previous/next bank", printed)
+            self.assertIn("TIMBRE/MORPH for previous/next model", printed)
+            self.assertIn("keep holding it", printed)
             self.assertIn("Hold the MORPH knob down while powering", printed)
             self.assertNotIn("RIGHT model button while powering", printed)
 
