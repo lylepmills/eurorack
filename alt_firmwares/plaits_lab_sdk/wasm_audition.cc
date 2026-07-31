@@ -37,6 +37,64 @@ float g_base_morph = 0.5f;
 float g_randomizer_timbre = 0.0f;
 float g_randomizer_morph = 0.0f;
 
+// The UI sends raw signed pot positions. Keep a small, absolute-off center
+// region, then recover the remaining half-travel and use one simple macro:
+// excursion grows quadratically while orbit speed grows only linearly.
+const float kRandomizerDeadZone = 0.07f;
+
+struct ParameterRandomizerProfile {
+  float near_span;
+  float far_span;
+  float near_rate;
+  float far_rate;
+  float far_center_release;
+};
+
+struct RandomizerProfile {
+  ParameterRandomizerProfile timbre;
+  ParameterRandomizerProfile morph;
+};
+
+#ifndef PLAITS_LAB_RANDOMIZER_PROFILE
+#define PLAITS_LAB_RANDOMIZER_PROFILE 0
+#endif
+
+// Profile ids are assigned by plaits_lab.py. The motion language and knob law
+// stay universal; these small records tune how each engine parameter receives
+// it. Values are intentionally data-like so a firmware port can use the same
+// table without carrying per-engine random-generator code.
+#if PLAITS_LAB_RANDOMIZER_PROFILE == 1
+// Virtual Analog: Pulse/sync is fairly sensitive; Saw shape can roam farther.
+const RandomizerProfile kRandomizerProfile = {
+  { 0.26f, 0.58f, 0.000010f, 0.000007f, 0.70f },
+  { 0.30f, 0.68f, 0.000007f, 0.000004f, 0.75f },
+};
+#elif PLAITS_LAB_RANDOMIZER_PROFILE == 2
+// Fold: fold amount gets restraint; symmetry tolerates a broader orbit.
+const RandomizerProfile kRandomizerProfile = {
+  { 0.22f, 0.50f, 0.000009f, 0.000006f, 0.55f },
+  { 0.30f, 0.66f, 0.000007f, 0.000004f, 0.70f },
+};
+#elif PLAITS_LAB_RANDOMIZER_PROFILE == 3
+// Vowel FOF: preserve vowel identity and make register the most patient move.
+const RandomizerProfile kRandomizerProfile = {
+  { 0.18f, 0.42f, 0.000006f, 0.000003f, 0.45f },
+  { 0.16f, 0.34f, 0.000004f, 0.000002f, 0.35f },
+};
+#elif PLAITS_LAB_RANDOMIZER_PROFILE == 4
+// Granular Cloud: grain and shape invite broader, livelier texture motion.
+const RandomizerProfile kRandomizerProfile = {
+  { 0.34f, 0.80f, 0.000014f, 0.000009f, 0.85f },
+  { 0.30f, 0.66f, 0.000010f, 0.000006f, 0.75f },
+};
+#else
+// Conservative fallback for every engine not yet listened to and profiled.
+const RandomizerProfile kRandomizerProfile = {
+  { 0.25f, 0.55f, 0.000009f, 0.000006f, 0.60f },
+  { 0.22f, 0.50f, 0.000006f, 0.000003f, 0.55f },
+};
+#endif
+
 // Four independent, autonomous chaotic orbits. There are no sampled targets,
 // countdowns, or slew stages: each x/y/z state evolves continuously on every
 // control block. This borrows the slow, bounded, never-settling behaviour of a
@@ -92,20 +150,48 @@ float SoftBipolar(float value, float scale) {
   return normalized / (0.4f + Absolute(normalized));
 }
 
+float RandomizerPosition(float amount) {
+  const float magnitude = Absolute(amount);
+  if (magnitude <= kRandomizerDeadZone) return 0.0f;
+  return (magnitude - kRandomizerDeadZone) /
+      (1.0f - kRandomizerDeadZone);
+}
+
+float RandomizerExcursion(float amount) {
+  const float position = RandomizerPosition(amount);
+  return position * position;
+}
+
+float RandomizerRateMultiplier(float amount) {
+  return 0.65f + 1.35f * RandomizerPosition(amount);
+}
+
 float RandomizedParameter(
     float base,
     float amount,
     const ChaosOrbit& near_orbit,
-    const ChaosOrbit& far_orbit) {
-  if (amount > -0.0001f && amount < 0.0001f) return base;
-  const float depth = amount < 0.0f ? -amount : amount;
+    const ChaosOrbit& far_orbit,
+    const ParameterRandomizerProfile& profile) {
+  const float excursion = RandomizerExcursion(amount);
+  if (excursion <= 0.0f) return base;
+  const bool near = amount < 0.0f;
   // Near reads a compact z-axis undulation. Far reads the broad bipolar x-axis
   // motion between the orbit's two lobes.
-  const float voltage = amount < 0.0f
-      ? SoftBipolar(near_orbit.z - 25.0f, 0.05f) * 0.35f
+  const float voltage = near
+      ? SoftBipolar(near_orbit.z - 25.0f, 0.05f)
       : SoftBipolar(far_orbit.x, 0.08f);
-  const float headroom = voltage < 0.0f ? base : 1.0f - base;
-  float value = base + voltage * headroom * depth;
+  const float span = near ? profile.near_span : profile.far_span;
+  const float symmetric_headroom = base < 1.0f - base ? base : 1.0f - base;
+  const float directional_headroom =
+      voltage < 0.0f ? base : 1.0f - base;
+  // Near is always local and symmetric. Far begins that way, then strong knob
+  // settings progressively release toward the available directional range.
+  const float release = near
+      ? 0.0f
+      : profile.far_center_release * excursion;
+  const float headroom = symmetric_headroom +
+      (directional_headroom - symmetric_headroom) * release;
+  float value = base + voltage * headroom * span * excursion;
   if (value < 0.0f) value = 0.0f;
   if (value > 1.0f) value = 1.0f;
   return value;
@@ -229,16 +315,24 @@ void render(int size) {
   int produced = 0;
   while (produced < size) {
     if (g_block_fill == 0) {
-      // 48 kHz / 12 samples = 4 kHz control rate. TIMBRE gets the quicker
-      // orbits; MORPH moves more slowly because it tends to alter structure.
-      AdvanceChaosOrbit(&g_timbre_near, 0.000012f);
-      AdvanceChaosOrbit(&g_timbre_far, 0.000008f);
-      AdvanceChaosOrbit(&g_morph_near, 0.000008f);
-      AdvanceChaosOrbit(&g_morph_far, 0.000004f);
+      // 48 kHz / 12 samples = 4 kHz control rate. Intensity changes speed
+      // gently (0.65x to 2x) while excursion follows the stronger square law.
+      const float timbre_rate = RandomizerRateMultiplier(g_randomizer_timbre);
+      const float morph_rate = RandomizerRateMultiplier(g_randomizer_morph);
+      AdvanceChaosOrbit(
+          &g_timbre_near, kRandomizerProfile.timbre.near_rate * timbre_rate);
+      AdvanceChaosOrbit(
+          &g_timbre_far, kRandomizerProfile.timbre.far_rate * timbre_rate);
+      AdvanceChaosOrbit(
+          &g_morph_near, kRandomizerProfile.morph.near_rate * morph_rate);
+      AdvanceChaosOrbit(
+          &g_morph_far, kRandomizerProfile.morph.far_rate * morph_rate);
       g_params.timbre = RandomizedParameter(
-          g_base_timbre, g_randomizer_timbre, g_timbre_near, g_timbre_far);
+          g_base_timbre, g_randomizer_timbre,
+          g_timbre_near, g_timbre_far, kRandomizerProfile.timbre);
       g_params.morph = RandomizedParameter(
-          g_base_morph, g_randomizer_morph, g_morph_near, g_morph_far);
+          g_base_morph, g_randomizer_morph,
+          g_morph_near, g_morph_far, kRandomizerProfile.morph);
       g_params.trigger = g_retrigger
           ? static_cast<TriggerState>(TRIGGER_HIGH | TRIGGER_RISING_EDGE)
           : TRIGGER_UNPATCHED;

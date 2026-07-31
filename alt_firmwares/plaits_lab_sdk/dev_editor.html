@@ -97,7 +97,7 @@
         <h2>Unpatched attenuverters</h2>
         <span class="pill">Audition prototype</span>
       </div>
-      <p class="prototype-copy">Assumes the TIMBRE and MORPH CV inputs are unpatched. Noon is off. CCW adds a close, center-seeking drift; CW adds a wider, slower roam. Both follow continuous Sloth-like chaotic orbits—no targets, clocks, or connection to Strike.</p>
+      <p class="prototype-copy">Assumes the TIMBRE and MORPH CV inputs are unpatched. A small zone around noon is completely off. CCW adds a close, center-seeking drift; CW adds a wider, slower roam. Moving farther increases both excursion and speed through an engine-tuned profile.</p>
       <div class="prototype-grid">
         <label>
           <span class="row"><strong>TIMBRE</strong><output id="randomizer-timbre-value">Off</output></span>
@@ -125,6 +125,7 @@
 </main>
 <script>
 const CONTROL_IDS = ['harmonics', 'timbre', 'morph', 'macro'];
+const RANDOMIZER_DEAD_ZONE = 0.07;
 const state = {
   controls: { harmonics: 0.5, timbre: 0.5, morph: 0.5, macro: 0.5 },
   note: 48,
@@ -143,8 +144,12 @@ function setPill(text, kind) { const p = $('pill'); p.textContent = text; p.clas
 function notice(text, isErr) { const n = $('notice'); n.textContent = text || ''; n.className = 'notice' + (isErr ? ' err' : ''); }
 
 function randomizerLabel(value) {
-  if (Math.abs(value) < 0.005) return 'Off';
-  return `${value < 0 ? 'Near' : 'Far'} ${Math.round(Math.abs(value) * 100)}%`;
+  const magnitude = Math.abs(value);
+  if (magnitude <= RANDOMIZER_DEAD_ZONE) return 'Off';
+  const position = (magnitude - RANDOMIZER_DEAD_ZONE) /
+    (1 - RANDOMIZER_DEAD_ZONE);
+  const intensity = position * position;
+  return `${value < 0 ? 'Near' : 'Far'} ${Math.max(1, Math.round(intensity * 100))}%`;
 }
 
 function updateRandomizerReadout(id) {

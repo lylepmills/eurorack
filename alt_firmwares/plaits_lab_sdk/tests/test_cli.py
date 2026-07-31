@@ -771,6 +771,10 @@ class PackageTests(unittest.TestCase):
         self.assertIn("ChaosOrbit", harness)
         self.assertNotIn("blocks_until_target", harness)
         self.assertIn("RandomizedParameter", harness)
+        self.assertIn("kRandomizerDeadZone", harness)
+        self.assertIn("RandomizerExcursion", harness)
+        self.assertIn("RandomizerRateMultiplier", harness)
+        self.assertIn("far_center_release", harness)
         self.assertIn("current_timbre", harness)
         worklet = (plaits_lab.SDK_DIR / "audition_worklet.js").read_text(encoding="utf-8")
         self.assertIn("'randomization'", worklet)
@@ -784,7 +788,12 @@ class PackageTests(unittest.TestCase):
         self.assertIn("await ensureLive()", html)
         self.assertNotIn("setInterval", html)
         self.assertNotIn("randomizer-auto", html)
+        self.assertIn("RANDOMIZER_DEAD_ZONE", html)
         self.assertIn("'Near' : 'Far'", html)
+        self.assertEqual(plaits_lab.RANDOMIZER_PROFILE_IDS["virtual-analog"], 1)
+        self.assertEqual(plaits_lab.RANDOMIZER_PROFILE_IDS["fold"], 2)
+        self.assertEqual(plaits_lab.RANDOMIZER_PROFILE_IDS["vowel-fof"], 3)
+        self.assertEqual(plaits_lab.RANDOMIZER_PROFILE_IDS["granular-cloud"], 4)
 
     def test_live_audition_stereo_surface_is_wired(self) -> None:
         # The audition must be able to drive parameters.stereo and read back
