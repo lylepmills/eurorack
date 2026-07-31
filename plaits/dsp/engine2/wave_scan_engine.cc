@@ -2366,7 +2366,6 @@ void WaveScanEngine::Render(
         }
         const float scaled = phase_ * 128.0f;
         int32_t index = static_cast<int32_t>(scaled);
-        CONSTRAIN(index, 0, 127);
         const float fraction = scaled - static_cast<float>(index);
 
         const float a = ReadWave(wave_a, index, fraction);
@@ -2425,7 +2424,6 @@ void WaveScanEngine::Render(
         }
         const float scaled = phase_ * 128.0f;
         int32_t index = static_cast<int32_t>(scaled);
-        CONSTRAIN(index, 0, 127);
         const float fraction = scaled - static_cast<float>(index);
 
         const float r00 = ReadWave(wave_00, index, fraction);
@@ -2503,7 +2501,6 @@ void WaveScanEngine::Render(
       for (int j = 0; j < 4; ++j) {
         const float scaled = phase_ * 128.0f;
         int32_t index = static_cast<int32_t>(scaled);
-        CONSTRAIN(index, 0, 127);
         const float fraction = scaled - static_cast<float>(index);
         const int32_t index_64 = index & ~1;
         const int32_t index_16 = index & ~7;
