@@ -12,8 +12,8 @@
 #   2. Is the port a faithful transcription? Pin the port's reflection corner to
 #      Braids' own `lut_flute_body_filter` value and its fixed 1-sample pitch
 #      term, then compare the mode each picks across COLOR. A chaotic loop will
-#      not match bin for bin (PROGRESS §3.11) -- what has to match is the
-#      CHARACTER: same scatter, same order of detuning.
+#      not match bin for bin -- what has to match is the CHARACTER: same
+#      scatter, same order of detuning.
 #
 # It also derives what Braids' fixed body filter works out to in harmonics of
 # the note, which is what the port's MORPH replaces.
@@ -80,7 +80,8 @@ def main():
     print("\n   Both sides scatter across multiples of f0 that have nothing to do")
     print("   with the played note. They do not agree take by take, and are not")
     print("   expected to: two coupled nonlinear loops a rate apart settle into")
-    print("   different limit cycles (PROGRESS §3.11, same as `bowed`).")
+    print("   different limit cycles -- the same reason `bowed` is matched on")
+    print("   pitch, level and gross tilt rather than bin by bin.")
 
 
 if __name__ == "__main__":
