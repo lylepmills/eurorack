@@ -16,6 +16,14 @@
 #include "plaits/dsp/engine/engine.h"
 #include PLAITS_LAB_ENGINE_HEADER
 
+#ifndef PLAITS_LAB_USER_DATA_BANK
+#define PLAITS_LAB_USER_DATA_BANK -1
+#endif
+
+#if PLAITS_LAB_USER_DATA_BANK >= 0
+#include "plaits/resources.h"
+#endif
+
 using namespace plaits;
 
 #ifndef PLAITS_QEMU_BLOCKS
@@ -33,6 +41,9 @@ using namespace plaits;
 #endif
 #ifndef PLAITS_QEMU_TIMBRE
 #define PLAITS_QEMU_TIMBRE 0.5f
+#endif
+#ifndef PLAITS_QEMU_MORPH
+#define PLAITS_QEMU_MORPH 0.5f
 #endif
 // Pitch matters: a physical model's per-sample work can depend on it (delay
 // length, filter iterations), so an engine measured at one note may cost quite
@@ -78,12 +89,18 @@ int main() {
   stmlib::BufferAllocator allocator(g_memory, sizeof(g_memory));
   static PLAITS_LAB_ENGINE_CLASS engine;
   engine.Init(&allocator);
+#if PLAITS_LAB_USER_DATA_BANK >= 0
+  engine.LoadUserData(plaits::fm_patches_table[PLAITS_LAB_USER_DATA_BANK]);
+#else
+  engine.LoadUserData(NULL);
+#endif
+  engine.Reset();
 
   EngineParameters p;
   p.trigger = PLAITS_QEMU_TRIGGER;
   p.note = PLAITS_QEMU_NOTE;
   p.timbre = PLAITS_QEMU_TIMBRE;
-  p.morph = 0.5f;
+  p.morph = PLAITS_QEMU_MORPH;
   p.harmonics = PLAITS_QEMU_HARMONICS;
   p.accent = 1.0f;
   p.macro = PLAITS_QEMU_MACRO;

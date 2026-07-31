@@ -55,11 +55,17 @@ ARCH_FLAGS = [
 # miss the case that actually breaks. These positions cover the corners plus the
 # centre; the estimate reports the WORST, because the worst is what glitches.
 SWEEP_POSITIONS = (
-    ("centre",    0.5, 0.5, 0.5, 48.0),
-    ("low",       0.05, 0.05, 0.05, 36.0),
-    ("high",      0.95, 0.95, 0.95, 72.0),
-    ("harm-high", 0.95, 0.5, 0.5, 48.0),
-    ("timbre-hi", 0.5, 0.95, 0.5, 60.0),
+    # name, harmonics, timbre, morph, macro, note
+    ("centre",    0.5, 0.5, 0.5, 0.5, 48.0),
+    ("low",       0.05, 0.05, 0.05, 0.05, 36.0),
+    ("high",      0.95, 0.95, 0.95, 0.95, 72.0),
+    ("harm-high", 0.95, 0.5, 0.5, 0.5, 48.0),
+    ("timbre-hi", 0.5, 0.95, 0.5, 0.5, 60.0),
+    # MORPH used to be hard-pinned to 0.5 in every sweep position. Keep
+    # dedicated axis points so a correlated all-low/all-high corner cannot
+    # hide a MORPH-specific hot path.
+    ("morph-low", 0.5, 0.5, 0.05, 0.5, 48.0),
+    ("morph-hi",  0.5, 0.5, 0.95, 0.5, 48.0),
 )
 
 COUNTS_RE = re.compile(
@@ -170,6 +176,7 @@ def main() -> int:
     parser.add_argument("--harmonics", type=float, default=0.5)
     parser.add_argument("--macro", type=float, default=0.5)
     parser.add_argument("--timbre", type=float, default=0.5)
+    parser.add_argument("--morph", type=float, default=0.5)
     parser.add_argument("--note", type=float, default=48.0)
     # unpatched = TRIGGER_UNPATCHED (2), the state an engine sees on a module
     # with nothing in TRIG -- the calibration condition. patched-idle = 0.
@@ -195,6 +202,7 @@ def main() -> int:
             "repo_root": REPO_ROOT,
             "source_root": REPO_ROOT / "plaits",
             "manifest": {"source": entry["source"], "postProcessing": entry["postProcessing"]},
+            "user_data_bank": entry["source"].get("userDataBank", -1),
             "source_files": [REPO_ROOT / f for f in entry["source"]["files"]],
             "header": Path(entry["source"]["header"]),
             "shared": entry.get("sharedModules", []),
@@ -231,7 +239,7 @@ def main() -> int:
     model = CostModel()
 
     positions = SWEEP_POSITIONS if args.sweep else (
-        ("as-given", args.harmonics, args.timbre, args.macro, args.note),
+        ("as-given", args.harmonics, args.timbre, args.morph, args.macro, args.note),
     )
 
     with tempfile.TemporaryDirectory(prefix="plaits-qemu-") as temp:
@@ -248,16 +256,18 @@ def main() -> int:
         # container start dominates, so batching turns a 5x sweep into roughly
         # the cost of a single run.
         commands = []
-        for name, harm, timb, macro, note in positions:
+        for name, harm, timb, morph, macro, note in positions:
             for label, blocks in (("a", args.blocks_a), ("b", args.blocks_b)):
                 commands.append(" ".join(shlex.quote(c) for c in container_compile(
                     mapped, ["/workspace", "/contributor/src", "/qemu"],
                     [f'-DPLAITS_LAB_ENGINE_HEADER="{header_define}"',
                      f"-DPLAITS_LAB_ENGINE_CLASS=plaits::{package['manifest']['source']['className']}",
+                     f"-DPLAITS_LAB_USER_DATA_BANK={package.get('user_data_bank', -1)}",
                      f"-DPLAITS_QEMU_BLOCKS={blocks}",
                      f"-DPLAITS_QEMU_HARMONICS={harm}f",
                      f"-DPLAITS_QEMU_MACRO={macro}f",
                      f"-DPLAITS_QEMU_TIMBRE={timb}f",
+                     f"-DPLAITS_QEMU_MORPH={morph}f",
                      f"-DPLAITS_QEMU_NOTE={note}f",
                      f"-DPLAITS_QEMU_TRIGGER={2 if args.trigger == 'unpatched' else 0}",
                      f"-DPLAITS_QEMU_STEREO={1 if args.stereo else 0}"],
@@ -285,7 +295,7 @@ def main() -> int:
 
         results = []
         samples = (args.blocks_b - args.blocks_a) * BLOCK_SIZE
-        for name, harm, timb, macro, note in positions:
+        for name, harm, timb, morph, macro, note in positions:
             lo, pc_lo = run_qemu(out_dir / f"h_{name}_a.elf", plugin)
             hi, pc_hi = run_qemu(out_dir / f"h_{name}_b.elf", plugin)
             d = [hi[i] - lo[i] for i in range(len(lo))]
