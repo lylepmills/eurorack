@@ -61,8 +61,15 @@ const float fade_point[kChordNumVoices] = {
   0.55f, 0.47f, 0.49f, 0.51f, 0.53f
 };
 
-const float chord_pan[kChordNumVoices] = {
-  0.5f, 0.2f, 0.8f, 0.05f, 0.95f
+// Equal-power gains for the fixed pan positions
+// { 0.5, 0.2, 0.8, 0.05, 0.95 }. Precomputing them removes ten square roots
+// per audio block without changing the rounded float values.
+const float chord_pan_left[kChordNumVoices] = {
+  0.707106769f, 0.894427180f, 0.447213590f, 0.974679410f, 0.223606825f
+};
+
+const float chord_pan_right[kChordNumVoices] = {
+  0.707106769f, 0.447213590f, 0.894427180f, 0.223606795f, 0.974679410f
 };
 
 const int kRegistrationTableSize = 8;
@@ -136,7 +143,7 @@ void ChordEngine::Render(
   
   fill(&out[0], &out[size], 0.0f);
   fill(&aux[0], &aux[size], 0.0f);
-  
+
   const float f0 = NoteToFrequency(parameters.note) * 0.998f;
   const float waveform = max((morph_lp_ - 0.535f) * 2.15f, 0.0f);
 
@@ -176,8 +183,8 @@ void ChordEngine::Render(
             size);
       }
 
-      float left_gain, right_gain;
-      StereoPanGains(chord_pan[note], &left_gain, &right_gain);
+      float left_gain = chord_pan_left[note];
+      float right_gain = chord_pan_right[note];
       // A note the mask would have sent to AUX reaches OUT scaled by the
       // macro's voice balance: keep that level in the stereo mix.
       const float note_gain = (1 << note) & aux_note_mask

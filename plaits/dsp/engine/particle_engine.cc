@@ -55,9 +55,25 @@ void ParticleEngine::Reset() {
   diffuser_.Reset();
 }
 
-// The energy centroid is at the center: pans average to 0.5.
-const float particle_pan[kNumParticles] = {
-  0.05f, 0.85f, 0.3f, 0.7f, 0.15f, 0.95f
+// Equal-power gains for the fixed pan positions
+// { 0.05, 0.85, 0.3, 0.7, 0.15, 0.95 }. Precomputing them removes twelve
+// square roots per stereo audio block without changing their float values.
+const float particle_pan_left[kNumParticles] = {
+  0.974679410f,
+  0.387298316f,
+  0.836660028f,
+  0.547722578f,
+  0.921954453f,
+  0.223606825f,
+};
+
+const float particle_pan_right[kNumParticles] = {
+  0.223606795f,
+  0.921954453f,
+  0.547722578f,
+  0.836660028f,
+  0.387298346f,
+  0.974679410f,
 };
 
 // The equal-power pan gain pairs sum to 1.297 on average: compensate, so
@@ -94,8 +110,6 @@ void ParticleEngine::Render(
 
   if ((PLAITS_STEREO_PARTICLE_NOISE && parameters.stereo)) {
     for (int i = 0; i < kNumParticles; ++i) {
-      float left_gain, right_gain;
-      StereoPanGains(particle_pan[i], &left_gain, &right_gain);
       particle_[i].RenderStereo(
           sync,
           density,
@@ -103,8 +117,8 @@ void ParticleEngine::Render(
           f0,
           spread,
           q,
-          left_gain,
-          right_gain,
+          particle_pan_left[i],
+          particle_pan_right[i],
           out,
           aux,
           size);
