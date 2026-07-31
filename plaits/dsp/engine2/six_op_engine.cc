@@ -73,6 +73,19 @@ void FMVoice::LoadPatch(const fm::Patch* patch) {
 
 const int kNumPatchesPerBank = 32;
 
+// All Six-Op pan positions are fixed. Keeping their equal-power gains as
+// float constants removes four VSQRTs from every audio block without changing
+// the panning law or its rounded float results.
+const float kSixOpCenterPan = 0.707106781f;  // sqrt(0.5)
+const float kSixOpPanLeft[kNumSixOpVoices] = {
+  0.894427191f,  // sqrt(0.8)
+  0.447213595f,  // sqrt(0.2)
+};
+const float kSixOpPanRight[kNumSixOpVoices] = {
+  0.447213595f,  // sqrt(0.2)
+  0.894427191f,  // sqrt(0.8)
+};
+
 void SixOpEngine::Init(BufferAllocator* allocator) {
   patch_index_quantizer_.Init(32, 0.005f, false);
 
@@ -203,32 +216,34 @@ void SixOpEngine::Render(
     rendered_voice_ = (rendered_voice_ + 1) % kNumSixOpVoices;
     voice_[rendered_voice_].Render(temp_buffer_, size * kNumSixOpVoices);
 
-    float pan_left[kNumSixOpVoices];
-    float pan_right[kNumSixOpVoices];
     // A free-running drone sustains a single voice: keep it centred rather
     // than parked on one side. With a trigger patched, the round-robin voice
     // allocation makes successive notes alternate between the two sides.
     const bool unpatched = parameters.trigger & TRIGGER_UNPATCHED;
-    for (int i = 0; i < kNumSixOpVoices; ++i) {
-      const float position = unpatched
-          ? 0.5f
-          : 0.2f + 0.6f * static_cast<float>(i) / \
-              static_cast<float>(kNumSixOpVoices - 1);
-      StereoPanGains(position, &pan_left[i], &pan_right[i]);
-    }
-
+    const float previous_left_gain = unpatched
+        ? kSixOpCenterPan
+        : kSixOpPanLeft[previous_voice];
+    const float previous_right_gain = unpatched
+        ? kSixOpCenterPan
+        : kSixOpPanRight[previous_voice];
+    const float current_left_gain = unpatched
+        ? kSixOpCenterPan
+        : kSixOpPanLeft[rendered_voice_];
+    const float current_right_gain = unpatched
+        ? kSixOpCenterPan
+        : kSixOpPanRight[rendered_voice_];
+    const float macro = parameters.macro;
+    const float darkness = (0.5f - macro) * 2.0f;
+    const float coefficient = 1.0f - darkness * 0.92f;
+    const float saturation = (macro - 0.5f) * 2.0f;
     for (size_t i = 0; i < size; ++i) {
       const float previous = acc_buffer_[i] * 0.25f;
       const float current = temp_buffer_[i] * 0.25f;
       float left = SoftClip(
-          previous * pan_left[previous_voice] + \
-          current * pan_left[rendered_voice_]);
+          previous * previous_left_gain + current * current_left_gain);
       float right = SoftClip(
-          previous * pan_right[previous_voice] + \
-          current * pan_right[rendered_voice_]);
-      if (parameters.macro < 0.5f) {
-        const float darkness = (0.5f - parameters.macro) * 2.0f;
-        const float coefficient = 1.0f - darkness * 0.92f;
+          previous * previous_right_gain + current * current_right_gain);
+      if (macro < 0.5f) {
         ONE_POLE(post_filter_, left, coefficient);
         left = post_filter_;
         ONE_POLE(post_filter_right_, right, coefficient);
@@ -236,23 +251,23 @@ void SixOpEngine::Render(
       } else {
         post_filter_ = left;
         post_filter_right_ = right;
-        const float saturation = (parameters.macro - 0.5f) * 2.0f;
         left += (SoftClip(left * 3.0f) - left) * saturation;
         right += (SoftClip(right * 3.0f) - right) * saturation;
       }
       out[i] = left;
       aux[i] = right;
     }
-    copy(
-        &temp_buffer_[size],
-        &temp_buffer_[kNumSixOpVoices * size],
-        &acc_buffer_[0]);
+    // std::copy lowers to a generic memmove in GCC 4.8.3. This fixed, small
+    // transfer is cheaper as a plain loop and has identical copy semantics
+    // because these buffers never overlap.
+    for (size_t i = 0; i < (kNumSixOpVoices - 1) * size; ++i) {
+      acc_buffer_[i] = temp_buffer_[size + i];
+    }
   } else {
     // Staggered rendering.
-    copy(
-        &acc_buffer_[0],
-        &acc_buffer_[(kNumSixOpVoices - 1) * size],
-        &temp_buffer_[0]);
+    for (size_t i = 0; i < (kNumSixOpVoices - 1) * size; ++i) {
+      temp_buffer_[i] = acc_buffer_[i];
+    }
     fill(
         &temp_buffer_[(kNumSixOpVoices - 1) * size],
         &temp_buffer_[kNumSixOpVoices * size],
@@ -260,25 +275,25 @@ void SixOpEngine::Render(
     rendered_voice_ = (rendered_voice_ + 1) % kNumSixOpVoices;
     voice_[rendered_voice_].Render(temp_buffer_, size * kNumSixOpVoices);
 
+    const float macro = parameters.macro;
+    const float darkness = (0.5f - macro) * 2.0f;
+    const float coefficient = 1.0f - darkness * 0.92f;
+    const float saturation = (macro - 0.5f) * 2.0f;
     for (size_t i = 0; i < size; ++i) {
       float sample = SoftClip(temp_buffer_[i] * 0.25f);
-      if (parameters.macro < 0.5f) {
-        const float darkness = (0.5f - parameters.macro) * 2.0f;
-        const float coefficient = 1.0f - darkness * 0.92f;
+      if (macro < 0.5f) {
         ONE_POLE(post_filter_, sample, coefficient);
         sample = post_filter_;
       } else {
         post_filter_ = sample;
-        const float saturation = (parameters.macro - 0.5f) * 2.0f;
         const float saturated = SoftClip(sample * 3.0f);
         sample += (saturated - sample) * saturation;
       }
       aux[i] = out[i] = sample;
     }
-    copy(
-        &temp_buffer_[size],
-        &temp_buffer_[kNumSixOpVoices * size],
-        &acc_buffer_[0]);
+    for (size_t i = 0; i < (kNumSixOpVoices - 1) * size; ++i) {
+      acc_buffer_[i] = temp_buffer_[size + i];
+    }
   }
 }
 
