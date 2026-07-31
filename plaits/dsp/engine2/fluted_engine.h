@@ -418,6 +418,9 @@ class FlutedEngine : public Engine {
   // The excitation envelope pointer, and the divider that reproduces Braids'
   // `if (size & 3) ++excitation_ptr` (1452-1454) -- three steps in four.
   int excitation_pointer_;
+  // Exact BlowingEnvelope(excitation_pointer_), cached because the pointer
+  // advances on only three internal samples in four and eventually stops.
+  int blowing_envelope_;
   uint32_t excitation_divider_;
 
   float noise_depth_;

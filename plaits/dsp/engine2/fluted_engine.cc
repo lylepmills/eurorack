@@ -249,6 +249,7 @@ void FlutedEngine::Reset() {
   dc_blocking_x0_ = 0;
   dc_blocking_y0_ = 0;
   excitation_pointer_ = 0;
+  blowing_envelope_ = BlowingEnvelope(excitation_pointer_);
   excitation_divider_ = 0;
   noise_depth_ = 2100.0f;
   blow_ = kFlutedBlowStock;
@@ -294,6 +295,7 @@ void FlutedEngine::Render(
     }
     lp_state_ = 0;
     excitation_pointer_ = 0;
+    blowing_envelope_ = BlowingEnvelope(excitation_pointer_);
     excitation_divider_ = 0;
   }
 
@@ -369,6 +371,10 @@ void FlutedEngine::Render(
 
   const uint32_t bore_mask = kFlutedBoreLength - 1;
   const uint32_t jet_mask = kFlutedJetLength - 1;
+  // The envelope is piecewise constant between pointer advances. Preserve its
+  // exact integer value instead of repeating the constant-division evaluator
+  // on both 96 kHz steps (and forever after the pointer reaches its plateau).
+  int blowing_envelope = blowing_envelope_;
 
   while (size--) {
     // ROUND, do not truncate. Braids' `breath_intensity` is an exact integer
@@ -402,7 +408,7 @@ void FlutedEngine::Render(
       // The breath: the excitation envelope doubled (1419-1420), with
       // MULTIPLICATIVE noise (1421-1423). Blow scales what Braids welds; at
       // noon blow_code is 4096 and the pair of shifts is the identity.
-      int32_t breath_pressure = BlowingEnvelope(excitation_pointer_) << 1;
+      int32_t breath_pressure = blowing_envelope << 1;
       breath_pressure = breath_pressure * blow_code >> 12;
       int32_t random_pressure =
           NextNoise(&rng_state_) * breath_intensity >> 12;
@@ -449,6 +455,7 @@ void FlutedEngine::Render(
       if ((excitation_divider_ & 3u) != 3u &&
           excitation_pointer_ < kFlutedEnvelopePlateau) {
         ++excitation_pointer_;
+        blowing_envelope = BlowingEnvelope(excitation_pointer_);
       }
       ++excitation_divider_;
 
@@ -491,6 +498,7 @@ void FlutedEngine::Render(
     *out++ = out_dc_output_;
     *aux++ = aux_dc_output_;
   }
+  blowing_envelope_ = blowing_envelope;
 }
 
 }  // namespace plaits
