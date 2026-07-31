@@ -137,54 +137,65 @@ void String::ProcessInternal(
   
   float ap_gain = -0.618f * non_linearity_amount / (0.15f + fabsf(non_linearity_amount));
   
-  while (size--) {
-    src_phase_ += src_ratio;
-    if (src_phase_ > 1.0f) {
-      src_phase_ -= 1.0f;
-      
-      float delay = delay_modulation.Next();
-      float s = 0.0f;
-      
-      if (non_linearity == STRING_NON_LINEARITY_DISPERSION) {
-        float noise = Random::GetFloat() - 0.5f;
-        ONE_POLE(dispersion_noise_, noise, noise_filter)
-        delay *= 1.0f + dispersion_noise_ * noise_amount;
-      } else {
-        delay *= 1.0f - curved_bridge_ * bridge_curving;
-      }
-      
-      if (non_linearity == STRING_NON_LINEARITY_DISPERSION) {
-        float ap_delay = delay * stretch_point;
-        float main_delay = delay - ap_delay * (0.408f - stretch_point * 0.308f) * stretch_correction;
-        if (ap_delay >= 4.0f && main_delay >= 4.0f) {
-          s = string_.Read(main_delay);
-          s = stretch_.Allpass(s, ap_delay, ap_gain);
-        } else {
-          s = string_.ReadHermite(delay);
-        }
-      } else {
-        s = string_.ReadHermite(delay);
-      }
-      
-      if (non_linearity == STRING_NON_LINEARITY_CURVED_BRIDGE) {
-        float value = fabsf(s) - 0.025f;
-        float sign = s > 0.0f ? 1.0f : -1.5f;
-        curved_bridge_ = (fabsf(value) + value) * sign;
-      }
-    
-      s += *in;
-      CONSTRAIN(s, -20.0f, +20.0f);
-      
-      dc_blocker_.Process(&s, 1);
-      s = iir_damping_filter_.Process<FILTER_MODE_LOW_PASS>(s);
-      string_.Write(s);
-
-      out_sample_[1] = out_sample_[0];
-      out_sample_[0] = s;
-    }
-    *out++ += Crossfade(out_sample_[1], out_sample_[0], src_phase_);
-    in++;
+  // Keep the model step written once while giving the ARM compiler two
+  // separate loops below. The firmware is built in pre-C++11 language mode.
+#define PROCESS_STRING_SAMPLE() { \
+    float delay = delay_modulation.Next(); \
+    float s = 0.0f; \
+    if (non_linearity == STRING_NON_LINEARITY_DISPERSION) { \
+      float noise = Random::GetFloat() - 0.5f; \
+      ONE_POLE(dispersion_noise_, noise, noise_filter) \
+      delay *= 1.0f + dispersion_noise_ * noise_amount; \
+    } else { \
+      delay *= 1.0f - curved_bridge_ * bridge_curving; \
+    } \
+    if (non_linearity == STRING_NON_LINEARITY_DISPERSION) { \
+      float ap_delay = delay * stretch_point; \
+      float main_delay = delay - ap_delay * \
+          (0.408f - stretch_point * 0.308f) * stretch_correction; \
+      if (ap_delay >= 4.0f && main_delay >= 4.0f) { \
+        s = string_.Read(main_delay); \
+        s = stretch_.Allpass(s, ap_delay, ap_gain); \
+      } else { \
+        s = string_.ReadHermite(delay); \
+      } \
+    } else { \
+      s = string_.ReadHermite(delay); \
+    } \
+    if (non_linearity == STRING_NON_LINEARITY_CURVED_BRIDGE) { \
+      float value = fabsf(s) - 0.025f; \
+      float sign = s > 0.0f ? 1.0f : -1.5f; \
+      curved_bridge_ = (fabsf(value) + value) * sign; \
+    } \
+    s += *in; \
+    CONSTRAIN(s, -20.0f, +20.0f); \
+    dc_blocker_.Process(&s, 1); \
+    s = iir_damping_filter_.Process<FILTER_MODE_LOW_PASS>(s); \
+    string_.Write(s); \
+    out_sample_[1] = out_sample_[0]; \
+    out_sample_[0] = s; \
   }
+
+  if (src_ratio == 1.0f) {
+    // At normal playing pitches every output sample advances the model once.
+    // Keep the low-note resampler out of this overwhelmingly common path.
+    while (size--) {
+      PROCESS_STRING_SAMPLE();
+      *out++ += Crossfade(out_sample_[1], out_sample_[0], src_phase_);
+      ++in;
+    }
+  } else {
+    while (size--) {
+      src_phase_ += src_ratio;
+      if (src_phase_ > 1.0f) {
+        src_phase_ -= 1.0f;
+        PROCESS_STRING_SAMPLE();
+      }
+      *out++ += Crossfade(out_sample_[1], out_sample_[0], src_phase_);
+      ++in;
+    }
+  }
+#undef PROCESS_STRING_SAMPLE
 }
 
 }  // namespace plaits

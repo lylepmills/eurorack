@@ -54,7 +54,6 @@ class StringVoice {
       float exciter_size,
       float* temp,
       float* out,
-      float* aux,
       size_t size);
   
  private:

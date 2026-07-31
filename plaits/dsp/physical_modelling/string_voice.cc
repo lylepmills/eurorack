@@ -61,7 +61,6 @@ void StringVoice::Render(
     float exciter_size,
     float* temp,
     float* out,
-    float* aux,
     size_t size) {
   const float density = brightness * brightness;
 
@@ -101,10 +100,6 @@ void StringVoice::Render(
   }
   
   excitation_filter_.Process<FILTER_MODE_LOW_PASS>(temp, temp, size);
-  for (size_t i = 0; i < size; ++i) {
-    aux[i] += temp[i];
-  }
-  
   float non_linearity = structure < 0.24f
       ? (structure - 0.24f) * 4.166f
       : (structure > 0.26f ? (structure - 0.26f) * 1.35135f : 0.0f);

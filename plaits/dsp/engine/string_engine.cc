@@ -57,7 +57,14 @@ void StringEngine::Reset() {
   }
 }
 
-const float string_pan[kNumStrings] = { 0.15f, 0.5f, 0.85f };
+// Equal-power gains for the three fixed pan positions (0.15, 0.5, 0.85).
+// Keep the one-ULP asymmetry between sqrt(0.15) and sqrt(1.0f - 0.85f).
+const float string_pan_left[kNumStrings] = {
+  0.921954453f, 0.707106769f, 0.387298316f
+};
+const float string_pan_right[kNumStrings] = {
+  0.387298346f, 0.707106769f, 0.921954453f
+};
 
 void StringEngine::Render(
     const EngineParameters& parameters,
@@ -84,9 +91,7 @@ void StringEngine::Render(
   if ((PLAITS_STEREO_INHARMONIC_STRING && parameters.stereo)) {
     for (int i = 0; i < kNumStrings; ++i) {
       float string_out[kMaxBlockSize];
-      float exciter[kMaxBlockSize];
       fill(&string_out[0], &string_out[size], 0.0f);
-      fill(&exciter[0], &exciter[size], 0.0f);
       voice_[i].Render(
           parameters.trigger & TRIGGER_UNPATCHED && i == active_string_,
           parameters.trigger & TRIGGER_RISING_EDGE && i == active_string_,
@@ -98,10 +103,9 @@ void StringEngine::Render(
           exciter_size,
           temp_buffer_,
           string_out,
-          exciter,
           size);
-      float left_gain, right_gain;
-      StereoPanGains(string_pan[i], &left_gain, &right_gain);
+      const float left_gain = string_pan_left[i];
+      const float right_gain = string_pan_right[i];
       for (size_t j = 0; j < size; ++j) {
         out[j] += string_out[j] * left_gain;
         aux[j] += string_out[j] * right_gain;
@@ -122,8 +126,10 @@ void StringEngine::Render(
         exciter_size,
         temp_buffer_,
         out,
-        aux,
         size);
+    for (size_t j = 0; j < size; ++j) {
+      aux[j] += temp_buffer_[j];
+    }
   }
 }
 
