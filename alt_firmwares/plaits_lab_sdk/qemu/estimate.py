@@ -253,8 +253,8 @@ def main() -> int:
                 mapped.append(f"/contributor/{q.relative_to(src_root.parent)}")
 
         # One docker invocation builds every ELF. Under amd64 emulation the
-        # container start dominates, so batching turns a 5x sweep into roughly
-        # the cost of a single run.
+        # container start dominates, so batching turns a multi-point sweep
+        # into roughly the cost of a single run.
         commands = []
         for name, harm, timb, morph, macro, note in positions:
             for label, blocks in (("a", args.blocks_a), ("b", args.blocks_b)):
