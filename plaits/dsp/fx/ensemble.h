@@ -61,10 +61,17 @@ class Ensemble {
     E::DelayLine<Memory, 0> line_l;
     E::DelayLine<Memory, 1> line_r;
     E::Context c;
+
+    // These values are fixed for the whole audio block. Keeping local copies
+    // also makes it clear to the old ARM compiler that the FX context writes
+    // cannot alias the Ensemble controls.
+    const float amount = amount_;
+    const float dry_amount = 1.0f - amount * 0.5f;
+    const float a = depth_ * 160.0f;
+    const float b = depth_ * 16.0f;
     
     while (size--) {
       engine_.Start(&c);
-      float dry_amount = 1.0f - amount_ * 0.5f;
     
       // Update LFO.
       const uint32_t one_third = 1417339207UL;
@@ -80,9 +87,6 @@ class Ensemble {
       float fast_240 = SineRaw(phase_2_ + two_third);
       
       // Max deviation: 176
-      float a = depth_ * 160.0f;
-      float b = depth_ * 16.0f;
-      
       float mod_1 = slow_0 * a + fast_0 * b;
       float mod_2 = slow_120 * a + fast_120 * b;
       float mod_3 = slow_240 * a + fast_240 * b;
@@ -99,13 +103,13 @@ class Ensemble {
       c.Interpolate(line_l, mod_2 + 192, 0.33f);
       c.Interpolate(line_r, mod_3 + 192, 0.33f);
       c.Write(wet, 0.0f);
-      *left = wet * amount_ + *left * dry_amount;
+      *left = wet * amount + *left * dry_amount;
       
       c.Interpolate(line_r, mod_1 + 192, 0.33f);
       c.Interpolate(line_r, mod_2 + 192, 0.33f);
       c.Interpolate(line_l, mod_3 + 192, 0.33f);
       c.Write(wet, 0.0f);
-      *right = wet * amount_ + *right * dry_amount;
+      *right = wet * amount + *right * dry_amount;
       left++;
       right++;
     }
