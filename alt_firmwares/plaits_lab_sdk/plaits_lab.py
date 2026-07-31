@@ -962,6 +962,15 @@ WASM_EXPORTS = ('["_init","_render","_set_params","_set_randomizer_amounts",'
                '"_set_stereo","_stereo_capable","_main_out","_aux_out",'
                '"_current_timbre","_current_morph"]')
 
+# Shared motion algorithm, compact engine/parameter tuning records. Zero is the
+# conservative fallback compiled for engines that have not had a listening pass.
+RANDOMIZER_PROFILE_IDS = {
+    "virtual-analog": 1,
+    "fold": 2,
+    "vowel-fof": 3,
+    "granular-cloud": 4,
+}
+
 
 def compile_wasm(package: dict[str, Any], output: Path) -> None:
     """Compile the package to a standalone .wasm for the browser live-audition
@@ -972,6 +981,7 @@ def compile_wasm(package: dict[str, Any], output: Path) -> None:
     if emcc is None:
         raise PackageError("emscripten (emcc) not on PATH; run `source <emsdk>/emsdk_env.sh`")
     manifest = package["manifest"]
+    randomizer_profile = RANDOMIZER_PROFILE_IDS.get(manifest.get("catalogId"), 0)
     compiled = engine_translation_units(package, Path(__file__).with_name("wasm_audition.cc"))
     command = [
         emcc,
@@ -979,6 +989,7 @@ def compile_wasm(package: dict[str, Any], output: Path) -> None:
         f'-DPLAITS_LAB_ENGINE_HEADER="{engine_header_define(package)}"',
         f'-DPLAITS_LAB_ENGINE_CLASS=plaits::{manifest["source"]["className"]}',
         f'-DPLAITS_LAB_USER_DATA_BANK={package.get("user_data_bank", -1)}',
+        f"-DPLAITS_LAB_RANDOMIZER_PROFILE={randomizer_profile}",
         "-I", str(package["repo_root"]),
         "-I", str(package["source_root"]),
         *compiled,
