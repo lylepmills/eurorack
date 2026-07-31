@@ -199,9 +199,7 @@ void FoldEngine::Reset() {
   downsampler_state_ = 0.0f;
   downsampler_state_aux_ = 0.0f;
   dc_input_ = 0.0f;
-  dc_output_ = 0.0f;
   dc_input_aux_ = 0.0f;
-  dc_output_aux_ = 0.0f;
 }
 
 void FoldEngine::Render(
@@ -296,11 +294,11 @@ void FoldEngine::Render(
 
     ONE_POLE(dc_input_, raw, 0.001f);
     ONE_POLE(dc_input_aux_, raw_aux, 0.001f);
-    dc_output_ = raw - dc_input_;
-    dc_output_aux_ = raw_aux - dc_input_aux_;
+    const float dc_output = raw - dc_input_;
+    const float dc_output_aux = raw_aux - dc_input_aux_;
 
-    *out++ = dc_output_;
-    *aux++ = dc_output_aux_;
+    *out++ = dc_output;
+    *aux++ = dc_output_aux;
   }
 }
 

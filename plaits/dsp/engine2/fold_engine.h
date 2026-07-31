@@ -126,9 +126,7 @@ class FoldEngine : public Engine {
   float downsampler_state_aux_;
 
   float dc_input_;
-  float dc_output_;
   float dc_input_aux_;
-  float dc_output_aux_;
 
   DISALLOW_COPY_AND_ASSIGN(FoldEngine);
 };
