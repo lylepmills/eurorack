@@ -92,12 +92,45 @@ void Resonator::Process(
   float mode_q[kModeBatchSize];
   float mode_f[kModeBatchSize];
   float mode_a[kModeBatchSize];
+
+  if (resolution_ < kModeBatchSize) {
+    fill(&out[0], &out[size], 0.0f);
+    return;
+  }
+
+  // Render the first complete batch separately so it can overwrite OUT.
+  // Subsequent batches retain the original additive accumulation.
+  for (int i = 0; i < kModeBatchSize; ++i) {
+    float mode_frequency = harmonic * stretch_factor;
+    if (mode_frequency >= 0.499f) {
+      mode_frequency = 0.499f;
+    }
+    const float mode_attenuation = 1.0f - mode_frequency * 2.0f;
+
+    mode_f[i] = mode_frequency;
+    mode_q[i] = 1.0f + mode_frequency * q;
+    mode_a[i] = mode_amplitude_[i] * mode_attenuation;
+
+    stretch_factor += stiffness;
+    if (stiffness < 0.0f) {
+      stiffness *= 0.93f;
+    } else {
+      stiffness *= 0.98f;
+    }
+    harmonic += f0;
+    q *= q_loss;
+  }
+  mode_filters_[0].Process<FILTER_MODE_BAND_PASS, false>(
+      mode_f,
+      mode_q,
+      mode_a,
+      in,
+      out,
+      size);
+
   int batch_counter = 0;
-  
-  ResonatorSvf<kModeBatchSize>* batch_processor = &mode_filters_[0];
-  
-  
-  for (int i = 0; i < resolution_; ++i) {
+  ResonatorSvf<kModeBatchSize>* batch_processor = &mode_filters_[1];
+  for (int i = kModeBatchSize; i < resolution_; ++i) {
     float mode_frequency = harmonic * stretch_factor;
     if (mode_frequency >= 0.499f) {
       mode_frequency = 0.499f;
@@ -154,19 +187,62 @@ void Resonator::ProcessStereo(
   brightness *= 1.0f - damping * 0.3f;
   float q_loss = brightness * (2.0f - brightness) * 0.85f + 0.15f;
 
-  float even_left, even_right, odd_left, odd_right;
-  StereoPanGains(0.17f, &even_left, &even_right);
-  StereoPanGains(0.83f, &odd_left, &odd_right);
+  // Exact binary32 results of sqrtf(0.83f) and sqrtf(0.17f). The positions are
+  // mirror images, so the odd-mode gains are the even-mode gains swapped.
+  // Keeping these fixed values avoids four square roots on every audio block.
+  const float even_left = 0x1.d27446p-1f;
+  const float even_right = 0x1.a634bep-2f;
+  const float odd_left = even_right;
+  const float odd_right = even_left;
 
   float mode_q[kModeBatchSize];
   float mode_f[kModeBatchSize];
   float mode_a_left[kModeBatchSize];
   float mode_a_right[kModeBatchSize];
+
+  if (resolution_ < kModeBatchSize) {
+    fill(&left[0], &left[size], 0.0f);
+    fill(&right[0], &right[size], 0.0f);
+    return;
+  }
+
+  // Render the first complete batch separately so it can overwrite both
+  // channels. Subsequent batches retain the original additive accumulation.
+  for (int i = 0; i < kModeBatchSize; ++i) {
+    float mode_frequency = harmonic * stretch_factor;
+    if (mode_frequency >= 0.499f) {
+      mode_frequency = 0.499f;
+    }
+    const float mode_attenuation = 1.0f - mode_frequency * 2.0f;
+    const float mode_amplitude = mode_amplitude_[i] * mode_attenuation;
+
+    mode_f[i] = mode_frequency;
+    mode_q[i] = 1.0f + mode_frequency * q;
+    mode_a_left[i] = mode_amplitude * ((i & 1) ? odd_left : even_left);
+    mode_a_right[i] = mode_amplitude * ((i & 1) ? odd_right : even_right);
+
+    stretch_factor += stiffness;
+    if (stiffness < 0.0f) {
+      stiffness *= 0.93f;
+    } else {
+      stiffness *= 0.98f;
+    }
+    harmonic += f0;
+    q *= q_loss;
+  }
+  mode_filters_[0].ProcessStereo<FILTER_MODE_BAND_PASS, false>(
+      mode_f,
+      mode_q,
+      mode_a_left,
+      mode_a_right,
+      in,
+      left,
+      right,
+      size);
+
   int batch_counter = 0;
-
-  ResonatorSvf<kModeBatchSize>* batch_processor = &mode_filters_[0];
-
-  for (int i = 0; i < resolution_; ++i) {
+  ResonatorSvf<kModeBatchSize>* batch_processor = &mode_filters_[1];
+  for (int i = kModeBatchSize; i < resolution_; ++i) {
     float mode_frequency = harmonic * stretch_factor;
     if (mode_frequency >= 0.499f) {
       mode_frequency = 0.499f;

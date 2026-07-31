@@ -57,9 +57,6 @@ void ModalEngine::Render(
     float* aux,
     size_t size,
     bool* already_enveloped) {
-  fill(&out[0], &out[size], 0.0f);
-  fill(&aux[0], &aux[size], 0.0f);
-  
   ONE_POLE(harmonics_lp_, parameters.harmonics, 0.01f);
   
   const bool sustain = parameters.trigger & TRIGGER_UNPATCHED;
@@ -84,6 +81,10 @@ void ModalEngine::Render(
     return;
   }
 
+  // The resonator's first mode batch overwrites OUT. AUX remains the raw
+  // exciter in mono mode, and ModalVoice accumulates it, so only that buffer
+  // needs clearing here.
+  fill(&aux[0], &aux[size], 0.0f);
   voice_.Render(
       sustain,
       parameters.trigger & TRIGGER_RISING_EDGE,
