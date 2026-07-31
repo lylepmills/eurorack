@@ -251,9 +251,10 @@ const int32_t kWaveScanMapCells = 15;
 // wave_line[] holds 64 entries and Braids indexes one past the scan position.
 const int32_t kWaveScanLineLast = 63;
 
-// The 96 kHz -> 48 kHz halfband needs 19 taps of history; 32 keeps the ring
-// mask a single AND.
+// The 96 kHz -> 48 kHz halfband needs 19 taps of history. Mirror the logical
+// 32-float ring so the reverse 19-sample window is contiguous after one mask.
 const size_t kWaveScanDecimatorSize = 32;
+const size_t kWaveScanDecimatorStorageSize = 2 * kWaveScanDecimatorSize;
 const uint32_t kWaveScanDecimatorMask = 31;
 
 // R4: the internal stream runs 4x, so the per-sub-sample increment is clamped
@@ -283,8 +284,11 @@ class WaveScanEngine : public Engine {
 
  private:
   inline void Push(float main, float side) {
-    decimator_main_[decimator_write_ & kWaveScanDecimatorMask] = main;
-    decimator_aux_[decimator_write_ & kWaveScanDecimatorMask] = side;
+    const uint32_t index = decimator_write_ & kWaveScanDecimatorMask;
+    decimator_main_[index] = main;
+    decimator_main_[index + kWaveScanDecimatorSize] = main;
+    decimator_aux_[index] = side;
+    decimator_aux_[index + kWaveScanDecimatorSize] = side;
     ++decimator_write_;
   }
 
@@ -300,8 +304,8 @@ class WaveScanEngine : public Engine {
 
   stmlib::HysteresisQuantizer2 model_quantizer_;
 
-  float decimator_main_[kWaveScanDecimatorSize];
-  float decimator_aux_[kWaveScanDecimatorSize];
+  float decimator_main_[kWaveScanDecimatorStorageSize];
+  float decimator_aux_[kWaveScanDecimatorStorageSize];
   uint32_t decimator_write_;
 
   DISALLOW_COPY_AND_ASSIGN(WaveScanEngine);

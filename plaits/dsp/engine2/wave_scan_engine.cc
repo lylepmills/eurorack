@@ -2256,7 +2256,9 @@ inline float Offset(float balance, float amount) {
 // 16 kHz, -1.41 dB at 20 kHz and -3.15 dB at 22 kHz, with a worst-case alias
 // residue of -10.4 dB at 26 kHz falling to -38.4 dB by 32 kHz.
 inline float Decimate(const float* buffer, uint32_t write) {
-#define WS_TAP(j) buffer[(write - 1u - (j)) & kWaveScanDecimatorMask]
+  const float* newest = buffer + kWaveScanDecimatorSize
+      + ((write - 1u) & kWaveScanDecimatorMask);
+#define WS_TAP(j) newest[-(j)]
   return 0.49863366f * WS_TAP(9)
       + 0.30863382f * (WS_TAP(8) + WS_TAP(10))
       - 0.08147628f * (WS_TAP(6) + WS_TAP(12))
@@ -2269,8 +2271,8 @@ inline float Decimate(const float* buffer, uint32_t write) {
 }  // namespace
 
 void WaveScanEngine::Init(BufferAllocator* allocator) {
-  // Two 32-float decimator rings and a handful of integers; nothing from the
-  // shared arena.
+  // Two mirrored 32-float decimator rings and a handful of integers; nothing
+  // from the shared arena.
   (void) allocator;
   model_quantizer_.Init(WAVE_SCAN_MODEL_LAST, 0.05f, false);
   Reset();
@@ -2288,7 +2290,7 @@ void WaveScanEngine::Reset() {
   bank_parameter_ = 0;
   scan_ = 0;
   previous_scan_ = 0;
-  for (size_t i = 0; i < kWaveScanDecimatorSize; ++i) {
+  for (size_t i = 0; i < kWaveScanDecimatorStorageSize; ++i) {
     decimator_main_[i] = 0.0f;
     decimator_aux_[i] = 0.0f;
   }
