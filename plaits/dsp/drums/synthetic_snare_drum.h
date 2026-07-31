@@ -86,6 +86,15 @@ class SyntheticSnareDrum {
     const float snare_decay = 1.0f - 1.0f / (0.01f * kSampleRate) * \
         stmlib::SemitonesToRatio(-decay * 60.0f - snappy * 7.0f);
     const float fm_decay = 1.0f - 1.0f / (0.007f * kSampleRate);
+
+    // These depend only on block-rate parameters. They used to be rebuilt
+    // for every sample even though neither changes inside the render loop.
+    float reset_noise_amount = (0.125f - f0) * 8.0f;
+    CONSTRAIN(reset_noise_amount, 0.0f, 1.0f);
+    reset_noise_amount *= reset_noise_amount;
+    reset_noise_amount *= fm_amount;
+    const float reset_noise_scale = reset_noise_amount * 0.025f;
+    const float mode_ratio = 1.0f + 0.47f * mode_spread;
     
     snappy = snappy * 1.1f - 0.05f;
     CONSTRAIN(snappy, 0.0f, 1.0f);
@@ -137,17 +146,13 @@ class SyntheticSnareDrum {
       // leaving Q40's collector and resetting all oscillators allow some
       // intermodulation.
       float reset_noise = 0.0f;
-      float reset_noise_amount = (0.125f - f0) * 8.0f;
-      CONSTRAIN(reset_noise_amount, 0.0f, 1.0f);
-      reset_noise_amount *= reset_noise_amount;
-      reset_noise_amount *= fm_amount;
       reset_noise += phase_[0] > 0.5f ? -1.0f : 1.0f;
       reset_noise += phase_[1] > 0.5f ? -1.0f : 1.0f;
-      reset_noise *= reset_noise_amount * 0.025f;
+      reset_noise *= reset_noise_scale;
 
       float f = f0 * (1.0f + fm_amount * (4.0f * fm_));
       phase_[0] += f;
-      phase_[1] += f * (1.0f + 0.47f * mode_spread);
+      phase_[1] += f * mode_ratio;
       if (reset_noise_amount > 0.1f) {
         if (phase_[0] >= 1.0f + reset_noise) {
           phase_[0] = 1.0f - phase_[0];

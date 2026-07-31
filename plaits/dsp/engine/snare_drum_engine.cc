@@ -39,6 +39,10 @@ namespace plaits {
 using namespace std;
 using namespace stmlib;
 
+// Equal-power gains for the fixed 0.3 / 0.7 stereo positions.
+const float kSnareNearPan = 0.836660028f;  // sqrt(0.7)
+const float kSnareFarPan = 0.547722578f;  // sqrt(0.3)
+
 void SnareDrumEngine::Init(BufferAllocator* allocator) {
   analog_snare_drum_.Init();
   synthetic_snare_drum_.Init();
@@ -85,15 +89,11 @@ void SnareDrumEngine::Render(
   if ((PLAITS_STEREO_ANALOG_SNARE && parameters.stereo)) {
     // Spread the two snare models across the stereo field; snares tolerate
     // more width than kicks.
-    float analog_left, analog_right;
-    float synthetic_left, synthetic_right;
-    StereoPanGains(0.3f, &analog_left, &analog_right);
-    StereoPanGains(0.7f, &synthetic_left, &synthetic_right);
     for (size_t i = 0; i < size; ++i) {
       const float analog = out[i];
       const float synthetic = aux[i];
-      out[i] = analog * analog_left + synthetic * synthetic_left;
-      aux[i] = analog * analog_right + synthetic * synthetic_right;
+      out[i] = analog * kSnareNearPan + synthetic * kSnareFarPan;
+      aux[i] = analog * kSnareFarPan + synthetic * kSnareNearPan;
     }
   }
 }
