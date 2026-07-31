@@ -18,7 +18,8 @@
 // a note; this quantises every voice onto a scale, so wide spans are chords
 // rather than clusters and the whole stack transposes diatonically under the
 // keyboard. At span 1 in a whole-tone scale it is an interval stack no cent
-// detune reaches; at span 2 in a major scale it is a thirteenth chord.
+// detune reaches; at span 2 in a major scale it is a thirteenth chord. All five
+// Renaissance waveforms, including WTx6's wavetable scan, share MORPH.
 //
 // ⚠️ AS IN `diatonic-chord`, upstream's offsets are read as ABSOLUTE. RenderStack
 // pre-accumulates its own spans (`acc += span; offsets[i] = acc`) into span,

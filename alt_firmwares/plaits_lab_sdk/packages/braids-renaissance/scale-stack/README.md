@@ -6,9 +6,9 @@ A port of the five STACK_* models from Tom Burns'
 Five oscillators starting at the played note and spaced an equal number of
 **scale degrees** apart, so one knob sweeps from a unison cluster out through
 stacked seconds, thirds, fourths and beyond — and every rung stays in the scale,
-which is what makes the sweep musical rather than an interval ramp. Four of the
-five display models fold onto MORPH; the wavetable one is dropped for the reason
-given in `diatonic-chord`'s README.
+which is what makes the sweep musical rather than an interval ramp. All five
+display models fold onto MORPH, ending in WTx6's wavetable scan; the Plaits-native
+mapping and measured substitution are documented in `diatonic-chord`'s README.
 
 ## Why it is not `swarm` or `triple`
 
@@ -21,12 +21,13 @@ chord that stays a thirteenth chord wherever you play it.
 ## Controls
 
 HARMONICS is the span, 1–16 scale degrees. MACRO picks the scale from the same
-eight `diatonic-chord` uses — and it matters more here, because the span counts
+sixteen `diatonic-chord` uses — and it matters more here, because the span counts
 in whatever the scale's degrees are: span 2 is a third in major and a fourth in
 pentatonic.
 
-TIMBRE detunes the voices symmetrically against each other and folds them where
-MORPH is still near a sine, as in `diatonic-chord`.
+TIMBRE detunes the voices symmetrically against each other, folds them where
+MORPH is still near a sine, and scans the table at the WTx6 endpoint, as in
+`diatonic-chord`.
 
 ## ⚠️ Upstream arithmetic is not reproduced
 
@@ -54,5 +55,6 @@ bank. The full scale list and the remaining notes live in that engine's README.
 Braids' `kStackSize` was 6 but `RenderStack` only ever filled five voices; five
 is what this ports.
 
-Host CPU is close to `triple`'s -- a smoke signal, not a budget; see
-`diatonic-chord`'s README.
+The calibrated Cortex-M4 sweep estimates 95% worst-case. The transition-path
+optimization, A/B delta, hardware-probe requirement, and cold/shared flash
+cases are covered in `diatonic-chord`'s README.

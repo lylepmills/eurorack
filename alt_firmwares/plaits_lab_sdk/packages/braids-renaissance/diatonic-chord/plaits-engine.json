@@ -27,13 +27,13 @@
     },
     {
       "id": "timbre",
-      "label": "Spread",
-      "description": "Detunes the voices against each other, and folds them where the waveform is still a sine."
+      "label": "Spread / Scan",
+      "description": "Detunes the voices, folds them near sine, and scans the table at the WTCH endpoint."
     },
     {
       "id": "morph",
       "label": "Waveform",
-      "description": "Morphs every voice from sine through triangle and saw to square."
+      "description": "Morphs every voice through sine, triangle, saw and square to WTCH's wavetable."
     },
     {
       "id": "macro",

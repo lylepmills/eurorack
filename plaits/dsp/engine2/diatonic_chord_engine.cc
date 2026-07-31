@@ -110,7 +110,15 @@ void DiatonicChordEngine::Render(
   const float fold = parameters.timbre;
 
   voices_.Render(
-      notes, num_voices, waveform, detune, fold, out, aux, size);
+      notes,
+      num_voices,
+      waveform,
+      parameters.timbre,
+      detune,
+      fold,
+      out,
+      aux,
+      size);
 }
 
 }  // namespace plaits

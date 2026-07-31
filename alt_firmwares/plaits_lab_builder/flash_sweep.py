@@ -113,22 +113,24 @@ def build_size(tag, recipe):
     key = hashlib.sha256(json.dumps(recipe, sort_keys=True).encode()).hexdigest()
     payload = {'buildKey': key, 'recipe': recipe}
     try:
-        elf_dir, _ = cs.build_firmware(payload)
+        artifact_path, _output, _metadata = cs.build_firmware(payload)
     except Exception as error:  # noqa: BLE001 - report and continue the sweep
         print('%-22s BUILD FAILED %s' % (tag, error), flush=True)
+        detail = getattr(error, 'detail', '')
+        if detail:
+            print(detail[-4000:], flush=True)
         return None
     elf = None
     for candidate in ('plaits.elf', 'rubato-plaits.elf'):
-        path = elf_dir.parent / candidate if elf_dir.is_file() else elf_dir / candidate
+        path = artifact_path.parent / candidate
         if path.exists():
             elf = path
             break
     if elf is None:
         import pathlib
-        found = list(pathlib.Path(elf_dir if elf_dir.is_dir() else elf_dir.parent)
-                     .rglob('*.elf'))
+        found = list(artifact_path.parent.rglob('*.elf'))
         if not found:
-            print('%-22s NO ELF in %s' % (tag, elf_dir), flush=True)
+            print('%-22s NO ELF beside %s' % (tag, artifact_path), flush=True)
             return None
         elf = found[0]
     text, data, _bss = cs.parse_size(elf)

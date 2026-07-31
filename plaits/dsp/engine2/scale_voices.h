@@ -101,12 +101,13 @@ class ScaleVoiceBank {
   void Reset();
 
   // `notes` holds `num_voices` MIDI notes; voice 0 is the root and is the one
-  // written to `aux`. `waveform` runs sine -> triangle -> saw -> square,
-  // `detune_cents` and `fold` come off TIMBRE.
+  // written to `aux`. `waveform` runs sine -> triangle -> saw -> square ->
+  // wavetable; `scan`, `detune_cents` and `fold` come off TIMBRE.
   void Render(
       const float* notes,
       int num_voices,
       float waveform,
+      float scan,
       float detune_cents,
       float fold,
       float* out,

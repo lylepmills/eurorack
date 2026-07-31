@@ -59,7 +59,15 @@ void ScaleStackEngine::Render(
   const float fold = parameters.timbre;
 
   voices_.Render(
-      notes, kScaleStackNumVoices, waveform, detune, fold, out, aux, size);
+      notes,
+      kScaleStackNumVoices,
+      waveform,
+      parameters.timbre,
+      detune,
+      fold,
+      out,
+      aux,
+      size);
 }
 
 }  // namespace plaits
