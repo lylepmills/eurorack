@@ -99,26 +99,80 @@ inline int BlowingEnvelope(int index) {
   return (509050880 - 425984 * i) / 23900;
 }
 
-// lut_blowing_jet, evaluated from its generator (lookup_tables.py:164-169)
-// rather than stored: `int(min(d^3 - d, 1) * 32767)` for d = index / 128 over
-// index 0..256. Reproduces all 257 entries at 0 LSB in float32 with truncation
-// TOWARD ZERO -- the direction Python's int() takes, and therefore the
-// direction braids/resources/resources.py's `int` converter took. Truncating
-// the other way (floor) misses by 1 LSB on every negative entry, which is the
-// whole lower half of the curve.
-//
-// Braids reads this table with NO interpolation
-// (digital_oscillator.cc:1444-1445), so the characteristic is a 128-step
-// staircase over 0..2 and the port reproduces that quantisation: take
-// `index >> 8` FIRST, then evaluate. Using the smooth cubic instead is exactly
-// the defect class the phase-2 guide's section 4 warns about.
+// Braids' lut_blowing_jet verbatim. The former closed-form evaluator produced
+// these same 257 integers, but paid for three floating-point multiplies and a
+// conversion on every internal sample. Braids reads the table with no
+// interpolation, so this is both its original implementation and exactly the
+// same 128-step staircase the port already produced.
+const int16_t kBlowingJet[257] = {
+       0,   -255,   -511,   -767,
+   -1022,  -1278,  -1532,  -1786,
+   -2039,  -2292,  -2544,  -2795,
+   -3044,  -3293,  -3541,  -3787,
+   -4031,  -4275,  -4516,  -4756,
+   -4994,  -5231,  -5465,  -5697,
+   -5927,  -6155,  -6381,  -6604,
+   -6824,  -7042,  -7257,  -7470,
+   -7679,  -7886,  -8089,  -8289,
+   -8486,  -8680,  -8870,  -9056,
+   -9239,  -9418,  -9594,  -9765,
+   -9932, -10095, -10254, -10409,
+  -10559, -10705, -10846, -10982,
+  -11114, -11241, -11363, -11480,
+  -11591, -11698, -11799, -11894,
+  -11984, -12069, -12147, -12220,
+  -12287, -12348, -12403, -12452,
+  -12494, -12530, -12560, -12583,
+  -12599, -12609, -12611, -12607,
+  -12596, -12578, -12552, -12519,
+  -12479, -12431, -12376, -12313,
+  -12242, -12163, -12077, -11982,
+  -11879, -11768, -11649, -11521,
+  -11384, -11239, -11085, -10923,
+  -10751, -10571, -10381, -10182,
+   -9974,  -9757,  -9530,  -9293,
+   -9047,  -8791,  -8526,  -8250,
+   -7964,  -7668,  -7362,  -7046,
+   -6719,  -6382,  -6034,  -5676,
+   -5306,  -4926,  -4535,  -4133,
+   -3719,  -3295,  -2859,  -2411,
+   -1952,  -1482,  -1000,   -506,
+       0,    517,   1048,   1590,
+    2144,   2711,   3291,   3883,
+    4487,   5105,   5735,   6378,
+    7034,   7704,   8386,   9082,
+    9791,  10514,  11250,  12000,
+   12764,  13542,  14333,  15139,
+   15959,  16793,  17642,  18504,
+   19382,  20274,  21181,  22102,
+   23039,  23990,  24957,  25939,
+   26936,  27948,  28976,  30019,
+   31079,  32153,  32767,  32767,
+   32767,  32767,  32767,  32767,
+   32767,  32767,  32767,  32767,
+   32767,  32767,  32767,  32767,
+   32767,  32767,  32767,  32767,
+   32767,  32767,  32767,  32767,
+   32767,  32767,  32767,  32767,
+   32767,  32767,  32767,  32767,
+   32767,  32767,  32767,  32767,
+   32767,  32767,  32767,  32767,
+   32767,  32767,  32767,  32767,
+   32767,  32767,  32767,  32767,
+   32767,  32767,  32767,  32767,
+   32767,  32767,  32767,  32767,
+   32767,  32767,  32767,  32767,
+   32767,  32767,  32767,  32767,
+   32767,  32767,  32767,  32767,
+   32767,  32767,  32767,  32767,
+   32767,  32767,  32767,  32767,
+   32767,  32767,  32767,  32767,
+   32767,  32767,  32767,  32767,
+   32767,
+};
+
 inline int BlowingJet(int index) {
-  const float d = static_cast<float>(index >> 8) * (1.0f / 128.0f);
-  float value = d * d * d - d;
-  if (value > 1.0f) {
-    value = 1.0f;
-  }
-  return static_cast<int>(value * 32767.0f);
+  return kBlowingJet[index >> 8];
 }
 
 // stmlib::Random's generator, so the breath noise has Braids' distribution
