@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "community",
+  "id": "rubato/renaissance-scrub-prototype",
+  "catalogId": "renaissance-scrub-prototype",
+  "version": "0.1.0",
+  "name": "Renaissance Scrub Prototype",
+  "author": "Lyle Mills",
+  "origin": "Community",
+  "artwork": {
+    "color": "#DC4A2C"
+  },
+  "license": "MIT",
+  "description": "A control-layout prototype for word playback: select a number, seek to a frame inside it, hold that frame without a trigger, or trigger playback forward from the seek point.",
+  "family": "Vocal",
+  "tags": [
+    "speech",
+    "vocal",
+    "phoneme",
+    "scrub",
+    "prototype"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Word",
+      "description": "Selects one of eleven words: zero through ten."
+    },
+    {
+      "id": "timbre",
+      "label": "Position",
+      "description": "Chooses the held frame; a trigger plays forward from this point."
+    },
+    {
+      "id": "morph",
+      "label": "Formant",
+      "description": "Shifts the apparent vocal-tract size without changing the played pitch."
+    },
+    {
+      "id": "macro",
+      "label": "Rate",
+      "description": "Changes word playback speed around the original rate at noon."
+    }
+  ],
+  "outputs": {
+    "main": "The held or playing LPC speech frame.",
+    "aux": "The LPC excitation signal before the vocal-tract filter."
+  },
+  "source": {
+    "root": "src",
+    "header": "renaissance-scrub-prototype_engine.h",
+    "files": [
+      "renaissance-scrub-prototype_engine.cc"
+    ],
+    "className": "RenaissanceScrubPrototypeEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": -0.7,
+    "auxGain": 0.8
+  },
+  "scenarios": "tests/scenarios.json",
+  "forkedFrom": "speech",
+  "upstream": "mutable-instruments/speech@1.0.0 (sha256:edc902ab4fd6d7861857f32fc833897dbe8a73bbcf6811ade937a0b140fba847)"
+}

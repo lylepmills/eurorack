@@ -1,0 +1,54 @@
+[
+  {
+    "id": "frozen-scan",
+    "name": "Frozen scan through five",
+    "durationSeconds": 5,
+    "note": 48,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.0, 1.0],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "whole-words",
+    "name": "Numbers from their beginnings",
+    "durationSeconds": 6,
+    "note": 48,
+    "triggerHz": 1.5,
+    "controls": {
+      "harmonics": [0.0, 1.0],
+      "timbre": [0.0, 0.0],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "offset-playback",
+    "name": "Retrigger five from moving offsets",
+    "durationSeconds": 6,
+    "note": 48,
+    "triggerHz": 2,
+    "controls": {
+      "harmonics": [0.5, 0.5],
+      "timbre": [0.0, 0.9],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "rate-and-formant",
+    "name": "Playback rate and vocal-tract sweep",
+    "durationSeconds": 6,
+    "note": 48,
+    "triggerHz": 1,
+    "controls": {
+      "harmonics": [0.75, 0.75],
+      "timbre": [0.0, 0.0],
+      "morph": [0.15, 0.85],
+      "macro": [0.0, 1.0]
+    }
+  }
+]

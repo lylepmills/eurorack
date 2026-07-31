@@ -258,6 +258,16 @@ versions are unique, and published versions are immutable.
 $SDK build ./$PKG/my-engine --hardware --output /tmp/my-engine-firmware.wav
 ```
 
+For an on-module A/B, add one built-in catalog model after the draft engine:
+
+```sh
+$SDK build ./$PKG/my-engine --hardware --compare-with speech \
+  --output /tmp/my-engine-versus-speech.wav
+```
+
+The draft is the first model and the comparison is the second model in the
+green bank. This remains a local, unreviewed firmware build.
+
 This produces an **UNREVIEWED** audio updater for hardware the contributor
 controls. The CLI uses a local ARM 4.8.3 toolchain when present and otherwise
 runs `plaits-lab-builder:local` through Docker. Hosted firmware builds never

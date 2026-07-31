@@ -422,6 +422,25 @@ class PackageTests(unittest.TestCase):
             self.assertIn("#define PLAITS_BANK_SIZES { 1, 0, 0 }", config)
             self.assertIn("#define PLAITS_ENGINE_ROWS { 0 }", config)
 
+    def test_local_hardware_config_can_add_one_builtin_for_ab(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            pkg_dir = Path(temp_dir) / "ab"
+            with redirect_stdout(io.StringIO()):
+                plaits_lab.init_command(SimpleNamespace(
+                    output=str(pkg_dir), from_engine="blank", author="T",
+                    package_id="test-author/ab", slug="ab", name="AB"))
+            config = plaits_lab.render_local_hardware_config(
+                plaits_lab.load_package(str(pkg_dir)), compare_with="speech")
+            self.assertEqual(config.count("RegisterInstance"), 2)
+            self.assertLess(config.index("community_ab_engine_"),
+                            config.index("speech_engine_"))
+            self.assertIn('#include "plaits/dsp/engine/speech_engine.h"', config)
+            self.assertIn("#define PLAITS_ENGINE_COUNT 2", config)
+            self.assertIn("#define PLAITS_BANK_SIZES { 2, 0, 0 }", config)
+            self.assertIn("#define PLAITS_ENGINE_ROWS { 0, 1 }", config)
+            self.assertIn("#define PLAITS_HAS_SPEECH_ENGINE 1", config)
+            self.assertIn("kSpeechEngineMask = 0x00000002", config)
+
     def test_hardware_build_reports_host_output_path(self) -> None:
         # The container writes the WAV to /output/<name> (a mount of the host dir);
         # the message must show the HOST path, or the user can't find the file.
