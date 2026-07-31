@@ -167,10 +167,12 @@ const int kVowelNumFormants = 3;
 // The port's inner loop runs at Braids' own 96 kHz.
 const int kVowelOversampling = 2;
 
-// The 31-tap halfband decimator's history, rounded up to a power of two so the
-// circular index masks. Its furthest reach is x[n - 30].
+// The 31-tap halfband decimator's logical history, rounded up to a power of
+// two. The physical buffer mirrors that history so the 31-sample FIR window is
+// contiguous even when it crosses the circular boundary.
 const int kVowelFirMask = 31;
 const int kVowelFirSize = 32;
+const int kVowelFirBufferSize = kVowelFirSize * 2;
 
 // digital_oscillator.cc:478, `consonant_frames = 160`, decremented once per
 // 24-sample block: 3840 samples at 96 kHz, which is 40 ms.
@@ -252,8 +254,8 @@ class VowelEngine : public Engine {
   // stmlib::Random seeded as the module seeds it (random.cc:34).
   uint32_t rng_state_;
 
-  float fir_a_[kVowelFirSize];
-  float fir_b_[kVowelFirSize];
+  float fir_a_[kVowelFirBufferSize];
+  float fir_b_[kVowelFirBufferSize];
   int fir_write_;
 
   float dc_input_;

@@ -193,18 +193,18 @@ const float kHalfband[9] = {
   -0.0000012732f
 };
 
-// buffer[(write - 1 - j) & mask] is x[n - j], with `write` the index one past
-// the newest sub-sample, so the centre tap sits on x[n - 15] and the surviving
-// pairs sit at ODD offsets from it: h[14]/h[16] at +-1, h[12]/h[18] at +-3, and
-// so on out to h[0]/h[30] at +-15. The furthest reach is x[n - 30], inside the
-// 32-entry history.
+// Each 32-sample history is mirrored into a 64-entry buffer. With `write` one
+// past the newest sub-sample, `buffer + (write & 31) + 16` is x[n - 15] in a
+// contiguous copy of the history. The surviving pairs sit at ODD offsets from
+// it: h[14]/h[16] at +-1, h[12]/h[18] at +-3, and so on out to h[0]/h[30] at
+// +-15. This preserves the exact accumulation order without masking every tap.
 inline float Decimate(const float* buffer, int write) {
-  const int centre = write - 16;
-  float sum = kHalfband[0] * buffer[centre & kVowelFirMask];
+  const float* centre =
+      buffer + (write & kVowelFirMask) + kVowelFirSize / 2;
+  float sum = kHalfband[0] * centre[0];
   for (int k = 1; k < 9; ++k) {
     const int offset = 2 * k - 1;
-    sum += kHalfband[k] * (buffer[(centre + offset) & kVowelFirMask] +
-                           buffer[(centre - offset) & kVowelFirMask]);
+    sum += kHalfband[k] * (centre[offset] + centre[-offset]);
   }
   return sum;
 }
@@ -239,9 +239,11 @@ inline int ReadSquareFormant(uint32_t phase, int amplitude) {
 inline uint32_t ScaleIncrement(uint32_t increment, float scale) {
   uint32_t result = increment;
   if (scale != 1.0f) {
-    float scaled = static_cast<float>(increment) * scale;
-    CONSTRAIN(scaled, 0.0f, 4294967040.0f);
-    result = static_cast<uint32_t>(scaled);
+    // The largest table-derived increment is 121 * 0x1000 * 711 =
+    // 352382976, and Spread plus stereo detune cannot scale it above 2.04.
+    // Their product is below 719 million, safely inside uint32_t.
+    result = static_cast<uint32_t>(
+        static_cast<float>(increment) * scale);
   }
   if (result > kVowelMaxFormantIncrement) {
     result = kVowelMaxFormantIncrement;
@@ -284,7 +286,7 @@ void VowelEngine::Reset() {
   consonant_samples_ = 0;
   strike_pending_ = true;
   rng_state_ = 0x21;
-  for (int i = 0; i < kVowelFirSize; ++i) {
+  for (int i = 0; i < kVowelFirBufferSize; ++i) {
     fir_a_[i] = 0.0f;
     fir_b_[i] = 0.0f;
   }
@@ -446,10 +448,15 @@ void VowelEngine::Render(
       // int16 headroom: the largest stack over every reachable amplitude
       // triple is 108 and 108 * 255 = 27540, so neither Braids' int16 nor this
       // int wraps. Measured, not assumed.
-      fir_a_[fir_write_ & kVowelFirMask] = ReadOverdrive(sample);
-      fir_b_[fir_write_ & kVowelFirMask] = stereo
+      const int fir_index = fir_write_ & kVowelFirMask;
+      const float fir_a = ReadOverdrive(sample);
+      const float fir_b = stereo
           ? ReadOverdrive(sample_r)
           : static_cast<float>(sample) * (1.0f / 32768.0f);
+      fir_a_[fir_index] = fir_a;
+      fir_a_[fir_index + kVowelFirSize] = fir_a;
+      fir_b_[fir_index] = fir_b;
+      fir_b_[fir_index + kVowelFirSize] = fir_b;
       ++fir_write_;
     }
 
