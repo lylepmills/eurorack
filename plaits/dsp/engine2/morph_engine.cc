@@ -117,16 +117,19 @@ inline float CutoffCoefficient(float cutoff_note) {
 // right. Every even tap of a halfband is zero, so only the odd offsets and the
 // centre are summed.
 inline float MorphEngine::Decimate(const float* history) const {
-  const int p = history_position_;
-  return kMorphHalfbandCentre * history[(p - 16) & 31]
-      + kMorphHalfband1 * (history[(p - 15) & 31] + history[(p - 17) & 31])
-      + kMorphHalfband3 * (history[(p - 13) & 31] + history[(p - 19) & 31])
-      + kMorphHalfband5 * (history[(p - 11) & 31] + history[(p - 21) & 31])
-      + kMorphHalfband7 * (history[(p - 9) & 31] + history[(p - 23) & 31])
-      + kMorphHalfband9 * (history[(p - 7) & 31] + history[(p - 25) & 31])
-      + kMorphHalfband11 * (history[(p - 5) & 31] + history[(p - 27) & 31])
-      + kMorphHalfband13 * (history[(p - 3) & 31] + history[(p - 29) & 31])
-      + kMorphHalfband15 * (history[(p - 1) & 31] + history[(p - 31) & 31]);
+  // Each logical entry is mirrored 32 floats later. Reading from the second
+  // copy makes the whole 31-tap window contiguous and removes the wrap mask
+  // from all seventeen history positions.
+  const int p = history_position_ + 32;
+  return kMorphHalfbandCentre * history[p - 16]
+      + kMorphHalfband1 * (history[p - 15] + history[p - 17])
+      + kMorphHalfband3 * (history[p - 13] + history[p - 19])
+      + kMorphHalfband5 * (history[p - 11] + history[p - 21])
+      + kMorphHalfband7 * (history[p - 9] + history[p - 23])
+      + kMorphHalfband9 * (history[p - 7] + history[p - 25])
+      + kMorphHalfband11 * (history[p - 5] + history[p - 27])
+      + kMorphHalfband13 * (history[p - 3] + history[p - 29])
+      + kMorphHalfband15 * (history[p - 1] + history[p - 31]);
 }
 
 void MorphEngine::Init(BufferAllocator* allocator) {
@@ -149,7 +152,7 @@ void MorphEngine::Reset() {
   lp_state_aux_ = 0.0f;
   dc_input_ = 0.0f;
   dc_input_aux_ = 0.0f;
-  for (int i = 0; i < 32; ++i) {
+  for (int i = 0; i < 64; ++i) {
     history_[i] = 0.0f;
     history_aux_[i] = 0.0f;
   }
@@ -349,19 +352,24 @@ void MorphEngine::Render(
       // crossfaded against the DRY pre-filter sample, not against the filtered
       // one. MACRO's drive is the only thing here Braids does not have.
       const float fuzzed = ReadShaper(lp_state_ * drive);
-      history_[history_position_] = sample + (fuzzed - sample) * fuzz;
+      const float processed = sample + (fuzzed - sample) * fuzz;
+      history_[history_position_] = processed;
+      history_[history_position_ + 32] = history_[history_position_];
 
       if (stereo) {
         lp_state_aux_ += (sample - lp_state_aux_) * lp_a_aux;
         CONSTRAIN(lp_state_aux_, -1.0f, 1.0f);
         const float fuzzed_aux = ReadShaper(lp_state_aux_ * drive);
-        history_aux_[history_position_] =
+        const float processed_aux =
             sample + (fuzzed_aux - sample) * fuzz_aux;
+        history_aux_[history_position_] = processed_aux;
       } else {
         // Mono AUX is the morph oscillator dry: the analog waveform the model
         // is built on, with neither the filter nor the fuzz on it.
         history_aux_[history_position_] = sample;
       }
+      history_aux_[history_position_ + 32] =
+          history_aux_[history_position_];
 
       history_position_ = (history_position_ + 1) & 31;
     }

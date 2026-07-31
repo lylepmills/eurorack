@@ -321,8 +321,10 @@ class MorphEngine : public Engine {
   float dc_input_;
   float dc_input_aux_;
 
-  float history_[32];
-  float history_aux_[32];
+  // Two mirrored copies turn each 31-tap decimator window into one contiguous
+  // span, avoiding a wrap mask at every tap without changing sample order.
+  float history_[64];
+  float history_aux_[64];
   int history_position_;
 
   DISALLOW_COPY_AND_ASSIGN(MorphEngine);
