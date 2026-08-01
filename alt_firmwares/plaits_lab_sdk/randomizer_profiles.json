@@ -41,6 +41,22 @@
       "farRate": 0.000004,
       "farCenterRelease": 0.30
     },
+    "pitch-interval": {
+      "topology": "pitch-like",
+      "nearSpan": 0.16,
+      "farSpan": 0.42,
+      "nearRate": 0.000006,
+      "farRate": 0.000003,
+      "farCenterRelease": 0.40
+    },
+    "event-rate": {
+      "topology": "event-rate",
+      "nearSpan": 0.24,
+      "farSpan": 0.58,
+      "nearRate": 0.000008,
+      "farRate": 0.000005,
+      "farCenterRelease": 0.60
+    },
     "threshold-guarded": {
       "topology": "threshold-sensitive",
       "nearSpan": 0.18,
@@ -262,6 +278,266 @@
           "farCenterRelease": 0.75
         }
       }
+    },
+    "glisson": {
+      "status": "seeded",
+      "timbre": "event-rate",
+      "morph": "centered"
+    },
+    "gendy": {
+      "status": "seeded",
+      "timbre": "broad-texture",
+      "morph": "broad-texture"
+    },
+    "scanned": {
+      "status": "seeded",
+      "timbre": "broad-texture",
+      "morph": "broad-texture"
+    },
+    "pulsar": {
+      "status": "seeded",
+      "timbre": "balanced",
+      "morph": "stepped-identity"
+    },
+    "loopback": {
+      "status": "seeded",
+      "timbre": "threshold-guarded",
+      "morph": "stepped-identity"
+    },
+    "lockstep": {
+      "status": "seeded",
+      "timbre": "threshold-guarded",
+      "morph": "patient-structure"
+    },
+    "tapfield": {
+      "status": "seeded",
+      "timbre": "stepped-identity",
+      "morph": "broad-texture"
+    },
+    "phase-weave": {
+      "status": "seeded",
+      "timbre": "balanced",
+      "morph": "centered"
+    },
+    "sideband-bank": {
+      "status": "seeded",
+      "timbre": "balanced",
+      "morph": "stepped-identity"
+    },
+    "attractor": {
+      "status": "seeded",
+      "timbre": "threshold-guarded",
+      "morph": "stepped-identity"
+    },
+    "undertow": {
+      "status": "seeded",
+      "timbre": "stepped-identity",
+      "morph": "centered"
+    },
+    "reed-pipe": {
+      "status": "seeded",
+      "timbre": "threshold-guarded",
+      "morph": "patient-structure"
+    },
+    "phase-flock": {
+      "status": "seeded",
+      "timbre": "threshold-guarded",
+      "morph": "patient-structure"
+    },
+    "rulefield": {
+      "status": "seeded",
+      "timbre": "balanced",
+      "morph": "event-rate"
+    },
+    "spectral-spiral": {
+      "status": "seeded",
+      "timbre": "pitch-interval",
+      "morph": "threshold-guarded"
+    },
+    "z-filter": {
+      "status": "seeded",
+      "timbre": "broad-texture",
+      "morph": "centered"
+    },
+    "toy": {
+      "status": "seeded",
+      "timbre": "event-rate",
+      "morph": "stepped-identity"
+    },
+    "csaw": {
+      "status": "seeded",
+      "timbre": "balanced",
+      "morph": "centered"
+    },
+    "ring-mod": {
+      "status": "seeded",
+      "timbre": "pitch-interval",
+      "morph": "balanced"
+    },
+    "buzz": {
+      "status": "seeded",
+      "timbre": "stepped-identity",
+      "morph": "centered"
+    },
+    "dual-sync": {
+      "status": "seeded",
+      "timbre": "pitch-interval",
+      "morph": "balanced"
+    },
+    "morph": {
+      "status": "seeded",
+      "timbre": "balanced",
+      "morph": "centered"
+    },
+    "noise-bank": {
+      "status": "seeded",
+      "timbre": "patient-structure",
+      "morph": "stepped-identity"
+    },
+    "particle-burst": {
+      "status": "seeded",
+      "timbre": "event-rate",
+      "morph": "pitch-interval"
+    },
+    "saw-square": {
+      "status": "seeded",
+      "timbre": "balanced",
+      "morph": "balanced"
+    },
+    "saw-swarm": {
+      "status": "seeded",
+      "timbre": "pitch-interval",
+      "morph": "centered"
+    },
+    "vowel": {
+      "status": "seeded",
+      "timbre": "pitch-interval",
+      "morph": "stepped-identity"
+    },
+    "harmonics": {
+      "status": "seeded",
+      "timbre": "pitch-interval",
+      "morph": "centered"
+    },
+    "vosim": {
+      "status": "seeded",
+      "timbre": "pitch-interval",
+      "morph": "balanced"
+    },
+    "plucked": {
+      "status": "seeded",
+      "timbre": "threshold-guarded",
+      "morph": "centered"
+    },
+    "blown": {
+      "status": "seeded",
+      "timbre": "patient-structure",
+      "morph": "threshold-guarded"
+    },
+    "struck-bell": {
+      "status": "seeded",
+      "timbre": "threshold-guarded",
+      "morph": "centered"
+    },
+    "struck-drum": {
+      "status": "seeded",
+      "timbre": "threshold-guarded",
+      "morph": "centered"
+    },
+    "kick": {
+      "status": "seeded",
+      "timbre": "threshold-guarded",
+      "morph": "centered"
+    },
+    "snare": {
+      "status": "seeded",
+      "timbre": "balanced",
+      "morph": "centered"
+    },
+    "cymbal": {
+      "status": "seeded",
+      "timbre": "balanced",
+      "morph": "centered"
+    },
+    "wave-scan": {
+      "status": "seeded",
+      "timbre": "broad-texture",
+      "morph": "stepped-identity"
+    },
+    "wave-paraphonic": {
+      "status": "seeded",
+      "timbre": "stepped-identity",
+      "morph": "patient-structure"
+    },
+    "fluted": {
+      "status": "seeded",
+      "timbre": "patient-structure",
+      "morph": "threshold-guarded"
+    },
+    "question-mark": {
+      "status": "seeded",
+      "timbre": "event-rate",
+      "morph": "broad-texture"
+    },
+    "bowed": {
+      "status": "seeded",
+      "timbre": "patient-structure",
+      "morph": "patient-structure"
+    },
+    "sub-oscillator": {
+      "status": "seeded",
+      "timbre": "balanced",
+      "morph": "centered"
+    },
+    "digital-modulation": {
+      "status": "seeded",
+      "timbre": "event-rate",
+      "morph": "balanced"
+    },
+    "saw-comb": {
+      "status": "seeded",
+      "timbre": "pitch-interval",
+      "morph": "balanced"
+    },
+    "raw-fm": {
+      "status": "seeded",
+      "timbre": "patient-structure",
+      "morph": "threshold-guarded"
+    },
+    "triple": {
+      "status": "seeded",
+      "timbre": "pitch-interval",
+      "morph": "balanced"
+    },
+    "bytebeat": {
+      "status": "seeded",
+      "timbre": "stepped-identity",
+      "morph": "stepped-identity"
+    },
+    "diatonic-chord": {
+      "status": "seeded",
+      "timbre": "pitch-interval",
+      "morph": "balanced"
+    },
+    "scale-stack": {
+      "status": "seeded",
+      "timbre": "pitch-interval",
+      "morph": "balanced"
+    },
+    "shakers": {
+      "status": "seeded",
+      "timbre": "threshold-guarded",
+      "morph": "threshold-guarded"
+    },
+    "brass": {
+      "status": "seeded",
+      "timbre": "threshold-guarded",
+      "morph": "patient-structure"
+    },
+    "helix": {
+      "status": "seeded",
+      "timbre": "centered",
+      "morph": "broad-texture"
     }
   }
 }

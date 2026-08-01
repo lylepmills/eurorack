@@ -792,11 +792,13 @@ class PackageTests(unittest.TestCase):
         self.assertIn("RANDOMIZER_DEAD_ZONE", html)
         self.assertIn("'Near' : 'Far'", html)
         registry = plaits_lab.load_randomizer_profile_registry()
-        stock_ids = {
+        catalog_ids = {
             engine["id"]
-            for engine in plaits_lab.read_json(plaits_lab.CATALOG_PATH)["engines"][:24]
+            for engine in plaits_lab.read_json(plaits_lab.CATALOG_PATH)["engines"]
         }
-        self.assertTrue(stock_ids <= set(registry["models"]))
+        self.assertEqual(catalog_ids, set(registry["models"]))
+        self.assertEqual(
+            sum(model["status"] == "tuned" for model in registry["models"].values()), 4)
         self.assertEqual(registry["models"]["virtual-analog"]["status"], "tuned")
         self.assertEqual(registry["models"]["fold"]["status"], "tuned")
         self.assertEqual(registry["models"]["vowel-fof"]["status"], "tuned")
@@ -807,6 +809,18 @@ class PackageTests(unittest.TestCase):
         chords = plaits_lab.randomizer_profile_for_catalog_id("chords")
         self.assertEqual(chords["status"], "seeded")
         self.assertEqual(chords["morph"]["topology"], "stepped")
+        self.assertEqual(
+            plaits_lab.randomizer_profile_for_catalog_id("rulefield")["morph"]["archetype"],
+            "event-rate")
+        self.assertEqual(
+            plaits_lab.randomizer_profile_for_catalog_id("ring-mod")["timbre"]["archetype"],
+            "pitch-interval")
+        self.assertEqual(
+            plaits_lab.randomizer_profile_for_catalog_id("helix")["timbre"]["archetype"],
+            "centered")
+        self.assertEqual(
+            plaits_lab.randomizer_profile_for_catalog_id("shakers")["morph"]["archetype"],
+            "threshold-guarded")
         fallback = plaits_lab.randomizer_profile_for_catalog_id("not-profiled-yet")
         self.assertEqual(fallback["status"], "fallback")
 
