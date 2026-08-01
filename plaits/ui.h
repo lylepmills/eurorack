@@ -131,6 +131,11 @@ class Ui {
          i <= POTS_ADC_CHANNEL_MORPH_POT; ++i) {
       pots_[i].Realign();
     }
+    // The right navigation button also arms the FM attenuverter's legacy
+    // extra-fine-tune target. A short navigation press must disarm it along
+    // with the four main knobs; otherwise the next ordinary FM adjustment is
+    // mistaken for hidden-parameter editing and opens the amber octave display.
+    pots_[POTS_ADC_CHANNEL_FM_ATTENUVERTER].Realign();
   }
 
   UiMode mode_;
