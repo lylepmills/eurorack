@@ -96,6 +96,10 @@ def parse_args() -> argparse.Namespace:
                         help="silence between words (default: 125)")
     parser.add_argument("--phoneme-chart", action="store_true",
                         help="render all 15 Plaits frames instead of text")
+    parser.add_argument("--formant-semitones", type=float, default=0.0,
+                        help="voice-register shift, -18..18 semitones (default: 0)")
+    parser.add_argument("--pitch-hz", type=float, default=100.0,
+                        help="fundamental frequency, 50..300 Hz (default: 100)")
     return parser.parse_args()
 
 
@@ -221,6 +225,10 @@ def main() -> int:
     args = parse_args()
     if args.word_gap_ms < 0 or args.word_gap_ms > 5000:
         raise SystemExit("--word-gap-ms must be between 0 and 5000")
+    if not -18.0 <= args.formant_semitones <= 18.0:
+        raise SystemExit("--formant-semitones must be between -18 and 18")
+    if not 50.0 <= args.pitch_hz <= 300.0:
+        raise SystemExit("--pitch-hz must be between 50 and 300")
     if args.phoneme_chart:
         plan, report = phoneme_chart_plan()
     else:
@@ -246,10 +254,14 @@ def main() -> int:
         for frame, ticks in plan:
             plan_file.write(f"{frame} {ticks}\n")
     try:
-        subprocess.run([str(args.renderer), str(plan_path), str(args.output)], check=True)
+        subprocess.run([
+            str(args.renderer), str(plan_path), str(args.output),
+            str(args.formant_semitones), str(args.pitch_hz),
+        ], check=True)
     finally:
         plan_path.unlink(missing_ok=True)
 
+    report.insert(1, f"Formant {args.formant_semitones:+.1f} semitones; pitch {args.pitch_hz:.1f} Hz")
     report_text = "\n".join(report) + "\n"
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)
