@@ -75,7 +75,7 @@ void SpeechEngine::Render(
     float blend = group;
     if (group <= 1.0f) {
       naive_speech_synth_.Render(
-          parameters.trigger == TRIGGER_RISING_EDGE,
+          parameters.trigger & TRIGGER_RISING_EDGE,
           f0,
           parameters.morph,
           parameters.timbre,
@@ -101,7 +101,7 @@ void SpeechEngine::Render(
     }
   
     sam_speech_synth_.Render(
-        parameters.trigger == TRIGGER_RISING_EDGE,
+        parameters.trigger & TRIGGER_RISING_EDGE,
         f0,
         parameters.morph,
         parameters.timbre,

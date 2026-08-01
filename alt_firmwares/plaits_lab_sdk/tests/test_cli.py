@@ -470,6 +470,61 @@ class PackageTests(unittest.TestCase):
             self.assertNotEqual(hashlib.sha256(idle_wav.read_bytes()).digest(),
                                 hashlib.sha256(triggered_wav.read_bytes()).digest())
 
+    def test_stock_speech_responds_to_hardware_trigger_flags(self) -> None:
+        package = plaits_lab.builtin_package("speech")
+        base_controls = {
+            "timbre": [0.37, 0.37],
+            "morph": [0.53, 0.53],
+            "macro": [0.5, 0.5],
+        }
+        # HARMONICS 0 is the Naive voice; 1/6 selects the SAM voice exactly.
+        # On hardware a rising edge is RISING_EDGE | HIGH, not RISING_EDGE by
+        # itself. Each voice must therefore react to the combined flag value.
+        for name, harmonics in (("naive", 0.0), ("sam", 1.0 / 6.0)):
+            controls = dict(base_controls)
+            controls["harmonics"] = [harmonics, harmonics]
+            idle = {
+                "id": f"{name}-idle", "durationSeconds": 1, "note": 48,
+                "triggerHz": 0, "controls": controls,
+            }
+            triggered = {
+                "id": f"{name}-triggered", "durationSeconds": 1, "note": 48,
+                "triggerHz": 2, "controls": controls,
+            }
+            with self.subTest(voice=name), tempfile.TemporaryDirectory() as temp_dir:
+                temp = Path(temp_dir)
+                renderer = plaits_lab.host_binary(temp, "speech-renderer")
+                plaits_lab.compile_renderer(package, renderer, None)
+                idle_wav = temp / "idle.wav"
+                triggered_wav = temp / "triggered.wav"
+                plaits_lab.run_scenario(package, renderer, idle, idle_wav)
+                plaits_lab.run_scenario(package, renderer, triggered, triggered_wav)
+                self.assertNotEqual(
+                    hashlib.sha256(idle_wav.read_bytes()).digest(),
+                    hashlib.sha256(triggered_wav.read_bytes()).digest())
+
+    def test_engines_do_not_compare_whole_trigger_to_rising_edge(self) -> None:
+        # EngineParameters.trigger is a bit field: on hardware a rising edge is
+        # RISING_EDGE | HIGH. Equality silently drops that edge, so production
+        # engines must test the RISING_EDGE bit instead.
+        roots = [
+            plaits_lab.REPO_ROOT / "plaits" / "dsp" / "engine",
+            plaits_lab.REPO_ROOT / "plaits" / "dsp" / "engine2",
+            SDK_DIR / "packages",
+            SDK_DIR / "diagnostics",
+        ]
+        offenders = []
+        for root in roots:
+            for suffix in ("*.cc", "*.h"):
+                for source_path in root.rglob(suffix):
+                    code = plaits_lab.strip_cpp_comments(
+                        source_path.read_text(encoding="utf-8"))
+                    compact = "".join(code.split())
+                    if ("==TRIGGER_RISING_EDGE" in compact or
+                            "TRIGGER_RISING_EDGE==" in compact):
+                        offenders.append(str(source_path.relative_to(plaits_lab.REPO_ROOT)))
+        self.assertEqual(offenders, [])
+
     def test_hardware_build_reports_host_output_path(self) -> None:
         # The container writes the WAV to /output/<name> (a mount of the host dir);
         # the message must show the HOST path, or the user can't find the file.
