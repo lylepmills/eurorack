@@ -107,7 +107,7 @@ def load_cmudict(path: Path) -> dict[str, list[str]]:
     pronunciations: dict[str, list[str]] = {}
     with path.open(encoding="latin-1") as source:
         for line in source:
-            line = line.strip()
+            line = line.split("#", 1)[0].strip()
             if not line or line.startswith(";;;"):
                 continue
             word, *phones = line.split()
