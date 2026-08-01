@@ -39,6 +39,16 @@ decision to interpret Renaissance's chord offsets as absolute scale degrees are
 shared with `diatonic-chord` and documented in its README. OUT is the complete
 chord; AUX is the root voice alone.
 
-The calibrated Cortex-M4 sweep estimates 74% worst-case (64–95%), substantially
-below the combined-engine prototype because there is no square-to-table
-crossfade. A hardware DWT probe remains the publication authority.
+The first sweep missed the three six-voice chord rows and understated the real
+worst case. Explicit 3/4/5/6-voice Cortex-M4 measurements found the old path at
+49/62/74/86% estimated CPU, with the six-voice uncertainty band reaching 110%
+and audible hardware breakup confirming the risk. Folding the two per-wave
+gains and scan crossfade into block-rate coefficients, then compacting the
+audible-voice loop, reduced the six-voice row from 446.8 to 387.5 instructions
+per sample: **75% estimated CPU (65–96%)**, with all six voices retained.
+
+Before/after renders differ by at most one 16-bit PCM LSB (218 of 384,000
+samples in the full-line hero; 139 of 288,000 at the bright top-of-range case),
+with 0.00 dB RMS and spectral deltas. The generic CPU sweep now includes the
+six-voice HARMONICS position so this regression cannot hide at the corners
+again. A hardware DWT probe remains the publication authority.

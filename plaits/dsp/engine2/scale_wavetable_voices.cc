@@ -55,9 +55,8 @@ const float kWavetableLevelMakeup = 2.5f;
 struct WaveTap {
   const int16_t* low;
   const int16_t* high;
-  float crossfade;
-  float gain_low;
-  float gain_high;
+  float low_weight;
+  float high_weight;
 };
 
 inline const int16_t* WaveAt(int slot) {
@@ -70,9 +69,12 @@ inline void ResolveWaveTap(float scan, WaveTap* tap) {
   const int slot = static_cast<int>(position);
   tap->low = WaveAt(slot);
   tap->high = WaveAt(slot + 1);
-  tap->crossfade = position - static_cast<float>(slot);
-  tap->gain_low = static_cast<float>(kWaveGain[slot]) / 128.0f;
-  tap->gain_high = static_cast<float>(kWaveGain[slot + 1]) / 128.0f;
+  const float crossfade = position - static_cast<float>(slot);
+  const float scale = kIntegratedScale * kWavetableLevelMakeup / 128.0f;
+  tap->low_weight = static_cast<float>(kWaveGain[slot]) *
+      (1.0f - crossfade) * scale;
+  tap->high_weight = static_cast<float>(kWaveGain[slot + 1]) *
+      crossfade * scale;
 }
 
 // wav_integrated_waves stores a scaled running sum. Difference first, then
@@ -90,12 +92,16 @@ inline float ReadWave(const WaveTap& tap, float phase) {
       tap.high[p_integral + 1] - tap.high[p_integral]);
   const float high_1 = static_cast<float>(
       tap.high[p_integral + 2] - tap.high[p_integral + 1]);
-  const float low =
-      (low_0 + (low_1 - low_0) * p_fractional) * tap.gain_low;
-  const float high =
-      (high_0 + (high_1 - high_0) * p_fractional) * tap.gain_high;
-  return (low + (high - low) * tap.crossfade) *
-      kIntegratedScale * kWavetableLevelMakeup;
+  // Crossfading and applying the two per-wave gains are linear operations.
+  // Fold their block-constant coefficients together first, then perform the
+  // phase interpolation once on the already-mixed endpoints. This is
+  // algebraically the same readout with one fewer multiply and a shorter
+  // dependent arithmetic chain in the six-voice inner loop.
+  const float sample_0 =
+      low_0 * tap.low_weight + high_0 * tap.high_weight;
+  const float sample_1 =
+      low_1 * tap.low_weight + high_1 * tap.high_weight;
+  return sample_0 + (sample_1 - sample_0) * p_fractional;
 }
 
 }  // namespace
@@ -108,16 +114,26 @@ void ScaleVoiceBank::RenderWavetable(
     float* out,
     float* aux,
     size_t size) {
+  // This path must be costed at the chord engine's VARIABLE voice count. The
+  // original generic sweep never selected its six-voice rows: explicit
+  // Cortex-M4 counts were 256.4/320.0/382.7/446.8 instructions per sample for
+  // 3/4/5/6 voices. Block-folding the wave coefficients and compacting audible
+  // upper voices below reduce those to 221.7/276.6/332.2/387.5 without dropping
+  // a voice or changing the interpolation.
   CONSTRAIN(num_voices, 1, kScaleVoicesMaxVoices);
 
   float frequency[kScaleVoicesMaxVoices];
-  bool audible[kScaleVoicesMaxVoices];
+  int audible_upper[kScaleVoicesMaxVoices - 1];
+  int num_audible_upper = 0;
   for (int v = 0; v < num_voices; ++v) {
     const float sign = (v & 1) ? 1.0f : -1.0f;
     const float detune = v == 0 ? 0.0f : sign * detune_cents * 0.01f;
     frequency[v] = NoteToFrequency(notes[v] + detune);
-    audible[v] = frequency[v] <= kScaleVoicesMaxVoiceFrequency;
+    if (v > 0 && frequency[v] <= kScaleVoicesMaxVoiceFrequency) {
+      audible_upper[num_audible_upper++] = v;
+    }
   }
+  const bool root_audible = frequency[0] <= kScaleVoicesMaxVoiceFrequency;
 
   WaveTap wave_tap;
   ResolveWaveTap(scan, &wave_tap);
@@ -125,19 +141,21 @@ void ScaleVoiceBank::RenderWavetable(
   for (size_t i = 0; i < size; ++i) {
     float mixed = 0.0f;
     float root = 0.0f;
-    for (int v = 0; v < num_voices; ++v) {
-      if (!audible[v]) {
-        continue;
+    if (root_audible) {
+      phase_[0] += frequency[0];
+      if (phase_[0] >= 1.0f) {
+        phase_[0] -= 1.0f;
       }
+      root = ReadWave(wave_tap, phase_[0]);
+      mixed = root * mix;
+    }
+    for (int a = 0; a < num_audible_upper; ++a) {
+      const int v = audible_upper[a];
       phase_[v] += frequency[v];
       if (phase_[v] >= 1.0f) {
         phase_[v] -= 1.0f;
       }
-      const float sample = ReadWave(wave_tap, phase_[v]);
-      mixed += sample * mix;
-      if (v == 0) {
-        root = sample;
-      }
+      mixed += ReadWave(wave_tap, phase_[v]) * mix;
     }
     // Differencing the integrated table reconstructs a zero-mean cycle, so
     // the folded-wave DC blocker is unnecessary on this CPU-critical path.

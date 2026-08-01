@@ -60,6 +60,10 @@ SWEEP_POSITIONS = (
     ("low",       0.05, 0.05, 0.05, 0.05, 36.0),
     ("high",      0.95, 0.95, 0.95, 0.95, 72.0),
     ("harm-high", 0.95, 0.5, 0.5, 0.5, 48.0),
+    # Wavetable Diatonic Chord's rows 5/6/14 add three extensions for six
+    # voices. None of the corners or centre select them, so this mid-axis point
+    # is load-bearing CPU coverage rather than another generic interpolation.
+    ("harm-six",  0.34, 0.5, 0.5, 0.5, 48.0),
     ("timbre-hi", 0.5, 0.95, 0.5, 0.5, 60.0),
     # MORPH used to be hard-pinned to 0.5 in every sweep position. Keep
     # dedicated axis points so a correlated all-low/all-high corner cannot
