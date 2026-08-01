@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import math
 import re
+import shutil
 import subprocess
 import tempfile
 import wave
@@ -45,17 +46,24 @@ PULSE_ENERGY = float(np.dot(PULSE, PULSE))
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("source", type=Path, help="16 kHz mono CMU Arctic WAV")
+    parser.add_argument(
+        "source", type=Path,
+        help="speech recording (any format supported by ffmpeg; 16 kHz mono PCM WAV natively)",
+    )
     parser.add_argument("--output", required=True, type=Path,
                         help="48 kHz Plaits LPC reconstruction")
     parser.add_argument("--reference-output", required=True, type=Path,
                         help="time-matched 48 kHz source reference")
     parser.add_argument("--report", type=Path)
+    parser.add_argument("--plan-output", type=Path,
+                        help="retain the generated LPC frame plan")
     parser.add_argument("--renderer", type=Path, default=gate2.DEFAULT_RENDERER)
     parser.add_argument("--rebuild-renderer", action="store_true")
     parser.add_argument("--formant-semitones", type=float, default=0.0)
     parser.add_argument("--pitch-scale", type=float, default=1.0,
                         help="multiply the analyzed pitch contour (default: 1)")
+    parser.add_argument("--prosody-amount", type=float, default=1.0,
+                        help="0 uses fixed pitch; 1 replays analyzed pitch")
     parser.add_argument("--voicing-threshold", type=float, default=0.60)
     parser.add_argument("--silence-db", type=float, default=-42.0,
                         help="silence threshold relative to p95 frame RMS")
@@ -71,6 +79,28 @@ def downsample(samples: np.ndarray) -> np.ndarray:
     margin = len(taps) // 2
     padded = np.pad(samples, (margin, margin), mode="reflect")
     return np.convolve(padded, taps, mode="valid")[::2]
+
+
+def read_source(path: Path) -> np.ndarray:
+    try:
+        return gate2.read_wave(path)
+    except (ValueError, wave.Error):
+        converter = shutil.which("ffmpeg")
+        if not converter:
+            raise ValueError(
+                f"{path} is not 16 kHz mono 16-bit PCM WAV and ffmpeg is unavailable"
+            )
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as converted_file:
+            converted_path = Path(converted_file.name)
+        try:
+            subprocess.run([
+                converter, "-v", "error", "-y", "-i", str(path),
+                "-ac", "1", "-ar", str(gate2.SOURCE_RATE),
+                "-c:a", "pcm_s16le", str(converted_path),
+            ], check=True)
+            return gate2.read_wave(converted_path)
+        finally:
+            converted_path.unlink(missing_ok=True)
 
 
 def normalized_autocorrelation(samples: np.ndarray, lag: int) -> float:
@@ -260,6 +290,8 @@ def main() -> int:
         raise SystemExit("--formant-semitones must be between -18 and 18")
     if not 0.5 <= args.pitch_scale <= 3.0:
         raise SystemExit("--pitch-scale must be between 0.5 and 3")
+    if not 0.0 <= args.prosody_amount <= 1.0:
+        raise SystemExit("--prosody-amount must be between 0 and 1")
     if not 0.0 <= args.voicing_threshold <= 1.0:
         raise SystemExit("--voicing-threshold must be between 0 and 1")
     if not -80.0 <= args.silence_db <= -12.0:
@@ -269,29 +301,37 @@ def main() -> int:
     if not 0.0 <= args.gain <= 2.0:
         raise SystemExit("--gain must be between 0 and 2")
 
-    samples = gate2.read_wave(args.source)
+    samples = read_source(args.source)
     plan, stats = make_plan(
         samples, args.voicing_threshold, args.silence_db, args.energy_scale)
     gate2.build_renderer(args.renderer, args.rebuild_renderer)
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile("w", suffix=".plan", delete=False) as plan_file:
+    temporary_plan = args.plan_output is None
+    if temporary_plan:
+        plan_file = tempfile.NamedTemporaryFile("w", suffix=".plan", delete=False)
         plan_path = Path(plan_file.name)
+    else:
+        args.plan_output.parent.mkdir(parents=True, exist_ok=True)
+        plan_path = args.plan_output
+        plan_file = plan_path.open("w", encoding="utf-8")
+    with plan_file:
         for frame in plan:
             plan_file.write(" ".join(str(value) for value in frame) + "\n")
     try:
         command = [
             str(args.renderer), str(plan_path), str(args.output),
             str(args.formant_semitones), str(100.0 * args.pitch_scale),
-            "1.0", str(args.gain),
+            str(args.prosody_amount), str(args.gain),
         ]
         rendered = subprocess.run(command, check=True, text=True, capture_output=True)
     finally:
-        plan_path.unlink(missing_ok=True)
+        if temporary_plan:
+            plan_path.unlink(missing_ok=True)
 
     output_samples = len(plan) * (OUTPUT_RATE // FRAME_RATE)
     write_reference(args.reference_output, samples, output_samples, args.gain)
     lines = [
-        "Continuous CMU Arctic recording -> frame-by-frame LPC -> Plaits LPC synth",
+        "Continuous speech recording -> frame-by-frame LPC -> Plaits LPC synth",
         f"Source: {args.source}",
     ]
     source_text = transcript(args.source)
@@ -300,6 +340,7 @@ def main() -> int:
     lines.extend([
         f"Reference: {args.reference_output}",
         f"Reconstruction: {args.output}",
+        f"LPC plan: {plan_path if args.plan_output else '(temporary)'}",
         rendered.stdout.strip(),
         f"Frames: {int(stats['frames'])} ({stats['duration']:.3f} s); "
         f"voiced {int(stats['voiced_frames'])}, unvoiced {int(stats['unvoiced_frames'])}, "
@@ -309,6 +350,7 @@ def main() -> int:
         f"Silence threshold: {args.silence_db:.1f} dB from p95 frame RMS; "
         f"voicing threshold: {args.voicing_threshold:.2f}; "
         f"energy scale: {args.energy_scale:.2f}",
+        f"Prosody replay: {args.prosody_amount:.2f}",
     ])
     report = "\n".join(lines) + "\n"
     if args.report:
