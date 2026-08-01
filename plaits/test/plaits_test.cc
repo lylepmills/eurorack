@@ -2527,7 +2527,8 @@ void TestExperimentalEngines() {
   ValidateExperimentalControlResponse<BytebeatEngine>("Bytebeat");
   ValidateExperimentalControlResponse<DiatonicChordEngine>("Diatonic Chord");
   ValidateExperimentalControlResponse<ScaleStackEngine>("Scale Stack");
-  ValidateExperimentalControlResponse<WavetableChordEngine>("Wavetable Chord");
+  ValidateExperimentalControlResponse<WavetableChordEngine>(
+      "Wavetable Diatonic Chord");
   ValidateExperimentalControlResponse<WavetableScaleStackEngine>("Wavetable Scale Stack");
   ValidateExperimentalControlResponse<ShakersEngine>("Shakers");
   ValidateExperimentalControlResponse<BrassEngine>("Brass");

@@ -1,4 +1,4 @@
-# Wavetable Chord
+# Wavetable Diatonic Chord
 
 A port of WTCH from Tom Burns'
 [Braids Renaissance](https://github.com/boourns/eurorack-renaissance): the

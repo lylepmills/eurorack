@@ -5,7 +5,7 @@
   "id": "braids-renaissance/wavetable-chord",
   "catalogId": "wavetable-chord",
   "version": "1.0.0",
-  "name": "Wavetable Chord",
+  "name": "Wavetable Diatonic Chord",
   "author": "Tom Burns",
   "origin": "Community",
   "license": "MIT",
