@@ -43,6 +43,11 @@ namespace {
 
 const int kLPCFramesPerSecond = 40;
 
+const LPCSpeechSynth::Frame kSilentFrames[2] = {
+  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+};
+
 // Host-generated continuous LPC analysis of two Kokoro listening-test phrases.
 // This bank is for local prototype evaluation, not a release provenance decision.
 #include "renaissance-scrub-prototype_phrases.inc"
@@ -108,10 +113,9 @@ void RenaissanceScrubPrototypeEngine::Render(
   const float rate = rate_ratio / 6.0f;
   const float pitch_shift = f0 /
       (rate_ratio * kLPCSpeechSynthDefaultF0 / kCorrectedSampleRate);
-  // MACRO is neutral at noon. Clockwise restores the captured pitch contour;
-  // the entire counter-clockwise half remains flat.
-  const float prosody_amount = max(
-      0.0f, (parameters.macro - 0.5f) * 2.0f);
+  // Use the entire MACRO travel: CCW is flat, CW is the captured contour.
+  const float prosody_amount = parameters.macro;
+  const bool frozen_scan = parameters.trigger & TRIGGER_UNPATCHED;
 
   if (parameters.trigger & TRIGGER_RISING_EDGE) {
     playback_frame_ = static_cast<int>(
@@ -123,10 +127,14 @@ void RenaissanceScrubPrototypeEngine::Render(
   }
 
   if (playback_frame_ == -1 && remaining_frame_samples_ == 0) {
-    synth_.PlayFrame(
-        frames_,
-        parameters.timbre * (static_cast<float>(num_frames_) - 1.0001f),
-        true);
+    if (frozen_scan) {
+      synth_.PlayFrame(
+          frames_,
+          parameters.timbre * (static_cast<float>(num_frames_) - 1.0001f),
+          true);
+    } else {
+      synth_.PlayFrame(kSilentFrames, 0.0f, false);
+    }
   } else if (remaining_frame_samples_ == 0) {
     synth_.PlayFrame(frames_, static_cast<float>(playback_frame_), false);
     remaining_frame_samples_ = kSampleRate / kLPCFramesPerSecond;

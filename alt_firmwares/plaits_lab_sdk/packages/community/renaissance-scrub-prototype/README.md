@@ -28,15 +28,30 @@ Each word is silence-trimmed and its captured pitch contour is normalized around
 Plaits' 100 Hz LPC reference, so moving between flat and natural prosody changes
 inflection without changing the word's average register.
 
-The point of this model is to test Renaissance's control split beside stock
-Speech on hardware:
+## Relationship to Renaissance
+
+This is a Renaissance-inspired Plaits instrument, not a pure port. It adopts
+the musically distinctive split between selecting speech material, choosing a
+frame position, triggering forward playback from that position, and sustaining
+a frozen frame. It deliberately departs from Renaissance in several ways:
+
+- It uses Plaits' LPC synthesizer and newly analyzed frames, not Renaissance's
+  SoftVoice-derived SAM tables or vocalist implementation.
+- HARMONICS, MORPH, and the Plaits Lab fourth MACRO extend the original control
+  surface with word selection, formant shift, and variable pitch prosody.
+- Idle behavior is jack-aware: with TRIG unpatched it scans frozen frames; with
+  TRIG patched it plays a one-shot and then returns to silence. This hybrid is a
+  Plaits-specific usability decision, not a claim of Renaissance parity.
+
+The resulting controls are:
 
 - **HARMONICS — Word:** selects one of the twelve words above.
-- **TIMBRE — Position:** holds a frame inside the selected word. A trigger plays
-  forward from this position, then returns to the held frame.
+- **TIMBRE — Position:** with TRIG unpatched, holds a frame inside the selected
+  word. With TRIG patched, a trigger plays forward from this position and then
+  returns to silence.
 - **MORPH — Formant:** vocal-tract size.
-- **MACRO — Prosody:** counter-clockwise through noon is a flat pitch contour;
-  clockwise restores the captured natural contour.
+- **MACRO — Prosody:** sweeps across the entire control range from flat pitch at
+  counter-clockwise to the captured natural contour at clockwise.
 - **MAIN:** LPC speech. **AUX:** the LPC excitation.
 
 Playback runs at the analyzed source rate; every word is shorter than 0.8

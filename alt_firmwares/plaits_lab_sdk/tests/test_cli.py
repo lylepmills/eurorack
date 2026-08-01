@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from array import array
 import hashlib
 import importlib.util
 import io
@@ -10,6 +11,7 @@ import sys
 import shutil
 import tempfile
 import unittest
+import wave
 import zipfile
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -477,10 +479,10 @@ class PackageTests(unittest.TestCase):
                        "renaissance-scrub-prototype")
         package = plaits_lab.load_package(str(package_dir))
         variants = {
-            "whiskey-flat": (0.04, 0.5),
-            "whiskey-counterclockwise": (0.04, 0.0),
+            "whiskey-flat": (0.04, 0.0),
+            "whiskey-half": (0.04, 0.5),
             "whiskey-natural": (0.04, 1.0),
-            "crimson-flat": (0.54, 0.5),
+            "crimson-flat": (0.54, 0.0),
         }
         with tempfile.TemporaryDirectory() as temp_dir:
             temp = Path(temp_dir)
@@ -501,9 +503,46 @@ class PackageTests(unittest.TestCase):
                 output = temp / f"{name}.wav"
                 plaits_lab.run_scenario(package, renderer, scenario, output)
                 digests[name] = hashlib.sha256(output.read_bytes()).digest()
-            self.assertEqual(
-                digests["whiskey-counterclockwise"], digests["whiskey-flat"])
-            self.assertEqual(len(set(digests.values())), len(variants) - 1)
+            self.assertEqual(len(set(digests.values())), len(variants))
+
+    def test_renaissance_scrub_uses_jack_aware_idle_behavior(self) -> None:
+        package_dir = (SDK_DIR / "packages" / "community" /
+                       "renaissance-scrub-prototype")
+        package = plaits_lab.load_package(str(package_dir))
+        controls = {
+            "harmonics": [0.04, 0.04],
+            "timbre": [0.5, 0.5],
+            "morph": [0.5, 0.5],
+            "macro": [0.5, 0.5],
+        }
+        unpatched = {
+            "id": "unpatched-frozen", "durationSeconds": 3, "note": 48,
+            "triggerHz": 0, "controls": controls,
+        }
+        patched = {
+            "id": "patched-one-shot", "durationSeconds": 3, "note": 48,
+            "triggerHz": 0.25, "controls": controls,
+        }
+
+        def tail_peak(path: Path) -> int:
+            with wave.open(str(path), "rb") as reader:
+                reader.setpos(reader.getnframes() - reader.getframerate())
+                samples = array("h")
+                samples.frombytes(reader.readframes(reader.getframerate()))
+            if sys.byteorder != "little":
+                samples.byteswap()
+            return max(abs(sample) for sample in samples)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            renderer = plaits_lab.host_binary(temp, "scrub-idle-renderer")
+            plaits_lab.compile_renderer(package, renderer, None)
+            unpatched_wav = temp / "unpatched.wav"
+            patched_wav = temp / "patched.wav"
+            plaits_lab.run_scenario(package, renderer, unpatched, unpatched_wav)
+            plaits_lab.run_scenario(package, renderer, patched, patched_wav)
+            self.assertGreater(tail_peak(unpatched_wav), 100)
+            self.assertLess(tail_peak(patched_wav), 32)
 
     def test_renaissance_scrub_pitch_contours_are_centered_on_100_hz(self) -> None:
         bank_path = (SDK_DIR / "packages" / "community" /
