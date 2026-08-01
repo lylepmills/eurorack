@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "rubato/hands-sticks",
+  "catalogId": "hands-sticks",
+  "version": "0.1.0",
+  "name": "Hands & Sticks",
+  "author": "Lyle Mills",
+  "origin": "Rubato Lab",
+  "license": "MIT",
+  "description": "Four clustered-impact voices cover handclaps, finger snaps, rimshots and struck wood without samples.",
+  "family": "Percussion",
+  "tags": ["clap", "clave", "percussion", "rimshot", "snap", "woodblock"],
+  "controls": [
+    { "id": "harmonics", "label": "Gesture", "description": "Selects handclap, finger snap, rimshot or clave and woodblock." },
+    { "id": "timbre", "label": "Tone", "description": "Moves the body resonances and the noise colour from dark to hard." },
+    { "id": "morph", "label": "Tail", "description": "Lengthens the cavity, shell or wooden body after the initial impact." },
+    { "id": "macro", "label": "Flam", "description": "Spreads one impact into a wider cluster of hands or sticks." }
+  ],
+  "outputs": { "main": "The complete gesture with its resonant body.", "aux": "The unbodied clustered impacts." },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/hands_sticks_engine.h",
+    "files": ["plaits/dsp/engine2/hands_sticks_engine.cc"],
+    "className": "HandsSticksEngine"
+  },
+  "postProcessing": { "alreadyEnveloped": true, "outGain": -1.0, "auxGain": -1.0 },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Original Rubato Lab prototype"
+}

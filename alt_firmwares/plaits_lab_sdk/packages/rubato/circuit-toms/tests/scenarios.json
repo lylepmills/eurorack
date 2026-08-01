@@ -1,0 +1,8 @@
+[
+  { "id": "hero", "name": "Round tom through metallic zap", "durationSeconds": 6, "note": 43, "triggerHz": 2.5,
+    "controls": { "harmonics": [0.0, 1.0], "timbre": [0.15, 0.9], "morph": [0.35, 0.72], "macro": [0.15, 0.75] } },
+  { "id": "sweep", "name": "No pitch sweep to three-octave dive", "durationSeconds": 5, "note": 40, "triggerHz": 2,
+    "controls": { "harmonics": [0.25, 0.25], "timbre": [0.0, 1.0], "morph": [0.65, 0.65], "macro": [0.2, 0.2] } },
+  { "id": "crack", "name": "Clean circuit to noisy driven shell", "durationSeconds": 5, "note": 48, "triggerHz": 3,
+    "controls": { "harmonics": [0.5, 0.5], "timbre": [0.45, 0.45], "morph": [0.42, 0.42], "macro": [0.0, 1.0] } }
+]

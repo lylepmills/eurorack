@@ -1,0 +1,41 @@
+// Copyright 2026 Lyle Mills.
+// SPDX-License-Identifier: MIT
+//
+// Modal membrane percussion with a position-dependent strike.
+
+#ifndef PLAITS_DSP_ENGINE2_SKINS_ENGINE_H_
+#define PLAITS_DSP_ENGINE2_SKINS_ENGINE_H_
+
+#include "plaits/dsp/engine/engine.h"
+
+namespace plaits {
+
+const int kSkinsNumModes = 8;
+
+class SkinsEngine : public Engine {
+ public:
+  SkinsEngine() { }
+  ~SkinsEngine() { }
+
+  virtual void Init(stmlib::BufferAllocator* allocator);
+  virtual void Reset();
+  virtual void LoadUserData(const uint8_t* user_data) { }
+  virtual void Render(const EngineParameters& parameters,
+      float* out,
+      float* aux,
+      size_t size,
+      bool* already_enveloped);
+
+ private:
+  float phase_[kSkinsNumModes];
+  float amplitude_[kSkinsNumModes];
+  float bend_ratio_;
+  float strike_envelope_;
+  float strike_lowpass_;
+
+  DISALLOW_COPY_AND_ASSIGN(SkinsEngine);
+};
+
+}  // namespace plaits
+
+#endif  // PLAITS_DSP_ENGINE2_SKINS_ENGINE_H_
