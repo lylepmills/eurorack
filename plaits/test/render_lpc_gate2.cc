@@ -98,8 +98,9 @@ bool ReadPlan(
 
 class Renderer {
  public:
-  Renderer(float internal_rate, float pitch_shift) :
+  Renderer(float internal_rate, float pitch_shift, float prosody_amount) :
       internal_rate_(internal_rate), pitch_shift_(pitch_shift),
+      prosody_amount_(prosody_amount),
       clock_phase_(0.0f), sample_(0.0f), next_sample_(0.0f) {
     synth_.Init();
     stmlib::Random::Seed(0x21);
@@ -119,7 +120,8 @@ class Renderer {
       const float reset_time = clock_phase_ / internal_rate_;
       float excitation;
       float new_sample;
-      synth_.Render(0.0f, pitch_shift_, &excitation, &new_sample, 1);
+      synth_.Render(
+          prosody_amount_, pitch_shift_, &excitation, &new_sample, 1);
       const float discontinuity = new_sample - sample_;
       this_sample += discontinuity * stmlib::ThisBlepSample(reset_time);
       next_sample_ += discontinuity * stmlib::NextBlepSample(reset_time);
@@ -133,6 +135,7 @@ class Renderer {
   plaits::LPCSpeechSynth synth_;
   float internal_rate_;
   float pitch_shift_;
+  float prosody_amount_;
   float clock_phase_;
   float sample_;
   float next_sample_;
@@ -141,16 +144,28 @@ class Renderer {
 }  // namespace
 
 int main(int argc, char** argv) {
-  if (argc != 5) {
+  if (argc < 5 || argc > 7) {
     std::fprintf(stderr,
-        "usage: %s PLAN OUTPUT.wav FORMANT_SEMITONES PITCH_HZ\n", argv[0]);
+        "usage: %s PLAN OUTPUT.wav FORMANT_SEMITONES PITCH_HZ "
+        "[PROSODY [GAIN]]\n",
+        argv[0]);
     return 2;
   }
   const float formant_semitones = static_cast<float>(std::atof(argv[3]));
   const float pitch_hz = static_cast<float>(std::atof(argv[4]));
+  const float prosody_amount = argc == 6
+      ? static_cast<float>(std::atof(argv[5]))
+      : argc == 7 ? static_cast<float>(std::atof(argv[5])) : 0.0f;
+  const float gain = argc == 7
+      ? static_cast<float>(std::atof(argv[6]))
+      : 0.35f;
   if (formant_semitones < -18.0f || formant_semitones > 18.0f ||
-      pitch_hz < 50.0f || pitch_hz > 300.0f) {
-    std::fprintf(stderr, "formant range is -18..18 semitones; pitch range is 50..300 Hz\n");
+      pitch_hz < 50.0f || pitch_hz > 300.0f ||
+      prosody_amount < 0.0f || prosody_amount > 1.0f ||
+      gain < 0.0f || gain > 2.0f) {
+    std::fprintf(stderr,
+        "formant range is -18..18 semitones; pitch range is 50..300 Hz; "
+        "prosody range is 0..1; gain range is 0..2\n");
     return 2;
   }
 
@@ -161,7 +176,10 @@ int main(int argc, char** argv) {
   }
 
   const float rate_ratio = std::pow(2.0f, formant_semitones / 12.0f);
-  Renderer renderer(rate_ratio / 6.0f, pitch_hz / (rate_ratio * 100.0f));
+  Renderer renderer(
+      rate_ratio / 6.0f,
+      pitch_hz / (rate_ratio * 100.0f),
+      prosody_amount);
   std::vector<float> samples;
   samples.reserve(frames.size() * kSamplesPerLPCFrame);
   float peak = 0.0f;
@@ -174,7 +192,6 @@ int main(int argc, char** argv) {
     }
   }
 
-  const float gain = 0.35f;
   for (size_t i = 0; i < samples.size(); ++i) {
     samples[i] *= gain;
   }
@@ -183,8 +200,8 @@ int main(int argc, char** argv) {
     return 2;
   }
   std::printf("rendered %s (%.3f s, %zu LPC frames, formant %+.1f st, "
-      "pitch %.1f Hz, raw peak %.4f, fixed gain %.2f)\n",
+      "pitch %.1f Hz, prosody %.2f, raw peak %.4f, gain %.2f)\n",
       argv[2], static_cast<double>(samples.size()) / kOutputSampleRate,
-      frames.size(), formant_semitones, pitch_hz, peak, gain);
+      frames.size(), formant_semitones, pitch_hz, prosody_amount, peak, gain);
   return 0;
 }
