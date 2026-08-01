@@ -1,0 +1,8 @@
+[
+  { "id": "hero", "name": "Centre to rim across an open membrane", "durationSeconds": 5, "note": 45, "triggerHz": 2,
+    "controls": { "harmonics": [0.2, 0.8], "timbre": [0.0, 1.0], "morph": [0.62, 0.62], "macro": [0.35, 0.35] } },
+  { "id": "pressure", "name": "Open head to pressed pitch-diving skin", "durationSeconds": 5, "note": 43, "triggerHz": 1.5,
+    "controls": { "harmonics": [0.45, 0.45], "timbre": [0.25, 0.25], "morph": [0.78, 0.78], "macro": [0.0, 1.0] } },
+  { "id": "pitch", "name": "Tuned hand drums over two octaves", "durationSeconds": 4, "note": 36, "triggerHz": 3,
+    "controls": { "harmonics": [0.6, 0.6], "timbre": [0.4, 0.4], "morph": [0.46, 0.46], "macro": [0.25, 0.25] } }
+]
