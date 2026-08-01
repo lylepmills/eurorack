@@ -95,19 +95,19 @@
     <div class="card hidden" id="randomizer-card">
       <div class="prototype-head">
         <h2>Unpatched attenuverters</h2>
-        <span class="pill">Audition prototype</span>
+        <span class="pill" id="randomizer-profile">Audition prototype</span>
       </div>
-      <p class="prototype-copy">Assumes the TIMBRE and MORPH CV inputs are unpatched. A small zone around noon is completely off. CCW adds a close, center-seeking drift; CW adds a wider, slower roam. Moving farther increases both excursion and speed through an engine-tuned profile.</p>
+      <p class="prototype-copy">Assumes the TIMBRE and MORPH CV inputs are unpatched. A small zone around noon is completely off. CCW adds a close, center-seeking drift; CW adds a wider, slower roam. Moving farther increases both excursion and speed through the parameter profile shown below.</p>
       <div class="prototype-grid">
         <label>
           <span class="row"><strong>TIMBRE</strong><output id="randomizer-timbre-value">Off</output></span>
           <input id="randomizer-timbre" type="range" min="-1" max="1" step="0.01" value="0" />
-          <small>Faster texture motion · Engine now <output id="randomizer-timbre-active">—</output></small>
+          <small><span id="randomizer-timbre-profile">Profile</span> · Engine now <output id="randomizer-timbre-active">—</output></small>
         </label>
         <label>
           <span class="row"><strong>MORPH</strong><output id="randomizer-morph-value">Off</output></span>
           <input id="randomizer-morph" type="range" min="-1" max="1" step="0.01" value="0" />
-          <small>Slower structural motion · Engine now <output id="randomizer-morph-active">—</output></small>
+          <small><span id="randomizer-morph-profile">Profile</span> · Engine now <output id="randomizer-morph-active">—</output></small>
         </label>
       </div>
     </div>
@@ -213,6 +213,15 @@ async function refreshPackage() {
     state.pkg = value;
     $('pkg-id').textContent = `${value.manifest.id}@${value.manifest.version}`;
     $('pkg-digest').textContent = (value.digest || '').slice(0, 22) + '…';
+    const profile = value.randomizerProfile || {};
+    const profileStatus = profile.status || 'fallback';
+    $('randomizer-profile').textContent = profileStatus === 'tuned'
+      ? 'Tuned profile' : (profileStatus === 'seeded' ? 'Seed profile' : 'Fallback profile');
+    for (const parameter of ['timbre', 'morph']) {
+      const parameterProfile = profile[parameter] || {};
+      const archetype = (parameterProfile.archetype || 'fallback').replaceAll('-', ' ');
+      $(`randomizer-${parameter}-profile`).textContent = archetype;
+    }
     renderControls();
     $('offline').classList.add('hidden');
     $('bench').classList.remove('hidden');

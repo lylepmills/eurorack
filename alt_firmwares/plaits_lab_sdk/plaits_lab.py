@@ -168,12 +168,34 @@ def builtin_engine(identifier: str) -> tuple[dict[str, Any], dict[str, Any]]:
 
 
 def builtin_package(identifier: str) -> dict[str, Any]:
-    engine, _ = builtin_engine(identifier)
+    engine, public = builtin_engine(identifier)
     source = engine["source"]
+    manual_controls = public.get("manual", {}).get("controls", {})
     return {
         "directory": REPO_ROOT,
+        "digest": public["digest"],
         "manifest": {
+            "schemaVersion": 1,
+            "sdk": SDK_VERSION,
             "packageType": "builtin-reference",
+            "id": engine["packageId"],
+            "catalogId": engine["id"],
+            "version": public["version"],
+            "name": engine["name"],
+            "author": engine["author"],
+            "origin": engine["origin"],
+            "description": engine["description"],
+            "family": engine["family"],
+            "tags": engine["tags"],
+            "controls": [
+                {
+                    "id": control_id,
+                    "label": label,
+                    "description": manual_controls.get(control_id, ""),
+                }
+                for control_id, label in zip(CONTROL_IDS, engine["controls"])
+            ],
+            "outputs": {"main": engine["outputs"][0], "aux": engine["outputs"][1]},
             "source": {"className": source["className"]},
             "postProcessing": engine["postProcessing"],
             "sharedModules": list(engine.get("sharedModules", [])),
@@ -941,14 +963,108 @@ WASM_EXPORTS = ('["_init","_render","_set_params","_set_randomizer_amounts",'
                '"_set_stereo","_stereo_capable","_main_out","_aux_out",'
                '"_current_timbre","_current_morph"]')
 
-# Shared motion algorithm, compact engine/parameter tuning records. Zero is the
-# conservative fallback compiled for engines that have not had a listening pass.
-RANDOMIZER_PROFILE_IDS = {
-    "virtual-analog": 1,
-    "fold": 2,
-    "vowel-fof": 3,
-    "granular-cloud": 4,
-}
+RANDOMIZER_PROFILES_PATH = SDK_DIR / "randomizer_profiles.json"
+RANDOMIZER_PROFILE_FIELDS = (
+    "nearSpan", "farSpan", "nearRate", "farRate", "farCenterRelease",
+)
+
+
+def load_randomizer_profile_registry() -> dict[str, Any]:
+    """Load and validate the audition-only parameter profile registry."""
+    registry = read_json(RANDOMIZER_PROFILES_PATH)
+    require(isinstance(registry, dict), "randomizer_profiles.json must contain an object")
+    require(registry.get("schemaVersion") == 1,
+            "randomizer_profiles.json schemaVersion must be 1")
+    archetypes = registry.get("parameterArchetypes")
+    require(isinstance(archetypes, dict) and archetypes,
+            "randomizer_profiles.json must define parameterArchetypes")
+    for name, profile in archetypes.items():
+        require(isinstance(name, str) and CATALOG_ID_PATTERN.fullmatch(name) is not None,
+                f"randomizer archetype name {name!r} is invalid")
+        require(isinstance(profile, dict),
+                f"randomizer archetype {name!r} must contain an object")
+        require(set(profile) == {"topology", *RANDOMIZER_PROFILE_FIELDS},
+                f"randomizer archetype {name!r} has unsupported fields")
+        require(isinstance(profile["topology"], str) and bool(profile["topology"]),
+                f"randomizer archetype {name!r} topology must be a non-empty string")
+        for field in RANDOMIZER_PROFILE_FIELDS:
+            require(isinstance(profile[field], (int, float)),
+                    f"randomizer archetype {name!r} {field} must be numeric")
+        require(0.0 <= profile["nearSpan"] <= 1.0,
+                f"randomizer archetype {name!r} nearSpan must be in [0, 1]")
+        require(0.0 <= profile["farSpan"] <= 1.0,
+                f"randomizer archetype {name!r} farSpan must be in [0, 1]")
+        require(profile["nearRate"] > 0.0 and profile["farRate"] > 0.0,
+                f"randomizer archetype {name!r} rates must be positive")
+        require(0.0 <= profile["farCenterRelease"] <= 1.0,
+                f"randomizer archetype {name!r} farCenterRelease must be in [0, 1]")
+
+    fallback = registry.get("fallback")
+    models = registry.get("models")
+    require(isinstance(fallback, dict) and isinstance(models, dict),
+            "randomizer_profiles.json must define fallback and models objects")
+    for catalog_id, model in {"fallback": fallback, **models}.items():
+        require(isinstance(model, dict) and set(model) == {"status", "timbre", "morph"},
+                f"randomizer profile {catalog_id!r} must define status, timbre, and morph")
+        require(model["status"] in {"fallback", "seeded", "tuned"},
+                f"randomizer profile {catalog_id!r} has an invalid status")
+        for parameter in ("timbre", "morph"):
+            value = model[parameter]
+            if isinstance(value, str):
+                require(value in archetypes,
+                        f"randomizer profile {catalog_id!r} references unknown archetype {value!r}")
+                continue
+            require(isinstance(value, dict) and set(value) == {"archetype", "overrides"},
+                    f"randomizer profile {catalog_id!r} {parameter} must reference an archetype")
+            require(value["archetype"] in archetypes,
+                    f"randomizer profile {catalog_id!r} references unknown archetype "
+                    f"{value['archetype']!r}")
+            overrides = value["overrides"]
+            require(isinstance(overrides, dict)
+                    and set(overrides) <= set(RANDOMIZER_PROFILE_FIELDS),
+                    f"randomizer profile {catalog_id!r} {parameter} has invalid overrides")
+            require(all(isinstance(item, (int, float)) for item in overrides.values()),
+                    f"randomizer profile {catalog_id!r} {parameter} overrides must be numeric")
+    return registry
+
+
+def resolve_randomizer_parameter_profile(
+    registry: dict[str, Any], reference: Any,
+) -> dict[str, Any]:
+    if isinstance(reference, str):
+        archetype_name = reference
+        overrides: dict[str, Any] = {}
+    else:
+        archetype_name = reference["archetype"]
+        overrides = reference["overrides"]
+    profile = dict(registry["parameterArchetypes"][archetype_name])
+    profile.update(overrides)
+    require(0.0 <= profile["nearSpan"] <= 1.0 and 0.0 <= profile["farSpan"] <= 1.0,
+            f"resolved randomizer archetype {archetype_name!r} spans must be in [0, 1]")
+    require(profile["nearRate"] > 0.0 and profile["farRate"] > 0.0,
+            f"resolved randomizer archetype {archetype_name!r} rates must be positive")
+    require(0.0 <= profile["farCenterRelease"] <= 1.0,
+            f"resolved randomizer archetype {archetype_name!r} farCenterRelease must be in [0, 1]")
+    profile["archetype"] = archetype_name
+    return profile
+
+
+def randomizer_profile_for_catalog_id(catalog_id: str | None) -> dict[str, Any]:
+    registry = load_randomizer_profile_registry()
+    model = registry["models"].get(catalog_id, registry["fallback"])
+    return {
+        "catalogId": catalog_id,
+        "status": model["status"],
+        "timbre": resolve_randomizer_parameter_profile(registry, model["timbre"]),
+        "morph": resolve_randomizer_parameter_profile(registry, model["morph"]),
+    }
+
+
+def randomizer_cpp_number(value: float) -> str:
+    literal = f"{float(value):.9g}"
+    if "." not in literal and "e" not in literal:
+        literal += ".0"
+    return literal + "f"
 
 
 def compile_wasm(package: dict[str, Any], output: Path) -> None:
@@ -960,14 +1076,26 @@ def compile_wasm(package: dict[str, Any], output: Path) -> None:
     if emcc is None:
         raise PackageError("emscripten (emcc) not on PATH; run `source <emsdk>/emsdk_env.sh`")
     manifest = package["manifest"]
-    randomizer_profile = RANDOMIZER_PROFILE_IDS.get(manifest.get("catalogId"), 0)
+    randomizer_profile = randomizer_profile_for_catalog_id(manifest.get("catalogId"))
     compiled = engine_translation_units(package, Path(__file__).with_name("wasm_audition.cc"))
+    randomizer_defines = [
+        f"-DPLAITS_LAB_RANDOMIZER_{parameter.upper()}_{field.upper()}="
+        f"{randomizer_cpp_number(randomizer_profile[parameter][json_field])}"
+        for parameter in ("timbre", "morph")
+        for field, json_field in (
+            ("NEAR_SPAN", "nearSpan"),
+            ("FAR_SPAN", "farSpan"),
+            ("NEAR_RATE", "nearRate"),
+            ("FAR_RATE", "farRate"),
+            ("FAR_CENTER_RELEASE", "farCenterRelease"),
+        )
+    ]
     command = [
         emcc,
         "-std=c++11", MATH_CONSTANTS_DEFINE, "-DTEST", "-O2",
         f'-DPLAITS_LAB_ENGINE_HEADER="{engine_header_define(package)}"',
         f'-DPLAITS_LAB_ENGINE_CLASS=plaits::{manifest["source"]["className"]}',
-        f"-DPLAITS_LAB_RANDOMIZER_PROFILE={randomizer_profile}",
+        *randomizer_defines,
         "-I", str(package["repo_root"]),
         "-I", str(package["source_root"]),
         *compiled,
@@ -2436,15 +2564,26 @@ class DevSession:
         self.temp_dir.cleanup()
 
     def package(self) -> dict[str, Any]:
-        package = load_package(self.package_arg, autodeclare=True)
-        report_autodeclared(package)
-        return package
+        package_path = Path(self.package_arg)
+        if (package_path / "plaits-engine.json").is_file():
+            package = load_package(self.package_arg, autodeclare=True)
+            report_autodeclared(package)
+            return package
+        return builtin_package(self.package_arg)
 
     def source_fingerprint(self, package: dict[str, Any]) -> str:
         import hashlib
 
         digest = hashlib.sha256()
-        for path in [package["header"], *package["source_files"]]:
+        # The live WASM also embeds the shared audition harness and resolved
+        # randomizer registry. Including both keeps a running dev server honest:
+        # profile and motion-law edits rebuild on the next /v1/package request.
+        for path in [
+            package["header"],
+            *package["source_files"],
+            SDK_DIR / "wasm_audition.cc",
+            RANDOMIZER_PROFILES_PATH,
+        ]:
             digest.update(path.read_bytes())
         return digest.hexdigest()
 
@@ -2574,10 +2713,14 @@ def dev_command(args: argparse.Namespace) -> int:
             if request_path == "/v1/package":
                 try:
                     current, recompiled = session.ensure_renderer()
+                    randomizer_profile = randomizer_profile_for_catalog_id(
+                        current["manifest"].get("catalogId"))
                     self.send_json({
                         "manifest": current["manifest"],
                         "scenarios": current["scenarios"],
-                        "digest": package_content_digest(current["directory"]),
+                        "randomizerProfile": randomizer_profile,
+                        "digest": current.get("digest")
+                        or package_content_digest(current["directory"]),
                         "sourceRevision": session.fingerprint,
                         "recompiled": recompiled,
                         "live": session.wasm_available,

@@ -775,6 +775,7 @@ class PackageTests(unittest.TestCase):
         self.assertIn("RandomizerExcursion", harness)
         self.assertIn("RandomizerRateMultiplier", harness)
         self.assertIn("far_center_release", harness)
+        self.assertIn("PLAITS_LAB_RANDOMIZER_TIMBRE_NEAR_SPAN", harness)
         self.assertIn("current_timbre", harness)
         worklet = (plaits_lab.SDK_DIR / "audition_worklet.js").read_text(encoding="utf-8")
         self.assertIn("'randomization'", worklet)
@@ -790,10 +791,57 @@ class PackageTests(unittest.TestCase):
         self.assertNotIn("randomizer-auto", html)
         self.assertIn("RANDOMIZER_DEAD_ZONE", html)
         self.assertIn("'Near' : 'Far'", html)
-        self.assertEqual(plaits_lab.RANDOMIZER_PROFILE_IDS["virtual-analog"], 1)
-        self.assertEqual(plaits_lab.RANDOMIZER_PROFILE_IDS["fold"], 2)
-        self.assertEqual(plaits_lab.RANDOMIZER_PROFILE_IDS["vowel-fof"], 3)
-        self.assertEqual(plaits_lab.RANDOMIZER_PROFILE_IDS["granular-cloud"], 4)
+        registry = plaits_lab.load_randomizer_profile_registry()
+        stock_ids = {
+            engine["id"]
+            for engine in plaits_lab.read_json(plaits_lab.CATALOG_PATH)["engines"][:24]
+        }
+        self.assertTrue(stock_ids <= set(registry["models"]))
+        self.assertEqual(registry["models"]["virtual-analog"]["status"], "tuned")
+        self.assertEqual(registry["models"]["fold"]["status"], "tuned")
+        self.assertEqual(registry["models"]["vowel-fof"]["status"], "tuned")
+        self.assertEqual(registry["models"]["granular-cloud"]["status"], "tuned")
+        vowel = plaits_lab.randomizer_profile_for_catalog_id("vowel-fof")
+        self.assertEqual(vowel["timbre"]["farSpan"], 0.52)
+        self.assertEqual(vowel["morph"]["nearRate"], 0.000005)
+        chords = plaits_lab.randomizer_profile_for_catalog_id("chords")
+        self.assertEqual(chords["status"], "seeded")
+        self.assertEqual(chords["morph"]["topology"], "stepped")
+        fallback = plaits_lab.randomizer_profile_for_catalog_id("not-profiled-yet")
+        self.assertEqual(fallback["status"], "fallback")
+
+    def test_compile_wasm_receives_resolved_randomizer_profile(self) -> None:
+        package = plaits_lab.builtin_package("chords")
+        captured: dict[str, object] = {}
+        real_compiler = plaits_lab.wasm_compiler_path
+        real_run = plaits_lab.subprocess.run
+        plaits_lab.wasm_compiler_path = lambda: "emcc"
+
+        def capture(command, **kwargs):
+            captured["command"] = command
+            return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+        plaits_lab.subprocess.run = capture
+        try:
+            plaits_lab.compile_wasm(package, Path(tempfile.gettempdir()) / "profiled.wasm")
+        finally:
+            plaits_lab.wasm_compiler_path = real_compiler
+            plaits_lab.subprocess.run = real_run
+
+        command = captured["command"]
+        self.assertIn("-DPLAITS_LAB_RANDOMIZER_TIMBRE_NEAR_SPAN=0.18f", command)
+        self.assertIn("-DPLAITS_LAB_RANDOMIZER_MORPH_FAR_SPAN=0.4f", command)
+
+    def test_dev_session_accepts_builtin_catalog_id(self) -> None:
+        session = plaits_lab.DevSession("chords", None)
+        try:
+            package = session.package()
+        finally:
+            session.close()
+        self.assertEqual(package["manifest"]["id"], "mutable-instruments/chords")
+        self.assertEqual(package["manifest"]["catalogId"], "chords")
+        self.assertEqual(package["manifest"]["controls"][1]["label"], "Waveform")
+        self.assertEqual(package["digest"], plaits_lab.builtin_engine("chords")[1]["digest"])
 
     def test_live_audition_stereo_surface_is_wired(self) -> None:
         # The audition must be able to drive parameters.stereo and read back
