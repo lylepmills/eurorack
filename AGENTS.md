@@ -14,8 +14,10 @@ The production editor is at <https://rubato.audio/plaits-palette/>.
 
 ## Project invariants
 
-- User-facing bank order is always green, red, amber. Plaits' legacy internal
-  engine registry is amber, green, red, so the build service must translate
+- User-facing bank order is always green, red, amber, then optional orange.
+  Plaits' legacy three-bank engine registry is amber, green, red; four-bank
+  builds rotate orange, green, red, amber so the cyclic hardware order from
+  green remains green, red, amber, orange. The build service must translate
   between the manifest order and the firmware registry.
 - The fourth synthesis macro is neutral at its midpoint for stock models. It is
   controlled by the locked-frequency menu's blinking-green option.

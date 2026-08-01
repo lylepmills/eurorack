@@ -133,15 +133,16 @@ int main() {
     CHECK(s.engine == 8);             // amber remembered row 0
   }
 
-  // --- Four banks incl. a short orange: {8,8,8,2}. Change wraps orange->green.
+  // --- Four-bank internal rotation is orange/green/red/amber. A short orange
+  //     therefore leads {2,8,8,8}, and changing bank follows the public cycle.
   {
-    const uint8_t sizes[] = {8, 8, 8, 2};
-    NavSim s = MakeSim(sizes, 4, 24);  // orange row 0 (offset 24)
-    CHECK(s.bank() == 3);
-    s.StepWithin(); CHECK(s.engine == 25);  // orange row 1
-    s.StepWithin(); CHECK(s.engine == 24);  // wraps after 2
-    s.Change(); CHECK(s.bank() == 0); CHECK(s.engine == 0);  // -> green
-    s.ChangeBack(); CHECK(s.bank() == 3); CHECK(s.engine == 24);  // -> orange
+    const uint8_t sizes[] = {2, 8, 8, 8};
+    NavSim s = MakeSim(sizes, 4, 0);  // orange row 0
+    CHECK(s.bank() == 0);
+    s.StepWithin(); CHECK(s.engine == 1);  // orange row 1
+    s.StepWithin(); CHECK(s.engine == 0);  // wraps after 2
+    s.Change(); CHECK(s.bank() == 1); CHECK(s.engine == 2);  // -> green
+    s.ChangeBack(); CHECK(s.bank() == 0); CHECK(s.engine == 0);  // -> orange
   }
 
   // --- Clamp guard: a remembered row past a (shrunk) bank's size is clamped.

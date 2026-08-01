@@ -628,14 +628,18 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertIn("kEngineUserDataBank[32]", config)
         registrations = config.split("#define PLAITS_REGISTER_ENGINES", 1)[1]
         self.assertEqual(registrations.count("RegisterInstance("), 32)
-        # The fourth (orange) bank stays last in the internal
-        # amber/green/red/orange registry order.
+        # Four-bank builds rotate orange to the front, keeping green and red at
+        # their legacy internal indices while the cyclic order from green reads
+        # green/red/amber/orange.
         self.assertLess(
-            registrations.index("&virtual_analog_vcf_engine_"),  # amber bank, internal first
-            registrations.index("&loopback_engine_"))
+            registrations.index("&loopback_engine_"),           # orange, internal first
+            registrations.index("&virtual_analog_engine_"))     # green
         self.assertLess(
-            registrations.index("&loopback_engine_"),
-            registrations.index("&reed_pipe_engine_"))
+            registrations.index("&virtual_analog_engine_"),
+            registrations.index("&swarm_engine_"))              # red
+        self.assertLess(
+            registrations.index("&swarm_engine_"),
+            registrations.index("&virtual_analog_vcf_engine_")) # amber
 
     def test_24_slot_recipes_emit_the_default_engine_count(self) -> None:
         config = render_config(validate_recipe(self.load("default_recipe.json")))
@@ -713,7 +717,17 @@ class GenerateEngineConfigTest(unittest.TestCase):
         engine_ids = ["virtual-analog"] * 24 + ["loopback", "lockstep"] + [None] * 6
         config = render_config(validate_recipe(self.v7_recipe(engine_ids)))
         self.assertIn("#define PLAITS_ENGINE_COUNT 26", config)
-        self.assertIn("#define PLAITS_BANK_SIZES { 8, 8, 8, 2 }", config)
+        self.assertIn("#define PLAITS_BANK_SIZES { 2, 8, 8, 8 }", config)
+
+    def test_v7_four_bank_layout_keeps_trailing_empty_amber_bank(self) -> None:
+        engine_ids = ["virtual-analog"] * 16 + [None] * 8 \
+            + ["loopback", "lockstep"] + [None] * 6
+        config = render_config(validate_recipe(self.v7_recipe(engine_ids)))
+        self.assertIn("#define PLAITS_ENGINE_COUNT 18", config)
+        self.assertIn("#define PLAITS_BANK_SIZES { 2, 8, 8, 0 }", config)
+        self.assertIn(
+            "Registry order: orange, green, red, amber.",
+            config)
 
     def test_v7_hole_in_a_bank_is_rejected(self) -> None:
         engine_ids = ["virtual-analog", None, "virtual-analog"] + [None] * 5 \

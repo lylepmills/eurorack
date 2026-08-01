@@ -270,27 +270,36 @@ void Ui::SaveState() {
 uint32_t Ui::BankToColor(int bank) {
 #if PLAITS_BUILD_COLOR_BLIND_MODE
   // One hue, four brightness levels. The generated registry is ordered amber,
-  // green, red, orange, while the editor presents green, red, amber, orange.
-  // Encode the PUBLIC order from brightest to faintest so the field guide and
-  // editor can describe one stable sequence: green 100%, red 50%, amber 25%,
-  // orange 12.5%. Sixteen-phase PWM keeps every level flicker-free and leaves
-  // the slower selected-model pulse as a separate visual signal.
-  static const uint8_t kBrightnessDuty[4] = { 4, 16, 8, 2 };
-  return (pwm_counter_ & 15) < kBrightnessDuty[bank]
+  // green, red for three banks, and orange, green, red, amber for four. Encode
+  // the PUBLIC order from brightest to faintest so the field guide and editor
+  // can describe one stable sequence: green 100%, red 50%, amber 25%, orange
+  // 12.5%. Sixteen-phase PWM keeps every level flicker-free and leaves the
+  // slower selected-model pulse as a separate visual signal.
+  static const uint8_t kThreeBankBrightnessDuty[3] = { 4, 16, 8 };
+  static const uint8_t kFourBankBrightnessDuty[4] = { 2, 16, 8, 4 };
+  const uint8_t duty = kNumBanks > 3
+      ? kFourBankBrightnessDuty[bank]
+      : kThreeBankBrightnessDuty[bank];
+  return (pwm_counter_ & 15) < duty
       ? LED_COLOR_YELLOW
       : LED_COLOR_OFF;
 #else
   // kNumBanks is a compile-time constant, so for three-bank builds this branch
   // folds away (equivalent to the previous #if PLAITS_ENGINE_COUNT > 24).
-  if (kNumBanks > 3 && bank == 3) {
+  if (kNumBanks > 3 && bank == 0) {
     // Fourth bank: orange. The LED channels are 1-bit (drivers/leds.cc), so
     // blend red with quarter-duty green by dithering at the poll rate — far
     // above flicker fusion, it reads as a steady color between red and the
     // full-duty yellow of the amber bank.
     return (pwm_counter_ & 3) ? LED_COLOR_RED : LED_COLOR_YELLOW;
   }
-  uint32_t colors[3] = { LED_COLOR_YELLOW, LED_COLOR_GREEN, LED_COLOR_RED };
-  return colors[bank];
+  static const uint32_t kThreeBankColors[3] = {
+    LED_COLOR_YELLOW, LED_COLOR_GREEN, LED_COLOR_RED
+  };
+  static const uint32_t kFourBankColors[4] = {
+    LED_COLOR_OFF, LED_COLOR_GREEN, LED_COLOR_RED, LED_COLOR_YELLOW
+  };
+  return kNumBanks > 3 ? kFourBankColors[bank] : kThreeBankColors[bank];
 #endif
 }
 

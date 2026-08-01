@@ -19,8 +19,9 @@
 #error "PLAITS_ENGINE_COUNT must be between 1 and 32"
 #endif
 
-// Per-bank engine counts, in the module's display order (amber, green, red, and
-// optionally orange — see Ui::BankToColor). One to four banks; each holds 0..8
+// Per-bank engine counts, in the module's internal display rotation (amber,
+// green, red for three banks; orange, green, red, amber for four — see
+// Ui::BankToColor). One to four banks; each holds 0..8
 // engines. A bank with
 // fewer than eight is a "short bank" whose select-button cycle wraps at its real
 // size (see bank_navigation.h). This is a COUNT per bank — where a bank's gaps
@@ -33,7 +34,8 @@
 #endif
 
 // Physical LED row (0..7) of each engine within its bank, in the same registry
-// order as the engine list (amber, green, red, and optionally orange) — one
+// order as the engine list (amber/green/red for three banks;
+// orange/green/red/amber for four) — one
 // entry per engine, summing to PLAITS_ENGINE_COUNT. This lets a bank keep gaps
 // in place: an engine holds its own row instead of the bank compacting to the
 // front, so deleting a mid-bank model leaves the others on their LEDs and their
@@ -52,8 +54,9 @@
 // Replace hue-dependent UI states with yellow brightness levels. Banks use
 // 100%, 50%, 25%, and 12.5% in public palette order; the options menu uses
 // 100%, 50%, and 25% within each blink tier. The firmware registry is ordered
-// amber, green, red, orange, so Ui::BankToColor maps those internal indices to
-// 25%, 100%, 50%, and 12.5% duty respectively. This is baked into the firmware
+// amber, green, red for three banks and orange, green, red, amber for four, so
+// Ui::BankToColor maps those internal indices back to the public levels. This
+// is baked into the firmware
 // rather than stored in settings: the right-button power-up gesture remains
 // available for the optional calibration procedure.
 #ifndef PLAITS_BUILD_COLOR_BLIND_MODE
