@@ -120,8 +120,10 @@ prototype** for TIMBRE and MORPH. A small zone around noon is off; CCW adds a
 close, center-seeking drift and CW adds a wider, slower roam. Both follow
 continuous chaotic control orbits with no targets, clocks, or connection to
 Strike. `randomizer_profiles.json` resolves reusable parameter archetypes and
-per-model overrides at compile time. This is a listening experiment, not part
-of the firmware, recipe schema, or engine-package contract.
+per-model overrides at compile time. Every catalog model has an explicit seed;
+the page labels profiles as seeded until they have had a listening pass. This
+is a listening experiment, not part of the firmware, recipe schema, or
+engine-package contract.
 
 ## Validation and submission
 
