@@ -239,7 +239,7 @@ system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-bced0e9c156e` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-220eeca73af8` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a
 new image, wait for `wrangler containers list` to report `ready` before smoke
@@ -300,6 +300,7 @@ target.
 | July 31, 2026 (unpatched attenuverter Drift + Step modes, manual contract 12) | `075543932021` | `rev-075543932021` |
 | July 31, 2026 (control-path flash recovery for full stock palettes) | `e90a1c3500c4` | `rev-e90a1c3500c4` |
 | August 1, 2026 (six-voice wavetable optimization, manual contract 13) | `bced0e9c156e` | `rev-bced0e9c156e` |
+| August 1, 2026 (navigation, fine-tune LED, and Ro'ved LED fixes) | `220eeca73af8` | `rev-220eeca73af8` |
 
 Three consequences a rollback has that a forward deploy does not:
 
