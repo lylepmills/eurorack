@@ -4,6 +4,8 @@ import hashlib
 import importlib.util
 import io
 import json
+import re
+import statistics
 import sys
 import shutil
 import tempfile
@@ -499,6 +501,29 @@ class PackageTests(unittest.TestCase):
                 plaits_lab.run_scenario(package, renderer, scenario, output)
                 digests.add(hashlib.sha256(output.read_bytes()).digest())
             self.assertEqual(len(digests), len(variants))
+
+    def test_renaissance_scrub_pitch_contours_are_centered_on_100_hz(self) -> None:
+        bank_path = (SDK_DIR / "packages" / "community" /
+                     "renaissance-scrub-prototype" / "src" /
+                     "renaissance-scrub-prototype_phrases.inc")
+        source = bank_path.read_text(encoding="utf-8")
+        frame_source = source.split("const LPCSpeechSynth::Frame kPhraseFrames[] = {", 1)[1]
+        frame_source = frame_source.split("};", 1)[0]
+        frames = [
+            tuple(int(value.strip()) for value in match.split(","))
+            for match in re.findall(r"\{\s*((?:-?\d+\s*,\s*){11}-?\d+)\s*\}", frame_source)
+        ]
+        offsets = [int(value) for value in re.search(
+            r"kPhraseOffsets\[\] = \{ ([^}]+) \}", source).group(1).split(",")]
+        lengths = [int(value) for value in re.search(
+            r"kPhraseLengths\[\] = \{ ([^}]+) \}", source).group(1).split(",")]
+        for offset, length in zip(offsets, lengths):
+            voiced_f0 = [
+                8000.0 / frame[1]
+                for frame in frames[offset:offset + length]
+                if frame[0] and frame[1]
+            ]
+            self.assertAlmostEqual(statistics.median(voiced_f0), 100.0, places=6)
 
     def test_stock_speech_responds_to_hardware_trigger_flags(self) -> None:
         package = plaits_lab.builtin_package("speech")

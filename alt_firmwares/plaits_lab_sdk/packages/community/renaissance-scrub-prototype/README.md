@@ -14,6 +14,10 @@ The generated bank is committed for local hardware evaluation. Its inclusion
 does not settle the provenance or distribution policy for a released custom
 word-bank service.
 
+Each captured pitch contour is normalized around Plaits' 100 Hz LPC reference,
+so moving between flat and natural prosody changes inflection without changing
+the phrase's average register.
+
 The point of this model is to test Renaissance's control split beside stock
 Speech on hardware:
 

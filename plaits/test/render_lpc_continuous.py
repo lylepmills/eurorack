@@ -64,6 +64,8 @@ def parse_args() -> argparse.Namespace:
                         help="multiply the analyzed pitch contour (default: 1)")
     parser.add_argument("--prosody-amount", type=float, default=1.0,
                         help="0 uses fixed pitch; 1 replays analyzed pitch")
+    parser.add_argument("--contour-center-hz", type=float, default=100.0,
+                        help="normalize the captured contour around this pitch; 0 disables")
     parser.add_argument("--voicing-threshold", type=float, default=0.60)
     parser.add_argument("--silence-db", type=float, default=-42.0,
                         help="silence threshold relative to p95 frame RMS")
@@ -203,6 +205,7 @@ def make_plan(
     voicing_threshold: float,
     silence_db: float,
     energy_scale: float,
+    contour_center_hz: float,
 ) -> tuple[list[list[int]], dict[str, float]]:
     analyzed = downsample(samples)
     frame_count = math.ceil(len(analyzed) / FRAME_SIZE)
@@ -214,6 +217,22 @@ def make_plan(
     frame_rms = [float(item["rms"]) for item in features if item is not None]
     reference_rms = float(np.percentile(frame_rms, 95))
     silence_rms = reference_rms * 10.0 ** (silence_db / 20.0)
+
+    source_periods = [
+        int(item["period"])
+        for item in features
+        if item is not None
+        and float(item["rms"]) >= silence_rms
+        and float(item["periodicity"]) >= voicing_threshold
+    ]
+    source_f0_median = float(np.median([
+        ANALYSIS_RATE / period for period in source_periods
+    ])) if source_periods else 0.0
+    period_scale = (
+        source_f0_median / contour_center_hz
+        if source_f0_median and contour_center_hz
+        else 1.0
+    )
 
     plan = []
     previous = [0] * 12
@@ -230,6 +249,8 @@ def make_plan(
         else:
             voiced = float(item["periodicity"]) >= voicing_threshold
             period = int(item["period"]) if voiced else 0
+            if period:
+                period = int(np.clip(round(period * period_scale), 1, 255))
             energy = excitation_energy(
                 float(item["residual_rms"]), period, voiced, energy_scale)
             coefficients = quantized_coefficients(item["reflection"])
@@ -259,6 +280,9 @@ def make_plan(
         "energy_max": float(max(energy_values, default=0)),
         "period_min": float(min(periods, default=0)),
         "period_max": float(max(periods, default=0)),
+        "source_f0_median": source_f0_median,
+        "contour_center_hz": contour_center_hz,
+        "period_scale": period_scale,
     }
     return plan, stats
 
@@ -292,6 +316,8 @@ def main() -> int:
         raise SystemExit("--pitch-scale must be between 0.5 and 3")
     if not 0.0 <= args.prosody_amount <= 1.0:
         raise SystemExit("--prosody-amount must be between 0 and 1")
+    if args.contour_center_hz != 0.0 and not 50.0 <= args.contour_center_hz <= 300.0:
+        raise SystemExit("--contour-center-hz must be 0 or between 50 and 300")
     if not 0.0 <= args.voicing_threshold <= 1.0:
         raise SystemExit("--voicing-threshold must be between 0 and 1")
     if not -80.0 <= args.silence_db <= -12.0:
@@ -303,7 +329,8 @@ def main() -> int:
 
     samples = read_source(args.source)
     plan, stats = make_plan(
-        samples, args.voicing_threshold, args.silence_db, args.energy_scale)
+        samples, args.voicing_threshold, args.silence_db, args.energy_scale,
+        args.contour_center_hz)
     gate2.build_renderer(args.renderer, args.rebuild_renderer)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     temporary_plan = args.plan_output is None
@@ -347,6 +374,9 @@ def main() -> int:
         f"silence {int(stats['silence_frames'])}",
         f"Energy bytes: {int(stats['energy_min'])}..{int(stats['energy_max'])}; "
         f"voiced periods: {int(stats['period_min'])}..{int(stats['period_max'])}",
+        f"Pitch contour: source median {stats['source_f0_median']:.1f} Hz; "
+        f"normalized center {stats['contour_center_hz']:.1f} Hz; "
+        f"period scale {stats['period_scale']:.3f}",
         f"Silence threshold: {args.silence_db:.1f} dB from p95 frame RMS; "
         f"voicing threshold: {args.voicing_threshold:.2f}; "
         f"energy scale: {args.energy_scale:.2f}",

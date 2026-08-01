@@ -54,6 +54,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--formant-semitones", type=float, default=0.0)
     parser.add_argument("--pitch-scale", type=float, default=1.0)
     parser.add_argument("--prosody-amount", type=float, default=1.0)
+    parser.add_argument("--contour-center-hz", type=float, default=100.0)
     parser.add_argument("--gain", type=float, default=1.0)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--renderer", type=Path, default=gate2.DEFAULT_RENDERER)
@@ -102,6 +103,7 @@ def main() -> int:
         "--formant-semitones", str(args.formant_semitones),
         "--pitch-scale", str(args.pitch_scale),
         "--prosody-amount", str(args.prosody_amount),
+        "--contour-center-hz", str(args.contour_center_hz),
         "--gain", str(args.gain),
     ]
     if args.rebuild_renderer:
