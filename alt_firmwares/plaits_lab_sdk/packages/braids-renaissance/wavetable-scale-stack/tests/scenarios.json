@@ -1,0 +1,67 @@
+[
+  {
+    "id": "hero",
+    "name": "WTx6 scanning the full mini-wave line",
+    "durationSeconds": 4,
+    "note": 40,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.1, 0.1],
+      "timbre": [0.3, 0.3],
+      "morph": [0.0, 1.0],
+      "macro": [0.0, 0.0]
+    }
+  },
+  {
+    "id": "span",
+    "name": "Independent scale-degree span on one table position",
+    "durationSeconds": 4,
+    "note": 40,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.0, 1.0],
+      "timbre": [0.3, 0.3],
+      "morph": [0.62, 0.62],
+      "macro": [0.0, 0.0]
+    }
+  },
+  {
+    "id": "spread",
+    "name": "Independent ensemble spread on one table position",
+    "durationSeconds": 4,
+    "note": 48,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.1, 0.1],
+      "timbre": [0.0, 1.0],
+      "morph": [0.62, 0.62],
+      "macro": [0.0, 0.0]
+    }
+  },
+  {
+    "id": "scales",
+    "name": "A WTx6 third-stack through all sixteen scales",
+    "durationSeconds": 4,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.1, 0.1],
+      "timbre": [0.35, 0.35],
+      "morph": [0.4, 0.4],
+      "macro": [0.0, 1.0]
+    }
+  },
+  {
+    "id": "thinning",
+    "name": "Wide bright spans where upper voices leave the audible range",
+    "durationSeconds": 3,
+    "note": 72,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.5, 1.0],
+      "timbre": [0.2, 0.2],
+      "morph": [0.85, 0.85],
+      "macro": [0.0, 0.0]
+    }
+  }
+]

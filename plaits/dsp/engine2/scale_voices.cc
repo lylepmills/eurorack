@@ -15,7 +15,6 @@
 #include "plaits/build_config.h"
 #include "plaits/dsp/engine/engine.h"
 #include "plaits/dsp/oscillator/sine_oscillator.h"
-#include "plaits/resources.h"
 
 namespace plaits {
 
@@ -23,81 +22,6 @@ using namespace std;
 using namespace stmlib;
 
 namespace {
-
-// Renaissance's WTCH and WTx6 models scan Braids' 33-entry mini_wave_line.
-// These are the measured counterparts already used by Wave Paraphonic: 16
-// slots are the same source wave in Plaits' bank and the other 17 are the
-// closest spectral matches. Both projects generated their source banks from
-// the same byte-identical waves.bin, so this keeps the scan's character without
-// retaining Braids' separate 33,024-byte wt_waves table.
-const uint8_t kWaveIndex[33] = {
-  182,  41,  57, 182, 145, 146, 122, 147,  57, 117, 151,
-  167, 166, 165, 163, 162,  96, 129,  90, 130, 170, 132,
-  134, 136, 138, 141, 140,  60,  62, 173, 121, 147, 178
-};
-
-// Plaits peak-normalises its generated tables. Restore each Braids wave's
-// relative RMS before crossfading, in 1/128 steps, as Wave Paraphonic does.
-const uint8_t kWaveGain[33] = {
-  121, 121, 130, 166, 118, 120, 100, 125, 147, 137, 218,
-  121, 111, 127, 124, 121, 104, 103,  98, 104, 122, 141,
-  126, 108, 112, 119, 106, 122, 125, 120,  94, 151, 127
-};
-
-const int kWaveTableSize = 128;
-const int kWaveStride = kWaveTableSize + 4;
-const float kIntegratedScale = 1.0f / 1024.0f;
-
-// The source-level WTCH/WTx6 endpoint averaged about 8 dB below the square in
-// the listening prototype. This makeup was A/B approved; the ordinary Plaits
-// output limiter remains the final guard for the line's highest-crest slots.
-const float kWavetableLevelMakeup = 2.5f;
-
-struct WaveTap {
-  const int16_t* low;
-  const int16_t* high;
-  float crossfade;
-  float gain_low;
-  float gain_high;
-};
-
-inline const int16_t* WaveAt(int slot) {
-  return wav_integrated_waves + size_t(kWaveIndex[slot]) * kWaveStride;
-}
-
-inline void ResolveWaveTap(float scan, WaveTap* tap) {
-  CONSTRAIN(scan, 0.0f, 1.0f);
-  const float position = scan * 31.999f;
-  const int slot = static_cast<int>(position);
-  tap->low = WaveAt(slot);
-  tap->high = WaveAt(slot + 1);
-  tap->crossfade = position - static_cast<float>(slot);
-  tap->gain_low = static_cast<float>(kWaveGain[slot]) / 128.0f;
-  tap->gain_high = static_cast<float>(kWaveGain[slot + 1]) / 128.0f;
-}
-
-// wav_integrated_waves stores a scaled running sum. Difference first, then
-// interpolate the reconstructed samples: this matches Braids' linear table
-// read and avoids the zero-order-hold images produced by interpolating the
-// integral before differentiating it.
-inline float ReadWave(const WaveTap& tap, float phase) {
-  const float p = phase * static_cast<float>(kWaveTableSize);
-  MAKE_INTEGRAL_FRACTIONAL(p);
-  const float low_0 = static_cast<float>(
-      tap.low[p_integral + 1] - tap.low[p_integral]);
-  const float low_1 = static_cast<float>(
-      tap.low[p_integral + 2] - tap.low[p_integral + 1]);
-  const float high_0 = static_cast<float>(
-      tap.high[p_integral + 1] - tap.high[p_integral]);
-  const float high_1 = static_cast<float>(
-      tap.high[p_integral + 2] - tap.high[p_integral + 1]);
-  const float low =
-      (low_0 + (low_1 - low_0) * p_fractional) * tap.gain_low;
-  const float high =
-      (high_0 + (high_1 - high_0) * p_fractional) * tap.gain_high;
-  return (low + (high - low) * tap.crossfade) *
-      kIntegratedScale * kWavetableLevelMakeup;
-}
 
 // One-sided PolyBLEP. `t` is the phase, `dt` the per-sample increment.
 inline float PolyBlep(float t, float dt) {
@@ -132,31 +56,19 @@ inline float Square(float phase, float dt) {
   return naive + PolyBlep(phase, dt) - PolyBlep(other, dt);
 }
 
-inline float NaiveSquare(float phase) {
-  return phase < 0.5f ? 1.0f : -1.0f;
-}
-
-// Only the two waveforms bracketing the knob are computed; a five-way
-// crossfade would cost more for the same result.
-inline float ClassicalWaveform(float phase, float dt, float waveform) {
-  const float scaled = waveform * 4.0f;
-  // Test from the expensive end first, and return exact anchors without
-  // computing their zero-gain neighbour. The five-anchor remap puts saw at
-  // MORPH noon, so that short-circuit is a material part of the M4 budget.
-  if (scaled >= 3.0f) {
-    return Square(phase, dt);
-  } else if (scaled >= 2.0f) {
-    const float saw = Saw(phase, dt);
-    if (scaled == 2.0f) {
-      return saw;
-    }
-    return saw + (Square(phase, dt) - saw) * (scaled - 2.0f);
-  } else if (scaled >= 1.0f) {
+// Only the two waveforms bracketing the knob are computed; a four-way
+// crossfade would cost twice this for the same result.
+inline float Waveform(float phase, float dt, float waveform) {
+  const float scaled = waveform * 3.0f;
+  if (scaled < 1.0f) {
+    const float sine = Sine(phase);
+    return sine + (Triangle(phase) - sine) * scaled;
+  } else if (scaled < 2.0f) {
     const float triangle = Triangle(phase);
     return triangle + (Saw(phase, dt) - triangle) * (scaled - 1.0f);
   } else {
-    const float sine = Sine(phase);
-    return sine + (Triangle(phase) - sine) * scaled;
+    const float saw = Saw(phase, dt);
+    return saw + (Square(phase, dt) - saw) * min(scaled - 2.0f, 1.0f);
   }
 }
 
@@ -228,7 +140,6 @@ void ScaleVoiceBank::Render(
     const float* notes,
     int num_voices,
     float waveform,
-    float scan,
     float detune_cents,
     float fold,
     float* out,
@@ -253,72 +164,7 @@ void ScaleVoiceBank::Render(
   const float mix = 1.0f / static_cast<float>(max(num_voices, 1));
   const float fold_drive = 1.0f + fold * (kScaleVoicesMaxFoldDrive - 1.0f);
   // The fold is a sine-region effect, as it was upstream.
-  const float fold_amount = max(1.0f - waveform * 4.0f, 0.0f);
-  if (waveform > 0.75f) {
-    WaveTap wave_tap;
-    ResolveWaveTap(scan, &wave_tap);
-    const float wavetable_amount = min((waveform - 0.75f) * 4.0f, 1.0f);
-    for (size_t i = 0; i < size; ++i) {
-      float mixed = 0.0f;
-      float root = 0.0f;
-      for (int v = 0; v < num_voices; ++v) {
-        if (!audible[v]) {
-          continue;
-        }
-        phase_[v] += frequency[v];
-        if (phase_[v] >= 1.0f) {
-          phase_[v] -= 1.0f;
-        }
-        const float wavetable = ReadWave(wave_tap, phase_[v]);
-        // The square anchor itself remains PolyBLEP. Inside the final
-        // crossfade its contribution is already falling behind a raw
-        // 128-sample Renaissance table; using the matching naive edge avoids
-        // paying for two BLEP corrections in addition to the table read.
-        float sample = wavetable;
-        if (wavetable_amount < 1.0f) {
-          const float square = NaiveSquare(phase_[v]);
-          sample = square + (wavetable - square) * wavetable_amount;
-        }
-        mixed += sample * mix;
-        if (v == 0) {
-          root = sample;
-        }
-      }
-      // Every reconstructed Plaits wave and the square transition are exactly
-      // zero-mean over a cycle, so the folded-wave DC blocker is unnecessary
-      // on this hot path.
-      out[i] = mixed;
-      aux[i] = root;
-    }
-    return;
-  }
-
-  if (waveform >= 0.25f) {
-    for (size_t i = 0; i < size; ++i) {
-      float mixed = 0.0f;
-      float root = 0.0f;
-      for (int v = 0; v < num_voices; ++v) {
-        if (!audible[v]) {
-          continue;
-        }
-        phase_[v] += frequency[v];
-        if (phase_[v] >= 1.0f) {
-          phase_[v] -= 1.0f;
-        }
-        const float sample = ClassicalWaveform(
-            phase_[v], frequency[v], waveform);
-        mixed += sample * mix;
-        if (v == 0) {
-          root = sample;
-        }
-      }
-      // Triangle and both PolyBLEP waveforms are analytically zero-mean and
-      // carry no sine fold, so keep the DC blocker off this CPU-critical path.
-      out[i] = mixed;
-      aux[i] = root;
-    }
-    return;
-  }
+  const float fold_amount = max(1.0f - waveform * 3.0f, 0.0f);
 
   for (size_t i = 0; i < size; ++i) {
     float mixed = 0.0f;
@@ -331,8 +177,7 @@ void ScaleVoiceBank::Render(
       if (phase_[v] >= 1.0f) {
         phase_[v] -= 1.0f;
       }
-      float sample = ClassicalWaveform(
-          phase_[v], frequency[v], waveform);
+      float sample = Waveform(phase_[v], frequency[v], waveform);
       if (fold_amount > 0.0f) {
         // Driving Sine()'s argument past a quarter turn folds. The +1.0f is
         // load-bearing, not cosmetic: Sine() is documented safe "for phase >=

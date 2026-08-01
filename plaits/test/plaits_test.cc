@@ -96,6 +96,8 @@
 #include "plaits/dsp/engine2/bytebeat_engine.h"
 #include "plaits/dsp/engine2/diatonic_chord_engine.h"
 #include "plaits/dsp/engine2/scale_stack_engine.h"
+#include "plaits/dsp/engine2/wavetable_chord_engine.h"
+#include "plaits/dsp/engine2/wavetable_scale_stack_engine.h"
 #include "plaits/dsp/engine2/shakers_engine.h"
 #include "plaits/dsp/engine2/brass_engine.h"
 #include "plaits/dsp/engine2/z_filter_engine.h"
@@ -2403,6 +2405,8 @@ void TestExperimentalEngines() {
   RenderAuditionEngine<BytebeatEngine>("23-bytebeat.wav");
   RenderAuditionEngine<DiatonicChordEngine>("24-diatonic-chord.wav");
   RenderAuditionEngine<ScaleStackEngine>("25-scale-stack.wav");
+  RenderAuditionEngine<WavetableChordEngine>("52-wavetable-chord.wav");
+  RenderAuditionEngine<WavetableScaleStackEngine>("53-wavetable-scale-stack.wav");
   RenderAuditionEngine<ShakersEngine>("26-shakers.wav");
   RenderAuditionEngine<BrassEngine>("28-brass.wav");
   RenderAuditionEngine<RawFmEngine>("21-raw-fm.wav");
@@ -2471,6 +2475,8 @@ void TestExperimentalEngines() {
   ValidateExperimentalEngineExtremes<BytebeatEngine>();
   ValidateExperimentalEngineExtremes<DiatonicChordEngine>();
   ValidateExperimentalEngineExtremes<ScaleStackEngine>();
+  ValidateExperimentalEngineExtremes<WavetableChordEngine>();
+  ValidateExperimentalEngineExtremes<WavetableScaleStackEngine>();
   ValidateExperimentalEngineExtremes<ShakersEngine>();
   ValidateExperimentalEngineExtremes<BrassEngine>();
   ValidateExperimentalEngineExtremes<ZFilterEngine>();
@@ -2521,6 +2527,8 @@ void TestExperimentalEngines() {
   ValidateExperimentalControlResponse<BytebeatEngine>("Bytebeat");
   ValidateExperimentalControlResponse<DiatonicChordEngine>("Diatonic Chord");
   ValidateExperimentalControlResponse<ScaleStackEngine>("Scale Stack");
+  ValidateExperimentalControlResponse<WavetableChordEngine>("Wavetable Chord");
+  ValidateExperimentalControlResponse<WavetableScaleStackEngine>("Wavetable Scale Stack");
   ValidateExperimentalControlResponse<ShakersEngine>("Shakers");
   ValidateExperimentalControlResponse<BrassEngine>("Brass");
   ValidateExperimentalControlResponse<ZFilterEngine>("Z Filter");

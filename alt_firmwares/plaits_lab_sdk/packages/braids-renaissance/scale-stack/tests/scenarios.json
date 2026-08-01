@@ -47,21 +47,8 @@
     "controls": {
       "harmonics": [0.15, 0.15],
       "timbre": [0.6, 0.6],
-      "morph": [0.75, 0.75],
-      "macro": [0.125, 0.125]
-    }
-  },
-  {
-    "id": "wavetable-scan",
-    "name": "WTx6 endpoint scanning the restored mini-wave line",
-    "durationSeconds": 4,
-    "note": 48,
-    "triggerHz": 0,
-    "controls": {
-      "harmonics": [0.1, 0.1],
-      "timbre": [0.0, 1.0],
       "morph": [1.0, 1.0],
-      "macro": [0.0, 0.0]
+      "macro": [0.125, 0.125]
     }
   }
 ]

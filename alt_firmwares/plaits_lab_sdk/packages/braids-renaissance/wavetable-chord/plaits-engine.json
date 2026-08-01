@@ -2,14 +2,14 @@
   "schemaVersion": 1,
   "sdk": "plaits-engine-cpp-v1",
   "packageType": "builtin-reference",
-  "id": "braids-renaissance/diatonic-chord",
-  "catalogId": "diatonic-chord",
+  "id": "braids-renaissance/wavetable-chord",
+  "catalogId": "wavetable-chord",
   "version": "1.0.0",
-  "name": "Diatonic Chord",
+  "name": "Wavetable Chord",
   "author": "Tom Burns",
   "origin": "Community",
   "license": "MIT",
-  "description": "Chords stacked in scale degrees rather than fixed intervals, so the quality follows the played note. From Tom Burns' Braids Renaissance firmware.",
+  "description": "Diatonic chords over Braids Renaissance's WTCH scan, with independent voice spread and wavetable position.",
   "family": "Polyphonic",
   "tags": [
     "braids",
@@ -17,7 +17,8 @@
     "chord",
     "diatonic",
     "polyphonic",
-    "scale"
+    "scale",
+    "wavetable"
   ],
   "controls": [
     {
@@ -28,31 +29,32 @@
     {
       "id": "timbre",
       "label": "Spread",
-      "description": "Detunes the voices against each other and folds them near sine."
+      "description": "Detunes the voices symmetrically without moving the chord's centre pitch."
     },
     {
       "id": "morph",
-      "label": "Waveform",
-      "description": "Morphs every voice from sine through triangle and saw to square."
+      "label": "Wavetable",
+      "description": "Scans WTCH's 33-wave mini-wave line."
     },
     {
       "id": "macro",
       "label": "Scale",
-      "description": "Selects the scale the chord is built from, which is what decides its quality."
+      "description": "Selects the scale the chord is built from, which decides its quality."
     }
   ],
   "outputs": {
-    "main": "The chord.",
+    "main": "The wavetable chord.",
     "aux": "The root voice alone, as a pitch reference."
   },
   "source": {
     "root": "../../../../..",
-    "header": "plaits/dsp/engine2/diatonic_chord_engine.h",
+    "header": "plaits/dsp/engine2/wavetable_chord_engine.h",
     "files": [
-      "plaits/dsp/engine2/diatonic_chord_engine.cc",
-      "plaits/dsp/engine2/scale_voices.cc"
+      "plaits/dsp/engine2/wavetable_chord_engine.cc",
+      "plaits/dsp/engine2/scale_voices.cc",
+      "plaits/dsp/engine2/scale_wavetable_voices.cc"
     ],
-    "className": "DiatonicChordEngine"
+    "className": "WavetableChordEngine"
   },
   "postProcessing": {
     "alreadyEnveloped": false,
@@ -60,5 +62,5 @@
     "auxGain": -0.65
   },
   "scenarios": "tests/scenarios.json",
-  "upstream": "Braids Renaissance DigitalOscillator::RenderDiatonicChord (boourns/eurorack-renaissance)"
+  "upstream": "Braids Renaissance WTCH / DigitalOscillator::RenderDiatonicChord (boourns/eurorack-renaissance)"
 }

@@ -91,8 +91,20 @@ class RenderManualTest(unittest.TestCase):
         return recipe
 
     def test_scale_bank_order_is_printable_only_for_scale_engines(self) -> None:
-        document = manual_document(self.scale_bank_recipe())
-        self.assertEqual(document["scaleBank"], ["Natural minor", "Major"])
+        for engine_id in (
+            "diatonic-chord",
+            "scale-stack",
+            "wavetable-chord",
+            "wavetable-scale-stack",
+        ):
+            recipe = self.scale_bank_recipe()
+            recipe["slots"][0] = engine_id
+            document = manual_document(recipe)
+            self.assertEqual(
+                document["scaleBank"],
+                ["Natural minor", "Major"],
+                engine_id,
+            )
         self.assertEqual(
             manual_document(self.load("default_recipe.json"))["scaleBank"],
             [],

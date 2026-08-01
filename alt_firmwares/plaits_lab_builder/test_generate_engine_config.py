@@ -26,7 +26,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
         return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
 
     def test_catalog_matches_the_approved_product_catalog(self) -> None:
-        self.assertEqual(len(CATALOG), 79)
+        self.assertEqual(len(CATALOG), 81)
 
     def test_worker_and_container_schema_ranges_stay_in_sync(self) -> None:
         # The public Worker validates first, then sends its normalized recipe to

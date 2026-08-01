@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "braids-renaissance/wavetable-scale-stack",
+  "catalogId": "wavetable-scale-stack",
+  "version": "1.0.0",
+  "name": "Wavetable Scale Stack",
+  "author": "Tom Burns",
+  "origin": "Community",
+  "license": "MIT",
+  "description": "Five scale-spaced voices over Braids Renaissance's WTx6 scan, with independent span, spread, and wavetable position.",
+  "family": "Polyphonic",
+  "tags": [
+    "braids",
+    "braids renaissance",
+    "stack",
+    "polyphonic",
+    "scale",
+    "interval",
+    "wavetable"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Span",
+      "description": "Sets the spacing between voices, from one scale degree up to sixteen."
+    },
+    {
+      "id": "timbre",
+      "label": "Spread",
+      "description": "Detunes the voices symmetrically without moving the stack's centre pitch."
+    },
+    {
+      "id": "morph",
+      "label": "Wavetable",
+      "description": "Scans WTx6's 33-wave mini-wave line."
+    },
+    {
+      "id": "macro",
+      "label": "Scale",
+      "description": "Selects the scale whose degrees define the stack spacing."
+    }
+  ],
+  "outputs": {
+    "main": "The wavetable stack.",
+    "aux": "The root voice alone, as a pitch reference."
+  },
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/wavetable_scale_stack_engine.h",
+    "files": [
+      "plaits/dsp/engine2/wavetable_scale_stack_engine.cc",
+      "plaits/dsp/engine2/scale_voices.cc",
+      "plaits/dsp/engine2/scale_wavetable_voices.cc"
+    ],
+    "className": "WavetableScaleStackEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": -0.6,
+    "auxGain": -0.6
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Braids Renaissance WTx6 / DigitalOscillator::RenderStack (boourns/eurorack-renaissance)"
+}

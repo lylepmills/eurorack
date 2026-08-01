@@ -8,20 +8,7 @@
     "controls": {
       "harmonics": [0.0, 0.7],
       "timbre": [0.2, 0.5],
-      "morph": [0.0, 1.0],
-      "macro": [0.0, 0.0]
-    }
-  },
-  {
-    "id": "wavetable-scan",
-    "name": "WTCH endpoint scanning the restored mini-wave line",
-    "durationSeconds": 4,
-    "note": 48,
-    "triggerHz": 0,
-    "controls": {
-      "harmonics": [0.28, 0.28],
-      "timbre": [0.0, 1.0],
-      "morph": [1.0, 1.0],
+      "morph": [0.0, 0.85],
       "macro": [0.0, 0.0]
     }
   },

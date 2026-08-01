@@ -180,7 +180,12 @@ def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]
         "chordTables": [table["name"] for table in build.chord_tables],
         "scaleBank": (
             [scale["name"] for scale in build.scale_bank]
-            if any(engine_id in ("diatonic-chord", "scale-stack") for engine_id in slots)
+            if any(engine_id in (
+                "diatonic-chord",
+                "scale-stack",
+                "wavetable-chord",
+                "wavetable-scale-stack",
+            ) for engine_id in slots)
             else []
         ),
         # Only a build that compiled the procedure in answers the power-up

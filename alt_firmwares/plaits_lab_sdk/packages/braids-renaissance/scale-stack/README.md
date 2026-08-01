@@ -1,14 +1,14 @@
 # Scale Stack
 
-A port of the five STACK_* models from Tom Burns'
+A port of the four classical STACK_* models from Tom Burns'
 [Braids Renaissance](https://github.com/boourns/eurorack-renaissance).
 
 Five oscillators starting at the played note and spaced an equal number of
 **scale degrees** apart, so one knob sweeps from a unison cluster out through
 stacked seconds, thirds, fourths and beyond — and every rung stays in the scale,
-which is what makes the sweep musical rather than an interval ramp. All five
-display models fold onto MORPH, ending in WTx6's wavetable scan; the Plaits-native
-mapping and measured substitution are documented in `diatonic-chord`'s README.
+which is what makes the sweep musical rather than an interval ramp. Sine,
+triangle, saw and square fold onto MORPH. WTx6 is the separate
+`wavetable-scale-stack` engine so its MORPH can scan the table independently.
 
 ## Why it is not `swarm` or `triple`
 
@@ -25,9 +25,8 @@ sixteen `diatonic-chord` uses — and it matters more here, because the span cou
 in whatever the scale's degrees are: span 2 is a third in major and a fourth in
 pentatonic.
 
-TIMBRE detunes the voices symmetrically against each other, folds them where
-MORPH is still near a sine, and scans the table at the WTx6 endpoint, as in
-`diatonic-chord`.
+TIMBRE detunes the voices symmetrically against each other and folds them where
+MORPH is still near a sine, as in `diatonic-chord`.
 
 ## ⚠️ Upstream arithmetic is not reproduced
 
@@ -55,6 +54,6 @@ bank. The full scale list and the remaining notes live in that engine's README.
 Braids' `kStackSize` was 6 but `RenderStack` only ever filled five voices; five
 is what this ports.
 
-The calibrated Cortex-M4 sweep estimates 95% worst-case. The transition-path
-optimization, A/B delta, hardware-probe requirement, and cold/shared flash
-cases are covered in `diatonic-chord`'s README.
+The calibrated Cortex-M4 sweep estimates 106% worst-case (92–136%). This is the
+unchanged classical path and still requires the hardware DWT probe before
+publication.

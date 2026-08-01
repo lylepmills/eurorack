@@ -110,8 +110,11 @@ CC_FILES       = algorithms.cc \
 		triple_engine.cc \
 		bytebeat_engine.cc \
 		scale_voices.cc \
+		scale_wavetable_voices.cc \
 		diatonic_chord_engine.cc \
+		wavetable_chord_engine.cc \
 		scale_stack_engine.cc \
+		wavetable_scale_stack_engine.cc \
 		shakers_engine.cc \
 		brass_engine.cc \
 		z_filter_engine.cc

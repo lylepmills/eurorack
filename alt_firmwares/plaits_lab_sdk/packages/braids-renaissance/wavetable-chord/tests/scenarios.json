@@ -1,0 +1,54 @@
+[
+  {
+    "id": "hero",
+    "name": "WTCH chord scanning the full mini-wave line",
+    "durationSeconds": 4,
+    "note": 48,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.28, 0.28],
+      "timbre": [0.25, 0.25],
+      "morph": [0.0, 1.0],
+      "macro": [0.0, 0.0]
+    }
+  },
+  {
+    "id": "spread",
+    "name": "Independent ensemble spread on one table position",
+    "durationSeconds": 4,
+    "note": 48,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.28, 0.28],
+      "timbre": [0.0, 1.0],
+      "morph": [0.62, 0.62],
+      "macro": [0.0, 0.0]
+    }
+  },
+  {
+    "id": "scales",
+    "name": "One WTCH shape through all sixteen scales",
+    "durationSeconds": 4,
+    "note": 45,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.16, 0.16],
+      "timbre": [0.25, 0.25],
+      "morph": [0.4, 0.4],
+      "macro": [0.0, 1.0]
+    }
+  },
+  {
+    "id": "top-of-range",
+    "name": "A bright wide extension near the top of the audible range",
+    "durationSeconds": 3,
+    "note": 84,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.6, 0.99],
+      "timbre": [0.4, 0.4],
+      "morph": [0.85, 0.85],
+      "macro": [0.75, 0.75]
+    }
+  }
+]

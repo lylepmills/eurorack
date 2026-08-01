@@ -3,14 +3,14 @@
 // Copyright 2026 Lyle Mills.
 // SPDX-License-Identifier: MIT
 //
-// Braids Renaissance's five CHORD_* models merged into one slot.
+// Braids Renaissance's four classical CHORD_* models merged into one slot,
+// with WTCH exposed separately as WavetableChordEngine.
 //
 // Upstream is DigitalOscillator::RenderDiatonicChord in Tom Burns' Braids
 // Renaissance (boourns/eurorack-renaissance): a chord built by stacking SCALE
 // DEGREES on the played note rather than by looking up an interval table. The
-// five display models -- sine, triangle, saw, square and wavetable -- differ
-// only in the waveform, so all five collapse onto MORPH the same way `triple`
-// collapses its four.
+// four classical display models -- sine, triangle, saw and square -- differ
+// only in waveform, so they collapse onto MORPH the same way `triple` does.
 //
 // WHY THIS IS NOT A DUPLICATE OF `chords`. Plaits' own chord engine reads a
 // table of intervals in cents, and Plaits Palette lets you author that table --
@@ -21,10 +21,9 @@
 // table entry for either. That is the whole reason the model exists and the
 // only thing that justifies the slot.
 //
-// THE WAVETABLE MODEL uses the measured Plaits-native mini_wave_line mapping
-// shared by the Wave Paraphonic port. Its 16 exact counterparts and 17 closest
-// matches read from wav_integrated_waves, avoiding a second 33,024-byte Braids
-// table; the normal linker shares Plaits' bank with every other table engine.
+// WTCH is a separate engine so MORPH can scan its table while TIMBRE remains an
+// independent spread control. It shares this engine's chord construction and
+// ScaleVoiceBank; only the oscillator path differs.
 //
 // ⚠️ UPSTREAM ARITHMETIC IS NOT REPRODUCED, because it does not match its own
 // labels. Renaissance's `diatonic_chords` table reads as ABSOLUTE scale degrees
@@ -69,7 +68,6 @@ class DiatonicChordEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-  // Pattern A: the chord against its own root.
   virtual bool stereo_capable() const { return true; }
 
  private:

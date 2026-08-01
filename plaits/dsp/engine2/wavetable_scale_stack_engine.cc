@@ -2,50 +2,50 @@
 // Copyright 2018 Tom Burns.
 // Copyright 2026 Lyle Mills.
 // SPDX-License-Identifier: MIT
-//
-// Braids Renaissance's classical STACK_* models and shared stack construction.
 
-#include "plaits/dsp/engine2/scale_stack_engine.h"
+// Braids Renaissance's dedicated WTx6 engine. Kept independent of Scale Stack
+// so the classical engine retains its exact code and flash footprint.
+
+#include "plaits/dsp/engine2/wavetable_scale_stack_engine.h"
 
 #include <algorithm>
 
 #include "stmlib/dsp/dsp.h"
+
+#include "plaits/dsp/engine2/scale_stack_engine.h"
 
 namespace plaits {
 
 using namespace std;
 using namespace stmlib;
 
-void ScaleStackEngine::Init(BufferAllocator* allocator) {
+void WavetableScaleStackEngine::Init(BufferAllocator* allocator) {
   (void) allocator;
   voices_.Init();
 }
 
-void ScaleStackEngine::Reset() {
+void WavetableScaleStackEngine::Reset() {
   voices_.Reset();
 }
 
-void ScaleStackEngine::Render(
+void WavetableScaleStackEngine::Render(
     const EngineParameters& parameters,
     float* out,
     float* aux,
     size_t size,
     bool* already_enveloped) {
   *already_enveloped = false;
-
   if (parameters.trigger & TRIGGER_RISING_EDGE) {
     voices_.Reset();
   }
 
   int scale = static_cast<int>(parameters.macro * kScaleVoicesNumScales);
   CONSTRAIN(scale, 0, kScaleVoicesNumScales - 1);
-
   int span = 1 + static_cast<int>(parameters.harmonics * kScaleStackMaxSpan);
   CONSTRAIN(span, 1, kScaleStackMaxSpan);
 
   float residual = 0.0f;
   const int root_degree = QuantizeToScale(parameters.note, scale, &residual);
-
   float notes[kScaleVoicesMaxVoices];
   notes[0] = parameters.note;
   for (int v = 1; v < kScaleStackNumVoices; ++v) {
@@ -53,11 +53,16 @@ void ScaleStackEngine::Render(
     CONSTRAIN(degree, 0, kScaleVoicesMaxDegreeOffset);
     notes[v] = ScaleDegreeToNote(root_degree + degree, scale) + residual;
   }
-  const float waveform = parameters.morph;
+
   const float detune = parameters.timbre * kScaleVoicesMaxDetuneCents;
-  const float fold = parameters.timbre;
-  voices_.Render(
-      notes, kScaleStackNumVoices, waveform, detune, fold, out, aux, size);
+  voices_.RenderWavetable(
+      notes,
+      kScaleStackNumVoices,
+      parameters.morph,
+      detune,
+      out,
+      aux,
+      size);
 }
 
 }  // namespace plaits

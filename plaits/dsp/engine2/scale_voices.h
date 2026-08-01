@@ -83,7 +83,8 @@ int QuantizeToScale(float note, int scale, float* residual);
 // The MIDI note of an absolute scale degree.
 float ScaleDegreeToNote(int degree, int scale);
 
-// A bank of naive oscillators sharing one waveform axis. Naive rather than
+// A bank of oscillators shared by the four classical scale models and their
+// dedicated wavetable counterparts. Naive rather than
 // band-limited on purpose: Braids rendered these models with plain phase
 // accumulators, that raw stacked-oscillator sound is the engine's identity, and
 // six band-limited voices would not fit the CPU budget in any case. What the
@@ -101,15 +102,25 @@ class ScaleVoiceBank {
   void Reset();
 
   // `notes` holds `num_voices` MIDI notes; voice 0 is the root and is the one
-  // written to `aux`. `waveform` runs sine -> triangle -> saw -> square ->
-  // wavetable; `scan`, `detune_cents` and `fold` come off TIMBRE.
+  // written to `aux`. `waveform` runs sine -> triangle -> saw -> square;
+  // `detune_cents` and `fold` come off TIMBRE.
   void Render(
       const float* notes,
       int num_voices,
       float waveform,
-      float scan,
       float detune_cents,
       float fold,
+      float* out,
+      float* aux,
+      size_t size);
+
+  // The dedicated WTCH/WTx6 path. MORPH supplies `scan`; TIMBRE remains an
+  // independent spread control through `detune_cents`.
+  void RenderWavetable(
+      const float* notes,
+      int num_voices,
+      float scan,
+      float detune_cents,
       float* out,
       float* aux,
       size_t size);

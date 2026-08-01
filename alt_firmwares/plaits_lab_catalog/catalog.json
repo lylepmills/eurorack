@@ -2990,7 +2990,7 @@
       ],
       "controls": [
         "Chord",
-        "Spread / Scan",
+        "Spread",
         "Waveform",
         "Scale"
       ],
@@ -3031,7 +3031,7 @@
       ],
       "controls": [
         "Span",
-        "Spread / Scan",
+        "Spread",
         "Waveform",
         "Scale"
       ],
@@ -3046,6 +3046,92 @@
         "files": [
           "plaits/dsp/engine2/scale_stack_engine.cc",
           "plaits/dsp/engine2/scale_voices.cc"
+        ]
+      },
+      "postProcessing": {
+        "alreadyEnveloped": false,
+        "outGain": -0.6,
+        "auxGain": -0.6
+      }
+    },
+    {
+      "id": "wavetable-chord",
+      "packageId": "braids-renaissance/wavetable-chord",
+      "name": "Wavetable Chord",
+      "author": "Tom Burns",
+      "origin": "Community",
+      "family": "Polyphonic",
+      "description": "Diatonic chords over Braids Renaissance's WTCH scan, with independent voice spread and wavetable position.",
+      "tags": [
+        "braids",
+        "braids renaissance",
+        "chord",
+        "diatonic",
+        "polyphonic",
+        "scale",
+        "wavetable"
+      ],
+      "controls": [
+        "Chord",
+        "Spread",
+        "Wavetable",
+        "Scale"
+      ],
+      "outputs": [
+        "Wavetable chord",
+        "Root voice"
+      ],
+      "source": {
+        "header": "plaits/dsp/engine2/wavetable_chord_engine.h",
+        "className": "WavetableChordEngine",
+        "member": "wavetable_chord_engine_",
+        "files": [
+          "plaits/dsp/engine2/wavetable_chord_engine.cc",
+          "plaits/dsp/engine2/scale_voices.cc",
+          "plaits/dsp/engine2/scale_wavetable_voices.cc"
+        ]
+      },
+      "postProcessing": {
+        "alreadyEnveloped": false,
+        "outGain": -0.65,
+        "auxGain": -0.65
+      }
+    },
+    {
+      "id": "wavetable-scale-stack",
+      "packageId": "braids-renaissance/wavetable-scale-stack",
+      "name": "Wavetable Scale Stack",
+      "author": "Tom Burns",
+      "origin": "Community",
+      "family": "Polyphonic",
+      "description": "Five scale-spaced voices over Braids Renaissance's WTx6 scan, with independent span, spread, and wavetable position.",
+      "tags": [
+        "braids",
+        "braids renaissance",
+        "stack",
+        "polyphonic",
+        "scale",
+        "interval",
+        "wavetable"
+      ],
+      "controls": [
+        "Span",
+        "Spread",
+        "Wavetable",
+        "Scale"
+      ],
+      "outputs": [
+        "Wavetable stack",
+        "Root voice"
+      ],
+      "source": {
+        "header": "plaits/dsp/engine2/wavetable_scale_stack_engine.h",
+        "className": "WavetableScaleStackEngine",
+        "member": "wavetable_scale_stack_engine_",
+        "files": [
+          "plaits/dsp/engine2/wavetable_scale_stack_engine.cc",
+          "plaits/dsp/engine2/scale_voices.cc",
+          "plaits/dsp/engine2/scale_wavetable_voices.cc"
         ]
       },
       "postProcessing": {
@@ -3849,8 +3935,8 @@
     "diatonic-chord": {
       "controls": {
         "harmonics": "Steps through sixteen chord shapes, from triads up through elevenths and the suspended set.",
-        "timbre": "Detunes the voices, folds them near sine, and scans the table at the WTCH endpoint.",
-        "morph": "Morphs every voice through sine, triangle, saw and square to WTCH's wavetable.",
+        "timbre": "Detunes the voices against each other and folds them where the waveform is still near sine.",
+        "morph": "Morphs every voice from sine through triangle and saw to square.",
         "macro": "Selects the scale the chord is built from, which is what decides its quality."
       },
       "trigger": "Realigns every voice so a struck chord starts the same way each time."
@@ -3858,9 +3944,27 @@
     "scale-stack": {
       "controls": {
         "harmonics": "Sets the spacing between voices, from one scale degree up to sixteen.",
-        "timbre": "Detunes the voices, folds them near sine, and scans the table at the WTx6 endpoint.",
-        "morph": "Morphs every voice through sine, triangle, saw and square to WTx6's wavetable.",
+        "timbre": "Detunes the voices against each other and folds them where the waveform is still near sine.",
+        "morph": "Morphs every voice from sine through triangle and saw to square.",
         "macro": "Selects the scale the stack is quantised to, which is what the spacing counts in."
+      },
+      "trigger": "Realigns every voice so a struck stack starts the same way each time."
+    },
+    "wavetable-chord": {
+      "controls": {
+        "harmonics": "Steps through the same sixteen scale-degree chord shapes as Diatonic Chord.",
+        "timbre": "Spreads the voices symmetrically, independent of the selected table position.",
+        "morph": "Scans WTCH's 33-wave mini-wave line.",
+        "macro": "Selects the scale the chord is built from, which decides its quality."
+      },
+      "trigger": "Realigns every voice so a struck chord starts the same way each time."
+    },
+    "wavetable-scale-stack": {
+      "controls": {
+        "harmonics": "Sets the spacing between voices, from one scale degree up to sixteen.",
+        "timbre": "Spreads the voices symmetrically, independent of the selected table position.",
+        "morph": "Scans WTx6's 33-wave mini-wave line.",
+        "macro": "Selects the scale whose degrees define the stack spacing."
       },
       "trigger": "Realigns every voice so a struck stack starts the same way each time."
     },
