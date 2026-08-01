@@ -26,7 +26,7 @@ ACCESSIBLE_BANK_COLOR = "#687069"
 CONTROL_IDS = ("harmonics", "timbre", "morph", "macro")
 PANEL_LABELS = ("HARMONICS", "TIMBRE", "MORPH", "FOURTH")
 
-# The options menu is seven "lights", ordered so the ones a player reaches for
+# The options menu is eight "lights", ordered so the ones a player reaches for
 # most sit nearest the start of the walk. Each light cycles through an ordered
 # list of settings, and the module shows the current one as an LED color (plaits
 # ui.cc): value 0 green, 1 red, 2 yellow, then 3-5 the SAME colors blinking — so
@@ -47,6 +47,9 @@ MENU_LIGHTS = (
     ("MODEL input", ("Model select", "Fourth macro", "Aux crossfade", "LPG colour (VCFA->VCA)")),
     ("LEVEL input", ("Level", "LPG decay", "Auto: decay or velocity")),
     ("Hold on trigger", ("Off (live CV)", "Sample & hold")),
+    ("Unpatched attenuverters", (
+        "Stock envelopes", "Continuous drift", "Triggered random step",
+    )),
 )
 
 # LED appearance for option values 0..8 (plaits ui.cc): green/red/yellow solid
@@ -461,7 +464,8 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         bank_map_style.append(("BOTTOMPADDING", (0, 0), (-1, -2), 8))
     bank_map.setStyle(TableStyle(bank_map_style))
 
-    # Options menu — the seven-light reference. Lights 1-5 and 7 are the same on
+    # Options menu — the eight-light reference. Every light except the chord
+    # table is the same on
     # every build; light 6 lists this recipe's chord tables, so the page is
     # partly recipe-specific. Each light's settings are shown in LED order, with
     # the color word tinted to the LED and "(blink)"/"(fast blink)" for the
@@ -518,12 +522,12 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
             "Press both buttons again to exit. The FREQUENCY knob now controls the selected model's fourth parameter; for Mutable Instruments models, noon preserves the original sound."
         )
         options_intro = (
-            "Click TIMBRE + FREQUENCY together to enter or exit the options menu. The first seven lights are the menu: "
+            "Click TIMBRE + FREQUENCY together to enter or exit the options menu. All eight lights are the menu: "
             "click FREQUENCY/TIMBRE for the previous/next light, and MORPH/HARMONICS for the previous/next setting. "
             "The first three settings use brightest, medium, and dim; settings four through six repeat those levels with a slow blink; "
             "and, on LIGHT 1, settings seven through nine repeat them with a fast blink."
             if roved else
-            "Short-press both buttons at once to enter or exit the options menu. The first seven lights are the menu: "
+            "Short-press both buttons at once to enter or exit the options menu. All eight lights are the menu: "
             "the left button moves between them, and the right button steps through a light's settings. "
             "The first three settings use brightest, medium, and dim; settings four through six repeat those levels with a slow blink; "
             "and, on LIGHT 1, settings seven through nine repeat them with a fast blink."
@@ -539,12 +543,12 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
             "Press both buttons again to exit. The FREQUENCY knob now controls the selected model's fourth parameter; for Mutable Instruments models, noon preserves the original sound."
         )
         options_intro = (
-            "Click TIMBRE + FREQUENCY together to enter or exit the options menu. The first seven lights are the menu: "
+            "Click TIMBRE + FREQUENCY together to enter or exit the options menu. All eight lights are the menu: "
             "click FREQUENCY/TIMBRE for the previous/next light, and MORPH/HARMONICS for the previous/next setting. "
             "The light's color shows the current setting — green, red, and yellow, then the same three colors blinking for a fourth, fifth, or sixth setting — "
             "and, on LIGHT 1, blinking fast for a seventh, eighth, or ninth."
             if roved else
-            "Short-press both buttons at once to enter or exit the options menu. The first seven lights are the menu: "
+            "Short-press both buttons at once to enter or exit the options menu. All eight lights are the menu: "
             "the left button moves between them, the right button steps through a light's settings, and the light's color shows the current one — "
             "green, red, and yellow, then the same three colors blinking for a fourth, fifth, or sixth setting — "
             "and, on LIGHT 1, blinking fast for a seventh, eighth, or ninth."
@@ -554,6 +558,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         "LIGHT 3 stays dark, and the light navigation skips it, unless LIGHT 2 is set to a suboscillator — it has nothing to act on otherwise. "
         "LIGHT 4 applies in octave-switching (frequency-locked) mode. LIGHT 6's LPG-decay and Auto settings apply only when TRIG is patched. "
         "Auto sends LEVEL to LPG decay on ordinary oscillator models, but keeps LEVEL as velocity/accent on models with their own envelope. "
+        "LIGHT 8 changes unpatched TIMBRE and MORPH attenuverters: Stock preserves the original envelope behavior, Drift moves continuously, and Step picks a new held offset on each trigger. Patched CV and each model's dedicated attenuverter behavior always take priority. "
         "Outside the menu, click FREQUENCY/TIMBRE for previous/next bank and "
         "MORPH/HARMONICS for previous/next model."
         if roved else
@@ -562,6 +567,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         "LIGHT 4 applies in octave-switching (frequency-locked) mode. Whenever LIGHT 4 is not Octaves, hold the right button and turn MORPH to change octaves. "
         "LIGHT 6's LPG-decay and Auto settings apply only when TRIG is patched. "
         "Auto sends LEVEL to LPG decay on ordinary oscillator models, but keeps LEVEL as velocity/accent on models with their own envelope. "
+        "LIGHT 8 changes unpatched TIMBRE and MORPH attenuverters: Stock preserves the original envelope behavior, Drift moves continuously, and Step picks a new held offset on each trigger. Patched CV and each model's dedicated attenuverter behavior always take priority. "
         "Model navigation (linear or banked) is chosen when you build the firmware, not from this menu."
     )
 

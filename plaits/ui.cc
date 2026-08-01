@@ -79,6 +79,7 @@ enum OptionLight {
   OPTION_LIGHT_MODEL_CV,
   OPTION_LIGHT_LEVEL_CV,
   OPTION_LIGHT_HOLD_ON_TRIGGER,
+  OPTION_LIGHT_ATTENUVERTER_MODE,
   OPTION_LIGHT_LAST
 };
 
@@ -93,6 +94,7 @@ static const uint8_t kNumAuxOutputOptions = 3;
 static const uint8_t kNumSuboscOptions = 6;
 static const uint8_t kNumChordSetOptions = PLAITS_CHORD_TABLE_COUNT;
 static const uint8_t kNumHoldOnTriggerOptions = 2;
+static const uint8_t kNumAttenuverterModes = ATTENUVERTER_MODE_LAST;
 
 // Steps an option by delta, wrapping at either end. delta is +/-1; the Ro'Ved
 // panel is the only caller that passes -1.
@@ -210,7 +212,8 @@ void Ui::StepOptionIndex(int delta) {
 
 void Ui::LoadState() {
   const State& state = settings_->state();
-  patch_->engine = state.engine;
+  patch_->engine = state.engine & 0x1f;
+  patch_->attenuverter_mode = (state.engine >> 5) & 0x03;
   patch_->lpg_colour = static_cast<float>(state.lpg_colour) / 256.0f;
   patch_->decay = static_cast<float>(state.decay) / 256.0f;
   octave_ = static_cast<float>(state.octave) / 256.0f;
@@ -238,7 +241,8 @@ void Ui::LoadState() {
 
 void Ui::SaveState() {
   State* state = settings_->mutable_state();
-  state->engine = patch_->engine;
+  state->engine = static_cast<uint8_t>(
+      (patch_->engine & 0x1f) | (patch_->attenuverter_mode << 5));
   state->lpg_colour = static_cast<uint8_t>(patch_->lpg_colour * 256.0f);
   state->decay = static_cast<uint8_t>(patch_->decay * 256.0f);
   state->octave = static_cast<uint8_t>(octave_ * 256.0f);
@@ -499,6 +503,8 @@ void Ui::UpdateLEDs() {
           option_value = patch_->level_cv_option;
         } else if (i == OPTION_LIGHT_HOLD_ON_TRIGGER) {
           option_value = patch_->hold_on_trigger_option;
+        } else if (i == OPTION_LIGHT_ATTENUVERTER_MODE) {
+          option_value = patch_->attenuverter_mode;
         }
 
         // Each option value encodes as one of three appearances crossed with a
@@ -893,6 +899,10 @@ void Ui::ReadSwitches() {
             case OPTION_LIGHT_HOLD_ON_TRIGGER:
               value = &patch_->hold_on_trigger_option;
               num_values = kNumHoldOnTriggerOptions;
+              break;
+            case OPTION_LIGHT_ATTENUVERTER_MODE:
+              value = &patch_->attenuverter_mode;
+              num_values = kNumAttenuverterModes;
               break;
           }
           if (value) {

@@ -18,6 +18,7 @@ from typing import Any
 CATALOG_PATH = Path(__file__).resolve().parents[1] / "plaits_lab_catalog/catalog.json"
 PUBLIC_CATALOG_PATH = Path(__file__).resolve().parents[1] / "plaits_lab_catalog/public_catalog.json"
 CHORD_CATALOG_PATH = Path(__file__).resolve().parents[1] / "plaits_lab_chord_tables/catalog.json"
+RANDOMIZER_PROFILES_PATH = Path(__file__).resolve().parents[1] / "plaits_lab_sdk/randomizer_profiles.json"
 
 
 @dataclass(frozen=True)
@@ -138,6 +139,7 @@ def load_catalog() -> dict[str, Engine]:
 
 
 CATALOG = load_catalog()
+RANDOMIZER_REGISTRY = json.loads(RANDOMIZER_PROFILES_PATH.read_text(encoding="utf-8"))
 PUBLIC_ENGINES = {
     item["id"]: item
     for item in json.loads(PUBLIC_CATALOG_PATH.read_text(encoding="utf-8"))["engines"]
@@ -667,6 +669,32 @@ def cpp_float(value: float) -> str:
     return f"{value:.1f}f"
 
 
+def cpp_precise_float(value: float) -> str:
+    literal = f"{float(value):.9g}"
+    if "." not in literal and "e" not in literal:
+        literal += ".0"
+    return literal + "f"
+
+
+def resolved_randomizer_parameter(engine_id: str, parameter: str) -> tuple[float, ...]:
+    model = RANDOMIZER_REGISTRY["models"].get(
+        engine_id, RANDOMIZER_REGISTRY["fallback"])
+    specification = model[parameter]
+    if isinstance(specification, str):
+        archetype = specification
+        overrides: dict[str, float] = {}
+    else:
+        archetype = specification["archetype"]
+        overrides = specification.get("overrides", {})
+    profile = {
+        **RANDOMIZER_REGISTRY["parameterArchetypes"][archetype],
+        **overrides,
+    }
+    return tuple(float(profile[field]) for field in (
+        "nearSpan", "farSpan", "nearRate", "farRate", "farCenterRelease",
+    ))
+
+
 def cpp_bool(value: bool) -> str:
     return "true" if value else "false"
 
@@ -727,6 +755,29 @@ def render_config(recipe: BuildRecipe) -> str:
     )
     speech_mask = sum(1 << index for index, item in enumerate(selected) if item.behavior == "speech")
     chiptune_mask = sum(1 << index for index, item in enumerate(selected) if item.behavior == "chiptune")
+
+    # Resolve the catalog's semantic archetypes into a compact firmware table.
+    # Only numeric profiles reached by this palette are emitted; duplicate
+    # archetypes and duplicate slots share one five-float record.
+    randomizer_profiles: list[tuple[float, ...]] = []
+    randomizer_profile_index: dict[tuple[float, ...], int] = {}
+    randomizer_pairs: list[tuple[int, int]] = []
+    for engine_id in internal_slots:
+        pair: list[int] = []
+        for parameter in ("timbre", "morph"):
+            profile = resolved_randomizer_parameter(engine_id, parameter)
+            if profile not in randomizer_profile_index:
+                randomizer_profile_index[profile] = len(randomizer_profiles)
+                randomizer_profiles.append(profile)
+            pair.append(randomizer_profile_index[profile])
+        randomizer_pairs.append((pair[0], pair[1]))
+    randomizer_profile_values = ", ".join(
+        "{ " + ", ".join(cpp_precise_float(value) for value in profile) + " }"
+        for profile in randomizer_profiles
+    )
+    randomizer_pair_values = ", ".join(
+        f"{{ {timbre}, {morph} }}" for timbre, morph in randomizer_pairs
+    )
     chord_offsets: list[int] = []
     chord_sizes: list[int] = []
     chord_cents: list[str] = []
@@ -848,6 +899,9 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_HAS_USER_DATA_BANK {1 if has_user_data_bank else 0}
 #define PLAITS_HAS_USER_DATA_BANK_OVERRIDE {1 if override_arrays_all else 0}
 #define PLAITS_HAS_RESOLVED_USER_DATA_BANK {1 if has_user_data_bank else 0}
+
+#define PLAITS_RANDOMIZER_PROFILES {{ {randomizer_profile_values} }}
+#define PLAITS_ENGINE_RANDOMIZER_PROFILE_INDICES {{ {randomizer_pair_values} }}
 
 #define PLAITS_CHORD_TABLE_COUNT {len(recipe.chord_tables)}
 #define PLAITS_CHORD_COUNT {chord_offset}

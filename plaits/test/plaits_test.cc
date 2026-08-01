@@ -44,6 +44,7 @@
 #include "plaits/dsp/engine/virtual_analog_engine.h"
 #include "plaits/dsp/engine/waveshaping_engine.h"
 #include "plaits/dsp/engine/wavetable_engine.h"
+#include "plaits/dsp/parameter_randomizer.h"
 
 #include "plaits/dsp/engine2/chiptune_engine.h"
 #include "plaits/dsp/engine2/attractor_engine.h"
@@ -2650,6 +2651,70 @@ void TestExperimentalEngines() {
   printf("Synthesis engine tests passed.\n");
 }
 
+void ValidateParameterRandomizer() {
+  const ParameterRandomizerProfile profile = {
+    0.25f, 0.55f, 0.000009f, 0.000006f, 0.60f
+  };
+  ParameterRandomizer randomizer;
+  randomizer.Init();
+
+  float timbre = 0.4f;
+  float morph = 0.6f;
+  randomizer.Process(
+      ATTENUVERTER_MODE_DRIFT, true, true,
+      0.4f, 0.6f, 0.05f, -0.05f, profile, profile,
+      &timbre, &morph);
+  if (timbre != 0.4f || morph != 0.6f) {
+    fprintf(stderr, "Attenuverter dead zone is not exactly off\n");
+    abort();
+  }
+
+  float first_drift = 0.0f;
+  for (int i = 0; i < 20000; ++i) {
+    randomizer.Process(
+        ATTENUVERTER_MODE_DRIFT, true, false,
+        0.5f, 0.5f, 0.8f, 0.8f, profile, profile,
+        &timbre, &morph);
+    if (i == 0) {
+      first_drift = timbre;
+    }
+    if (timbre < 0.0f || timbre > 1.0f || morph != 0.6f) {
+      fprintf(stderr, "Drift escaped its bounds or touched a disabled axis\n");
+      abort();
+    }
+  }
+  if (fabsf(timbre - first_drift) < 0.001f) {
+    fprintf(stderr, "Drift did not move over time\n");
+    abort();
+  }
+
+  randomizer.Process(
+      ATTENUVERTER_MODE_STEP, true, true,
+      0.5f, 0.5f, 0.8f, -0.8f, profile, profile,
+      &timbre, &morph);
+  const float held_timbre = timbre;
+  const float held_morph = morph;
+  for (int i = 0; i < 100; ++i) {
+    randomizer.Process(
+        ATTENUVERTER_MODE_STEP, true, true,
+        0.5f, 0.5f, 0.8f, -0.8f, profile, profile,
+        &timbre, &morph);
+  }
+  if (timbre != held_timbre || morph != held_morph) {
+    fprintf(stderr, "Step mode moved without a trigger\n");
+    abort();
+  }
+  randomizer.Trigger();
+  randomizer.Process(
+      ATTENUVERTER_MODE_STEP, true, true,
+      0.5f, 0.5f, 0.8f, -0.8f, profile, profile,
+      &timbre, &morph);
+  if (timbre == held_timbre && morph == held_morph) {
+    fprintf(stderr, "Step mode did not choose a new trigger value\n");
+    abort();
+  }
+}
+
 int main(void) {
 #if defined(__SSE2__)
   _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
@@ -2698,5 +2763,7 @@ int main(void) {
   // EnumerateWavetables();
   
   // TestLPGAttackDecay();
+  printf("Validating unpatched attenuverter modes...\n");
+  ValidateParameterRandomizer();
   TestExperimentalEngines();
 }

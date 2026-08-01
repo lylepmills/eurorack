@@ -28,6 +28,21 @@ class GenerateEngineConfigTest(unittest.TestCase):
     def test_catalog_matches_the_approved_product_catalog(self) -> None:
         self.assertEqual(len(CATALOG), 81)
 
+    def test_randomizer_profiles_are_compact_and_cover_every_selected_slot(self) -> None:
+        build = validate_recipe(self.load("default_recipe.json"))
+        config = render_config(build)
+        profile_line = next(
+            line for line in config.splitlines()
+            if line.startswith("#define PLAITS_RANDOMIZER_PROFILES ")
+        )
+        pair_line = next(
+            line for line in config.splitlines()
+            if line.startswith("#define PLAITS_ENGINE_RANDOMIZER_PROFILE_INDICES ")
+        )
+        self.assertIn("1.2e-05f", profile_line)
+        self.assertLess(len(re.findall(r"\{ [^{}]+ \}", profile_line)), 24)
+        self.assertEqual(len(re.findall(r"\{ \d+, \d+ \}", pair_line)), 24)
+
     def test_worker_and_container_schema_ranges_stay_in_sync(self) -> None:
         # The public Worker validates first, then sends its normalized recipe to
         # this Python container. A ceiling mismatch lets the API accept a recipe

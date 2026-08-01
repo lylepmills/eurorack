@@ -63,7 +63,15 @@ bool Settings::Init() {
     ApplyBuildOptionDefaults(&state_);
   }
 
-  CONSTRAIN(state_.engine, 0, PLAITS_ENGINE_COUNT - 1);
+  // The engine byte's low five bits store the selected slot (the firmware has
+  // a hard 32-slot ceiling); bits 5-6 persist the three-state attenuverter mode
+  // without growing State and invalidating every previously saved setting.
+  int saved_engine = state_.engine & 0x1f;
+  int attenuverter_mode = (state_.engine >> 5) & 0x03;
+  CONSTRAIN(saved_engine, 0, PLAITS_ENGINE_COUNT - 1);
+  CONSTRAIN(attenuverter_mode, 0, 2);
+  state_.engine = static_cast<uint8_t>(
+      saved_engine | (attenuverter_mode << 5));
   CONSTRAIN(state_.locked_frequency_pot_option, 0, 3);
   CONSTRAIN(state_.model_cv_option, 0, 3);
   CONSTRAIN(state_.level_cv_option, 0, 2);

@@ -59,10 +59,13 @@ TOOLCHAIN_PATH ?= /usr/local/arm-4.8.3/
 
 include stmlib/makefile.inc
 
-# These paths do not run in the audio callback. Optimizing them for size leaves
-# the synthesis code at -O2 while recovering flash for alternate engine banks.
+# Optimize control, startup, and callback glue for size while leaving the voice
+# renderer and every synthesis engine at -O2. FillBuffer itself only dispatches
+# to those hot paths, so this recovers flash without slowing their DSP loops.
+$(BUILD_DIR)plaits.o \
 $(BUILD_DIR)ui.o \
 $(BUILD_DIR)settings.o \
+$(BUILD_DIR)parameter_randomizer.o \
 $(BUILD_DIR)user_data_receiver.o: CCFLAGS += -Os
 
 # The hosted builder generates engine_config.h with the recipe's engine registry

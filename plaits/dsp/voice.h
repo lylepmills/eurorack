@@ -47,6 +47,7 @@
 #include "plaits/build_config.h"
 #include "plaits/dsp/oscillator/sine_oscillator.h"
 #include "plaits/dsp/oscillator/square_oscillator.h"
+#include "plaits/dsp/parameter_randomizer.h"
 
 #include "plaits/dsp/envelope.h"
 
@@ -169,6 +170,10 @@ struct Patch {
   // 1 - hold timbre, morph, harmo, level, v/oct cv modulations on trigger (not fm)
   //     (note model is already held on trigger by default)
   uint8_t hold_on_trigger_option;
+  // 0 - stock internal-envelope behavior
+  // 1 - continuous chaotic drift on unpatched TIMBRE and MORPH
+  // 2 - new held random offsets on each trigger rising edge
+  uint8_t attenuverter_mode;
 
   // The readings of the two aux options that the DSP and the UI need. Keeping
   // them here means a future renumber touches one place.
@@ -263,6 +268,9 @@ class Voice {
   float held_harmo_;
   float held_level_;
   float held_note_;
+
+  ParameterRandomizer parameter_randomizer_;
+  uint8_t previous_attenuverter_mode_;
   
   DecayEnvelope decay_envelope_;
   LPGEnvelope lpg_envelope_;

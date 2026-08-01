@@ -538,6 +538,16 @@
       "status": "seeded",
       "timbre": "centered",
       "morph": "broad-texture"
+    },
+    "wavetable-chord": {
+      "status": "seeded",
+      "timbre": "pitch-interval",
+      "morph": "stepped-identity"
+    },
+    "wavetable-scale-stack": {
+      "status": "seeded",
+      "timbre": "pitch-interval",
+      "morph": "stepped-identity"
     }
   }
 }

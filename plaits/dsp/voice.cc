@@ -34,6 +34,18 @@ namespace plaits {
 using namespace std;
 using namespace stmlib;
 
+#if defined(PLAITS_RANDOMIZER_PROFILES) && \
+    defined(PLAITS_ENGINE_RANDOMIZER_PROFILE_INDICES)
+static const ParameterRandomizerProfile kRandomizerProfiles[] =
+    PLAITS_RANDOMIZER_PROFILES;
+static const EngineRandomizerProfile kEngineRandomizerProfiles[] =
+    PLAITS_ENGINE_RANDOMIZER_PROFILE_INDICES;
+#else
+static const ParameterRandomizerProfile kRandomizerProfiles[] = {
+  { 0.25f, 0.55f, 0.000009f, 0.000006f, 0.60f },
+};
+#endif
+
 void Voice::Init(BufferAllocator* allocator) {
   engines_.Init();
   PLAITS_REGISTER_ENGINES(engines_);
@@ -60,6 +72,8 @@ void Voice::Init(BufferAllocator* allocator) {
   
   trigger_state_ = false;
   previous_note_ = 0.0f;
+  parameter_randomizer_.Init();
+  previous_attenuverter_mode_ = ATTENUVERTER_MODE_STOCK;
   
   trigger_delay_.Init(trigger_delay_line_);
 }
@@ -157,6 +171,15 @@ void Voice::Render(
   if (rising_edge && !level_patched) {
     lpg_envelope_.Trigger();
   }
+  if (patch.attenuverter_mode != previous_attenuverter_mode_) {
+    if (patch.attenuverter_mode == ATTENUVERTER_MODE_STEP) {
+      parameter_randomizer_.Trigger();
+    }
+    previous_attenuverter_mode_ = patch.attenuverter_mode;
+  }
+  if (rising_edge && patch.attenuverter_mode == ATTENUVERTER_MODE_STEP) {
+    parameter_randomizer_.Trigger();
+  }
 
   float macro_cv = 0.0f;
   float patch_lpg_colour = patch.lpg_colour;
@@ -171,6 +194,9 @@ void Voice::Render(
   CONSTRAIN(patch_lpg_colour, 0.0f, 1.0f);
   
   if (engine_index != previous_engine_index_ || reload_user_data_) {
+    if (patch.attenuverter_mode == ATTENUVERTER_MODE_STEP) {
+      parameter_randomizer_.Trigger();
+    }
     UserData user_data;
     const uint8_t* data = user_data.ptr(engine_index);
     // Number of valid packed patch bytes behind `data`. A runtime TIMBRE-loaded
@@ -274,6 +300,27 @@ void Voice::Render(
     }
   }
 #endif
+
+  const bool preserve_chiptune_timbre =
+#if PLAITS_HAS_CHIPTUNE_ENGINE
+      (kChiptuneEngineMask & (1u << engine_index)) &&
+      modulations.trigger_patched && !modulations.timbre_patched;
+#else
+      false;
+#endif
+  const bool preserve_speech_morph =
+#if PLAITS_HAS_SPEECH_ENGINE
+      (kSpeechEngineMask & (1u << engine_index)) &&
+      modulations.trigger_patched && !modulations.morph_patched;
+#else
+      false;
+#endif
+  const bool randomize_timbre =
+      patch.attenuverter_mode != ATTENUVERTER_MODE_STOCK &&
+      !modulations.timbre_patched && !preserve_chiptune_timbre;
+  const bool randomize_morph =
+      patch.attenuverter_mode != ATTENUVERTER_MODE_STOCK &&
+      !modulations.morph_patched && !preserve_speech_morph;
   
   p.note = ApplyModulations(
       patch.note + note,
@@ -290,7 +337,7 @@ void Voice::Render(
   p.timbre = ApplyModulations(
       patch.timbre,
       patch.timbre_modulation_amount,
-      modulations.timbre_patched,
+      modulations.timbre_patched || randomize_timbre,
       modulations_timbre,
       use_internal_envelope,
       internal_envelope_amplitude_timbre * decay_envelope_.value(),
@@ -301,13 +348,33 @@ void Voice::Render(
   p.morph = ApplyModulations(
       patch.morph,
       patch.morph_modulation_amount,
-      modulations.morph_patched,
+      modulations.morph_patched || randomize_morph,
       modulations_morph,
       use_internal_envelope,
       internal_envelope_amplitude * decay_envelope_.value(),
       0.0f,
       0.0f,
       1.0f);
+
+#if defined(PLAITS_RANDOMIZER_PROFILES) && \
+    defined(PLAITS_ENGINE_RANDOMIZER_PROFILE_INDICES)
+  const EngineRandomizerProfile& randomizer_profile =
+      kEngineRandomizerProfiles[engine_index];
+#else
+  const EngineRandomizerProfile randomizer_profile = { 0, 0 };
+#endif
+  parameter_randomizer_.Process(
+      static_cast<AttenuverterMode>(patch.attenuverter_mode),
+      randomize_timbre,
+      randomize_morph,
+      patch.timbre,
+      patch.morph,
+      patch.timbre_modulation_amount,
+      patch.morph_modulation_amount,
+      kRandomizerProfiles[randomizer_profile.timbre],
+      kRandomizerProfiles[randomizer_profile.morph],
+      &p.timbre,
+      &p.morph);
 
   bool already_enveloped = pp_s.already_enveloped;
   e->Render(p, out_buffer_, aux_buffer_, size, &already_enveloped);

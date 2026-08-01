@@ -40,6 +40,7 @@ CC_FILES       = algorithms.cc \
 		naive_speech_synth.cc \
 		noise_engine.cc \
 		packet_decoder.cc \
+		parameter_randomizer.cc \
 		particle_engine.cc \
 		phase_flock_engine.cc \
 		phase_distortion_engine.cc \
