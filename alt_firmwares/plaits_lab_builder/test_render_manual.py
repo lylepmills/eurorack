@@ -14,7 +14,15 @@ from generate_engine_config import (
     DEFAULT_CONFIGURATION,
     DEFAULT_SCALE_BANK,
 )
-from render_manual import CONTROL_IDS, _clip, display_name, manual_document, render_pdf
+from render_manual import (
+    ATTENUVERTER_OPTIONS_NOTE,
+    CONTROL_IDS,
+    MENU_LIGHTS,
+    _clip,
+    display_name,
+    manual_document,
+    render_pdf,
+)
 
 
 FIXTURES = Path(__file__).parent
@@ -57,6 +65,12 @@ class RenderManualTest(unittest.TestCase):
                 "userDataBanks": [],
             },
         }
+
+    def test_attenuverter_option_copy_explains_direction(self) -> None:
+        self.assertEqual(MENU_LIGHTS[-1][1][0], "Default behavior")
+        self.assertIn("both directions are bipolar", ATTENUVERTER_OPTIONS_NOTE)
+        self.assertIn("in Drift also the speed", ATTENUVERTER_OPTIONS_NOTE)
+        self.assertNotIn("Stock", ATTENUVERTER_OPTIONS_NOTE)
 
     def short_bank_recipe(self) -> dict:
         # v7 short bank: green full (8), red partly empty (3 + 5 empty), amber

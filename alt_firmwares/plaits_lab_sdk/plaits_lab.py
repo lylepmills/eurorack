@@ -976,7 +976,7 @@ RANDOMIZER_PROFILE_FIELDS = (
 
 
 def load_randomizer_profile_registry() -> dict[str, Any]:
-    """Load and validate the audition-only parameter profile registry."""
+    """Load and validate the firmware Drift tuning-profile registry."""
     registry = read_json(RANDOMIZER_PROFILES_PATH)
     require(isinstance(registry, dict), "randomizer_profiles.json must contain an object")
     require(registry.get("schemaVersion") == 1,

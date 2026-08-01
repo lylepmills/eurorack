@@ -26,16 +26,16 @@
   .controls .row output { font-variant-numeric:tabular-nums; color:var(--muted); }
   .controls small { color:var(--subtle); font-size:11px; }
   input[type=range] { width:100%; accent-color:var(--accent); }
-  .prototype-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:12px; }
-  .prototype-head h2 { margin:0; font-size:15px; font-weight:600; }
-  .prototype-head .pill { padding:2px 9px; }
-  .prototype-copy { margin:0 0 14px; color:var(--muted); font-size:12px; }
-  .prototype-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 22px; }
-  .prototype-grid label { display:grid; gap:5px; }
-  .prototype-grid .row { display:flex; justify-content:space-between; align-items:baseline; }
-  .prototype-grid output { color:var(--muted); font-variant-numeric:tabular-nums; }
-  .prototype-grid small { color:var(--subtle); font-size:11px; }
-  @media (max-width:560px) { .prototype-grid { grid-template-columns:1fr; } }
+  .randomizer-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:12px; }
+  .randomizer-head h2 { margin:0; font-size:15px; font-weight:600; }
+  .randomizer-head .pill { padding:2px 9px; }
+  .randomizer-copy { margin:0 0 14px; color:var(--muted); font-size:12px; }
+  .randomizer-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 22px; }
+  .randomizer-grid label { display:grid; gap:5px; }
+  .randomizer-grid .row { display:flex; justify-content:space-between; align-items:baseline; }
+  .randomizer-grid output { color:var(--muted); font-variant-numeric:tabular-nums; }
+  .randomizer-grid small { color:var(--subtle); font-size:11px; }
+  @media (max-width:560px) { .randomizer-grid { grid-template-columns:1fr; } }
   .actions { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:16px; }
   button { border:1px solid var(--border); border-radius:9px; padding:9px 15px; background:var(--card); color:var(--ink); font-size:13px; font-weight:600; cursor:pointer; }
   button:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
@@ -93,12 +93,12 @@
       </div>
     </div>
     <div class="card hidden" id="randomizer-card">
-      <div class="prototype-head">
+      <div class="randomizer-head">
         <h2>Unpatched attenuverters</h2>
-        <span class="pill" id="randomizer-profile">Audition prototype</span>
+        <span class="pill" id="randomizer-profile">Firmware Drift audition</span>
       </div>
-      <p class="prototype-copy">Assumes the TIMBRE and MORPH CV inputs are unpatched. A small zone around noon is completely off. CCW adds a close, center-seeking drift; CW adds a wider, slower roam. Moving farther increases both excursion and speed through the parameter profile shown below.</p>
-      <div class="prototype-grid">
+      <p class="randomizer-copy">Assumes the TIMBRE and MORPH CV inputs are unpatched. A small zone around noon is completely off. Both directions remain bipolar: CCW selects restrained movement close to the knob setting, while CW selects broader, farther-reaching movement. Moving farther increases both excursion and speed through the parameter profile shown below.</p>
+      <div class="randomizer-grid">
         <label>
           <span class="row"><strong>TIMBRE</strong><output id="randomizer-timbre-value">Off</output></span>
           <input id="randomizer-timbre" type="range" min="-1" max="1" step="0.01" value="0" />

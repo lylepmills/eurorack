@@ -48,8 +48,16 @@ MENU_LIGHTS = (
     ("LEVEL input", ("Level", "LPG decay", "Auto: decay or velocity")),
     ("Hold on trigger", ("Off (live CV)", "Sample & hold")),
     ("Unpatched attenuverters", (
-        "Stock envelopes", "Continuous drift", "Triggered random step",
+        "Default behavior", "Continuous drift", "Triggered random step",
     )),
+)
+
+ATTENUVERTER_OPTIONS_NOTE = (
+    "LIGHT 8 changes what unpatched TIMBRE and MORPH attenuverters do: Default behavior preserves the original behavior, "
+    "Drift moves continuously, and Step picks a new held offset on each physical TRIG. In Drift or Step, CCW selects "
+    "restrained movement close to the knob setting and CW selects broader, farther-reaching movement; both directions are "
+    "bipolar. Moving farther from center increases the range, and in Drift also the speed. Patched CV and each model's "
+    "dedicated attenuverter behavior always take priority. "
 )
 
 # LED appearance for option values 0..8 (plaits ui.cc): green/red/yellow solid
@@ -558,7 +566,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         "LIGHT 3 stays dark, and the light navigation skips it, unless LIGHT 2 is set to a suboscillator — it has nothing to act on otherwise. "
         "LIGHT 4 applies in octave-switching (frequency-locked) mode. LIGHT 6's LPG-decay and Auto settings apply only when TRIG is patched. "
         "Auto sends LEVEL to LPG decay on ordinary oscillator models, but keeps LEVEL as velocity/accent on models with their own envelope. "
-        "LIGHT 8 changes unpatched TIMBRE and MORPH attenuverters: Stock preserves the original envelope behavior, Drift moves continuously, and Step picks a new held offset on each trigger. Patched CV and each model's dedicated attenuverter behavior always take priority. "
+        f"{ATTENUVERTER_OPTIONS_NOTE}"
         "Outside the menu, click FREQUENCY/TIMBRE for previous/next bank and "
         "MORPH/HARMONICS for previous/next model."
         if roved else
@@ -567,7 +575,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         "LIGHT 4 applies in octave-switching (frequency-locked) mode. Whenever LIGHT 4 is not Octaves, hold the right button and turn MORPH to change octaves. "
         "LIGHT 6's LPG-decay and Auto settings apply only when TRIG is patched. "
         "Auto sends LEVEL to LPG decay on ordinary oscillator models, but keeps LEVEL as velocity/accent on models with their own envelope. "
-        "LIGHT 8 changes unpatched TIMBRE and MORPH attenuverters: Stock preserves the original envelope behavior, Drift moves continuously, and Step picks a new held offset on each trigger. Patched CV and each model's dedicated attenuverter behavior always take priority. "
+        f"{ATTENUVERTER_OPTIONS_NOTE}"
         "Model navigation (linear or banked) is chosen when you build the firmware, not from this menu."
     )
 

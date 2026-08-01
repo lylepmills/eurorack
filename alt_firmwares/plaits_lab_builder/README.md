@@ -87,6 +87,10 @@ covers the FM-bank credits, and the chord-table fold that fixed guides served
 from cache with another recipe's LIGHT 1 row; contract 6 renames a customized
 six-op slot "Custom 6-Op FM Bank" in the bank map and the model reference,
 subtitled with the bank's own name; contract 10 adds the recipe's scale order).
+The source now clarifies LIGHT 8's Default/CCW/CW behavior; the next image and
+Worker rollout must move the manual contract from 12 to 13 so cached guides
+receive that prose-only correction. Do not bump the Worker before the matching
+renderer image exists.
 
 The contract is the Worker's alone, and in source (`a0c0791`) it rides in the
 `POST /manual` body as `manualContract` for the container to echo on

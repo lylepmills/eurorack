@@ -115,14 +115,19 @@ continuous drone (**Sustained**) and a struck note (**Plucked**, where **Strike*
 opens a low-pass-gate decay) — the same low-pass-gate behavior Plaits applies to a
 patched trigger, so sustained engines respond to Strike too.
 
-The live page also carries an **audition-only unpatched-attenuverter
-prototype** for TIMBRE and MORPH. A small zone around noon is off; CCW adds a
-close, center-seeking drift and CW adds a wider, slower roam. Both follow
-continuous chaotic control orbits with no targets, clocks, or connection to
-Strike. `randomizer_profiles.json` resolves reusable parameter archetypes and
-per-model overrides at compile time. Every catalog model has an explicit seed;
-the page labels profiles as seeded until they have had a listening pass. This
-is a listening experiment, not part of the firmware, recipe schema, or
+The live page also auditions the firmware's **unpatched-attenuverter Drift
+mode** for TIMBRE and MORPH. A small zone around noon is off. Both sides remain
+bipolar: CCW selects restrained movement close to the knob setting, while CW
+selects broader, farther-reaching movement. Moving farther from center
+increases both excursion and speed. The modulation follows continuous chaotic
+control orbits with no targets, clocks, or connection to Strike.
+`randomizer_profiles.json` resolves reusable parameter archetypes and per-model
+overrides at compile time. Every catalog model has an explicit profile; the
+page labels it as seeded until it has had a listening pass. Virtual Analog,
+Fold, Vowel FOF, and Granular Cloud are currently tuned; the other 77
+profiles remain seeded starting points. This page is a tuning aid for the
+shipped firmware's continuous Drift behavior. Runtime mode selection and
+trigger-driven Step live on the module, not in the recipe schema or
 engine-package contract.
 
 ## Validation and submission

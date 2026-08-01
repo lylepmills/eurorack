@@ -758,10 +758,10 @@ class PackageTests(unittest.TestCase):
         worklet = (plaits_lab.SDK_DIR / "audition_worklet.js").read_text(encoding="utf-8")
         self.assertIn("'env'", worklet)
 
-    def test_attenurandomizer_prototype_surface_is_wired(self) -> None:
-        # Experimental only: signed TIMBRE/MORPH depths select continuously
-        # evolving Near/Far voltages in the audio engine. Triggers do not clock
-        # or restart either process. No firmware contract depends on this yet.
+    def test_attenurandomizer_drift_audition_surface_is_wired(self) -> None:
+        # The tuning page mirrors the firmware's continuous Drift behavior:
+        # signed TIMBRE/MORPH depths select continuously evolving local/broad
+        # voltages. Triggers do not clock or restart either process.
         self.assertIn("_set_randomizer_amounts", plaits_lab.WASM_EXPORTS)
         self.assertIn("_current_timbre", plaits_lab.WASM_EXPORTS)
         self.assertIn("_current_morph", plaits_lab.WASM_EXPORTS)
@@ -773,6 +773,9 @@ class PackageTests(unittest.TestCase):
         self.assertIn("RandomizedParameter", harness)
         self.assertIn("kRandomizerDeadZone", harness)
         self.assertIn("RandomizerExcursion", harness)
+        html = (plaits_lab.SDK_DIR / "dev_editor.html").read_text(encoding="utf-8")
+        self.assertIn("Both directions remain bipolar", html)
+        self.assertNotIn("Audition prototype", html)
         self.assertIn("RandomizerRateMultiplier", harness)
         self.assertIn("far_center_release", harness)
         self.assertIn("PLAITS_LAB_RANDOMIZER_TIMBRE_NEAR_SPAN", harness)
