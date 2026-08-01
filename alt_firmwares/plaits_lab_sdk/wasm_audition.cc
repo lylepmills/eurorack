@@ -81,10 +81,11 @@ const RandomizerProfile kRandomizerProfile = {
   { 0.30f, 0.66f, 0.000007f, 0.000004f, 0.70f },
 };
 #elif PLAITS_LAB_RANDOMIZER_PROFILE == 3
-// Vowel FOF: preserve vowel identity and make register the most patient move.
+// Vowel FOF: preserve vowel identity, but keep both controls audibly alive;
+// register remains the most patient move in the tuned set.
 const RandomizerProfile kRandomizerProfile = {
-  { 0.18f, 0.42f, 0.000006f, 0.000003f, 0.45f },
-  { 0.16f, 0.34f, 0.000004f, 0.000002f, 0.35f },
+  { 0.23f, 0.52f, 0.000007f, 0.000004f, 0.55f },
+  { 0.21f, 0.44f, 0.000005f, 0.000003f, 0.45f },
 };
 #elif PLAITS_LAB_RANDOMIZER_PROFILE == 4
 // Granular Cloud: grain and shape invite broader, livelier texture motion.
