@@ -66,7 +66,25 @@ $(BUILD_DIR)plaits.o \
 $(BUILD_DIR)ui.o \
 $(BUILD_DIR)settings.o \
 $(BUILD_DIR)parameter_randomizer.o \
-$(BUILD_DIR)user_data_receiver.o: CCFLAGS += -Os
+$(BUILD_DIR)user_data_receiver.o \
+$(BUILD_DIR)audio_dac.o \
+$(BUILD_DIR)cv_adc.o \
+$(BUILD_DIR)firmware_update_adc.o \
+$(BUILD_DIR)leds.o \
+$(BUILD_DIR)pots_adc.o \
+$(BUILD_DIR)switches.o \
+$(BUILD_DIR)debug_port.o \
+$(BUILD_DIR)packet_decoder.o \
+$(BUILD_DIR)bootloader_utils.o \
+$(BUILD_DIR)chord_bank.o \
+$(BUILD_DIR)system_clock.o \
+$(BUILD_DIR)system_stm32f37x.o: CCFLAGS += -Os
+
+# The STM peripheral library is initialization and register-access glue, not
+# synthesis DSP. Its default -O2 expansion is expensive on a 224 KB target;
+# size optimization keeps the same hardware behavior and leaves the audio
+# renderer and engine inner loops untouched.
+$(BUILD_DIR)stm32f37x_%.o: CCFLAGS += -Os
 
 # The hosted builder generates engine_config.h with the recipe's engine registry
 # (PLAITS_ENGINE_MEMBERS, reached through voice.h) and its compile-time option
