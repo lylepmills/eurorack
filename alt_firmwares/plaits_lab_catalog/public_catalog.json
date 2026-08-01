@@ -3197,7 +3197,7 @@
     {
       "id": "wavetable-chord",
       "packageId": "braids-renaissance/wavetable-chord",
-      "name": "Wavetable Chord",
+      "name": "Wavetable Diatonic Chord",
       "author": "Tom Burns",
       "origin": "Community",
       "family": "Polyphonic",
@@ -3222,8 +3222,8 @@
         "Root voice"
       ],
       "version": "1.0.0",
-      "digest": "sha256:db4226c044b0ec86585ae8561661fa4940998693a48d6bbb2cea5e0bcc57f847",
-      "documentationDigest": "sha256:d03c7d6c994779de25d318804a0f268be6fad8c9503073e0dfe03cc23f2ad599",
+      "digest": "sha256:03b283a88c2a6e3981b2dd9e272bb36e2402766e80a5e616ca7b2a799a3ae95c",
+      "documentationDigest": "sha256:a0eb6e3f620ad8adb3af556957750e81febffb05e34d3b3b49498937603ab97a",
       "manual": {
         "controls": {
           "harmonics": "Steps through the same sixteen scale-degree chord shapes as Diatonic Chord.",
