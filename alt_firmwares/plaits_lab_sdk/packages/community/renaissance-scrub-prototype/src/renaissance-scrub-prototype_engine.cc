@@ -214,7 +214,7 @@ void RenaissanceScrubPrototypeEngine::Render(
   const float time_stretch = SemitonesToRatio(
       -(parameters.macro - 0.5f) * 24.0f);
 
-  if (parameters.trigger == TRIGGER_RISING_EDGE) {
+  if (parameters.trigger & TRIGGER_RISING_EDGE) {
     playback_frame_ = static_cast<int>(
         parameters.timbre * static_cast<float>(num_frames_));
     if (playback_frame_ >= num_frames_) {

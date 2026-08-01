@@ -441,6 +441,35 @@ class PackageTests(unittest.TestCase):
             self.assertIn("#define PLAITS_HAS_SPEECH_ENGINE 1", config)
             self.assertIn("kSpeechEngineMask = 0x00000002", config)
 
+    def test_renaissance_scrub_responds_to_hardware_trigger_flags(self) -> None:
+        package_dir = (SDK_DIR / "packages" / "community" /
+                       "renaissance-scrub-prototype")
+        package = plaits_lab.load_package(str(package_dir))
+        fixed = {
+            "harmonics": [0.5, 0.5],
+            "timbre": [0.0, 0.0],
+            "morph": [0.5, 0.5],
+            "macro": [0.5, 0.5],
+        }
+        idle = {
+            "id": "idle", "durationSeconds": 1, "note": 48,
+            "triggerHz": 0, "controls": fixed,
+        }
+        triggered = {
+            "id": "triggered", "durationSeconds": 1, "note": 48,
+            "triggerHz": 2, "controls": fixed,
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            renderer = plaits_lab.host_binary(temp, "scrub-renderer")
+            plaits_lab.compile_renderer(package, renderer, None)
+            idle_wav = temp / "idle.wav"
+            triggered_wav = temp / "triggered.wav"
+            plaits_lab.run_scenario(package, renderer, idle, idle_wav)
+            plaits_lab.run_scenario(package, renderer, triggered, triggered_wav)
+            self.assertNotEqual(hashlib.sha256(idle_wav.read_bytes()).digest(),
+                                hashlib.sha256(triggered_wav.read_bytes()).digest())
+
     def test_hardware_build_reports_host_output_path(self) -> None:
         # The container writes the WAV to /output/<name> (a mount of the host dir);
         # the message must show the HOST path, or the user can't find the file.
