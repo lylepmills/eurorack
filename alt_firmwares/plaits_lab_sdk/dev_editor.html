@@ -32,6 +32,7 @@
   button.primary { background:var(--accent); border-color:var(--accent); color:#FFF8F0; }
   button.primary:hover:not(:disabled) { background:#c13e22; color:#FFF8F0; }
   button:disabled { opacity:.5; cursor:default; }
+  button kbd { margin-left:5px; padding:1px 5px; border:1px solid currentColor; border-radius:4px; font:10px/1.4 "SF Mono",ui-monospace,monospace; opacity:.65; }
   .actions label { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); }
   #live-actions .sub { color:var(--subtle); font-size:12px; flex-basis:100%; }
   #live-status.err { color:var(--accent); }
@@ -69,7 +70,7 @@
       <div class="controls" id="controls"></div>
       <div class="actions hidden" id="live-actions">
         <button class="primary" id="live-toggle">▶ Live audition</button>
-        <button id="live-strike">Strike</button>
+        <button id="live-strike" title="Strike (Space)" aria-keyshortcuts="Space">Strike <kbd>Space</kbd></button>
         <label>Envelope <select id="live-env"><option value="0">Sustained</option><option value="1">Plucked</option></select></label>
         <label>Monitor <select id="live-monitor"><option value="main">Main only</option><option value="aux">Aux only</option><option value="mainaux">Main + Aux (L/R)</option><option value="stereo" id="monitor-stereo-opt" disabled>Stereo (start audition to detect)</option></select></label>
         <button id="live-reload">Reload edits</button>
@@ -378,9 +379,22 @@ function stopLive() {
   $('live-toggle').textContent = '▶ Live audition'; $('live-toggle').classList.remove('primary');
 }
 $('live-toggle').addEventListener('click', () => { audio.running ? stopLive() : startLive(); });
-$('live-strike').addEventListener('click', async () => {
+async function strikeLive() {
   if (!audio.running) await startLive();   // Strike turns audition on if it isn't — the click is the gesture.
   if (audio.running && audio.node) audio.node.port.postMessage({ type: 'trigger' });
+}
+$('live-strike').addEventListener('click', strikeLive);
+document.addEventListener('keydown', (event) => {
+  if (event.code !== 'Space' || event.repeat) return;
+  const target = event.target;
+  const targetUsesSpace = target && (
+    target.isContentEditable
+    || ['BUTTON', 'SELECT', 'TEXTAREA'].includes(target.tagName)
+    || (target.tagName === 'INPUT' && target.type !== 'range')
+  );
+  if (targetUsesSpace) return;
+  event.preventDefault();
+  void strikeLive();
 });
 $('live-env').addEventListener('change', (e) => { if (audio.running && audio.node) audio.node.port.postMessage({ type: 'env', value: Number(e.target.value) }); });
 $('live-reload').addEventListener('click', refreshPackage);

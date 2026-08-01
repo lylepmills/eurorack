@@ -758,6 +758,14 @@ class PackageTests(unittest.TestCase):
         worklet = (plaits_lab.SDK_DIR / "audition_worklet.js").read_text(encoding="utf-8")
         self.assertIn("'env'", worklet)
 
+    def test_live_strike_spacebar_shortcut_is_wired(self) -> None:
+        html = (plaits_lab.SDK_DIR / "dev_editor.html").read_text(encoding="utf-8")
+        self.assertIn('aria-keyshortcuts="Space"', html)
+        self.assertIn("event.code !== 'Space'", html)
+        self.assertIn("event.repeat", html)
+        self.assertIn("event.preventDefault()", html)
+        self.assertIn("void strikeLive()", html)
+
     def test_live_audition_stereo_surface_is_wired(self) -> None:
         # The audition must be able to drive parameters.stereo and read back
         # stereo_capable(), so a contributor can hear a stereo engine's L/R render.
