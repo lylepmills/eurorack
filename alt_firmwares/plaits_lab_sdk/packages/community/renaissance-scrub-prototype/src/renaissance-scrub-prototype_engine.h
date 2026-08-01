@@ -34,10 +34,10 @@
 
 namespace plaits {
 
-// Interaction prototype, deliberately using Plaits' existing MIT-licensed LPC
-// number bank. HARMONICS selects zero..ten, TIMBRE seeks within that word, and
-// a trigger plays forward from the seek point. With no trigger, the selected
-// frame is held. MORPH shifts the formants and MACRO changes playback speed.
+// Continuous-LPC word playback with Renaissance's control split. HARMONICS
+// selects a phrase, TIMBRE seeks within it, and a trigger plays forward from
+// that point. With no trigger, the selected frame is held. MORPH shifts the
+// formants and MACRO controls captured pitch prosody around a flat midpoint.
 class RenaissanceScrubPrototypeEngine : public Engine {
  public:
   RenaissanceScrubPrototypeEngine() { }
@@ -53,15 +53,11 @@ class RenaissanceScrubPrototypeEngine : public Engine {
       bool* already_enveloped);
 
  private:
-  static const int kNumWords = 11;
-  static const int kMaxWordFrames = 28;
-
-  size_t DecodeWord(const uint8_t* data, bool store);
-  void LoadWord(int word);
+  void LoadPhrase(int phrase);
 
   LPCSpeechSynth synth_;
-  LPCSpeechSynth::Frame frames_[kMaxWordFrames + 1];
-  int word_;
+  const LPCSpeechSynth::Frame* frames_;
+  int phrase_;
   int num_frames_;
   int playback_frame_;
   size_t remaining_frame_samples_;

@@ -1,54 +1,93 @@
 [
   {
+    "id": "familiar-flat",
+    "name": "Familiar phrase with flat pitch",
+    "durationSeconds": 4,
+    "note": 48,
+    "triggerHz": 0.25,
+    "controls": {
+      "harmonics": [0.25, 0.25],
+      "timbre": [0.0, 0.0],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "familiar-natural",
+    "name": "Familiar phrase with captured pitch",
+    "durationSeconds": 4,
+    "note": 48,
+    "triggerHz": 0.25,
+    "controls": {
+      "harmonics": [0.25, 0.25],
+      "timbre": [0.0, 0.0],
+      "morph": [0.5, 0.5],
+      "macro": [1.0, 1.0]
+    }
+  },
+  {
+    "id": "blind-flat",
+    "name": "Blind phrase with flat pitch",
+    "durationSeconds": 4,
+    "note": 48,
+    "triggerHz": 0.25,
+    "controls": {
+      "harmonics": [0.75, 0.75],
+      "timbre": [0.0, 0.0],
+      "morph": [0.5, 0.5],
+      "macro": [0.5, 0.5]
+    }
+  },
+  {
+    "id": "blind-natural",
+    "name": "Blind phrase with captured pitch",
+    "durationSeconds": 4,
+    "note": 48,
+    "triggerHz": 0.25,
+    "controls": {
+      "harmonics": [0.75, 0.75],
+      "timbre": [0.0, 0.0],
+      "morph": [0.5, 0.5],
+      "macro": [1.0, 1.0]
+    }
+  },
+  {
     "id": "frozen-scan",
-    "name": "Frozen scan through five",
+    "name": "Frozen scan through familiar phrase",
     "durationSeconds": 5,
     "note": 48,
     "triggerHz": 0,
     "controls": {
-      "harmonics": [0.5, 0.5],
+      "harmonics": [0.25, 0.25],
       "timbre": [0.0, 1.0],
       "morph": [0.5, 0.5],
       "macro": [0.5, 0.5]
     }
   },
   {
-    "id": "whole-words",
-    "name": "Numbers from their beginnings",
-    "durationSeconds": 6,
-    "note": 48,
-    "triggerHz": 1.5,
-    "controls": {
-      "harmonics": [0.0, 1.0],
-      "timbre": [0.0, 0.0],
-      "morph": [0.5, 0.5],
-      "macro": [0.5, 0.5]
-    }
-  },
-  {
     "id": "offset-playback",
-    "name": "Retrigger five from moving offsets",
-    "durationSeconds": 6,
+    "name": "Retrigger blind phrase from moving offsets",
+    "durationSeconds": 8,
     "note": 48,
-    "triggerHz": 2,
-    "controls": {
-      "harmonics": [0.5, 0.5],
-      "timbre": [0.0, 0.9],
-      "morph": [0.5, 0.5],
-      "macro": [0.5, 0.5]
-    }
-  },
-  {
-    "id": "rate-and-formant",
-    "name": "Playback rate and vocal-tract sweep",
-    "durationSeconds": 6,
-    "note": 48,
-    "triggerHz": 1,
+    "triggerHz": 0.5,
     "controls": {
       "harmonics": [0.75, 0.75],
+      "timbre": [0.0, 0.8],
+      "morph": [0.5, 0.5],
+      "macro": [1.0, 1.0]
+    }
+  },
+  {
+    "id": "formant-and-prosody",
+    "name": "Formant and prosody sweep",
+    "durationSeconds": 8,
+    "note": 48,
+    "triggerHz": 0.25,
+    "controls": {
+      "harmonics": [0.25, 0.25],
       "timbre": [0.0, 0.0],
-      "morph": [0.15, 0.85],
-      "macro": [0.0, 1.0]
+      "morph": [0.25, 0.75],
+      "macro": [0.5, 1.0]
     }
   }
 ]

@@ -470,6 +470,36 @@ class PackageTests(unittest.TestCase):
             self.assertNotEqual(hashlib.sha256(idle_wav.read_bytes()).digest(),
                                 hashlib.sha256(triggered_wav.read_bytes()).digest())
 
+    def test_renaissance_scrub_exposes_phrase_and_prosody_controls(self) -> None:
+        package_dir = (SDK_DIR / "packages" / "community" /
+                       "renaissance-scrub-prototype")
+        package = plaits_lab.load_package(str(package_dir))
+        variants = {
+            "familiar-flat": (0.25, 0.5),
+            "familiar-natural": (0.25, 1.0),
+            "blind-flat": (0.75, 0.5),
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            renderer = plaits_lab.host_binary(temp, "scrub-control-renderer")
+            plaits_lab.compile_renderer(package, renderer, None)
+            digests = set()
+            for name, (harmonics, macro) in variants.items():
+                scenario = {
+                    "id": name, "durationSeconds": 4, "note": 48,
+                    "triggerHz": 0.25,
+                    "controls": {
+                        "harmonics": [harmonics, harmonics],
+                        "timbre": [0.0, 0.0],
+                        "morph": [0.5, 0.5],
+                        "macro": [macro, macro],
+                    },
+                }
+                output = temp / f"{name}.wav"
+                plaits_lab.run_scenario(package, renderer, scenario, output)
+                digests.add(hashlib.sha256(output.read_bytes()).digest())
+            self.assertEqual(len(digests), len(variants))
+
     def test_stock_speech_responds_to_hardware_trigger_flags(self) -> None:
         package = plaits_lab.builtin_package("speech")
         base_controls = {
