@@ -87,10 +87,9 @@ covers the FM-bank credits, and the chord-table fold that fixed guides served
 from cache with another recipe's LIGHT 1 row; contract 6 renames a customized
 six-op slot "Custom 6-Op FM Bank" in the bank map and the model reference,
 subtitled with the bank's own name; contract 10 adds the recipe's scale order).
-The source now clarifies LIGHT 8's Default/CCW/CW behavior; the next image and
-Worker rollout must move the manual contract from 12 to 13 so cached guides
-receive that prose-only correction. Do not bump the Worker before the matching
-renderer image exists.
+Contract 13 clarifies LIGHT 8's Default/CCW/CW behavior. It shipped with the
+six-voice wavetable optimization image, so cached guides receive that
+prose-only correction from the matching renderer.
 
 The contract is the Worker's alone, and in source (`a0c0791`) it rides in the
 `POST /manual` body as `manualContract` for the container to echo on
@@ -231,7 +230,7 @@ system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-e90a1c3500c4` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-bced0e9c156e` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a
 new image, wait for `wrangler containers list` to report `ready` before smoke
@@ -241,7 +240,7 @@ the previous live instance during the schema-5 rollout.
 Schema 16, including per-engine stereo, recipe-driven scale banks, and automatic
 LEVEL routing, is live. The generalized
 schema-inheritance hardening from `5b2b077` is also live: current production
-source `e90a1c3500c4` descends from that commit, so future supported schemas
+source `bced0e9c156e` descends from that commit, so future supported schemas
 inherit older feature shapes without another version-list edit.
 
 ### Rolling back
@@ -291,6 +290,7 @@ target.
 | July 31, 2026 (Renaissance WTCH and WTx6 standalone engines) | `792f18cfbe5a` | `rev-792f18cfbe5a` |
 | July 31, 2026 (unpatched attenuverter Drift + Step modes, manual contract 12) | `075543932021` | `rev-075543932021` |
 | July 31, 2026 (control-path flash recovery for full stock palettes) | `e90a1c3500c4` | `rev-e90a1c3500c4` |
+| August 1, 2026 (six-voice wavetable optimization, manual contract 13) | `bced0e9c156e` | `rev-bced0e9c156e` |
 
 Three consequences a rollback has that a forward deploy does not:
 
