@@ -60,46 +60,55 @@ struct RandomizerProfile {
   ParameterRandomizerProfile morph;
 };
 
-#ifndef PLAITS_LAB_RANDOMIZER_PROFILE
-#define PLAITS_LAB_RANDOMIZER_PROFILE 0
+// plaits_lab.py resolves catalog-driven archetypes and per-model overrides into
+// these compile-time values. Defaults keep direct harness builds conservative.
+#ifndef PLAITS_LAB_RANDOMIZER_TIMBRE_NEAR_SPAN
+#define PLAITS_LAB_RANDOMIZER_TIMBRE_NEAR_SPAN 0.25f
+#endif
+#ifndef PLAITS_LAB_RANDOMIZER_TIMBRE_FAR_SPAN
+#define PLAITS_LAB_RANDOMIZER_TIMBRE_FAR_SPAN 0.55f
+#endif
+#ifndef PLAITS_LAB_RANDOMIZER_TIMBRE_NEAR_RATE
+#define PLAITS_LAB_RANDOMIZER_TIMBRE_NEAR_RATE 0.000009f
+#endif
+#ifndef PLAITS_LAB_RANDOMIZER_TIMBRE_FAR_RATE
+#define PLAITS_LAB_RANDOMIZER_TIMBRE_FAR_RATE 0.000006f
+#endif
+#ifndef PLAITS_LAB_RANDOMIZER_TIMBRE_FAR_CENTER_RELEASE
+#define PLAITS_LAB_RANDOMIZER_TIMBRE_FAR_CENTER_RELEASE 0.60f
+#endif
+#ifndef PLAITS_LAB_RANDOMIZER_MORPH_NEAR_SPAN
+#define PLAITS_LAB_RANDOMIZER_MORPH_NEAR_SPAN 0.22f
+#endif
+#ifndef PLAITS_LAB_RANDOMIZER_MORPH_FAR_SPAN
+#define PLAITS_LAB_RANDOMIZER_MORPH_FAR_SPAN 0.50f
+#endif
+#ifndef PLAITS_LAB_RANDOMIZER_MORPH_NEAR_RATE
+#define PLAITS_LAB_RANDOMIZER_MORPH_NEAR_RATE 0.000006f
+#endif
+#ifndef PLAITS_LAB_RANDOMIZER_MORPH_FAR_RATE
+#define PLAITS_LAB_RANDOMIZER_MORPH_FAR_RATE 0.000003f
+#endif
+#ifndef PLAITS_LAB_RANDOMIZER_MORPH_FAR_CENTER_RELEASE
+#define PLAITS_LAB_RANDOMIZER_MORPH_FAR_CENTER_RELEASE 0.55f
 #endif
 
-// Profile ids are assigned by plaits_lab.py. The motion language and knob law
-// stay universal; these small records tune how each engine parameter receives
-// it. Values are intentionally data-like so a firmware port can use the same
-// table without carrying per-engine random-generator code.
-#if PLAITS_LAB_RANDOMIZER_PROFILE == 1
-// Virtual Analog: Pulse/sync is fairly sensitive; Saw shape can roam farther.
 const RandomizerProfile kRandomizerProfile = {
-  { 0.26f, 0.58f, 0.000010f, 0.000007f, 0.70f },
-  { 0.30f, 0.68f, 0.000007f, 0.000004f, 0.75f },
+  {
+    PLAITS_LAB_RANDOMIZER_TIMBRE_NEAR_SPAN,
+    PLAITS_LAB_RANDOMIZER_TIMBRE_FAR_SPAN,
+    PLAITS_LAB_RANDOMIZER_TIMBRE_NEAR_RATE,
+    PLAITS_LAB_RANDOMIZER_TIMBRE_FAR_RATE,
+    PLAITS_LAB_RANDOMIZER_TIMBRE_FAR_CENTER_RELEASE,
+  },
+  {
+    PLAITS_LAB_RANDOMIZER_MORPH_NEAR_SPAN,
+    PLAITS_LAB_RANDOMIZER_MORPH_FAR_SPAN,
+    PLAITS_LAB_RANDOMIZER_MORPH_NEAR_RATE,
+    PLAITS_LAB_RANDOMIZER_MORPH_FAR_RATE,
+    PLAITS_LAB_RANDOMIZER_MORPH_FAR_CENTER_RELEASE,
+  },
 };
-#elif PLAITS_LAB_RANDOMIZER_PROFILE == 2
-// Fold: fold amount gets restraint; symmetry tolerates a broader orbit.
-const RandomizerProfile kRandomizerProfile = {
-  { 0.22f, 0.50f, 0.000009f, 0.000006f, 0.55f },
-  { 0.30f, 0.66f, 0.000007f, 0.000004f, 0.70f },
-};
-#elif PLAITS_LAB_RANDOMIZER_PROFILE == 3
-// Vowel FOF: preserve vowel identity, but keep both controls audibly alive;
-// register remains the most patient move in the tuned set.
-const RandomizerProfile kRandomizerProfile = {
-  { 0.23f, 0.52f, 0.000007f, 0.000004f, 0.55f },
-  { 0.21f, 0.44f, 0.000005f, 0.000003f, 0.45f },
-};
-#elif PLAITS_LAB_RANDOMIZER_PROFILE == 4
-// Granular Cloud: grain and shape invite broader, livelier texture motion.
-const RandomizerProfile kRandomizerProfile = {
-  { 0.34f, 0.80f, 0.000014f, 0.000009f, 0.85f },
-  { 0.30f, 0.66f, 0.000010f, 0.000006f, 0.75f },
-};
-#else
-// Conservative fallback for every engine not yet listened to and profiled.
-const RandomizerProfile kRandomizerProfile = {
-  { 0.25f, 0.55f, 0.000009f, 0.000006f, 0.60f },
-  { 0.22f, 0.50f, 0.000006f, 0.000003f, 0.55f },
-};
-#endif
 
 // Four independent, autonomous chaotic orbits. There are no sampled targets,
 // countdowns, or slew stages: each x/y/z state evolves continuously on every

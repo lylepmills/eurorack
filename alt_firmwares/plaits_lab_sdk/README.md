@@ -79,6 +79,7 @@ SPDX tag agrees with the manifest.
 
 ```sh
 $SDK dev ./$PKG/my-engine
+$SDK dev chords                 # audition a built-in directly by catalog ID
 ```
 
 Open the `http://127.0.0.1:4179/` link it prints. Page and API are the same
@@ -115,10 +116,12 @@ opens a low-pass-gate decay) — the same low-pass-gate behavior Plaits applies 
 patched trigger, so sustained engines respond to Strike too.
 
 The live page also carries an **audition-only unpatched-attenuverter
-prototype** for TIMBRE and MORPH. Noon is off, CCW samples nearby peaky targets,
-and CW samples across the control range; Strike applies each target and returns
-to the panel value over the selected time. This is a listening experiment, not
-part of the firmware, recipe schema, or engine-package contract.
+prototype** for TIMBRE and MORPH. A small zone around noon is off; CCW adds a
+close, center-seeking drift and CW adds a wider, slower roam. Both follow
+continuous chaotic control orbits with no targets, clocks, or connection to
+Strike. `randomizer_profiles.json` resolves reusable parameter archetypes and
+per-model overrides at compile time. This is a listening experiment, not part
+of the firmware, recipe schema, or engine-package contract.
 
 ## Validation and submission
 
