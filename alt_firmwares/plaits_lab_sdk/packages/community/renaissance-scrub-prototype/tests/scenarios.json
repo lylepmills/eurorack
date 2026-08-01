@@ -1,51 +1,51 @@
 [
   {
-    "id": "familiar-flat",
-    "name": "Familiar phrase with flat pitch",
-    "durationSeconds": 4,
+    "id": "whiskey-flat",
+    "name": "Whiskey with flat pitch",
+    "durationSeconds": 3,
     "note": 48,
-    "triggerHz": 0.25,
+    "triggerHz": 1,
     "controls": {
-      "harmonics": [0.25, 0.25],
+      "harmonics": [0.04, 0.04],
       "timbre": [0.0, 0.0],
       "morph": [0.5, 0.5],
       "macro": [0.5, 0.5]
     }
   },
   {
-    "id": "familiar-natural",
-    "name": "Familiar phrase with captured pitch",
-    "durationSeconds": 4,
+    "id": "whiskey-natural",
+    "name": "Whiskey with captured pitch",
+    "durationSeconds": 3,
     "note": 48,
-    "triggerHz": 0.25,
+    "triggerHz": 1,
     "controls": {
-      "harmonics": [0.25, 0.25],
+      "harmonics": [0.04, 0.04],
       "timbre": [0.0, 0.0],
       "morph": [0.5, 0.5],
       "macro": [1.0, 1.0]
     }
   },
   {
-    "id": "blind-flat",
-    "name": "Blind phrase with flat pitch",
-    "durationSeconds": 4,
+    "id": "crimson-flat",
+    "name": "Crimson with flat pitch",
+    "durationSeconds": 3,
     "note": 48,
-    "triggerHz": 0.25,
+    "triggerHz": 1,
     "controls": {
-      "harmonics": [0.75, 0.75],
+      "harmonics": [0.54, 0.54],
       "timbre": [0.0, 0.0],
       "morph": [0.5, 0.5],
       "macro": [0.5, 0.5]
     }
   },
   {
-    "id": "blind-natural",
-    "name": "Blind phrase with captured pitch",
-    "durationSeconds": 4,
+    "id": "crimson-natural",
+    "name": "Crimson with captured pitch",
+    "durationSeconds": 3,
     "note": 48,
-    "triggerHz": 0.25,
+    "triggerHz": 1,
     "controls": {
-      "harmonics": [0.75, 0.75],
+      "harmonics": [0.54, 0.54],
       "timbre": [0.0, 0.0],
       "morph": [0.5, 0.5],
       "macro": [1.0, 1.0]
@@ -53,12 +53,12 @@
   },
   {
     "id": "frozen-scan",
-    "name": "Frozen scan through familiar phrase",
+    "name": "Frozen scan through thunder",
     "durationSeconds": 5,
     "note": 48,
     "triggerHz": 0,
     "controls": {
-      "harmonics": [0.25, 0.25],
+      "harmonics": [0.71, 0.71],
       "timbre": [0.0, 1.0],
       "morph": [0.5, 0.5],
       "macro": [0.5, 0.5]
@@ -66,28 +66,28 @@
   },
   {
     "id": "offset-playback",
-    "name": "Retrigger blind phrase from moving offsets",
-    "durationSeconds": 8,
+    "name": "Retrigger satellite from moving offsets",
+    "durationSeconds": 6,
     "note": 48,
-    "triggerHz": 0.5,
+    "triggerHz": 1,
     "controls": {
-      "harmonics": [0.75, 0.75],
+      "harmonics": [0.96, 0.96],
       "timbre": [0.0, 0.8],
       "morph": [0.5, 0.5],
       "macro": [1.0, 1.0]
     }
   },
   {
-    "id": "formant-and-prosody",
-    "name": "Formant and prosody sweep",
-    "durationSeconds": 8,
+    "id": "word-sequence",
+    "name": "Sweep through all twelve words",
+    "durationSeconds": 12,
     "note": 48,
-    "triggerHz": 0.25,
+    "triggerHz": 1,
     "controls": {
-      "harmonics": [0.25, 0.25],
+      "harmonics": [0.0, 1.0],
       "timbre": [0.0, 0.0],
-      "morph": [0.25, 0.75],
-      "macro": [0.5, 1.0]
+      "morph": [0.5, 0.5],
+      "macro": [1.0, 1.0]
     }
   }
 ]

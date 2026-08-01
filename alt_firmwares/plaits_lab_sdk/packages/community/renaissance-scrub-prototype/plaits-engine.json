@@ -4,7 +4,7 @@
   "packageType": "community",
   "id": "rubato/renaissance-scrub-prototype",
   "catalogId": "renaissance-scrub-prototype",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "name": "Renaissance Scrub Prototype",
   "author": "Lyle Mills",
   "origin": "Community",
@@ -12,7 +12,7 @@
     "color": "#DC4A2C"
   },
   "license": "MIT",
-  "description": "A continuous-LPC phrase player: select a phrase, seek to a frozen frame, trigger forward playback, and choose flat or captured pitch prosody.",
+  "description": "A continuous-LPC word player: select one of twelve words, seek to a frozen frame, trigger forward playback, and choose flat or captured pitch prosody.",
   "family": "Vocal",
   "tags": [
     "speech",
@@ -24,8 +24,8 @@
   "controls": [
     {
       "id": "harmonics",
-      "label": "Phrase",
-      "description": "Selects one of two host-generated listening-test phrases."
+      "label": "Word",
+      "description": "Selects one of twelve host-generated words."
     },
     {
       "id": "timbre",
@@ -40,7 +40,7 @@
     {
       "id": "macro",
       "label": "Prosody",
-      "description": "Noon is flat pitch, clockwise restores the captured pitch contour, and counter-clockwise inverts it."
+      "description": "Counter-clockwise through noon is flat pitch; clockwise restores the captured pitch contour."
     }
   ],
   "outputs": {

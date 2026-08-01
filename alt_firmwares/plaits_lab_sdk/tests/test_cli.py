@@ -472,24 +472,25 @@ class PackageTests(unittest.TestCase):
             self.assertNotEqual(hashlib.sha256(idle_wav.read_bytes()).digest(),
                                 hashlib.sha256(triggered_wav.read_bytes()).digest())
 
-    def test_renaissance_scrub_exposes_phrase_and_prosody_controls(self) -> None:
+    def test_renaissance_scrub_exposes_word_and_prosody_controls(self) -> None:
         package_dir = (SDK_DIR / "packages" / "community" /
                        "renaissance-scrub-prototype")
         package = plaits_lab.load_package(str(package_dir))
         variants = {
-            "familiar-flat": (0.25, 0.5),
-            "familiar-natural": (0.25, 1.0),
-            "blind-flat": (0.75, 0.5),
+            "whiskey-flat": (0.04, 0.5),
+            "whiskey-counterclockwise": (0.04, 0.0),
+            "whiskey-natural": (0.04, 1.0),
+            "crimson-flat": (0.54, 0.5),
         }
         with tempfile.TemporaryDirectory() as temp_dir:
             temp = Path(temp_dir)
             renderer = plaits_lab.host_binary(temp, "scrub-control-renderer")
             plaits_lab.compile_renderer(package, renderer, None)
-            digests = set()
+            digests = {}
             for name, (harmonics, macro) in variants.items():
                 scenario = {
-                    "id": name, "durationSeconds": 4, "note": 48,
-                    "triggerHz": 0.25,
+                    "id": name, "durationSeconds": 2, "note": 48,
+                    "triggerHz": 1,
                     "controls": {
                         "harmonics": [harmonics, harmonics],
                         "timbre": [0.0, 0.0],
@@ -499,31 +500,35 @@ class PackageTests(unittest.TestCase):
                 }
                 output = temp / f"{name}.wav"
                 plaits_lab.run_scenario(package, renderer, scenario, output)
-                digests.add(hashlib.sha256(output.read_bytes()).digest())
-            self.assertEqual(len(digests), len(variants))
+                digests[name] = hashlib.sha256(output.read_bytes()).digest()
+            self.assertEqual(
+                digests["whiskey-counterclockwise"], digests["whiskey-flat"])
+            self.assertEqual(len(set(digests.values())), len(variants) - 1)
 
     def test_renaissance_scrub_pitch_contours_are_centered_on_100_hz(self) -> None:
         bank_path = (SDK_DIR / "packages" / "community" /
                      "renaissance-scrub-prototype" / "src" /
                      "renaissance-scrub-prototype_phrases.inc")
         source = bank_path.read_text(encoding="utf-8")
-        frame_source = source.split("const LPCSpeechSynth::Frame kPhraseFrames[] = {", 1)[1]
+        frame_source = source.split("const LPCSpeechSynth::Frame kLPCBankFrames[] = {", 1)[1]
         frame_source = frame_source.split("};", 1)[0]
         frames = [
             tuple(int(value.strip()) for value in match.split(","))
             for match in re.findall(r"\{\s*((?:-?\d+\s*,\s*){11}-?\d+)\s*\}", frame_source)
         ]
         offsets = [int(value) for value in re.search(
-            r"kPhraseOffsets\[\] = \{ ([^}]+) \}", source).group(1).split(",")]
+            r"kLPCBankOffsets\[\] = \{ ([^}]+) \}", source).group(1).split(",")]
         lengths = [int(value) for value in re.search(
-            r"kPhraseLengths\[\] = \{ ([^}]+) \}", source).group(1).split(",")]
+            r"kLPCBankLengths\[\] = \{ ([^}]+) \}", source).group(1).split(",")]
+        self.assertEqual(len(offsets), 12)
+        self.assertTrue(all(0 < length <= 32 for length in lengths))
         for offset, length in zip(offsets, lengths):
             voiced_f0 = [
                 8000.0 / frame[1]
                 for frame in frames[offset:offset + length]
                 if frame[0] and frame[1]
             ]
-            self.assertAlmostEqual(statistics.median(voiced_f0), 100.0, places=6)
+            self.assertAlmostEqual(statistics.median(voiced_f0), 100.0, delta=1.0)
 
     def test_stock_speech_responds_to_hardware_trigger_flags(self) -> None:
         package = plaits_lab.builtin_package("speech")

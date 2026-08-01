@@ -35,7 +35,7 @@
 namespace plaits {
 
 // Continuous-LPC word playback with Renaissance's control split. HARMONICS
-// selects a phrase, TIMBRE seeks within it, and a trigger plays forward from
+// selects a word, TIMBRE seeks within it, and a trigger plays forward from
 // that point. With no trigger, the selected frame is held. MORPH shifts the
 // formants and MACRO controls captured pitch prosody around a flat midpoint.
 class RenaissanceScrubPrototypeEngine : public Engine {
@@ -53,11 +53,11 @@ class RenaissanceScrubPrototypeEngine : public Engine {
       bool* already_enveloped);
 
  private:
-  void LoadPhrase(int phrase);
+  void LoadWord(int word);
 
   LPCSpeechSynth synth_;
   const LPCSpeechSynth::Frame* frames_;
-  int phrase_;
+  int word_;
   int num_frames_;
   int playback_frame_;
   size_t remaining_frame_samples_;

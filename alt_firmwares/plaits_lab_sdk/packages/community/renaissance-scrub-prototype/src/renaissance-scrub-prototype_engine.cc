@@ -49,19 +49,19 @@ const int kLPCFramesPerSecond = 40;
 
 }  // namespace
 
-void RenaissanceScrubPrototypeEngine::LoadPhrase(int phrase) {
-  if (phrase < 0) {
-    phrase = 0;
-  } else if (phrase >= kNumPhrases) {
-    phrase = kNumPhrases - 1;
+void RenaissanceScrubPrototypeEngine::LoadWord(int word) {
+  if (word < 0) {
+    word = 0;
+  } else if (word >= kLPCBankNumEntries) {
+    word = kLPCBankNumEntries - 1;
   }
-  if (phrase == phrase_) {
+  if (word == word_) {
     return;
   }
 
-  frames_ = &kPhraseFrames[kPhraseOffsets[phrase]];
-  num_frames_ = kPhraseLengths[phrase];
-  phrase_ = phrase;
+  frames_ = &kLPCBankFrames[kLPCBankOffsets[word]];
+  num_frames_ = kLPCBankLengths[word];
+  word_ = word;
   playback_frame_ = -1;
   remaining_frame_samples_ = 0;
 }
@@ -73,14 +73,14 @@ void RenaissanceScrubPrototypeEngine::Init(BufferAllocator* allocator) {
 void RenaissanceScrubPrototypeEngine::Reset() {
   synth_.Init();
   frames_ = NULL;
-  phrase_ = -1;
+  word_ = -1;
   num_frames_ = 0;
   playback_frame_ = -1;
   remaining_frame_samples_ = 0;
   clock_phase_ = 0.0f;
   fill(&sample_[0], &sample_[2], 0.0f);
   fill(&next_sample_[0], &next_sample_[2], 0.0f);
-  LoadPhrase(0);
+  LoadWord(0);
 }
 
 void RenaissanceScrubPrototypeEngine::Render(
@@ -91,11 +91,11 @@ void RenaissanceScrubPrototypeEngine::Render(
     bool* already_enveloped) {
   *already_enveloped = true;
 
-  int phrase = static_cast<int>(parameters.harmonics * kNumPhrases);
-  if (phrase >= kNumPhrases) {
-    phrase = kNumPhrases - 1;
+  int word = static_cast<int>(parameters.harmonics * kLPCBankNumEntries);
+  if (word >= kLPCBankNumEntries) {
+    word = kLPCBankNumEntries - 1;
   }
-  LoadPhrase(phrase);
+  LoadWord(word);
 
   if (num_frames_ == 0) {
     fill(out, out + size, 0.0f);
@@ -109,8 +109,9 @@ void RenaissanceScrubPrototypeEngine::Render(
   const float pitch_shift = f0 /
       (rate_ratio * kLPCSpeechSynthDefaultF0 / kCorrectedSampleRate);
   // MACRO is neutral at noon. Clockwise restores the captured pitch contour;
-  // counter-clockwise inverts it for an intentionally experimental register.
-  const float prosody_amount = (parameters.macro - 0.5f) * 2.0f;
+  // the entire counter-clockwise half remains flat.
+  const float prosody_amount = max(
+      0.0f, (parameters.macro - 0.5f) * 2.0f);
 
   if (parameters.trigger & TRIGGER_RISING_EDGE) {
     playback_frame_ = static_cast<int>(
