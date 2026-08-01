@@ -227,7 +227,7 @@ system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-075543932021` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-e90a1c3500c4` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a
 new image, wait for `wrangler containers list` to report `ready` before smoke
@@ -237,7 +237,7 @@ the previous live instance during the schema-5 rollout.
 Schema 16, including per-engine stereo, recipe-driven scale banks, and automatic
 LEVEL routing, is live. The generalized
 schema-inheritance hardening from `5b2b077` is also live: current production
-source `075543932021` descends from that commit, so future supported schemas
+source `e90a1c3500c4` descends from that commit, so future supported schemas
 inherit older feature shapes without another version-list edit.
 
 ### Rolling back
@@ -286,6 +286,7 @@ target.
 | July 30, 2026 (sound-exact CPU sweep, with flash-safe Modal path) | `7db000d5bfd3` | `rev-7db000d5bfd3` |
 | July 31, 2026 (Renaissance WTCH and WTx6 standalone engines) | `792f18cfbe5a` | `rev-792f18cfbe5a` |
 | July 31, 2026 (unpatched attenuverter Drift + Step modes, manual contract 12) | `075543932021` | `rev-075543932021` |
+| July 31, 2026 (control-path flash recovery for full stock palettes) | `e90a1c3500c4` | `rev-e90a1c3500c4` |
 
 Three consequences a rollback has that a forward deploy does not:
 
