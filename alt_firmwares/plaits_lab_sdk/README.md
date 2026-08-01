@@ -277,8 +277,11 @@ $SDK build ./$PKG/my-engine --hardware --output /tmp/my-engine-firmware.wav
 This produces an **UNREVIEWED** audio updater for hardware the contributor
 controls. The CLI uses a local ARM 4.8.3 toolchain when present and otherwise
 runs `plaits-lab-builder:local` through Docker. Hosted firmware builds never
-compile draft source; they accept only published package version/digest
-references from the catalog.
+compile draft source. A current published package reference is accepted
+directly; an older compatible reference for the same engine/package is resolved
+to the current approved catalog entry. Unknown, renamed, breaking, malformed,
+and future references are rejected. In every case, the compiler uses only
+source baked into its approved image.
 
 The firmware this produces is a **one-model Plaits — just yours.** The module
 boots into your single model (the first slot, which the LEDs show amber/yellow —

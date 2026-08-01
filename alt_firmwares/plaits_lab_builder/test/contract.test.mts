@@ -5,6 +5,7 @@ import {
   approvedEngineIds,
   computeBuildKey,
   computeManualKey,
+  isCompatiblePackageUpgrade,
   maxRecipeSchemaVersion,
   minRecipeSchemaVersion,
   normalizeRecipe,
@@ -323,7 +324,17 @@ test("unknown engine IDs never reach the queue", () => {
   assert.throws(() => normalizeRecipe(input), /not approved/);
 });
 
-test("versioned package references are checked against immutable digests", async () => {
+test("package-version compatibility only moves forward within a stable API line", () => {
+  assert.equal(isCompatiblePackageUpgrade("1.0.0", "1.0.0"), true);
+  assert.equal(isCompatiblePackageUpgrade("1.2.3", "1.4.0"), true);
+  assert.equal(isCompatiblePackageUpgrade("0.4.2", "0.4.9"), true);
+  assert.equal(isCompatiblePackageUpgrade("1.4.0", "1.2.3"), false);
+  assert.equal(isCompatiblePackageUpgrade("1.9.0", "2.0.0"), false);
+  assert.equal(isCompatiblePackageUpgrade("0.3.9", "0.4.0"), false);
+  assert.equal(isCompatiblePackageUpgrade("1.0", "1.0.0"), false);
+});
+
+test("versioned package references migrate stale digests but reject incompatible identities", async () => {
   const publicCatalog = JSON.parse(await readFile(
     new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),
     "utf8",
@@ -340,7 +351,23 @@ test("versioned package references are checked against immutable digests", async
   const normalized = normalizeRecipe(versioned);
   assert.equal(normalized.schemaVersion, 5);
   assert.deepEqual(normalized.slots, fixture.slots);
+
+  // The selected engine/package is unchanged. The current builder owns the
+  // source and build revision, so an older digest resolves to today's engine.
   versioned.slots[0].digest = "sha256:" + "0".repeat(64);
+  assert.deepEqual(normalizeRecipe(versioned).slots, fixture.slots);
+
+  versioned.slots[0].digest = "not-a-digest";
+  assert.throws(() => normalizeRecipe(versioned), /unavailable package version/);
+
+  versioned.slots[0].digest = "sha256:" + "0".repeat(64);
+  versioned.slots[0].package = "somewhere-else/virtual-analog";
+  assert.throws(() => normalizeRecipe(versioned), /unavailable package version/);
+
+  const currentVersion = (byId.get(fixture.slots[0]) as { version: string }).version;
+  const [major, minor, patch] = currentVersion.split(".").map(Number);
+  versioned.slots[0].package = (byId.get(fixture.slots[0]) as { packageId: string }).packageId;
+  versioned.slots[0].version = `${major}.${minor}.${patch + 1}`;
   assert.throws(() => normalizeRecipe(versioned), /unavailable package version/);
 });
 

@@ -166,10 +166,41 @@ const defaultConfiguration: Pick<NormalizedRecipe, "preferences" | "initialOptio
 
 const idPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const digestPattern = /^sha256:[0-9a-f]{64}$/;
+const packageVersionPattern = /^\d+\.\d+\.\d+$/;
 const approvedChordTablesById = new Map(chordCatalog.tables.map((table) => [table.id, table]));
 
 function shortText(value: unknown, maximum: number): value is string {
   return typeof value === "string" && value.trim().length > 0 && value.length <= maximum;
+}
+
+type PackageVersion = readonly [major: number, minor: number, patch: number];
+
+function parsePackageVersion(value: unknown): PackageVersion | null {
+  if (!shortText(value, 32) || !packageVersionPattern.test(value)) return null;
+  const parts = value.split(".").map(Number);
+  if (!parts.every(Number.isSafeInteger)) return null;
+  return parts as unknown as PackageVersion;
+}
+
+// A recipe identifies the model the user chose; the hosted builder always
+// compiles that model from its current approved source image. Accept an older
+// package reference only when semantic versioning says the current package is a
+// compatible forward update. Versions >=1 stay compatible within a major;
+// 0.x packages stay compatible within a minor. Never let a recipe from a newer
+// catalog silently compile an older implementation.
+export function isCompatiblePackageUpgrade(from: unknown, to: unknown): boolean {
+  const source = parsePackageVersion(from);
+  const target = parsePackageVersion(to);
+  if (!source || !target) return false;
+  const [sourceMajor, sourceMinor, sourcePatch] = source;
+  const [targetMajor, targetMinor, targetPatch] = target;
+  const compatible = targetMajor === 0
+    ? sourceMajor === 0 && sourceMinor === targetMinor
+    : sourceMajor === targetMajor;
+  if (!compatible) return false;
+  return sourceMajor < targetMajor
+    || (sourceMajor === targetMajor && sourceMinor < targetMinor)
+    || (sourceMajor === targetMajor && sourceMinor === targetMinor && sourcePatch <= targetPatch);
 }
 
 function normalizeChordTables(value: unknown): NormalizedChordTable[] {
@@ -602,10 +633,16 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
         }
         const reference = value as Record<string, unknown>;
         const approved = typeof reference.engine === "string" ? approvedEngines.get(reference.engine) : undefined;
+        // Package digests are provenance, not caller-supplied source: the
+        // compiler image contains the only code a build can use. Re-pin a stale
+        // but compatible reference to that image's current approved engine.
+        // Package identity and semantic-version compatibility remain the hard
+        // boundary, so renamed/removed packages and breaking upgrades fail.
         if (!approved
             || reference.package !== approved.packageId
-            || reference.version !== approved.version
-            || reference.digest !== approved.digest) {
+            || !isCompatiblePackageUpgrade(reference.version, approved.version)
+            || typeof reference.digest !== "string"
+            || !digestPattern.test(reference.digest)) {
           throw new ContractError("unapproved_package", "The recipe contains an unavailable package version.");
         }
         return approved.id;

@@ -1,7 +1,7 @@
 # Plaits Lab firmware build service
 
 This directory contains the approved-engine backend for Plaits Lab. It accepts
-legacy recipes and manifests through schema 16 containing 24 or 32 immutable
+legacy recipes and manifests through schema 16 containing 24 or 32 versioned
 engine references, firmware preferences and starting options, and bounded
 chord-table/custom-FM/scale-bank resources. Schema 15 can target either Mutable
 Instruments Plaits or Plum Audio Ro'Ved and adds the color-blind bank display.
@@ -40,6 +40,14 @@ not require an account, email address, cookie, API token, or customer identity.
 - `GET /v1/builds/:buildKey` returns durable job state.
 - `GET /v1/builds/:buildKey/firmware` streams the recipe's cached WAV or HEX
   artifact from R2 with the matching content type and filename.
+
+Engine references are resolved to the current approved catalog at request
+normalization. An older digest or compatible semantic version for the same
+engine and package is upgraded to the source in the current compiler image;
+unknown/renamed packages, breaking versions, malformed digests, and references
+from a newer catalog still fail closed. Recipes therefore preserve the chosen
+model across compatible implementation updates without allowing callers to
+provide source. The current source revision remains part of the build key.
 
 ## Personalized manual prototype
 
@@ -211,14 +219,15 @@ Container are managed by `wrangler.jsonc`. Before each firmware-source rollout:
    `../plaits_lab_catalog/public_catalog.json` from the exporter at the
    checked-out commit), then commit any change. Each engine digest hashes its
    catalog metadata *and* source bytes, so even a display-name edit invalidates
-   it — a stale `public_catalog.json` makes the Worker reject every recipe the
-   website emits with "unavailable package version". `pnpm run deploy` runs
+   it. Compatible stale references now resolve to the current package, but the
+   catalog must still match the compiler image for new/removed packages,
+   documentation identity, and trustworthy provenance. `pnpm run deploy` runs
    `catalog:check` as a hard gate and refuses to ship a stale allowlist.
 4. Re-sync the website catalog to the SAME commit
    (`website/scripts/sync-plaits-catalog.mjs`) so its per-engine digests match
-   the builder's — otherwise engines whose source moved since the old pin start
-   rejecting. The builder allowlist and the website snapshot must always be
-   generated from one commit.
+   the builder's. Server-side compatibility is a stale-client safety net, not a
+   substitute for deploying the builder allowlist and website snapshot from one
+   commit.
 5. Run the contract, generator, type, and dry-run deployment checks.
 6. Deploy with `pnpm run deploy` (not `pnpm deploy`, which is pnpm's built-in
    workspace-deploy command) and wait for the Container image rollout.

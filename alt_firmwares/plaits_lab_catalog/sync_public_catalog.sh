@@ -6,11 +6,11 @@
 # imports statically as its digest allowlist (see plaits_lab_builder/src/
 # contract.ts). Each engine's digest hashes its catalog METADATA record plus its
 # source bytes, so even a display-name-only edit (e.g. the DX7->6-Op FM rename in
-# a4219d1) moves a digest. If public_catalog.json is not regenerated after such a
-# change, the deployed Worker rejects the very recipes the website emits with
-# "The recipe contains an unavailable package version." — which is exactly how
-# every stock build silently broke once. This script makes regeneration
-# reproducible and gives `pnpm deploy` a freshness gate (predeploy -> --check).
+# a4219d1) moves a digest. The Worker can now re-pin compatible stale client
+# references, but its catalog still has to match the compiler image for package
+# additions/removals, documentation identity, and trustworthy provenance. This
+# script makes regeneration reproducible and gives `pnpm deploy` a freshness
+# gate (predeploy -> --check).
 #
 # It regenerates from `git archive <ref>` (default HEAD), NOT the working tree,
 # because export_web_catalog.py hashes source files from the repo root — a dirty
@@ -48,7 +48,7 @@ python3 "$TMP/alt_firmwares/plaits_lab_catalog/export_web_catalog.py" "$TMP/publ
 if [ "$CHECK" -eq 1 ]; then
   if ! diff -q "$OUT" "$TMP/public_catalog.generated.json" >/dev/null 2>&1; then
     echo "ERROR: public_catalog.json is STALE vs source ${COMMIT:0:12}." >&2
-    echo "       The builder allowlist would reject recipes the exporter/website emit." >&2
+    echo "       The builder allowlist would not describe the source image it compiles." >&2
     echo "       Regenerate + commit:  ./sync_public_catalog.sh${REF:+ --ref $REF}" >&2
     echo >&2
     echo "Drifting engines (committed digest -> source digest):" >&2

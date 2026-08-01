@@ -73,8 +73,11 @@ of validation or the firmware build.
 Local tooling can produce an explicitly unreviewed hardware WAV for the
 contributor's own module, using the pinned ARM toolchain locally or through the
 builder container. The hosted service must not return an installable
-firmware image for arbitrary submitted C++; only immutable, approved package
-digests may enter public firmware builds.
+firmware image for arbitrary submitted C++. Recipe references are resolved by
+engine/package identity: an older semantically compatible version or digest is
+re-pinned to the current immutable approved catalog entry, while unknown,
+renamed, breaking, malformed, and future references fail closed. Only source
+from that current approved package may enter public firmware builds.
 
 ## Validation and publication
 
@@ -127,8 +130,9 @@ shipped safeguards are:
 - source-policy checks, upload caps, networkless/resource-limited builds,
   public-endpoint rate limits, review state/notes, and the immutable approved
   package-digest allowlist constrain intake and publication; and
-- the public recipe builder continues to compile approved package digests only,
-  never arbitrary submitted C++.
+- the public recipe builder resolves compatible stale references to the current
+  approved package and compiles only that baked-in source, never arbitrary
+  submitted C++.
 
 Still open:
 
