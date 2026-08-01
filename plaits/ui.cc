@@ -34,6 +34,7 @@
 
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/system/system_clock.h"
+#include "plaits/alternate_parameter_leds.h"
 #include "plaits/build_config.h"
 #include "plaits/bank_navigation.h"
 
@@ -416,7 +417,8 @@ void Ui::UpdateLEDs() {
           value -= 0.001f;
           for (int i = 0; i < 4; ++i) {
             leds_.set(
-                parameter * 4 + 3 - i,
+                AlternateParameterLedIndex(
+                    parameter, i, PLAITS_ROVED_PANEL != 0),
                 value * 64.0f > pwm_counter ? LED_COLOR_YELLOW : LED_COLOR_OFF);
             value -= 0.25f;
           }
