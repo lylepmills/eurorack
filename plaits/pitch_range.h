@@ -7,6 +7,8 @@
 #ifndef PLAITS_PITCH_RANGE_H_
 #define PLAITS_PITCH_RANGE_H_
 
+#include <cmath>
+
 #include "stmlib/stmlib.h"
 
 namespace plaits {
@@ -33,9 +35,79 @@ inline float WideRangeNote(int range, float transposition) {
 }
 
 inline float PrecisionRangeNote(float anchor_note, float transposition) {
-  // transposition is the filtered FREQUENCY pot in [-1, +1].
+  // transposition is a caught-up fine control in [-1, +1].
   return anchor_note + transposition;
 }
+
+// The endpoint-weighted catch-up used by Plaits' ordinary hidden parameters,
+// packaged for controls whose meaning changes when the pitch range changes.
+// The virtual value starts wherever the new role needs it (normally noon), so
+// entering that role does not jump. Any deliberate physical movement changes
+// it immediately, while the skew converges virtual and physical values at the
+// end of the knob's travel; after they meet, tracking is direct.
+class EndpointCatchUp {
+ public:
+  EndpointCatchUp() : initialized_(false), catching_up_(false) { }
+
+  inline void Reset() {
+    initialized_ = false;
+    catching_up_ = false;
+  }
+
+  inline void Init(float value, float physical_value) {
+    value_ = Clamp(value);
+    previous_physical_value_ = Clamp(physical_value);
+    initialized_ = true;
+    catching_up_ = true;
+  }
+
+  inline float Process(float physical_value) {
+    physical_value = Clamp(physical_value);
+    if (!initialized_) {
+      Init(0.5f, physical_value);
+    }
+
+    if (!catching_up_) {
+      value_ = physical_value;
+      previous_physical_value_ = physical_value;
+      return value_;
+    }
+
+    if (fabsf(physical_value - previous_physical_value_) > 0.005f) {
+      const float delta = physical_value - previous_physical_value_;
+      float skew_ratio = delta > 0.0f
+          ? (1.001f - value_) / (1.001f - previous_physical_value_)
+          : (0.001f + value_) / (0.001f + previous_physical_value_);
+      if (skew_ratio < 0.1f) skew_ratio = 0.1f;
+      if (skew_ratio > 10.0f) skew_ratio = 10.0f;
+
+      value_ += skew_ratio * delta;
+      value_ = Clamp(value_);
+      previous_physical_value_ = physical_value;
+
+      if (fabsf(value_ - physical_value) < 0.005f) {
+        catching_up_ = false;
+      }
+    }
+    return value_;
+  }
+
+  inline bool catching_up() const {
+    return catching_up_;
+  }
+
+ private:
+  static inline float Clamp(float value) {
+    if (value < 0.0f) return 0.0f;
+    if (value > 1.0f) return 1.0f;
+    return value;
+  }
+
+  float value_;
+  float previous_physical_value_;
+  bool initialized_;
+  bool catching_up_;
+};
 
 inline int16_t EncodeTunedRoot(float note) {
   float scaled = note * 256.0f;
