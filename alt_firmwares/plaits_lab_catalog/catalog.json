@@ -14,8 +14,7 @@
       "tags": [
         "analog",
         "oscillator",
-        "sync",
-        "variant"
+        "sync"
       ],
       "controls": [
         "Detune",
@@ -29,7 +28,8 @@
       ],
       "artwork": {
         "icon": "/model-icons/virtual-analog.png",
-        "kind": "official"
+        "kind": "official",
+        "tone": "green"
       },
       "source": {
         "header": "plaits/dsp/engine/virtual_analog_engine.h",
@@ -98,7 +98,8 @@
       "tags": [
         "analog",
         "oscillator",
-        "sync"
+        "sync",
+        "variant"
       ],
       "controls": [
         "Detune",
@@ -112,8 +113,7 @@
       ],
       "artwork": {
         "icon": "/model-icons/virtual-analog.png",
-        "kind": "official",
-        "tone": "green"
+        "kind": "official"
       },
       "source": {
         "header": "plaits/dsp/engine/virtual_analog_crossfade_engine.h",
