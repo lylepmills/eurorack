@@ -2642,6 +2642,111 @@ void ValidateOneKnobEnvelope() {
     fprintf(stderr, "One-knob gated release tail=%f\n", envelope.value());
     abort();
   }
+
+  // A synth has no resonant body to carry the gesture, so its midpoint release
+  // deliberately outlasts Elements' resonator-oriented timing. At four seconds
+  // the Elements profile is done while the expanded synth profile is not.
+  envelope.Init();
+  for (int block = 0; block < 30000; ++block) {
+    envelope.Process(
+        0.5f,
+        true,
+        block == 0,
+        OneKnobEnvelope::PROFILE_SYNTH);
+  }
+  for (int block = 0; block < 16000; ++block) {
+    envelope.Process(
+        0.5f,
+        false,
+        false,
+        OneKnobEnvelope::PROFILE_SYNTH);
+  }
+  if (!envelope.active()) {
+    fprintf(stderr, "One-knob synth profile did not preserve the long release\n");
+    abort();
+  }
+  for (int block = 0; block < 8000; ++block) {
+    envelope.Process(
+        0.5f,
+        false,
+        false,
+        OneKnobEnvelope::PROFILE_SYNTH);
+  }
+  if (envelope.active()) {
+    fprintf(stderr, "One-knob synth profile release did not finish\n");
+    abort();
+  }
+}
+
+void ValidateModalContourExcitation() {
+  BufferAllocator allocator(ram_block, 16384);
+  ModalEngine engine;
+  engine.Init(&allocator);
+  engine.Reset();
+
+  EngineParameters parameters;
+  parameters.trigger = TRIGGER_HIGH;
+  parameters.note = 48.0f;
+  parameters.harmonics = 0.35f;
+  parameters.timbre = 0.55f;
+  parameters.morph = 0.7f;
+  parameters.accent = 0.8f;
+  parameters.macro = 0.5f;
+  parameters.chord_set_option = 0;
+  parameters.articulation_envelope = 1.0f;
+  parameters.articulation_envelope_active = true;
+
+  float out[kAudioBlockSize];
+  float aux[kAudioBlockSize];
+  bool already_enveloped = true;
+  float excitation_energy = 0.0f;
+  for (int block = 0; block < 64; ++block) {
+    engine.Render(
+        parameters,
+        out,
+        aux,
+        kAudioBlockSize,
+        &already_enveloped);
+    for (size_t i = 0; i < kAudioBlockSize; ++i) {
+      excitation_energy += fabsf(aux[i]);
+    }
+  }
+  if (excitation_energy <= 0.001f) {
+    fprintf(stderr, "Modal contour did not generate continuous excitation\n");
+    abort();
+  }
+
+  // Closing the exciter must silence AUX immediately while the resonator on
+  // OUT continues to ring. This is the essential Elements-style distinction
+  // between ending a gesture and muting its acoustic body.
+  parameters.trigger = TRIGGER_LOW;
+  parameters.articulation_envelope = 0.0f;
+  parameters.articulation_envelope_active = false;
+  float tail_energy = 0.0f;
+  float stopped_excitation_energy = 0.0f;
+  // The exciter's own low-pass filter has a short stateful ring, so inspect a
+  // later block rather than demanding a mathematically impossible one-block
+  // stop. The modal body should still have much longer memory at that point.
+  for (int block = 0; block < 64; ++block) {
+    engine.Render(
+        parameters,
+        out,
+        aux,
+        kAudioBlockSize,
+        &already_enveloped);
+  }
+  for (size_t i = 0; i < kAudioBlockSize; ++i) {
+    tail_energy += fabsf(out[i]);
+    stopped_excitation_energy += fabsf(aux[i]);
+  }
+  if (tail_energy <= 0.001f || stopped_excitation_energy > 0.000001f) {
+    fprintf(
+        stderr,
+        "Modal contour ring-out failed: tail=%f excitation=%f\n",
+        tail_energy,
+        stopped_excitation_energy);
+    abort();
+  }
 }
 
 void TestExperimentalEngines() {
@@ -2664,6 +2769,7 @@ void TestExperimentalEngines() {
   printf("Validating one-knob envelope...\n");
   fflush(stdout);
   ValidateOneKnobEnvelope();
+  ValidateModalContourExcitation();
   printf("Validating selectable chord tables...\n");
   fflush(stdout);
   BufferAllocator chord_allocator(ram_block, sizeof(ram_block));

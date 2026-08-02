@@ -77,6 +77,16 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertLess(len(re.findall(r"\{ [^{}]+ \}", profile_line)), 24)
         self.assertEqual(len(re.findall(r"\{ \d+, \d+ \}", pair_line)), 24)
 
+    def test_stock_resonators_receive_exciter_envelope_routing(self) -> None:
+        config = render_config(validate_recipe(self.load("default_recipe.json")))
+        # The generated registry rotates public amber/green/red into its legacy
+        # internal order. Inharmonic String and Modal Resonator consequently
+        # land at internal indices 19 and 20, not their public slot numbers.
+        self.assertIn(
+            "#define PLAITS_RESONATOR_ENVELOPE_ENGINE_MASK 0x00180000u",
+            config,
+        )
+
     def test_worker_and_container_schema_ranges_stay_in_sync(self) -> None:
         # The public Worker validates first, then sends its normalized recipe to
         # this Python container. A ceiling mismatch lets the API accept a recipe

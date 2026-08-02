@@ -74,7 +74,10 @@ enum TriggerState {
 };
 
 struct EngineParameters {
-  EngineParameters() : stereo(false) { }
+  EngineParameters()
+      : articulation_envelope(0.0f),
+        articulation_envelope_active(false),
+        stereo(false) { }
 
   int trigger;
   float note;
@@ -86,6 +89,12 @@ struct EngineParameters {
   // Optional fourth synthesis macro. In the alt firmware this is controlled
   // by the frequency knob while pitch is locked and option 3 is selected.
   float macro;
+
+  // A model-aware articulation signal used by physical models that can accept
+  // continuously varying excitation. Most engines deliberately ignore it and
+  // retain the normal post-engine LPG or their own native envelope.
+  float articulation_envelope;
+  bool articulation_envelope_active;
 
   // alt firmware
   uint8_t chord_set_option;

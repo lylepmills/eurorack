@@ -131,6 +131,9 @@ class DecayEnvelope {
 //   0.0 .. 0.4  one-shot AD, from a short pluck to a slow swell
 //   0.4 .. 0.6  the same slow attack/decay, with sustain rising from 0 to 1
 //   0.6 .. 1.0  full sustain, with attack/release accelerating toward the end
+// The resonator profile preserves Elements' compact gesture timing; the synth
+// profile expands the slow center because an oscillator has no acoustic body
+// to provide a tail after the contour itself closes.
 //
 // Elements treats the whole range as an ADSR. Plaits is normally driven by
 // short trigger pulses rather than keyboard gates, so the zero-sustain region
@@ -143,14 +146,24 @@ class DecayEnvelope {
 // audio callback.
 class OneKnobEnvelope {
  public:
+  enum Profile {
+    PROFILE_ELEMENTS_RESONATOR,
+    PROFILE_SYNTH
+  };
+
   OneKnobEnvelope() { }
   ~OneKnobEnvelope() { }
 
   void Init();
 
-  float Process(float shape, bool gate, bool rising_edge);
+  float Process(
+      float shape,
+      bool gate,
+      bool rising_edge,
+      Profile profile = PROFILE_ELEMENTS_RESONATOR);
 
   inline float value() const { return value_; }
+  inline bool active() const { return segment_ != SEGMENT_DONE; }
 
 #if defined(TEST)
   // Host-test access to the two approximations. These are not part of the

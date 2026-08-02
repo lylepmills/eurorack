@@ -62,7 +62,12 @@ void ModalEngine::Render(
 
   ONE_POLE(harmonics_lp_, parameters.harmonics, 0.01f);
   
-  const bool sustain = parameters.trigger & TRIGGER_UNPATCHED;
+  const bool contour_excitation = parameters.articulation_envelope_active;
+  const bool sustain =
+      (parameters.trigger & TRIGGER_UNPATCHED) || contour_excitation;
+  const float accent = contour_excitation
+      ? parameters.accent * parameters.articulation_envelope
+      : parameters.accent;
   const float stock_exciter_q = sustain ? 0.7f : 1.5f;
   const float exciter_q = ApplyMacro(
       stock_exciter_q, 0.5f, 6.0f, parameters.macro);
@@ -71,7 +76,7 @@ void ModalEngine::Render(
     voice_.RenderStereo(
         sustain,
         parameters.trigger & TRIGGER_RISING_EDGE,
-        parameters.accent,
+        accent,
         NoteToFrequency(parameters.note),
         harmonics_lp_,
         parameters.timbre,
@@ -87,7 +92,7 @@ void ModalEngine::Render(
   voice_.Render(
       sustain,
       parameters.trigger & TRIGGER_RISING_EDGE,
-      parameters.accent,
+      accent,
       NoteToFrequency(parameters.note),
       harmonics_lp_,
       parameters.timbre,

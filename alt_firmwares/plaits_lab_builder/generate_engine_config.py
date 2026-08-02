@@ -65,6 +65,15 @@ LEVEL_AUTO_MIN_SCHEMA_VERSION = 16
 SPEECH_BANKS_MIN_SCHEMA_VERSION = 17
 ATTENUVERTER_MODE_MIN_SCHEMA_VERSION = 18
 
+# These two stock physical-model engines can treat the alternate contour as
+# energy entering a resonator rather than as a VCA after it.  Keep this list in
+# the trusted generator rather than accepting an arbitrary recipe flag: a
+# public recipe chooses engines, but cannot change firmware routing semantics.
+RESONATOR_ENVELOPE_ENGINE_IDS = frozenset({
+    "inharmonic-string",
+    "modal-resonator",
+})
+
 MIN_SCALE_BANK_SIZE = 1
 MAX_SCALE_BANK_SIZE = 16
 MIN_SCALE_DEGREES = 2
@@ -810,6 +819,11 @@ def render_config(recipe: BuildRecipe) -> str:
     speech_mask = sum(1 << index for index, item in enumerate(selected) if item.behavior == "speech")
     lpc_words_mask = sum(1 << index for index, item in enumerate(selected) if item.behavior == "lpc-words")
     chiptune_mask = sum(1 << index for index, item in enumerate(selected) if item.behavior == "chiptune")
+    resonator_envelope_mask = sum(
+        1 << index
+        for index, engine_id in enumerate(internal_slots)
+        if engine_id in RESONATOR_ENVELOPE_ENGINE_IDS
+    )
 
     # Resolve the catalog's semantic archetypes into a compact firmware table.
     # Only numeric profiles reached by this palette are emitted; duplicate
@@ -961,6 +975,7 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_HAS_USER_DATA_BANK {1 if has_user_data_bank else 0}
 #define PLAITS_HAS_USER_DATA_BANK_OVERRIDE {1 if override_arrays_all else 0}
 #define PLAITS_HAS_RESOLVED_USER_DATA_BANK {1 if has_user_data_bank else 0}
+#define PLAITS_RESONATOR_ENVELOPE_ENGINE_MASK 0x{resonator_envelope_mask:08x}u
 
 #define PLAITS_RANDOMIZER_PROFILES {{ {randomizer_profile_values} }}
 #define PLAITS_ENGINE_RANDOMIZER_PROFILE_INDICES {{ {randomizer_pair_values} }}

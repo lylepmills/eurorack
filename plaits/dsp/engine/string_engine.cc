@@ -72,6 +72,13 @@ void StringEngine::Render(
     float* aux,
     size_t size,
     bool* already_enveloped) {
+  const bool contour_excitation = parameters.articulation_envelope_active;
+  const bool sustain =
+      (parameters.trigger & TRIGGER_UNPATCHED) || contour_excitation;
+  const float accent = contour_excitation
+      ? parameters.accent * parameters.articulation_envelope
+      : parameters.accent;
+
   if (parameters.trigger & TRIGGER_RISING_EDGE) {
     // 8 in original firmware version.
     // 05.01.18: mic.w: problem with microbrute.
@@ -93,9 +100,9 @@ void StringEngine::Render(
       float string_out[kMaxBlockSize];
       fill(&string_out[0], &string_out[size], 0.0f);
       voice_[i].Render(
-          parameters.trigger & TRIGGER_UNPATCHED && i == active_string_,
+          sustain && i == active_string_,
           parameters.trigger & TRIGGER_RISING_EDGE && i == active_string_,
-          parameters.accent,
+          accent,
           f0_[i],
           parameters.harmonics,
           parameters.timbre * parameters.timbre,
@@ -116,9 +123,9 @@ void StringEngine::Render(
 
   for (int i = 0; i < kNumStrings; ++i) {
     voice_[i].Render(
-        parameters.trigger & TRIGGER_UNPATCHED && i == active_string_,
+        sustain && i == active_string_,
         parameters.trigger & TRIGGER_RISING_EDGE && i == active_string_,
-        parameters.accent,
+        accent,
         f0_[i],
         parameters.harmonics,
         parameters.timbre * parameters.timbre,

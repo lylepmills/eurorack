@@ -164,6 +164,14 @@ void Voice::Render(
 #if PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE
   const bool one_knob_envelope_mode =
       patch.locked_frequency_pot_option == 4;
+  const bool resonator_envelope_mode =
+#if PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE && \
+    defined(PLAITS_RESONATOR_ENVELOPE_ENGINE_MASK)
+      one_knob_envelope_mode &&
+      (PLAITS_RESONATOR_ENVELOPE_ENGINE_MASK & (1u << engine_index));
+#else
+      false;
+#endif
 #endif
   float patch_decay = patch.decay;
   if (patch.locked_frequency_pot_option == 3) {
@@ -298,7 +306,10 @@ void Voice::Render(
     internal_envelope = one_knob_envelope_.Process(
         patch.freqlock_param,
         trigger_state_,
-        start_one_knob_envelope);
+        start_one_knob_envelope,
+        resonator_envelope_mode
+            ? OneKnobEnvelope::PROFILE_ELEMENTS_RESONATOR
+            : OneKnobEnvelope::PROFILE_SYNTH);
   } else if (one_knob_envelope_active_) {
     one_knob_envelope_.Init();
   }
@@ -308,6 +319,12 @@ void Voice::Render(
   float compressed_level = 1.3f * modulations_level / (0.3f + fabsf(modulations_level));
   CONSTRAIN(compressed_level, 0.0f, 1.0f);
   p.accent = level_patched ? compressed_level : 0.8f;
+#if PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE
+  p.articulation_envelope = internal_envelope;
+  p.articulation_envelope_active =
+      use_one_knob_envelope && resonator_envelope_mode &&
+      one_knob_envelope_.active();
+#endif
 
   bool use_internal_envelope = modulations.trigger_patched;
 

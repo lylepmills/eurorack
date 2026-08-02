@@ -103,6 +103,7 @@ $(BUILD_DIR)stm32f37x_%.o: CCFLAGS += -Os
 RECIPE_CONFIG_OBJS = voice.o plaits.o ui.o settings.o chord_bank.o scale_voices.o switches.o
 ifneq ($(ENGINE_CONFIG),)
 $(patsubst %,$(BUILD_DIR)%,$(RECIPE_CONFIG_OBJS)): CPPFLAGS += -include $(ENGINE_CONFIG)
+$(patsubst %,$(BUILD_DIR)%,$(RECIPE_CONFIG_OBJS)): $(ENGINE_CONFIG)
 endif
 
 # Speech-bank data is independent of the engine registry and can be much larger

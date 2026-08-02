@@ -136,30 +136,47 @@ float OneKnobEnvelope::TimeIncrement(float time) {
   return stmlib::Exp2Safe(log2_increment) * control_rate_correction;
 }
 
-float OneKnobEnvelope::Process(float shape, bool gate, bool rising_edge) {
+float OneKnobEnvelope::Process(
+    float shape,
+    bool gate,
+    bool rising_edge,
+    Profile profile) {
   if (shape < 0.0f) {
     shape = 0.0f;
   } else if (shape > 1.0f) {
     shape = 1.0f;
   }
 
+  // Elements keeps the slow point compact: about 266 ms of attack and 3.05 s
+  // of decay/release. That is natural when the resonator supplies the rest of
+  // the audible tail. A memoryless synth needs the contour itself to carry a
+  // long gesture, so its slow point reaches about 1.17 s / 4.92 s. Both keep
+  // the same fast endpoints and the same pluck -> sustain topology.
+  const float slow_attack =
+      profile == PROFILE_SYNTH ? 0.65f : 0.45f;
+  const float slow_decay_release =
+      profile == PROFILE_SYNTH ? 0.90f : 0.81f;
   float attack;
   float decay_release;
   float sustain;
   bool gated;
   if (shape < 0.4f) {
-    attack = 0.15f + 0.75f * shape;
-    decay_release = attack * 1.8f;
+    const float slow_amount = shape * 2.5f;
+    attack = 0.15f + (slow_attack - 0.15f) * slow_amount;
+    decay_release =
+        0.27f + (slow_decay_release - 0.27f) * slow_amount;
     sustain = 0.0f;
     gated = false;
   } else if (shape < 0.6f) {
-    attack = 0.45f;
-    decay_release = 0.81f;
+    attack = slow_attack;
+    decay_release = slow_decay_release;
     sustain = (shape - 0.4f) * 5.0f;
     gated = true;
   } else {
-    attack = 0.15f + 0.75f * (1.0f - shape);
-    decay_release = attack * 1.8f;
+    const float slow_amount = (1.0f - shape) * 2.5f;
+    attack = 0.15f + (slow_attack - 0.15f) * slow_amount;
+    decay_release =
+        0.27f + (slow_decay_release - 0.27f) * slow_amount;
     sustain = 1.0f;
     gated = true;
   }
