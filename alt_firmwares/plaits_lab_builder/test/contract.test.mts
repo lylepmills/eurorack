@@ -40,7 +40,7 @@ test("the Worker and compiler catalogs contain the same approved IDs", async () 
     approvedEngineIds,
     compilerCatalog.engines.map((engine: { id: string }) => engine.id),
   );
-  assert.equal(approvedEngineIds.length, 81);
+  assert.equal(approvedEngineIds.length, 83);
 });
 
 test("normalization removes nondeterministic manifest fields", () => {
