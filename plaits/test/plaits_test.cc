@@ -2615,6 +2615,26 @@ void ValidateOneKnobEnvelope() {
     fprintf(stderr, "One-knob gated sustain=%f\n", envelope.value());
     abort();
   }
+
+  // Live moves in the gated half update sustain immediately, and crossing
+  // into the one-shot half must release rather than latch the old sustain.
+  envelope.Process(0.5f, true, false);
+  if (fabsf(envelope.value() - 0.5f) > 0.001f) {
+    fprintf(stderr, "One-knob live sustain=%f\n", envelope.value());
+    abort();
+  }
+  for (int block = 0; block < 16000; ++block) {
+    envelope.Process(0.0f, true, false);
+  }
+  if (envelope.value() > 0.001f) {
+    fprintf(stderr, "One-knob live region-crossing tail=%f\n", envelope.value());
+    abort();
+  }
+
+  envelope.Init();
+  for (int block = 0; block < 500; ++block) {
+    envelope.Process(1.0f, true, block == 0);
+  }
   for (int block = 0; block < 500; ++block) {
     envelope.Process(1.0f, false, false);
   }

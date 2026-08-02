@@ -168,6 +168,13 @@ float OneKnobEnvelope::Process(float shape, bool gate, bool rising_edge) {
     start_value_ = segment_ == SEGMENT_DONE ? 0.0f : value_;
     segment_ = SEGMENT_ATTACK;
     phase_ = 0.0f;
+  } else if (segment_ == SEGMENT_SUSTAIN && !gated) {
+    // If the knob crosses live from the gated half into the one-shot half,
+    // continue smoothly into the newly selected AD region's release instead
+    // of leaving the previous sustain latched.
+    start_value_ = value_;
+    segment_ = SEGMENT_RELEASE;
+    phase_ = 0.0f;
   } else if (gated && !gate &&
              segment_ != SEGMENT_RELEASE && segment_ != SEGMENT_DONE) {
     // The sustain half is a real gated envelope. A low gate can interrupt the
@@ -202,6 +209,10 @@ float OneKnobEnvelope::Process(float shape, bool gate, bool rising_edge) {
     return value_;
   }
   if (segment_ == SEGMENT_SUSTAIN) {
+    // Sustain is part of the one-knob control. Follow live moves within the
+    // gated region instead of freezing the value reached at the end of decay.
+    value_ = sustain;
+    start_value_ = sustain;
     return value_;
   }
 

@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 2,
+  "target": "mutable-instruments-plaits",
+  "firmware": "rubato-plaits",
+  "slots": [
+    "virtual-analog",
+    "virtual-analog",
+    "virtual-analog",
+    "virtual-analog",
+    "virtual-analog",
+    "virtual-analog",
+    "virtual-analog",
+    "virtual-analog",
+    "virtual-analog",
+    "virtual-analog",
+    "virtual-analog",
+    "virtual-analog",
+    "virtual-analog",
+    "virtual-analog",
+    "virtual-analog",
+    "virtual-analog",
+    "virtual-analog",
+    "virtual-analog",
+    "virtual-analog",
+    "virtual-analog",
+    "virtual-analog",
+    "virtual-analog",
+    "virtual-analog",
+    "virtual-analog"
+  ],
+  "output": "audio-wav"
+}
