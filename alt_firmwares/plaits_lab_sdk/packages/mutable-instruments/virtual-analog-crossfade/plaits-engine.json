@@ -11,7 +11,7 @@
   "license": "MIT",
   "description": "Emilie Gillet's original virtual-analog variant 1: a detuned pair crossfading through dry tone into hard sync.",
   "family": "Subtractive",
-  "tags": ["analog", "oscillator", "sync"],
+  "tags": ["analog", "oscillator", "sync", "variant"],
   "controls": [
     { "id": "harmonics", "label": "Detune", "description": "Detunes the secondary oscillator through musical intervals." },
     { "id": "timbre", "label": "Detune to sync", "description": "Moves from the detuned pair through the dry primary to hard synchronization." },

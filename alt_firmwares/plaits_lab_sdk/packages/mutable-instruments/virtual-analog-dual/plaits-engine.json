@@ -11,7 +11,7 @@
   "license": "MIT",
   "description": "Emilie Gillet's original virtual-analog variant 0: independently shaped oscillators, interval detuning, and sync.",
   "family": "Subtractive",
-  "tags": ["analog", "oscillator", "sync"],
+  "tags": ["analog", "oscillator", "sync", "variant"],
   "controls": [
     { "id": "harmonics", "label": "Detune and sync", "description": "Detunes the secondary oscillator and sweeps the synchronized alternate-output ratio." },
     { "id": "timbre", "label": "Primary waveform", "description": "Changes the primary oscillator from saw through square and pulse shapes." },
