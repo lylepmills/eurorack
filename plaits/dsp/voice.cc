@@ -291,8 +291,13 @@ void Voice::Render(
 
   decay_envelope_.Process(short_decay * 2.0f);
 
+  // Keep Plaits' original short decay envelope as the modulation source for
+  // synthesis parameters.  The alternate contour is an articulation source:
+  // letting its multi-second shapes replace this value made even small saved
+  // FM attenuverter offsets sound like prominent pitch envelopes.
   float internal_envelope = decay_envelope_.value();
 #if PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE
+  float articulation_envelope = internal_envelope;
   // The option is meaningful only with TRIG patched. Reset it when inactive so
   // selecting the mode later never revives an envelope from an old note. If it
   // is selected while a gate is already high, start an attack immediately
@@ -303,7 +308,7 @@ void Voice::Render(
       rising_edge ||
       (use_one_knob_envelope && !one_knob_envelope_active_ && trigger_state_);
   if (use_one_knob_envelope) {
-    internal_envelope = one_knob_envelope_.Process(
+    articulation_envelope = one_knob_envelope_.Process(
         patch.freqlock_param,
         trigger_state_,
         start_one_knob_envelope,
@@ -320,13 +325,23 @@ void Voice::Render(
   CONSTRAIN(compressed_level, 0.0f, 1.0f);
   p.accent = level_patched ? compressed_level : 0.8f;
 #if PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE
-  p.articulation_envelope = internal_envelope;
+  p.articulation_envelope = articulation_envelope;
   p.articulation_envelope_active =
       use_one_knob_envelope && resonator_envelope_mode &&
       one_knob_envelope_.active();
 #endif
 
   bool use_internal_envelope = modulations.trigger_patched;
+#if PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE
+  // In contour mode the unpatched FM attenuverter must not turn articulation
+  // into pitch. Patched FM remains fully functional because external
+  // modulation takes precedence in ApplyModulations(). Timbre and morph keep
+  // Plaits' original short internal modulation envelope.
+  const bool use_internal_frequency_envelope =
+      use_internal_envelope && !use_one_knob_envelope;
+#else
+  const bool use_internal_frequency_envelope = use_internal_envelope;
+#endif
 
   // Actual synthesis parameters.
   
@@ -398,7 +413,7 @@ void Voice::Render(
       patch.frequency_modulation_amount,
       modulations.frequency_patched,
       modulations.frequency,
-      use_internal_envelope,
+      use_internal_frequency_envelope,
       internal_envelope_amplitude * \
           internal_envelope * internal_envelope * 48.0f,
       1.0f,
@@ -516,12 +531,12 @@ void Voice::Render(
       lpg_envelope_.ProcessLP(compressed_level, short_decay, decay_tail, hf);
 #if PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE
     } else if (use_one_knob_envelope) {
-      // Feed the same envelope to the synthesis modulations and to the LPG.
-      // ProcessLP retains Plaits' colour-dependent vactrol tail, so LPG COLOUR
-      // and the regular DECAY setting remain useful rather than being silently
-      // replaced by the new shape control.
+      // Feed the articulation contour to the LPG only. ProcessLP retains
+      // Plaits' colour-dependent vactrol tail, so LPG COLOUR and the regular
+      // DECAY setting remain useful rather than being silently replaced by the
+      // new shape control.
       lpg_envelope_.ProcessLP(
-          internal_envelope, short_decay, decay_tail, hf);
+          articulation_envelope, short_decay, decay_tail, hf);
 #endif
     } else {
       const float attack = NoteToFrequency(p.note) * float(kBlockSize) * 2.0f;
