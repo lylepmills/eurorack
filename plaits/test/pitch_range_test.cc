@@ -44,6 +44,29 @@ int main() {
   CHECK(Near(PrecisionRangeNote(60.25f, 0.0f), 60.25f));
   CHECK(Near(PrecisionRangeNote(60.25f, 1.0f), 61.25f));
 
+  // Changing roles starts from noon without a pitch jump. Movement beyond the
+  // ordinary Plaits pickup threshold changes the virtual control immediately,
+  // and reaching an endpoint completes pickup so subsequent tracking is direct.
+  EndpointCatchUp catch_up;
+  catch_up.Init(0.5f, 0.8f);
+  CHECK(Near(catch_up.Process(0.8f), 0.5f));
+  CHECK(Near(catch_up.Process(0.796f), 0.5f));
+  const float first_movement = catch_up.Process(0.79f);
+  CHECK(first_movement < 0.5f);
+  CHECK(first_movement > 0.48f);
+  CHECK(catch_up.catching_up());
+
+  EndpointCatchUp catch_up_clockwise;
+  catch_up_clockwise.Init(0.5f, 0.8f);
+  CHECK(catch_up_clockwise.Process(1.0f) > 0.99f);
+  CHECK(!catch_up_clockwise.catching_up());
+  CHECK(Near(catch_up_clockwise.Process(0.9f), 0.9f));
+
+  EndpointCatchUp catch_up_counterclockwise;
+  catch_up_counterclockwise.Init(0.5f, 0.8f);
+  CHECK(Near(catch_up_counterclockwise.Process(0.0f), 0.0f));
+  CHECK(!catch_up_counterclockwise.catching_up());
+
   // Tuned roots persist at 1/256 semitone (about 0.39 cent), without squeezing
   // them through the legacy eight-bit value spread across fourteen semitones.
   const float roots[] = {

@@ -156,8 +156,8 @@ class Ui {
   float tuned_root_note_;
   float precision_anchor_note_;
   int previous_pitch_range_;
-  bool precision_recentered_;
-  bool octave_recentered_;
+  EndpointCatchUp precision_catch_up_;
+  EndpointCatchUp octave_catch_up_;
   Patch* patch_;
   Modulations* modulations_;
   NormalizationProbe normalization_probe_;
