@@ -39,6 +39,7 @@
 #include "plaits/drivers/pots_adc.h"
 #include "plaits/drivers/switches.h"
 #include "plaits/dsp/voice.h"
+#include "plaits/pitch_range.h"
 #include "plaits/pot_controller.h"
 #include "plaits/settings.h"
 
@@ -150,9 +151,13 @@ class Ui {
 
   float data_transfer_progress_;
   float fine_tune_;
-  float extra_fine_tune_;
   float transposition_;
   float octave_;
+  float tuned_root_note_;
+  float precision_anchor_note_;
+  int previous_pitch_range_;
+  bool precision_recentered_;
+  bool octave_recentered_;
   Patch* patch_;
   Modulations* modulations_;
   NormalizationProbe normalization_probe_;

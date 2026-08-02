@@ -83,6 +83,13 @@ struct State {
   // old-size chunk and reinitializes State once (calibration is unaffected).
   uint8_t bank_last_row[4];
 
+  // Precision-tuning prototype: the captured manual root in semitones, Q8.
+  // A separate validity byte makes a freshly migrated state fall back to C4;
+  // growing State deliberately reinitializes legacy state while calibration
+  // survives in its independent PersistentData chunk.
+  int16_t tuned_root_q8;
+  uint8_t tuned_root_valid;
+
   enum { tag = 0x54415453 };  // STAT
 };
 
