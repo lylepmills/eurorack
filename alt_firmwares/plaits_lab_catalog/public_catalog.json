@@ -54,7 +54,7 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Subtractive",
-      "description": "Independent variable waveforms with interval detuning and a synchronized alternate output.",
+      "description": "One of Emilie Gillet's alternate virtual-analog designs preserved in the Plaits source: independent waveforms, interval detuning, and a synchronized alternate output.",
       "tags": [
         "analog",
         "oscillator",
@@ -76,8 +76,8 @@
         "kind": "official"
       },
       "version": "1.0.0",
-      "digest": "sha256:213ae2c3fdb6a6a41b5491c077f26e163f521b449c4e170d3e0f76644742a2d0",
-      "documentationDigest": "sha256:bc9adade4c81643846c245b363faed7827ea0e5184e2e63c8295418cdd42f628",
+      "digest": "sha256:6860ab288b24242006b30274e8d5761a3de7cc35649f60dac59f8f027d661b9b",
+      "documentationDigest": "sha256:a099a2890a1f9ed7b982f89d04fa448c34d4cff52f8aed63df6394b815d52d44",
       "manual": {
         "controls": {
           "harmonics": "Detunes the secondary oscillator through musical intervals and sets the synchronized AUX ratio.",
@@ -98,7 +98,7 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Subtractive",
-      "description": "A variable waveform pair crossfading from detune through dry tone to hard synchronization.",
+      "description": "One of Emilie Gillet's alternate virtual-analog designs preserved in the Plaits source: a waveform pair crossfading from detune through dry tone to hard sync.",
       "tags": [
         "analog",
         "oscillator",
@@ -120,8 +120,8 @@
         "kind": "official"
       },
       "version": "1.0.0",
-      "digest": "sha256:c3f2f0297180eed9ae85c9dfb6e9eb5752b49c5377d4dc1482c073a349aab56f",
-      "documentationDigest": "sha256:607dc9da8e18a8dbe09645befd2517dd17249cf5e60e64f0909c0bc6febfeac5",
+      "digest": "sha256:47c01bceff969643289ed7b4a246f3de235f827d5512011b14541c75a6809897",
+      "documentationDigest": "sha256:01153868150bde76f8f0d24c1e7a8bf4ceda557685591be30e30ab57f9e84d94",
       "manual": {
         "controls": {
           "harmonics": "Detunes the secondary oscillator through closely spaced and musical intervals.",
