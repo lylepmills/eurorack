@@ -19,6 +19,55 @@ ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 PACKAGE_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*$")
 CONTROL_IDS = ("harmonics", "timbre", "morph", "macro")
 
+# These panel-order mappings were audited against Mutable Instruments' Plaits
+# manual and the corresponding engine source. Keep them explicit: a generic
+# four-item length check cannot detect a TIMBRE/MORPH swap.
+AUDITED_STOCK_CONTROLS = {
+    "virtual-analog": ["Detune", "Variable square", "Variable saw", "Oscillator balance"],
+    "waveshaping": ["Waveshaper waveform", "Fold amount", "Waveform asymmetry", "Wavefolder symmetry"],
+    "granular-formant": ["Formant ratio", "Formant frequency", "Formant width and shape", "Carrier bleed"],
+    "harmonic": ["Spectral bumps", "Prominent harmonic", "Bump shape", "Odd/even balance"],
+    "chords": ["Chord", "Inversion and transposition", "Waveform", "Voice-group balance"],
+    "speech": ["Model and word bank", "Species", "Phoneme or word", "Spectral emphasis"],
+    "swarm": ["Pitch randomization", "Grain density", "Grain duration and overlap", "Size dispersion"],
+    "filtered-noise": ["Filter response", "Clock frequency", "Resonance", "Filter position"],
+    "particle-noise": ["Frequency randomization", "Density", "Filter type", "Diffusion"],
+    "analog-bass-drum": ["Attack and overdrive", "Brightness", "Decay", "Pitch-envelope punch"],
+    "analog-snare": ["Harmonic/noise balance", "Mode balance", "Decay", "Shell inharmonicity"],
+    "analog-hi-hat": ["Metal/noise balance", "High-pass cutoff", "Decay", "Oscillator spacing"],
+    "virtual-analog-vcf": ["Resonance and filter character", "Filter cutoff", "Waveform and sub level", "Drive"],
+    "phase-distortion": ["Distortion frequency", "Distortion amount", "Asymmetry", "Modulator ratio"],
+    "wave-terrain": ["Terrain", "Path radius", "Path offset", "Y offset"],
+    "string-machine": ["Chord", "Filter and chorus", "Waveform and registration", "Ensemble amount"],
+    "chiptune": ["Chord", "Arpeggio or inversion", "Pulse width and sync", "Register preset"],
+}
+
+AUDITED_STOCK_OUTPUTS = {
+    "two-op-fm": ["FM voice", "Sub-oscillator"],
+    "filtered-noise": [
+        "Filtered noise",
+        "Mono: two separated band-pass voices. Stereo: decorrelated matching filter.",
+    ],
+    "dx7-bank-a": [
+        "Six-operator FM voice; left channel in stereo",
+        "Same voice mix in mono; right channel in stereo",
+    ],
+    "dx7-bank-b": [
+        "Six-operator FM voice; left channel in stereo",
+        "Same voice mix in mono; right channel in stereo",
+    ],
+    "dx7-bank-c": [
+        "Six-operator FM voice; left channel in stereo",
+        "Same voice mix in mono; right channel in stereo",
+    ],
+    "string-machine": ["Voices 1 and 3 predominantly", "Voices 2 and 4 predominantly"],
+    "chiptune": ["Chiptune chord or arpeggio", "NES triangle bass"],
+}
+
+AUDITED_STOCK_TRIGGERS = {
+    "chiptune": "Advances the arpeggiator and restarts its envelope on each patched TRIG pulse.",
+}
+
 
 def load_catalog() -> dict[str, Any]:
     value = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
@@ -74,6 +123,7 @@ def validate_catalog(catalog: dict[str, Any]) -> None:
     known_modules = set(load_shared_modules())
     ids: set[str] = set()
     packages: set[str] = set()
+    engines_by_id: dict[str, dict[str, Any]] = {}
     for engine in engines:
         engine_id = engine.get("id")
         package_id = engine.get("packageId")
@@ -87,6 +137,7 @@ def validate_catalog(catalog: dict[str, Any]) -> None:
             raise ValueError(f"duplicate package ID: {package_id}")
         ids.add(engine_id)
         packages.add(package_id)
+        engines_by_id[engine_id] = engine
         if len(engine.get("controls", [])) != 4 or len(engine.get("outputs", [])) != 2:
             raise ValueError(f"{engine_id} must declare four controls and two outputs")
         source = engine.get("source", {})
@@ -108,6 +159,17 @@ def validate_catalog(catalog: dict[str, Any]) -> None:
                     or any(module_id not in known_modules for module_id in modules)):
                 raise ValueError(f"{engine_id} references an unknown or duplicate shared module")
 
+    for engine_id, expected in AUDITED_STOCK_CONTROLS.items():
+        actual = engines_by_id.get(engine_id, {}).get("controls")
+        if actual != expected:
+            raise ValueError(
+                f"{engine_id} controls no longer match the audited "
+                "HARMONICS/TIMBRE/MORPH/Macro order")
+    for engine_id, expected in AUDITED_STOCK_OUTPUTS.items():
+        actual = engines_by_id.get(engine_id, {}).get("outputs")
+        if actual != expected:
+            raise ValueError(f"{engine_id} outputs no longer match the audited behavior")
+
     for name, slots in catalog.get("presets", {}).items():
         if len(slots) not in (24, 32) or any(engine_id not in ids for engine_id in slots):
             raise ValueError(f"preset {name} must contain 24 or 32 approved engine IDs")
@@ -127,6 +189,9 @@ def validate_catalog(catalog: dict[str, Any]) -> None:
         trigger = manual["trigger"]
         if not isinstance(trigger, str) or not 12 <= len(trigger) <= 180:
             raise ValueError(f"{engine_id} manual trigger description must contain 12-180 characters")
+        expected_trigger = AUDITED_STOCK_TRIGGERS.get(engine_id)
+        if expected_trigger is not None and trigger != expected_trigger:
+            raise ValueError(f"{engine_id} trigger no longer matches the audited behavior")
 
 
 def web_catalog(catalog: dict[str, Any]) -> dict[str, Any]:

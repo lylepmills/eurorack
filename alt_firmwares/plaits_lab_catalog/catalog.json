@@ -18,8 +18,8 @@
       ],
       "controls": [
         "Detune",
-        "Waveform",
-        "Sync",
+        "Variable square",
+        "Variable saw",
         "Oscillator balance"
       ],
       "outputs": [
@@ -143,9 +143,9 @@
         "harmonic"
       ],
       "controls": [
-        "Harmonics",
-        "Fold",
-        "Shape",
+        "Waveshaper waveform",
+        "Fold amount",
+        "Waveform asymmetry",
         "Wavefolder symmetry"
       ],
       "outputs": [
@@ -192,7 +192,7 @@
       ],
       "outputs": [
         "FM voice",
-        "Alternate FM topology"
+        "Sub-oscillator"
       ],
       "artwork": {
         "icon": "/model-icons/two-op-fm.png",
@@ -227,9 +227,9 @@
         "vocal"
       ],
       "controls": [
-        "Frequency",
-        "Formant",
-        "Shape",
+        "Formant ratio",
+        "Formant frequency",
+        "Formant width and shape",
         "Carrier bleed"
       ],
       "outputs": [
@@ -269,9 +269,9 @@
         "organ"
       ],
       "controls": [
-        "Partials",
-        "Balance",
-        "Spectral tilt",
+        "Spectral bumps",
+        "Prominent harmonic",
+        "Bump shape",
         "Odd/even balance"
       ],
       "outputs": [
@@ -354,8 +354,8 @@
       ],
       "controls": [
         "Chord",
+        "Inversion and transposition",
         "Waveform",
-        "Voicing",
         "Voice-group balance"
       ],
       "outputs": [
@@ -398,9 +398,9 @@
         "phoneme"
       ],
       "controls": [
-        "Model",
-        "Vowel",
-        "Prosody",
+        "Model and word bank",
+        "Species",
+        "Phoneme or word",
         "Spectral emphasis"
       ],
       "outputs": [
@@ -447,10 +447,10 @@
         "drone"
       ],
       "controls": [
-        "Spread",
-        "Density",
-        "Shape",
-        "Particle dispersion"
+        "Pitch randomization",
+        "Grain density",
+        "Grain duration and overlap",
+        "Size dispersion"
       ],
       "outputs": [
         "Sawtooth swarm",
@@ -489,14 +489,14 @@
         "clocked"
       ],
       "controls": [
-        "Clock",
-        "Filter",
+        "Filter response",
+        "Clock frequency",
         "Resonance",
         "Filter position"
       ],
       "outputs": [
         "Filtered noise",
-        "Complementary filter mode"
+        "Mono: two separated band-pass voices. Stereo: decorrelated matching filter."
       ],
       "artwork": {
         "icon": "/model-icons/filtered-noise.png",
@@ -531,9 +531,9 @@
         "texture"
       ],
       "controls": [
+        "Frequency randomization",
         "Density",
-        "Filter",
-        "Spread",
+        "Filter type",
         "Diffusion"
       ],
       "outputs": [
@@ -663,9 +663,9 @@
         "percussion"
       ],
       "controls": [
-        "Tone",
+        "Attack and overdrive",
+        "Brightness",
         "Decay",
-        "Drive",
         "Pitch-envelope punch"
       ],
       "outputs": [
@@ -705,9 +705,9 @@
         "percussion"
       ],
       "controls": [
-        "Tone",
+        "Harmonic/noise balance",
+        "Mode balance",
         "Decay",
-        "Noise",
         "Shell inharmonicity"
       ],
       "outputs": [
@@ -748,9 +748,9 @@
         "percussion"
       ],
       "controls": [
-        "Metal",
+        "Metal/noise balance",
+        "High-pass cutoff",
         "Decay",
-        "Noise",
         "Oscillator spacing"
       ],
       "outputs": [
@@ -791,14 +791,14 @@
         "bass"
       ],
       "controls": [
-        "Waveform",
-        "Filter",
-        "Resonance",
+        "Resonance and filter character",
+        "Filter cutoff",
+        "Waveform and sub level",
         "Drive"
       ],
       "outputs": [
-        "Filtered virtual analog oscillator",
-        "Alternate filter output"
+        "Two-stage low-pass output",
+        "Soft-clipped high-pass output"
       ],
       "artwork": {
         "icon": "/model-icons/virtual-analog-vcf.png",
@@ -833,14 +833,14 @@
         "bright"
       ],
       "controls": [
-        "Shape",
-        "Distortion",
-        "Modulation",
+        "Distortion frequency",
+        "Distortion amount",
+        "Asymmetry",
         "Modulator ratio"
       ],
       "outputs": [
-        "Phase-distortion voice",
-        "Alternate phase curve"
+        "Hard-synced phase-distortion voice",
+        "Free-running phase-modulation voice"
       ],
       "artwork": {
         "icon": "/model-icons/phase-distortion.png",
@@ -882,8 +882,8 @@
         "Network detune"
       ],
       "outputs": [
-        "Six-operator FM voice",
-        "Alternate operator output"
+        "Six-operator FM voice; left channel in stereo",
+        "Same voice mix in mono; right channel in stereo"
       ],
       "artwork": {
         "icon": "/model-icons/dx7-bank-a.png",
@@ -929,8 +929,8 @@
         "Network detune"
       ],
       "outputs": [
-        "Six-operator FM voice",
-        "Alternate operator output"
+        "Six-operator FM voice; left channel in stereo",
+        "Same voice mix in mono; right channel in stereo"
       ],
       "artwork": {
         "icon": "/model-icons/dx7-bank-b.png",
@@ -976,8 +976,8 @@
         "Network detune"
       ],
       "outputs": [
-        "Six-operator FM voice",
-        "Alternate operator output"
+        "Six-operator FM voice; left channel in stereo",
+        "Same voice mix in mono; right channel in stereo"
       ],
       "artwork": {
         "icon": "/model-icons/dx7-bank-c.png",
@@ -1017,8 +1017,8 @@
       ],
       "controls": [
         "Terrain",
-        "X axis",
-        "Y axis",
+        "Path radius",
+        "Path offset",
         "Y offset"
       ],
       "outputs": [
@@ -1060,13 +1060,13 @@
       ],
       "controls": [
         "Chord",
-        "Registration",
-        "Ensemble",
+        "Filter and chorus",
+        "Waveform and registration",
         "Ensemble amount"
       ],
       "outputs": [
-        "String ensemble",
-        "Alternate registration"
+        "Voices 1 and 3 predominantly",
+        "Voices 2 and 4 predominantly"
       ],
       "artwork": {
         "icon": "/model-icons/string-machine.png",
@@ -1106,13 +1106,13 @@
       ],
       "controls": [
         "Chord",
-        "Arpeggio",
-        "Shape",
+        "Arpeggio or inversion",
+        "Pulse width and sync",
         "Register preset"
       ],
       "outputs": [
         "Chiptune chord or arpeggio",
-        "Bass voice"
+        "NES triangle bass"
       ],
       "artwork": {
         "icon": "/model-icons/chiptune.png",
@@ -3353,8 +3353,8 @@
     "virtual-analog": {
       "controls": {
         "harmonics": "Detunes the paired oscillators through closely spaced and musical intervals.",
-        "timbre": "Moves through pulse-width changes and introduces oscillator synchronization.",
-        "morph": "Changes the shape of the variable sawtooth component.",
+        "timbre": "Sweeps a variable square from narrow pulse through full square to hard-sync formants.",
+        "morph": "Sweeps a variable saw from triangle through saw to an increasingly wide notch.",
         "macro": "Crossfades the square and variable-saw components around the stock midpoint."
       },
       "trigger": "Restarts the internal envelope when TRIG is patched."
@@ -3379,9 +3379,9 @@
     },
     "waveshaping": {
       "controls": {
-        "harmonics": "Selects the harmonic relationship between the oscillator components.",
+        "harmonics": "Changes the waveshaper waveform before the signal reaches the wavefolder.",
         "timbre": "Increases wavefolding from a clean tone to dense folded spectra.",
-        "morph": "Changes the underlying waveform sent into the wavefolder.",
+        "morph": "Changes waveform asymmetry from a symmetric triangle toward skewed shapes.",
         "macro": "Offsets the wavefolder symmetry from negative through centered to positive bias."
       },
       "trigger": "Restarts the internal envelope when TRIG is patched."
@@ -3397,18 +3397,18 @@
     },
     "granular-formant": {
       "controls": {
-        "harmonics": "Sets the relationship between the fundamental and the grain clock.",
-        "timbre": "Moves the resonant formant above and around the fundamental.",
-        "morph": "Changes grain shape and the balance of tonal and noisy material.",
+        "harmonics": "Sets the frequency ratio between the two formant components.",
+        "timbre": "Sets the formant frequency independently of the played fundamental.",
+        "morph": "Changes formant width and the shape of each windowed grain.",
         "macro": "Brings the carrier through the stock suppressed-carrier texture."
       },
       "trigger": "Restarts the internal envelope and grain articulation when TRIG is patched."
     },
     "harmonic": {
       "controls": {
-        "harmonics": "Changes the number and distribution of active additive partials.",
-        "timbre": "Moves energy between low and high partial groups.",
-        "morph": "Tilts and animates the spectrum across the partial bank.",
+        "harmonics": "Changes the number of spectral bumps and the ripples distributed around them.",
+        "timbre": "Selects the most prominent harmonic, like moving a band-pass filter's cutoff.",
+        "morph": "Changes each spectral bump from broad and flat to narrow and peaked.",
         "macro": "Rebalances odd and even partials around the stock midpoint."
       },
       "trigger": "Restarts the internal envelope when TRIG is patched."
@@ -3424,45 +3424,45 @@
     },
     "chords": {
       "controls": {
-        "harmonics": "Selects the chord voicing from the active chord table.",
-        "timbre": "Changes the waveform shared by the four chord voices.",
-        "morph": "Changes inversion and spacing across the chord voices.",
+        "harmonics": "Selects the chord from the active chord table.",
+        "timbre": "Changes chord inversion and transposition across the four voices.",
+        "morph": "Changes waveform from divide-down string and organ registrations into wavetable scanning.",
         "macro": "Balances the two internally grouped sets of chord voices."
       },
       "trigger": "Restarts the internal envelope and rearticulates the chord when TRIG is patched."
     },
     "speech": {
       "controls": {
-        "harmonics": "Selects the speech synthesis model or word-bank behavior.",
-        "timbre": "Moves through vowels, phonemes, or words for the selected model.",
-        "morph": "Changes prosody, inflection, and transitions between speech elements.",
+        "harmonics": "Crossfades the speech models, then selects LPC word banks.",
+        "timbre": "Changes voice species by shifting formants or changing the emulated speech-chip clock.",
+        "morph": "Selects the vowel, phoneme, word, or word segment for the active speech model.",
         "macro": "Moves from raw excitation through the stock voice to sharper spectral emphasis."
       },
       "trigger": "Advances or restarts speech material according to the selected model."
     },
     "swarm": {
       "controls": {
-        "harmonics": "Spreads the oscillator pitches from a tight unison to a wide swarm.",
-        "timbre": "Changes the number and density of active swarm particles.",
-        "morph": "Changes the individual oscillator shape and animation.",
-        "macro": "Widens the distribution of particle sizes around the stock midpoint."
+        "harmonics": "Changes the amount of random pitch spread across the eight swarm voices.",
+        "timbre": "Changes grain density from sparse particles to a continuous swarm.",
+        "morph": "Changes grain duration and overlap, merging into continuous oscillators at maximum.",
+        "macro": "Widens the distribution of grain sizes around the stock midpoint."
       },
       "trigger": "Restarts the internal envelope and rearticulates the swarm when TRIG is patched."
     },
     "filtered-noise": {
       "controls": {
-        "harmonics": "Changes the clock rate and pitch character of the noise source.",
-        "timbre": "Sweeps the primary multimode filter response.",
+        "harmonics": "Sweeps the primary filter response continuously from low-pass through band-pass to high-pass.",
+        "timbre": "Sets the variable clock frequency of the noise source.",
         "morph": "Raises resonance from broad noise to sharply pitched bands.",
-        "macro": "Moves an independent filter position from low-pass toward high-pass."
+        "macro": "Offsets the filter response from low-pass toward high-pass around the HARMONICS setting."
       },
-      "trigger": "Restarts the internal envelope when TRIG is patched."
+      "trigger": "Restarts the internal envelope and resets the variable noise clock when TRIG is patched."
     },
     "particle-noise": {
       "controls": {
-        "harmonics": "Changes particle density from isolated ticks to a continuous cloud.",
-        "timbre": "Moves the resonant filter excited by each particle.",
-        "morph": "Spreads particle frequencies and timing across the texture.",
+        "harmonics": "Randomizes particle frequencies around the played note.",
+        "timbre": "Changes particle density from isolated ticks to a continuous cloud.",
+        "morph": "Changes filter type: diffused all-pass textures below noon, then increasingly resonant band-pass filters.",
         "macro": "Adds diffusion from a dry particle stream to a dense cloud."
       },
       "trigger": "Restarts the internal envelope and particle articulation when TRIG is patched."
@@ -3487,45 +3487,45 @@
     },
     "analog-bass-drum": {
       "controls": {
-        "harmonics": "Changes the drum tone and oscillator character.",
-        "timbre": "Sets the decay from a short knock to a sustained kick.",
-        "morph": "Raises drive and nonlinear body in the synthesized drum.",
+        "harmonics": "Changes attack sharpness, pitch-envelope amount, and overdrive.",
+        "timbre": "Changes the drum's brightness.",
+        "morph": "Sets decay from a short knock to a sustained kick.",
         "macro": "Changes pitch-envelope punch from restrained to exaggerated."
       },
       "trigger": "Fires a new bass-drum hit with velocity taken from LEVEL."
     },
     "analog-snare": {
       "controls": {
-        "harmonics": "Changes the tuning of the modeled shell oscillators.",
-        "timbre": "Sets the decay of the shell and noise components.",
-        "morph": "Balances the tuned shell against the filtered noise component.",
+        "harmonics": "Balances the tuned shell oscillators against the filtered noise component.",
+        "timbre": "Balances the different resonant modes of the modeled shell.",
+        "morph": "Sets decay for the shell and noise components.",
         "macro": "Spreads the shell modes from compact to strongly inharmonic."
       },
       "trigger": "Fires a new snare hit with velocity taken from LEVEL."
     },
     "analog-hi-hat": {
       "controls": {
-        "harmonics": "Changes the metallic oscillator mixture and cymbal tone.",
-        "timbre": "Sets the decay from a tight closed hat to a longer open sound.",
-        "morph": "Balances the metallic oscillators against the noise component.",
+        "harmonics": "Balances the metallic oscillator bank against filtered noise.",
+        "timbre": "Sweeps the high-pass filter cutoff from dark and closed to bright and open.",
+        "morph": "Sets decay from a tight closed hat to a longer open sound.",
         "macro": "Spreads metallic oscillator frequencies from compact to widely separated."
       },
       "trigger": "Fires a new hi-hat hit with velocity taken from LEVEL."
     },
     "virtual-analog-vcf": {
       "controls": {
-        "harmonics": "Moves through classic oscillator shapes before the filter.",
+        "harmonics": "Changes filter character from a gentle four-pole response through resonance to a harsher two-pole response.",
         "timbre": "Sweeps the virtual-analog filter cutoff.",
-        "morph": "Raises filter resonance toward self-oscillating emphasis.",
+        "morph": "Sweeps classic oscillator waveforms and introduces a sub-oscillator near the ends.",
         "macro": "Increases oscillator and filter drive from clean to saturated."
       },
       "trigger": "Restarts the internal envelope when TRIG is patched."
     },
     "phase-distortion": {
       "controls": {
-        "harmonics": "Selects the phase-distortion waveform and contour.",
-        "timbre": "Raises the amount of phase distortion and harmonic brightness.",
-        "morph": "Changes modulation depth and motion within the phase curve.",
+        "harmonics": "Selects the distortion or modulator frequency through quantized ratios.",
+        "timbre": "Raises the amount of phase distortion or phase modulation.",
+        "morph": "Changes the asymmetry of the phase-distortion waveform.",
         "macro": "Moves the modulator ratio from an octave down through unison to an octave up."
       },
       "trigger": "Restarts the internal envelope when TRIG is patched."
@@ -3560,17 +3560,17 @@
     "wave-terrain": {
       "controls": {
         "harmonics": "Selects the terrain or waveform family used by the two-dimensional scan.",
-        "timbre": "Moves the scan along the terrain's first axis.",
-        "morph": "Moves the scan along the terrain's second axis.",
+        "timbre": "Changes the radius of the elliptical path scanned across the terrain.",
+        "morph": "Offsets the path along the terrain's X axis.",
         "macro": "Offsets the Y-axis path to reveal complementary terrain contours."
       },
       "trigger": "Restarts the internal envelope when TRIG is patched."
     },
     "string-machine": {
       "controls": {
-        "harmonics": "Selects chord voicing and harmonic registration.",
-        "timbre": "Changes the divide-down string registration and octave mixture.",
-        "morph": "Changes ensemble animation and timbral movement.",
+        "harmonics": "Selects the chord from the active chord table.",
+        "timbre": "Changes filter cutoff, chorus depth, and chorus amount together.",
+        "morph": "Changes the divide-down waveform and drawbar-style registration.",
         "macro": "Moves ensemble depth from dry through the stock setting to fully wet."
       },
       "trigger": "Restarts the internal envelope and rearticulates the string chord."
@@ -3578,11 +3578,11 @@
     "chiptune": {
       "controls": {
         "harmonics": "Selects the chord or interval pattern of the square-wave voices.",
-        "timbre": "Changes arpeggiation rate and ordering.",
-        "morph": "Changes pulse shape and the balance of the chip voices.",
+        "timbre": "Selects arpeggiator direction and range when clocked, or chord inversion when unclocked.",
+        "morph": "Changes pulse width and synchronization of the square-wave voices.",
         "macro": "Selects stepped register and inversion presets around the stock center step."
       },
-      "trigger": "Restarts the arpeggio and internal envelope when TRIG is patched."
+      "trigger": "Advances the arpeggiator and restarts its envelope on each patched TRIG pulse."
     },
     "glisson": {
       "controls": {
