@@ -129,7 +129,7 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
 
   // Bind pots to parameters.
   pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].Init(
-      &transposition_, &fine_tune_, 0.005f, 2.0f, -1.0f);
+      &transposition_, NULL, 0.005f, 2.0f, -1.0f);
   pots_[POTS_ADC_CHANNEL_HARMONICS_POT].Init(
       &patch->harmonics, &octave_, 0.005f, 1.0f, 0.0f);
   pots_[POTS_ADC_CHANNEL_TIMBRE_POT].Init(
@@ -139,7 +139,7 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
   pots_[POTS_ADC_CHANNEL_TIMBRE_ATTENUVERTER].Init(
       &patch->timbre_modulation_amount, NULL, 0.005f, 2.0f, -1.0f);
   pots_[POTS_ADC_CHANNEL_FM_ATTENUVERTER].Init(
-      &patch->frequency_modulation_amount, &extra_fine_tune_, 0.005f, 2.0f, -1.0f);
+      &patch->frequency_modulation_amount, NULL, 0.005f, 2.0f, -1.0f);
   pots_[POTS_ADC_CHANNEL_MORPH_ATTENUVERTER].Init(
       &patch->morph_modulation_amount, NULL, 0.005f, 2.0f, -1.0f);
 
@@ -166,6 +166,11 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
   locked_octave_control_ = static_cast<float>(locked_octave_) / 8.0f;
   locked_octave_gesture_armed_ = false;
   editing_locked_octave_ = false;
+
+  previous_pitch_range_ = PitchRangeFromControl(octave_);
+  precision_anchor_note_ = tuned_root_note_;
+  precision_recentered_ = false;
+  octave_recentered_ = false;
 
 #if PLAITS_BUILD_ENABLE_CALIBRATION
   // Calibration state is initialized under the gate along with everything else
@@ -219,7 +224,6 @@ void Ui::LoadState() {
   patch_->decay = static_cast<float>(state.decay) / 256.0f;
   octave_ = static_cast<float>(state.octave) / 256.0f;
   fine_tune_ = static_cast<float>(state.fine_tune) / 256.0f;
-  extra_fine_tune_ = static_cast<float>(state.extra_fine_tune) / 256.0f;
 
   // alt firmware
   patch_->locked_frequency_pot_option = state.locked_frequency_pot_option;
@@ -230,6 +234,9 @@ void Ui::LoadState() {
   patch_->chord_set_option = state.chord_set_option;
   patch_->hold_on_trigger_option = state.hold_on_trigger_option;
   locked_octave_ = state.locked_octave;
+  tuned_root_note_ = state.tuned_root_valid == 1
+      ? DecodeTunedRoot(state.tuned_root_q8)
+      : 60.0f;
 
   for (int i = 0; i < 4; ++i) {
     bank_last_row_[i] = state.bank_last_row[i];
@@ -248,7 +255,10 @@ void Ui::SaveState() {
   state->decay = static_cast<uint8_t>(patch_->decay * 256.0f);
   state->octave = static_cast<uint8_t>(octave_ * 256.0f);
   state->fine_tune = static_cast<uint8_t>(fine_tune_ * 256.0f);
-  state->extra_fine_tune = static_cast<uint8_t>(extra_fine_tune_ * 256.0f);
+  // Retire the unfinished one-sided FM-attenuverter trim in this prototype.
+  // Zero is its neutral value in the old arithmetic and prevents a fresh
+  // state from shifting every locked range sharp by half a semitone.
+  state->extra_fine_tune = 0;
 
   // alt firmware
   state->locked_frequency_pot_option = patch_->locked_frequency_pot_option;
@@ -259,6 +269,8 @@ void Ui::SaveState() {
   state->chord_set_option = patch_->chord_set_option;
   state->hold_on_trigger_option = patch_->hold_on_trigger_option;
   state->locked_octave = locked_octave_;
+  state->tuned_root_q8 = EncodeTunedRoot(tuned_root_note_);
+  state->tuned_root_valid = 1;
 
   for (int i = 0; i < 4; ++i) {
     state->bank_last_row[i] = bank_last_row_[i];
@@ -395,6 +407,33 @@ void Ui::UpdateLEDs() {
   switch (mode_) {
     case UI_MODE_NORMAL:
       {
+        // Entering Precision freezes pitch until FREQUENCY reaches noon. Make
+        // that deliberate recenter step visible instead of presenting it as
+        // another unexplained pot dead zone.
+        if (PitchRangeFromControl(octave_) == PITCH_RANGE_PRECISION &&
+            !precision_recentered_) {
+          if (pwm_counter < triangle) {
+            for (int i = 0; i < kNumLEDs; ++i) {
+              leds_.set(i, LED_COLOR_GREEN);
+            }
+          }
+          break;
+        }
+
+        // Locking the tuned root must not let the off-centre fine-tuning
+        // position select an adjacent octave. Hold the root while the player
+        // returns FREQUENCY to noon, with a distinct yellow prompt.
+        if (PitchRangeFromControl(octave_) == PITCH_RANGE_OCTAVES &&
+            patch_->locked_frequency_pot_option == 0 &&
+            !octave_recentered_) {
+          if (pwm_counter < triangle) {
+            for (int i = 0; i < kNumLEDs; ++i) {
+              leds_.set(i, LED_COLOR_YELLOW);
+            }
+          }
+          break;
+        }
+
         // Selected with the buttons. The lit LED is the engine's PHYSICAL row
         // (kEngineRows), so an engine in a gapped bank stays on its own LED
         // rather than the compacted position; the bank (hence color) is still
@@ -467,19 +506,21 @@ void Ui::UpdateLEDs() {
         // eight model lights. The first eight choices climb one light at a
         // time; all lights indicate the ninth/highest octave. Existing hidden
         // octave/range editing keeps its original display.
-        int octave = editing_locked_octave_
-            ? (locked_octave_ == 8 ? 10 : locked_octave_ + 1)
-            : static_cast<int>(octave_ * 11.0f);
+        const int octave = editing_locked_octave_
+            ? (locked_octave_ == 8 ? PITCH_RANGE_HIGH : locked_octave_ + 1)
+            : PitchRangeFromControl(octave_);
         for (int i = 0; i < 8; ++i) {
           LedColor color = LED_COLOR_OFF;
           if (octave == 0) {
             color = i == (triangle >> 1) ? LED_COLOR_OFF : LED_COLOR_YELLOW;
-          } else if (octave == 10) {
+          } else if (octave == PITCH_RANGE_HIGH) {
             color = LED_COLOR_YELLOW;
-          } else if (octave == 9) {
+          } else if (octave == PITCH_RANGE_OCTAVES) {
             color = (i & 1) == ((triangle >> 3) & 1)
                 ? LED_COLOR_OFF
                 : LED_COLOR_YELLOW;
+          } else if (octave == PITCH_RANGE_PRECISION) {
+            color = pwm_counter < triangle ? LED_COLOR_GREEN : LED_COLOR_OFF;
           } else {
             color = (octave - 1) == i ? LED_COLOR_YELLOW : LED_COLOR_OFF;
           }
@@ -926,12 +967,13 @@ void Ui::ReadSwitches() {
               // the neutral octave. This is keyed on the transition so it
               // behaves the same in either menu direction.
               if (old_value == 0 && new_value != 0 &&
-                  static_cast<int>(octave_ * 11.0f) == 9) {
+                  PitchRangeFromControl(octave_) == PITCH_RANGE_OCTAVES) {
                 locked_octave_ = static_cast<uint8_t>(
                     octave_quantizer_.Process(
                         0.5f * transposition_ + 0.5f));
               } else if (old_value != 0 && new_value == 0) {
                 locked_octave_ = 4;
+                octave_recentered_ = false;
               }
             }
             *value = static_cast<uint8_t>(new_value);
@@ -1044,23 +1086,54 @@ void Ui::Poll() {
   cv_adc_.Convert();
   pots_adc_.Convert();
 
-  const int octave = static_cast<int>(octave_ * 11.0f);
-  if (octave == 0) {
+  const int pitch_range = PitchRangeFromControl(octave_);
+
+  // Range transitions capture the MANUAL pitch only; V/OCT and FM live in the
+  // modulation structure and are never baked into the tuned root. Stopping on
+  // Precision starts a visible recenter phase. Passing straight through to
+  // Octaves still preserves the coarse pitch instead of jumping to C4.
+  if (pitch_range != previous_pitch_range_) {
+    if (pitch_range == PITCH_RANGE_PRECISION) {
+      precision_anchor_note_ = patch_->note;
+      precision_recentered_ = false;
+    } else if (pitch_range == PITCH_RANGE_OCTAVES) {
+      tuned_root_note_ = patch_->note;
+      precision_anchor_note_ = tuned_root_note_;
+      locked_octave_ = 4;
+      octave_recentered_ = false;
+      SaveState();
+    }
+    previous_pitch_range_ = pitch_range;
+  }
+
+  if (pitch_range == PITCH_RANGE_LOW) {
     patch_->note = -48.37f + transposition_ * 60.0f;
-  } else if (octave == 9) {
-    patch_->note = 53.0f + fine_tune_ * 14.0f + extra_fine_tune_;
+  } else if (pitch_range == PITCH_RANGE_PRECISION) {
+    if (!precision_recentered_ && fabsf(transposition_) < 0.01f) {
+      precision_recentered_ = true;
+    }
+    patch_->note = precision_recentered_
+        ? PrecisionRangeNote(precision_anchor_note_, transposition_)
+        : precision_anchor_note_;
+  } else if (pitch_range == PITCH_RANGE_OCTAVES) {
+    patch_->note = tuned_root_note_;
     if (patch_->locked_frequency_pot_option == 0) {
-      patch_->note += 12.0f * static_cast<float>(octave_quantizer_.Process(0.5f * transposition_ + 0.5f) - 4);
+      if (!octave_recentered_ && fabsf(transposition_) < 0.01f) {
+        octave_recentered_ = true;
+      }
+      if (octave_recentered_) {
+        patch_->note += 12.0f * static_cast<float>(
+            octave_quantizer_.Process(0.5f * transposition_ + 0.5f) - 4);
+      }
       patch_->freqlock_param = 0.0f;
     } else {
       patch_->note += 12.0f * static_cast<float>(locked_octave_ - 4);
       patch_->freqlock_param = 0.5f * transposition_ + 0.5f;
     }
-  } else if (octave == 10) {
+  } else if (pitch_range == PITCH_RANGE_HIGH) {
     patch_->note = 60.0f + transposition_ * 48.0f;
   } else {
-    const float fine = transposition_ * 7.0f;
-    patch_->note = fine + static_cast<float>(octave) * 12.0f;
+    patch_->note = WideRangeNote(pitch_range, transposition_);
   }
 }
 

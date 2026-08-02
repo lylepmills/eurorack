@@ -130,7 +130,7 @@ void Settings::InitState() {
   state_.decay = 128;
   state_.octave = 255;
   state_.fine_tune = 128;
-  state_.extra_fine_tune = 128;
+  state_.extra_fine_tune = 0;
 
   // alt firmware options
   ApplyBuildOptionDefaults(&state_);
@@ -142,6 +142,9 @@ void Settings::InitState() {
   for (int i = 0; i < 4; ++i) {
     state_.bank_last_row[i] = 0;
   }
+
+  state_.tuned_root_q8 = 60 * 256;
+  state_.tuned_root_valid = 0;
 }
 
 void Settings::SavePersistentData() {
