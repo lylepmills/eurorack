@@ -239,7 +239,7 @@ system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-22a9af18c30b` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-407cbf6eefca` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a
 new image, wait for `wrangler containers list` to report `ready` before smoke
@@ -249,7 +249,7 @@ the previous live instance during the schema-5 rollout.
 Schema 16, including per-engine stereo, recipe-driven scale banks, and automatic
 LEVEL routing, is live. The generalized
 schema-inheritance hardening from `5b2b077` is also live: current production
-source `bced0e9c156e` descends from that commit, so future supported schemas
+source `407cbf6eefca` descends from that commit, so future supported schemas
 inherit older feature shapes without another version-list edit.
 
 ### Rolling back
@@ -302,6 +302,7 @@ target.
 | August 1, 2026 (six-voice wavetable optimization, manual contract 13) | `bced0e9c156e` | `rev-bced0e9c156e` |
 | August 1, 2026 (navigation, fine-tune LED, and Ro'ved LED fixes) | `220eeca73af8` | `rev-220eeca73af8` |
 | August 1, 2026 (Virtual Analog Dual and Crossfade variants) | `22a9af18c30b` | `rev-22a9af18c30b` |
+| August 2, 2026 (stock-model control and output metadata audit) | `407cbf6eefca` | `rev-407cbf6eefca` |
 
 Three consequences a rollback has that a forward deploy does not:
 
