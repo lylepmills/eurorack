@@ -35,6 +35,8 @@
 #include "plaits/dsp/engine/speech_engine.h"
 #include "plaits/dsp/engine/string_engine.h"
 #include "plaits/dsp/engine/swarm_engine.h"
+#include "plaits/dsp/engine/virtual_analog_crossfade_engine.h"
+#include "plaits/dsp/engine/virtual_analog_dual_engine.h"
 #include "plaits/dsp/engine/virtual_analog_engine.h"
 #include "plaits/dsp/engine/waveshaping_engine.h"
 #include "plaits/dsp/engine/wavetable_engine.h"
@@ -155,6 +157,8 @@ void bench(const char* name) {
 int main() {
   // Stock Mutable Instruments models.
   bench<VirtualAnalogEngine>("virtual-analog");
+  bench<VirtualAnalogDualEngine>("virtual-analog-dual");
+  bench<VirtualAnalogCrossfadeEngine>("virtual-analog-crossfade");
   bench<WaveshapingEngine>("waveshaping");
   bench<FMEngine>("two-op-fm");
   bench<GrainEngine>("granular-formant");

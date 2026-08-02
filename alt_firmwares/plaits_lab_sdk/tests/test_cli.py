@@ -99,6 +99,8 @@ class PackageTests(unittest.TestCase):
     def test_reference_packages_validate(self) -> None:
         packages = [
             SDK_DIR / "packages" / "mutable-instruments" / "virtual-analog",
+            SDK_DIR / "packages" / "mutable-instruments" / "virtual-analog-dual",
+            SDK_DIR / "packages" / "mutable-instruments" / "virtual-analog-crossfade",
             SDK_DIR / "packages" / "rubato" / "pulsar",
         ]
         for package in packages:
@@ -490,7 +492,7 @@ class PackageTests(unittest.TestCase):
 
     def test_authoritative_catalog_exposes_every_forkable_model(self) -> None:
         catalog, public = plaits_lab.load_builtin_catalog()
-        self.assertEqual(len(catalog), 81)
+        self.assertEqual(len(catalog), 83)
         self.assertEqual(set(catalog), set(public))
         self.assertTrue(all(item["digest"].startswith("sha256:") for item in public.values()))
 

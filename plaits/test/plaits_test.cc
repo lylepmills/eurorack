@@ -41,6 +41,8 @@
 #include "plaits/dsp/engine/snare_drum_engine.h"
 #include "plaits/dsp/engine/speech_engine.h"
 #include "plaits/dsp/engine/swarm_engine.h"
+#include "plaits/dsp/engine/virtual_analog_crossfade_engine.h"
+#include "plaits/dsp/engine/virtual_analog_dual_engine.h"
 #include "plaits/dsp/engine/virtual_analog_engine.h"
 #include "plaits/dsp/engine/waveshaping_engine.h"
 #include "plaits/dsp/engine/wavetable_engine.h"
@@ -1497,7 +1499,7 @@ void RenderAuditionEngine(const char* name) {
 }
 
 template<typename T>
-void ValidateExperimentalControlResponse(const char* name) {
+void ValidateExperimentalControlResponse(const char* name, bool stereo = false) {
   static char allocator_memory_a[16 * 1024];
   static char allocator_memory_b[16 * 1024];
   const char* control_names[] = { "HARMONICS", "TIMBRE", "MORPH", "macro" };
@@ -1524,6 +1526,7 @@ void ValidateExperimentalControlResponse(const char* name) {
     low_parameters.timbre = 0.57f;
     low_parameters.morph = 0.39f;
     low_parameters.macro = 0.61f;
+    low_parameters.stereo = stereo;
     EngineParameters high_parameters = low_parameters;
     float* low_control = control == 0 ? &low_parameters.harmonics
         : control == 1 ? &low_parameters.timbre
@@ -1581,7 +1584,9 @@ void ValidateExperimentalControlResponse(const char* name) {
 }
 
 template<typename T>
-void ValidateExperimentalEngineExtremes(float maximum = 4.0f) {
+void ValidateExperimentalEngineExtremes(
+    float maximum = 4.0f,
+    bool stereo = false) {
   BufferAllocator allocator(ram_block, 16384);
   // Static storage mirrors the firmware's zero-initialized Voice instance.
   // Several original engines rely on that initialization before Init().
@@ -1603,6 +1608,7 @@ void ValidateExperimentalEngineExtremes(float maximum = 4.0f) {
           p.timbre = values[t];
           p.morph = values[m];
           p.macro = values[x];
+          p.stereo = stereo;
           for (size_t block = 0; block < 64; ++block) {
             float out[kAudioBlockSize];
             float aux[kAudioBlockSize];
@@ -2509,6 +2515,10 @@ void TestExperimentalEngines() {
   ValidateExperimentalEngineExtremes<BuzzEngine>();
   ValidateExperimentalEngineExtremes<FoldEngine>();
   ValidateExperimentalEngineExtremes<SubOscillatorEngine>();
+  ValidateExperimentalEngineExtremes<VirtualAnalogDualEngine>();
+  ValidateExperimentalEngineExtremes<VirtualAnalogCrossfadeEngine>();
+  ValidateExperimentalEngineExtremes<VirtualAnalogDualEngine>(4.0f, true);
+  ValidateExperimentalEngineExtremes<VirtualAnalogCrossfadeEngine>(4.0f, true);
   ValidateExperimentalControlResponse<LoopbackEngine>("Loopback");
   ValidateExperimentalControlResponse<LockstepEngine>("Lockstep");
   ValidateExperimentalControlResponse<TapfieldEngine>("Tapfield");
@@ -2562,6 +2572,14 @@ void TestExperimentalEngines() {
   ValidateExperimentalControlResponse<BuzzEngine>("Buzz");
   ValidateExperimentalControlResponse<FoldEngine>("Fold");
   ValidateExperimentalControlResponse<SubOscillatorEngine>("Sub Osc");
+  ValidateExperimentalControlResponse<VirtualAnalogDualEngine>("Virtual Analog Dual");
+  ValidateExperimentalControlResponse<VirtualAnalogCrossfadeEngine>("Virtual Analog Crossfade");
+  ValidateExperimentalControlResponse<VirtualAnalogDualEngine>(
+      "Virtual Analog Dual stereo",
+      true);
+  ValidateExperimentalControlResponse<VirtualAnalogCrossfadeEngine>(
+      "Virtual Analog Crossfade stereo",
+      true);
   printf("Validating stock fourth-macro midpoint...\n");
   fflush(stdout);
   ValidateStockMacroMidpoint();
@@ -2599,6 +2617,10 @@ void TestExperimentalEngines() {
   ValidateStockMacroResponse<ChiptuneEngine>("Chiptune");
   printf("  Virtual Analog\n");
   ValidateStockMacroResponse<VirtualAnalogEngine>("Virtual Analog");
+  printf("  Virtual Analog Dual\n");
+  ValidateStockMacroResponse<VirtualAnalogDualEngine>("Virtual Analog Dual");
+  printf("  Virtual Analog Crossfade\n");
+  ValidateStockMacroResponse<VirtualAnalogCrossfadeEngine>("Virtual Analog Crossfade");
   printf("  Waveshaping\n");
   ValidateStockMacroResponse<WaveshapingEngine>("Waveshaping");
   printf("  Two-op FM\n");
@@ -2637,6 +2659,8 @@ void TestExperimentalEngines() {
   ValidateExperimentalEngineExtremes<WaveTerrainEngine>(32.0f);
   ValidateExperimentalEngineExtremes<ChiptuneEngine>(32.0f);
   ValidateExperimentalEngineExtremes<VirtualAnalogEngine>(32.0f);
+  ValidateExperimentalEngineExtremes<VirtualAnalogDualEngine>(32.0f);
+  ValidateExperimentalEngineExtremes<VirtualAnalogCrossfadeEngine>(32.0f);
   ValidateExperimentalEngineExtremes<WaveshapingEngine>(32.0f);
   ValidateExperimentalEngineExtremes<FMEngine>(32.0f);
   ValidateExperimentalEngineExtremes<GrainEngine>(32.0f);

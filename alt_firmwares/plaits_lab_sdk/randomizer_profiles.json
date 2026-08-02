@@ -95,6 +95,16 @@
         }
       }
     },
+    "virtual-analog-dual": {
+      "status": "seeded",
+      "timbre": "balanced",
+      "morph": "balanced"
+    },
+    "virtual-analog-crossfade": {
+      "status": "seeded",
+      "timbre": "centered",
+      "morph": "broad-texture"
+    },
     "waveshaping": {
       "status": "seeded",
       "timbre": "balanced",

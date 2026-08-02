@@ -1,4 +1,5 @@
 // Copyright 2016 Emilie Gillet.
+// Copyright 2026 Rubato Audio.
 //
 // Author: Emilie Gillet (emilie.o.gillet@gmail.com)
 //
@@ -8,10 +9,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -19,27 +20,32 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-// 
+//
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
 // -----------------------------------------------------------------------------
 //
-// The production Plaits virtual-analog voice (the former VA_VARIANT 2).
+// Emilie Gillet's original VA_VARIANT 0, made independently selectable.
+//
+// Two variable-shape oscillators have separate waveform controls. HARMONICS
+// detunes the second through musical intervals and independently sweeps the
+// hard-sync ratio heard on AUX. The Plaits Palette fourth macro scales the
+// interval detuning from unison to twice the original range, with 0.5 exactly
+// reproducing the original implementation.
 
-#ifndef PLAITS_DSP_ENGINE_VIRTUAL_ANALOG_ENGINE_H_
-#define PLAITS_DSP_ENGINE_VIRTUAL_ANALOG_ENGINE_H_
+#ifndef PLAITS_DSP_ENGINE_VIRTUAL_ANALOG_DUAL_ENGINE_H_
+#define PLAITS_DSP_ENGINE_VIRTUAL_ANALOG_DUAL_ENGINE_H_
 
 #include "plaits/dsp/engine/engine.h"
-#include "plaits/dsp/oscillator/variable_saw_oscillator.h"
 #include "plaits/dsp/oscillator/variable_shape_oscillator.h"
 
 namespace plaits {
-  
-class VirtualAnalogEngine : public Engine {
+
+class VirtualAnalogDualEngine : public Engine {
  public:
-  VirtualAnalogEngine() { }
-  ~VirtualAnalogEngine() { }
-  
+  VirtualAnalogDualEngine() { }
+  ~VirtualAnalogDualEngine() { }
+
   virtual void Init(stmlib::BufferAllocator* allocator);
   virtual void Reset();
   virtual void LoadUserData(const uint8_t* user_data) { }
@@ -48,26 +54,21 @@ class VirtualAnalogEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
-  // OUT/AUX carry L/R when stereo is requested: the engine's saw and sync
-  // square are panned across the field, and the monster-sync AUX is dropped.
-  virtual bool stereo_capable() const { return PLAITS_STEREO_VIRTUAL_ANALOG; }
+  virtual bool stereo_capable() const {
+    return PLAITS_STEREO_VIRTUAL_ANALOG_DUAL;
+  }
 
  private:
   float ComputeDetuning(float detune) const;
-  
+
   VariableShapeOscillator primary_;
   VariableShapeOscillator auxiliary_;
-
   VariableShapeOscillator sync_;
-  VariableSawOscillator variable_saw_;
-
-  float auxiliary_amount_;
-  float xmod_amount_;
   float* temp_buffer_;
-  
-  DISALLOW_COPY_AND_ASSIGN(VirtualAnalogEngine);
+
+  DISALLOW_COPY_AND_ASSIGN(VirtualAnalogDualEngine);
 };
 
 }  // namespace plaits
 
-#endif  // PLAITS_DSP_ENGINE_VIRTUAL_ANALOG_ENGINE_H_
+#endif  // PLAITS_DSP_ENGINE_VIRTUAL_ANALOG_DUAL_ENGINE_H_

@@ -114,6 +114,8 @@ endif
 # the three DX7 banks share six_op_engine, hence SIX_OP.
 PLAITS_STEREO_MODELS = \
   VIRTUAL_ANALOG:virtual_analog_engine WAVESHAPING:waveshaping_engine \
+  VIRTUAL_ANALOG_DUAL:virtual_analog_dual_engine \
+  VIRTUAL_ANALOG_CROSSFADE:virtual_analog_crossfade_engine \
   TWO_OP_FM:fm_engine GRANULAR_FORMANT:grain_engine HARMONIC:additive_engine \
   WAVETABLE:wavetable_engine CHORDS:chord_engine SPEECH:speech_engine \
   SWARM:swarm_engine FILTERED_NOISE:noise_engine PARTICLE_NOISE:particle_engine \

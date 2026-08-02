@@ -26,8 +26,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
         return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
 
     def test_catalog_matches_the_approved_product_catalog(self) -> None:
-        self.assertEqual(len(CATALOG), 81)
-
+        self.assertEqual(len(CATALOG), 83)
     def test_randomizer_profiles_are_compact_and_cover_every_selected_slot(self) -> None:
         build = validate_recipe(self.load("default_recipe.json"))
         config = render_config(build)
@@ -377,6 +376,24 @@ class GenerateEngineConfigTest(unittest.TestCase):
         registrations = config.split("#define PLAITS_REGISTER_ENGINES", 1)[1]
         self.assertLess(registrations.index("&six_op_engine_"), registrations.index("&virtual_analog_engine_"))
         self.assertLess(registrations.index("&virtual_analog_engine_"), registrations.index("&bass_drum_engine_"))
+
+    def test_all_virtual_analog_variants_can_coexist(self) -> None:
+        recipe = self.load("default_recipe.json")
+        recipe["slots"][:3] = [
+            "virtual-analog-dual",
+            "virtual-analog-crossfade",
+            "virtual-analog",
+        ]
+        config = render_config(validate_recipe(recipe))
+        for declaration in (
+            "VirtualAnalogDualEngine virtual_analog_dual_engine_;",
+            "VirtualAnalogCrossfadeEngine virtual_analog_crossfade_engine_;",
+            "VirtualAnalogEngine virtual_analog_engine_;",
+        ):
+            self.assertIn(declaration, config)
+        self.assertEqual(config.count("RegisterInstance(&virtual_analog_dual_engine_"), 1)
+        self.assertEqual(config.count("RegisterInstance(&virtual_analog_crossfade_engine_"), 1)
+        self.assertEqual(config.count("RegisterInstance(&virtual_analog_engine_"), 1)
 
     def test_dx_banks_and_mixed_lab_engines_are_encoded_per_slot(self) -> None:
         config = render_config(validate_recipe(self.load("mixed_recipe.json")))

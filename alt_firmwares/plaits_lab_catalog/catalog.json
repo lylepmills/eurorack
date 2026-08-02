@@ -46,6 +46,90 @@
       }
     },
     {
+      "id": "virtual-analog-dual",
+      "packageId": "mutable-instruments/virtual-analog-dual",
+      "name": "Virtual Analog Dual",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Subtractive",
+      "description": "Independent variable waveforms with interval detuning and a synchronized alternate output.",
+      "tags": [
+        "analog",
+        "oscillator",
+        "sync",
+        "variant"
+      ],
+      "controls": [
+        "Detune and sync",
+        "Primary waveform",
+        "Secondary waveform",
+        "Detune range"
+      ],
+      "outputs": [
+        "Mixed variable oscillators",
+        "Primary and synchronized secondary"
+      ],
+      "artwork": {
+        "icon": "/model-icons/virtual-analog.png",
+        "kind": "official"
+      },
+      "source": {
+        "header": "plaits/dsp/engine/virtual_analog_dual_engine.h",
+        "className": "VirtualAnalogDualEngine",
+        "member": "virtual_analog_dual_engine_",
+        "files": [
+          "plaits/dsp/engine/virtual_analog_dual_engine.cc"
+        ]
+      },
+      "postProcessing": {
+        "alreadyEnveloped": false,
+        "outGain": 0.8,
+        "auxGain": 0.8
+      }
+    },
+    {
+      "id": "virtual-analog-crossfade",
+      "packageId": "mutable-instruments/virtual-analog-crossfade",
+      "name": "Virtual Analog Crossfade",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Subtractive",
+      "description": "A variable waveform pair crossfading from detune through dry tone to hard synchronization.",
+      "tags": [
+        "analog",
+        "oscillator",
+        "sync",
+        "variant"
+      ],
+      "controls": [
+        "Detune",
+        "Detune to sync",
+        "Common waveform",
+        "Detune range"
+      ],
+      "outputs": [
+        "Detune-to-sync crossfade",
+        "Detuned secondary oscillator"
+      ],
+      "artwork": {
+        "icon": "/model-icons/virtual-analog.png",
+        "kind": "official"
+      },
+      "source": {
+        "header": "plaits/dsp/engine/virtual_analog_crossfade_engine.h",
+        "className": "VirtualAnalogCrossfadeEngine",
+        "member": "virtual_analog_crossfade_engine_",
+        "files": [
+          "plaits/dsp/engine/virtual_analog_crossfade_engine.cc"
+        ]
+      },
+      "postProcessing": {
+        "alreadyEnveloped": false,
+        "outGain": 0.8,
+        "auxGain": 0.8
+      }
+    },
+    {
       "id": "waveshaping",
       "packageId": "mutable-instruments/waveshaping",
       "name": "Waveshaping",
@@ -3272,6 +3356,24 @@
         "timbre": "Moves through pulse-width changes and introduces oscillator synchronization.",
         "morph": "Changes the shape of the variable sawtooth component.",
         "macro": "Crossfades the square and variable-saw components around the stock midpoint."
+      },
+      "trigger": "Restarts the internal envelope when TRIG is patched."
+    },
+    "virtual-analog-dual": {
+      "controls": {
+        "harmonics": "Detunes the secondary oscillator through musical intervals and sets the synchronized AUX ratio.",
+        "timbre": "Changes the primary oscillator continuously from saw through square and pulse shapes.",
+        "morph": "Changes the secondary oscillator independently through the same variable waveform range.",
+        "macro": "Scales interval detuning from unison to twice the original range; the midpoint is Emilie's original spread."
+      },
+      "trigger": "Restarts the internal envelope when TRIG is patched."
+    },
+    "virtual-analog-crossfade": {
+      "controls": {
+        "harmonics": "Detunes the secondary oscillator through closely spaced and musical intervals.",
+        "timbre": "Moves the main output from a detuned pair through the dry primary to progressively harder synchronization.",
+        "morph": "Changes the common oscillator waveform continuously from saw through square and pulse shapes.",
+        "macro": "Scales interval detuning from unison to twice the original range; the midpoint is Emilie's original spread."
       },
       "trigger": "Restarts the internal envelope when TRIG is patched."
     },
