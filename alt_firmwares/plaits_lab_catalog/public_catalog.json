@@ -14,8 +14,7 @@
       "tags": [
         "analog",
         "oscillator",
-        "sync",
-        "variant"
+        "sync"
       ],
       "controls": [
         "Detune",
@@ -29,11 +28,12 @@
       ],
       "artwork": {
         "icon": "/model-icons/virtual-analog.png",
-        "kind": "official"
+        "kind": "official",
+        "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:1c0f5c26df39f0c387a62d76e1039a9a0e9c1b3dce9169b5d339fab55b9a319e",
-      "documentationDigest": "sha256:884a22a5736d9ca001f0a72173a45b8f3f39cea2fd5a500bdfdebde612e10463",
+      "digest": "sha256:742584d96378f4c169a2ba1574a8899e28d5371c80a978e8b38937a6a849785e",
+      "documentationDigest": "sha256:f1e5b8101e33dce12c7d37bb7ed1f5ec3e12fe1b0d28f8b60e898502f2a1f220",
       "manual": {
         "controls": {
           "harmonics": "Detunes the paired oscillators through closely spaced and musical intervals.",
@@ -102,7 +102,8 @@
       "tags": [
         "analog",
         "oscillator",
-        "sync"
+        "sync",
+        "variant"
       ],
       "controls": [
         "Detune",
@@ -116,12 +117,11 @@
       ],
       "artwork": {
         "icon": "/model-icons/virtual-analog.png",
-        "kind": "official",
-        "tone": "green"
+        "kind": "official"
       },
       "version": "1.0.0",
-      "digest": "sha256:0149a383919033441dfa9d3f6f80cef32ceeb0bd8fee4b7f5fa88dee9c53a60a",
-      "documentationDigest": "sha256:769178999e238bacedf2a8ad6e973cb548f7201745d6e497e4309ef3d5e77dbb",
+      "digest": "sha256:c3f2f0297180eed9ae85c9dfb6e9eb5752b49c5377d4dc1482c073a349aab56f",
+      "documentationDigest": "sha256:607dc9da8e18a8dbe09645befd2517dd17249cf5e60e64f0909c0bc6febfeac5",
       "manual": {
         "controls": {
           "harmonics": "Detunes the secondary oscillator through closely spaced and musical intervals.",
