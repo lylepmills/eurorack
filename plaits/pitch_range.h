@@ -1,8 +1,8 @@
 // Copyright 2026 Rubato Audio.
 //
 // Pure pitch-range math shared by the hardware UI and its host test. The
-// selector keeps Plaits' eight ordinary +/-7-semitone octave ranges, then adds
-// a precision stop before octave switching and the high-frequency range.
+// selector keeps Plaits' eight ordinary +/-7-semitone octave ranges, followed
+// by octave switching, precision tuning, and the high-frequency range.
 
 #ifndef PLAITS_PITCH_RANGE_H_
 #define PLAITS_PITCH_RANGE_H_
@@ -17,8 +17,8 @@ enum PitchRange {
   PITCH_RANGE_LOW = 0,
   PITCH_RANGE_FIRST_WIDE = 1,
   PITCH_RANGE_LAST_WIDE = 8,
-  PITCH_RANGE_PRECISION = 9,
-  PITCH_RANGE_OCTAVES = 10,
+  PITCH_RANGE_OCTAVES = 9,
+  PITCH_RANGE_PRECISION = 10,
   PITCH_RANGE_HIGH = 11,
   PITCH_RANGE_COUNT = 12
 };
