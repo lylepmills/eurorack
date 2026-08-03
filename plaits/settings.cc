@@ -121,6 +121,8 @@ void Settings::InitPersistentData() {
   c[CV_ADC_CHANNEL_LEVEL].offset = 0.49f;
   c[CV_ADC_CHANNEL_LEVEL].scale = -0.6f;
   c[CV_ADC_CHANNEL_LEVEL].normalization_detection_threshold = 21403;
+
+  persistent_data_.polyphonic_pitch_calibration.Clear();
 }
 
 void Settings::InitState() {

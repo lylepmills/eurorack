@@ -45,6 +45,23 @@ using namespace stmlib;
 
 static const int32_t kLongPressTime = 2000;
 
+#if PLAITS_BUILD_POLYPHONIC_PITCH_CALIBRATION
+static const CvAdcChannel kPolyphonicPitchChannels[] = {
+  CV_ADC_CHANNEL_MODEL,
+  CV_ADC_CHANNEL_HARMONICS,
+  CV_ADC_CHANNEL_LEVEL,
+};
+
+static bool IsPolyphonicPitchChannel(int channel) {
+  for (int i = 0; i < POLYPHONIC_PITCH_INPUT_LAST; ++i) {
+    if (channel == kPolyphonicPitchChannels[i]) {
+      return true;
+    }
+  }
+  return false;
+}
+#endif  // PLAITS_BUILD_POLYPHONIC_PITCH_CALIBRATION
+
 // The build's bank layout, baked in by the generated config (build_config.h).
 // bank_navigation.h reads bank/row from this table; the LED display and
 // Navigate() use it instead of assuming eight-wide banks. The firmware is built
@@ -169,10 +186,15 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
 
 #if PLAITS_BUILD_ENABLE_CALIBRATION
   // Calibration state is initialized under the gate along with everything else
-  // that touches it, so a build without the procedure emits no code for it at
-  // all and stays byte-identical to one built before this existed.
+  // that touches it, so a build without the procedure emits no calibration
+  // code. Ui reserves eighteen additional bytes for the prototype's filtered
+  // readings and captured C1 points.
   pitch_lp_calibration_ = 0.0f;
   cv_c1_ = 0.0f;
+  for (int i = 0; i < POLYPHONIC_PITCH_INPUT_LAST; ++i) {
+    polyphonic_pitch_lp_calibration_[i] = 0.0f;
+    polyphonic_cv_c1_[i] = 0;
+  }
   calibration_step_ = 0;
   calibration_armed_ = false;
 
@@ -1020,6 +1042,14 @@ void Ui::Poll() {
   // chasing.
   ONE_POLE(
       pitch_lp_calibration_, cv_adc_.float_value(CV_ADC_CHANNEL_V_OCT), 0.1f);
+#if PLAITS_BUILD_POLYPHONIC_PITCH_CALIBRATION
+  for (int i = 0; i < POLYPHONIC_PITCH_INPUT_LAST; ++i) {
+    ONE_POLE(
+        polyphonic_pitch_lp_calibration_[i],
+        static_cast<float>(cv_adc_.value(kPolyphonicPitchChannels[i])),
+        0.1f);
+  }
+#endif
 #endif  // PLAITS_BUILD_ENABLE_CALIBRATION
 
   ui_task_ = (ui_task_ + 1) % 4;
@@ -1081,11 +1111,24 @@ void Ui::StartCalibration() {
 void Ui::CalibrateC1() {
   // Acquire offsets for all channels.
   for (int i = 0; i < CV_ADC_CHANNEL_LAST; ++i) {
-    if (i != CV_ADC_CHANNEL_V_OCT) {
+    if (i != CV_ADC_CHANNEL_V_OCT
+#if PLAITS_BUILD_POLYPHONIC_PITCH_CALIBRATION
+        && !IsPolyphonicPitchChannel(i)
+#endif
+        ) {
       ChannelCalibrationData* c = settings_->mutable_calibration_data(i);
       c->offset = -cv_adc_.float_value(CvAdcChannel(i)) * c->scale;
     }
   }
+#if PLAITS_BUILD_POLYPHONIC_PITCH_CALIBRATION
+  // MODEL, HARMONICS and LEVEL are patched to 1V in this build. Capture their
+  // raw readings for the separate pitch profile instead of mistaking 1V for
+  // each control's zero and corrupting its ordinary offset calibration.
+  for (int i = 0; i < POLYPHONIC_PITCH_INPUT_LAST; ++i) {
+    polyphonic_cv_c1_[i] = static_cast<int16_t>(
+        polyphonic_pitch_lp_calibration_[i]);
+  }
+#endif
   cv_c1_ = pitch_lp_calibration_;
   calibration_step_ = 2;
 }
@@ -1098,15 +1141,35 @@ void Ui::CalibrateC3() {
   float c3 = pitch_lp_calibration_;
   float delta = c3 - c1;
 
+#if PLAITS_BUILD_POLYPHONIC_PITCH_CALIBRATION
+  int16_t polyphonic_cv_c3[POLYPHONIC_PITCH_INPUT_LAST];
+  bool polyphonic_pairs_valid = true;
+  for (int i = 0; i < POLYPHONIC_PITCH_INPUT_LAST; ++i) {
+    polyphonic_cv_c3[i] = static_cast<int16_t>(
+        polyphonic_pitch_lp_calibration_[i]);
+    polyphonic_pairs_valid = polyphonic_pairs_valid &&
+        PolyphonicPitchCalibrationData::PairIsValid(
+            polyphonic_cv_c1_[i], polyphonic_cv_c3[i]);
+  }
+#endif
+
   // Two octaves apart, within tolerance. Anything else is a mis-patched or
   // wrongly-scaled source, and is rejected rather than written: on a bad pair
   // the module shows the error display and the previous calibration — the one
   // it has been playing in tune with — is left in flash untouched.
-  if (delta > -0.6f && delta < -0.2f) {
+  if (delta > -0.6f && delta < -0.2f
+#if PLAITS_BUILD_POLYPHONIC_PITCH_CALIBRATION
+      && polyphonic_pairs_valid
+#endif
+      ) {
     ChannelCalibrationData* c = settings_->mutable_calibration_data(
         CV_ADC_CHANNEL_V_OCT);
     c->scale = 24.0f / delta;
     c->offset = 12.0f - c->scale * c1;
+#if PLAITS_BUILD_POLYPHONIC_PITCH_CALIBRATION
+    settings_->mutable_polyphonic_pitch_calibration()->Store(
+        polyphonic_cv_c1_, polyphonic_cv_c3);
+#endif
     settings_->SavePersistentData();
     mode_ = UI_MODE_NORMAL;
   } else {

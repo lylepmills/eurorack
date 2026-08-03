@@ -33,6 +33,7 @@
 #include "stmlib/system/storage.h"
 
 #include "plaits/drivers/cv_adc.h"
+#include "plaits/polyphonic_calibration.h"
 
 namespace plaits {
 
@@ -47,9 +48,15 @@ struct ChannelCalibrationData {
 
 struct PersistentData {
   ChannelCalibrationData channel_calibration_data[CV_ADC_CHANNEL_LAST];
-  uint8_t padding[16];
+  PolyphonicPitchCalibrationData polyphonic_pitch_calibration;
   enum { tag = 0x494C4143 };  // CALI
 };
+
+// ChunkStorage rejects calibration chunks whose payload size changes. The
+// extra profile must continue to occupy exactly the old reserved padding.
+STATIC_ASSERT(
+    sizeof(PersistentData) == 112,
+    persistent_calibration_chunk_must_remain_stock_compatible);
 
 struct State {
   // base firmware
@@ -104,6 +111,16 @@ class Settings {
 
   inline ChannelCalibrationData* mutable_calibration_data(int channel) {
     return &persistent_data_.channel_calibration_data[channel];
+  }
+
+  inline const PolyphonicPitchCalibrationData&
+      polyphonic_pitch_calibration() const {
+    return persistent_data_.polyphonic_pitch_calibration;
+  }
+
+  inline PolyphonicPitchCalibrationData*
+      mutable_polyphonic_pitch_calibration() {
+    return &persistent_data_.polyphonic_pitch_calibration;
   }
 
   inline const State& state() const {

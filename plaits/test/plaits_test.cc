@@ -24,6 +24,7 @@
 
 #include "plaits/dsp/dsp.h"
 #include "plaits/build_config.h"
+#include "plaits/polyphonic_calibration.h"
 #include "plaits/pot_controller.h"
 
 #include "plaits/dsp/chords/chord_bank.h"
@@ -2335,6 +2336,50 @@ void ValidateAutoLevelDecayRouting() {
   }
 }
 
+void ValidatePolyphonicPitchCalibration() {
+  PolyphonicPitchCalibrationData calibration;
+  calibration.Clear();
+  if (calibration.valid()) {
+    fprintf(stderr, "Blank polyphonic pitch calibration was accepted\n");
+    abort();
+  }
+  if (calibration.Transform(POLYPHONIC_PITCH_INPUT_MODEL, 0) != 0.0f) {
+    fprintf(stderr, "Blank polyphonic pitch calibration was not inert\n");
+    abort();
+  }
+
+  // Representative readings for the three identical -0.33 V/V front ends.
+  const int16_t c1[POLYPHONIC_PITCH_INPUT_LAST] = { 7471, 7480, 7460 };
+  const int16_t c3[POLYPHONIC_PITCH_INPUT_LAST] = { -5636, -5627, -5647 };
+  if (!calibration.Store(c1, c3) || !calibration.valid()) {
+    fprintf(stderr, "Valid polyphonic pitch calibration was rejected\n");
+    abort();
+  }
+
+  for (int i = 0; i < POLYPHONIC_PITCH_INPUT_LAST; ++i) {
+    const PolyphonicPitchInput input = static_cast<PolyphonicPitchInput>(i);
+    const int16_t midpoint = static_cast<int16_t>((c1[i] + c3[i]) / 2);
+    if (fabsf(calibration.Transform(input, c1[i]) - 12.0f) > 0.001f ||
+        fabsf(calibration.Transform(input, c3[i]) - 36.0f) > 0.001f ||
+        fabsf(calibration.Transform(input, midpoint) - 24.0f) > 0.01f) {
+      fprintf(stderr, "Polyphonic pitch transform does not track 1V/oct\n");
+      abort();
+    }
+  }
+
+  // Store is transactional: a failed high point cannot erase the last good
+  // profile or make the ordinary control calibration fall back unexpectedly.
+  const PolyphonicPitchCalibrationData previous = calibration;
+  int16_t bad_c3[POLYPHONIC_PITCH_INPUT_LAST] = {
+    c1[0], c3[1], c3[2]
+  };
+  if (calibration.Store(c1, bad_c3) ||
+      memcmp(&calibration, &previous, sizeof(calibration)) != 0) {
+    fprintf(stderr, "Bad polyphonic calibration damaged the saved profile\n");
+    abort();
+  }
+}
+
 void TestExperimentalEngines() {
   printf("Validating the shared scale bank...\n");
   fflush(stdout);
@@ -2787,6 +2832,8 @@ int main(void) {
   // EnumerateWavetables();
   
   // TestLPGAttackDecay();
+  printf("Validating independent polyphonic pitch calibration...\n");
+  ValidatePolyphonicPitchCalibration();
   printf("Validating unpatched attenuverter modes...\n");
   ValidateParameterRandomizer();
   TestExperimentalEngines();

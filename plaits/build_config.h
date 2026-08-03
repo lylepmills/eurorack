@@ -131,6 +131,21 @@
 #define PLAITS_BUILD_ENABLE_CALIBRATION 0
 #endif
 
+// Prototype: while the optional calibration procedure is enabled, also expect
+// 1V and 3V on MODEL, HARMONICS and LEVEL and save an independent 1V/oct
+// profile for those jacks. Their ordinary calibration coefficients are not
+// repurposed, so firmware that does not consume this profile sees the exact
+// same controls it did before. This is intentionally not exposed by the hosted
+// builder contract yet; enable it only in a dedicated hardware-test build.
+#ifndef PLAITS_BUILD_POLYPHONIC_PITCH_CALIBRATION
+#define PLAITS_BUILD_POLYPHONIC_PITCH_CALIBRATION 0
+#endif
+
+#if PLAITS_BUILD_POLYPHONIC_PITCH_CALIBRATION && \
+    !PLAITS_BUILD_ENABLE_CALIBRATION
+#error "Polyphonic pitch calibration requires PLAITS_BUILD_ENABLE_CALIBRATION"
+#endif
+
 // Plum Audio Ro'Ved replaces Plaits' two model buttons with four clickable
 // knobs. The DSP and analog hardware are Plaits-compatible; only the switch
 // GPIOs and UI gestures differ. Hosted recipes select this panel variant with

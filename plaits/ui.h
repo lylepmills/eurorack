@@ -168,6 +168,11 @@ class Ui {
   uint8_t calibration_step_;
   float pitch_lp_calibration_;
   float cv_c1_;
+  // Slow raw-ADC filters and captured 1V readings for the three additional
+  // pitch inputs. Kept outside the compile-time gate for the same
+  // class-layout/ODR reason as the stock calibration fields above.
+  float polyphonic_pitch_lp_calibration_[POLYPHONIC_PITCH_INPUT_LAST];
+  int16_t polyphonic_cv_c1_[POLYPHONIC_PITCH_INPUT_LAST];
   // Calibration is entered by holding a button through power-up, so that press
   // is still down when the procedure starts. Steps only accept presses once
   // both buttons have been seen up.
