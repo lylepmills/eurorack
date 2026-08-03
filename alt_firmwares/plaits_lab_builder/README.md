@@ -33,6 +33,8 @@ The service is split across two isolation layers:
 
 The browser-facing API is public at `https://plaits-api.rubato.audio`. It does
 not require an account, email address, cookie, API token, or customer identity.
+Its CORS allowlist includes both production site origins, `https://rubato.audio`
+and `https://www.rubato.audio`; keep both in the Worker tests and live canary.
 
 - `GET /v1/catalog` returns the approved engine, chord-table, and scale-bank limits.
 - `POST /v1/builds` accepts a Plaits Lab manifest and returns a deterministic

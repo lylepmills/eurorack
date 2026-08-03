@@ -13,6 +13,7 @@ import {
   type NormalizedRecipe,
 } from "./contract";
 import { deadLetterAction } from "./dead_letter";
+import { corsHeaders } from "./cors";
 
 const DEAD_LETTER_QUEUE = "plaits-lab-builds-dead-letter";
 
@@ -75,17 +76,6 @@ function json(value: unknown, init: ResponseInit = {}): Response {
   headers.set("Content-Type", "application/json; charset=utf-8");
   headers.set("Cache-Control", "no-store");
   return Response.json(value, { ...init, headers });
-}
-
-function corsHeaders(request: Request, env: Env): Headers {
-  const origin = request.headers.get("Origin");
-  const headers = new Headers({ Vary: "Origin" });
-  if (origin === env.PUBLIC_ORIGIN) {
-    headers.set("Access-Control-Allow-Origin", origin);
-    headers.set("Access-Control-Allow-Headers", "Content-Type");
-    headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  }
-  return headers;
 }
 
 function outputDetails(output: FirmwareOutput): {
@@ -593,7 +583,7 @@ async function recordDeadLetter(message: Message<BuildMessage>, env: Env): Promi
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    const cors = corsHeaders(request, env);
+    const cors = corsHeaders(request, env.PUBLIC_ORIGINS);
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
 
     let response: Response;
