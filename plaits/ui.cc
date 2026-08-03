@@ -45,6 +45,11 @@ using namespace stmlib;
 
 static const int32_t kLongPressTime = 2000;
 
+// Ui::Poll runs once per 12-sample audio block, or 4,000 times per second.
+// Waiting two seconds after the last quantized pitch change coalesces an entire
+// tuning gesture into one flash write.
+static const uint16_t kPrecisionSaveDelay = 8000;
+
 // The build's bank layout, baked in by the generated config (build_config.h).
 // bank_navigation.h reads bank/row from this table; the LED display and
 // Navigate() use it instead of assuming eight-wide banks. The firmware is built
@@ -171,6 +176,8 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
   precision_anchor_note_ = tuned_root_note_;
   precision_catch_up_.Reset();
   octave_catch_up_.Reset();
+  precision_root_save_.Init(
+      EncodeTunedRoot(tuned_root_note_), kPrecisionSaveDelay);
 
 #if PLAITS_BUILD_ENABLE_CALIBRATION
   // Calibration state is initialized under the gate along with everything else
@@ -277,6 +284,7 @@ void Ui::SaveState() {
   }
 
   settings_->SaveState();
+  precision_root_save_.MarkSaved(EncodeTunedRoot(tuned_root_note_));
 }
 
 uint32_t Ui::BankToColor(int bank) {
@@ -1079,6 +1087,13 @@ void Ui::Poll() {
       octave_catch_up_.Init(
           0.5f, 0.5f * transposition_ + 0.5f);
       SaveState();
+    } else if (previous_pitch_range_ == PITCH_RANGE_PRECISION) {
+      // Fine Tune is a complete tuning mode, not a temporary editor that must
+      // be followed by Octaves. Preserve its final manual pitch when leaving
+      // in either direction.
+      tuned_root_note_ = patch_->note;
+      precision_anchor_note_ = tuned_root_note_;
+      SaveState();
     }
     previous_pitch_range_ = pitch_range;
   }
@@ -1090,6 +1105,10 @@ void Ui::Poll() {
         0.5f * transposition_ + 0.5f);
     patch_->note = PrecisionRangeNote(
         precision_anchor_note_, 2.0f * fine_control - 1.0f);
+    tuned_root_note_ = patch_->note;
+    if (precision_root_save_.Process(EncodeTunedRoot(tuned_root_note_))) {
+      SaveState();
+    }
   } else if (pitch_range == PITCH_RANGE_OCTAVES) {
     patch_->note = tuned_root_note_;
     if (patch_->locked_frequency_pot_option == 0) {

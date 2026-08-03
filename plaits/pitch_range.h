@@ -109,6 +109,64 @@ class EndpointCatchUp {
   bool catching_up_;
 };
 
+// Coalesces a stream of changing values into one save request after the value
+// has remained unchanged for a caller-selected number of control-rate ticks.
+// Returning to the last saved value cancels the pending write.
+class DeferredValueSave {
+ public:
+  DeferredValueSave() : delay_(0), countdown_(0), initialized_(false) { }
+
+  inline void Init(int16_t saved_value, uint16_t delay) {
+    saved_value_ = saved_value;
+    pending_value_ = saved_value;
+    delay_ = delay;
+    countdown_ = 0;
+    initialized_ = true;
+  }
+
+  inline bool Process(int16_t value) {
+    if (!initialized_) {
+      Init(value, 0);
+      return false;
+    }
+
+    if (value != pending_value_) {
+      pending_value_ = value;
+      countdown_ = delay_;
+      return false;
+    }
+
+    if (pending_value_ == saved_value_) {
+      countdown_ = 0;
+      return false;
+    }
+
+    if (countdown_) {
+      --countdown_;
+      if (countdown_) {
+        return false;
+      }
+    }
+
+    saved_value_ = pending_value_;
+    return true;
+  }
+
+  inline void MarkSaved(int16_t value) {
+    saved_value_ = value;
+    pending_value_ = value;
+    countdown_ = 0;
+    initialized_ = true;
+  }
+
+ private:
+  int16_t saved_value_;
+  int16_t pending_value_;
+  uint16_t delay_;
+  uint16_t countdown_;
+  bool initialized_;
+};
+
 inline int16_t EncodeTunedRoot(float note) {
   float scaled = note * 256.0f;
   if (scaled <= -32768.0f) return static_cast<int16_t>(-32768);

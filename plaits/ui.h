@@ -158,6 +158,7 @@ class Ui {
   int previous_pitch_range_;
   EndpointCatchUp precision_catch_up_;
   EndpointCatchUp octave_catch_up_;
+  DeferredValueSave precision_root_save_;
   Patch* patch_;
   Modulations* modulations_;
   NormalizationProbe normalization_probe_;

@@ -78,6 +78,25 @@ int main() {
   CHECK(EncodeTunedRoot(-200.0f) == -32768);
   CHECK(EncodeTunedRoot(200.0f) == 32767);
 
+  // A fine-tuning gesture produces one save only after settling. Further
+  // changes restart the delay, returning to the saved value cancels it, and an
+  // unrelated state save can explicitly consume a pending write.
+  DeferredValueSave deferred_save;
+  deferred_save.Init(100, 3);
+  CHECK(!deferred_save.Process(101));
+  CHECK(!deferred_save.Process(101));
+  CHECK(!deferred_save.Process(102));
+  CHECK(!deferred_save.Process(102));
+  CHECK(!deferred_save.Process(102));
+  CHECK(deferred_save.Process(102));
+  CHECK(!deferred_save.Process(102));
+  CHECK(!deferred_save.Process(103));
+  CHECK(!deferred_save.Process(102));
+  CHECK(!deferred_save.Process(102));
+  CHECK(!deferred_save.Process(104));
+  deferred_save.MarkSaved(104);
+  CHECK(!deferred_save.Process(104));
+
   std::printf("pitch_range_test: %d checks passed\n", checks);
   return 0;
 }
