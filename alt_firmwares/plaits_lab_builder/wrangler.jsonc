@@ -27,7 +27,7 @@
       "class_name": "FirmwareBuilder",
       "image": "registry.cloudflare.com/256bac4d555b969399df16f575c5f464/plaits-lab-build-service-firmwarebuilder:rev-8ab5c8c018a2",
       "instance_type": "standard-4",
-      "max_instances": 1
+      "max_instances": 2
     }
   ],
   "durable_objects": {
@@ -86,9 +86,9 @@
         "max_batch_size": 1,
         "max_batch_timeout": 1,
         "max_retries": 5,
-        // The build container is limited to a single instance (max_instances: 1),
-        // so deliver one message at a time: concurrent deliveries would burn
-        // through their retries against the busy container and dead-letter.
+        // Firmware builds remain serialized. The second container instance is
+        // reserved for the public Speech encoder so listening and bank creation
+        // do not stall the compile queue.
         "max_concurrency": 1,
         "dead_letter_queue": "plaits-lab-builds-dead-letter"
       },

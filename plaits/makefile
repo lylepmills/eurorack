@@ -105,6 +105,13 @@ ifneq ($(ENGINE_CONFIG),)
 $(patsubst %,$(BUILD_DIR)%,$(RECIPE_CONFIG_OBJS)): CPPFLAGS += -include $(ENGINE_CONFIG)
 endif
 
+# Speech-bank data is independent of the engine registry and can be much larger
+# than the ordinary recipe config. Force it into Speech alone so the other
+# recipe-dependent objects do not parse or carry duplicate copies of the data.
+ifneq ($(SPEECH_CONFIG),)
+$(BUILD_DIR)speech_engine.o: CPPFLAGS += -include $(SPEECH_CONFIG)
+endif
+
 # Per-engine stereo (OUT/AUX as an L/R pair) is gated at compile time by
 # PLAITS_STEREO_<X> (default 1 in stereo_config.h). To disable an engine's
 # stereo the hosted builder passes PLAITS_STEREO_<X>=0, and the rule below adds

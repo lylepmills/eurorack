@@ -16,6 +16,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from speech_banks import validate_speech_banks
+
 
 CATALOG_PATH = Path(__file__).resolve().parents[1] / "plaits_lab_catalog/catalog.json"
 PUBLIC_CATALOG_PATH = Path(__file__).resolve().parents[1] / "plaits_lab_catalog/public_catalog.json"
@@ -46,7 +48,7 @@ PACKED_BANK_SIZE = PATCHES_PER_BANK * PACKED_PATCH_SIZE  # 4096
 # versions so adding a schema at the ceiling does not require extending a trail
 # of "10, 11, 12..." whitelists in the build container.
 MIN_RECIPE_SCHEMA_VERSION = 2
-MAX_RECIPE_SCHEMA_VERSION = 16
+MAX_RECIPE_SCHEMA_VERSION = 17
 CONFIGURATION_MIN_SCHEMA_VERSION = 4
 RESOURCES_MIN_SCHEMA_VERSION = 5
 FOUR_BANK_MIN_SCHEMA_VERSION = 6
@@ -60,6 +62,7 @@ ROVED_MIN_SCHEMA_VERSION = 15
 COLOR_BLIND_MODE_MIN_SCHEMA_VERSION = 15
 SCALE_BANK_MIN_SCHEMA_VERSION = 16
 LEVEL_AUTO_MIN_SCHEMA_VERSION = 16
+SPEECH_BANKS_MIN_SCHEMA_VERSION = 17
 
 MIN_SCALE_BANK_SIZE = 1
 MAX_SCALE_BANK_SIZE = 16
@@ -117,6 +120,8 @@ class BuildRecipe:
     # the builder treats as all stereo-capable engines when the aux option is
     # stereo. A tuple (schema 10+) lists exactly the enabled engines.
     stereo_engines: tuple[str, ...] | None = None
+    # v17: selected stock LPC banks followed by custom decoded-frame banks.
+    speech_banks: dict[str, Any] | None = None
 
 
 def load_catalog() -> dict[str, Engine]:
@@ -450,6 +455,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
     validate_bank_shape(public_slots, schema_version)
     user_data_banks: list[tuple[int, bytes]] = []   # v6 index-keyed
     slot_banks: list[tuple[int, bytes]] = []        # v12 slot-keyed
+    speech_banks: dict[str, Any] | None = None
     scale_bank = validate_scale_bank(DEFAULT_SCALE_BANK)
     if schema_version >= RESOURCES_MIN_SCHEMA_VERSION:
         resources = value.get("resources")
@@ -476,9 +482,16 @@ def validate_recipe(value: Any) -> BuildRecipe:
             and isinstance(resources, dict)
             and "scaleBank" in resources
         )
+        carries_speech_banks = (
+            schema_version >= SPEECH_BANKS_MIN_SCHEMA_VERSION
+            and isinstance(resources, dict)
+            and "speechBanks" in resources
+        )
         base_resource_keys = {"chordTables"}
         if carries_scale_bank:
             base_resource_keys.add("scaleBank")
+        if carries_speech_banks:
+            base_resource_keys.add("speechBanks")
         carries_user_data_banks = expect_user_data_banks or (
             schema_version >= CALIBRATION_MIN_SCHEMA_VERSION
             and isinstance(resources, dict)
@@ -492,6 +505,10 @@ def validate_recipe(value: Any) -> BuildRecipe:
         chord_tables = validate_chord_tables(resources.get("chordTables"))
         if carries_scale_bank:
             scale_bank = validate_scale_bank(resources.get("scaleBank"))
+        if carries_speech_banks:
+            if "speech" not in public_slots:
+                raise ValueError("speechBanks requires the Speech engine in the palette")
+            speech_banks = validate_speech_banks(resources.get("speechBanks"))
         if carries_user_data_banks:
             if schema_version >= SLOT_BANK_MIN_SCHEMA_VERSION:
                 slot_banks = validate_user_data_banks_v12(resources.get("userDataBanks"), len(slots))
@@ -663,6 +680,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
         user_data_bank_overrides=tuple(user_data_banks),
         slot_bank_overrides=tuple(slot_banks),
         stereo_engines=stereo_engines,
+        speech_banks=speech_banks,
         **normalized_options,
     )
 

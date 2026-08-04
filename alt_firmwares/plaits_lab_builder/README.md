@@ -1,14 +1,17 @@
 # Plaits Lab firmware build service
 
 This directory contains the approved-engine backend for Plaits Lab. It accepts
-legacy recipes and manifests through schema 16 containing 24 or 32 versioned
+legacy recipes and manifests through schema 17 containing 24 or 32 versioned
 engine references, firmware preferences and starting options, and bounded
-chord-table/custom-FM/scale-bank resources. Schema 15 can target either Mutable
+chord-table/custom-FM/scale-bank/Speech-bank resources. Schema 15 can target either Mutable
 Instruments Plaits or Plum Audio Ro'Ved and adds the color-blind bank display.
 Schema 16 adds an ordered bank of up to 16 editable scales shared by Diatonic
 Chord and Scale Stack, plus automatic LEVEL routing, which
 uses LPG decay on ordinary oscillator models and preserves LEVEL as
-velocity/accent on self-enveloped models. It generates a compile-time
+velocity/accent on self-enveloped models. Schema 17 adds a selectable set of
+the five shipped Speech banks plus up to eight total stock/custom LPC banks;
+custom banks carry bounded 14-byte decoded frames and word boundaries rather
+than source recordings or synthesis-model data. It generates a compile-time
 configuration, builds with the pinned Mutable
 Instruments ARM toolchain, enforces the Plaits flash and RAM limits, and returns
 either the default 48 kHz audio updater or, when explicitly requested, an
@@ -26,7 +29,9 @@ The service is split across two isolation layers:
 - A Cloudflare Worker validates and hashes recipes, stores job state in Durable
   Objects, schedules work through Queues, and caches successful WAV/HEX files in R2.
 - A non-root Cloudflare Container has no runtime internet access. It owns the
-  allowlisted C++ registry generator and the compiler. The request cannot
+  allowlisted C++ registry generator, compiler, and pinned Kokoro/LPC encoder.
+  Kokoro weights, voices, and language dictionaries are baked into the image.
+  The request cannot
   provide source, paths, make targets, flags, or shell fragments.
 
 ## API
@@ -42,6 +47,15 @@ and `https://www.rubato.audio`; keep both in the Worker tests and live canary.
 - `GET /v1/builds/:buildKey` returns durable job state.
 - `GET /v1/builds/:buildKey/firmware` streams the recipe's cached WAV or HEX
   artifact from R2 with the matching content type and filename.
+- `POST /v1/speech/encode` synthesizes a bounded word list and returns listening
+  previews plus the compact LPC resource stored in a schema-17 recipe.
+- `POST /v1/speech/encode-recording` splits a paused microphone take and
+  converts it without retaining the uploaded recording. Generated previews and
+  frame data return in the response; unlike deterministic text requests, the
+  recording request is not cached in R2.
+- `POST /v1/speech/segment`, `GET /v1/speech/voice-preview/…`, and
+  `GET /v1/speech/stock/…` support language-aware splitting and listening.
+  Deterministic text, voice, and stock results are content-addressed in R2.
 
 Engine references are resolved to the current approved catalog at request
 normalization. An older digest or compatible semantic version for the same
@@ -137,7 +151,7 @@ catalog was unaffected: `catalog:check` and the website `--check` both confirmed
 byte-identical snapshots at the new revision, so no engine digest moved.
 
 The build key covers the normalized slots, preferences, starting options,
-ordered chord-table and scale-bank data (without `createdAt`), requested output
+ordered chord-table, scale-bank, and Speech-bank data (without `createdAt`), requested output
 format, source revision, toolchain identity, and build-contract version. Identical recipes
 therefore share the same immutable artifact; WAV and HEX requests remain
 separate cache entries while sharing their field-guide PDF.

@@ -38,12 +38,28 @@ using namespace stmlib;
 void SpeechEngine::Init(BufferAllocator* allocator) {
   sam_speech_synth_.Init();
   naive_speech_synth_.Init();
+#if PLAITS_HAS_CUSTOM_SPEECH_BANKS
+  lpc_speech_synth_word_bank_.Init(
+      custom_speech_stock_word_banks,
+      CUSTOM_SPEECH_NUM_STOCK_BANKS,
+      custom_speech_word_banks,
+      CUSTOM_SPEECH_NUM_WORD_BANKS,
+      allocator);
+#else
   lpc_speech_synth_word_bank_.Init(
       word_banks_,
       LPC_SPEECH_SYNTH_NUM_WORD_BANKS,
       allocator);
+#endif
   lpc_speech_synth_controller_.Init(&lpc_speech_synth_word_bank_);
+#if PLAITS_HAS_CUSTOM_SPEECH_BANKS
+  word_bank_quantizer_.Init(
+      CUSTOM_SPEECH_NUM_STOCK_BANKS + CUSTOM_SPEECH_NUM_WORD_BANKS + 1,
+      0.1f,
+      false);
+#else
   word_bank_quantizer_.Init(LPC_SPEECH_SYNTH_NUM_WORD_BANKS + 1, 0.1f, false);
+#endif
   
   temp_buffer_[0] = allocator->Allocate<float>(kMaxBlockSize);
   temp_buffer_[1] = allocator->Allocate<float>(kMaxBlockSize);

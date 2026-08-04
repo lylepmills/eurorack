@@ -20,9 +20,81 @@ release notes, and user documentation become the source of truth.
 
 | Feature | Status | Last reviewed | Resume from |
 | --- | --- | --- | --- |
+| Renaissance-style Speech remix | Parked | 2026-08-03 | `codex/renaissance-sam-prototype` at `a815337` |
 | Four independent pitch CVs for chord engines | Parked | 2026-08-03 | `session/plaits-four-voct` at `ebed081` |
 
 ## Parked
+
+### Renaissance-style Speech remix
+
+**Concept.** Keep stock Plaits Speech and eventually offer a second speech
+model centered on retriggerable word playback and frozen-frame scanning. A
+selected word starts at a position chosen within that word when triggered; with
+no trigger, the same axis can hold and scan individual LPC frames as a playable
+formant oscillator. Custom word banks should feed both models, but each instance
+of the remix can initially carry one bank rather than reproducing stock Speech's
+multi-bank interface.
+
+**Decision.** Parked to finish and launch custom banks for stock Speech without
+making one editor serve two substantially different model interfaces. The
+listening work established enough musical difference to keep the idea: stock
+Speech is the broader phoneme/SAM/LPC collection with multiple word banks,
+while the remix is a focused word instrument whose distinctive behavior is
+starting within, retriggering, and freezing a word.
+
+**Prototypes.** Firmware branch `codex/renaissance-sam-prototype`, through
+commit `a815337` (`make LPC word playback jack aware`). The website listening
+and custom-bank A/B work is on Rubato Audio branch
+`codex/plaits-custom-words-prototype`; commit `b5172b49` added previews through
+both engines and `c3ce1085` deliberately returned the active editor to stock
+Speech. Treat all of these as research, not release-ready firmware.
+
+#### What we learned
+
+- The musically useful Renaissance idea is the interaction model, not its
+  circulated SAM data: choose a word, choose a frame offset, trigger forward
+  playback from that offset, or hold a frame when no trigger is present.
+- The remix can be recreated from Plaits' MIT-licensed LPC speech machinery and
+  newly encoded/custom word data. Do not copy or distribute the SoftVoice-derived
+  tables circulated with Braids Renaissance; their provenance is unclear and the
+  Renaissance source files have no individual license headers.
+- A continuous-phrase bank truncated useful material and made selection vague.
+  Splitting phrases into independently bounded words fixed both problems. The
+  later jack-aware prototype also stays in held-frame oscillator mode only while
+  TRIG is genuinely unpatched; a patched but infrequent trigger must not fall
+  back to free-running behavior.
+- Natural source pitch and a normalized 100 Hz pitch both sounded useful enough
+  to preserve as bank-generation choices. Inverse prosody did not.
+- Custom-bank previews proved that one editor can generate material for both
+  engines, but the hardware assignment UI should not conflate stock Speech's
+  several selectable banks with the remix's one-bank-per-model-slot design.
+
+#### Work required to resume
+
+1. Rebase the firmware prototype onto current `origin/master` and re-run the
+   trigger-edge regression suite, including long intervals between patched
+   triggers and held-frame behavior when TRIG is unpatched.
+2. Decide the final control map and naming. Preserve a full-range prosody control
+   and make the frozen-frame/word-playback distinction understandable from the
+   model description rather than hidden lore.
+3. Connect the production custom-word-bank format to the firmware generator.
+   Start with one selected bank per remix model slot; multiple independent remix
+   slots can carry different banks if flash permits.
+4. Restore the separate remix assignment and engine-preview UI only after the
+   stock Speech editor ships. Reuse the existing custom-bank preparation flow,
+   but present the two destination models as separate choices.
+5. Measure ARM flash/CPU, render public previews, audit stereo/AUX behavior, and
+   complete hardware listening before catalog or Palette exposure.
+
+#### Constraints worth preserving
+
+- Stock Speech remains available; the remix is an additional model, not a
+  replacement or a claim of exact Renaissance behavior.
+- Keep SoftVoice-derived tables out of distributable firmware unless their
+  provenance and permission are independently resolved.
+- A patched TRIG input is authoritative even during long quiet intervals.
+- Word boundaries are first-class bank data; do not return to one long phrase
+  chopped only by a fixed frame budget.
 
 ### Four independent pitch CVs for chord engines
 

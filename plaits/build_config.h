@@ -15,6 +15,12 @@
 #define PLAITS_ENGINE_COUNT 24
 #endif
 
+// Recipe builds can replace the five shipped LPC word banks with a selected
+// stock subset followed by host-generated decoded-frame banks.
+#ifndef PLAITS_HAS_CUSTOM_SPEECH_BANKS
+#define PLAITS_HAS_CUSTOM_SPEECH_BANKS 0
+#endif
+
 #if PLAITS_ENGINE_COUNT < 1 || PLAITS_ENGINE_COUNT > 32
 #error "PLAITS_ENGINE_COUNT must be between 1 and 32"
 #endif

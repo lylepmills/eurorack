@@ -114,8 +114,19 @@ void LPCSpeechSynthWordBank::Init(
     const LPCSpeechSynthWordBankData* word_banks,
     int num_banks,
     BufferAllocator* allocator) {
+  Init(word_banks, num_banks, NULL, 0, allocator);
+}
+
+void LPCSpeechSynthWordBank::Init(
+    const LPCSpeechSynthWordBankData* word_banks,
+    int num_banks,
+    const LPCSpeechSynthRawWordBankData* raw_word_banks,
+    int num_raw_word_banks,
+    BufferAllocator* allocator) {
   word_banks_ = word_banks;
   num_banks_ = num_banks;
+  raw_word_banks_ = raw_word_banks;
+  num_raw_word_banks_ = num_raw_word_banks;
   frames_ = allocator->Allocate<LPCSpeechSynth::Frame>(
       kLPCSpeechSynthMaxFrames);
   word_boundaries_ = allocator->Allocate<int>(kLPCSpeechSynthMaxWords);
@@ -181,12 +192,26 @@ size_t LPCSpeechSynthWordBank::LoadNextWord(const uint8_t* data) {
 }
 
 bool LPCSpeechSynthWordBank::Load(int bank) {
-  if (bank == loaded_bank_ || bank >= num_banks_) {
+  if (bank == loaded_bank_ || bank < 0 ||
+      bank >= num_banks_ + num_raw_word_banks_) {
     return false;
   }
 
   num_frames_ = 0;
   num_words_ = 0;
+
+  if (bank >= num_banks_) {
+    const LPCSpeechSynthRawWordBankData& raw = raw_word_banks_[bank - num_banks_];
+    num_frames_ = raw.num_frames;
+    num_words_ = raw.num_words;
+    copy(raw.frames, raw.frames + num_frames_, frames_);
+    copy(
+        raw.word_boundaries,
+        raw.word_boundaries + num_words_ + 1,
+        word_boundaries_);
+    loaded_bank_ = bank;
+    return true;
+  }
   
   const uint8_t* data = word_banks_[bank].data;
   size_t size = word_banks_[bank].size;

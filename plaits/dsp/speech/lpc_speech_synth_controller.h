@@ -97,6 +97,16 @@ struct LPCSpeechSynthWordBankData {
   size_t size;
 };
 
+// Custom banks already contain decoded LPC frames. Keeping them in this form
+// avoids forcing newly analysed speech through the legacy TI bitstream format;
+// the selected bank is copied into the controller's existing working buffer.
+struct LPCSpeechSynthRawWordBankData {
+  const LPCSpeechSynth::Frame* frames;
+  const uint16_t* word_boundaries;
+  uint16_t num_frames;
+  uint8_t num_words;
+};
+
 class LPCSpeechSynthWordBank {
  public:
   LPCSpeechSynthWordBank() { }
@@ -105,6 +115,12 @@ class LPCSpeechSynthWordBank {
   void Init(
       const LPCSpeechSynthWordBankData* word_banks,
       int num_banks,
+      stmlib::BufferAllocator* allocator);
+  void Init(
+      const LPCSpeechSynthWordBankData* word_banks,
+      int num_banks,
+      const LPCSpeechSynthRawWordBankData* raw_word_banks,
+      int num_raw_word_banks,
       stmlib::BufferAllocator* allocator);
   
   bool Load(int index);
@@ -130,8 +146,10 @@ class LPCSpeechSynthWordBank {
   size_t LoadNextWord(const uint8_t* data);
   
   const LPCSpeechSynthWordBankData* word_banks_;
-  
+  const LPCSpeechSynthRawWordBankData* raw_word_banks_;
+
   int num_banks_;
+  int num_raw_word_banks_;
   int loaded_bank_;
   int num_frames_;
   int num_words_;

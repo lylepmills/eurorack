@@ -3,12 +3,16 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import os
 import re
 import shutil
+import struct
 import subprocess
+import sys
+import tempfile
 import threading
 from dataclasses import dataclass
 from http import HTTPStatus
@@ -18,6 +22,7 @@ from typing import Any, Literal
 
 from generate_engine_config import render_config, validate_recipe
 from render_manual import manual_document, render_pdf
+from speech_banks import render_speech_config
 
 
 WORKSPACE = Path(os.environ.get("PLAITS_WORKSPACE", "/workspace")).resolve()
@@ -42,6 +47,8 @@ TOOLCHAIN_BIN = os.environ.get("PLAITS_TOOLCHAIN_BIN", "/usr/local/arm-4.8.3/bin
 # against malformed internal requests without contradicting the public schema.
 MAX_REQUEST_BYTES = 1024 * 1024
 MAX_BUILD_SECONDS = 12 * 60
+MAX_SPEECH_JSON_BYTES = 64 * 1024
+MAX_RECORDING_BYTES = 4 * 1024 * 1024
 BUILD_KEY_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 # The contract is echoed into a response header, so it is held to a short
 # printable token rather than trusted verbatim — no CRLF, no header injection.
@@ -79,6 +86,21 @@ class BuildRecord:
 
 BUILD_RECORDS: dict[str, BuildRecord] = {}
 BUILD_RECORDS_LOCK = threading.Lock()
+SPEECH_LOCK = threading.Lock()
+SPEECH_ROOT = Path("/tmp/plaits-speech")
+SPEECH_SCRIPTS = Path(__file__).resolve().parent
+LPC_FRAME = struct.Struct("<BBhh8b")
+VOICE_CATALOG = {
+    "en-US": ({"af_heart", "af_bella", "af_nicole", "am_fenrir", "am_michael"}, "The singing voice approached rapidly."),
+    "en-GB": ({"bf_emma", "bm_fable", "bm_george"}, "The singing voice approached rapidly."),
+    "es": ({"ef_dora", "em_alex"}, "La voz que cantaba se acercó rápidamente."),
+    "fr-FR": ({"ff_siwis"}, "La voix chantante s'est approchée rapidement."),
+    "hi": ({"hf_alpha", "hm_omega"}, "गाने वाली आवाज़ तेज़ी से पास आई।"),
+    "it": ({"if_sara", "im_nicola"}, "La voce che cantava si avvicinò rapidamente."),
+    "pt-BR": ({"pf_dora", "pm_alex"}, "A voz que cantava se aproximou rapidamente."),
+    "ja": ({"jf_alpha", "jf_gongitsune", "jf_nezumi", "jf_tebukuro", "jm_kumo"}, "歌声が急速に近づいてきました。"),
+    "zh": ({"zf_xiaobei", "zf_xiaoni", "zf_xiaoxiao", "zf_xiaoyi", "zm_yunjian", "zm_yunxi", "zm_yunxia", "zm_yunyang"}, "歌声迅速地靠近了。"),
+}
 
 
 def sha256_file(path: Path) -> str:
@@ -96,6 +118,190 @@ def redact_log(value: str) -> str:
 
 def request_size_is_valid(content_length: int) -> bool:
     return 0 < content_length <= MAX_REQUEST_BYTES
+
+
+def _speech_job_key(value: bytes, revision: str) -> str:
+    return hashlib.sha256(revision.encode("ascii") + b"\0" + value).hexdigest()[:24]
+
+
+def _run_speech_script(name: str, arguments: list[str]) -> None:
+    result = subprocess.run(
+        [sys.executable, str(SPEECH_SCRIPTS / name), *arguments],
+        cwd=WORKSPACE,
+        capture_output=True,
+        text=True,
+        timeout=4 * 60,
+    )
+    if result.returncode:
+        raise BuildError("speech_encoding_failed", "The Speech bank could not be encoded.", redact_log(result.stderr))
+
+
+def _data_audio(path: Path) -> str:
+    return "data:audio/wav;base64," + base64.b64encode(path.read_bytes()).decode("ascii")
+
+
+def _pack_plans(paths: list[Path]) -> tuple[list[int], str]:
+    packed = bytearray()
+    boundaries = [0]
+    for path in paths:
+        frames = []
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            values = [int(value) for value in line.split()]
+            if len(values) != 12:
+                raise BuildError("speech_encoding_failed", "The encoder produced an invalid LPC frame.")
+            frames.append(values)
+        if not frames:
+            raise BuildError("speech_encoding_failed", "The encoder produced an empty word.")
+        frames.append(frames[-1][:])
+        for frame in frames:
+            packed.extend(LPC_FRAME.pack(*frame))
+        boundaries.append(boundaries[-1] + len(frames))
+    if boundaries[-1] > 1024:
+        raise BuildError("speech_bank_too_large", "This bank is too long for Plaits. Use fewer or shorter words.")
+    return boundaries, base64.b64encode(packed).decode("ascii")
+
+
+def _validate_speech_request(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict) or value.get("format") != "rubato.plaits-lpc-word-bank/v1":
+        raise BuildError("invalid_request", "The Speech bank request is invalid.")
+    language = value.get("language")
+    synthesis = value.get("synthesis")
+    voice = synthesis.get("voice") if isinstance(synthesis, dict) else None
+    if language not in VOICE_CATALOG or voice not in VOICE_CATALOG[language][0]:
+        raise BuildError("invalid_request", "Choose a supported voice for the selected language.")
+    entries = value.get("entries")
+    if not isinstance(entries, list) or not 1 <= len(entries) <= 16:
+        raise BuildError("invalid_request", "A Speech bank must contain between 1 and 16 words.")
+    normalized_entries = []
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            raise BuildError("invalid_request", f"Word {index + 1} is invalid.")
+        word = entry.get("word")
+        spoken_as = entry.get("spokenAs", "")
+        if not isinstance(word, str) or not word.strip() or len(word) > 80:
+            raise BuildError("invalid_request", f"Word {index + 1} is missing or too long.")
+        if not isinstance(spoken_as, str) or len(spoken_as) > 80:
+            raise BuildError("invalid_request", f"Pronunciation hint {index + 1} is invalid.")
+        normalized_entries.append({"word": word.strip(), **({"spokenAs": spoken_as.strip()} if spoken_as.strip() else {})})
+    return {
+        "format": "rubato.plaits-lpc-word-bank/v1",
+        "name": str(value.get("name", "Custom words"))[:80],
+        "language": language,
+        "entries": normalized_entries,
+        "synthesis": {"voice": voice, "pitchContour": "flat-to-natural", "referencePitchHz": 100},
+    }
+
+
+def encode_speech_bank(value: Any) -> dict[str, Any]:
+    request = _validate_speech_request(value)
+    encoded = json.dumps(request, sort_keys=True, ensure_ascii=False).encode("utf-8")
+    job_id = _speech_job_key(encoded, "continuous-kokoro-production-v1")
+    output = SPEECH_ROOT / "banks" / job_id
+    manifest_path = output / "manifest.json"
+    cached = manifest_path.is_file()
+    if not cached:
+        with SPEECH_LOCK:
+            cached = manifest_path.is_file()
+            if not cached:
+                output.mkdir(parents=True, exist_ok=True)
+                request_path = output / "request.json"
+                request_path.write_text(json.dumps(request, ensure_ascii=False), encoding="utf-8")
+                _run_speech_script("encode_word_bank.py", [
+                    "--repo", str(WORKSPACE),
+                    "--request", str(request_path),
+                    "--output-dir", str(output),
+                    "--artifact-cache", str(SPEECH_ROOT / "artifacts"),
+                ])
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    entries = []
+    plans = []
+    for entry in manifest["entries"]:
+        index = int(entry["index"])
+        prefix = f"entry-{index:02d}"
+        plans.append(output / f"{prefix}.plan")
+        entries.append({
+            key: entry[key] for key in ("index", "word", "spokenAs", "frames", "durationSeconds", "frameBytes", "sourceF0Median")
+        } | {"audio": {mode: _data_audio(output / f"{prefix}-{mode}.wav") for mode in ("source", "natural", "flat")}})
+    boundaries, frame_data = _pack_plans(plans)
+    return {
+        "jobId": job_id,
+        "cached": cached,
+        "bankAudio": {mode: _data_audio(output / manifest["bankFiles"][mode]) for mode in ("natural", "flat")},
+        "entries": entries,
+        "totals": manifest["totals"],
+        "synthesis": manifest["synthesis"],
+        "cache": manifest.get("cache"),
+        "wordBoundaries": boundaries,
+        "frameData": frame_data,
+    }
+
+
+def encode_recording(audio: bytes) -> dict[str, Any]:
+    job_id = _speech_job_key(audio, "paused-recording-production-v1")
+    with tempfile.TemporaryDirectory(prefix="speech-recording-") as temporary:
+        output = Path(temporary)
+        source = output / "recording.wav"
+        source.write_bytes(audio)
+        _run_speech_script("encode_recording.py", [
+            "--repo", str(WORKSPACE), "--source", str(source), "--output-dir", str(output),
+        ])
+        manifest = json.loads((output / "recording-manifest.json").read_text(encoding="utf-8"))
+        entries = []
+        plans = []
+        for entry in manifest["entries"]:
+            index = int(entry["index"])
+            prefix = f"recording-word-{index:02d}"
+            plans.append(output / f"{prefix}.plan")
+            entries.append({
+                key: entry[key] for key in ("index", "frames", "guardFrames", "frameBytes", "durationSeconds", "sourceF0Median")
+            } | {"audio": {mode: _data_audio(output / f"{prefix}-{mode}.wav") for mode in ("source", "natural", "flat")}})
+        boundaries, frame_data = _pack_plans(plans)
+        return {
+            "jobId": job_id,
+            "cached": False,
+            "entries": entries,
+            "bankAudio": {mode: _data_audio(output / manifest["bankFiles"][mode]) for mode in ("source", "natural", "flat")},
+            "totals": manifest["totals"],
+            "segmentation": manifest["segmentation"],
+            "normalization": manifest.get("normalization"),
+            "sampleRate": manifest["sampleRate"],
+            "wordBoundaries": boundaries,
+            "frameData": frame_data,
+        }
+
+
+def voice_preview(language: str, voice: str) -> Path:
+    if language not in VOICE_CATALOG or voice not in VOICE_CATALOG[language][0]:
+        raise BuildError("invalid_request", "That Speech voice is not supported.")
+    text = VOICE_CATALOG[language][1]
+    job_id = _speech_job_key(f"{language}\0{voice}\0{text}".encode("utf-8"), "voice-preview-production-v1")
+    output = SPEECH_ROOT / "voices" / job_id
+    target = output / "voice-preview-source.wav"
+    if not target.is_file():
+        with SPEECH_LOCK:
+            if not target.is_file():
+                _run_speech_script("render_voice_preview.py", [
+                    "--language", language, "--voice", voice, "--text", text,
+                    "--output-dir", str(output), "--artifact-cache", str(SPEECH_ROOT / "artifacts"),
+                ])
+    return target
+
+
+def stock_preview(bank: int, mode: str) -> Path:
+    if bank < 0 or bank > 4 or mode not in {"natural", "flat"}:
+        raise BuildError("invalid_request", "That stock Speech preview is invalid.")
+    target = SPEECH_ROOT / "stock" / f"bank-{bank + 1}-{mode}.wav"
+    if not target.is_file():
+        with SPEECH_LOCK:
+            if not target.is_file():
+                target.parent.mkdir(parents=True, exist_ok=True)
+                subprocess.run([
+                    "/usr/local/bin/plaits-render-stock-speech-bank", str(bank), str(target),
+                    "1.0" if mode == "natural" else "0.0",
+                ], check=True, timeout=60)
+    return target
 
 
 def parse_size(elf_path: Path) -> tuple[int, int, int]:
@@ -269,8 +475,11 @@ def build_firmware(payload: Any) -> tuple[Path, FirmwareOutput, dict[str, str]]:
         shutil.rmtree(build_dir)
     build_dir.mkdir(parents=True, exist_ok=False)
     config_path = build_dir / "engine_config.h"
+    speech_config_path = build_dir / "speech_config.h"
     recipe_path = build_dir / "recipe.json"
     config_path.write_text(render_config(validated_recipe), encoding="utf-8")
+    speech_config_path.write_text(
+        render_speech_config(validated_recipe.speech_banks), encoding="utf-8")
     recipe_path.write_text(json.dumps(recipe, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
 
     command = [
@@ -279,6 +488,7 @@ def build_firmware(payload: Any) -> tuple[Path, FirmwareOutput, dict[str, str]]:
         "plaits/makefile",
         f"BUILD_ROOT={build_dir}/",
         f"ENGINE_CONFIG={config_path}",
+        f"SPEECH_CONFIG={speech_config_path}",
         f"CC={_compiler('arm-none-eabi-gcc')}",
         f"CXX={_compiler('arm-none-eabi-g++')}",
         # Every build gets a fresh BUILD_ROOT, so the per-object .d files are
@@ -426,6 +636,22 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/ping":
             self.send_json({"ok": True}, HTTPStatus.OK)
             return
+        voice_match = re.fullmatch(r"/speech/voice-preview/([^/]+)/([^/]+)\.wav", self.path)
+        stock_match = re.fullmatch(r"/speech/stock/bank-([1-5])-(natural|flat)\.wav", self.path)
+        try:
+            if voice_match:
+                self.send_wav(voice_preview(voice_match.group(1), voice_match.group(2)))
+                return
+            if stock_match:
+                self.send_wav(stock_preview(int(stock_match.group(1)) - 1, stock_match.group(2)))
+                return
+        except BuildError as error:
+            self.send_json_error(error, HTTPStatus.BAD_REQUEST)
+            return
+        except Exception as error:  # noqa: BLE001
+            print(f"builder: speech preview failed: {redact_log(str(error))}", flush=True)
+            self.send_json_error(BuildError("speech_encoding_failed", "The Speech preview could not be rendered."), HTTPStatus.INTERNAL_SERVER_ERROR)
+            return
         match = re.fullmatch(r"/build/([0-9a-f]{64})", self.path)
         if not match:
             self.send_error(HTTPStatus.NOT_FOUND)
@@ -448,6 +674,15 @@ class Handler(BaseHTTPRequestHandler):
         self.send_artifact(record.artifact_path, record.output, record.metadata)
 
     def do_POST(self) -> None:  # noqa: N802
+        if self.path == "/speech/segment":
+            self.handle_speech_segment()
+            return
+        if self.path == "/speech/encode":
+            self.handle_speech_encode()
+            return
+        if self.path == "/speech/encode-recording":
+            self.handle_speech_recording()
+            return
         if self.path == "/manual":
             self.handle_manual()
             return
@@ -475,6 +710,56 @@ class Handler(BaseHTTPRequestHandler):
                 BUILD_RECORDS[build_key] = BuildRecord()
                 threading.Thread(target=run_build, args=(build_key, payload), daemon=True).start()
         self.send_json({"status": "building"}, HTTPStatus.ACCEPTED)
+
+    def handle_speech_segment(self) -> None:
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            if not 0 < length <= MAX_SPEECH_JSON_BYTES:
+                raise BuildError("invalid_request", "The text-splitting request size is invalid.")
+            value = json.loads(self.rfile.read(length))
+            language = value.get("language") if isinstance(value, dict) else None
+            source = value.get("text") if isinstance(value, dict) else None
+            if language not in {"ja", "zh"} or not isinstance(source, str) or not source.strip() or len(source) > 2000:
+                raise BuildError("invalid_request", "The text-splitting request is invalid.")
+            result = subprocess.run(
+                [sys.executable, str(SPEECH_SCRIPTS / "segment_text.py"), "--language", language, "--text", source.strip()],
+                check=True, capture_output=True, text=True, timeout=30,
+            )
+            words = json.loads(result.stdout)["words"]
+            self.send_json({"words": words[:16], "totalWords": len(words)}, HTTPStatus.OK)
+        except (json.JSONDecodeError, UnicodeDecodeError, subprocess.SubprocessError) as error:
+            self.send_json_error(BuildError("invalid_request", "The text could not be split.", redact_log(str(error))), HTTPStatus.BAD_REQUEST)
+        except BuildError as error:
+            self.send_json_error(error, HTTPStatus.BAD_REQUEST)
+
+    def handle_speech_encode(self) -> None:
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            if not 0 < length <= MAX_SPEECH_JSON_BYTES:
+                raise BuildError("invalid_request", "The Speech bank request size is invalid.")
+            value = json.loads(self.rfile.read(length))
+            self.send_json(encode_speech_bank(value), HTTPStatus.OK)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            self.send_json_error(BuildError("invalid_request", "The Speech bank request is not valid JSON."), HTTPStatus.BAD_REQUEST)
+        except BuildError as error:
+            status = HTTPStatus.BAD_REQUEST if error.code == "invalid_request" else HTTPStatus.UNPROCESSABLE_ENTITY
+            self.send_json_error(error, status)
+        except Exception as error:  # noqa: BLE001
+            print(f"builder: speech encoding failed: {redact_log(str(error))}", flush=True)
+            self.send_json_error(BuildError("speech_encoding_failed", "The Speech bank could not be encoded."), HTTPStatus.INTERNAL_SERVER_ERROR)
+
+    def handle_speech_recording(self) -> None:
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            if not 0 < length <= MAX_RECORDING_BYTES:
+                raise BuildError("invalid_request", "Keep the recording to 15 seconds or less.")
+            self.send_json(encode_recording(self.rfile.read(length)), HTTPStatus.OK)
+        except BuildError as error:
+            status = HTTPStatus.BAD_REQUEST if error.code == "invalid_request" else HTTPStatus.UNPROCESSABLE_ENTITY
+            self.send_json_error(error, status)
+        except Exception as error:  # noqa: BLE001
+            print(f"builder: recording encoding failed: {redact_log(str(error))}", flush=True)
+            self.send_json_error(BuildError("speech_encoding_failed", "The recording could not be converted into a Speech bank."), HTTPStatus.INTERNAL_SERVER_ERROR)
 
     def handle_manual(self) -> None:
         # Rendering takes a couple of seconds, so unlike /build this endpoint
@@ -538,6 +823,14 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         with artifact_path.open("rb") as artifact:
             shutil.copyfileobj(artifact, self.wfile, length=1024 * 1024)
+
+    def send_wav(self, path: Path) -> None:
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "audio/wav")
+        self.send_header("Content-Length", str(path.stat().st_size))
+        self.end_headers()
+        with path.open("rb") as audio:
+            shutil.copyfileobj(audio, self.wfile)
 
     def send_json(self, value: Any, status: HTTPStatus) -> None:
         body = (json.dumps(value, separators=(",", ":")) + "\n").encode("utf-8")

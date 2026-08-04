@@ -102,6 +102,96 @@ function manualArtifactKey(manualKey: string): string {
   return `manuals/${manualKey}.pdf`;
 }
 
+const SPEECH_ENCODER_CONTAINER = "speech-encoder";
+
+async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map((value) => value.toString(16).padStart(2, "0")).join("");
+}
+
+function speechResponse(body: BodyInit | null, init: ResponseInit = {}): Response {
+  const headers = new Headers(init.headers);
+  headers.set("Cache-Control", "no-store");
+  return new Response(body, { ...init, headers });
+}
+
+async function speechRateLimit(request: Request, env: Env): Promise<Response | null> {
+  const clientIp = request.headers.get("CF-Connecting-IP") ?? "local-development";
+  const { success } = await env.BUILD_RATE_LIMITER.limit({ key: `speech:${clientIp}` });
+  return success ? null : json(
+    { error: "Too many new Speech encodings were requested. Please wait a minute and try again." },
+    { status: 429, headers: { "Retry-After": "60" } },
+  );
+}
+
+async function proxySpeechJson(
+  request: Request,
+  env: Env,
+  containerPath: string,
+  options: { cacheNamespace?: string; maxBytes: number },
+): Promise<Response> {
+  const bytes = await request.arrayBuffer();
+  if (bytes.byteLength === 0 || bytes.byteLength > options.maxBytes) {
+    return json({ error: "The Speech request is too large." }, { status: 413 });
+  }
+  const cacheKey = options.cacheNamespace
+    ? `speech/${options.cacheNamespace}/${await sha256Hex(bytes)}.json`
+    : null;
+  if (cacheKey) {
+    const cached = await env.ARTIFACTS.get(cacheKey);
+    if (cached) {
+      return speechResponse(cached.body, {
+        status: 200,
+        headers: { "Content-Type": "application/json; charset=utf-8", "X-Speech-Cache": "hit" },
+      });
+    }
+  }
+  const limited = await speechRateLimit(request, env);
+  if (limited) return limited;
+  const container = getContainer(env.FIRMWARE_BUILDER, SPEECH_ENCODER_CONTAINER);
+  const response = await container.fetch(`http://container${containerPath}`, {
+    method: "POST",
+    headers: { "Content-Type": request.headers.get("Content-Type") ?? "application/json" },
+    body: bytes,
+  });
+  const result = await response.arrayBuffer();
+  const contentType = response.headers.get("Content-Type") ?? "application/json; charset=utf-8";
+  if (response.ok && cacheKey) {
+    await env.ARTIFACTS.put(cacheKey, result, { httpMetadata: { contentType: "application/json" } });
+  }
+  return speechResponse(result, {
+    status: response.status,
+    headers: { "Content-Type": contentType, "X-Speech-Cache": response.ok ? "miss" : "error" },
+  });
+}
+
+async function proxySpeechAudio(
+  request: Request,
+  env: Env,
+  containerPath: string,
+  cacheKey: string,
+): Promise<Response> {
+  const cached = await env.ARTIFACTS.get(cacheKey);
+  if (cached) {
+    return speechResponse(cached.body, {
+      status: 200,
+      headers: { "Content-Type": "audio/wav", "X-Speech-Cache": "hit" },
+    });
+  }
+  const limited = await speechRateLimit(request, env);
+  if (limited) return limited;
+  const container = getContainer(env.FIRMWARE_BUILDER, SPEECH_ENCODER_CONTAINER);
+  const response = await container.fetch(`http://container${containerPath}`);
+  const result = await response.arrayBuffer();
+  if (response.ok && response.headers.get("Content-Type") === "audio/wav") {
+    await env.ARTIFACTS.put(cacheKey, result, { httpMetadata: { contentType: "audio/wav" } });
+  }
+  return speechResponse(result, {
+    status: response.status,
+    headers: { "Content-Type": response.headers.get("Content-Type") ?? "application/json", "X-Speech-Cache": response.ok ? "miss" : "error" },
+  });
+}
+
 function artifactSummary(artifact: R2Object): NonNullable<JobState["artifact"]> {
   return {
     bytes: artifact.size,
@@ -605,11 +695,41 @@ export default {
           },
           buildContract: env.PLAITS_BUILD_CONTRACT,
         });
+      } else if (request.method === "POST" && url.pathname === "/v1/speech/segment") {
+        response = await proxySpeechJson(request, env, "/speech/segment", {
+          cacheNamespace: "segments-v1",
+          maxBytes: 64 * 1024,
+        });
+      } else if (request.method === "POST" && url.pathname === "/v1/speech/encode") {
+        response = await proxySpeechJson(request, env, "/speech/encode", {
+          cacheNamespace: "banks-v1",
+          maxBytes: 64 * 1024,
+        });
+      } else if (request.method === "POST" && url.pathname === "/v1/speech/encode-recording") {
+        response = await proxySpeechJson(request, env, "/speech/encode-recording", {
+          maxBytes: 4 * 1024 * 1024,
+        });
       } else if (request.method === "POST" && url.pathname === "/v1/builds") {
         response = await createBuild(request, env);
       } else {
+        const voiceMatch = url.pathname.match(/^\/v1\/speech\/voice-preview\/([^/]+)\/([^/]+)\.wav$/);
+        const stockMatch = url.pathname.match(/^\/v1\/speech\/stock\/bank-([1-5])-(natural|flat)\.wav$/);
         const match = url.pathname.match(/^\/v1\/builds\/([0-9a-f]+)(\/firmware|\/manual)?$/);
-        if (request.method === "GET" && match?.[2] === "/firmware") response = await downloadFirmware(match[1], env);
+        if (request.method === "GET" && voiceMatch) {
+          response = await proxySpeechAudio(
+            request,
+            env,
+            `/speech/voice-preview/${voiceMatch[1]}/${voiceMatch[2]}.wav`,
+            `speech/voices-v1/${voiceMatch[1]}/${voiceMatch[2]}.wav`,
+          );
+        } else if (request.method === "GET" && stockMatch) {
+          response = await proxySpeechAudio(
+            request,
+            env,
+            `/speech/stock/bank-${stockMatch[1]}-${stockMatch[2]}.wav`,
+            `speech/stock-v1/bank-${stockMatch[1]}-${stockMatch[2]}.wav`,
+          );
+        } else if (request.method === "GET" && match?.[2] === "/firmware") response = await downloadFirmware(match[1], env);
         else if (request.method === "GET" && match?.[2] === "/manual") response = await downloadManual(match[1], env);
         else if (request.method === "GET" && match) response = await getBuild(match[1], env);
         else response = json({ error: { code: "not_found", message: "Route not found." } }, { status: 404 });

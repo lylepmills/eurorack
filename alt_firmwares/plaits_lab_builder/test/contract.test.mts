@@ -40,7 +40,7 @@ test("the Worker and compiler catalogs contain the same approved IDs", async () 
     approvedEngineIds,
     compilerCatalog.engines.map((engine: { id: string }) => engine.id),
   );
-  assert.equal(approvedEngineIds.length, 83);
+  assert.equal(approvedEngineIds.length, 85);
 });
 
 test("normalization removes nondeterministic manifest fields", () => {
@@ -521,6 +521,83 @@ test("version 16 validates, normalizes, and hashes the scale bank", async () => 
   const mismatched = structuredClone(recipe);
   mismatched.resources.scaleBank[1].tuning = "12-TET";
   assert.throws(() => normalizeRecipe(mismatched), /tuning label/);
+});
+
+test("version 17 carries bounded Speech banks and hashes their LPC frames", async () => {
+  const publicCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const chordCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_chord_tables/catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const byId = new Map(publicCatalog.engines.map((engine: {
+    id: string; packageId: string; version: string; digest: string;
+  }) => [engine.id, engine]));
+  const frame = Buffer.alloc(14);
+  frame[0] = 12;
+  frame[1] = 80;
+  const speechBanks = {
+    stockBankIds: [0, 3],
+    customBanks: [{
+      words: ["hello"],
+      wordBoundaries: [0, 1],
+      frameData: frame.toString("base64"),
+    }],
+  };
+  const recipe = {
+    ...structuredClone(fixture),
+    schemaVersion: 17,
+    slots: fixture.slots.map((engineId: string) => {
+      const engine = byId.get(engineId)!;
+      return {
+        engine: engineId,
+        package: engine.packageId,
+        version: engine.version,
+        digest: engine.digest,
+      };
+    }),
+    preferences: { navigationMode: "linear" },
+    initialOptions: {
+      lockedFrequencyKnob: "octaves",
+      modelInput: "model",
+      levelInput: "level",
+      auxOutput: "alternate-model",
+      suboscillatorOctave: 0,
+      chordTable: chordCatalog.tables[0].id,
+      holdOnTrigger: false,
+    },
+    resources: { chordTables: [structuredClone(chordCatalog.tables[0])], speechBanks },
+  };
+  const normalized = normalizeRecipe(recipe);
+  assert.equal(normalized.schemaVersion, 17);
+  assert.deepEqual(normalized.resources.speechBanks, speechBanks);
+
+  const identity = { sourceRevision: "source", toolchain: "toolchain", contract: "17" };
+  const changed = structuredClone(recipe);
+  changed.resources.speechBanks.customBanks[0].frameData = Buffer.from([
+    13, ...frame.subarray(1),
+  ]).toString("base64");
+  assert.notEqual(
+    await computeBuildKey(normalized, identity),
+    await computeBuildKey(normalizeRecipe(changed), identity),
+  );
+
+  const tooOld = structuredClone(recipe);
+  tooOld.schemaVersion = 16;
+  assert.throws(
+    () => normalizeRecipe(tooOld),
+    (error: { code?: string }) => error.code === "invalid_resources",
+  );
+
+  const withoutSpeech = structuredClone(recipe);
+  withoutSpeech.slots = withoutSpeech.slots.map(
+    (slot: { engine: string }) => slot.engine === "speech"
+      ? structuredClone(withoutSpeech.slots[0])
+      : slot,
+  );
+  assert.throws(() => normalizeRecipe(withoutSpeech), /require.*Speech model/);
 });
 
 test("version 6 carries a validated custom FM bank and hashes its packed bytes", async () => {

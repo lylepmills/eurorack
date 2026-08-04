@@ -36,7 +36,7 @@ export type NormalizedChordTable = {
 // feature gates below use minimums so a newly supported schema cannot get
 // stranded behind an old "10, 11, 12..." whitelist.
 export const minRecipeSchemaVersion = 2;
-export const maxRecipeSchemaVersion = 16;
+export const maxRecipeSchemaVersion = 17;
 const configurationMinSchemaVersion = 4;
 const resourcesMinSchemaVersion = 5;
 const fourBankMinSchemaVersion = 6;       // 32 slots
@@ -50,6 +50,7 @@ const rovedMinSchemaVersion = 15;         // four-knob Ro'Ved panel
 const colorBlindModeMinSchemaVersion = 15; // brightness-coded banks
 const scaleBankMinSchemaVersion = 16;      // recipe-driven scale bank
 export const levelAutoMinSchemaVersion = 16; // engine-aware LEVEL routing
+const speechBanksMinSchemaVersion = 17;      // selectable/custom Speech LPC banks
 
 export const minScaleBankSize = 1;
 export const maxScaleBankSize = 16;
@@ -110,8 +111,19 @@ export type NormalizedSlotBank = {
   bank: NormalizedUserDataBank["bank"];
 };
 
+export type NormalizedSpeechBank = {
+  words: string[];
+  wordBoundaries: number[];
+  frameData: string;
+};
+
+export type NormalizedSpeechBanks = {
+  stockBankIds: number[];
+  customBanks: NormalizedSpeechBank[];
+};
+
 export type NormalizedRecipe = {
-  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16;
+  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17;
   target: "mutable-instruments-plaits" | "plum-audio-roved";
   firmware: "rubato-plaits";
   // A null entry is an empty slot (v7 short banks); filled slots are engine ids.
@@ -143,6 +155,8 @@ export type NormalizedRecipe = {
     // v6 carries index-keyed banks; v12 carries per-slot banks. (The empty
     // fourth-bank marker on a 32-slot v7-v11 recipe is an empty array.)
     userDataBanks?: NormalizedUserDataBank[] | NormalizedSlotBank[];
+    // v17: selected shipped LPC banks followed by custom decoded-frame banks.
+    speechBanks?: NormalizedSpeechBanks;
   };
   // Catalog ids of the engines built with the stereo render path (introduced in
   // schema 10). Absent on schema <= 9 (the global-stereo recipes, which the
@@ -402,6 +416,66 @@ function normalizeSlotBanks(value: unknown, numSlots: number): NormalizedSlotBan
   });
 }
 
+const lpcFrameBytes = 14;
+const maxSpeechBanks = 8;
+const maxSpeechWords = 16;
+const maxSpeechFrames = 1024;
+const canonicalBase64Pattern = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+
+function normalizeSpeechBanks(value: unknown): NormalizedSpeechBanks {
+  if (!value || typeof value !== "object") {
+    throw new ContractError("invalid_speech_banks", "The recipe contains invalid Speech word banks.");
+  }
+  const candidate = value as Record<string, unknown>;
+  if (!hasExactKeys(candidate, ["stockBankIds", "customBanks"])
+      || !Array.isArray(candidate.stockBankIds)
+      || !Array.isArray(candidate.customBanks)) {
+    throw new ContractError("invalid_speech_banks", "The recipe contains invalid Speech word banks.");
+  }
+  const stockBankIds = candidate.stockBankIds;
+  if (stockBankIds.some((id) => !Number.isInteger(id) || Number(id) < 0 || Number(id) > 4)
+      || new Set(stockBankIds).size !== stockBankIds.length
+      || stockBankIds.length + candidate.customBanks.length < 1
+      || stockBankIds.length + candidate.customBanks.length > maxSpeechBanks) {
+    throw new ContractError(
+      "invalid_speech_banks",
+      `Speech must contain between one and ${maxSpeechBanks} total banks.`,
+    );
+  }
+  const customBanks = candidate.customBanks.map((raw): NormalizedSpeechBank => {
+    if (!raw || typeof raw !== "object") {
+      throw new ContractError("invalid_speech_bank", "The recipe contains an invalid custom Speech bank.");
+    }
+    const bank = raw as Record<string, unknown>;
+    if (!hasExactKeys(bank, ["words", "wordBoundaries", "frameData"])
+        || !Array.isArray(bank.words)
+        || bank.words.length < 1 || bank.words.length > maxSpeechWords
+        || bank.words.some((word) => typeof word !== "string" || !word.trim() || word.length > 80)
+        || !Array.isArray(bank.wordBoundaries)
+        || typeof bank.frameData !== "string"
+        || !canonicalBase64Pattern.test(bank.frameData)) {
+      throw new ContractError("invalid_speech_bank", "The recipe contains an invalid custom Speech bank.");
+    }
+    const packedBytes = (bank.frameData.length / 4) * 3
+      - (bank.frameData.endsWith("==") ? 2 : bank.frameData.endsWith("=") ? 1 : 0);
+    const frameCount = packedBytes / lpcFrameBytes;
+    const boundaries = bank.wordBoundaries;
+    if (packedBytes <= 0 || !Number.isInteger(frameCount) || frameCount > maxSpeechFrames
+        || boundaries.length !== bank.words.length + 1
+        || boundaries.some((item) => !Number.isInteger(item))
+        || boundaries[0] !== 0 || boundaries.at(-1) !== frameCount
+        || boundaries.slice(1).some((item, index) => Number(item) <= Number(boundaries[index]))) {
+      throw new ContractError("invalid_speech_bank", "A custom Speech bank contains invalid LPC word boundaries.");
+    }
+    return {
+      words: bank.words.map((word) => String(word).trim()),
+      wordBoundaries: boundaries.map(Number),
+      frameData: bank.frameData,
+    };
+  });
+  return { stockBankIds: stockBankIds.map(Number), customBanks };
+}
+
 export class ContractError extends Error {
   readonly code: string;
 
@@ -652,6 +726,7 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
   let scaleBank: NormalizedScale[] | undefined;
   let userDataBanks: NormalizedUserDataBank[] | undefined;   // v6 index-keyed
   let slotBanks: NormalizedSlotBank[] | undefined;           // v12 slot-keyed
+  let speechBanks: NormalizedSpeechBanks | undefined;        // v17
   if (schemaVersion >= resourcesMinSchemaVersion) {
     const resources = candidate.resources;
     // v6 always carries index-keyed banks; v12 always carries per-slot banks (its
@@ -676,8 +751,13 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     // its shipped default bank.
     const carriesScaleBank = schemaVersion >= scaleBankMinSchemaVersion
       && Object.hasOwn(resourceValues, "scaleBank");
-    const baseKeys = carriesScaleBank
-      ? ["chordTables", "scaleBank"] : ["chordTables"];
+    const carriesSpeechBanks = schemaVersion >= speechBanksMinSchemaVersion
+      && Object.hasOwn(resourceValues, "speechBanks");
+    const baseKeys = [
+      "chordTables",
+      ...(carriesScaleBank ? ["scaleBank"] : []),
+      ...(carriesSpeechBanks ? ["speechBanks"] : []),
+    ];
     const carriesUserDataBanks = expectsUserDataBanks
       || (schemaVersion >= calibrationMinSchemaVersion
         && hasExactKeys(resourceValues, [...baseKeys, "userDataBanks"]));
@@ -689,6 +769,12 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     chordTables = normalizeChordTables(resourceValues.chordTables);
     if (carriesScaleBank) {
       scaleBank = normalizeScaleBank(resourceValues.scaleBank);
+    }
+    if (carriesSpeechBanks) {
+      if (!slots.includes("speech")) {
+        throw new ContractError("invalid_speech_banks", "Speech word banks require the Speech model in the palette.");
+      }
+      speechBanks = normalizeSpeechBanks(resourceValues.speechBanks);
     }
     if (carriesUserDataBanks) {
       const rawBanks = resourceValues.userDataBanks;
@@ -738,7 +824,8 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     // (v8); a short-bank recipe (a trailing empty slot) stays v7; a candidate that
     // carried v6 resources (even an empty custom-bank list, e.g. a 32-slot recipe)
     // stays v6; else v5.
-    schemaVersion: scaleBank !== undefined
+    schemaVersion: speechBanks !== undefined ? 17
+      : scaleBank !== undefined
         || configuration.initialOptions.levelInput === "auto" ? 16
       : candidate.target === "plum-audio-roved"
         || configuration.preferences.colorBlindMode ? 15
@@ -760,6 +847,7 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     resources: {
       chordTables,
       ...(scaleBank !== undefined ? { scaleBank } : {}),
+      ...(speechBanks !== undefined ? { speechBanks } : {}),
       ...((userDataBanks ?? slotBanks)
         ? { userDataBanks: userDataBanks ?? slotBanks }
         : {}),
