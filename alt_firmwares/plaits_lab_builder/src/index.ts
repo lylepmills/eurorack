@@ -102,7 +102,10 @@ function manualArtifactKey(manualKey: string): string {
   return `manuals/${manualKey}.pdf`;
 }
 
-const SPEECH_ENCODER_CONTAINER = "speech-encoder";
+// The name is the Durable Object identity, not just a label. Bump it when the
+// compiler image's baked speech dependencies change so a long-lived encoder
+// instance cannot keep serving the previous image after a container rollout.
+const SPEECH_ENCODER_CONTAINER = "speech-encoder-v2";
 
 async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", bytes);
