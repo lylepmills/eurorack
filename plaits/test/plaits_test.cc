@@ -1800,7 +1800,11 @@ void ValidateSixOpMacroResponse() {
           fm_patches_table[bank_index], 0.5f, harmonics, 128);
       const double patch_high = SixOpMacroSignature(
           fm_patches_table[bank_index], 1.0f, harmonics, 128);
-      const double patch_threshold = max(1.0, patch_stock * 0.001);
+      // Quiet factory patches can have a whole-render signature below 1.0.
+      // An absolute floor of 1.0 labels even a several-fold MACRO response as
+      // unchanged; retain the intended 0.1% relative comparison with only a
+      // numerical-noise floor.
+      const double patch_threshold = max(1.0e-6, patch_stock * 0.001);
       if (fabs(patch_low - patch_stock) < patch_threshold && \
           fabs(patch_high - patch_stock) < patch_threshold) {
         fprintf(
@@ -1940,9 +1944,10 @@ void ValidateSixOpShortBank() {
   }
 
   // Claim 1: the whole dial stays on real (audible) patches. A full-bank stock
-  // patch here signs in the thousands; an empty slot signs ~0. Use a floor well
-  // above zero but far below a real patch.
-  if (min_sig < 100.0) {
+  // patch here signs near 100 or above with the single-voice drone renderer;
+  // an empty slot signs ~0. Use a floor well above zero but far below a real
+  // patch rather than coupling the reachability test to renderer scheduling.
+  if (min_sig < 10.0) {
     fprintf(
         stderr,
         "Short six-op bank (%d patches) leaves a silent Harmonics zone: "

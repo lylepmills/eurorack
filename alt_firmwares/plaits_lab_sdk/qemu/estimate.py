@@ -102,10 +102,27 @@ EXTREME_SWEEP_POSITIONS = (
 
 # Model-specific transition points belong here when a generic axis/corner
 # sweep cannot select the expensive topology. Wavetable chord engines grow from
-# four to six voices at particular HARMONICS rows.
+# four to six voices at particular HARMONICS rows. Six-op FM uses HARMONICS as
+# a discrete program selector; first/middle/last sampling cannot cover the
+# different operator algorithms present in all 32 programs.
+SIX_OP_PROGRAM_POSITIONS = tuple(
+    (
+        f"program-{program + 1:02d}-macro-high",
+        (program + 0.5) / (32.0 * 1.02),
+        0.5,
+        0.5,
+        0.999,
+        48.0,
+    )
+    for program in range(32)
+)
+
 ENGINE_SWEEP_POSITIONS = {
     "wavetable-chord": (("harm-six", 0.34, 0.5, 0.5, 0.5, 48.0),),
     "wavetable-scale-stack": (("harm-six", 0.34, 0.5, 0.5, 0.5, 48.0),),
+    "dx7-bank-a": SIX_OP_PROGRAM_POSITIONS,
+    "dx7-bank-b": SIX_OP_PROGRAM_POSITIONS,
+    "dx7-bank-c": SIX_OP_PROGRAM_POSITIONS,
 }
 
 
@@ -348,6 +365,15 @@ def main() -> int:
             commands.append(
                 "/usr/local/arm-4.8.3/bin/arm-none-eabi-nm -C -S -n "
                 f"/output/h_{workloads[0][0]}_a.elf > /output/symbols.txt")
+        # Passing every compile and link command through `sh -c` eventually
+        # exceeds Docker's argument limit for model-specific exhaustive sweeps
+        # (for example all 32 Six-op programs under both trigger modes). A
+        # mounted script has no such limit and preserves the same commands.
+        build_script = out_dir / "build.sh"
+        build_script.write_text(
+            "#!/bin/sh\nset -e\n" + "\n".join(commands) + "\n",
+            encoding="utf-8",
+        )
         docker = [
             "docker", "run", "--rm", "--platform", "linux/amd64",
             "--entrypoint", "sh",
@@ -356,7 +382,7 @@ def main() -> int:
             "-v", f"{QEMU_DIR}:/qemu:ro",
             "-v", f"{out_dir}:/output",
             "-w", "/workspace",
-            args.image, "-c", " && ".join(commands),
+            args.image, "/output/build.sh",
         ]
         if not args.quiet:
             print(f"building {2 * len(workloads)} harnesses ({len(workloads)} workloads)...")

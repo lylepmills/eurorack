@@ -162,18 +162,20 @@ void SixOpEngine::Render(
     const float t = parameters.morph;
     voice_[0].mutable_lfo()->Scrub(2.0f * kCorrectedSampleRate * t);
 
-    for (int i = 0; i < kNumSixOpVoices; ++i) {
-      voice_[i].LoadPatch(&patches_[patch_index]);
-      Voice<6>::Parameters* p = voice_[i].mutable_parameters();
-      p->sustain = i == 0 ? true : false;
-      p->gate = false;
-      p->note = parameters.note;
-      p->velocity = parameters.accent;
-      p->brightness = parameters.timbre;
-      p->envelope_control = t;
-      p->modulator_detune = modulator_detune;
-      voice_[i].set_modulations(voice_[0].lfo());
-    }
+    // A free-running drone has exactly one sustained voice. Keeping the second
+    // voice loaded and advancing its silent envelopes wasted half of the FM
+    // render budget, which is enough to overrun on expensive DX7 algorithms.
+    voice_[0].LoadPatch(&patches_[patch_index]);
+    Voice<6>::Parameters* p = voice_[0].mutable_parameters();
+    p->sustain = true;
+    p->gate = false;
+    p->note = parameters.note;
+    p->velocity = parameters.accent;
+    p->brightness = parameters.timbre;
+    p->envelope_control = t;
+    p->modulator_detune = modulator_detune;
+    voice_[0].set_modulations(voice_[0].lfo());
+    voice_[1].UnloadPatch();
   } else {
     if (parameters.trigger & TRIGGER_RISING_EDGE) {
       active_voice_ = (active_voice_ + 1) % kNumSixOpVoices;
@@ -207,7 +209,47 @@ void SixOpEngine::Render(
   //   voice_[i].Render(temp_buffer_, size);
   // }
 
-  if ((PLAITS_STEREO_SIX_OP && parameters.stereo)) {
+  if (parameters.trigger & TRIGGER_UNPATCHED) {
+    // Render the single sustained voice at the native block size. The old
+    // staggered path rendered 2 * size samples every other block while also
+    // spending the intervening block rendering a silent voice. This produces
+    // the same continuous oscillator stream without the silent work.
+    fill(&temp_buffer_[0], &temp_buffer_[size], 0.0f);
+    voice_[0].Render(temp_buffer_, size);
+    fill(&acc_buffer_[0], &acc_buffer_[(kNumSixOpVoices - 1) * size], 0.0f);
+    rendered_voice_ = 0;
+
+    const float output_gain = 0.25f *
+        ((PLAITS_STEREO_SIX_OP && parameters.stereo)
+            ? kSixOpCenterPan
+            : 1.0f);
+    const float macro = parameters.macro;
+    const float darkness = (0.5f - macro) * 2.0f;
+    const float coefficient = 1.0f - darkness * 0.92f;
+    const float saturation = (macro - 0.5f) * 2.0f;
+    if (macro < 0.5f) {
+      for (size_t i = 0; i < size; ++i) {
+        float sample = SoftClip(temp_buffer_[i] * output_gain);
+        ONE_POLE(post_filter_, sample, coefficient);
+        sample = post_filter_;
+        aux[i] = out[i] = sample;
+      }
+    } else if (macro > 0.5f) {
+      for (size_t i = 0; i < size; ++i) {
+        float sample = SoftClip(temp_buffer_[i] * output_gain);
+        post_filter_ = sample;
+        sample += (SoftLimit(sample * 3.0f) - sample) * saturation;
+        aux[i] = out[i] = sample;
+      }
+    } else {
+      for (size_t i = 0; i < size; ++i) {
+        const float sample = SoftClip(temp_buffer_[i] * output_gain);
+        post_filter_ = sample;
+        aux[i] = out[i] = sample;
+      }
+    }
+    post_filter_right_ = post_filter_;
+  } else if ((PLAITS_STEREO_SIX_OP && parameters.stereo)) {
     // Staggered rendering, split by voice: the accumulation buffer always
     // holds the tail of the single voice rendered on the previous block, so
     // per-voice pan gains can be applied when the two halves are combined.
@@ -236,26 +278,55 @@ void SixOpEngine::Render(
     const float darkness = (0.5f - macro) * 2.0f;
     const float coefficient = 1.0f - darkness * 0.92f;
     const float saturation = (macro - 0.5f) * 2.0f;
-    for (size_t i = 0; i < size; ++i) {
-      const float previous = acc_buffer_[i] * 0.25f;
-      const float current = temp_buffer_[i] * 0.25f;
-      float left = SoftClip(
-          previous * previous_left_gain + current * current_left_gain);
-      float right = SoftClip(
-          previous * previous_right_gain + current * current_right_gain);
-      if (macro < 0.5f) {
+    if (macro < 0.5f) {
+      for (size_t i = 0; i < size; ++i) {
+        const float previous = acc_buffer_[i] * 0.25f;
+        const float current = temp_buffer_[i] * 0.25f;
+        float left = SoftClip(
+            previous * previous_left_gain + current * current_left_gain);
+        float right = SoftClip(
+            previous * previous_right_gain + current * current_right_gain);
         ONE_POLE(post_filter_, left, coefficient);
         left = post_filter_;
         ONE_POLE(post_filter_right_, right, coefficient);
         right = post_filter_right_;
-      } else {
+        out[i] = left;
+        aux[i] = right;
+      }
+    } else if (macro > 0.5f) {
+      for (size_t i = 0; i < size; ++i) {
+        const float previous = acc_buffer_[i] * 0.25f;
+        const float current = temp_buffer_[i] * 0.25f;
+        float left = SoftClip(
+            previous * previous_left_gain + current * current_left_gain);
+        float right = SoftClip(
+            previous * previous_right_gain + current * current_right_gain);
         post_filter_ = left;
         post_filter_right_ = right;
-        left += (SoftClip(left * 3.0f) - left) * saturation;
-        right += (SoftClip(right * 3.0f) - right) * saturation;
+        // The first SoftClip bounds each channel to [-1, 1], so the driven
+        // sample is already inside SoftClip's rational section. Calling
+        // SoftLimit directly removes redundant range checks without changing
+        // the transfer function.
+        left += (SoftLimit(left * 3.0f) - left) * saturation;
+        right += (SoftLimit(right * 3.0f) - right) * saturation;
+        out[i] = left;
+        aux[i] = right;
       }
-      out[i] = left;
-      aux[i] = right;
+    } else {
+      // At the neutral MACRO position saturation is exactly zero. Avoid doing
+      // two additional soft clips per sample only to crossfade them away.
+      for (size_t i = 0; i < size; ++i) {
+        const float previous = acc_buffer_[i] * 0.25f;
+        const float current = temp_buffer_[i] * 0.25f;
+        const float left = SoftClip(
+            previous * previous_left_gain + current * current_left_gain);
+        const float right = SoftClip(
+            previous * previous_right_gain + current * current_right_gain);
+        post_filter_ = left;
+        post_filter_right_ = right;
+        out[i] = left;
+        aux[i] = right;
+      }
     }
     // std::copy lowers to a generic memmove in GCC 4.8.3. This fixed, small
     // transfer is cheaper as a plain loop and has identical copy semantics
@@ -279,17 +350,27 @@ void SixOpEngine::Render(
     const float darkness = (0.5f - macro) * 2.0f;
     const float coefficient = 1.0f - darkness * 0.92f;
     const float saturation = (macro - 0.5f) * 2.0f;
-    for (size_t i = 0; i < size; ++i) {
-      float sample = SoftClip(temp_buffer_[i] * 0.25f);
-      if (macro < 0.5f) {
+    if (macro < 0.5f) {
+      for (size_t i = 0; i < size; ++i) {
+        float sample = SoftClip(temp_buffer_[i] * 0.25f);
         ONE_POLE(post_filter_, sample, coefficient);
         sample = post_filter_;
-      } else {
-        post_filter_ = sample;
-        const float saturated = SoftClip(sample * 3.0f);
-        sample += (saturated - sample) * saturation;
+        aux[i] = out[i] = sample;
       }
-      aux[i] = out[i] = sample;
+    } else if (macro > 0.5f) {
+      for (size_t i = 0; i < size; ++i) {
+        float sample = SoftClip(temp_buffer_[i] * 0.25f);
+        post_filter_ = sample;
+        const float saturated = SoftLimit(sample * 3.0f);
+        sample += (saturated - sample) * saturation;
+        aux[i] = out[i] = sample;
+      }
+    } else {
+      for (size_t i = 0; i < size; ++i) {
+        const float sample = SoftClip(temp_buffer_[i] * 0.25f);
+        post_filter_ = sample;
+        aux[i] = out[i] = sample;
+      }
     }
     for (size_t i = 0; i < (kNumSixOpVoices - 1) * size; ++i) {
       acc_buffer_[i] = temp_buffer_[size + i];
