@@ -103,6 +103,44 @@ class VariableShapeOscillator {
       float* out,
       size_t size,
       uint32_t hard_sync = 0) {
+    // Keep the stock oscillator loop intact when this block contains no
+    // external reset. A runtime hard_sync argument used to leave a test and a
+    // shift in every sample of every VA oscillator, even though almost every
+    // block has an empty event mask. Dispatch once per block instead.
+    if (hard_sync) {
+      RenderInternal<enable_sync, output_phase, true>(
+          master_frequency,
+          frequency,
+          pw,
+          waveshape,
+          phase_modulation_amount,
+          out,
+          size,
+          hard_sync);
+    } else {
+      RenderInternal<enable_sync, output_phase, false>(
+          master_frequency,
+          frequency,
+          pw,
+          waveshape,
+          phase_modulation_amount,
+          out,
+          size,
+          0);
+    }
+  }
+
+ private:
+  template<bool enable_sync, bool output_phase, bool process_hard_sync>
+  void RenderInternal(
+      float master_frequency,
+      float frequency,
+      float pw,
+      float waveshape,
+      float phase_modulation_amount,
+      float* out,
+      size_t size,
+      uint32_t hard_sync) {
     if (master_frequency >= kMaxFrequency) {
       master_frequency = kMaxFrequency;
     }
@@ -146,25 +184,27 @@ class VariableShapeOscillator {
       const float slope_up = 1.0f / (pw);
       const float slope_down = 1.0f / (1.0f - pw);
 
-      if (hard_sync & 1) {
-        // The external edge is quantized to this sample boundary. Apply the
-        // same two-sample polyBLEP used by the oscillator's internal master
-        // sync, then reset both master and slave phase without touching the
-        // parameter interpolators.
-        const float value = ComputeNaiveSample(
-            slave_phase_,
-            pw,
-            slope_up,
-            slope_down,
-            triangle_amount,
-            square_amount);
-        this_sample -= value * stmlib::ThisBlepSample(1.0f);
-        next_sample -= value * stmlib::NextBlepSample(1.0f);
-        master_phase_ = 0.0f;
-        slave_phase_ = 0.0f;
-        high_ = false;
+      if (process_hard_sync) {
+        if (hard_sync & 1) {
+          // The external edge is quantized to this sample boundary. Apply the
+          // same two-sample polyBLEP used by the oscillator's internal master
+          // sync, then reset both master and slave phase without touching the
+          // parameter interpolators.
+          const float value = ComputeNaiveSample(
+              slave_phase_,
+              pw,
+              slope_up,
+              slope_down,
+              triangle_amount,
+              square_amount);
+          this_sample -= value * stmlib::ThisBlepSample(1.0f);
+          next_sample -= value * stmlib::NextBlepSample(1.0f);
+          master_phase_ = 0.0f;
+          slave_phase_ = 0.0f;
+          high_ = false;
+        }
+        hard_sync >>= 1;
       }
-      hard_sync >>= 1;
 
       if (enable_sync) {
         master_phase_ += master_frequency;
@@ -266,7 +306,8 @@ class VariableShapeOscillator {
     
     next_sample_ = next_sample;
   }
-  
+
+ public:
   inline void set_master_phase(float master_phase) {
     master_phase_ = master_phase;
   }

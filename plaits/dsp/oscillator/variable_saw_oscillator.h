@@ -64,6 +64,26 @@ class VariableSawOscillator {
       float* out,
       size_t size,
       uint32_t hard_sync = 0) {
+    // Most blocks contain no external reset. Select the original zero-event
+    // loop once here rather than paying for a mask test and shift per sample.
+    if (hard_sync) {
+      RenderInternal<true>(
+          frequency, pw, waveshape, out, size, hard_sync);
+    } else {
+      RenderInternal<false>(
+          frequency, pw, waveshape, out, size, 0);
+    }
+  }
+
+ private:
+  template<bool process_hard_sync>
+  void RenderInternal(
+      float frequency,
+      float pw,
+      float waveshape,
+      float* out,
+      size_t size,
+      uint32_t hard_sync) {
     if (frequency >= kMaxFrequency) {
       frequency = kMaxFrequency;
     }
@@ -93,22 +113,24 @@ class VariableSawOscillator {
       const float slope_up = 1.0f / (pw);
       const float slope_down = 1.0f / (1.0f - pw);
 
-      if (hard_sync & 1) {
-        // Reset at the requested sample boundary, with a causal polyBLEP for
-        // the arbitrary waveform-value discontinuity.
-        const float value = ComputeNaiveSample(
-            phase_,
-            pw,
-            slope_up,
-            slope_down,
-            triangle_amount,
-            notch_amount);
-        this_sample -= value * stmlib::ThisBlepSample(1.0f);
-        next_sample -= value * stmlib::NextBlepSample(1.0f);
-        phase_ = 0.0f;
-        high_ = false;
+      if (process_hard_sync) {
+        if (hard_sync & 1) {
+          // Reset at the requested sample boundary, with a causal polyBLEP for
+          // the arbitrary waveform-value discontinuity.
+          const float value = ComputeNaiveSample(
+              phase_,
+              pw,
+              slope_up,
+              slope_down,
+              triangle_amount,
+              notch_amount);
+          this_sample -= value * stmlib::ThisBlepSample(1.0f);
+          next_sample -= value * stmlib::NextBlepSample(1.0f);
+          phase_ = 0.0f;
+          high_ = false;
+        }
+        hard_sync >>= 1;
       }
-      hard_sync >>= 1;
 
       phase_ += frequency;
       
