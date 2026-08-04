@@ -48,7 +48,7 @@ PACKED_BANK_SIZE = PATCHES_PER_BANK * PACKED_PATCH_SIZE  # 4096
 # versions so adding a schema at the ceiling does not require extending a trail
 # of "10, 11, 12..." whitelists in the build container.
 MIN_RECIPE_SCHEMA_VERSION = 2
-MAX_RECIPE_SCHEMA_VERSION = 17
+MAX_RECIPE_SCHEMA_VERSION = 18
 CONFIGURATION_MIN_SCHEMA_VERSION = 4
 RESOURCES_MIN_SCHEMA_VERSION = 5
 FOUR_BANK_MIN_SCHEMA_VERSION = 6
@@ -63,6 +63,7 @@ COLOR_BLIND_MODE_MIN_SCHEMA_VERSION = 15
 SCALE_BANK_MIN_SCHEMA_VERSION = 16
 LEVEL_AUTO_MIN_SCHEMA_VERSION = 16
 SPEECH_BANKS_MIN_SCHEMA_VERSION = 17
+ATTENUVERTER_MODE_MIN_SCHEMA_VERSION = 18
 
 MIN_SCALE_BANK_SIZE = 1
 MAX_SCALE_BANK_SIZE = 16
@@ -80,7 +81,9 @@ SCALE_UNITS_PER_OCTAVE = 12 * SCALE_UNITS_PER_SEMITONE
 # the aux output holds one suboscillator value instead of two (square/sine), and
 # the suboscillator light carries shape and octave together (2026-07). Version 3:
 # the LEVEL light adds Auto as value 2, expanding that digit's radix (2026-07).
-OPTIONS_LAYOUT_VERSION = 3
+# Version 4 adds LIGHT 8's attenuverter mode to recipe starting options and
+# moves the collision-free profile identity into three persisted bytes.
+OPTIONS_LAYOUT_VERSION = 4
 
 
 @dataclass(frozen=True)
@@ -96,6 +99,7 @@ class BuildRecipe:
     aux_subosc_option: int
     chord_set_option: int
     hold_on_trigger_option: int
+    attenuverter_mode: int
     options_profile_id: int
     # v14: 1 compiles the CV calibration procedure in (held right button at
     # power-up), 0 leaves it out. Not an options-menu setting and not part of the
@@ -533,15 +537,23 @@ def validate_recipe(value: Any) -> BuildRecipe:
     options = configuration.get("initialOptions")
     if not isinstance(preferences, dict) or not isinstance(options, dict):
         raise ValueError("recipe must contain firmware preferences and starting options")
+    legacy_option_keys = {
+        "lockedFrequencyKnob", "modelInput", "levelInput", "auxOutput",
+        "suboscillatorOctave", "chordTable", "holdOnTrigger",
+    }
+    current_option_keys = legacy_option_keys | {"attenuverterMode"}
+    carries_attenuverter_mode = set(options) == current_option_keys
     if set(preferences) not in (
         {"navigationMode"},
         {"navigationMode", "calibration"},
         {"navigationMode", "calibration", "colorBlindMode"},
-    ) or set(options) != {
-        "lockedFrequencyKnob", "modelInput", "levelInput", "auxOutput",
-        "suboscillatorOctave", "chordTable", "holdOnTrigger",
-    }:
+    ) or (set(options) != legacy_option_keys and not carries_attenuverter_mode):
         raise ValueError("recipe contains an unsupported firmware option")
+    if ((schema_version >= ATTENUVERTER_MODE_MIN_SCHEMA_VERSION)
+            != carries_attenuverter_mode):
+        raise ValueError(
+            f"unpatched attenuverter starting mode requires schemaVersion "
+            f"{ATTENUVERTER_MODE_MIN_SCHEMA_VERSION}")
 
     mappings = {
         "navigation_mode": (preferences.get("navigationMode"), {"linear": 0, "banked": 1}),
@@ -567,6 +579,10 @@ def validate_recipe(value: Any) -> BuildRecipe:
             table["id"]: index for index, table in enumerate(chord_tables)
         }),
         "hold_on_trigger_option": (options.get("holdOnTrigger"), {False: 0, True: 1}),
+        "attenuverter_mode": (
+            options.get("attenuverterMode", "stock"),
+            {"stock": 0, "drift": 1, "step": 2},
+        ),
     }
     normalized_options: dict[str, int] = {}
     for name, (selected, allowed) in mappings.items():
@@ -611,15 +627,14 @@ def validate_recipe(value: Any) -> BuildRecipe:
         # starting options.
         ("chord_set_option", 9),
         ("hold_on_trigger_option", 2),
+        ("attenuverter_mode", 3),
     ):
         profile_code = profile_code * radix + normalized_options[name]
-    # The reversible encoding has to stay under the reserved range (profile code
-    # < 254*256 = 65024) to fit the legacy navigation and padding bytes, while
-    # reserving low bytes 0 and 1 so saved states from the old navigation setting
-    # can never look initialized. The option digits now span 15552 values per
-    # layout version; the assertion is here so any future growth lands as a build
-    # error rather than as colliding profile ids.
-    if profile_code >= 254 * 256:
+    # The reversible encoding now occupies three bytes. The high byte reuses the
+    # retired extra-fine-tune state byte, so every v4 profile is disjoint from
+    # every older 16-bit marker and forces one correct defaults apply after the
+    # upgrade. Low bytes 0 and 1 remain reserved for legacy navigation states.
+    if profile_code >= 254 * 65536:
         raise ValueError("options profile code has outgrown the reserved range")
     profile_id = ((profile_code // 254) << 8) | (2 + profile_code % 254)
 
@@ -955,9 +970,10 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_BUILD_AUX_SUBOSC_OPTION {recipe.aux_subosc_option}
 #define PLAITS_BUILD_CHORD_SET_OPTION {recipe.chord_set_option}
 #define PLAITS_BUILD_HOLD_ON_TRIGGER_OPTION {recipe.hold_on_trigger_option}
+#define PLAITS_BUILD_ATTENUVERTER_MODE {recipe.attenuverter_mode}
 #define PLAITS_BUILD_ENABLE_CALIBRATION {recipe.enable_calibration}
 #define PLAITS_ROVED_PANEL {recipe.roved_panel}
-#define PLAITS_BUILD_OPTIONS_PROFILE_ID 0x{recipe.options_profile_id:04x}u
+#define PLAITS_BUILD_OPTIONS_PROFILE_ID 0x{recipe.options_profile_id:06x}u
 
 #define PLAITS_ENGINE_MEMBERS \\
   {members}

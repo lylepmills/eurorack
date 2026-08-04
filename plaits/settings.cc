@@ -30,12 +30,43 @@
 
 #include <algorithm>
 
+#if defined(STM32F37X)
+#include <stm32f37x_flash.h>
+#endif
+
 #include "stmlib/system/storage.h"
 #include "plaits/build_config.h"
 
 namespace plaits {
 
 using namespace std;
+
+#if defined(STM32F37X)
+// The audio updater erases and rewrites the application page containing this
+// word on every firmware install. Consuming it on first boot lets the firmware
+// distinguish a real reflash from an ordinary power cycle, so Starting Options
+// are applied for every install without making runtime option changes volatile.
+const uint32_t kInstallMarkerValue = 0x5af00d5a;
+const uint32_t kInstallMarker
+    __attribute__((section(".plaits_install_marker"), aligned(4), used)) =
+        kInstallMarkerValue;
+#endif
+
+static bool ConsumeInstallMarker() {
+#if defined(STM32F37X)
+  const volatile uint32_t* marker = &kInstallMarker;
+  if (*marker != kInstallMarkerValue) {
+    return false;
+  }
+  FLASH_Unlock();
+  FLASH_Status status = FLASH_ProgramWord(
+      reinterpret_cast<uint32_t>(&kInstallMarker), 0u);
+  FLASH_Lock();
+  return status == FLASH_COMPLETE;
+#else
+  return false;
+#endif
+}
 
 static void ApplyBuildOptionDefaults(State* state) {
   state->locked_frequency_pot_option = PLAITS_BUILD_LOCKED_FREQUENCY_POT_OPTION;
@@ -45,8 +76,14 @@ static void ApplyBuildOptionDefaults(State* state) {
   state->aux_subosc_option = PLAITS_BUILD_AUX_SUBOSC_OPTION;
   state->chord_set_option = PLAITS_BUILD_CHORD_SET_OPTION;
   state->hold_on_trigger_option = PLAITS_BUILD_HOLD_ON_TRIGGER_OPTION;
-  state->options_profile_id_low = PLAITS_BUILD_OPTIONS_PROFILE_ID & 0xff;
-  state->options_profile_id_high = PLAITS_BUILD_OPTIONS_PROFILE_ID >> 8;
+  state->engine = static_cast<uint8_t>(
+      (state->engine & 0x1f) | (PLAITS_BUILD_ATTENUVERTER_MODE << 5));
+  state->options_profile_id_low = static_cast<uint8_t>(
+      PLAITS_BUILD_OPTIONS_PROFILE_ID & 0xff);
+  state->options_profile_id_high = static_cast<uint8_t>(
+      (PLAITS_BUILD_OPTIONS_PROFILE_ID >> 8) & 0xff);
+  state->options_profile_id_upper = static_cast<uint8_t>(
+      (PLAITS_BUILD_OPTIONS_PROFILE_ID >> 16) & 0xff);
 }
 
 bool Settings::Init() {
@@ -55,10 +92,13 @@ bool Settings::Init() {
   
   bool success = chunk_storage_.Init(&persistent_data_, &state_);
 
-  uint16_t saved_options_profile_id = state_.options_profile_id_low |
-      (state_.options_profile_id_high << 8);
+  bool fresh_install = ConsumeInstallMarker();
+  uint32_t saved_options_profile_id = state_.options_profile_id_low |
+      (state_.options_profile_id_high << 8) |
+      (state_.options_profile_id_upper << 16);
   bool apply_build_options = success &&
-      saved_options_profile_id != PLAITS_BUILD_OPTIONS_PROFILE_ID;
+      (fresh_install ||
+       saved_options_profile_id != PLAITS_BUILD_OPTIONS_PROFILE_ID);
   if (apply_build_options) {
     ApplyBuildOptionDefaults(&state_);
   }
@@ -130,7 +170,8 @@ void Settings::InitState() {
   state_.decay = 128;
   state_.octave = 255;
   state_.fine_tune = 128;
-  state_.extra_fine_tune = 0;
+  state_.options_profile_id_upper = static_cast<uint8_t>(
+      (PLAITS_BUILD_OPTIONS_PROFILE_ID >> 16) & 0xff);
 
   // alt firmware options
   ApplyBuildOptionDefaults(&state_);

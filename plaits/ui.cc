@@ -262,10 +262,10 @@ void Ui::SaveState() {
   state->decay = static_cast<uint8_t>(patch_->decay * 256.0f);
   state->octave = static_cast<uint8_t>(octave_ * 256.0f);
   state->fine_tune = static_cast<uint8_t>(fine_tune_ * 256.0f);
-  // Retire the unfinished one-sided FM-attenuverter trim from the legacy state.
-  // Zero is its neutral value in the old arithmetic and prevents a fresh
-  // state from shifting every locked range sharp by half a semitone.
-  state->extra_fine_tune = 0;
+  // The retired extra-fine-tune byte now extends the Starting Options profile
+  // identity, keeping the new three-state attenuverter digit collision-free.
+  state->options_profile_id_upper = static_cast<uint8_t>(
+      (PLAITS_BUILD_OPTIONS_PROFILE_ID >> 16) & 0xff);
 
   // alt firmware
   state->locked_frequency_pot_option = patch_->locked_frequency_pot_option;

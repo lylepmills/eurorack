@@ -58,7 +58,10 @@ struct State {
   uint8_t decay;
   uint8_t octave;
   uint8_t fine_tune;
-  uint8_t extra_fine_tune;
+  // Retired fine-tune storage, reused as the high byte of the generated
+  // Starting Options profile ID. Older profiles leave it zero, making every
+  // current three-byte ID disjoint without growing State or erasing settings.
+  uint8_t options_profile_id_upper;
 
   // alt firmware options
   uint8_t locked_frequency_pot_option;

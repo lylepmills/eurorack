@@ -36,7 +36,7 @@ export type NormalizedChordTable = {
 // feature gates below use minimums so a newly supported schema cannot get
 // stranded behind an old "10, 11, 12..." whitelist.
 export const minRecipeSchemaVersion = 2;
-export const maxRecipeSchemaVersion = 17;
+export const maxRecipeSchemaVersion = 18;
 const configurationMinSchemaVersion = 4;
 const resourcesMinSchemaVersion = 5;
 const fourBankMinSchemaVersion = 6;       // 32 slots
@@ -51,6 +51,7 @@ const colorBlindModeMinSchemaVersion = 15; // brightness-coded banks
 const scaleBankMinSchemaVersion = 16;      // recipe-driven scale bank
 export const levelAutoMinSchemaVersion = 16; // engine-aware LEVEL routing
 const speechBanksMinSchemaVersion = 17;      // selectable/custom Speech LPC banks
+const attenuverterModeMinSchemaVersion = 18; // recipe-driven LIGHT 8 starting mode
 
 export const minScaleBankSize = 1;
 export const maxScaleBankSize = 16;
@@ -123,7 +124,7 @@ export type NormalizedSpeechBanks = {
 };
 
 export type NormalizedRecipe = {
-  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17;
+  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18;
   target: "mutable-instruments-plaits" | "plum-audio-roved";
   firmware: "rubato-plaits";
   // A null entry is an empty slot (v7 short banks); filled slots are engine ids.
@@ -148,6 +149,7 @@ export type NormalizedRecipe = {
     suboscillatorOctave: 0 | -1 | -2;
     chordTable: string;
     holdOnTrigger: boolean;
+    attenuverterMode: "stock" | "drift" | "step";
   };
   resources: {
     chordTables: NormalizedChordTable[];
@@ -175,6 +177,7 @@ const defaultConfiguration: Pick<NormalizedRecipe, "preferences" | "initialOptio
     suboscillatorOctave: 0,
     chordTable: "original",
     holdOnTrigger: false,
+    attenuverterMode: "stock",
   },
 };
 
@@ -549,14 +552,19 @@ function normalizeConfiguration(
     preferenceValues,
     ["calibration", "colorBlindMode", "navigationMode"],
   );
+  const legacyInitialOptions = hasExactKeys(optionValues, [
+    "auxOutput", "chordTable", "holdOnTrigger", "levelInput",
+    "lockedFrequencyKnob", "modelInput", "suboscillatorOctave",
+  ]);
+  const carriesAttenuverterMode = hasExactKeys(optionValues, [
+    "attenuverterMode", "auxOutput", "chordTable", "holdOnTrigger", "levelInput",
+    "lockedFrequencyKnob", "modelInput", "suboscillatorOctave",
+  ]);
   if ((!legacyPreferences && !carriesCalibration && !carriesColorBlindMode)
       || ((carriesCalibration || carriesColorBlindMode)
         && typeof preferenceValues.calibration !== "boolean")
       || (carriesColorBlindMode && typeof preferenceValues.colorBlindMode !== "boolean")
-      || !hasExactKeys(optionValues, [
-        "auxOutput", "chordTable", "holdOnTrigger", "levelInput",
-        "lockedFrequencyKnob", "modelInput", "suboscillatorOctave",
-      ])
+      || (!legacyInitialOptions && !carriesAttenuverterMode)
       || !isOneOf(preferenceValues.navigationMode, ["linear", "banked"] as const)
       || !isOneOf(optionValues.lockedFrequencyKnob, ["octaves", "decay", "aux-crossfade", "macro-4"] as const)
       || !isOneOf(optionValues.modelInput, ["model", "lpg-colour", "aux-crossfade", "macro-4"] as const)
@@ -567,6 +575,14 @@ function normalizeConfiguration(
       || !chordTables.some((table) => table.id === optionValues.chordTable)
       || typeof optionValues.holdOnTrigger !== "boolean") {
     throw new ContractError("invalid_preferences", "The recipe contains an unsupported firmware option.");
+  }
+  if ((Number(candidate.schemaVersion) >= attenuverterModeMinSchemaVersion) !== carriesAttenuverterMode
+      || (carriesAttenuverterMode
+        && !isOneOf(optionValues.attenuverterMode, ["stock", "drift", "step"] as const))) {
+    throw new ContractError(
+      "unsupported_schema",
+      `Unpatched attenuverter starting mode requires recipe schema version ${attenuverterModeMinSchemaVersion}.`,
+    );
   }
   const calibration = (carriesCalibration || carriesColorBlindMode)
     && preferenceValues.calibration === true;
@@ -608,6 +624,9 @@ function normalizeConfiguration(
       suboscillatorOctave: optionValues.suboscillatorOctave,
       chordTable: optionValues.chordTable,
       holdOnTrigger: optionValues.holdOnTrigger,
+      attenuverterMode: carriesAttenuverterMode
+        ? optionValues.attenuverterMode as NormalizedRecipe["initialOptions"]["attenuverterMode"]
+        : "stock",
     },
   };
 }
@@ -824,7 +843,8 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     // (v8); a short-bank recipe (a trailing empty slot) stays v7; a candidate that
     // carried v6 resources (even an empty custom-bank list, e.g. a 32-slot recipe)
     // stays v6; else v5.
-    schemaVersion: speechBanks !== undefined ? 17
+    schemaVersion: schemaVersion >= attenuverterModeMinSchemaVersion ? 18
+      : speechBanks !== undefined ? 17
       : scaleBank !== undefined
         || configuration.initialOptions.levelInput === "auto" ? 16
       : candidate.target === "plum-audio-roved"

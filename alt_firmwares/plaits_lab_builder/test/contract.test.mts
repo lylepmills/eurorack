@@ -50,6 +50,60 @@ test("normalization removes nondeterministic manifest fields", () => {
   assert.deepEqual(normalized.slots, fixture.slots);
   assert.equal(normalized.preferences.navigationMode, "linear");
   assert.equal(normalized.initialOptions.lockedFrequencyKnob, "octaves");
+  assert.equal(normalized.initialOptions.attenuverterMode, "stock");
+});
+
+test("schema 18 carries the unpatched attenuverter starting mode", async () => {
+  const publicCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const chordCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_chord_tables/catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const engines = new Map(
+    publicCatalog.engines.map((engine: { id: string }) => [engine.id, engine]),
+  );
+  const recipe = structuredClone(fixture) as any;
+  recipe.schemaVersion = 18;
+  recipe.slots = fixture.slots.map((engineId: string) => {
+    const engine = engines.get(engineId) as {
+      packageId: string;
+      version: string;
+      digest: string;
+    };
+    return {
+      engine: engineId,
+      package: engine.packageId,
+      version: engine.version,
+      digest: engine.digest,
+    };
+  });
+  recipe.preferences = { navigationMode: "linear" };
+  recipe.initialOptions = {
+    lockedFrequencyKnob: "octaves",
+    modelInput: "model",
+    levelInput: "level",
+    auxOutput: "alternate-model",
+    suboscillatorOctave: 0,
+    chordTable: "original",
+    holdOnTrigger: false,
+    attenuverterMode: "drift",
+  };
+  recipe.resources = { chordTables: chordCatalog.tables };
+
+  const normalized = normalizeRecipe(recipe);
+  assert.equal(normalized.schemaVersion, 18);
+  assert.equal(normalized.initialOptions.attenuverterMode, "drift");
+
+  const missing = structuredClone(recipe);
+  delete missing.initialOptions.attenuverterMode;
+  assert.throws(() => normalizeRecipe(missing), /schema version 18/);
+  assert.throws(
+    () => normalizeRecipe({ ...recipe, schemaVersion: 17 }),
+    /schema version 18/,
+  );
 });
 
 test("automatic LEVEL routing is carried only by schema 16", async () => {
@@ -1128,6 +1182,9 @@ test("per-engine stereo (stereoEngines) requires and normalizes to v10", async (
     const laterRecipe = {
       ...recipe,
       schemaVersion: version,
+      initialOptions: version >= 18
+        ? { ...(recipe.initialOptions as object), attenuverterMode: "stock" }
+        : recipe.initialOptions,
       resources: version === 12 || version === 13
         ? { chordTables: [table], userDataBanks: [] }
         : version === 16

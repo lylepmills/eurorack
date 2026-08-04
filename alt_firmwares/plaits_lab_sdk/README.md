@@ -127,8 +127,10 @@ page labels it as seeded until it has had a listening pass. Virtual Analog,
 Fold, Vowel FOF, and Granular Cloud are currently tuned; the other 77
 profiles remain seeded starting points. This page is a tuning aid for the
 shipped firmware's continuous Drift behavior. Runtime mode selection and
-trigger-driven Step live on the module, not in the recipe schema or
-engine-package contract.
+trigger-driven Step remain available on the module. Recipe schema 18 also lets
+Plaits Palette choose Stock, Drift, or Step as the installed firmware's
+Starting Option; this is a firmware preference, not part of an engine-package
+contract.
 
 ## Validation and submission
 

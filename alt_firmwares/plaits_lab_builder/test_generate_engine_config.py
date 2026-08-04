@@ -7,6 +7,7 @@ from itertools import product
 from pathlib import Path
 
 from generate_engine_config import (
+    ATTENUVERTER_MODE_MIN_SCHEMA_VERSION,
     CATALOG,
     DEFAULT_CHORD_TABLES,
     DEFAULT_CONFIGURATION,
@@ -64,12 +65,13 @@ class GenerateEngineConfigTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unsupported output format"):
             validate_recipe(recipe)
 
-    def test_legacy_recipes_receive_the_stable_default_option_profile(self) -> None:
+    def test_legacy_recipes_migrate_to_the_current_default_option_profile(self) -> None:
         # Also the value PLAITS_BUILD_OPTIONS_PROFILE_ID carries in
-        # plaits/build_config.h, so a local build and a hosted default build
-        # agree and do not reset each other's saved options.
+        # plaits/build_config.h. Its nonzero upper byte makes it disjoint from
+        # every legacy 16-bit profile, forcing one correct defaults apply.
         recipe = validate_recipe(self.load("default_recipe.json"))
-        self.assertEqual(recipe.options_profile_id, 0xB7B0)
+        self.assertEqual(recipe.options_profile_id, 0x02DEBE)
+        self.assertEqual(recipe.attenuverter_mode, 0)
 
     def test_option_values_match_the_firmware_numbering(self) -> None:
         # These numbers are the firmware's (plaits/dsp/voice.h): they pick the
@@ -96,6 +98,30 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertEqual(build.aux_subosc_option, 2)
         self.assertEqual(build.chord_set_option, 2)
         self.assertEqual(build.hold_on_trigger_option, 1)
+        self.assertEqual(build.attenuverter_mode, 0)
+
+    def test_attenuverter_starting_mode_is_schema_18_and_changes_the_profile(self) -> None:
+        recipe = self.load("default_recipe.json")
+        recipe["schemaVersion"] = 18
+        recipe["preferences"] = {"navigationMode": "linear"}
+        recipe["resources"] = {"chordTables": DEFAULT_CHORD_TABLES}
+        markers = set()
+        for name, numeric in (("stock", 0), ("drift", 1), ("step", 2)):
+            recipe["initialOptions"] = dict(
+                DEFAULT_CONFIGURATION["initialOptions"], attenuverterMode=name
+            )
+            build = validate_recipe(recipe)
+            self.assertEqual(build.attenuverter_mode, numeric)
+            self.assertIn(
+                f"#define PLAITS_BUILD_ATTENUVERTER_MODE {numeric}",
+                render_config(build),
+            )
+            markers.add(build.options_profile_id)
+        self.assertEqual(len(markers), 3)
+
+        recipe["schemaVersion"] = 17
+        with self.assertRaisesRegex(ValueError, "schemaVersion 18"):
+            validate_recipe(recipe)
 
     def test_auto_level_routing_is_schema_16_and_firmware_value_two(self) -> None:
         recipe = self.load("default_recipe.json")
@@ -346,7 +372,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
 
     def test_every_option_profile_has_a_unique_legacy_safe_marker(self) -> None:
         recipe = self.load("default_recipe.json")
-        recipe["schemaVersion"] = 16
+        recipe["schemaVersion"] = 18
         recipe["preferences"] = {"navigationMode": "linear"}
         recipe["resources"] = {"chordTables": DEFAULT_CHORD_TABLES}
         option_values = (
@@ -357,6 +383,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
             ("suboscillatorOctave", [0, -1, -2]),
             ("chordTable", ["original", "jon-butler", "joe-mcmullen"]),
             ("holdOnTrigger", [False, True]),
+            ("attenuverterMode", ["stock", "drift", "step"]),
         )
         markers = set()
         for selected in product(*(values for _, values in option_values)):
@@ -367,8 +394,8 @@ class GenerateEngineConfigTest(unittest.TestCase):
             self.assertGreater(marker & 0xff, 1)
             markers.add(marker)
         # Every option combination must map to a distinct profile marker.
-        # Product of the cardinalities: 4 * 4 * 3 * 4 * 3 * 3 * 2.
-        self.assertEqual(len(markers), 3456)
+        # Product of the cardinalities: 4 * 4 * 3 * 4 * 3 * 3 * 2 * 3.
+        self.assertEqual(len(markers), 10368)
 
     def test_registry_translates_green_red_amber_to_amber_green_red(self) -> None:
         recipe = self.load("mixed_recipe.json")
@@ -867,7 +894,8 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertIn("#define PLAITS_BUILD_AUX_SUBOSC_OPTION 5", config)
         self.assertIn("#define PLAITS_BUILD_CHORD_SET_OPTION 2", config)
         self.assertIn("#define PLAITS_BUILD_HOLD_ON_TRIGGER_OPTION 1", config)
-        self.assertRegex(config, r"#define PLAITS_BUILD_OPTIONS_PROFILE_ID 0x[0-9a-f]{4}u")
+        self.assertIn("#define PLAITS_BUILD_ATTENUVERTER_MODE 0", config)
+        self.assertRegex(config, r"#define PLAITS_BUILD_OPTIONS_PROFILE_ID 0x[0-9a-f]{6}u")
 
         recipe["initialOptions"]["compilerFlag"] = "-DUNTRUSTED"
         with self.assertRaisesRegex(ValueError, "unsupported firmware option"):
@@ -1019,6 +1047,8 @@ class GenerateEngineConfigTest(unittest.TestCase):
         for version in range(10, MAX_RECIPE_SCHEMA_VERSION + 1):
             recipe = self.calibration_recipe(version, False)
             recipe["initialOptions"]["auxOutput"] = "stereo"
+            if version >= ATTENUVERTER_MODE_MIN_SCHEMA_VERSION:
+                recipe["initialOptions"]["attenuverterMode"] = "stock"
             recipe["stereoEngines"] = ["virtual-analog"]
             if version in (12, 13):
                 recipe["resources"]["userDataBanks"] = []
