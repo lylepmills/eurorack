@@ -2686,13 +2686,13 @@ void ValidateOneKnobEnvelope() {
   float triggered_peak = 0.0f;
   for (int block = 0; block < 4000; ++block) {
     const float pulse_value = triggered_pulse.Process(
-        0.5f,
+        0.25f,
         block == 0,
         block == 0,
         OneKnobEnvelope::PROFILE_SYNTH,
         OneKnobEnvelope::MODE_TRIGGERED);
     const float gate_value = triggered_gate.Process(
-        0.5f,
+        0.25f,
         true,
         block == 0,
         OneKnobEnvelope::PROFILE_SYNTH,
@@ -2706,37 +2706,44 @@ void ValidateOneKnobEnvelope() {
   if (triggered_peak < 0.999f || triggered_pulse.active()) {
     fprintf(
         stderr,
-        "Triggered midpoint did not complete: peak=%f tail=%f\n",
+        "Triggered decay-side contour did not complete: peak=%f tail=%f\n",
         triggered_peak,
         triggered_pulse.value());
     abort();
   }
 
-  // Clockwise must be monotonically longer. The synth maximum remains alive
-  // after four seconds but completes within the eight-second table ceiling.
+  // Far clockwise is a long swell followed by a genuinely sharp decay. Keep
+  // the attack alive beyond four seconds, then require the fall after its peak
+  // to finish in less than 25 ms.
   envelope.Init();
-  for (int block = 0; block < 16000; ++block) {
-    envelope.Process(
+  int triggered_peak_block = -1;
+  int triggered_done_block = -1;
+  for (int block = 0; block < 36000; ++block) {
+    const float value = envelope.Process(
         1.0f,
         block == 0,
         block == 0,
         OneKnobEnvelope::PROFILE_SYNTH,
         OneKnobEnvelope::MODE_TRIGGERED);
+    if (triggered_peak_block < 0 && value > 0.999f) {
+      triggered_peak_block = block;
+    }
+    if (triggered_peak_block >= 0 && !envelope.active()) {
+      triggered_done_block = block;
+      break;
+    }
   }
-  if (!envelope.active()) {
-    fprintf(stderr, "Triggered maximum ended before four seconds\n");
+  if (triggered_peak_block < 16000) {
+    fprintf(stderr, "Triggered CW attack ended before four seconds\n");
     abort();
   }
-  for (int block = 0; block < 20000; ++block) {
-    envelope.Process(
-        1.0f,
-        false,
-        false,
-        OneKnobEnvelope::PROFILE_SYNTH,
-        OneKnobEnvelope::MODE_TRIGGERED);
-  }
-  if (envelope.active()) {
-    fprintf(stderr, "Triggered maximum exceeded nine seconds\n");
+  if (triggered_done_block < 0 ||
+      triggered_done_block - triggered_peak_block >= 100) {
+    fprintf(
+        stderr,
+        "Triggered CW decay was not sharp: peak=%d done=%d\n",
+        triggered_peak_block,
+        triggered_done_block);
     abort();
   }
 

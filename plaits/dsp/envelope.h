@@ -136,9 +136,9 @@ class DecayEnvelope {
 // to provide a tail after the contour itself closes.
 //
 // MODE_ELEMENTS_HYBRID preserves Elements' pluck-to-sustain topology.
-// MODE_TRIGGERED spends the entire range on a monotonic one-shot AD gesture
-// and ignores the falling edge. MODE_GATED spends the entire range on a
-// full-sustain ASR gesture and follows the gate.
+// MODE_TRIGGERED spends the entire range on a one-shot AD shape spectrum and
+// ignores the falling edge. MODE_GATED spends the entire range on a full-
+// sustain ASR gesture and follows the gate.
 //
 // Process is called once per Plaits audio block. Curve and rate lookup tables
 // live in envelope.cc; their compact fixed-point representation keeps the

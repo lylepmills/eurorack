@@ -542,12 +542,12 @@ void Voice::Render(
       lpg_envelope_.ProcessLP(compressed_level, short_decay, decay_tail, hf);
 #if PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE
     } else if (use_one_knob_envelope) {
-      // Feed the articulation contour to the LPG only. ProcessLP retains
-      // Plaits' colour-dependent vactrol tail, so LPG COLOUR and the regular
-      // DECAY setting remain useful rather than being silently replaced by the
-      // new shape control.
+      // The contour already supplies the complete amplitude trajectory. Track
+      // it directly instead of adding Plaits' stock vactrol decay afterward;
+      // otherwise the advertised millisecond decays remain audibly long. The
+      // LPG's level-dependent cutoff and COLOUR response are still retained.
       lpg_envelope_.ProcessLP(
-          articulation_envelope, short_decay, decay_tail, hf);
+          articulation_envelope, 1.0f, 0.0f, hf);
 #endif
     } else {
       const float attack = NoteToFrequency(p.note) * float(kBlockSize) * 2.0f;

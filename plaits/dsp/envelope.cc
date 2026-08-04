@@ -154,15 +154,28 @@ float OneKnobEnvelope::Process(
   bool gated;
 
   if (mode == MODE_TRIGGERED) {
-    // Spend the entire knob throw on a monotonic one-shot gesture. Attack stays
-    // quick through most of the range (the squared taper matters here), while
-    // decay spans a tight click through a several-second tail. Resonators use
-    // a shorter excitation gesture because their acoustic body supplies the
-    // remainder of the audible decay.
-    const float attack_end = profile == PROFILE_SYNTH ? 0.45f : 0.35f;
-    const float decay_end = profile == PROFILE_SYNTH ? 0.98f : 0.90f;
-    attack = 0.10f + (attack_end - 0.10f) * shape * shape;
-    decay_release = 0.20f + (decay_end - 0.20f) * shape;
+    // Use the full throw as a one-shot shape spectrum. The counter-clockwise
+    // half keeps attack fast while opening decay from a click into a long tail.
+    // The clockwise half trades that tail for an increasingly slow attack,
+    // ending with a several-second swell and a genuinely sharp decay. The
+    // quadratic ease-out spreads useful slow attacks across most of the CW half
+    // without evaluating sqrtf in the audio callback.
+    const float fast_attack = 0.05f;
+    const float pivot_attack = 0.12f;
+    const float fast_decay = 0.08f;
+    const float slow_decay = profile == PROFILE_SYNTH ? 0.98f : 0.90f;
+    if (shape < 0.5f) {
+      const float amount = shape * 2.0f;
+      attack = fast_attack + (pivot_attack - fast_attack) * amount;
+      decay_release = fast_decay + (slow_decay - fast_decay) * amount;
+    } else {
+      const float amount = (shape - 0.5f) * 2.0f;
+      const float slow_attack_amount = amount * (2.0f - amount);
+      const float slow_attack = profile == PROFILE_SYNTH ? 0.96f : 0.90f;
+      attack = pivot_attack +
+          (slow_attack - pivot_attack) * slow_attack_amount;
+      decay_release = slow_decay + (fast_decay - slow_decay) * amount;
+    }
     sustain = 0.0f;
     gated = false;
   } else if (mode == MODE_GATED) {
