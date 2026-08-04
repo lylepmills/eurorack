@@ -79,6 +79,12 @@ for filename in ["config.json", "kokoro-v1_0.pth", *(f"voices/{voice}.pt" for vo
     hf_hub_download(repo_id=repo, filename=filename)
 PY
 
+# Misaki's English G2P asks spaCy to download this model on first use when it
+# is absent. Production containers have no outbound network, so bake the exact
+# compatible wheel after the much larger voice layer and keep requests offline.
+RUN python3 -m pip install --no-cache-dir \
+    "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
+
 RUN useradd --create-home --uid 10001 builder
 
 COPY --chown=builder:builder . /workspace
