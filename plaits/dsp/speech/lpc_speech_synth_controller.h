@@ -35,6 +35,10 @@
 
 namespace plaits {
 
+#ifndef PLAITS_HAS_CUSTOM_SPEECH_BANKS
+#define PLAITS_HAS_CUSTOM_SPEECH_BANKS 0
+#endif
+
 class BitStream {
  public:
   BitStream() { }
@@ -97,6 +101,7 @@ struct LPCSpeechSynthWordBankData {
   size_t size;
 };
 
+#if PLAITS_HAS_CUSTOM_SPEECH_BANKS
 // Custom banks already contain decoded LPC frames. Keeping them in this form
 // avoids forcing newly analysed speech through the legacy TI bitstream format;
 // the selected bank is copied into the controller's existing working buffer.
@@ -106,6 +111,7 @@ struct LPCSpeechSynthRawWordBankData {
   uint16_t num_frames;
   uint8_t num_words;
 };
+#endif
 
 class LPCSpeechSynthWordBank {
  public:
@@ -116,12 +122,14 @@ class LPCSpeechSynthWordBank {
       const LPCSpeechSynthWordBankData* word_banks,
       int num_banks,
       stmlib::BufferAllocator* allocator);
+#if PLAITS_HAS_CUSTOM_SPEECH_BANKS
   void Init(
       const LPCSpeechSynthWordBankData* word_banks,
       int num_banks,
       const LPCSpeechSynthRawWordBankData* raw_word_banks,
       int num_raw_word_banks,
       stmlib::BufferAllocator* allocator);
+#endif
   
   bool Load(int index);
   void Reset();
@@ -146,10 +154,14 @@ class LPCSpeechSynthWordBank {
   size_t LoadNextWord(const uint8_t* data);
   
   const LPCSpeechSynthWordBankData* word_banks_;
+#if PLAITS_HAS_CUSTOM_SPEECH_BANKS
   const LPCSpeechSynthRawWordBankData* raw_word_banks_;
+#endif
 
   int num_banks_;
+#if PLAITS_HAS_CUSTOM_SPEECH_BANKS
   int num_raw_word_banks_;
+#endif
   int loaded_bank_;
   int num_frames_;
   int num_words_;

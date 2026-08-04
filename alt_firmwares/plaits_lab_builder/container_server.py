@@ -489,6 +489,7 @@ def build_firmware(payload: Any) -> tuple[Path, FirmwareOutput, dict[str, str]]:
         f"BUILD_ROOT={build_dir}/",
         f"ENGINE_CONFIG={config_path}",
         f"SPEECH_CONFIG={speech_config_path}",
+        f"SPEECH_BANKS_ENABLED={1 if validated_recipe.speech_banks is not None else 0}",
         f"CC={_compiler('arm-none-eabi-gcc')}",
         f"CXX={_compiler('arm-none-eabi-g++')}",
         # Every build gets a fresh BUILD_ROOT, so the per-object .d files are

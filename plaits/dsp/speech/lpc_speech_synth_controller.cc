@@ -114,9 +114,19 @@ void LPCSpeechSynthWordBank::Init(
     const LPCSpeechSynthWordBankData* word_banks,
     int num_banks,
     BufferAllocator* allocator) {
+#if PLAITS_HAS_CUSTOM_SPEECH_BANKS
   Init(word_banks, num_banks, NULL, 0, allocator);
+#else
+  word_banks_ = word_banks;
+  num_banks_ = num_banks;
+  frames_ = allocator->Allocate<LPCSpeechSynth::Frame>(
+      kLPCSpeechSynthMaxFrames);
+  word_boundaries_ = allocator->Allocate<int>(kLPCSpeechSynthMaxWords);
+  Reset();
+#endif
 }
 
+#if PLAITS_HAS_CUSTOM_SPEECH_BANKS
 void LPCSpeechSynthWordBank::Init(
     const LPCSpeechSynthWordBankData* word_banks,
     int num_banks,
@@ -132,14 +142,14 @@ void LPCSpeechSynthWordBank::Init(
   word_boundaries_ = allocator->Allocate<int>(kLPCSpeechSynthMaxWords);
   Reset();
 }
+#endif
 
 void LPCSpeechSynthWordBank::Reset() {
   loaded_bank_ = -1;
   num_frames_ = 0;
   num_words_ = 0;
-  fill(
-      &word_boundaries_[0],
-      &word_boundaries_[kLPCSpeechSynthMaxWords], 0);
+  // GetWordBoundaries() does not read the array while num_words_ is zero, and
+  // Load() overwrites every live boundary before publishing a non-zero count.
 }
 
 size_t LPCSpeechSynthWordBank::LoadNextWord(const uint8_t* data) {
@@ -192,14 +202,19 @@ size_t LPCSpeechSynthWordBank::LoadNextWord(const uint8_t* data) {
 }
 
 bool LPCSpeechSynthWordBank::Load(int bank) {
+#if PLAITS_HAS_CUSTOM_SPEECH_BANKS
   if (bank == loaded_bank_ || bank < 0 ||
       bank >= num_banks_ + num_raw_word_banks_) {
+#else
+  if (bank == loaded_bank_ || bank >= num_banks_) {
+#endif
     return false;
   }
 
   num_frames_ = 0;
   num_words_ = 0;
 
+#if PLAITS_HAS_CUSTOM_SPEECH_BANKS
   if (bank >= num_banks_) {
     const LPCSpeechSynthRawWordBankData& raw = raw_word_banks_[bank - num_banks_];
     num_frames_ = raw.num_frames;
@@ -212,6 +227,7 @@ bool LPCSpeechSynthWordBank::Load(int bank) {
     loaded_bank_ = bank;
     return true;
   }
+#endif
   
   const uint8_t* data = word_banks_[bank].data;
   size_t size = word_banks_[bank].size;

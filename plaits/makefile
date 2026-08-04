@@ -112,6 +112,12 @@ ifneq ($(SPEECH_CONFIG),)
 $(BUILD_DIR)speech_engine.o: CPPFLAGS += -include $(SPEECH_CONFIG)
 endif
 
+# Compile the decoded-frame controller path only for recipes that carry a
+# Speech-bank resource. Legacy/default palettes keep the stock code footprint.
+ifneq ($(SPEECH_BANKS_ENABLED),)
+$(BUILD_DIR)lpc_speech_synth_controller.o: CPPFLAGS += -DPLAITS_HAS_CUSTOM_SPEECH_BANKS=$(SPEECH_BANKS_ENABLED)
+endif
+
 # Per-engine stereo (OUT/AUX as an L/R pair) is gated at compile time by
 # PLAITS_STEREO_<X> (default 1 in stereo_config.h). To disable an engine's
 # stereo the hosted builder passes PLAITS_STEREO_<X>=0, and the rule below adds
