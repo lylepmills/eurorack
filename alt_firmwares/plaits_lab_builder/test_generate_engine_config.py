@@ -28,6 +28,21 @@ class GenerateEngineConfigTest(unittest.TestCase):
 
     def test_catalog_matches_the_approved_product_catalog(self) -> None:
         self.assertEqual(len(CATALOG), 85)
+
+    def test_lpc_words_emits_its_prosody_behavior_mask(self) -> None:
+        recipe = self.load("default_recipe.json")
+        recipe["slots"][0] = "lpc-speech"
+        config = render_config(validate_recipe(recipe))
+        self.assertIn("#define PLAITS_HAS_LPC_WORDS_ENGINE 1", config)
+        # Public green slot 0 follows the leading eight amber engines in the
+        # firmware registry, so LPC Words is internal engine index 8.
+        self.assertIn("static const uint32_t kLPCWordsEngineMask = 0x00000100;", config)
+
+    def test_palette_without_lpc_words_disables_its_behavior_mask(self) -> None:
+        config = render_config(validate_recipe(self.load("default_recipe.json")))
+        self.assertIn("#define PLAITS_HAS_LPC_WORDS_ENGINE 0", config)
+        self.assertIn("static const uint32_t kLPCWordsEngineMask = 0x00000000;", config)
+
     def test_randomizer_profiles_are_compact_and_cover_every_selected_slot(self) -> None:
         build = validate_recipe(self.load("default_recipe.json"))
         config = render_config(build)

@@ -25,14 +25,15 @@
 //
 // -----------------------------------------------------------------------------
 //
-// The sustained half of the stock Speech engine, expanded into a full engine.
-// HARMONICS traverses the original naive -> SAM crossfade over the whole dial
-// instead of compressing pure SAM to one point at HARMONICS = 1/6.
+// The continuously playable sounds from the stock Speech engine, expanded into
+// a full engine. HARMONICS traverses naive -> SAM -> LPC phonemes over the whole
+// dial; the LPC word banks live in LPCSpeechEngine instead.
 
 #ifndef PLAITS_DSP_ENGINE2_FORMANT_SPEECH_ENGINE_H_
 #define PLAITS_DSP_ENGINE2_FORMANT_SPEECH_ENGINE_H_
 
 #include "plaits/dsp/engine/engine.h"
+#include "plaits/dsp/speech/lpc_speech_synth_controller.h"
 #include "plaits/dsp/speech/naive_speech_synth.h"
 #include "plaits/dsp/speech/sam_speech_synth.h"
 
@@ -58,6 +59,7 @@ class FormantSpeechEngine : public Engine {
  private:
   NaiveSpeechSynth naive_speech_synth_;
   SAMSpeechSynth sam_speech_synth_;
+  LPCSpeechSynthController lpc_speech_synth_controller_;
   float* temp_buffer_[2];
   float post_filter_;
 

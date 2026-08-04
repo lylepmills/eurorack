@@ -37,7 +37,8 @@ void LPCSpeechEngine::Init(BufferAllocator* allocator) {
       LPC_SPEECH_SYNTH_NUM_WORD_BANKS,
       allocator);
   lpc_speech_synth_controller_.Init(&lpc_speech_synth_word_bank_);
-  word_bank_quantizer_.Init(LPC_SPEECH_SYNTH_NUM_WORD_BANKS + 1, 0.1f, false);
+  word_bank_quantizer_.Init(LPC_SPEECH_SYNTH_NUM_WORD_BANKS, 0.1f, false);
+  prosody_amount_ = 0.0f;
 }
 
 void LPCSpeechEngine::Reset() {
@@ -50,28 +51,26 @@ void LPCSpeechEngine::Render(
     float* aux,
     size_t size,
     bool* already_enveloped) {
-  // Six evenly addressable materials: interpolated phonemes, then the five
-  // stock word banks. The 1.1 range is the stock Speech quantizer's full input
-  // span after its model crossfade has ended.
-  const int word_bank = word_bank_quantizer_.Process(
-      parameters.harmonics * 1.1f) - 1;
+  // The phoneme position moved to Speech Sounds, leaving the five stock word
+  // banks evenly addressable across the whole HARMONICS dial.
+  const int word_bank = word_bank_quantizer_.Process(parameters.harmonics);
   const bool free_running = parameters.trigger & TRIGGER_UNPATCHED;
   const bool trigger = parameters.trigger & TRIGGER_RISING_EDGE;
   const bool replay_prosody = word_bank >= 0 && !free_running;
   *already_enveloped = replay_prosody;
 
-  // MORPH's midpoint is the stock playback speed. MACRO directly controls the
-  // vocal-tract/formant shift that stock Speech hides on TIMBRE. Recorded
-  // prosody stays suppressed so pitched playback follows the played note.
-  const float speed = (parameters.morph - 0.5f) * 2.0f;
+  // Keep word/address selection on MORPH as it is in stock Speech. TIMBRE now
+  // places the original playback speed at noon, while MACRO controls the vocal
+  // tract. Voice supplies prosody from the unpatched FM attenuverter.
+  const float speed = (parameters.timbre - 0.5f) * 2.0f;
   lpc_speech_synth_controller_.Render(
       free_running,
       trigger,
       word_bank,
       NoteToFrequency(parameters.note),
-      0.0f,
+      prosody_amount_,
       speed,
-      parameters.timbre,
+      parameters.morph,
       parameters.macro,
       replay_prosody ? parameters.accent : 1.0f,
       aux,

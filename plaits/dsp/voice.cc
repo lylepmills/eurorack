@@ -147,6 +147,10 @@ void Voice::Render(
   auto_preserves_level = auto_preserves_level || \
       (kSpeechEngineMask & (1u << engine_index));
 #endif
+#if PLAITS_HAS_LPC_WORDS_ENGINE
+  auto_preserves_level = auto_preserves_level || \
+      (kLPCWordsEngineMask & (1u << engine_index));
+#endif
 #if PLAITS_HAS_CHIPTUNE_ENGINE
   auto_preserves_level = auto_preserves_level || \
       (kChiptuneEngineMask & (1u << engine_index));
@@ -286,6 +290,18 @@ void Voice::Render(
     speech_engine_.set_speed( 
         !modulations.trigger_patched || modulations.morph_patched ?
             0.0f : patch.morph_modulation_amount);
+  }
+#endif
+#if PLAITS_HAS_LPC_WORDS_ENGINE
+  if (kLPCWordsEngineMask & (1u << engine_index)) {
+    // Match stock Speech's word-bank region: the FM attenuverter controls the
+    // recorded pitch contour when TRIG is patched and FM is not. Suppress the
+    // ordinary trigger-driven pitch envelope so this remains a single-purpose
+    // gesture; patched FM still modulates pitch normally.
+    internal_envelope_amplitude = 0.0f;
+    lpc_speech_engine_.set_prosody_amount(
+        !modulations.trigger_patched || modulations.frequency_patched ?
+            0.0f : patch.frequency_modulation_amount);
   }
 #endif
 #if PLAITS_HAS_CHIPTUNE_ENGINE

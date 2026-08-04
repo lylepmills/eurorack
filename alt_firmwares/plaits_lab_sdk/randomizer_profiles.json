@@ -147,8 +147,8 @@
     },
     "lpc-speech": {
       "status": "seeded",
-      "timbre": "stepped-identity",
-      "morph": "centered"
+      "timbre": "centered",
+      "morph": "stepped-identity"
     },
     "swarm": {
       "status": "seeded",

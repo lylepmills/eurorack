@@ -30,6 +30,7 @@
 #include "plaits/dsp/engine2/wave_terrain_engine.h"
 
 #define PLAITS_HAS_SPEECH_ENGINE 1
+#define PLAITS_HAS_LPC_WORDS_ENGINE 0
 #define PLAITS_HAS_CHIPTUNE_ENGINE 1
 #define PLAITS_HAS_USER_DATA_BANK 1
 #define PLAITS_HAS_USER_DATA_BANK_OVERRIDE 0

@@ -2397,11 +2397,12 @@ void ValidateSpeechEngineSplit() {
   bool stock_enveloped[blocks];
   bool split_enveloped[blocks];
 
-  // The two endpoints pin the new full-range MODEL axis to Speech's exact
-  // naive and SAM anchors, through its mono macro and stereo render paths.
-  const float models[] = { 0.0f, 1.0f };
+  // The full-range model axis is stock Speech's group 0..2 stretched across
+  // the dial: naive -> SAM -> LPC phonemes. Intermediate points pin both stock
+  // crossfades as well as their three exact anchors.
+  const float models[] = { 0.0f, 0.25f, 0.5f, 0.75f, 1.0f };
   const float colours[] = { 0.2f, 0.5f, 0.8f };
-  for (size_t m = 0; m < 2; ++m) {
+  for (size_t m = 0; m < 5; ++m) {
     for (size_t c = 0; c < 3; ++c) {
       for (size_t stereo = 0; stereo < 2; ++stereo) {
         uint8_t stock_ram[16384] = { 0 };
@@ -2415,7 +2416,7 @@ void ValidateSpeechEngineSplit() {
 
         EngineParameters stock_parameters;
         stock_parameters.note = 60.0f;
-        stock_parameters.harmonics = models[m] / 6.0f;
+        stock_parameters.harmonics = models[m] / 3.0f;
         stock_parameters.timbre = 0.63f;
         stock_parameters.morph = 0.37f;
         stock_parameters.macro = colours[c];
@@ -2432,51 +2433,68 @@ void ValidateSpeechEngineSplit() {
         RenderSpeechEquivalenceSequence(
             &split, split_parameters, split_out, split_aux, split_enveloped);
         AssertSpeechEquivalence(
-            "Formant Speech", stock_out, stock_aux, stock_enveloped,
+            "Speech Sounds", stock_out, stock_aux, stock_enveloped,
             split_out, split_aux, split_enveloped);
       }
     }
   }
 
-  // LPC's six bank positions map back to Speech's LPC range. At neutral SPEED,
-  // its ADDRESS and VOCAL TRACT controls call the controller with the same
-  // values as stock Speech at MACRO noon.
-  for (int material = 0; material < 6; ++material) {
+  // LPC Words removes the phoneme position and stretches the five word banks
+  // across HARMONICS. MORPH remains the word address, while TIMBRE exposes the
+  // speed that stock Speech hides on its attenuverter. The explicit prosody
+  // setter is the endpoint of Voice's inherited FM-attenuverter routing.
+  const float speeds[] = { -0.6f, 0.0f, 0.6f };
+  const float prosodies[] = { -1.0f, 0.0f, 0.7f };
+  for (int material = 0; material < 5; ++material) {
     for (size_t stereo = 0; stereo < 2; ++stereo) {
-      uint8_t stock_ram[16384] = { 0 };
-      uint8_t split_ram[16384] = { 0 };
-      BufferAllocator stock_allocator(stock_ram, sizeof(stock_ram));
-      BufferAllocator split_allocator(split_ram, sizeof(split_ram));
-      SpeechEngine stock;
-      LPCSpeechEngine split;
-      stock.Init(&stock_allocator);
-      split.Init(&split_allocator);
+      for (size_t s = 0; s < 3; ++s) {
+        for (size_t p = 0; p < 3; ++p) {
+          uint8_t stock_ram[16384] = { 0 };
+          uint8_t split_ram[16384] = { 0 };
+          BufferAllocator stock_allocator(stock_ram, sizeof(stock_ram));
+          BufferAllocator split_allocator(split_ram, sizeof(split_ram));
+          SpeechEngine stock;
+          LPCSpeechEngine split;
+          stock.Init(&stock_allocator);
+          split.Init(&split_allocator);
+          stock.set_prosody_amount(prosodies[p]);
+          split.set_prosody_amount(prosodies[p]);
 
-      const float bank = static_cast<float>(material) / 5.0f;
-      EngineParameters stock_parameters;
-      stock_parameters.note = 60.0f;
-      stock_parameters.harmonics = (2.0f + bank * 4.0f) / 6.0f;
-      stock_parameters.timbre = 0.64f;
-      stock_parameters.morph = 0.38f;
-      stock_parameters.macro = 0.5f;
-      stock_parameters.accent = 0.8f;
-      stock_parameters.chord_set_option = 0;
-      stock_parameters.stereo = stereo != 0;
-      EngineParameters split_parameters = stock_parameters;
-      split_parameters.harmonics = bank;
-      split_parameters.timbre = stock_parameters.morph;
-      split_parameters.morph = 0.5f;
-      split_parameters.macro = stock_parameters.timbre;
+          const float stock_quantizer_value =
+              static_cast<float>(material + 1) / 6.0f + 1.0f / 12.0f;
+          const float split_bank = static_cast<float>(material) / 4.0f;
+          const float split_speed = 0.5f + speeds[s] * 0.5f;
+          // Derive the stock speed through the new control's actual arithmetic
+          // so bit-exact output comparisons do not mistake float round-off for
+          // a synthesis difference.
+          stock.set_speed((split_speed - 0.5f) * 2.0f);
+          EngineParameters stock_parameters;
+          stock_parameters.note = 60.0f;
+          stock_parameters.harmonics =
+              (2.0f + stock_quantizer_value / 0.275f) / 6.0f;
+          stock_parameters.timbre = 0.64f;
+          stock_parameters.morph = 0.38f;
+          stock_parameters.macro = 0.5f;
+          stock_parameters.accent = 0.8f;
+          stock_parameters.chord_set_option = 0;
+          stock_parameters.stereo = stereo != 0;
+          EngineParameters split_parameters = stock_parameters;
+          split_parameters.harmonics = split_bank;
+          split_parameters.timbre = split_speed;
+          split_parameters.morph = stock_parameters.morph;
+          split_parameters.macro = stock_parameters.timbre;
 
-      Random::Seed(0x1ec10);
-      RenderSpeechEquivalenceSequence(
-          &stock, stock_parameters, stock_out, stock_aux, stock_enveloped);
-      Random::Seed(0x1ec10);
-      RenderSpeechEquivalenceSequence(
-          &split, split_parameters, split_out, split_aux, split_enveloped);
-      AssertSpeechEquivalence(
-          "LPC Speech", stock_out, stock_aux, stock_enveloped,
-          split_out, split_aux, split_enveloped);
+          Random::Seed(0x1ec10);
+          RenderSpeechEquivalenceSequence(
+              &stock, stock_parameters, stock_out, stock_aux, stock_enveloped);
+          Random::Seed(0x1ec10);
+          RenderSpeechEquivalenceSequence(
+              &split, split_parameters, split_out, split_aux, split_enveloped);
+          AssertSpeechEquivalence(
+              "LPC Words", stock_out, stock_aux, stock_enveloped,
+              split_out, split_aux, split_enveloped);
+        }
+      }
     }
   }
 }

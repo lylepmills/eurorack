@@ -805,6 +805,7 @@ def render_config(recipe: BuildRecipe) -> str:
         for item in selected
     )
     speech_mask = sum(1 << index for index, item in enumerate(selected) if item.behavior == "speech")
+    lpc_words_mask = sum(1 << index for index, item in enumerate(selected) if item.behavior == "lpc-words")
     chiptune_mask = sum(1 << index for index, item in enumerate(selected) if item.behavior == "chiptune")
 
     # Resolve the catalog's semantic archetypes into a compact firmware table.
@@ -952,6 +953,7 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_BANK_SIZES {{ {", ".join(str(size) for size in bank_sizes)} }}
 #define PLAITS_ENGINE_ROWS {{ {", ".join(str(row) for row in engine_rows)} }}
 #define PLAITS_HAS_SPEECH_ENGINE {1 if any(item.behavior == 'speech' for item in selected) else 0}
+#define PLAITS_HAS_LPC_WORDS_ENGINE {1 if any(item.behavior == 'lpc-words' for item in selected) else 0}
 #define PLAITS_HAS_CHIPTUNE_ENGINE {1 if any(item.behavior == 'chiptune' for item in selected) else 0}
 #define PLAITS_HAS_USER_DATA_BANK {1 if has_user_data_bank else 0}
 #define PLAITS_HAS_USER_DATA_BANK_OVERRIDE {1 if override_arrays_all else 0}
@@ -999,6 +1001,9 @@ static const int8_t kEngineUserDataBank[{len(selected)}] = {{ {user_data_banks} 
 {user_data_bank_override_block}
 #if PLAITS_HAS_SPEECH_ENGINE
 static const uint32_t kSpeechEngineMask = 0x{speech_mask:08x};
+#endif
+#if PLAITS_HAS_LPC_WORDS_ENGINE
+static const uint32_t kLPCWordsEngineMask = 0x{lpc_words_mask:08x};
 #endif
 #if PLAITS_HAS_CHIPTUNE_ENGINE
 static const uint32_t kChiptuneEngineMask = 0x{chiptune_mask:08x};

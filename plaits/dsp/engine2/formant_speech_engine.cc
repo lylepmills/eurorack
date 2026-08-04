@@ -32,6 +32,9 @@ using namespace stmlib;
 void FormantSpeechEngine::Init(BufferAllocator* allocator) {
   naive_speech_synth_.Init();
   sam_speech_synth_.Init();
+  // Phoneme scan mode never dereferences a word bank. Keeping this null avoids
+  // linking or allocating the word-bank data that belongs to LPC Words.
+  lpc_speech_synth_controller_.Init(NULL);
   temp_buffer_[0] = allocator->Allocate<float>(kMaxBlockSize);
   temp_buffer_[1] = allocator->Allocate<float>(kMaxBlockSize);
   post_filter_ = 0.0f;
@@ -52,18 +55,40 @@ void FormantSpeechEngine::Render(
   const float f0 = NoteToFrequency(parameters.note);
   const bool trigger = parameters.trigger & TRIGGER_RISING_EDGE;
 
-  // These are the stock Speech engine's two sustained models with the same
-  // parameter mapping and render order. Only the model-coordinate scaling has
-  // changed: 0..1 here is exactly group 0..1 there.
-  naive_speech_synth_.Render(
-      trigger,
-      f0,
-      parameters.morph,
-      parameters.timbre,
-      temp_buffer_[0],
-      aux,
-      out,
-      size);
+  // Expand stock Speech's group 0..2 across the whole dial: naive at the left
+  // endpoint, SAM at noon, and continuously scanned LPC phonemes at the right.
+  // The render order and interpolation below match the corresponding stock
+  // branches exactly at every point.
+  const float group = parameters.harmonics * 2.0f;
+  float blend;
+  if (group <= 1.0f) {
+    naive_speech_synth_.Render(
+        trigger,
+        f0,
+        parameters.morph,
+        parameters.timbre,
+        temp_buffer_[0],
+        aux,
+        out,
+        size);
+    blend = group;
+  } else {
+    lpc_speech_synth_controller_.Render(
+        parameters.trigger & TRIGGER_UNPATCHED,
+        trigger,
+        -1,
+        f0,
+        0.0f,
+        0.0f,
+        parameters.morph,
+        parameters.timbre,
+        1.0f,
+        aux,
+        out,
+        size);
+    blend = 2.0f - group;
+  }
+
   sam_speech_synth_.Render(
       trigger,
       f0,
@@ -73,7 +98,6 @@ void FormantSpeechEngine::Render(
       temp_buffer_[1],
       size);
 
-  float blend = parameters.harmonics;
   blend *= blend * (3.0f - 2.0f * blend);
   blend *= blend * (3.0f - 2.0f * blend);
   for (size_t i = 0; i < size; ++i) {

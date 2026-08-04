@@ -449,16 +449,17 @@
     {
       "id": "formant-speech",
       "packageId": "rubato/formant-speech",
-      "name": "Formant Speech",
+      "name": "Speech Sounds",
       "author": "Lyle Mills, after Emilie Gillet",
       "origin": "Rubato Lab",
       "family": "Vocal",
-      "description": "Naive and SAM formant voices expanded from the sustained side of Speech.",
+      "description": "Naive, SAM, and LPC phoneme voices spread continuously across one playable model.",
       "tags": [
         "speech",
         "vocal",
         "formant",
-        "sam"
+        "sam",
+        "phoneme"
       ],
       "controls": [
         "Model",
@@ -467,17 +468,17 @@
         "Spectral emphasis"
       ],
       "outputs": [
-        "Formant voice",
+        "Speech sounds voice",
         "Raw excitation or widened voice"
       ],
       "version": "1.0.0",
-      "digest": "sha256:a082d7af50483a2f9424633f8d3dca4d58e5c7842b4fa6bf9a74ca66dd070712",
-      "documentationDigest": "sha256:d6a0ec0dd58ec4f928da6152a110f832af2f2e4b393f30637911a641c30aee68",
+      "digest": "sha256:c00931e7138514951c0e5890a266a9e169c708a3355f728af368ce06b7d1845d",
+      "documentationDigest": "sha256:495080935e72a54c8da82472ce50e98deb579103fe57d9dedecf4346f309068f",
       "manual": {
         "controls": {
-          "harmonics": "Crossfades continuously from the five-formant naive voice to the three-formant SAM voice.",
-          "timbre": "Changes vocal species by shifting the formant frequencies and vocal register.",
-          "morph": "Moves continuously through the available vowel and phoneme shapes.",
+          "harmonics": "Moves continuously from the five-formant naive voice through SAM to interpolated LPC phonemes.",
+          "timbre": "Changes vocal species, register, formant frequencies, or speech-chip character for the active model.",
+          "morph": "Moves continuously through the available vowel and phoneme shapes for the active model.",
           "macro": "Moves from raw excitation through the stock voice to sharper spectral emphasis."
         },
         "trigger": "Adds the source models' brief consonant or glottal articulation at the start of a note."
@@ -489,21 +490,21 @@
     {
       "id": "lpc-speech",
       "packageId": "rubato/lpc-speech",
-      "name": "LPC Speech",
+      "name": "LPC Words",
       "author": "Lyle Mills, after Emilie Gillet",
       "origin": "Rubato Lab",
       "family": "Vocal",
-      "description": "LPC phonemes and five word banks with direct speed and vocal-tract controls.",
+      "description": "Five LPC word banks with direct word, speed, vocal-tract, and recorded-prosody controls.",
       "tags": [
         "speech",
         "vocal",
-        "phoneme",
+        "words",
         "lpc"
       ],
       "controls": [
         "Bank",
-        "Phoneme or word",
         "Speed",
+        "Word",
         "Vocal tract"
       ],
       "outputs": [
@@ -511,16 +512,16 @@
         "Raw excitation or widened voice"
       ],
       "version": "1.0.0",
-      "digest": "sha256:719f0f6653e55b701a34da5afe57ce2b4a340412c5785dc268e0bf6bc7362e26",
-      "documentationDigest": "sha256:cd4f85d0babf91b00836a12bf5b0094ef5df23a01435c61cc8da2e9feb5c0161",
+      "digest": "sha256:917a719143c42c6eae9f4bee281c467730d7896065ea40ad4e2f85b324fa3d81",
+      "documentationDigest": "sha256:b759d7f4595e570a72ea7879e172f728cfe8846ccb16a096821b228f35290316",
       "manual": {
         "controls": {
-          "harmonics": "Selects interpolated LPC phonemes or one of the five stock word banks.",
-          "timbre": "Selects a phoneme, a word, or a position within the active LPC material.",
-          "morph": "Changes playback speed around the original recording speed at noon.",
+          "harmonics": "Selects one of the five stock LPC word banks across the full dial.",
+          "timbre": "Changes playback speed around the original recording speed at noon.",
+          "morph": "Selects a word or a position within the active LPC word bank.",
           "macro": "Shifts the LPC vocal tract while keeping the played note as the pitch reference."
         },
-        "trigger": "Plays the selected word or adds a consonant articulation to the current phoneme."
+        "trigger": "Plays the selected word. With TRIG patched and FM unpatched, the FM attenuverter restores or inverts its recorded pitch contour."
       },
       "implementation": {
         "className": "LPCSpeechEngine"

@@ -25,9 +25,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// The LPC half of the stock Speech engine, with its material, address, speed,
-// and vocal-tract controls available directly instead of sharing one dial with
-// the naive and SAM models.
+// The five LPC word banks from the stock Speech engine, with bank, word,
+// playback speed, vocal-tract shift, and recorded prosody available directly.
 
 #ifndef PLAITS_DSP_ENGINE2_LPC_SPEECH_ENGINE_H_
 #define PLAITS_DSP_ENGINE2_LPC_SPEECH_ENGINE_H_
@@ -56,10 +55,15 @@ class LPCSpeechEngine : public Engine {
     return PLAITS_STEREO_LPC_SPEECH;
   }
 
+  inline void set_prosody_amount(float prosody_amount) {
+    prosody_amount_ = prosody_amount;
+  }
+
  private:
   stmlib::HysteresisQuantizer2 word_bank_quantizer_;
   LPCSpeechSynthController lpc_speech_synth_controller_;
   LPCSpeechSynthWordBank lpc_speech_synth_word_bank_;
+  float prosody_amount_;
 
   DISALLOW_COPY_AND_ASSIGN(LPCSpeechEngine);
 };
