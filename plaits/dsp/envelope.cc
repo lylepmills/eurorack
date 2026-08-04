@@ -231,16 +231,21 @@ float OneKnobEnvelope::Process(
     }
   }
 
-  // A dedicated triggered contour is a self-contained one-shot. Let it finish
-  // before accepting another edge; repeatedly restarting a multi-second attack
-  // from its current value can otherwise staircase the envelope toward one and
-  // hold it there indefinitely under a clock.
-  const bool start_envelope = rising_edge &&
-      (mode != MODE_TRIGGERED || segment_ == SEGMENT_DONE);
-  if (start_envelope) {
-    start_value_ = segment_ == SEGMENT_DONE ? 0.0f : value_;
+  if (rising_edge) {
+    if (mode == MODE_TRIGGERED) {
+      // Triggered mode uses a linear attack, so its current amplitude is also
+      // the phase needed to resume that attack without a discontinuity. An
+      // edge during attack therefore does not restart the clock, while an edge
+      // during decay turns smoothly back toward the peak. This remains fully
+      // retriggerable without the slow-attack staircase/latch caused by
+      // resetting phase to zero from the current value.
+      start_value_ = 0.0f;
+      phase_ = value_;
+    } else {
+      start_value_ = segment_ == SEGMENT_DONE ? 0.0f : value_;
+      phase_ = 0.0f;
+    }
     segment_ = SEGMENT_ATTACK;
-    phase_ = 0.0f;
   } else if (segment_ == SEGMENT_SUSTAIN && !gated) {
     // If the knob crosses live from the gated half into the one-shot half,
     // continue smoothly into the newly selected AD region's release instead

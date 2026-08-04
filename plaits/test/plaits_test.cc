@@ -2813,25 +2813,101 @@ void ValidateOneKnobEnvelope() {
     abort();
   }
 
-  // A clock faster than the far-CW cycle must not restart the long attack from
-  // its current value forever. Active one-shots ignore intervening edges and
-  // reach zero before the next available edge starts another cycle.
+  // Repeated clocks during a long attack must be accepted without restarting
+  // its progress. The far-CW attack still reaches its peak within three seconds,
+  // and each retrigger is amplitude-continuous.
   envelope.Init();
-  bool clocked_trigger_completed = false;
-  for (int block = 0; block < 16000; ++block) {
-    const bool edge = (block % 2000) == 0;
-    envelope.Process(
+  int clocked_peak_block = -1;
+  float previous_clocked_value = 0.0f;
+  for (int block = 0; block < 12000; ++block) {
+    const bool edge = (block % 500) == 0;
+    const float value = envelope.Process(
         1.0f,
         edge,
         edge,
         OneKnobEnvelope::PROFILE_SYNTH,
         OneKnobEnvelope::MODE_TRIGGERED);
-    if (block > 0 && !envelope.active()) {
-      clocked_trigger_completed = true;
+    if (edge && block > 0 &&
+        fabsf(value - previous_clocked_value) > 0.000001f) {
+      fprintf(
+          stderr,
+          "Triggered attack jumped on retrigger: before=%f after=%f\n",
+          previous_clocked_value,
+          value);
+      abort();
+    }
+    if (value > 0.999f) {
+      clocked_peak_block = block;
+      break;
+    }
+    previous_clocked_value = value;
+  }
+  if (clocked_peak_block < 8000 || clocked_peak_block >= 12000) {
+    fprintf(
+        stderr,
+        "Clocked retriggers delayed triggered attack: peak=%d\n",
+        clocked_peak_block);
+    abort();
+  }
+
+  // A retrigger during decay reverses smoothly from the current amplitude and
+  // reaches a fresh peak instead of being ignored or resetting to zero.
+  envelope.Init();
+  for (int block = 0; block < 1000 && envelope.value() < 0.999f; ++block) {
+    envelope.Process(
+        0.25f,
+        block == 0,
+        block == 0,
+        OneKnobEnvelope::PROFILE_SYNTH,
+        OneKnobEnvelope::MODE_TRIGGERED);
+  }
+  for (int block = 0; block < 400; ++block) {
+    envelope.Process(
+        0.25f,
+        false,
+        false,
+        OneKnobEnvelope::PROFILE_SYNTH,
+        OneKnobEnvelope::MODE_TRIGGERED);
+  }
+  const float before_retrigger = envelope.value();
+  const float at_retrigger = envelope.Process(
+      0.25f,
+      true,
+      true,
+      OneKnobEnvelope::PROFILE_SYNTH,
+      OneKnobEnvelope::MODE_TRIGGERED);
+  const float after_retrigger = envelope.Process(
+      0.25f,
+      false,
+      false,
+      OneKnobEnvelope::PROFILE_SYNTH,
+      OneKnobEnvelope::MODE_TRIGGERED);
+  if (fabsf(at_retrigger - before_retrigger) > 0.000001f ||
+      after_retrigger <= at_retrigger) {
+    fprintf(
+        stderr,
+        "Triggered decay retrigger was not a smooth reversal: "
+        "before=%f at=%f after=%f\n",
+        before_retrigger,
+        at_retrigger,
+        after_retrigger);
+    abort();
+  }
+  bool retriggered_peak = false;
+  for (int block = 0; block < 1000; ++block) {
+    const float value = envelope.Process(
+        0.25f,
+        false,
+        false,
+        OneKnobEnvelope::PROFILE_SYNTH,
+        OneKnobEnvelope::MODE_TRIGGERED);
+    if (value > 0.999f) {
+      retriggered_peak = true;
+      break;
     }
   }
-  if (!clocked_trigger_completed) {
-    fprintf(stderr, "Clocked triggered contour never completed\n");
+  if (!retriggered_peak) {
+    fprintf(stderr, "Triggered decay retrigger did not reach a new peak\n");
     abort();
   }
 
