@@ -119,11 +119,6 @@ void FMEngine::RenderInternal(
       &previous_feedback_, 2.0f * parameters.morph - 1.0f, size);
   Downsampler carrier_downsampler(&carrier_fir_);
   Downsampler sub_downsampler(&sub_fir_);
-  const float modulator_ratio = target_modulator_frequency /
-      (target_carrier_frequency > 1.0e-9f
-          ? target_carrier_frequency
-          : 1.0e-9f);
-  const float* linear_fm = parameters.linear_fm;
 
   // Equal-power pan gains for the stereo octave-spread, computed once at
   // control rate. The carrier sits slightly left of centre, the sub slightly
@@ -137,6 +132,73 @@ void FMEngine::RenderInternal(
     StereoPanGains(0.6f, &sub_left, &sub_right);
   }
 
+#if PLAITS_BUILD_LINEAR_TZFM
+  if (parameters.linear_fm) {
+    const float modulator_ratio = target_modulator_frequency /
+        (target_carrier_frequency > 1.0e-9f
+            ? target_carrier_frequency
+            : 1.0e-9f);
+    const float* linear_fm = parameters.linear_fm;
+    while (size--) {
+      const float max_uint32 = 4294967296.0f;
+      const float amount = amount_modulation.Next();
+      const float feedback = feedback_modulation.Next();
+      const float phase_feedback =
+          feedback < 0.0f ? 0.5f * feedback * feedback : 0.0f;
+      const float modulator_fb =
+          feedback > 0.0f ? 0.25f * feedback * feedback : 0.0f;
+
+      // Four internal samples are rendered per output sample, so both the
+      // carrier and its audio-rate displacement are expressed per internal
+      // step. Bound the modulator base to 1/3 Nyquist once here: its negative-
+      // feedback multiplier is in [0.5, 1.5], which then guarantees every
+      // signed inner increment remains representable without four costly
+      // floating-point clamp/compare sequences in the oversampling loop.
+      const float root_offset = *linear_fm++ * 0.25f;
+      float carrier = carrier_frequency.Next() + root_offset;
+      float modulator =
+          modulator_frequency.Next() + root_offset * modulator_ratio;
+      CONSTRAIN(carrier, -0.5f, 0.499999f);
+      CONSTRAIN(modulator, -0.333332f, 0.333332f);
+      const int32_t carrier_increment =
+          static_cast<int32_t>(max_uint32 * carrier);
+
+      for (size_t j = 0; j < kOversampling; ++j) {
+        const int32_t modulator_increment = static_cast<int32_t>(
+            max_uint32 * modulator *
+            (1.0f + previous_sample_ * phase_feedback));
+        modulator_phase_ += modulator_increment;
+        carrier_phase_ += carrier_increment;
+        sub_phase_ += carrier_increment / 2;
+        const float modulator_sample = SinePM(
+            modulator_phase_, modulator_fb * previous_sample_);
+        const float carrier_sample = SinePM(
+            carrier_phase_, amount * modulator_sample);
+        const float sub_sample = SinePM(
+            sub_phase_, amount * carrier_sample * 0.25f);
+        ONE_POLE(previous_sample_, carrier_sample, 0.05f);
+        carrier_downsampler.Accumulate(j, carrier_sample);
+        sub_downsampler.Accumulate(j, sub_sample);
+      }
+
+      if ((PLAITS_STEREO_TWO_OP_FM && parameters.stereo)) {
+        const float c = carrier_downsampler.Read();
+        const float s = sub_downsampler.Read();
+        *out++ = c * carrier_left + s * sub_left;
+        *aux++ = c * carrier_right + s * sub_right;
+      } else {
+        *out++ = carrier_downsampler.Read();
+        *aux++ = sub_downsampler.Read();
+      }
+    }
+    return;
+  }
+#endif
+
+  // Preserve Emilie's unsigned 4x path byte-for-byte whenever audio-rate
+  // linear FM is inactive. Two-op FM is already the most expensive factory
+  // engine, so paying signed-frequency overhead merely because the firmware
+  // supports TZFM can push an otherwise stock patch over its deadline.
   while (size--) {
     if (process_hard_sync) {
       if (hard_sync & 1) {
@@ -154,30 +216,16 @@ void FMEngine::RenderInternal(
     const float amount = amount_modulation.Next();
     const float feedback = feedback_modulation.Next();
     float phase_feedback = feedback < 0.0f ? 0.5f * feedback * feedback : 0.0f;
-    // This engine renders four internal samples per output sample. The
-    // external offset is expressed at the output sample rate, so divide by
-    // four before applying it to each oversampled phase step. Apply the same
-    // root-frequency displacement to the modulator, scaled by the selected
-    // operator ratio, so the entire FM voice crosses zero coherently.
-    const float root_offset = linear_fm ? *linear_fm++ * 0.25f : 0.0f;
-    float _carrier_frequency = carrier_frequency.Next() + root_offset;
-    float _modulator_frequency =
-        modulator_frequency.Next() + root_offset * modulator_ratio;
-    CONSTRAIN(_carrier_frequency, -0.5f, 0.499999f);
-    CONSTRAIN(_modulator_frequency, -0.5f, 0.499999f);
-    const int32_t carrier_increment = static_cast<int32_t>(
-        max_uint32 * _carrier_frequency);
+    const uint32_t carrier_increment = static_cast<uint32_t>(
+        max_uint32 * carrier_frequency.Next());
+    float _modulator_frequency = modulator_frequency.Next();
 
     for (size_t j = 0; j < kOversampling; ++j) {
-      float modulator_phase_frequency =
-          _modulator_frequency *
-          (1.0f + previous_sample_ * phase_feedback);
-      CONSTRAIN(modulator_phase_frequency, -0.5f, 0.499999f);
-      const int32_t modulator_increment = static_cast<int32_t>(
-          max_uint32 * modulator_phase_frequency);
-      modulator_phase_ += modulator_increment;
+      modulator_phase_ += static_cast<uint32_t>(
+          max_uint32 * _modulator_frequency *
+          (1.0f + previous_sample_ * phase_feedback));
       carrier_phase_ += carrier_increment;
-      sub_phase_ += carrier_increment / 2;
+      sub_phase_ += carrier_increment >> 1;
       float modulator_fb = feedback > 0.0f ? 0.25f * feedback * feedback : 0.0f;
       float modulator = SinePM(
           modulator_phase_, modulator_fb * previous_sample_);

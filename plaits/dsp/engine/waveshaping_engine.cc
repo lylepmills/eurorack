@@ -33,6 +33,7 @@
 #include "stmlib/dsp/parameter_interpolator.h"
 #include "stmlib/utils/dsp.h"
 
+#include "plaits/build_config.h"
 #include "plaits/dsp/oscillator/sine_oscillator.h"
 #include "plaits/resources.h"
 #include "plaits/build_config.h"
@@ -81,10 +82,16 @@ void WaveshapingEngine::Render(
   
   // Start from bandlimited slope signal.
   const uint32_t hard_sync = PLAITS_HARD_SYNC_EVENTS(parameters);
+#if PLAITS_BUILD_LINEAR_TZFM
   slope_.RenderLinearFm<OSCILLATOR_SHAPE_SLOPE>(
       f0, pw, parameters.linear_fm, out, size, hard_sync);
   triangle_.RenderLinearFm<OSCILLATOR_SHAPE_SLOPE>(
       f0, 0.5f, parameters.linear_fm, aux, size, hard_sync);
+#else
+  slope_.Render<OSCILLATOR_SHAPE_SLOPE>(f0, pw, out, size, hard_sync);
+  triangle_.Render<OSCILLATOR_SHAPE_SLOPE>(
+      f0, 0.5f, aux, size, hard_sync);
+#endif
 
   // Try to estimate how rich the spectrum is, and reduce the range of the
   // waveshaping control accordingly.

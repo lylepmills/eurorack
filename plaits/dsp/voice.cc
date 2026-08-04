@@ -46,6 +46,19 @@ static const ParameterRandomizerProfile kRandomizerProfiles[] = {
 };
 #endif
 
+#if PLAITS_BUILD_LINEAR_TZFM
+// The FM input conditioner has a -0.2 V/V slope (100k input, 20k feedback).
+// In SDADC single-ended zero-reference mode, normalized code has a 2 / 3.3 V
+// slope. The stored Plaits FM calibration then multiplies by -60, yielding:
+//
+//   60 * 0.2 * 2 / 3.3 = 80 / 11 calibration units per input volt.
+//
+// Keep this hardware-derived constant explicit: treating the calibrated value
+// as 12 semitones/volt under-scales linear FM to roughly 606 Hz/V.
+static const float kFmCalibrationUnitsPerVolt = 80.0f / 11.0f;
+static const float kLinearTzfmHzPerVolt = 1000.0f;
+#endif
+
 void Voice::Init(BufferAllocator* allocator) {
   engines_.Init();
   PLAITS_REGISTER_ENGINES(engines_);
@@ -225,10 +238,10 @@ void Voice::Render(
 
 #if PLAITS_BUILD_LINEAR_TZFM
   // The FM attenuverter controls a fixed Hz/volt slope instead of a semitone
-  // span for engines that opt in. The ADC calibration expresses FM in
-  // semitones (12 per volt), so 1000 / 12 / sample-rate converts it to signed
-  // cycles/sample. A fixed Hz slope is what makes this linear FM; dividing by
-  // the carrier here would turn it back into exponential/ratio modulation.
+  // span for engines that opt in. Convert the hardware-calibrated FM value back
+  // to volts, then apply a nominal 1 kHz/V slope. A fixed Hz slope is what makes
+  // this linear FM; dividing by the carrier here would turn it back into
+  // exponential/ratio modulation.
   float linear_fm[kMaxBlockSize];
   const bool use_linear_tzfm =
       modulations.frequency_patched && e->linear_tzfm_capable();
@@ -236,7 +249,10 @@ void Voice::Render(
     float amount = patch.frequency_modulation_amount;
     amount *= std::max(fabsf(amount) - 0.05f, 0.05f);
     amount *= 1.05f;
-    const float scale = amount * (1000.0f / 12.0f) / kCorrectedSampleRate;
+    const float scale =
+        amount *
+        (kLinearTzfmHzPerVolt / kFmCalibrationUnitsPerVolt) /
+        kCorrectedSampleRate;
     for (size_t i = 0; i < size; ++i) {
       linear_fm[i] = modulations.frequency_audio[i] * scale;
     }

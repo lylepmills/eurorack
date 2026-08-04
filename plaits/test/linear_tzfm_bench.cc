@@ -11,6 +11,7 @@
 #endif
 
 #include "plaits/dsp/dsp.h"
+#include "plaits/dsp/engine/fm_engine.h"
 #include "plaits/dsp/engine/waveshaping_engine.h"
 #include "plaits/dsp/engine2/vowel_fof_engine.h"
 #include "stmlib/utils/buffer_allocator.h"
@@ -93,6 +94,7 @@ int main() {
   _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
 #endif
   Benchmark<WaveshapingEngine>("waveshaping");
+  Benchmark<FMEngine>("two-op-fm");
   Benchmark<VowelFofEngine>("vowel-fof");
   return 0;
 }

@@ -82,6 +82,16 @@ class Ui {
   // calibration. Kept public for the audio callback's diagnostics/tests.
   void ReadAudioRateFm(float* destination, size_t size);
 
+  // Engine initialization runs in the audio callback and can take longer than
+  // an ordinary render block. Re-anchor the free-running FM producer after
+  // that deliberate pause so it is not reported as an input-stream failure.
+  void RealignAudioInputAfterEngineChange();
+
+  // Consume and calibrate the 50 kHz stream only while the selected engine can
+  // actually use a patched FM input. This keeps the ordinary factory path out
+  // of the callback budget of already-expensive engines.
+  void SetAudioRateFmNeeded(bool needed);
+
   void set_active_engine(int active_engine) {
     active_engine_ = active_engine;
   }
@@ -196,6 +206,7 @@ class Ui {
   bool ignore_release_[SWITCH_LAST];
 
   int active_engine_;
+  bool audio_rate_fm_needed_;
   // Per-bank memory for banked navigation: the row last selected in each bank,
   // so changing bank restores it (design "B"). Persisted across power cycles via
   // the saved State. Indexed by bank; up to four banks.
