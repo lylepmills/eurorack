@@ -9,6 +9,8 @@ Before changing Plaits, read:
 - `alt_firmwares/plaits_lab_sdk/README.md` for model development and
   contributor tooling.
 - `alt_firmwares/README.md` for legacy alternate-firmware information.
+- `alt_firmwares/PLAITS_PALETTE_BACKLOG.md` for investigated, parked, and
+  planned Palette feature work.
 
 The production editor is at <https://rubato.audio/plaits-palette/>.
 

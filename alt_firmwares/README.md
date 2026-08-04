@@ -2,6 +2,9 @@
 
 Plaits Palette is now available at [rubato.audio/plaits-palette](https://rubato.audio/plaits-palette/).
 
+Investigated and deferred Palette features are tracked in the
+[Plaits Palette future-work index](PLAITS_PALETTE_BACKLOG.md).
+
 Earlier versions of my Plaits alt firmware have been superseded by Plaits Palette and are no longer supported.
 
 # Rings
