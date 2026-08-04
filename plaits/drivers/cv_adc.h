@@ -33,6 +33,8 @@
 
 #include "stmlib/stmlib.h"
 
+#include "plaits/drivers/audio_rate_fm_resampler.h"
+
 namespace plaits {
 
 enum CvAdcChannel {
@@ -49,7 +51,8 @@ enum CvAdcChannel {
 
 class CvAdc {
  public:
-  static const size_t kAudioRateFmBufferSize = 24;
+  static const size_t kAudioRateFmBufferSize =
+      AudioRateFmResampler::kRingBufferSize;
 
   CvAdc() { }
   ~CvAdc() { }
@@ -57,10 +60,34 @@ class CvAdc {
   void Init();
   void DeInit();
   void Convert();
-  // Copies the newest `size` audio-rate FM conversions in chronological order.
-  // In a regular build this simply repeats the latest control-rate reading,
-  // which keeps the driver API and class layout recipe-independent.
-  void CopyAudioRateFm(int16_t* destination, size_t size) const;
+  // Resamples the continuous 50 kHz FM conversion stream onto the exact Plaits
+  // synthesis clock. In a regular build this repeats the latest control-rate
+  // reading, keeping the driver API and class layout recipe-independent.
+  void CopyAudioRateFm(float* destination, size_t size);
+  // State persistence and engine initialization can block the audio consumer
+  // while the DMA producer keeps running. Restart acquisition after either
+  // planned pause without latching a false fault.
+  void RealignAudioRateFmAfterKnownPause(size_t block_size);
+  inline uint32_t audio_rate_fm_faults() const {
+    return audio_rate_fm_overruns_ +
+        audio_rate_fm_resampler_.resync_count() -
+        audio_rate_fm_acknowledged_resyncs_;
+  }
+  inline uint32_t audio_rate_fm_overruns() const {
+    return audio_rate_fm_overruns_;
+  }
+  inline uint32_t audio_rate_fm_resyncs() const {
+    return audio_rate_fm_resampler_.resync_count() -
+        audio_rate_fm_acknowledged_resyncs_;
+  }
+  inline uint32_t audio_rate_fm_underflows() const {
+    return audio_rate_fm_resampler_.underflow_count() -
+        audio_rate_fm_acknowledged_underflows_;
+  }
+  inline uint32_t audio_rate_fm_excess_lag() const {
+    return audio_rate_fm_resampler_.excess_lag_count() -
+        audio_rate_fm_acknowledged_excess_lag_;
+  }
 
   inline int16_t value(CvAdcChannel channel) const {
     return values_[channel_map_[channel]];
@@ -73,7 +100,12 @@ class CvAdc {
  private:
   int channel_map_[CV_ADC_CHANNEL_LAST];
   int16_t values_[CV_ADC_CHANNEL_LAST];
-  int16_t audio_rate_fm_[kAudioRateFmBufferSize];
+  volatile int16_t audio_rate_fm_[kAudioRateFmBufferSize];
+  AudioRateFmResampler audio_rate_fm_resampler_;
+  uint32_t audio_rate_fm_overruns_;
+  uint32_t audio_rate_fm_acknowledged_resyncs_;
+  uint32_t audio_rate_fm_acknowledged_underflows_;
+  uint32_t audio_rate_fm_acknowledged_excess_lag_;
   
   DISALLOW_COPY_AND_ASSIGN(CvAdc);
 };

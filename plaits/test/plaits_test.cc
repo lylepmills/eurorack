@@ -24,6 +24,7 @@
 
 #include "plaits/dsp/dsp.h"
 #include "plaits/build_config.h"
+#include "plaits/drivers/audio_rate_fm_resampler.h"
 #include "plaits/pot_controller.h"
 
 #include "plaits/dsp/chords/chord_bank.h"
@@ -3345,10 +3346,12 @@ void TestExperimentalEngines() {
   fflush(stdout);
   ValidateOneKnobEnvelope();
   ValidateModalContourExcitation();
+#if PLAITS_BUILD_LINEAR_TZFM
   printf("Validating linear through-zero oscillator core...\n");
   fflush(stdout);
   ValidateLinearTzfmOscillator();
   ValidateLinearTzfmTwoOpFm();
+#endif  // PLAITS_BUILD_LINEAR_TZFM
   printf("Validating selectable chord tables...\n");
   fflush(stdout);
   BufferAllocator chord_allocator(ram_block, sizeof(ram_block));
@@ -3763,6 +3766,103 @@ void ValidateCustomSpeechBankLevelMatching() {
   }
 }
 
+void ValidateAudioRateFmRecovery() {
+  AudioRateFmResampler resampler;
+  volatile int16_t ring[AudioRateFmResampler::kRingBufferSize];
+  float output[12];
+  for (size_t i = 0; i < AudioRateFmResampler::kRingBufferSize; ++i) {
+    ring[i] = static_cast<int16_t>(i * 257);
+  }
+
+  resampler.Init();
+  size_t write_index = 0;
+  uint32_t source_phase = 0;
+  for (int block = 0; block < 24; ++block) {
+    source_phase += 12 * AudioRateFmResampler::kSourceStep;
+    const size_t produced =
+        source_phase / AudioRateFmResampler::kPhaseDenominator;
+    source_phase %= AudioRateFmResampler::kPhaseDenominator;
+    write_index = (write_index + produced) %
+        AudioRateFmResampler::kRingBufferSize;
+    resampler.Process(ring, write_index, output, 12);
+  }
+  if (resampler.resync_count()) {
+    fprintf(stderr, "FM resampler drifted during a steady producer run\n");
+    abort();
+  }
+
+  // If both audio DMA halves became pending, their two callbacks run back to
+  // back. The producer has advanced for both blocks before the first callback;
+  // the first render must retain the second block's backlog rather than
+  // classifying it as excessive and re-seeding away valid samples.
+  source_phase += 24 * AudioRateFmResampler::kSourceStep;
+  const size_t catch_up_produced =
+      source_phase / AudioRateFmResampler::kPhaseDenominator;
+  source_phase %= AudioRateFmResampler::kPhaseDenominator;
+  write_index = (write_index + catch_up_produced) %
+      AudioRateFmResampler::kRingBufferSize;
+  resampler.Process(ring, write_index, output, 12);
+  resampler.Process(ring, write_index, output, 12);
+  if (resampler.resync_count()) {
+    fprintf(stderr, "FM resampler discarded a valid two-block backlog\n");
+    abort();
+  }
+
+  // Model changes can leave callbacks immediately pending. CvAdc restarts its
+  // acquisition at the live producer cursor, holds the latest scalar sample
+  // through that backlog, and resumes only after a fresh target lag exists.
+  resampler.Restart(write_index);
+  for (int recovery = 0; recovery < 4; ++recovery) {
+    const size_t produced = recovery ? 13 : 0;
+    write_index = (write_index + produced) %
+        AudioRateFmResampler::kRingBufferSize;
+    resampler.Process(ring, write_index, output, 12);
+  }
+  if (!resampler.running()) {
+    fprintf(stderr, "FM resampler did not restart after a known pause\n");
+    abort();
+  }
+  source_phase = 0;
+  for (int block = 0; block < 24; ++block) {
+    source_phase += 12 * AudioRateFmResampler::kSourceStep;
+    const size_t produced =
+        source_phase / AudioRateFmResampler::kPhaseDenominator;
+    source_phase %= AudioRateFmResampler::kPhaseDenominator;
+    write_index = (write_index + produced) %
+        AudioRateFmResampler::kRingBufferSize;
+    resampler.Process(ring, write_index, output, 12);
+  }
+  if (resampler.resync_count()) {
+    fprintf(stderr, "FM resampler did not recover after a known pause\n");
+    abort();
+  }
+
+  // Keep field diagnostics honest: an empty producer interval is an
+  // underflow, while a cursor one slot behind the consumer is excessive lag.
+  AudioRateFmResampler reason_probe;
+  reason_probe.Init();
+  write_index = AudioRateFmResampler::kNominalLag;
+  reason_probe.Process(ring, write_index, output, 12);
+  reason_probe.Process(ring, write_index, output, 12);
+  reason_probe.Process(ring, write_index, output, 12);
+  if (reason_probe.underflow_count() != 1 ||
+      reason_probe.excess_lag_count() != 0) {
+    fprintf(stderr, "FM resampler misclassified an underflow\n");
+    abort();
+  }
+
+  reason_probe.Restart(0);
+  write_index = AudioRateFmResampler::kNominalLag;
+  reason_probe.Process(ring, write_index, output, 12);
+  // After the first render the consumer is at index 12. A producer cursor at
+  // 11 is therefore 63 samples ahead in modulo space, beyond the guard.
+  reason_probe.Process(ring, 11, output, 12);
+  if (reason_probe.excess_lag_count() != 1) {
+    fprintf(stderr, "FM resampler misclassified excessive lag\n");
+    abort();
+  }
+}
+
 int main(void) {
 #if defined(__SSE2__)
   _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
@@ -3815,5 +3915,7 @@ int main(void) {
   ValidateParameterRandomizer();
   printf("Validating custom Speech bank level matching...\n");
   ValidateCustomSpeechBankLevelMatching();
+  printf("Validating audio-rate FM recovery...\n");
+  ValidateAudioRateFmRecovery();
   TestExperimentalEngines();
 }

@@ -231,13 +231,33 @@ class Oscillator {
           slope_down = 1.0f / (1.0f - pw);
         }
         if (high_ ^ (phase_ < pw)) {
-          float t = (phase_ - pw) / frequency;
           float discontinuity = (slope_up + slope_down) * frequency;
           if (through_zero_fm && frequency < 0.0f) {
             discontinuity = -discontinuity;
           }
-          this_sample -= stmlib::ThisIntegratedBlepSample(t) * discontinuity;
-          next_sample -= stmlib::NextIntegratedBlepSample(t) * discontinuity;
+          if (through_zero_fm) {
+            // At a through-zero stall the interpolated pulse width can cross
+            // the stationary phase. Dividing by a zero (or nearly zero)
+            // oscillator velocity makes t infinite and 0 * poly(infinity)
+            // becomes a latched NaN. A phase-driven crossing always produces
+            // t in [0, 1]; skip only the degenerate parameter-driven case,
+            // whose true bandlimited correction tends to zero with velocity.
+            if (fabsf(frequency) > 1.0e-7f) {
+              const float t = (phase_ - pw) / frequency;
+              if (t >= 0.0f && t <= 1.0f) {
+                this_sample -=
+                    stmlib::ThisIntegratedBlepSample(t) * discontinuity;
+                next_sample -=
+                    stmlib::NextIntegratedBlepSample(t) * discontinuity;
+              }
+            }
+          } else {
+            const float t = (phase_ - pw) / frequency;
+            this_sample -=
+                stmlib::ThisIntegratedBlepSample(t) * discontinuity;
+            next_sample -=
+                stmlib::NextIntegratedBlepSample(t) * discontinuity;
+          }
           high_ = phase_ < pw;
         }
         if (phase_ >= 1.0f) {

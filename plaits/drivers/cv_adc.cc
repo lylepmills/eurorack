@@ -31,7 +31,6 @@
 #include <stm32f37x_conf.h>
 
 #include "plaits/build_config.h"
-#include "plaits/drivers/audio_rate_timer.h"
 
 namespace plaits {
 
@@ -77,9 +76,16 @@ void CvAdc::Init() {
     channel_map_[i] = 0;
     values_[i] = 0;
   }
+#if PLAITS_BUILD_LINEAR_TZFM
   for (size_t i = 0; i < kAudioRateFmBufferSize; ++i) {
     audio_rate_fm_[i] = 0;
   }
+  audio_rate_fm_resampler_.Init();
+  audio_rate_fm_overruns_ = 0;
+  audio_rate_fm_acknowledged_resyncs_ = 0;
+  audio_rate_fm_acknowledged_underflows_ = 0;
+  audio_rate_fm_acknowledged_excess_lag_ = 0;
+#endif
 
   // Power all the SDADCs.
   RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR, ENABLE);
@@ -124,6 +130,16 @@ void CvAdc::Init() {
   for (int i = 0; i < 3; ++i) {
     const ConverterConfiguration& config = converter_configuration[i];
     const bool audio_rate_fm = PLAITS_BUILD_LINEAR_TZFM && i == 1;
+
+    // With one continuous channel, FAST mode performs the first conversion in
+    // 360 SDADC cycles and every subsequent conversion in 120 cycles: exactly
+    // 50 kHz from Plaits' 6 MHz SDADC clock. FAST must be selected while the
+    // peripheral is disabled (or in initialization mode).
+#if PLAITS_BUILD_LINEAR_TZFM
+    if (audio_rate_fm) {
+      SDADC_FastConversionCmd(config.sdadc, ENABLE);
+    }
+#endif
 
     // Wait for SDADC to stabilize.
     SDADC_Cmd(config.sdadc, ENABLE);
@@ -176,15 +192,11 @@ void CvAdc::Init() {
     // Select injected channels.
     SDADC_InjectedChannelSelect(config.sdadc, channels);
     
-    // Disable continuous mode - the conversions are restarted every time
-    // we render a block of samples.
-    SDADC_InjectedContinuousModeCmd(config.sdadc, DISABLE);
-    if (audio_rate_fm) {
-      SDADC_ExternalTrigInjectedConvConfig(
-          config.sdadc, SDADC_ExternalTrigInjecConv_T2_CC3);
-      SDADC_ExternalTrigInjectedConvEdgeConfig(
-          config.sdadc, SDADC_ExternalTrigInjecConvEdge_Rising);
-    }
+    // Control-rate converters are restarted once per UI poll. SDADC2 instead
+    // free-runs its sole FM channel; timer-triggered one-shot conversions would
+    // take 360 cycles each and reach only 16.7 kHz.
+    SDADC_InjectedContinuousModeCmd(
+        config.sdadc, audio_rate_fm ? ENABLE : DISABLE);
     
     // Terminate initialization sequence.
     SDADC_CalibrationSequenceConfig(config.sdadc, SDADC_CalibrationSequence_3);
@@ -201,17 +213,15 @@ void CvAdc::Init() {
   }
 
 #if PLAITS_BUILD_LINEAR_TZFM
-  // The shared timer's CC3 event is exactly phase-stable with the I2S clock.
-  // Sync input can share the same base through TRGO without resetting us.
-  AudioRateTimer::SetClientActive(AudioRateTimer::CLIENT_TZFM_CV, true);
+  // One software start launches the perpetual 50 kHz injected conversion
+  // stream. Convert() must never restart SDADC2 in this build mode.
+  SDADC_ClearFlag(SDADC2, SDADC_FLAG_JOVR);
+  SDADC_SoftwareStartInjectedConv(SDADC2);
 #endif
   Convert();
 }
 
 void CvAdc::DeInit() {
-#if PLAITS_BUILD_LINEAR_TZFM
-  AudioRateTimer::SetClientActive(AudioRateTimer::CLIENT_TZFM_CV, false);
-#endif
   for (int i = 0; i < 3; ++i) {
     const ConverterConfiguration& config = converter_configuration[i];
     SDADC_Cmd(config.sdadc, DISABLE);
@@ -239,29 +249,55 @@ void CvAdc::Convert() {
   SDADC_SoftwareStartInjectedConv(SDADC3);
 }
 
-void CvAdc::CopyAudioRateFm(int16_t* destination, size_t size) const {
-  if (size > kAudioRateFmBufferSize) {
-    size = kAudioRateFmBufferSize;
-  }
+void CvAdc::CopyAudioRateFm(float* destination, size_t size) {
 #if PLAITS_BUILD_LINEAR_TZFM
-  // CNDTR points to the NEXT DMA write. Looking one block backwards therefore
-  // returns the newest completed samples in chronological order. The copy is
-  // far shorter than one conversion period; a sample completing during it can
-  // only defer that newest sample to the following audio block.
+  if (SDADC_GetFlagStatus(SDADC2, SDADC_FLAG_JOVR) == SET) {
+    ++audio_rate_fm_overruns_;
+    SDADC_ClearFlag(SDADC2, SDADC_FLAG_JOVR);
+  }
+  // CNDTR points to the next DMA write. DMA stores the sample before it
+  // decrements CNDTR; the barrier keeps the following ring reads ordered after
+  // this producer snapshot.
   const size_t next = (
       kAudioRateFmBufferSize - DMA_GetCurrDataCounter(DMA2_Channel4)) %
       kAudioRateFmBufferSize;
-  const size_t first =
-      (next + kAudioRateFmBufferSize - size) % kAudioRateFmBufferSize;
-  for (size_t i = 0; i < size; ++i) {
-    destination[i] =
-        audio_rate_fm_[(first + i) % kAudioRateFmBufferSize];
-  }
+  __DMB();
+  audio_rate_fm_resampler_.Process(
+      audio_rate_fm_, next, destination, size);
 #else
-  const int16_t value = values_[channel_map_[CV_ADC_CHANNEL_FM]];
+  const float value =
+      static_cast<float>(values_[channel_map_[CV_ADC_CHANNEL_FM]]) /
+      32768.0f;
   for (size_t i = 0; i < size; ++i) {
     destination[i] = value;
   }
+#endif
+}
+
+void CvAdc::RealignAudioRateFmAfterKnownPause(size_t block_size) {
+#if PLAITS_BUILD_LINEAR_TZFM
+  (void)block_size;
+  // The caller invokes this immediately after a known blocking operation. A
+  // JOVR flag present now was caused by that deliberate pause and must not
+  // become a fault.
+  SDADC_ClearFlag(SDADC2, SDADC_FLAG_JOVR);
+  const size_t next = (
+      kAudioRateFmBufferSize - DMA_GetCurrDataCounter(DMA2_Channel4)) %
+      kAudioRateFmBufferSize;
+  __DMB();
+  audio_rate_fm_resampler_.Restart(next);
+  // Any re-seed observed before this known pause completed belongs to the
+  // transition. Preserve the raw lifetime count for debugging, but establish
+  // a new diagnostic baseline. Restart() waits for a fresh ring lead, so
+  // immediately pending callbacks simply receive the newest scalar sample.
+  audio_rate_fm_acknowledged_resyncs_ =
+      audio_rate_fm_resampler_.resync_count();
+  audio_rate_fm_acknowledged_underflows_ =
+      audio_rate_fm_resampler_.underflow_count();
+  audio_rate_fm_acknowledged_excess_lag_ =
+      audio_rate_fm_resampler_.excess_lag_count();
+#else
+  (void)block_size;
 #endif
 }
 

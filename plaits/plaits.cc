@@ -141,14 +141,24 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
     // from the continuous usage tone to the full two-tone beacon format.
     cpu_probe.SectionBegin(0);
 #endif
+    const int previous_engine = voice.active_engine();
     voice.Render(patch, modulations, (Voice::Frame*)(output), size);
+    const int active_engine = voice.active_engine();
 #if PLAITS_CPU_PROBE && PLAITS_CPU_PROBE_SECTION_TOTAL
     cpu_probe.SectionEnd(0);
 #endif
     PLAITS_CPU_PROBE_END(size)
     PLAITS_CPU_PROBE_READOUT((Voice::Frame*)(output), size)
     PLAITS_CPU_PROBE_DISPLAY(ui)
-    ui.set_active_engine(voice.active_engine());
+    if (active_engine != previous_engine) {
+      ui.RealignAudioInputAfterEngineChange();
+    }
+    ui.set_active_engine(active_engine);
+#if PLAITS_BUILD_LINEAR_TZFM
+    ui.SetAudioRateFmNeeded(
+        modulations.frequency_patched &&
+        voice.active_engine_supports_linear_tzfm());
+#endif
   }
   
 #ifdef PROFILE_INTERRUPT
