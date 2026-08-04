@@ -92,7 +92,8 @@ enum OptionLight {
 static const uint8_t kNumOptions = OPTION_LIGHT_LAST;
 static const uint8_t kNumLockedFrequencyPotOptions =
     4 + 2 * PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE;
-static const uint8_t kNumModelCVOptions = 5;
+static const uint8_t kNumModelCVOptions =
+    4 + PLAITS_BUILD_ENABLE_SYNC_INPUT;
 static const uint8_t kNumLevelCVOptions = 3;
 // Aux output: regular aux model, stereo (true L/R pair on stereo-capable
 // engines), suboscillator. The suboscillator's own light then carries shape
@@ -122,7 +123,9 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
 
   cv_adc_.Init();
   pots_adc_.Init();
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
   sync_input_.Init();
+#endif
   leds_.Init();
   switches_.Init();
 
@@ -1027,9 +1030,12 @@ void Ui::DetectNormalization() {
 }
 
 void Ui::Poll() {
-  const bool sync_enabled = patch_->model_cv_option == 4;
-  sync_input_.SetEnabled(sync_enabled);
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
+  sync_input_.SetEnabled(patch_->model_cv_option == 4);
   modulations_->hard_sync = sync_input_.ReadEvents(kBlockSize);
+#else
+  modulations_->hard_sync = 0;
+#endif
   for (int i = 0; i < POTS_ADC_CHANNEL_LAST; ++i) {
     pots_[i].ProcessControlRate(pots_adc_.float_value(PotsAdcChannel(i)));
   }

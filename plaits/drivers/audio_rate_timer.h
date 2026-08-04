@@ -9,19 +9,15 @@
 
 namespace plaits {
 
-// TIM2 is shared by the MODEL-input hard-sync detector and the optional
-// audio-rate TZFM CV path. Keep its configuration in one place so enabling one
-// feature cannot reset or stop the other feature's sampling clock.
+// TIM2 clocks the MODEL-input hard-sync detector at the synthesis sample rate.
 class AudioRateTimer {
  public:
   enum Client {
-    CLIENT_SYNC_INPUT = 1 << 0,
-    CLIENT_TZFM_CV = 1 << 1
+    CLIENT_SYNC_INPUT = 1 << 0
   };
 
-  // Safe to call more than once. This configures both trigger outputs:
-  //   TIM2 TRGO/update -> ADC1 injected MODEL-input conversions.
-  //   TIM2 CC3         -> SDADC2 injected TZFM conversions.
+  // Safe to call more than once. TIM2 TRGO/update triggers ADC1's injected
+  // MODEL-input conversion.
   static void Init();
 
   // Starts TIM2 while at least one client is active. A client can acquire or

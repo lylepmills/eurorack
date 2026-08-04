@@ -270,9 +270,13 @@ void Voice::Render(
   }
   EngineParameters p;
   p.chord_set_option = patch.chord_set_option;
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
   p.hard_sync = patch.model_cv_option == 4 && e->hard_sync_capable()
       ? modulations.hard_sync
       : 0;
+#else
+  p.hard_sync = 0;
+#endif
   // The stereo aux mode requests a true stereo render (OUT = left, AUX = right)
   // from engines that support it; the others fall back to their regular aux
   // output. stereo_capable() is compile-time false for an engine built with its

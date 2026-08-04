@@ -2,6 +2,10 @@
 
 #include "plaits/drivers/sync_input.h"
 
+#include "plaits/build_config.h"
+
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
+
 #include <stm32f37x_conf.h>
 
 #include "plaits/drivers/audio_rate_timer.h"
@@ -57,7 +61,7 @@ void SyncInput::Init() {
   // preempts the block callback. This priority assignment is made here rather
   // than globally: stock/default builds that never select sync are unchanged.
   NVIC_SetPriority(ADC1_IRQn, 0);
-  NVIC_EnableIRQ(ADC1_IRQn);
+  NVIC_DisableIRQ(ADC1_IRQn);
 }
 
 void SyncInput::ArmRisingEdge() {
@@ -84,25 +88,32 @@ void SyncInput::SetEnabled(bool enabled) {
   if (enabled) {
     queue_.Init(CycleCount());
     ArmRisingEdge();
-    ADC_ClearITPendingBit(ADC1, ADC_IT_AWD);
-    ADC_AnalogWatchdogCmd(ADC1, ADC_AnalogWatchdog_SingleInjecEnable);
-    ADC_ITConfig(ADC1, ADC_IT_AWD, ENABLE);
-    ADC_ExternalTrigInjectedConvCmd(ADC1, ENABLE);
-
     // Let the short watchdog ISR preempt the audio callback; otherwise its DWT
     // timestamp would describe callback completion rather than the actual edge.
     NVIC_SetPriority(DMA1_Channel5_IRQn, 1);
+    enabled_ = true;
+    ADC_ClearITPendingBit(ADC1, ADC_IT_AWD);
+    NVIC_ClearPendingIRQ(ADC1_IRQn);
+    NVIC_EnableIRQ(ADC1_IRQn);
+    ADC_AnalogWatchdogCmd(ADC1, ADC_AnalogWatchdog_SingleInjecEnable);
+    ADC_ITConfig(ADC1, ADC_IT_AWD, ENABLE);
+    ADC_ExternalTrigInjectedConvCmd(ADC1, ENABLE);
     AudioRateTimer::SetClientActive(
         AudioRateTimer::CLIENT_SYNC_INPUT, true);
   } else {
     ADC_ExternalTrigInjectedConvCmd(ADC1, DISABLE);
     ADC_ITConfig(ADC1, ADC_IT_AWD, DISABLE);
     ADC_AnalogWatchdogCmd(ADC1, ADC_AnalogWatchdog_None);
-    ADC_ClearITPendingBit(ADC1, ADC_IT_AWD);
     AudioRateTimer::SetClientActive(
         AudioRateTimer::CLIENT_SYNC_INPUT, false);
+    NVIC_DisableIRQ(ADC1_IRQn);
+    ADC_ClearITPendingBit(ADC1, ADC_IT_AWD);
+    NVIC_ClearPendingIRQ(ADC1_IRQn);
+    enabled_ = false;
+    // Once the edge detector is off there is no priority-0 interrupt that the
+    // renderer must yield to, so restore the stock audio interrupt priority.
+    NVIC_SetPriority(DMA1_Channel5_IRQn, 0);
   }
-  enabled_ = enabled;
 }
 
 void SyncInput::HandleInterrupt() {
@@ -133,3 +144,5 @@ void ADC1_IRQHandler(void) {
 }
 
 }
+
+#endif  // PLAITS_BUILD_ENABLE_SYNC_INPUT

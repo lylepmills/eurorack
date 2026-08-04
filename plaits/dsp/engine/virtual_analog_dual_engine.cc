@@ -25,6 +25,14 @@
 
 #include "plaits/dsp/engine/virtual_analog_dual_engine.h"
 
+#include "plaits/build_config.h"
+
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
+#define PLAITS_HARD_SYNC_EVENTS(parameters) ((parameters).hard_sync)
+#else
+#define PLAITS_HARD_SYNC_EVENTS(parameters) 0u
+#endif
+
 namespace plaits {
 
 using namespace stmlib;
@@ -105,7 +113,7 @@ void VirtualAnalogDualEngine::Render(
       primary_shape,
       temp_buffer_,
       size,
-      parameters.hard_sync);
+      PLAITS_HARD_SYNC_EVENTS(parameters));
   // OUT is scratch until the final mix. Keeping the normal secondary here
   // leaves AUX available for the synchronized secondary in mono.
   auxiliary_.Render(
@@ -114,7 +122,7 @@ void VirtualAnalogDualEngine::Render(
       auxiliary_shape,
       out,
       size,
-      parameters.hard_sync);
+      PLAITS_HARD_SYNC_EVENTS(parameters));
 
   if (PLAITS_STEREO_VIRTUAL_ANALOG_DUAL && parameters.stereo) {
     // Both channels are complementary views of the same original 50/50 mix.
@@ -135,7 +143,7 @@ void VirtualAnalogDualEngine::Render(
         auxiliary_shape,
         aux,
         size,
-        parameters.hard_sync);
+        PLAITS_HARD_SYNC_EVENTS(parameters));
     for (size_t i = 0; i < size; ++i) {
       const float primary = temp_buffer_[i];
       out[i] = (out[i] + primary) * 0.5f;
@@ -145,3 +153,5 @@ void VirtualAnalogDualEngine::Render(
 }
 
 }  // namespace plaits
+
+#undef PLAITS_HARD_SYNC_EVENTS

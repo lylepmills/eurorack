@@ -30,7 +30,14 @@
 
 #include <algorithm>
 
+#include "plaits/build_config.h"
 #include "stmlib/dsp/parameter_interpolator.h"
+
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
+#define PLAITS_HARD_SYNC_EVENTS(parameters) ((parameters).hard_sync)
+#else
+#define PLAITS_HARD_SYNC_EVENTS(parameters) 0u
+#endif
 
 namespace plaits {
 
@@ -107,9 +114,11 @@ void VirtualAnalogEngine::Render(
   CONSTRAIN(pw_2, 0.5f, 0.99f);
 
   primary_.Render(
-      primary_f, pw_1, shape_1, temp_buffer_, size, parameters.hard_sync);
+      primary_f, pw_1, shape_1, temp_buffer_, size,
+      PLAITS_HARD_SYNC_EVENTS(parameters));
   auxiliary_.Render(
-      auxiliary_f, pw_2, shape_2, aux, size, parameters.hard_sync);
+      auxiliary_f, pw_2, shape_2, aux, size,
+      PLAITS_HARD_SYNC_EVENTS(parameters));
 
   if ((PLAITS_STEREO_VIRTUAL_ANALOG && parameters.stereo)) {
     // OUT/AUX become L/R: pan the two detuned varishape oscillators (primary
@@ -135,7 +144,7 @@ void VirtualAnalogEngine::Render(
         shape_2,
         aux,
         size,
-        parameters.hard_sync);
+        PLAITS_HARD_SYNC_EVENTS(parameters));
     for (size_t i = 0; i < size; ++i) {
       aux[i] = (aux[i] + temp_buffer_[i]) * 0.5f;
     }
@@ -172,9 +181,11 @@ void VirtualAnalogEngine::Render(
     // TIMBRE crossfade are dropped, but both crossfade interpolators are still
     // advanced so their state stays coherent when toggling back to mono.
     primary_.Render(
-        primary_f, pw, shape, out, size, parameters.hard_sync);
+        primary_f, pw, shape, out, size,
+        PLAITS_HARD_SYNC_EVENTS(parameters));
     auxiliary_.Render(
-        auxiliary_f, pw, shape, aux, size, parameters.hard_sync);
+        auxiliary_f, pw, shape, aux, size,
+        PLAITS_HARD_SYNC_EVENTS(parameters));
 
     ParameterInterpolator xmod_amount_modulation(
         &xmod_amount_,
@@ -197,7 +208,8 @@ void VirtualAnalogEngine::Render(
     }
   } else {
     primary_.Render(
-        primary_f, pw, shape, out, size, parameters.hard_sync);
+        primary_f, pw, shape, out, size,
+        PLAITS_HARD_SYNC_EVENTS(parameters));
     sync_.Render(
         primary_f,
         sync_f,
@@ -205,7 +217,7 @@ void VirtualAnalogEngine::Render(
         shape,
         aux,
         size,
-        parameters.hard_sync);
+        PLAITS_HARD_SYNC_EVENTS(parameters));
 
     ParameterInterpolator xmod_amount_modulation(
         &xmod_amount_,
@@ -216,7 +228,8 @@ void VirtualAnalogEngine::Render(
     }
 
     auxiliary_.Render(
-        auxiliary_f, pw, shape, aux, size, parameters.hard_sync);
+        auxiliary_f, pw, shape, aux, size,
+        PLAITS_HARD_SYNC_EVENTS(parameters));
 
     ParameterInterpolator auxiliary_amount_modulation(
         &auxiliary_amount_,
@@ -263,7 +276,7 @@ void VirtualAnalogEngine::Render(
         shape,
         out,
         size,
-        parameters.hard_sync);
+        PLAITS_HARD_SYNC_EVENTS(parameters));
     auxiliary_.Render(
         auxiliary_f,
         auxiliary_sync_f,
@@ -271,7 +284,7 @@ void VirtualAnalogEngine::Render(
         shape,
         aux,
         size,
-        parameters.hard_sync);
+        PLAITS_HARD_SYNC_EVENTS(parameters));
     for (size_t i = 0; i < size; ++i) {
       aux[i] = (aux[i] - out[i]) * 0.5f;
     }
@@ -309,14 +322,14 @@ void VirtualAnalogEngine::Render(
       1.0f,
       temp_buffer_,
       size,
-      parameters.hard_sync);
+      PLAITS_HARD_SYNC_EVENTS(parameters));
   variable_saw_.Render(
       auxiliary_f,
       saw_pw,
       saw_shape,
       out,
       size,
-      parameters.hard_sync);
+      PLAITS_HARD_SYNC_EVENTS(parameters));
   
   float norm = 1.0f / (std::max(square_gain, saw_gain));
   const float oscillator_balance = parameters.macro;
@@ -356,3 +369,5 @@ void VirtualAnalogEngine::Render(
 }
 
 }  // namespace plaits
+
+#undef PLAITS_HARD_SYNC_EVENTS

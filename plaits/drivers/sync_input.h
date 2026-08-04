@@ -39,7 +39,7 @@ class SyncInput {
 
   SyncEventQueue queue_;
   volatile bool armed_for_rising_edge_;
-  bool enabled_;
+  volatile bool enabled_;
 
   DISALLOW_COPY_AND_ASSIGN(SyncInput);
 };

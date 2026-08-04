@@ -27,7 +27,14 @@
 
 #include <algorithm>
 
+#include "plaits/build_config.h"
 #include "stmlib/dsp/parameter_interpolator.h"
+
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
+#define PLAITS_HARD_SYNC_EVENTS(parameters) ((parameters).hard_sync)
+#else
+#define PLAITS_HARD_SYNC_EVENTS(parameters) 0u
+#endif
 
 namespace plaits {
 
@@ -108,7 +115,8 @@ void VirtualAnalogCrossfadeEngine::Render(
   CONSTRAIN(pw, 0.5f, 0.99f);
 
   primary_.Render(
-      primary_f, pw, shape, out, size, parameters.hard_sync);
+      primary_f, pw, shape, out, size,
+      PLAITS_HARD_SYNC_EVENTS(parameters));
   sync_.Render(
       primary_f,
       sync_f,
@@ -116,7 +124,7 @@ void VirtualAnalogCrossfadeEngine::Render(
       shape,
       temp_buffer_,
       size,
-      parameters.hard_sync);
+      PLAITS_HARD_SYNC_EVENTS(parameters));
 
   ParameterInterpolator xmod_amount_modulation(
       &xmod_amount_,
@@ -127,7 +135,8 @@ void VirtualAnalogCrossfadeEngine::Render(
   }
 
   auxiliary_.Render(
-      auxiliary_f, pw, shape, aux, size, parameters.hard_sync);
+      auxiliary_f, pw, shape, aux, size,
+      PLAITS_HARD_SYNC_EVENTS(parameters));
 
   ParameterInterpolator auxiliary_amount_modulation(
       &auxiliary_amount_,
@@ -154,3 +163,5 @@ void VirtualAnalogCrossfadeEngine::Render(
 }
 
 }  // namespace plaits
+
+#undef PLAITS_HARD_SYNC_EVENTS

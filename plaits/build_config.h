@@ -86,6 +86,13 @@
 #define PLAITS_BUILD_MODEL_CV_OPTION 0
 #endif
 
+// Compile the MODEL-input audio-rate edge detector and hard-reset paths only
+// into builds that select sync. Full palettes are close to the flash ceiling,
+// so the hardware path and oscillator reset code remain recipe-scoped.
+#ifndef PLAITS_BUILD_ENABLE_SYNC_INPUT
+#define PLAITS_BUILD_ENABLE_SYNC_INPUT 0
+#endif
+
 #ifndef PLAITS_BUILD_LEVEL_CV_OPTION
 #define PLAITS_BUILD_LEVEL_CV_OPTION 0
 #endif
