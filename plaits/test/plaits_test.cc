@@ -2712,16 +2712,16 @@ void ValidateOneKnobEnvelope() {
     abort();
   }
 
-  // Far clockwise is a long swell followed by a genuinely sharp decay. Keep
-  // the attack alive beyond four seconds, then require the fall after its peak
-  // to finish in less than 25 ms.
+  // Far clockwise is a slow but finite swell followed by a short decay. A held
+  // gate must not latch it: require an attack between two and three seconds,
+  // then a decay between 10 and 30 ms.
   envelope.Init();
   int triggered_peak_block = -1;
   int triggered_done_block = -1;
-  for (int block = 0; block < 36000; ++block) {
+  for (int block = 0; block < 14000; ++block) {
     const float value = envelope.Process(
         1.0f,
-        block == 0,
+        true,
         block == 0,
         OneKnobEnvelope::PROFILE_SYNTH,
         OneKnobEnvelope::MODE_TRIGGERED);
@@ -2733,17 +2733,43 @@ void ValidateOneKnobEnvelope() {
       break;
     }
   }
-  if (triggered_peak_block < 16000) {
-    fprintf(stderr, "Triggered CW attack ended before four seconds\n");
+  if (triggered_peak_block < 8000 || triggered_peak_block >= 12000) {
+    fprintf(
+        stderr,
+        "Triggered CW attack outside two-to-three-second window: %d\n",
+        triggered_peak_block);
     abort();
   }
   if (triggered_done_block < 0 ||
-      triggered_done_block - triggered_peak_block >= 100) {
+      triggered_done_block - triggered_peak_block < 40 ||
+      triggered_done_block - triggered_peak_block >= 120) {
     fprintf(
         stderr,
-        "Triggered CW decay was not sharp: peak=%d done=%d\n",
+        "Triggered CW decay outside 10-to-30-ms window: peak=%d done=%d\n",
         triggered_peak_block,
         triggered_done_block);
+    abort();
+  }
+
+  // A clock faster than the far-CW cycle must not restart the long attack from
+  // its current value forever. Active one-shots ignore intervening edges and
+  // reach zero before the next available edge starts another cycle.
+  envelope.Init();
+  bool clocked_trigger_completed = false;
+  for (int block = 0; block < 16000; ++block) {
+    const bool edge = (block % 2000) == 0;
+    envelope.Process(
+        1.0f,
+        edge,
+        edge,
+        OneKnobEnvelope::PROFILE_SYNTH,
+        OneKnobEnvelope::MODE_TRIGGERED);
+    if (block > 0 && !envelope.active()) {
+      clocked_trigger_completed = true;
+    }
+  }
+  if (!clocked_trigger_completed) {
+    fprintf(stderr, "Clocked triggered contour never completed\n");
     abort();
   }
 

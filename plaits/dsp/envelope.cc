@@ -157,13 +157,16 @@ float OneKnobEnvelope::Process(
     // Use the full throw as a one-shot shape spectrum. The counter-clockwise
     // half keeps attack fast while opening decay from a click into a long tail.
     // The clockwise half trades that tail for an increasingly slow attack,
-    // ending with a several-second swell and a genuinely sharp decay. The
-    // quadratic ease-out spreads useful slow attacks across most of the CW half
-    // without evaluating sqrtf in the audio callback.
-    const float fast_attack = 0.05f;
-    const float pivot_attack = 0.12f;
-    const float fast_decay = 0.08f;
-    const float slow_decay = profile == PROFILE_SYNTH ? 0.98f : 0.90f;
+    // ending with a slow swell and a short decay. Keep both endpoints away
+    // from the table's extremes: the LPG no longer adds its own tail, so a
+    // real 19 ms minimum is already percussive, while a roughly 2.9 s maximum
+    // attack remains clearly slow without feeling latched. The quadratic
+    // ease-out spreads useful slow attacks across most of the CW half without
+    // evaluating sqrtf in the audio callback.
+    const float fast_attack = 0.10f;
+    const float pivot_attack = 0.16f;
+    const float fast_decay = 0.20f;
+    const float slow_decay = profile == PROFILE_SYNTH ? 0.94f : 0.84f;
     if (shape < 0.5f) {
       const float amount = shape * 2.0f;
       attack = fast_attack + (pivot_attack - fast_attack) * amount;
@@ -171,7 +174,7 @@ float OneKnobEnvelope::Process(
     } else {
       const float amount = (shape - 0.5f) * 2.0f;
       const float slow_attack_amount = amount * (2.0f - amount);
-      const float slow_attack = profile == PROFILE_SYNTH ? 0.96f : 0.90f;
+      const float slow_attack = profile == PROFILE_SYNTH ? 0.80f : 0.72f;
       attack = pivot_attack +
           (slow_attack - pivot_attack) * slow_attack_amount;
       decay_release = slow_decay + (fast_decay - slow_decay) * amount;
@@ -221,7 +224,13 @@ float OneKnobEnvelope::Process(
     }
   }
 
-  if (rising_edge) {
+  // A dedicated triggered contour is a self-contained one-shot. Let it finish
+  // before accepting another edge; repeatedly restarting a multi-second attack
+  // from its current value can otherwise staircase the envelope toward one and
+  // hold it there indefinitely under a clock.
+  const bool start_envelope = rising_edge &&
+      (mode != MODE_TRIGGERED || segment_ == SEGMENT_DONE);
+  if (start_envelope) {
     start_value_ = segment_ == SEGMENT_DONE ? 0.0f : value_;
     segment_ = SEGMENT_ATTACK;
     phase_ = 0.0f;
