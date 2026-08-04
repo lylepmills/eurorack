@@ -431,7 +431,7 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:e3ae6a5a542f93d542d1464fae7f3302c02c7f9f2696bbaddb32ae473e0506bf",
+      "digest": "sha256:2d2f50433795a62e255ddc962c942be768bf2520505d403a65f5b7ac12b91faf",
       "documentationDigest": "sha256:f078efcc10babcd476d02a48261f6b76c2cf4dfb0b56692e72e4ebb6c44fabd2",
       "manual": {
         "controls": {
@@ -511,7 +511,7 @@
         "Raw excitation or widened voice"
       ],
       "version": "1.0.0",
-      "digest": "sha256:1ff4eae6cb4b8dbbe98ee42dbe994d81500e69e4bab70e8b6b559aeff2d593c0",
+      "digest": "sha256:ab4ae302e4fd223ec41a0e8a2e23fe41ca16c29c991a01eb6af5fd7d939370d6",
       "documentationDigest": "sha256:cd4f85d0babf91b00836a12bf5b0094ef5df23a01435c61cc8da2e9feb5c0161",
       "manual": {
         "controls": {
