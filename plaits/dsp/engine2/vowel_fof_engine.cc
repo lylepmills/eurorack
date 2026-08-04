@@ -11,6 +11,7 @@
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/dsp/units.h"
 
+#include "plaits/build_config.h"
 #include "plaits/dsp/engine2/vowel_fof_data.h"
 #include "plaits/dsp/oscillator/sine_oscillator.h"
 
@@ -183,8 +184,13 @@ void VowelFofEngine::Render(
   // once per sample rather than once per block: 77% of the CPU budget against
   // 72%. The five-filter bank is the rest and is irreducible.
   float excitation[kMaxBlockSize];
+#if PLAITS_BUILD_LINEAR_TZFM
   excitation_.RenderLinearFm<OSCILLATOR_SHAPE_SAW>(
       frequency, 0.0f, parameters.linear_fm, excitation, size);
+#else
+  excitation_.Render<OSCILLATOR_SHAPE_SAW>(
+      frequency, 0.0f, excitation, size);
+#endif
 
   // The two aux modes get their OWN sample loop rather than sharing one with a
   // branch inside it. The branch would sit in the FIVE-iteration formant loop,

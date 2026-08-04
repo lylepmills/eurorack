@@ -168,6 +168,7 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
   fill(&ignore_release_[0], &ignore_release_[SWITCH_LAST], false);
 
   active_engine_ = 0;
+  audio_rate_fm_needed_ = false;
   pitch_lp_ = 0.0f;
   data_transfer_progress_ = 0.0f;
 
@@ -212,7 +213,17 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
 // shape and octave only matter while the aux output IS a suboscillator; rather
 // than show a light that does nothing, the menu darkens it and walks past it.
 bool Ui::OptionInert(int index) const {
-  return index == OPTION_LIGHT_SUBOSC && !patch_->aux_is_subosc();
+  if (index == OPTION_LIGHT_SUBOSC && !patch_->aux_is_subosc()) {
+    return true;
+  }
+#if PLAITS_BUILD_LINEAR_TZFM
+  // SDADC2 is dedicated to the continuous FM stream, so no LEVEL setting can
+  // have an effect in this build.
+  if (index == OPTION_LIGHT_LEVEL_CV) {
+    return true;
+  }
+#endif
+  return false;
 }
 
 // Step to the next light the player can actually use in either direction. The
@@ -289,6 +300,9 @@ void Ui::SaveState() {
   }
 
   settings_->SaveState();
+#if PLAITS_BUILD_LINEAR_TZFM
+  cv_adc_.RealignAudioRateFmAfterKnownPause(kBlockSize);
+#endif
   precision_root_save_.MarkSaved(EncodeTunedRoot(tuned_root_note_));
 }
 
@@ -331,6 +345,31 @@ uint32_t Ui::BankToColor(int bank) {
 void Ui::UpdateLEDs() {
   leds_.Clear();
   ++pwm_counter_;
+
+#if PLAITS_BUILD_LINEAR_TZFM && PLAITS_INPUT_FAULT_DIAGNOSTICS
+  // Qualification-only fault display, latched until reboot. Top to bottom:
+  //   LEDs 1-2: SDADC injected-conversion overrun
+  //   LED 4: FM ring did not contain enough source samples
+  //   LED 5: FM ring had an implausibly large producer backlog
+  // Keep this out of ordinary builds: diagnostic takeover should never look
+  // like a bricked module to a player.
+  if (mode_ == UI_MODE_NORMAL && cv_adc_.audio_rate_fm_faults()) {
+    if ((pwm_counter_ >> 5) & 1) {
+      if (cv_adc_.audio_rate_fm_overruns()) {
+        leds_.set(0, LED_COLOR_RED);
+        leds_.set(1, LED_COLOR_RED);
+      }
+      if (cv_adc_.audio_rate_fm_underflows()) {
+        leds_.set(3, LED_COLOR_RED);
+      }
+      if (cv_adc_.audio_rate_fm_excess_lag()) {
+        leds_.set(4, LED_COLOR_RED);
+      }
+    }
+    leds_.Write();
+    return;
+  }
+#endif
 
 #if PLAITS_CPU_PROBE && PLAITS_CPU_PROBE_LEDS
   // A probe build's LEDs are a CPU meter, so an engine's cost is readable with
@@ -1038,17 +1077,31 @@ void Ui::DetectNormalization() {
 }
 
 void Ui::ReadAudioRateFm(float* destination, size_t size) {
-  int16_t raw[CvAdc::kAudioRateFmBufferSize];
-  if (size > CvAdc::kAudioRateFmBufferSize) {
-    size = CvAdc::kAudioRateFmBufferSize;
-  }
-  cv_adc_.CopyAudioRateFm(raw, size);
+  cv_adc_.CopyAudioRateFm(destination, size);
   const ChannelCalibrationData& calibration =
       settings_->calibration_data(CV_ADC_CHANNEL_FM);
   for (size_t i = 0; i < size; ++i) {
-    destination[i] = calibration.Transform(
-        static_cast<float>(raw[i]) / 32768.0f);
+    destination[i] = calibration.Transform(destination[i]);
   }
+}
+
+void Ui::RealignAudioInputAfterEngineChange() {
+#if PLAITS_BUILD_LINEAR_TZFM
+  cv_adc_.RealignAudioRateFmAfterKnownPause(kBlockSize);
+#endif
+}
+
+void Ui::SetAudioRateFmNeeded(bool needed) {
+#if PLAITS_BUILD_LINEAR_TZFM
+  if (needed && !audio_rate_fm_needed_) {
+    // The producer may have wrapped many times while no consumer was active,
+    // so a modulo cursor cannot safely resume the previous read position.
+    cv_adc_.RealignAudioRateFmAfterKnownPause(kBlockSize);
+  }
+  audio_rate_fm_needed_ = needed;
+#else
+  (void)needed;
+#endif
 }
 
 void Ui::Poll() {
@@ -1059,7 +1112,9 @@ void Ui::Poll() {
   modulations_->hard_sync = 0;
 #endif
 #if PLAITS_BUILD_LINEAR_TZFM
-  ReadAudioRateFm(modulations_->frequency_audio, kBlockSize);
+  if (audio_rate_fm_needed_) {
+    ReadAudioRateFm(modulations_->frequency_audio, kBlockSize);
+  }
 #endif
   for (int i = 0; i < POTS_ADC_CHANNEL_LAST; ++i) {
     pots_[i].ProcessControlRate(pots_adc_.float_value(PotsAdcChannel(i)));
@@ -1215,6 +1270,9 @@ void Ui::CalibrateC3() {
     c->scale = 24.0f / delta;
     c->offset = 12.0f - c->scale * c1;
     settings_->SavePersistentData();
+#if PLAITS_BUILD_LINEAR_TZFM
+    cv_adc_.RealignAudioRateFmAfterKnownPause(kBlockSize);
+#endif
     mode_ = UI_MODE_NORMAL;
   } else {
     mode_ = UI_MODE_ERROR;
