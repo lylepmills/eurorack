@@ -32,6 +32,13 @@
 #ifndef PLAITS_CPU_PROBE_SECTION_TOTAL
 #define PLAITS_CPU_PROBE_SECTION_TOTAL 0
 #endif
+
+// The standard engine-development probe begins immediately before
+// Voice::Render. System-feature benchmarks can opt into measuring the UI/ADC
+// work that precedes it as part of the same audio callback.
+#ifndef PLAITS_CPU_PROBE_WHOLE_CALLBACK
+#define PLAITS_CPU_PROBE_WHOLE_CALLBACK 0
+#endif
 #include "plaits/dsp/voice.h"
 #include "plaits/settings.h"
 #include "plaits/ui.h"
@@ -79,6 +86,10 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
   TIC
 #endif  // PROFILE_INTERRUPT
 
+#if PLAITS_CPU_PROBE && PLAITS_CPU_PROBE_WHOLE_CALLBACK
+  PLAITS_CPU_PROBE_BEGIN
+#endif
+
   IWDG_ReloadCounter();
   
   ui.Poll();
@@ -122,7 +133,9 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
         ui.DisplayDataTransferProgress(-1.0f);
       }
     }
+#if !(PLAITS_CPU_PROBE && PLAITS_CPU_PROBE_WHOLE_CALLBACK)
     PLAITS_CPU_PROBE_BEGIN
+#endif
 #if PLAITS_CPU_PROBE && PLAITS_CPU_PROBE_SECTION_TOTAL
     // Validation builds only: registering a section switches the AUX readout
     // from the continuous usage tone to the full two-tone beacon format.
