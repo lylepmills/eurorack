@@ -2676,6 +2676,123 @@ void ValidateOneKnobEnvelope() {
     fprintf(stderr, "One-knob synth profile release did not finish\n");
     abort();
   }
+
+  // The dedicated triggered contour is a true one-shot across its entire knob
+  // range: a 1 ms trigger and a held gate must produce the same curve.
+  OneKnobEnvelope triggered_pulse;
+  OneKnobEnvelope triggered_gate;
+  triggered_pulse.Init();
+  triggered_gate.Init();
+  float triggered_peak = 0.0f;
+  for (int block = 0; block < 4000; ++block) {
+    const float pulse_value = triggered_pulse.Process(
+        0.5f,
+        block == 0,
+        block == 0,
+        OneKnobEnvelope::PROFILE_SYNTH,
+        OneKnobEnvelope::MODE_TRIGGERED);
+    const float gate_value = triggered_gate.Process(
+        0.5f,
+        true,
+        block == 0,
+        OneKnobEnvelope::PROFILE_SYNTH,
+        OneKnobEnvelope::MODE_TRIGGERED);
+    triggered_peak = max(triggered_peak, pulse_value);
+    if (fabsf(pulse_value - gate_value) > 0.000001f) {
+      fprintf(stderr, "Triggered contour responded to gate length\n");
+      abort();
+    }
+  }
+  if (triggered_peak < 0.999f || triggered_pulse.active()) {
+    fprintf(
+        stderr,
+        "Triggered midpoint did not complete: peak=%f tail=%f\n",
+        triggered_peak,
+        triggered_pulse.value());
+    abort();
+  }
+
+  // Clockwise must be monotonically longer. The synth maximum remains alive
+  // after four seconds but completes within the eight-second table ceiling.
+  envelope.Init();
+  for (int block = 0; block < 16000; ++block) {
+    envelope.Process(
+        1.0f,
+        block == 0,
+        block == 0,
+        OneKnobEnvelope::PROFILE_SYNTH,
+        OneKnobEnvelope::MODE_TRIGGERED);
+  }
+  if (!envelope.active()) {
+    fprintf(stderr, "Triggered maximum ended before four seconds\n");
+    abort();
+  }
+  for (int block = 0; block < 20000; ++block) {
+    envelope.Process(
+        1.0f,
+        false,
+        false,
+        OneKnobEnvelope::PROFILE_SYNTH,
+        OneKnobEnvelope::MODE_TRIGGERED);
+  }
+  if (envelope.active()) {
+    fprintf(stderr, "Triggered maximum exceeded nine seconds\n");
+    abort();
+  }
+
+  // The dedicated gated contour always reaches full sustain and follows the
+  // gate. Its slow end is intentionally a long attack/release gesture.
+  envelope.Init();
+  for (int block = 0; block < 500; ++block) {
+    envelope.Process(
+        0.0f,
+        true,
+        block == 0,
+        OneKnobEnvelope::PROFILE_SYNTH,
+        OneKnobEnvelope::MODE_GATED);
+  }
+  if (envelope.value() < 0.999f) {
+    fprintf(stderr, "Gated minimum did not reach full sustain\n");
+    abort();
+  }
+  for (int block = 0; block < 500; ++block) {
+    envelope.Process(
+        0.0f,
+        false,
+        false,
+        OneKnobEnvelope::PROFILE_SYNTH,
+        OneKnobEnvelope::MODE_GATED);
+  }
+  if (envelope.active()) {
+    fprintf(stderr, "Gated minimum did not release promptly\n");
+    abort();
+  }
+
+  envelope.Init();
+  for (int block = 0; block < 2000; ++block) {
+    envelope.Process(
+        1.0f,
+        true,
+        block == 0,
+        OneKnobEnvelope::PROFILE_SYNTH,
+        OneKnobEnvelope::MODE_GATED);
+  }
+  if (envelope.value() >= 0.999f) {
+    fprintf(stderr, "Gated maximum attack was not slow\n");
+    abort();
+  }
+  for (int block = 0; block < 6000; ++block) {
+    envelope.Process(
+        1.0f,
+        true,
+        false,
+        OneKnobEnvelope::PROFILE_SYNTH,
+        OneKnobEnvelope::MODE_GATED);
+  }
+  if (envelope.value() < 0.999f) {
+    fprintf(stderr, "Gated maximum did not reach sustain\n");
+    abort();
+  }
 }
 
 void ValidateModalContourExcitation() {

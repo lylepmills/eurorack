@@ -135,10 +135,10 @@ class DecayEnvelope {
 // profile expands the slow center because an oscillator has no acoustic body
 // to provide a tail after the contour itself closes.
 //
-// Elements treats the whole range as an ADSR. Plaits is normally driven by
-// short trigger pulses rather than keyboard gates, so the zero-sustain region
-// deliberately ignores the falling edge and completes its AD cycle. The
-// sustain region follows the gate and releases as soon as it goes low.
+// MODE_ELEMENTS_HYBRID preserves Elements' pluck-to-sustain topology.
+// MODE_TRIGGERED spends the entire range on a monotonic one-shot AD gesture
+// and ignores the falling edge. MODE_GATED spends the entire range on a
+// full-sustain ASR gesture and follows the gate.
 //
 // Process is called once per Plaits audio block. Curve and rate lookup tables
 // live in envelope.cc; their compact fixed-point representation keeps the
@@ -151,6 +151,12 @@ class OneKnobEnvelope {
     PROFILE_SYNTH
   };
 
+  enum Mode {
+    MODE_ELEMENTS_HYBRID,
+    MODE_TRIGGERED,
+    MODE_GATED
+  };
+
   OneKnobEnvelope() { }
   ~OneKnobEnvelope() { }
 
@@ -160,7 +166,8 @@ class OneKnobEnvelope {
       float shape,
       bool gate,
       bool rising_edge,
-      Profile profile = PROFILE_ELEMENTS_RESONATOR);
+      Profile profile = PROFILE_ELEMENTS_RESONATOR,
+      Mode mode = MODE_ELEMENTS_HYBRID);
 
   inline float value() const { return value_; }
   inline bool active() const { return segment_ != SEGMENT_DONE; }

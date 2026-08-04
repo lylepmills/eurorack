@@ -308,13 +308,24 @@ void Voice::Render(
       rising_edge ||
       (use_one_knob_envelope && !one_knob_envelope_active_ && trigger_state_);
   if (use_one_knob_envelope) {
+#if PLAITS_BUILD_ONE_KNOB_ENVELOPE_MODE == 1
+    const OneKnobEnvelope::Mode contour_mode =
+        OneKnobEnvelope::MODE_TRIGGERED;
+#elif PLAITS_BUILD_ONE_KNOB_ENVELOPE_MODE == 2
+    const OneKnobEnvelope::Mode contour_mode =
+        OneKnobEnvelope::MODE_GATED;
+#else
+    const OneKnobEnvelope::Mode contour_mode =
+        OneKnobEnvelope::MODE_ELEMENTS_HYBRID;
+#endif
     articulation_envelope = one_knob_envelope_.Process(
         patch.freqlock_param,
         trigger_state_,
         start_one_knob_envelope,
         resonator_envelope_mode
             ? OneKnobEnvelope::PROFILE_ELEMENTS_RESONATOR
-            : OneKnobEnvelope::PROFILE_SYNTH);
+            : OneKnobEnvelope::PROFILE_SYNTH,
+        contour_mode);
   } else if (one_knob_envelope_active_) {
     one_knob_envelope_.Init();
   }

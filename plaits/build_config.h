@@ -81,6 +81,13 @@
 #define PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE 0
 #endif
 
+// Select the one-knob contour topology when it is compiled in: 0 keeps the
+// original Elements hybrid, 1 is a dedicated one-shot attack/decay contour,
+// and 2 is a dedicated gated attack/sustain/release contour.
+#ifndef PLAITS_BUILD_ONE_KNOB_ENVELOPE_MODE
+#define PLAITS_BUILD_ONE_KNOB_ENVELOPE_MODE 0
+#endif
+
 #ifndef PLAITS_BUILD_MODEL_CV_OPTION
 #define PLAITS_BUILD_MODEL_CV_OPTION 0
 #endif

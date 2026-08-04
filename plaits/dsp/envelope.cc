@@ -140,45 +140,72 @@ float OneKnobEnvelope::Process(
     float shape,
     bool gate,
     bool rising_edge,
-    Profile profile) {
+    Profile profile,
+    Mode mode) {
   if (shape < 0.0f) {
     shape = 0.0f;
   } else if (shape > 1.0f) {
     shape = 1.0f;
   }
 
-  // Elements keeps the slow point compact: about 266 ms of attack and 3.05 s
-  // of decay/release. That is natural when the resonator supplies the rest of
-  // the audible tail. A memoryless synth needs the contour itself to carry a
-  // long gesture, so its slow point reaches about 1.17 s / 4.92 s. Both keep
-  // the same fast endpoints and the same pluck -> sustain topology.
-  const float slow_attack =
-      profile == PROFILE_SYNTH ? 0.65f : 0.45f;
-  const float slow_decay_release =
-      profile == PROFILE_SYNTH ? 0.90f : 0.81f;
   float attack;
   float decay_release;
   float sustain;
   bool gated;
-  if (shape < 0.4f) {
-    const float slow_amount = shape * 2.5f;
-    attack = 0.15f + (slow_attack - 0.15f) * slow_amount;
-    decay_release =
-        0.27f + (slow_decay_release - 0.27f) * slow_amount;
+
+  if (mode == MODE_TRIGGERED) {
+    // Spend the entire knob throw on a monotonic one-shot gesture. Attack stays
+    // quick through most of the range (the squared taper matters here), while
+    // decay spans a tight click through a several-second tail. Resonators use
+    // a shorter excitation gesture because their acoustic body supplies the
+    // remainder of the audible decay.
+    const float attack_end = profile == PROFILE_SYNTH ? 0.45f : 0.35f;
+    const float decay_end = profile == PROFILE_SYNTH ? 0.98f : 0.90f;
+    attack = 0.10f + (attack_end - 0.10f) * shape * shape;
+    decay_release = 0.20f + (decay_end - 0.20f) * shape;
     sustain = 0.0f;
     gated = false;
-  } else if (shape < 0.6f) {
-    attack = slow_attack;
-    decay_release = slow_decay_release;
-    sustain = (shape - 0.4f) * 5.0f;
-    gated = true;
-  } else {
-    const float slow_amount = (1.0f - shape) * 2.5f;
-    attack = 0.15f + (slow_attack - 0.15f) * slow_amount;
-    decay_release =
-        0.27f + (slow_decay_release - 0.27f) * slow_amount;
+  } else if (mode == MODE_GATED) {
+    // A dedicated gate has one job: reach full sustain and follow the input.
+    // Clockwise makes both edges softer, with release intentionally stretching
+    // farther than attack. This mode is compiled now for direct comparison,
+    // although the first hardware audition selects MODE_TRIGGERED.
+    const float attack_end = profile == PROFILE_SYNTH ? 0.68f : 0.55f;
+    const float release_end = profile == PROFILE_SYNTH ? 0.90f : 0.81f;
+    attack = 0.05f + (attack_end - 0.05f) * shape;
+    decay_release = 0.10f + (release_end - 0.10f) * shape;
     sustain = 1.0f;
     gated = true;
+  } else {
+    // Elements keeps the slow point compact: about 266 ms of attack and 3.05 s
+    // of decay/release. That is natural when the resonator supplies the rest of
+    // the audible tail. A memoryless synth needs the contour itself to carry a
+    // long gesture, so its slow point reaches about 1.17 s / 4.92 s. Both keep
+    // the same fast endpoints and the same pluck -> sustain topology.
+    const float slow_attack =
+        profile == PROFILE_SYNTH ? 0.65f : 0.45f;
+    const float slow_decay_release =
+        profile == PROFILE_SYNTH ? 0.90f : 0.81f;
+    if (shape < 0.4f) {
+      const float slow_amount = shape * 2.5f;
+      attack = 0.15f + (slow_attack - 0.15f) * slow_amount;
+      decay_release =
+          0.27f + (slow_decay_release - 0.27f) * slow_amount;
+      sustain = 0.0f;
+      gated = false;
+    } else if (shape < 0.6f) {
+      attack = slow_attack;
+      decay_release = slow_decay_release;
+      sustain = (shape - 0.4f) * 5.0f;
+      gated = true;
+    } else {
+      const float slow_amount = (1.0f - shape) * 2.5f;
+      attack = 0.15f + (slow_attack - 0.15f) * slow_amount;
+      decay_release =
+          0.27f + (slow_decay_release - 0.27f) * slow_amount;
+      sustain = 1.0f;
+      gated = true;
+    }
   }
 
   if (rising_edge) {
