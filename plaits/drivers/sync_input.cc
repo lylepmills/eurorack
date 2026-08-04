@@ -43,8 +43,10 @@ void SyncInput::Init() {
   queue_.Init(CycleCount());
 
   // PB1 / ADC channel 9 is already in analog mode for SDADC1's MODEL scan.
-  // ADC1 can read the same pin through its injected group without disturbing
-  // the seven-pot regular DMA sequence.
+  // ADC1 reads the same pin through its injected group. Injected conversions
+  // preempt the regular seven-pot DMA sequence, so sync builds shorten the pot
+  // acquisition time enough for both groups to finish inside one sample (see
+  // pots_adc.cc).
   ADC_InjectedSequencerLengthConfig(ADC1, 1);
   ADC_InjectedChannelConfig(
       ADC1, ADC_Channel_9, 1, ADC_SampleTime_7Cycles5);

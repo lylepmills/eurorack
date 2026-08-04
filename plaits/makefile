@@ -100,7 +100,7 @@ $(BUILD_DIR)stm32f37x_%.o: CCFLAGS += -Os
 # instead of the recipe's. check_config_scope.py enforces that at build time.
 # ENGINE_CONFIG is empty for ordinary firmware builds, which fall back to the
 # checked-in default headers via each unit's own #include.
-RECIPE_CONFIG_OBJS = voice.o plaits.o ui.o settings.o chord_bank.o scale_voices.o switches.o sync_input.o audio_rate_timer.o virtual_analog_engine.o virtual_analog_dual_engine.o virtual_analog_crossfade_engine.o
+RECIPE_CONFIG_OBJS = voice.o plaits.o ui.o settings.o chord_bank.o scale_voices.o pots_adc.o switches.o sync_input.o audio_rate_timer.o virtual_analog_engine.o virtual_analog_dual_engine.o virtual_analog_crossfade_engine.o
 RECIPE_CONFIG_TARGETS = $(patsubst %,$(BUILD_DIR)%,$(RECIPE_CONFIG_OBJS))
 ifneq ($(ENGINE_CONFIG),)
 $(RECIPE_CONFIG_TARGETS): CPPFLAGS += -include $(ENGINE_CONFIG)

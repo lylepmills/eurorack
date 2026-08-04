@@ -28,6 +28,8 @@
 
 #include "plaits/drivers/pots_adc.h"
 
+#include "plaits/build_config.h"
+
 #include <algorithm>
 
 #include <stm32f37x_conf.h>
@@ -35,6 +37,18 @@
 namespace plaits {
 
 using namespace std;
+
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
+// Sync In samples MODEL through ADC1's injected group once per audio sample.
+// Injected conversions preempt the regular seven-pot scan, so the stock
+// 239.5-cycle acquisition time prevents that scan from ever completing.  At
+// 7.5 cycles, all seven regular conversions plus one injected conversion take
+// 160 ADC clocks, safely inside the 188 ADC clocks in one audio sample.  Pot
+// smoothing still happens at control rate; this only shortens acquisition.
+static const uint32_t kPotSampleTime = ADC_SampleTime_7Cycles5;
+#else
+static const uint32_t kPotSampleTime = ADC_SampleTime_239Cycles5;
+#endif
 
 void PotsAdc::Init() {
   // Enable ADC clock.
@@ -82,15 +96,15 @@ void PotsAdc::Init() {
   adc_init.ADC_NbrOfChannel = POTS_ADC_CHANNEL_LAST;
   ADC_Init(ADC1, &adc_init);
   
-  // Sample rate: 5.10 kHz > 4kHz
+  // Stock scan rate: 5.10 kHz > 4kHz
   // 72000 / 8 / ((12.5 + 239.5) * 7)
-  ADC_RegularChannelConfig(ADC1, ADC_Channel_0, 1, ADC_SampleTime_239Cycles5);
-  ADC_RegularChannelConfig(ADC1, ADC_Channel_2, 2, ADC_SampleTime_239Cycles5);
-  ADC_RegularChannelConfig(ADC1, ADC_Channel_3, 3, ADC_SampleTime_239Cycles5);
-  ADC_RegularChannelConfig(ADC1, ADC_Channel_1, 4, ADC_SampleTime_239Cycles5);
-  ADC_RegularChannelConfig(ADC1, ADC_Channel_6, 5, ADC_SampleTime_239Cycles5);
-  ADC_RegularChannelConfig(ADC1, ADC_Channel_5, 6, ADC_SampleTime_239Cycles5);
-  ADC_RegularChannelConfig(ADC1, ADC_Channel_4, 7, ADC_SampleTime_239Cycles5);
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_0, 1, kPotSampleTime);
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_2, 2, kPotSampleTime);
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_3, 3, kPotSampleTime);
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_1, 4, kPotSampleTime);
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_6, 5, kPotSampleTime);
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_5, 6, kPotSampleTime);
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_4, 7, kPotSampleTime);
   
   // Enable and calibrate ADC1.
   ADC_Cmd(ADC1, ENABLE);
