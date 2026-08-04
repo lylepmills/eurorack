@@ -204,6 +204,26 @@ class RenderManualTest(unittest.TestCase):
             render_pdf(manual_document(roved_recipe), roved)
             self.assertNotIn("LOCKED OCTAVES", pdf_strings(roved))
 
+    @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
+    def test_macro_and_fine_tuning_use_one_consistent_control_name(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            standard = Path(temp_dir) / "standard-controls.pdf"
+            render_pdf(manual_document(self.calibration_recipe(False)), standard)
+            printed = pdf_strings(standard).replace(")(", " ")
+            self.assertIn("MACRO", printed)
+            self.assertIn(r"MACRO \(fourth control\)", printed)
+            self.assertNotIn("FOURTH CONTROL", printed)
+            self.assertNotIn("Fourth macro", printed)
+            self.assertIn("FINE TUNING", printed)
+            self.assertIn("Hold the right button and turn HARMONICS", printed)
+            self.assertIn("saves automatically two seconds after you stop", printed)
+
+            roved = Path(temp_dir) / "roved-controls.pdf"
+            render_pdf(manual_document(self.roved_recipe()), roved)
+            roved_printed = pdf_strings(roved).replace(")(", " ")
+            self.assertIn("Press and hold HARMONICS", roved_printed)
+            self.assertNotIn("Hold the right button and turn HARMONICS", roved_printed)
+
     def roved_recipe(self, calibration: bool = False) -> dict:
         recipe = self.calibration_recipe(calibration)
         recipe["schemaVersion"] = 15
