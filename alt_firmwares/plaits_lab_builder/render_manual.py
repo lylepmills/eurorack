@@ -24,7 +24,7 @@ ACCESSIBLE_BANK_NAMES = ("BRIGHTEST", "BRIGHT", "DIM", "DIMMEST")
 ACCESSIBLE_BANK_LEVELS = ("100%", "50%", "25%", "12.5%")
 ACCESSIBLE_BANK_COLOR = "#687069"
 CONTROL_IDS = ("harmonics", "timbre", "morph", "macro")
-PANEL_LABELS = ("HARMONICS", "TIMBRE", "MORPH", "FOURTH")
+PANEL_LABELS = ("HARMONICS", "TIMBRE", "MORPH", "MACRO")
 
 # The options menu is eight "lights", ordered so the ones a player reaches for
 # most sit nearest the start of the walk. Each light cycles through an ordered
@@ -43,8 +43,8 @@ MENU_LIGHTS = (
         "Square", "Square, -1 octave", "Square, -2 octaves",
         "Sine", "Sine, -1 octave", "Sine, -2 octaves",
     )),
-    ("FREQUENCY knob", ("Octaves", "Fourth macro", "Aux crossfade", "LPG decay")),
-    ("MODEL input", ("Model select", "Fourth macro", "Aux crossfade", "LPG colour (VCFA->VCA)")),
+    ("FREQUENCY knob", ("Octaves", "MACRO (fourth control)", "Aux crossfade", "LPG decay")),
+    ("MODEL input", ("Model select", "MACRO (fourth control)", "Aux crossfade", "LPG colour (VCFA->VCA)")),
     ("LEVEL input", ("Level", "LPG decay", "Auto: decay or velocity")),
     ("Hold on trigger", ("Off (live CV)", "Sample & hold")),
     ("Unpatched attenuverters", (
@@ -523,11 +523,11 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         fourth_control = (
             "Press the HARMONICS knob down, keep holding it, and turn until the model LEDs blink; this selects the octave-switching frequency range. "
             "Click TIMBRE + FREQUENCY together to open the alternate-firmware options menu. Click TIMBRE to walk forward to LIGHT 4, then click HARMONICS once, until it uses medium brightness. "
-            "Click TIMBRE + FREQUENCY again to exit. The FREQUENCY knob now controls the selected model's fourth parameter; for Mutable Instruments models, noon preserves the original sound."
+            "Click TIMBRE + FREQUENCY again to exit. The FREQUENCY knob now controls the selected model's MACRO, its fourth synthesis control; for Mutable Instruments models, noon preserves the original sound."
             if roved else
             "Hold the right button and turn HARMONICS until the model LEDs blink; this selects the octave-switching frequency range. "
             "Short-press both model buttons to open the alternate-firmware options menu. Use the left button to walk to LIGHT 4, then press the right button once, until it uses medium brightness. "
-            "Press both buttons again to exit. The FREQUENCY knob now controls the selected model's fourth parameter; for Mutable Instruments models, noon preserves the original sound."
+            "Press both buttons again to exit. The FREQUENCY knob now controls the selected model's MACRO, its fourth synthesis control; for Mutable Instruments models, noon preserves the original sound."
         )
         options_intro = (
             "Click TIMBRE + FREQUENCY together to enter or exit the options menu. All eight lights are the menu: "
@@ -544,11 +544,11 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         fourth_control = (
             "Press the HARMONICS knob down, keep holding it, and turn until the model LEDs blink yellow; this selects the octave-switching frequency range. "
             "Click TIMBRE + FREQUENCY together to open the alternate-firmware options menu. Click TIMBRE to walk forward to LIGHT 4, then click HARMONICS once, until it turns red. "
-            "Click TIMBRE + FREQUENCY again to exit. The FREQUENCY knob now controls the selected model's fourth parameter; for Mutable Instruments models, noon preserves the original sound."
+            "Click TIMBRE + FREQUENCY again to exit. The FREQUENCY knob now controls the selected model's MACRO, its fourth synthesis control; for Mutable Instruments models, noon preserves the original sound."
             if roved else
             "Hold the right button and turn HARMONICS until the model LEDs blink yellow; this selects the octave-switching frequency range. "
             "Short-press both model buttons to open the alternate-firmware options menu. Use the left button to walk to LIGHT 4, then press the right button once, until it turns red. "
-            "Press both buttons again to exit. The FREQUENCY knob now controls the selected model's fourth parameter; for Mutable Instruments models, noon preserves the original sound."
+            "Press both buttons again to exit. The FREQUENCY knob now controls the selected model's MACRO, its fourth synthesis control; for Mutable Instruments models, noon preserves the original sound."
         )
         options_intro = (
             "Click TIMBRE + FREQUENCY together to enter or exit the options menu. All eight lights are the menu: "
@@ -577,6 +577,15 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         "Auto sends LEVEL to LPG decay on ordinary oscillator models, but keeps LEVEL as velocity/accent on models with their own envelope. "
         f"{ATTENUVERTER_OPTIONS_NOTE}"
         "Model navigation (linear or banked) is chosen when you build the firmware, not from this menu."
+    )
+    fine_tuning = (
+        "Press and hold HARMONICS, then turn it to choose the frequency range. Fine tuning is the position after octave switching and before the high-frequency range; all eight model lights pulse together. "
+        "Release HARMONICS, then turn FREQUENCY to tune one semitone above or below the current manual pitch. The pitch starts where it was, responds as soon as you turn, and saves automatically two seconds after you stop. "
+        "That saved pitch becomes the root used by octave switching and remains after power cycles. Patched V/OCT and FM are not folded into the saved tuning."
+        if roved else
+        "Hold the right button and turn HARMONICS to choose the frequency range. Fine tuning is the position after octave switching and before the high-frequency range; all eight model lights pulse together. "
+        "Release the button, then turn FREQUENCY to tune one semitone above or below the current manual pitch. The pitch starts where it was, responds as soon as you turn, and saves automatically two seconds after you stop. "
+        "That saved pitch becomes the root used by octave switching and remains after power cycles. Patched V/OCT and FM are not folded into the saved tuning."
     )
 
     story.append(bank_map)
@@ -611,8 +620,27 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         Spacer(1, 0.18 * inch),
         Table(
             [[
-                Paragraph("FOURTH CONTROL", table_header_style),
+                Paragraph("MACRO", table_header_style),
                 Paragraph(fourth_control, small_style),
+            ]],
+            colWidths=[1.1 * inch, 5.2 * inch],
+            style=TableStyle([
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#EFECE3")),
+                ("BOX", (0, 0), (-1, -1), 0.5, line),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 7),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+            ]),
+        ),
+    ])
+    story.extend([
+        Spacer(1, 0.12 * inch),
+        Table(
+            [[
+                Paragraph("FINE TUNING", table_header_style),
+                Paragraph(fine_tuning, small_style),
             ]],
             colWidths=[1.1 * inch, 5.2 * inch],
             style=TableStyle([

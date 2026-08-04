@@ -97,7 +97,9 @@ six-op slot "Custom 6-Op FM Bank" in the bank map and the model reference,
 subtitled with the bank's own name; contract 10 adds the recipe's scale order).
 Contract 13 clarifies LIGHT 8's Default/CCW/CW behavior. It shipped with the
 six-voice wavetable optimization image, so cached guides receive that
-prose-only correction from the matching renderer.
+prose-only correction from the matching renderer. Contract 14 standardizes the
+fourth synthesis control's user-facing name as MACRO and adds the precision
+fine-tuning range to the at-module reference.
 
 The contract is the Worker's alone, and in source (`a0c0791`) it rides in the
 `POST /manual` body as `manualContract` for the container to echo on
