@@ -154,30 +154,37 @@ float OneKnobEnvelope::Process(
   bool gated;
 
   if (mode == MODE_TRIGGERED) {
-    // Use the full throw as a one-shot shape spectrum. The counter-clockwise
-    // half keeps attack fast while opening decay from a click into a long tail.
-    // The clockwise half trades that tail for an increasingly slow attack,
-    // ending with a slow swell and a short decay. Keep both endpoints away
-    // from the table's extremes: the LPG no longer adds its own tail, so a
-    // real 19 ms minimum is already percussive, while a roughly 2.9 s maximum
-    // attack remains clearly slow without feeling latched. The quadratic
-    // ease-out spreads useful slow attacks across most of the CW half without
-    // evaluating sqrtf in the audio callback.
-    const float fast_attack = 0.10f;
-    const float pivot_attack = 0.16f;
-    const float fast_decay = 0.20f;
-    const float slow_decay = profile == PROFILE_SYNTH ? 0.94f : 0.84f;
-    if (shape < 0.5f) {
-      const float amount = shape * 2.0f;
-      attack = fast_attack + (pivot_attack - fast_attack) * amount;
-      decay_release = fast_decay + (slow_decay - fast_decay) * amount;
-    } else {
-      const float amount = (shape - 0.5f) * 2.0f;
-      const float slow_attack_amount = amount * (2.0f - amount);
-      const float slow_attack = profile == PROFILE_SYNTH ? 0.80f : 0.72f;
-      attack = pivot_attack +
-          (slow_attack - pivot_attack) * slow_attack_amount;
-      decay_release = slow_decay + (fast_decay - slow_decay) * amount;
+    // Treat the knob as a path through attack/decay space rather than forcing
+    // one time to be the inverse of the other. The uniformly spaced waypoints
+    // move through soft plucks, ringing envelopes, slow-attack/slow-decay
+    // gestures, and finally a slow-attack/short-decay reverse pluck. Time itself
+    // is already mapped approximately logarithmically by TimeIncrement(). The
+    // 19 ms / 80 ms floor avoids spending travel on sub-20-ms attacks and
+    // heavily suppressed decays that tend to collapse into clicks or blips.
+    static const float kAttack[] = {
+      0.20f, 0.215f, 0.24f, 0.28f, 0.34f,
+      0.44f, 0.56f, 0.68f, 0.80f,
+    };
+    static const float kDecay[] = {
+      0.32f, 0.40f, 0.52f, 0.66f, 0.82f,
+      0.84f, 0.80f, 0.68f, 0.42f,
+    };
+    float waypoint = shape * 8.0f;
+    int segment = static_cast<int>(waypoint);
+    float amount = waypoint - static_cast<float>(segment);
+    if (segment >= 8) {
+      segment = 7;
+      amount = 1.0f;
+    }
+    attack = kAttack[segment] +
+        (kAttack[segment + 1] - kAttack[segment]) * amount;
+    decay_release = kDecay[segment] +
+        (kDecay[segment + 1] - kDecay[segment]) * amount;
+    if (profile == PROFILE_ELEMENTS_RESONATOR) {
+      // Resonators supply some of their own temporal body. Preserve the same
+      // shape progression while gently compressing only the long end.
+      attack = 0.20f + (attack - 0.20f) * 0.85f;
+      decay_release = 0.32f + (decay_release - 0.32f) * 0.85f;
     }
     sustain = 0.0f;
     gated = false;
@@ -286,8 +293,13 @@ float OneKnobEnvelope::Process(
   const float target = attack_segment
       ? 1.0f
       : (segment_ == SEGMENT_DECAY ? sustain : 0.0f);
+  // Elements' quartic attack deliberately stays near zero before arriving
+  // abruptly. That articulation works as an exciter contour, but turns short
+  // synth VCA attacks into late blips. Dedicated triggered mode uses a linear
+  // amplitude rise; the Elements hybrid and gated experiments keep the source
+  // curvature, and all modes retain the exponential decay.
   const float curve = attack_segment
-      ? QuarticCurve(phase_)
+      ? (mode == MODE_TRIGGERED ? phase_ : QuarticCurve(phase_))
       : ExponentialCurve(phase_);
   value_ = start_value_ + (target - start_value_) * curve;
   phase_ += TimeIncrement(attack_segment ? attack : decay_release);

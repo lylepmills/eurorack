@@ -2712,9 +2712,40 @@ void ValidateOneKnobEnvelope() {
     abort();
   }
 
-  // Far clockwise is a slow but finite swell followed by a short decay. A held
-  // gate must not latch it: require an attack between two and three seconds,
-  // then a decay between 10 and 30 ms.
+  // The fast endpoint must remain articulated rather than collapsing into a
+  // click: roughly 19 ms of linear attack and 80 ms of exponential decay.
+  envelope.Init();
+  int fast_peak_block = -1;
+  int fast_done_block = -1;
+  for (int block = 0; block < 1000; ++block) {
+    const float value = envelope.Process(
+        0.0f,
+        block == 0,
+        block == 0,
+        OneKnobEnvelope::PROFILE_SYNTH,
+        OneKnobEnvelope::MODE_TRIGGERED);
+    if (fast_peak_block < 0 && value > 0.999f) {
+      fast_peak_block = block;
+    }
+    if (fast_peak_block >= 0 && !envelope.active()) {
+      fast_done_block = block;
+      break;
+    }
+  }
+  if (fast_peak_block < 60 || fast_peak_block >= 100 ||
+      fast_done_block - fast_peak_block < 250 ||
+      fast_done_block - fast_peak_block >= 450) {
+    fprintf(
+        stderr,
+        "Triggered fast endpoint collapsed: peak=%d done=%d\n",
+        fast_peak_block,
+        fast_done_block);
+    abort();
+  }
+
+  // Far clockwise is a slow but finite swell followed by a short, audible
+  // decay. A held gate must not latch it: require an attack between two and
+  // three seconds, then a decay between 150 and 300 ms.
   envelope.Init();
   int triggered_peak_block = -1;
   int triggered_done_block = -1;
@@ -2741,13 +2772,44 @@ void ValidateOneKnobEnvelope() {
     abort();
   }
   if (triggered_done_block < 0 ||
-      triggered_done_block - triggered_peak_block < 40 ||
-      triggered_done_block - triggered_peak_block >= 120) {
+      triggered_done_block - triggered_peak_block < 600 ||
+      triggered_done_block - triggered_peak_block >= 1200) {
     fprintf(
         stderr,
-        "Triggered CW decay outside 10-to-30-ms window: peak=%d done=%d\n",
+        "Triggered CW decay outside 150-to-300-ms window: peak=%d done=%d\n",
         triggered_peak_block,
         triggered_done_block);
+    abort();
+  }
+
+  // The penultimate quarter contains genuinely slow/slow shapes rather than
+  // immediately trading all decay for attack. At 75%, both stages must remain
+  // longer than half a second.
+  envelope.Init();
+  int slow_slow_peak_block = -1;
+  int slow_slow_done_block = -1;
+  for (int block = 0; block < 18000; ++block) {
+    const float value = envelope.Process(
+        0.75f,
+        block == 0,
+        block == 0,
+        OneKnobEnvelope::PROFILE_SYNTH,
+        OneKnobEnvelope::MODE_TRIGGERED);
+    if (slow_slow_peak_block < 0 && value > 0.999f) {
+      slow_slow_peak_block = block;
+    }
+    if (slow_slow_peak_block >= 0 && !envelope.active()) {
+      slow_slow_done_block = block;
+      break;
+    }
+  }
+  if (slow_slow_peak_block < 2000 ||
+      slow_slow_done_block - slow_slow_peak_block < 2000) {
+    fprintf(
+        stderr,
+        "Triggered slow/slow waypoint collapsed: peak=%d done=%d\n",
+        slow_slow_peak_block,
+        slow_slow_done_block);
     abort();
   }
 
