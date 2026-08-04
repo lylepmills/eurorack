@@ -61,6 +61,9 @@ using namespace plaits;
 #ifndef PLAITS_QEMU_TRIGGER
 #define PLAITS_QEMU_TRIGGER 2
 #endif
+#ifndef PLAITS_QEMU_TRIGGER_PERIOD
+#define PLAITS_QEMU_TRIGGER_PERIOD 0
+#endif
 
 // Stereo requests the L/R render path from engines that branch on it. An
 // engine whose stereo branch is a second render (the Pattern B shape: a mono
@@ -112,6 +115,13 @@ int main() {
   bool already_enveloped = false;
 
   for (int i = 0; i < PLAITS_QEMU_BLOCKS; ++i) {
+#if PLAITS_QEMU_TRIGGER_PERIOD > 0
+    // Exercise the active, patched workload too. A constant patched-idle
+    // trigger never starts drum and exciter engines, so it can report the cost
+    // of silence. Periodic rising edges keep both A/B runs phase-aligned and
+    // their subtraction measures a representative active steady state.
+    p.trigger = (i % PLAITS_QEMU_TRIGGER_PERIOD) == 0 ? 1 : 0;
+#endif
     engine.Render(p, out, aux, kBlockSize, &already_enveloped);
     g_sink += out[0] + aux[0];
   }

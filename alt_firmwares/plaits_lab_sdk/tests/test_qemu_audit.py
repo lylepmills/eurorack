@@ -1,0 +1,59 @@
+import sys
+import unittest
+from pathlib import Path
+
+QEMU_DIR = Path(__file__).resolve().parents[1] / "qemu"
+sys.path.insert(0, str(QEMU_DIR))
+
+import audit_catalog
+import estimate
+
+
+class AuditCatalogTest(unittest.TestCase):
+    def test_extreme_sweep_covers_axes_pitch_and_every_control_pair(self):
+        positions = estimate.sweep_positions("extreme", "chords")
+        by_name = {position[0]: position for position in positions}
+        for name in (
+            "harm-low", "harm-high", "timbre-low", "timbre-high",
+            "morph-low", "morph-high", "macro-low", "macro-high",
+            "note-low", "note-high",
+        ):
+            self.assertIn(name, by_name)
+
+        corners = [position[1:5] for position in positions
+                   if position[0].startswith("corner-")]
+        self.assertEqual(len(corners), 8)
+        for first in range(4):
+            for second in range(first + 1, 4):
+                combinations = {(row[first], row[second]) for row in corners}
+                self.assertEqual(len(combinations), 4)
+
+    def test_engine_specific_transition_is_added_once(self):
+        names = [position[0] for position in
+                 estimate.sweep_positions("extreme", "wavetable-chord")]
+        self.assertEqual(names.count("harm-six"), 1)
+
+    def test_every_current_catalog_model_advertises_stereo(self):
+        ids = audit_catalog.stereo_catalog_ids()
+        self.assertEqual(len(ids), 83)
+        self.assertIn("chords", ids)
+
+    def test_risk_requires_hardware_on_midpoint_or_upper_band(self):
+        def result(mid, high):
+            return {"estimate": {"usage": mid, "usage_high": high}}
+
+        self.assertEqual(audit_catalog.risk(result(0.60, 0.80)), "OK")
+        self.assertEqual(audit_catalog.risk(result(0.86, 0.90)), "HARDWARE")
+        self.assertEqual(audit_catalog.risk(result(0.70, 1.01)), "HARDWARE")
+        self.assertEqual(audit_catalog.risk(result(1.01, 1.20)), "FAIL")
+
+    def test_estimate_command_exercises_both_trigger_states(self):
+        command = audit_catalog.estimate_command("chords", "extreme", "image", 200, 400)
+        self.assertIn("--stereo", command)
+        self.assertEqual(command[command.index("--trigger") + 1], "both")
+        self.assertEqual(command[command.index("--sweep") + 1], "extreme")
+        self.assertIn("--json", command)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -218,6 +218,25 @@ It reports a **band**, not a number, and it sweeps parameter positions and
 reports the **worst** — because an engine can pass at one knob position and
 glitch at another.
 
+The default sweep covers each control independently at both extremes, low/high
+pitch, a pairwise covering array of correlated control corners, and any
+model-specific topology transitions registered in `qemu/estimate.py`. Use
+`--sweep quick` only for a short development check. Patched percussion and
+exciter paths should be measured with `--trigger periodic`; `--trigger both`
+checks that active path as well as the unpatched state.
+
+Before a stereo catalog rollout, run the resumable all-model gate:
+
+```sh
+python3 alt_firmwares/plaits_lab_sdk/qemu/audit_catalog.py --jobs 2
+```
+
+It measures every stereo catalog model under both trigger conditions, writes an
+incremental revision-keyed JSON file in `/tmp`, and ranks the result by the
+conservative upper edge of the calibrated band. A midpoint at or above 85%, or
+an uncertainty band crossing 100%, requires an on-hardware CPU-probe audition;
+a midpoint at or above 100% fails the gate.
+
 Accuracy, measured by predicting each calibration engine from a fit that excludes
 it (`python3 qemu/cost_model.py`): **mean error 14%, 14 of 15 within 30%.**
 

@@ -859,7 +859,10 @@ class PackageTests(unittest.TestCase):
             session.close()
         self.assertEqual(package["manifest"]["id"], "mutable-instruments/chords")
         self.assertEqual(package["manifest"]["catalogId"], "chords")
-        self.assertEqual(package["manifest"]["controls"][1]["label"], "Waveform")
+        self.assertEqual(
+            package["manifest"]["controls"][1]["label"],
+            "Inversion and transposition",
+        )
         self.assertEqual(package["digest"], plaits_lab.builtin_engine("chords")[1]["digest"])
 
     def test_live_audition_stereo_surface_is_wired(self) -> None:

@@ -21,6 +21,7 @@ marginal cost of the render loop alone.
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import shlex
 import shutil
@@ -52,9 +53,12 @@ ARCH_FLAGS = [
 ]
 
 # An engine's cost can depend on its parameters, so one sample of the space can
-# miss the case that actually breaks. These positions cover the corners plus the
-# centre; the estimate reports the WORST, because the worst is what glitches.
-SWEEP_POSITIONS = (
+# miss the case that actually breaks. QUICK_SWEEP_POSITIONS preserves the old
+# short developer sweep. The default EXTREME sweep adds every independent axis
+# extreme, pitch extremes, and an eight-run pairwise covering array for the four
+# controls. The latter catches every low/high interaction between two controls
+# without paying for all sixteen corners.
+QUICK_SWEEP_POSITIONS = (
     # name, harmonics, timbre, morph, macro, note
     ("centre",    0.5, 0.5, 0.5, 0.5, 48.0),
     ("low",       0.05, 0.05, 0.05, 0.05, 36.0),
@@ -72,25 +76,49 @@ SWEEP_POSITIONS = (
     ("morph-hi",  0.5, 0.5, 0.95, 0.5, 48.0),
 )
 
+EXTREME_SWEEP_POSITIONS = (
+    ("centre",       0.5,   0.5,   0.5,   0.5,   48.0),
+    ("harm-low",     0.001, 0.5,   0.5,   0.5,   48.0),
+    ("harm-high",    0.999, 0.5,   0.5,   0.5,   48.0),
+    ("timbre-low",   0.5,   0.001, 0.5,   0.5,   48.0),
+    ("timbre-high",  0.5,   0.999, 0.5,   0.5,   60.0),
+    ("morph-low",    0.5,   0.5,   0.001, 0.5,   48.0),
+    ("morph-high",   0.5,   0.5,   0.999, 0.5,   48.0),
+    ("macro-low",    0.5,   0.5,   0.5,   0.001, 48.0),
+    ("macro-high",   0.5,   0.5,   0.5,   0.999, 48.0),
+    ("note-low",     0.5,   0.5,   0.5,   0.5,   12.0),
+    ("note-high",    0.5,   0.5,   0.5,   0.5,  108.0),
+    # Pairwise covering array. Across these eight corners, every pair of
+    # controls sees all four low/high combinations at least once.
+    ("corner-0000",  0.001, 0.001, 0.001, 0.001, 48.0),
+    ("corner-0011",  0.001, 0.001, 0.999, 0.999, 48.0),
+    ("corner-0101",  0.001, 0.999, 0.001, 0.999, 48.0),
+    ("corner-0110",  0.001, 0.999, 0.999, 0.001, 48.0),
+    ("corner-1001",  0.999, 0.001, 0.001, 0.999, 48.0),
+    ("corner-1010",  0.999, 0.001, 0.999, 0.001, 48.0),
+    ("corner-1100",  0.999, 0.999, 0.001, 0.001, 48.0),
+    ("corner-1111",  0.999, 0.999, 0.999, 0.999, 48.0),
+)
+
+# Model-specific transition points belong here when a generic axis/corner
+# sweep cannot select the expensive topology. Wavetable chord engines grow from
+# four to six voices at particular HARMONICS rows.
+ENGINE_SWEEP_POSITIONS = {
+    "wavetable-chord": (("harm-six", 0.34, 0.5, 0.5, 0.5, 48.0),),
+    "wavetable-scale-stack": (("harm-six", 0.34, 0.5, 0.5, 0.5, 48.0),),
+}
+
+
+def sweep_positions(mode: str, engine_id: str | None = None) -> tuple:
+    base = QUICK_SWEEP_POSITIONS if mode == "quick" else EXTREME_SWEEP_POSITIONS
+    extra = ENGINE_SWEEP_POSITIONS.get(engine_id or "", ())
+    existing = {position[0] for position in base}
+    return base + tuple(position for position in extra if position[0] not in existing)
+
 COUNTS_RE = re.compile(
     r"PLAITS_QEMU_COUNTS insns=(\d+) flash_reads=(\d+) ram_reads=(\d+) writes=(\d+)"
     r" divs=(\d+) sqrts=(\d+) vcmps=(\d+) branches=(\d+)"
 )
-
-
-def container_compile(sources: list[str], includes: list[str], defines: list[str],
-                      out_elf: str, image: str, mounts: list[str]) -> list[str]:
-    """The command that builds the harness ELF with the SAME toolchain the
-    firmware uses -- a different compiler would generate different code and make
-    the counts incomparable."""
-    cxx = "/usr/local/arm-4.8.3/bin/arm-none-eabi-g++"
-    cmd = [cxx, *ARCH_FLAGS, *defines]
-    for inc in includes:
-        cmd += ["-I", inc]
-    cmd += ["/qemu/startup.c", *sources]
-    cmd += ["-T", "/qemu/mps2.ld", "-nostartfiles", "-Wl,--gc-sections",
-            "-o", out_elf]
-    return cmd
 
 
 PC_RE = re.compile(r"PLAITS_QEMU_PC 0x([0-9a-f]+) (\d+) (\d+)")
@@ -184,13 +212,15 @@ def main() -> int:
     parser.add_argument("--note", type=float, default=48.0)
     # unpatched = TRIGGER_UNPATCHED (2), the state an engine sees on a module
     # with nothing in TRIG -- the calibration condition. patched-idle = 0.
-    parser.add_argument("--trigger", choices=("unpatched", "patched-idle"),
+    parser.add_argument("--trigger", choices=("unpatched", "patched-idle", "periodic", "both"),
                         default="unpatched")
     parser.add_argument("--stereo", action="store_true",
         help="measure the stereo (OUT/AUX as L/R) render path instead of mono")
     parser.add_argument("--quiet", action="store_true")
-    parser.add_argument("--sweep", action="store_true",
-        help="measure several parameter positions and report the worst")
+    parser.add_argument("--sweep", nargs="?", const="extreme", choices=("quick", "extreme"),
+        help="measure parameter extremes and report the worst (default: extreme; pass quick for the legacy short sweep)")
+    parser.add_argument("--json", action="store_true",
+        help="print the complete machine-readable result")
     parser.add_argument("--profile", action="store_true",
         help="per-function instruction histogram (single position)")
     parser.add_argument("--keep", action="store_true")
@@ -242,9 +272,10 @@ def main() -> int:
     from cost_model import CostModel
     model = CostModel()
 
-    positions = SWEEP_POSITIONS if args.sweep else (
+    positions = sweep_positions(args.sweep, args.builtin) if args.sweep else (
         ("as-given", args.harmonics, args.timbre, args.morph, args.macro, args.note),
     )
+    trigger_modes = ("unpatched", "periodic") if args.trigger == "both" else (args.trigger,)
 
     with tempfile.TemporaryDirectory(prefix="plaits-qemu-") as temp:
         out_dir = Path(temp)
@@ -256,31 +287,67 @@ def main() -> int:
             else:
                 mapped.append(f"/contributor/{q.relative_to(src_root.parent)}")
 
-        # One docker invocation builds every ELF. Under amd64 emulation the
-        # container start dominates, so batching turns a multi-point sweep
-        # into roughly the cost of a single run.
+        # Compile the engine and support units once, then compile only the tiny
+        # harness for each workload. The old implementation recompiled the
+        # complete engine twice per position; a catalog-wide extreme audit was
+        # technically possible but needlessly took hours.
+        harness = QEMU_DIR / "harness.cc"
+        mapped_harness = f"/workspace/{harness.relative_to(REPO_ROOT)}"
+        common_defines = [
+            f'-DPLAITS_LAB_ENGINE_HEADER="{header_define}"',
+            f"-DPLAITS_LAB_ENGINE_CLASS=plaits::{package['manifest']['source']['className']}",
+            f"-DPLAITS_LAB_USER_DATA_BANK={package.get('user_data_bank', -1)}",
+        ]
+        includes = ["/workspace", "/contributor/src", "/qemu"]
+        compile_prefix = ["/usr/local/arm-4.8.3/bin/arm-none-eabi-g++", *ARCH_FLAGS,
+                          *common_defines]
+        for inc in includes:
+            compile_prefix += ["-I", inc]
+
         commands = []
-        for name, harm, timb, morph, macro, note in positions:
-            for label, blocks in (("a", args.blocks_a), ("b", args.blocks_b)):
-                commands.append(" ".join(shlex.quote(c) for c in container_compile(
-                    mapped, ["/workspace", "/contributor/src", "/qemu"],
-                    [f'-DPLAITS_LAB_ENGINE_HEADER="{header_define}"',
-                     f"-DPLAITS_LAB_ENGINE_CLASS=plaits::{package['manifest']['source']['className']}",
-                     f"-DPLAITS_LAB_USER_DATA_BANK={package.get('user_data_bank', -1)}",
-                     f"-DPLAITS_QEMU_BLOCKS={blocks}",
-                     f"-DPLAITS_QEMU_HARMONICS={harm}f",
-                     f"-DPLAITS_QEMU_MACRO={macro}f",
-                     f"-DPLAITS_QEMU_TIMBRE={timb}f",
-                     f"-DPLAITS_QEMU_MORPH={morph}f",
-                     f"-DPLAITS_QEMU_NOTE={note}f",
-                     f"-DPLAITS_QEMU_TRIGGER={2 if args.trigger == 'unpatched' else 0}",
-                     f"-DPLAITS_QEMU_STEREO={1 if args.stereo else 0}"],
-                    f"/output/h_{name}_{label}.elf", args.image, [])))
+        object_paths = []
+        shared_sources = ["/qemu/startup.c"] + [m for m in mapped if m != mapped_harness]
+        for index, source in enumerate(shared_sources):
+            object_path = f"/output/shared_{index}.o"
+            object_paths.append(object_path)
+            commands.append(" ".join(shlex.quote(c) for c in [
+                *compile_prefix, "-c", source, "-o", object_path,
+            ]))
+
+        workloads = []
+        for trigger_mode in trigger_modes:
+            for name, harm, timb, morph, macro, note in positions:
+                workload = f"{trigger_mode}_{name}"
+                workloads.append((workload, trigger_mode, name, harm, timb, morph, macro, note))
+                for label, blocks in (("a", args.blocks_a), ("b", args.blocks_b)):
+                    harness_obj = f"/output/h_{workload}_{label}.o"
+                    elf = f"/output/h_{workload}_{label}.elf"
+                    trigger_value = 2 if trigger_mode == "unpatched" else 0
+                    trigger_period = 16 if trigger_mode == "periodic" else 0
+                    defines = [
+                        f"-DPLAITS_QEMU_BLOCKS={blocks}",
+                        f"-DPLAITS_QEMU_HARMONICS={harm}f",
+                        f"-DPLAITS_QEMU_MACRO={macro}f",
+                        f"-DPLAITS_QEMU_TIMBRE={timb}f",
+                        f"-DPLAITS_QEMU_MORPH={morph}f",
+                        f"-DPLAITS_QEMU_NOTE={note}f",
+                        f"-DPLAITS_QEMU_TRIGGER={trigger_value}",
+                        f"-DPLAITS_QEMU_TRIGGER_PERIOD={trigger_period}",
+                        f"-DPLAITS_QEMU_STEREO={1 if args.stereo else 0}",
+                    ]
+                    commands.append(" ".join(shlex.quote(c) for c in [
+                        *compile_prefix, *defines, "-c", mapped_harness, "-o", harness_obj,
+                    ]))
+                    commands.append(" ".join(shlex.quote(c) for c in [
+                        "/usr/local/arm-4.8.3/bin/arm-none-eabi-g++", *ARCH_FLAGS,
+                        harness_obj, *object_paths, "-T", "/qemu/mps2.ld", "-nostartfiles",
+                        "-Wl,--gc-sections", "-o", elf,
+                    ]))
         if args.profile:
             # The symbol table is what turns PC buckets into function names.
             commands.append(
                 "/usr/local/arm-4.8.3/bin/arm-none-eabi-nm -C -S -n "
-                f"/output/h_{positions[0][0]}_a.elf > /output/symbols.txt")
+                f"/output/h_{workloads[0][0]}_a.elf > /output/symbols.txt")
         docker = [
             "docker", "run", "--rm", "--platform", "linux/amd64",
             "--entrypoint", "sh",
@@ -292,24 +359,26 @@ def main() -> int:
             args.image, "-c", " && ".join(commands),
         ]
         if not args.quiet:
-            print(f"building {len(commands)} harnesses ({len(positions)} positions)...")
+            print(f"building {2 * len(workloads)} harnesses ({len(workloads)} workloads)...")
         r = subprocess.run(docker, text=True, capture_output=True, check=False)
         if r.returncode:
             raise SystemExit(f"harness build failed\n{(r.stderr or r.stdout)[-4000:]}")
 
         results = []
         samples = (args.blocks_b - args.blocks_a) * BLOCK_SIZE
-        for name, harm, timb, morph, macro, note in positions:
-            lo, pc_lo = run_qemu(out_dir / f"h_{name}_a.elf", plugin)
-            hi, pc_hi = run_qemu(out_dir / f"h_{name}_b.elf", plugin)
+        for workload, trigger_mode, name, harm, timb, morph, macro, note in workloads:
+            lo, pc_lo = run_qemu(out_dir / f"h_{workload}_a.elf", plugin)
+            hi, pc_hi = run_qemu(out_dir / f"h_{workload}_b.elf", plugin)
             d = [hi[i] - lo[i] for i in range(len(lo))]
-            results.append({"position": name, "insns": d[0] / samples,
+            results.append({"position": name, "trigger": trigger_mode,
+                            "harmonics": harm, "timbre": timb, "morph": morph,
+                            "macro": macro, "note": note, "insns": d[0] / samples,
                             "flash": d[1] / samples, "ram": d[2] / samples,
                             "writes": d[3] / samples,
                             "divs": d[4] / samples, "sqrts": d[5] / samples,
                             "vcmps": d[6] / samples, "branches": d[7] / samples})
             if not args.quiet:
-                print(f"  {name:10} {d[0]/samples:8.1f} instructions/sample")
+                print(f"  {trigger_mode:10} {name:14} {d[0]/samples:8.1f} instructions/sample")
 
         if args.profile:
             report_profile(out_dir / "symbols.txt", pc_lo, pc_hi, samples)
@@ -318,13 +387,27 @@ def main() -> int:
     est = model.estimate(worst["insns"])
     symbol, sentence = model.verdict(worst["insns"])
 
+    payload = {
+        "engine": args.builtin or str(args.package),
+        "stereo": args.stereo,
+        "sweep": args.sweep,
+        "triggers": list(trigger_modes),
+        "results": results,
+        "worst": worst,
+        "estimate": est,
+        "verdict": {"symbol": symbol, "sentence": sentence},
+    }
+    if args.json:
+        print(json.dumps(payload, sort_keys=True))
+        return 0
+
     if args.quiet:
-        print(f"RESULT worst={worst['position']} insns={worst['insns']:.1f} "
+        print(f"RESULT worst={worst['trigger']}/{worst['position']} insns={worst['insns']:.1f} "
               f"vcmps={worst['vcmps']:.1f} branches={worst['branches']:.1f} "
               f"divs={worst['divs']:.2f} usage={100*est['usage']:.0f}%")
         return 0
 
-    print(f"\nworst case: {worst['position']}  ({worst['insns']:.1f} instructions/sample)")
+    print(f"\nworst case: {worst['trigger']}/{worst['position']}  ({worst['insns']:.1f} instructions/sample)")
     if len(results) > 1:
         spread = worst["insns"] / min(r["insns"] for r in results)
         print(f"  cost varies {spread:.2f}x across the parameter space")
