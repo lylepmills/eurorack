@@ -375,8 +375,8 @@
         "Voice-group balance"
       ],
       "outputs": [
-        "Four-voice chord",
-        "Root or alternate voice group"
+        "Mono: full chord. Stereo: left side of the chord spread.",
+        "Mono: root or alternate voice group. Stereo: right side of the chord spread."
       ],
       "artwork": {
         "icon": "/model-icons/chords.png",
@@ -387,8 +387,8 @@
         "chord-bank"
       ],
       "version": "1.0.0",
-      "digest": "sha256:61d96b19f30714bbf62a084ec8bf62c383dd30298f01de1d1d533fc6ee91d104",
-      "documentationDigest": "sha256:e336c0feb36967c45a00e2bc406412492011e7e6d9ea0254209eb4057688048e",
+      "digest": "sha256:c90e1f6546a44de58f6f1504d1c0d186ec14a895d25f4cfef8ea51f19c441c2c",
+      "documentationDigest": "sha256:80d07cb2b3e4cae4610d0288f25d777674eec98d35ae384a50d99660a1fee32c",
       "manual": {
         "controls": {
           "harmonics": "Selects the chord from the active chord table.",

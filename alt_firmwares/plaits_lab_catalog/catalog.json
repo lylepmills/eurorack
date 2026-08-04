@@ -359,8 +359,8 @@
         "Voice-group balance"
       ],
       "outputs": [
-        "Four-voice chord",
-        "Root or alternate voice group"
+        "Mono: full chord. Stereo: left side of the chord spread.",
+        "Mono: root or alternate voice group. Stereo: right side of the chord spread."
       ],
       "artwork": {
         "icon": "/model-icons/chords.png",

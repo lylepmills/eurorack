@@ -27,9 +27,9 @@
 // Chords: wavetable and divide-down organ/string machine.
 //
 // OUT: all notes. AUX: the notes selected by the chord inversion, boosted.
-// alt firmware, stereo mode: each note keeps the mix it contributes to OUT
-// (including the macro's voice balance), panned to a fixed per-note
-// position - root at the center, outer voices widest - with no AUX boost.
+// alt firmware, stereo mode: the center oscillator is shared equally and the
+// four outer oscillator slots alternate left/right, preserving the original
+// note layout without five separate pan-and-accumulate passes.
 
 #include "plaits/dsp/engine/chord_engine.h"
 
@@ -59,17 +59,6 @@ void ChordEngine::Reset() {
 
 const float fade_point[kChordNumVoices] = {
   0.55f, 0.47f, 0.49f, 0.51f, 0.53f
-};
-
-// Equal-power gains for the fixed pan positions
-// { 0.5, 0.2, 0.8, 0.05, 0.95 }. Precomputing them removes ten square roots
-// per audio block without changing the rounded float values.
-const float chord_pan_left[kChordNumVoices] = {
-  0.707106769f, 0.894427180f, 0.447213590f, 0.974679410f, 0.223606825f
-};
-
-const float chord_pan_right[kChordNumVoices] = {
-  0.707106769f, 0.447213590f, 0.894427180f, 0.223606795f, 0.974679410f
 };
 
 const int kRegistrationTableSize = 8;
@@ -146,31 +135,49 @@ void ChordEngine::Render(
 
   const float f0 = NoteToFrequency(parameters.note) * 0.998f;
   const float waveform = max((morph_lp_ - 0.535f) * 2.15f, 0.0f);
-
   if ((PLAITS_STEREO_CHORDS && parameters.stereo)) {
+    float center_samples[kMaxBlockSize];
+    fill(&center_samples[0], &center_samples[size], 0.0f);
     const float voice_balance = ApplyMacro(
         1.0f, 0.0f, 2.0f, parameters.macro);
+
     for (int note = 0; note < kChordNumVoices; ++note) {
+      // ComputeChordInversion crossfades one chord tone between two oscillator
+      // slots. At each settled inversion one side of that crossfade is exactly
+      // silent; rendering it anyway costs a full oscillator voice and is the
+      // difference between meeting and missing the audio deadline in the high
+      // TIMBRE stereo corner. The control is already low-pass filtered, so the
+      // voice reaches the -88 dB floor through the normal per-block gain
+      // interpolation before this steady-state fast path freezes its inaudible
+      // phase. A small floor is necessary because the one-pole approaches a
+      // dialled inversion asymptotically in float rather than landing on zero.
+      if (note_amplitudes[note] <= 0.00001f) {
+        continue;
+      }
+
       float wavetable_amount = 50.0f * (morph_lp_ - fade_point[note]);
       CONSTRAIN(wavetable_amount, 0.0f, 1.0f);
 
       float divide_down_amount = 1.0f - wavetable_amount;
+      const float note_gain = (1 << note) & aux_note_mask
+          ? voice_balance
+          : 1.0f;
+      float* destination = note == 0
+          ? center_samples
+          : ((note & 1) ? out : aux);
 
       const float note_f0 = f0 * ratios[note];
       float divide_down_gain = 4.0f - note_f0 * 32.0f;
       CONSTRAIN(divide_down_gain, 0.0f, 1.0f);
       divide_down_amount *= divide_down_gain;
 
-      float note_samples[kMaxBlockSize];
-      fill(&note_samples[0], &note_samples[size], 0.0f);
-
       if (wavetable_amount) {
         wavetable_voice_[note].Render(
             note_f0 * 1.004f,
-            note_amplitudes[note] * wavetable_amount,
+            note_amplitudes[note] * wavetable_amount * note_gain,
             waveform,
             wavetable,
-            note_samples,
+            destination,
             size);
       }
 
@@ -178,24 +185,23 @@ void ChordEngine::Render(
         divide_down_voice_[note].Render(
             note_f0,
             harmonics,
-            note_amplitudes[note] * divide_down_amount,
-            note_samples,
+            note_amplitudes[note] * divide_down_amount * note_gain,
+            destination,
             size);
       }
+    }
 
-      float left_gain = chord_pan_left[note];
-      float right_gain = chord_pan_right[note];
-      // A note the mask would have sent to AUX reaches OUT scaled by the
-      // macro's voice balance: keep that level in the stereo mix.
-      const float note_gain = (1 << note) & aux_note_mask
-          ? voice_balance
-          : 1.0f;
-      left_gain *= note_gain;
-      right_gain *= note_gain;
-      for (size_t i = 0; i < size; ++i) {
-        out[i] += note_samples[i] * left_gain;
-        aux[i] += note_samples[i] * right_gain;
-      }
+    for (size_t i = 0; i < size; ++i) {
+      // Slots 1/3 were left and 2/4 right in the original five-position pan.
+      // One shared crossfeed approximates their near/far widths while the
+      // center slot retains its exact equal-power gain. This reduces five
+      // temporary render buffers and five dual-channel accumulation loops to
+      // one center buffer and one final matrix.
+      const float left_group = out[i];
+      const float right_group = aux[i];
+      const float center = center_samples[i] * 0.707106769f;
+      out[i] = left_group * 0.935f + right_group * 0.335f + center;
+      aux[i] = right_group * 0.935f + left_group * 0.335f + center;
     }
     return;
   }

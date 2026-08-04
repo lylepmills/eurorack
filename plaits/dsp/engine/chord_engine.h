@@ -27,9 +27,9 @@
 // Chords: wavetable and divide-down organ/string machine.
 //
 // OUT: all notes. AUX: the notes selected by the chord inversion, boosted.
-// alt firmware, stereo mode: each note keeps the mix it contributes to OUT
-// (including the macro's voice balance), panned to a fixed per-note
-// position - root at the center, outer voices widest - with no AUX boost.
+// alt firmware, stereo mode: the center oscillator is shared equally and the
+// four outer oscillator slots alternate left/right, preserving the original
+// note layout without five separate pan-and-accumulate passes.
 
 #ifndef PLAITS_DSP_ENGINE_CHORD_ENGINE_H_
 #define PLAITS_DSP_ENGINE_CHORD_ENGINE_H_

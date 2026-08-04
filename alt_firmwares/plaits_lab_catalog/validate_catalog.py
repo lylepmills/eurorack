@@ -61,6 +61,10 @@ AUDITED_STOCK_OUTPUTS = {
         "Same voice mix in mono; right channel in stereo",
     ],
     "string-machine": ["Voices 1 and 3 predominantly", "Voices 2 and 4 predominantly"],
+    "chords": [
+        "Mono: full chord. Stereo: left side of the chord spread.",
+        "Mono: root or alternate voice group. Stereo: right side of the chord spread.",
+    ],
     "chiptune": ["Chiptune chord or arpeggio", "NES triangle bass"],
 }
 
