@@ -66,11 +66,13 @@
 #include "plaits/dsp/engine2/bowed_engine.h"
 #include "plaits/dsp/engine2/question_mark_engine.h"
 #include "plaits/dsp/engine2/fluted_engine.h"
+#include "plaits/dsp/engine2/formant_speech_engine.h"
 #include "plaits/dsp/engine2/wave_paraphonic_engine.h"
 #include "plaits/dsp/engine2/wave_scan_engine.h"
 #include "plaits/dsp/engine2/cymbal_engine.h"
 #include "plaits/dsp/engine2/snare_engine.h"
 #include "plaits/dsp/engine2/kick_engine.h"
+#include "plaits/dsp/engine2/lpc_speech_engine.h"
 #include "plaits/dsp/engine2/struck_drum_engine.h"
 #include "plaits/dsp/engine2/struck_bell_engine.h"
 #include "plaits/dsp/engine2/blown_engine.h"
@@ -2335,7 +2337,149 @@ void ValidateAutoLevelDecayRouting() {
   }
 }
 
+template<typename E>
+void RenderSpeechEquivalenceSequence(
+    E* engine,
+    EngineParameters parameters,
+    float* out,
+    float* aux,
+    bool* enveloped) {
+  const size_t blocks = 16;
+  for (size_t block = 0; block < blocks; ++block) {
+    parameters.trigger = block == 0 ? TRIGGER_RISING_EDGE : TRIGGER_LOW;
+    engine->Render(
+        parameters,
+        out + block * kMaxBlockSize,
+        aux + block * kMaxBlockSize,
+        kMaxBlockSize,
+        &enveloped[block]);
+  }
+}
+
+void AssertSpeechEquivalence(
+    const char* label,
+    const float* expected_out,
+    const float* expected_aux,
+    const bool* expected_enveloped,
+    const float* actual_out,
+    const float* actual_aux,
+    const bool* actual_enveloped) {
+  const size_t blocks = 16;
+  const size_t samples = blocks * kMaxBlockSize;
+  for (size_t i = 0; i < samples; ++i) {
+    if (expected_out[i] != actual_out[i] ||
+        expected_aux[i] != actual_aux[i]) {
+      fprintf(stderr, "%s diverged from stock Speech at sample %zu\n", label, i);
+      abort();
+    }
+  }
+  for (size_t block = 0; block < blocks; ++block) {
+    if (expected_enveloped[block] != actual_enveloped[block]) {
+      fprintf(stderr, "%s changed Speech's envelope declaration at block %zu\n",
+          label, block);
+      abort();
+    }
+  }
+}
+
+void ValidateSpeechEngineSplit() {
+  const size_t blocks = 16;
+  const size_t samples = blocks * kMaxBlockSize;
+  float stock_out[samples];
+  float stock_aux[samples];
+  float split_out[samples];
+  float split_aux[samples];
+  bool stock_enveloped[blocks];
+  bool split_enveloped[blocks];
+
+  // The two endpoints pin the new full-range MODEL axis to Speech's exact
+  // naive and SAM anchors, through its mono macro and stereo render paths.
+  const float models[] = { 0.0f, 1.0f };
+  const float colours[] = { 0.2f, 0.5f, 0.8f };
+  for (size_t m = 0; m < 2; ++m) {
+    for (size_t c = 0; c < 3; ++c) {
+      for (size_t stereo = 0; stereo < 2; ++stereo) {
+        uint8_t stock_ram[16384] = { 0 };
+        uint8_t split_ram[16384] = { 0 };
+        BufferAllocator stock_allocator(stock_ram, sizeof(stock_ram));
+        BufferAllocator split_allocator(split_ram, sizeof(split_ram));
+        SpeechEngine stock;
+        FormantSpeechEngine split;
+        stock.Init(&stock_allocator);
+        split.Init(&split_allocator);
+
+        EngineParameters stock_parameters;
+        stock_parameters.note = 60.0f;
+        stock_parameters.harmonics = models[m] / 6.0f;
+        stock_parameters.timbre = 0.63f;
+        stock_parameters.morph = 0.37f;
+        stock_parameters.macro = colours[c];
+        stock_parameters.accent = 0.8f;
+        stock_parameters.chord_set_option = 0;
+        stock_parameters.stereo = stereo != 0;
+        EngineParameters split_parameters = stock_parameters;
+        split_parameters.harmonics = models[m];
+
+        Random::Seed(0x51ee);
+        RenderSpeechEquivalenceSequence(
+            &stock, stock_parameters, stock_out, stock_aux, stock_enveloped);
+        Random::Seed(0x51ee);
+        RenderSpeechEquivalenceSequence(
+            &split, split_parameters, split_out, split_aux, split_enveloped);
+        AssertSpeechEquivalence(
+            "Formant Speech", stock_out, stock_aux, stock_enveloped,
+            split_out, split_aux, split_enveloped);
+      }
+    }
+  }
+
+  // LPC's six bank positions map back to Speech's LPC range. At neutral SPEED,
+  // its ADDRESS and VOCAL TRACT controls call the controller with the same
+  // values as stock Speech at MACRO noon.
+  for (int material = 0; material < 6; ++material) {
+    for (size_t stereo = 0; stereo < 2; ++stereo) {
+      uint8_t stock_ram[16384] = { 0 };
+      uint8_t split_ram[16384] = { 0 };
+      BufferAllocator stock_allocator(stock_ram, sizeof(stock_ram));
+      BufferAllocator split_allocator(split_ram, sizeof(split_ram));
+      SpeechEngine stock;
+      LPCSpeechEngine split;
+      stock.Init(&stock_allocator);
+      split.Init(&split_allocator);
+
+      const float bank = static_cast<float>(material) / 5.0f;
+      EngineParameters stock_parameters;
+      stock_parameters.note = 60.0f;
+      stock_parameters.harmonics = (2.0f + bank * 4.0f) / 6.0f;
+      stock_parameters.timbre = 0.64f;
+      stock_parameters.morph = 0.38f;
+      stock_parameters.macro = 0.5f;
+      stock_parameters.accent = 0.8f;
+      stock_parameters.chord_set_option = 0;
+      stock_parameters.stereo = stereo != 0;
+      EngineParameters split_parameters = stock_parameters;
+      split_parameters.harmonics = bank;
+      split_parameters.timbre = stock_parameters.morph;
+      split_parameters.morph = 0.5f;
+      split_parameters.macro = stock_parameters.timbre;
+
+      Random::Seed(0x1ec10);
+      RenderSpeechEquivalenceSequence(
+          &stock, stock_parameters, stock_out, stock_aux, stock_enveloped);
+      Random::Seed(0x1ec10);
+      RenderSpeechEquivalenceSequence(
+          &split, split_parameters, split_out, split_aux, split_enveloped);
+      AssertSpeechEquivalence(
+          "LPC Speech", stock_out, stock_aux, stock_enveloped,
+          split_out, split_aux, split_enveloped);
+    }
+  }
+}
+
 void TestExperimentalEngines() {
+  printf("Validating Speech engine split anchors...\n");
+  fflush(stdout);
+  ValidateSpeechEngineSplit();
   printf("Validating the shared scale bank...\n");
   fflush(stdout);
   ValidateScaleVoiceBank();
@@ -2464,6 +2608,8 @@ void TestExperimentalEngines() {
   printf("Validating new Plaits Lab engines...\n");
   fflush(stdout);
   ValidateExperimentalEngineExtremes<LoopbackEngine>();
+  ValidateExperimentalEngineExtremes<FormantSpeechEngine>(32.0f);
+  ValidateExperimentalEngineExtremes<LPCSpeechEngine>(32.0f);
   ValidateExperimentalEngineExtremes<LockstepEngine>();
   ValidateExperimentalEngineExtremes<TapfieldEngine>();
   ValidateExperimentalEngineExtremes<PhaseWeaveEngine>();
@@ -2520,6 +2666,8 @@ void TestExperimentalEngines() {
   ValidateExperimentalEngineExtremes<VirtualAnalogDualEngine>(4.0f, true);
   ValidateExperimentalEngineExtremes<VirtualAnalogCrossfadeEngine>(4.0f, true);
   ValidateExperimentalControlResponse<LoopbackEngine>("Loopback");
+  ValidateExperimentalControlResponse<FormantSpeechEngine>("Formant Speech");
+  ValidateExperimentalControlResponse<LPCSpeechEngine>("LPC Speech");
   ValidateExperimentalControlResponse<LockstepEngine>("Lockstep");
   ValidateExperimentalControlResponse<TapfieldEngine>("Tapfield");
   ValidateExperimentalControlResponse<PhaseWeaveEngine>("Phase Weave");

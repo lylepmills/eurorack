@@ -24,6 +24,7 @@ CC_FILES       = algorithms.cc \
 		chord_engine.cc \
 		dx_units.cc \
 		fm_engine.cc \
+		formant_speech_engine.cc \
 		gendy_engine.cc \
 		grain_engine.cc \
 		glisson_engine.cc \
@@ -31,6 +32,7 @@ CC_FILES       = algorithms.cc \
 		hi_hat_engine.cc \
 		lockstep_engine.cc \
 		loopback_engine.cc \
+		lpc_speech_engine.cc \
 		lpc_speech_synth.cc \
 		lpc_speech_synth_controller.cc \
 		lpc_speech_synth_phonemes.cc \

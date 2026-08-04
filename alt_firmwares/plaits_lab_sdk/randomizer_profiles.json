@@ -140,6 +140,16 @@
       "timbre": "stepped-identity",
       "morph": "patient-structure"
     },
+    "formant-speech": {
+      "status": "seeded",
+      "timbre": "balanced",
+      "morph": "patient-structure"
+    },
+    "lpc-speech": {
+      "status": "seeded",
+      "timbre": "stepped-identity",
+      "morph": "centered"
+    },
     "swarm": {
       "status": "seeded",
       "timbre": "broad-texture",

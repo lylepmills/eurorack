@@ -186,6 +186,8 @@ STEREO_MACROS = {
     "wavetable": "WAVETABLE",
     "chords": "CHORDS",
     "speech": "SPEECH",
+    "formant-speech": "FORMANT_SPEECH",
+    "lpc-speech": "LPC_SPEECH",
     "swarm": "SWARM",
     "filtered-noise": "FILTERED_NOISE",
     "particle-noise": "PARTICLE_NOISE",

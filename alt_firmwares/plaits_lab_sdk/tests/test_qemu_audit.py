@@ -35,7 +35,7 @@ class AuditCatalogTest(unittest.TestCase):
 
     def test_every_current_catalog_model_advertises_stereo(self):
         ids = audit_catalog.stereo_catalog_ids()
-        self.assertEqual(len(ids), 83)
+        self.assertEqual(len(ids), 85)
         self.assertIn("chords", ids)
 
     def test_risk_requires_hardware_on_midpoint_or_upper_band(self):

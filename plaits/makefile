@@ -118,6 +118,7 @@ PLAITS_STEREO_MODELS = \
   VIRTUAL_ANALOG_CROSSFADE:virtual_analog_crossfade_engine \
   TWO_OP_FM:fm_engine GRANULAR_FORMANT:grain_engine HARMONIC:additive_engine \
   WAVETABLE:wavetable_engine CHORDS:chord_engine SPEECH:speech_engine \
+  FORMANT_SPEECH:formant_speech_engine LPC_SPEECH:lpc_speech_engine \
   SWARM:swarm_engine FILTERED_NOISE:noise_engine PARTICLE_NOISE:particle_engine \
   INHARMONIC_STRING:string_engine MODAL_RESONATOR:modal_engine \
   ANALOG_BASS_DRUM:bass_drum_engine ANALOG_SNARE:snare_drum_engine \

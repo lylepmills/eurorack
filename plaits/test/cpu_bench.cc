@@ -58,11 +58,13 @@
 #include "plaits/dsp/engine2/bowed_engine.h"
 #include "plaits/dsp/engine2/question_mark_engine.h"
 #include "plaits/dsp/engine2/fluted_engine.h"
+#include "plaits/dsp/engine2/formant_speech_engine.h"
 #include "plaits/dsp/engine2/wave_paraphonic_engine.h"
 #include "plaits/dsp/engine2/wave_scan_engine.h"
 #include "plaits/dsp/engine2/cymbal_engine.h"
 #include "plaits/dsp/engine2/snare_engine.h"
 #include "plaits/dsp/engine2/kick_engine.h"
+#include "plaits/dsp/engine2/lpc_speech_engine.h"
 #include "plaits/dsp/engine2/struck_drum_engine.h"
 #include "plaits/dsp/engine2/struck_bell_engine.h"
 #include "plaits/dsp/engine2/blown_engine.h"
@@ -184,6 +186,8 @@ int main() {
   // the sweep. (chiptune measured ~709/785 ns mono/stereo in an ad-hoc run.)
   bench<ChiptuneEngine>("chiptune");
   // Rubato Lab models.
+  bench<FormantSpeechEngine>("formant-speech");
+  bench<LPCSpeechEngine>("lpc-speech");
   bench<GlissonEngine>("glisson");
   bench<GendyEngine>("gendy");
   bench<ScannedEngine>("scanned");

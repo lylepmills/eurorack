@@ -26,7 +26,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
         return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
 
     def test_catalog_matches_the_approved_product_catalog(self) -> None:
-        self.assertEqual(len(CATALOG), 83)
+        self.assertEqual(len(CATALOG), 85)
     def test_randomizer_profiles_are_compact_and_cover_every_selected_slot(self) -> None:
         build = validate_recipe(self.load("default_recipe.json"))
         config = render_config(build)

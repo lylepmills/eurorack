@@ -434,6 +434,88 @@
       }
     },
     {
+      "id": "formant-speech",
+      "packageId": "rubato/formant-speech",
+      "name": "Formant Speech",
+      "author": "Lyle Mills, after Emilie Gillet",
+      "origin": "Rubato Lab",
+      "family": "Vocal",
+      "description": "Naive and SAM formant voices expanded from the sustained side of Speech.",
+      "tags": [
+        "speech",
+        "vocal",
+        "formant",
+        "sam"
+      ],
+      "controls": [
+        "Model",
+        "Species",
+        "Vowel",
+        "Spectral emphasis"
+      ],
+      "outputs": [
+        "Formant voice",
+        "Raw excitation or widened voice"
+      ],
+      "source": {
+        "header": "plaits/dsp/engine2/formant_speech_engine.h",
+        "className": "FormantSpeechEngine",
+        "member": "formant_speech_engine_",
+        "files": [
+          "plaits/dsp/engine2/formant_speech_engine.cc",
+          "plaits/dsp/speech/naive_speech_synth.cc",
+          "plaits/dsp/speech/sam_speech_synth.cc"
+        ]
+      },
+      "postProcessing": {
+        "alreadyEnveloped": false,
+        "outGain": -0.7,
+        "auxGain": 0.8
+      }
+    },
+    {
+      "id": "lpc-speech",
+      "packageId": "rubato/lpc-speech",
+      "name": "LPC Speech",
+      "author": "Lyle Mills, after Emilie Gillet",
+      "origin": "Rubato Lab",
+      "family": "Vocal",
+      "description": "LPC phonemes and five word banks with direct speed and vocal-tract controls.",
+      "tags": [
+        "speech",
+        "vocal",
+        "phoneme",
+        "lpc"
+      ],
+      "controls": [
+        "Bank",
+        "Phoneme or word",
+        "Speed",
+        "Vocal tract"
+      ],
+      "outputs": [
+        "LPC speech voice",
+        "Raw excitation or widened voice"
+      ],
+      "source": {
+        "header": "plaits/dsp/engine2/lpc_speech_engine.h",
+        "className": "LPCSpeechEngine",
+        "member": "lpc_speech_engine_",
+        "files": [
+          "plaits/dsp/engine2/lpc_speech_engine.cc",
+          "plaits/dsp/speech/lpc_speech_synth.cc",
+          "plaits/dsp/speech/lpc_speech_synth_controller.cc",
+          "plaits/dsp/speech/lpc_speech_synth_phonemes.cc",
+          "plaits/dsp/speech/lpc_speech_synth_words.cc"
+        ]
+      },
+      "postProcessing": {
+        "alreadyEnveloped": false,
+        "outGain": -0.7,
+        "auxGain": 0.8
+      }
+    },
+    {
       "id": "swarm",
       "packageId": "mutable-instruments/swarm",
       "name": "Swarm",
@@ -3439,6 +3521,24 @@
         "macro": "Moves from raw excitation through the stock voice to sharper spectral emphasis."
       },
       "trigger": "Advances or restarts speech material according to the selected model."
+    },
+    "formant-speech": {
+      "controls": {
+        "harmonics": "Crossfades continuously from the five-formant naive voice to the three-formant SAM voice.",
+        "timbre": "Changes vocal species by shifting the formant frequencies and vocal register.",
+        "morph": "Moves continuously through the available vowel and phoneme shapes.",
+        "macro": "Moves from raw excitation through the stock voice to sharper spectral emphasis."
+      },
+      "trigger": "Adds the source models' brief consonant or glottal articulation at the start of a note."
+    },
+    "lpc-speech": {
+      "controls": {
+        "harmonics": "Selects interpolated LPC phonemes or one of the five stock word banks.",
+        "timbre": "Selects a phoneme, a word, or a position within the active LPC material.",
+        "morph": "Changes playback speed around the original recording speed at noon.",
+        "macro": "Shifts the LPC vocal tract while keeping the played note as the pitch reference."
+      },
+      "trigger": "Plays the selected word or adds a consonant articulation to the current phoneme."
     },
     "swarm": {
       "controls": {
