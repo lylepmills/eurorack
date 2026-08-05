@@ -25,8 +25,9 @@
 //
 // -----------------------------------------------------------------------------
 //
-// The five LPC word banks from the stock Speech engine, with bank, word,
-// playback speed, vocal-tract shift, and recorded prosody available directly.
+// The LPC word banks from the stock Speech engine and recipe resources, with
+// the stock word and vocal-tract controls preserved and playback speed plus
+// recorded prosody available directly.
 
 #ifndef PLAITS_DSP_ENGINE2_LPC_SPEECH_ENGINE_H_
 #define PLAITS_DSP_ENGINE2_LPC_SPEECH_ENGINE_H_

@@ -2440,9 +2440,10 @@ void ValidateSpeechEngineSplit() {
   }
 
   // LPC Words removes the phoneme position and stretches the five word banks
-  // across HARMONICS. MORPH remains the word address, while TIMBRE exposes the
-  // speed that stock Speech hides on its attenuverter. The explicit prosody
-  // setter is the endpoint of Voice's inherited FM-attenuverter routing.
+  // across HARMONICS. TIMBRE and MORPH preserve stock Speech's vocal-tract and
+  // word-address controls, while MACRO exposes the speed that stock Speech
+  // hides on its attenuverter. The explicit prosody setter is the endpoint of
+  // Voice's inherited FM-attenuverter routing.
   const float speeds[] = { -0.6f, 0.0f, 0.6f };
   const float prosodies[] = { -1.0f, 0.0f, 0.7f };
   for (int material = 0; material < 5; ++material) {
@@ -2480,9 +2481,9 @@ void ValidateSpeechEngineSplit() {
           stock_parameters.stereo = stereo != 0;
           EngineParameters split_parameters = stock_parameters;
           split_parameters.harmonics = split_bank;
-          split_parameters.timbre = split_speed;
+          split_parameters.timbre = stock_parameters.timbre;
           split_parameters.morph = stock_parameters.morph;
-          split_parameters.macro = stock_parameters.timbre;
+          split_parameters.macro = split_speed;
 
           Random::Seed(0x1ec10);
           RenderSpeechEquivalenceSequence(

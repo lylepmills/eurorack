@@ -494,7 +494,7 @@
       "author": "Lyle Mills, after Emilie Gillet",
       "origin": "Rubato Lab",
       "family": "Vocal",
-      "description": "Selected stock and custom LPC word banks with direct word, speed, vocal-tract, and recorded-prosody controls.",
+      "description": "Selected stock and custom LPC word banks with the original word and vocal-tract controls plus direct speed and recorded prosody.",
       "tags": [
         "speech",
         "vocal",
@@ -503,23 +503,23 @@
       ],
       "controls": [
         "Word bank",
-        "Speed",
+        "Vocal tract",
         "Word",
-        "Vocal tract"
+        "Speed"
       ],
       "outputs": [
         "LPC speech voice",
         "Raw excitation or widened voice"
       ],
       "version": "1.0.0",
-      "digest": "sha256:e3e8d3b51966e93bae056cb66969622a56b703bc034a3fdcc8d235a7b88fdbee",
-      "documentationDigest": "sha256:feb9bbb9afcd5ad48a17f7c392232735f82475a41a9afcb899748eeeadf80865",
+      "digest": "sha256:026f2b3c04b06565c686eda4409ceafdffe0584675fa2a27d40855691404022c",
+      "documentationDigest": "sha256:3dd9dea7a3a4b5f950a44d187a00128d76ce78836b2dbff980b373348bf21a77",
       "manual": {
         "controls": {
           "harmonics": "Selects one of the active stock or custom LPC word banks across the full dial.",
-          "timbre": "Changes playback speed around the original recording speed at noon.",
+          "timbre": "Shifts the LPC vocal tract while keeping the played note as the pitch reference, matching Original Speech's LPC range.",
           "morph": "Selects a word or a position within the active LPC word bank.",
-          "macro": "Shifts the LPC vocal tract while keeping the played note as the pitch reference."
+          "macro": "Changes playback speed around the original recording speed at noon."
         },
         "trigger": "Plays the selected word. With TRIG patched and FM unpatched, the FM attenuverter restores or inverts its recorded pitch contour."
       },

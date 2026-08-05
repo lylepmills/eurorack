@@ -67,10 +67,12 @@ void LPCSpeechEngine::Render(
   const bool replay_prosody = word_bank >= 0 && !free_running;
   *already_enveloped = replay_prosody;
 
-  // Keep word/address selection on MORPH as it is in stock Speech. TIMBRE now
-  // places the original playback speed at noon, while MACRO controls the vocal
-  // tract. Voice supplies prosody from the unpatched FM attenuverter.
-  const float speed = (parameters.timbre - 0.5f) * 2.0f;
+  // Preserve the stock LPC controls: TIMBRE shifts the vocal tract and MORPH
+  // selects the word/address. The dedicated engine exposes the playback speed
+  // that stock Speech hides on an attenuverter through MACRO instead, with the
+  // original recording speed at noon. Voice supplies prosody from the
+  // unpatched FM attenuverter.
+  const float speed = (parameters.macro - 0.5f) * 2.0f;
   lpc_speech_synth_controller_.Render(
       free_running,
       trigger,
@@ -79,7 +81,7 @@ void LPCSpeechEngine::Render(
       prosody_amount_,
       speed,
       parameters.morph,
-      parameters.macro,
+      parameters.timbre,
       replay_prosody ? parameters.accent : 1.0f,
       aux,
       out,
