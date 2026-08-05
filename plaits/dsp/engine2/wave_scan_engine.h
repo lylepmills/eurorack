@@ -124,17 +124,25 @@
 // 48 kHz (plaits/dsp/dsp.h:51), both 4000 blocks per second.
 //
 // TABLES. This engine vendors Braids' wave bank, and that is the expensive
-// decision in it: 32,768 B of waves + 256 B of wt_map + 64 B of wave_line +
-// 360 B of wavetable_definitions = 33,448 B. Verified rather than asserted:
+// decision in it. The 32,768 B of wave samples are stored losslessly as each
+// wave's first sample followed by ZigZag/Rice-coded first and second
+// differences: 20,822 B of residual payload + 1,028 B of first samples,
+// Rice parameters, offsets and refill padding = 21,850 B. Add 256 B of wt_map
+// + 64 B of wave_line + 360 B of definitions for 22,530 B of tables total.
+// Four active and four staging waves plus decoder state occupy 1,152 B from
+// Plaits' shared engine arena. WMAP is the widest read, at four waves, and
+// decoding happens only when a requested wave is not already cached. Verified
+// rather than asserted:
 // the 33,024 B `wt_waves` array in braids/resources.cc is byte-identical to
 // braids/data/waves.bin, which is what waveforms.py:145 reads, at 0 LSB across
 // all 33,024 bytes; wt_map likewise at 0 LSB across 256. The vendored copy
 // drops each wave's 129th byte -- the wrap guard Braids' Interpolate824 reads
 // at index 128 -- because it equals the wave's own first sample in all 256
 // waves, checked, at 0 LSB, so the port wraps the index with `& 127` instead
-// and saves 256 B while reading the same value. That is the whole saving
-// available: all 256 waves are reachable (the 20 bank definitions alone name
-// every one of them), so there is no unused-wave subset to drop.
+// and saves 256 B while reading the same value. All 256 waves are reachable
+// (the 20 bank definitions alone name every one of them), so the compression
+// changes storage rather than content. The generator and host test decode all
+// 32,768 samples and require a byte-exact match with waves.bin.
 //
 // Substituting Plaits' wav_integrated_waves was costed and rejected on
 // content, not on bytes: it is 50,688 B, larger than the bank being replaced,
@@ -213,6 +221,11 @@
 //     (digital_oscillator.h:255). Here they share one slot and one
 //     accumulator, so the phase runs on -- the same choice z-filter and
 //     noise-bank make, and the one that keeps a HARMONICS sweep from clicking.
+//   - A wave that is not in the four-slot cache is decoded into a staging
+//     buffer three samples per 4 kHz render block, then swapped in whole. The
+//     current wave remains valid during the 43-block / 10.75 ms fill. This
+//     bounds the audio-callback cost under abrupt or audio-rate modulation;
+//     stationary output is byte-exact, while a newly addressed wave can lag.
 
 #ifndef PLAITS_DSP_ENGINE2_WAVE_SCAN_ENGINE_H_
 #define PLAITS_DSP_ENGINE2_WAVE_SCAN_ENGINE_H_
@@ -235,6 +248,22 @@ enum WaveScanModel {
 // port wraps with `& 127`.
 const size_t kWaveScanWaveSize = 128;
 const uint32_t kWaveScanWaveMask = 127;
+const size_t kWaveScanNumWaves = 256;
+const size_t kWaveScanCacheSize = 4;
+const size_t kWaveScanCacheBuffersPerSlot = 2;
+const size_t kWaveScanDecodeChunkSize = 3;
+
+struct WaveScanDecodeState {
+  const uint8_t* data;
+  uint8_t* destination;
+  uint32_t bits;
+  uint32_t num_bits;
+  int32_t sample;
+  int32_t difference;
+  uint16_t target;
+  uint16_t index;
+  uint8_t rice_parameter;
+};
 
 // wavetable_definitions holds 20 banks; `previous_parameter_[1] * 20 >> 15`
 // spans exactly 0..19 over the knob's 0..32767.
@@ -282,7 +311,23 @@ class WaveScanEngine : public Engine {
       bool* already_enveloped);
   virtual bool stereo_capable() const { return PLAITS_STEREO_WAVE_SCAN; }
 
+#if defined(TEST)
+  static void TestDecodeWave(uint8_t wave, uint8_t* destination);
+#endif
+
  private:
+  void PrepareWaves(
+      const uint8_t* wave_ids,
+      size_t count,
+      const uint8_t** waves);
+  void StartDecoder(size_t slot, uint8_t wave);
+  void AdvanceDecoders();
+
+  inline uint8_t* WaveCacheBuffer(size_t slot, size_t buffer) {
+    return wave_cache_ +
+        (slot * kWaveScanCacheBuffersPerSlot + buffer) * kWaveScanWaveSize;
+  }
+
   inline void Push(float main, float side) {
     const uint32_t index = decimator_write_ & kWaveScanDecimatorMask;
     decimator_main_[index] = main;
@@ -303,6 +348,11 @@ class WaveScanEngine : public Engine {
   int32_t previous_scan_;
 
   stmlib::HysteresisQuantizer2 model_quantizer_;
+
+  uint8_t* wave_cache_;
+  WaveScanDecodeState* wave_decoders_;
+  uint16_t wave_cache_ids_[kWaveScanCacheSize];
+  uint8_t wave_cache_active_buffers_[kWaveScanCacheSize];
 
   float decimator_main_[kWaveScanDecimatorStorageSize];
   float decimator_aux_[kWaveScanDecimatorStorageSize];
