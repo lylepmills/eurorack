@@ -35,12 +35,13 @@ formant oscillator. Custom word banks should feed both models, but each instance
 of the remix can initially carry one bank rather than reproducing stock Speech's
 multi-bank interface.
 
-**Decision.** Parked to finish and launch custom banks for stock Speech without
-making one editor serve two substantially different model interfaces. The
-listening work established enough musical difference to keep the idea: stock
-Speech is the broader phoneme/SAM/LPC collection with multiple word banks,
-while the remix is a focused word instrument whose distinctive behavior is
-starting within, retriggering, and freezing a word.
+**Decision.** Parked after shipping custom banks for the current split Speech
+architecture. Plaits Palette now exposes Speech Sounds and LPC Words as
+separate models, with a shared bank editor and selectable stock/custom LPC
+banks. The listening work established enough musical difference to keep the
+Renaissance remix as a possible third model: it is a focused word instrument
+whose distinctive behavior is starting within, retriggering, and freezing a
+word, rather than another bank-management variant.
 
 **Prototypes.** Firmware branch `codex/renaissance-sam-prototype`, through
 commit `a815337` (`make LPC word playback jack aware`). The website listening
@@ -80,9 +81,10 @@ Speech. Treat all of these as research, not release-ready firmware.
 3. Connect the production custom-word-bank format to the firmware generator.
    Start with one selected bank per remix model slot; multiple independent remix
    slots can carry different banks if flash permits.
-4. Restore the separate remix assignment and engine-preview UI only after the
-   stock Speech editor ships. Reuse the existing custom-bank preparation flow,
-   but present the two destination models as separate choices.
+4. Add the remix as its own model destination alongside Speech Sounds and LPC
+   Words. Reuse the shipped custom-bank preparation flow, but keep assignment
+   and engine previews distinct: the existing models share several selectable
+   banks, while each remix slot initially selects one bank.
 5. Measure ARM flash/CPU, render public previews, audit stereo/AUX behavior, and
    complete hardware listening before catalog or Palette exposure.
 
