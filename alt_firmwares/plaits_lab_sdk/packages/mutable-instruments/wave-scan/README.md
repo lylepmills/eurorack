@@ -30,11 +30,12 @@ not in it at any phase. There is no substitution to make, and Plaits'
 `wav_integrated_waves` is 50,688 B — larger than the bank it would be replacing.
 
 This engine therefore vendors Braids' own data, but stores it losslessly as
-second differences with a per-wave Rice parameter. The residual payload is
-20,822 B; first samples, parameters, packet offsets and two safe refill bytes
-bring the wave bank to 21,850 B. Add 256 B of `wt_map`, 64 B of `wave_line` and
-360 B of bank definitions for **22,530 B of tables** — 10,918 B less than the
-direct array.
+second differences in byte-aligned blocks of 16, each with a fixed signed bit
+width. The residual payload is 23,754 B; first samples and packet offsets bring
+the wave bank to 24,524 B. Add 256 B of `wt_map`, 64 B of `wave_line` and 360 B
+of bank definitions for **25,204 B of tables** — 8,244 B less than the direct
+array. Fixed-width extraction costs a little more flash than the original Rice
+prototype but avoids its data-dependent unary loop on the Cortex-M4.
 
 At runtime the engine decodes only the waves used by the current block into a
 four-slot cache from Plaits' shared engine arena. Each slot has an active and a
@@ -43,21 +44,21 @@ WMAP four, and WLIN three. Cached waves survive from block to block, and the
 replacement policy preserves every wave requested by the incoming block, so a
 one-cell scan only decodes the newly exposed edge.
 
-Decoding is deliberately bounded to three samples per slot per 4 kHz render
-block. A missing wave is swapped in whole after 43 blocks, or 10.75 ms, while
-the prior cached wave remains valid. That makes an abrupt four-corner WMAP jump
-safe for the audio callback rather than doing four complete variable-length
+Decoding has one global budget: one slot advances by two samples per 4 kHz
+render block, round-robin. A four-corner WMAP miss fills in about 256 blocks,
+or 64 ms, while the prior cached waves remain valid. That makes an abrupt
+four-corner jump safe for the audio callback rather than doing four complete
 decodes at once. The waveform content and stationary output are exact; the one
 declared behavioral tradeoff is that a newly addressed, uncached wave can lag
 the control by that cache-fill interval.
 
-With the pinned Cortex-M4 toolchain and release flags, the engine object falls
-from 37,372 B to 28,208 B: **9,164 B of net flash recovered** after paying for
-the decoder and cache machinery. The standard 19-position QEMU sweep rises
-from 414.5 to 427.1 instructions/sample at its worst point. A separate stress
-run that forces WMAP between disjoint corners every render block, keeping all
-four incremental decoders busy continuously, measures 487.8
-instructions/sample. Hardware remains the publication authority for CPU.
+The first Rice-coded prototype serviced every cache slot on every block. Even
+after reducing each slot to one sample, hardware measured 920–930 Hz on the CPU
+probe (92–93% of the render budget) and crossed the probe's 90% red line under
+opposite-corner WMAP modulation. The fixed-width, globally budgeted decoder
+measures 436.9 instructions/sample in the same forced every-block stress after
+the cache pipeline has settled, approximately 84% by the calibrated QEMU model.
+Hardware remains the publication authority for CPU.
 
 The storage change is exact, not a new resampling step. Braids stores 129
 samples and reads index 128 as a wrap guard; that byte equals the wave's own

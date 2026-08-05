@@ -125,10 +125,10 @@
 //
 // TABLES. This engine vendors Braids' wave bank, and that is the expensive
 // decision in it. The 32,768 B of wave samples are stored losslessly as each
-// wave's first sample followed by ZigZag/Rice-coded first and second
-// differences: 20,822 B of residual payload + 1,028 B of first samples,
-// Rice parameters, offsets and refill padding = 21,850 B. Add 256 B of wt_map
-// + 64 B of wave_line + 360 B of definitions for 22,530 B of tables total.
+// wave's first sample followed by block-packed first and second differences:
+// 23,754 B of residual payload + 770 B of first samples and offsets = 24,524 B.
+// Add 256 B of wt_map + 64 B of wave_line + 360 B of definitions for 25,204 B
+// of tables total.
 // Four active and four staging waves plus decoder state occupy 1,152 B from
 // Plaits' shared engine arena. WMAP is the widest read, at four waves, and
 // decoding happens only when a requested wave is not already cached. Verified
@@ -222,13 +222,12 @@
 //     accumulator, so the phase runs on -- the same choice z-filter and
 //     noise-bank make, and the one that keeps a HARMONICS sweep from clicking.
 //   - A wave that is not in the four-slot cache is decoded into a staging
-//     buffer one sample per 4 kHz render block, then swapped in whole. The
-//     current wave remains valid during the 127-block / 31.75 ms fill. The
-//     deliberately small slice is hardware-derived: advancing all four WMAP
-//     decoders by three samples per block crossed Plaits' deadline under
-//     opposite-corner modulation. This bounds the audio-callback cost under
-//     abrupt or audio-rate modulation; stationary output is byte-exact, while
-//     a newly addressed wave can lag.
+//     buffer. One cache slot advances by two samples per 4 kHz render block,
+//     round-robin, then swaps in whole. Four simultaneous WMAP misses therefore
+//     fill in about 256 blocks / 64 ms. The current waves remain valid during
+//     the fill. This bounds the audio-callback cost under abrupt or audio-rate
+//     modulation; stationary output is byte-exact, while newly addressed waves
+//     can lag.
 
 #ifndef PLAITS_DSP_ENGINE2_WAVE_SCAN_ENGINE_H_
 #define PLAITS_DSP_ENGINE2_WAVE_SCAN_ENGINE_H_
@@ -254,7 +253,8 @@ const uint32_t kWaveScanWaveMask = 127;
 const size_t kWaveScanNumWaves = 256;
 const size_t kWaveScanCacheSize = 4;
 const size_t kWaveScanCacheBuffersPerSlot = 2;
-const size_t kWaveScanDecodeChunkSize = 1;
+const size_t kWaveScanDecodeChunkSize = 2;
+const size_t kWaveScanResidualBlockSize = 16;
 
 struct WaveScanDecodeState {
   const uint8_t* data;
@@ -265,7 +265,7 @@ struct WaveScanDecodeState {
   int32_t difference;
   uint16_t target;
   uint16_t index;
-  uint8_t rice_parameter;
+  uint8_t bit_width;
 };
 
 // wavetable_definitions holds 20 banks; `previous_parameter_[1] * 20 >> 15`
@@ -356,6 +356,7 @@ class WaveScanEngine : public Engine {
   WaveScanDecodeState* wave_decoders_;
   uint16_t wave_cache_ids_[kWaveScanCacheSize];
   uint8_t wave_cache_active_buffers_[kWaveScanCacheSize];
+  uint8_t decode_slot_;
 
   float decimator_main_[kWaveScanDecimatorStorageSize];
   float decimator_aux_[kWaveScanDecimatorStorageSize];
