@@ -29,6 +29,14 @@ Schema 17 is available in production with recipe-driven scale banks, automatic
 LEVEL routing, selectable/custom LPC Speech banks, text and recording encoders,
 and source/engine audio previews.
 
+An August 4 hardware regression exposed two firmware defects in the custom
+Speech path: inconsistent `PLAITS_HAS_CUSTOM_SPEECH_BANKS` values changed the
+`Voice` class layout between compilation units, and discrete LPC playback could
+read one frame past a word boundary. A patched build passed both the stock-bank-
+only control and the original two-custom-bank recipe on hardware. Keep the
+public custom-bank editor disabled until the patched compiler image has also
+passed a build through the deployed production service.
+
 The service is split across two isolation layers:
 
 - A Cloudflare Worker validates and hashes recipes, stores job state in Durable

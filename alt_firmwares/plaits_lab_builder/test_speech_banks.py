@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import re
 import struct
 import tempfile
 import unittest
@@ -24,6 +25,21 @@ def bank(words=("hello", "world")):
 
 
 class SpeechBanksTest(unittest.TestCase):
+    def test_custom_speech_layout_macro_covers_every_firmware_object(self) -> None:
+        makefile = (Path(__file__).resolve().parents[2] / "plaits/makefile").read_text(
+            encoding="utf-8")
+        match = re.search(r"^SPEECH_LAYOUT_OBJS\s*=\s*(.+)$", makefile, re.MULTILINE)
+        self.assertIsNotNone(match)
+        declared = set(match.group(1).split())
+        self.assertEqual(declared, {
+            "voice.o",
+            "plaits.o",
+            "ui.o",
+            "lpc_speech_engine.o",
+            "lpc_speech_synth_controller.o",
+            "lpc_speech_synth_phonemes.o",
+        })
+
     def test_preview_plans_gain_one_guard_frame_per_word(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "word.plan"

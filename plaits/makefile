@@ -113,9 +113,15 @@ $(BUILD_DIR)speech_engine.o: CPPFLAGS += -include $(SPEECH_CONFIG)
 endif
 
 # Compile the decoded-frame controller path only for recipes that carry a
-# Speech-bank resource. Legacy/default palettes keep the stock code footprint.
+# Speech-bank resource. The macro changes LPCSpeechSynthWordBank's class layout,
+# so every object that lays out Voice, SpeechEngine, or LPCSpeechEngine must see
+# the same value. Applying it only to the method implementations corrupts the
+# following Voice members during startup even when the recipe has no raw banks.
+# Legacy/default palettes keep the stock code footprint by compiling all of
+# these objects with the value 0.
+SPEECH_LAYOUT_OBJS = voice.o plaits.o ui.o lpc_speech_engine.o lpc_speech_synth_controller.o lpc_speech_synth_phonemes.o
 ifneq ($(SPEECH_BANKS_ENABLED),)
-$(BUILD_DIR)lpc_speech_synth_controller.o: CPPFLAGS += -DPLAITS_HAS_CUSTOM_SPEECH_BANKS=$(SPEECH_BANKS_ENABLED)
+$(patsubst %,$(BUILD_DIR)%,$(SPEECH_LAYOUT_OBJS)): CPPFLAGS += -DPLAITS_HAS_CUSTOM_SPEECH_BANKS=$(SPEECH_BANKS_ENABLED)
 endif
 
 # Per-engine stereo (OUT/AUX as an L/R pair) is gated at compile time by
