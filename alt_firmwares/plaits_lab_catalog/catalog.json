@@ -437,10 +437,10 @@
       "id": "formant-speech",
       "packageId": "rubato/formant-speech",
       "name": "Speech Sounds",
-      "author": "Lyle Mills, after Emilie Gillet",
-      "origin": "Rubato Lab",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
       "family": "Vocal",
-      "description": "Naive, SAM, and LPC phoneme voices spread continuously across one playable model.",
+      "description": "The Naive, SAM, and LPC phoneme sides of Mutable Instruments Speech, spread continuously across one playable model.",
       "tags": [
         "speech",
         "vocal",
@@ -458,6 +458,11 @@
         "Speech sounds voice",
         "Raw excitation or widened voice"
       ],
+      "artwork": {
+        "icon": "/model-icons/speech-sounds.png",
+        "kind": "official",
+        "tone": "green"
+      },
       "source": {
         "header": "plaits/dsp/engine2/formant_speech_engine.h",
         "className": "FormantSpeechEngine",
@@ -481,10 +486,10 @@
       "id": "lpc-speech",
       "packageId": "rubato/lpc-speech",
       "name": "LPC Words",
-      "author": "Lyle Mills, after Emilie Gillet",
-      "origin": "Rubato Lab",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
       "family": "Vocal",
-      "description": "Selected stock and custom LPC word banks with the original word and vocal-tract controls plus direct speed and recorded prosody.",
+      "description": "The LPC word-bank side of Mutable Instruments Speech, with selected stock or custom banks, direct speed, and recorded prosody.",
       "tags": [
         "speech",
         "vocal",
@@ -501,6 +506,11 @@
         "LPC speech voice",
         "Raw excitation or widened voice"
       ],
+      "artwork": {
+        "icon": "/model-icons/lpc-words.png",
+        "kind": "official",
+        "tone": "green"
+      },
       "source": {
         "header": "plaits/dsp/engine2/lpc_speech_engine.h",
         "className": "LPCSpeechEngine",
