@@ -65,6 +65,17 @@ compiled all three models with two custom banks at 58,804 B text + 48 B data and
 `b2af16801f581279ba2107dc1a308ac389e12f483f0e6eb5a1adb0e723e6674f`;
 the matching field guide also reached ready.
 
+The Mutable-attribution and divided-icon follow-up shipped at
+`rev-769417c8b8e3`. Production canary build
+`dd9c1c3dc7367fac5eec17c171e40d868cda3c1aee63014e82d97100f06c7291`
+again compiled all three models with two custom banks at 54,068 B text + 48 B
+data and 20,316 B BSS. Its 4,492,268-byte WAV has SHA-256
+`443bc8e7b887a6ed6b5df222a589c42da1836ecd7f1398b86a793d34988bc3aa`
+and binary SHA-256
+`772af22234dac433bbb3d6775e38185e0eff9f39f392c6fda3f082fae0e6e9c8`;
+both match the exact local release candidate, confirming the follow-up changed
+catalog provenance and artwork without changing compiled firmware bytes.
+
 The service is split across two isolation layers:
 
 - A Cloudflare Worker validates and hashes recipes, stores job state in Durable
