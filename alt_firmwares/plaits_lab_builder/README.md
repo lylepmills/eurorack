@@ -345,7 +345,7 @@ system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-d554b7f46dc0` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-1038cea4008d` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a new
 image, use `wrangler containers info <application-id>` and wait for a healthy
@@ -360,7 +360,7 @@ and Step unpatched-attenuverter modes; schema 17's selectable stock LPC banks,
 custom text/recording-derived Speech banks, source/engine previews; and the
 earlier recipe-driven scale banks and automatic LEVEL routing. The generalized
 schema-inheritance hardening from `5b2b077` is also live: current production
-source `d554b7f46dc0` descends from that commit, so future supported schemas
+source `1038cea4008d` descends from that commit, so future supported schemas
 inherit older feature shapes without another version-list edit.
 
 ### Rolling back
@@ -426,6 +426,7 @@ target.
 | August 5, 2026 (match custom Speech bank levels to stock) | `812937f27ada` | `rev-812937f27ada` |
 | August 5, 2026 (split Speech Sounds and LPC Words with shared custom banks) | `174d93845372` | `rev-174d93845372` |
 | August 5, 2026 (schema 19 triggered and gated FREQUENCY contours, manual contract 15) | `d554b7f46dc0` | `rev-d554b7f46dc0` |
+| August 5, 2026 (credit split Speech engines to Mutable Instruments; divided Speech icons) | `1038cea4008d` | `rev-1038cea4008d` |
 
 Three consequences a rollback has that a forward deploy does not:
 
