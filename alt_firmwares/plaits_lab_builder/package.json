@@ -9,7 +9,7 @@
     "dev": "wrangler dev",
     "catalog:check": "../plaits_lab_catalog/sync_public_catalog.sh --check",
     "catalog:regen": "../plaits_lab_catalog/sync_public_catalog.sh",
-    "deploy": "pnpm run catalog:check && wrangler deploy",
+    "deploy": "pnpm run catalog:check && wrangler deploy --env=\"\"",
     "deploy:staging": "pnpm run catalog:check && wrangler deploy --env staging --containers-rollout=immediate",
     "smoke:staging": "node --experimental-strip-types scripts/staging_smoke.mts"
   },

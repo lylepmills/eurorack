@@ -6,6 +6,11 @@ const source = await readFile(new URL("../wrangler.jsonc", import.meta.url), "ut
 const config = JSON.parse(source.replace(/^\s*\/\/.*$/gm, ""));
 const staging = config.env.staging;
 const smoke = await readFile(new URL("../scripts/staging_smoke.mts", import.meta.url), "utf8");
+const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+
+test("production deploy explicitly targets the root Wrangler environment", () => {
+  assert.match(packageJson.scripts.deploy, /wrangler deploy --env=(?:""|\\"\\")$/);
+});
 
 test("staging promotes the same immutable release identity and container image", () => {
   for (const key of [
