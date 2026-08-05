@@ -173,9 +173,10 @@ class OneKnobEnvelope {
   inline bool active() const { return segment_ != SEGMENT_DONE; }
 
 #if defined(TEST)
-  // Host-test access to the two approximations. These are not part of the
+  // Host-test access to the curve approximations. These are not part of the
   // firmware API and compile out of production builds.
   static float TestQuarticCurve(float phase);
+  static float TestGatedAttackCurve(float phase);
   static float TestExponentialCurve(float phase);
   static float TestTimeIncrement(float time);
 #endif
@@ -190,6 +191,8 @@ class OneKnobEnvelope {
   };
 
   static float QuarticCurve(float phase);
+  static float GatedAttackCurve(float phase);
+  static float InverseGatedAttackCurve(float value);
   static float ExponentialCurve(float phase);
   static float TimeIncrement(float time);
 

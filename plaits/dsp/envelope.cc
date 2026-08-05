@@ -46,6 +46,20 @@ const uint16_t kQuarticCurve[kCurveTableSize + 1] = {
   47265, 50025, 52895, 55879, 58979, 62197, 65535,
 };
 
+// round(65535 * t^1.7), t = i / 64. A gated VCA benefits from a gentle swell,
+// but Elements' t^3.32 exciter curve spends too much of a long attack near
+// silence before arriving abruptly. This keeps the onset soft while making the
+// whole gesture audible.
+const uint16_t kGatedAttackCurve[kCurveTableSize + 1] = {
+  0, 56, 181, 361, 588, 859, 1172, 1523, 1911, 2334, 2792, 3283, 3807,
+  4362, 4947, 5563, 6208, 6882, 7585, 8315, 9072, 9857, 10668, 11505,
+  12369, 13258, 14172, 15111, 16074, 17063, 18075, 19111, 20171, 21254,
+  22360, 23490, 24642, 25817, 27015, 28234, 29476, 30740, 32025, 33332,
+  34661, 36010, 37381, 38773, 40186, 41620, 43074, 44549, 46044, 47559,
+  49095, 50651, 52226, 53821, 55436, 57071, 58725, 60399, 62092, 63804,
+  65535,
+};
+
 // round(65535 * (1 - exp(-4t)) / (1 - exp(-4))), t = i / 64.
 const uint16_t kExponentialCurve[kCurveTableSize + 1] = {
   0, 4045, 7844, 11414, 14767, 17917, 20876, 23656, 26267, 28720, 31025,
@@ -105,6 +119,35 @@ void OneKnobEnvelope::Init() {
 
 float OneKnobEnvelope::QuarticCurve(float phase) {
   return LookupCurve(kQuarticCurve, phase);
+}
+
+float OneKnobEnvelope::GatedAttackCurve(float phase) {
+  return LookupCurve(kGatedAttackCurve, phase);
+}
+
+float OneKnobEnvelope::InverseGatedAttackCurve(float value) {
+  if (value <= 0.0f) {
+    return 0.0f;
+  }
+  if (value >= 1.0f) {
+    return 1.0f;
+  }
+  const float scaled = value * 65535.0f;
+  int lower = 0;
+  int upper = kCurveTableSize;
+  while (upper - lower > 1) {
+    const int midpoint = (lower + upper) >> 1;
+    if (static_cast<float>(kGatedAttackCurve[midpoint]) <= scaled) {
+      lower = midpoint;
+    } else {
+      upper = midpoint;
+    }
+  }
+  const float a = static_cast<float>(kGatedAttackCurve[lower]);
+  const float b = static_cast<float>(kGatedAttackCurve[upper]);
+  const float fractional = (scaled - a) / (b - a);
+  return (static_cast<float>(lower) + fractional) /
+      static_cast<float>(kCurveTableSize);
 }
 
 float OneKnobEnvelope::ExponentialCurve(float phase) {
@@ -189,14 +232,44 @@ float OneKnobEnvelope::Process(
     sustain = 0.0f;
     gated = false;
   } else if (mode == MODE_GATED) {
-    // A dedicated gate has one job: reach full sustain and follow the input.
-    // Clockwise makes both edges softer, with release intentionally stretching
-    // farther than attack. This mode is compiled now for direct comparison,
-    // although the first hardware audition selects MODE_TRIGGERED.
-    const float attack_end = profile == PROFILE_SYNTH ? 0.68f : 0.55f;
-    const float release_end = profile == PROFILE_SYNTH ? 0.90f : 0.81f;
-    attack = 0.05f + (attack_end - 0.05f) * shape;
-    decay_release = 0.10f + (release_end - 0.10f) * shape;
+    // Preserve the intuitive clockwise-is-slower gesture, but place explicit
+    // waypoints in perceived time rather than linearly sweeping the already
+    // nonlinear Elements time control. The synth path spans 6 ms..2.6 s of
+    // attack and 25 ms..4.5 s of release. Resonators share the useful fast end
+    // but compress the acoustic tail to 1.2 s / 3.0 s.
+    static const float kSynthAttack[] = {
+      0.122648f, 0.155171f, 0.204219f, 0.269687f, 0.343899f,
+      0.433192f, 0.541704f, 0.666283f, 0.781246f,
+    };
+    static const float kSynthRelease[] = {
+      0.221317f, 0.269687f, 0.333503f, 0.405549f, 0.500136f,
+      0.602406f, 0.699271f, 0.794383f, 0.882649f,
+    };
+    static const float kResonatorAttack[] = {
+      0.122648f, 0.155171f, 0.196374f, 0.248396f, 0.309466f,
+      0.385743f, 0.472360f, 0.564453f, 0.653884f,
+    };
+    static const float kResonatorRelease[] = {
+      0.221317f, 0.269687f, 0.322106f, 0.385743f, 0.464526f,
+      0.553470f, 0.640600f, 0.727494f, 0.806767f,
+    };
+    const float* attack_waypoints = profile == PROFILE_SYNTH
+        ? kSynthAttack
+        : kResonatorAttack;
+    const float* release_waypoints = profile == PROFILE_SYNTH
+        ? kSynthRelease
+        : kResonatorRelease;
+    float waypoint = shape * 8.0f;
+    int segment = static_cast<int>(waypoint);
+    float amount = waypoint - static_cast<float>(segment);
+    if (segment >= 8) {
+      segment = 7;
+      amount = 1.0f;
+    }
+    attack = attack_waypoints[segment] +
+        (attack_waypoints[segment + 1] - attack_waypoints[segment]) * amount;
+    decay_release = release_waypoints[segment] +
+        (release_waypoints[segment + 1] - release_waypoints[segment]) * amount;
     sustain = 1.0f;
     gated = true;
   } else {
@@ -241,6 +314,12 @@ float OneKnobEnvelope::Process(
       // resetting phase to zero from the current value.
       start_value_ = 0.0f;
       phase_ = value_;
+    } else if (mode == MODE_GATED) {
+      // Reverse from a release without restarting a complete attack from the
+      // current level. Reconstructing the absolute attack phase keeps the edge
+      // continuous and makes only the perceptually remaining rise play out.
+      start_value_ = 0.0f;
+      phase_ = InverseGatedAttackCurve(value_);
     } else {
       start_value_ = segment_ == SEGMENT_DONE ? 0.0f : value_;
       phase_ = 0.0f;
@@ -299,13 +378,17 @@ float OneKnobEnvelope::Process(
       ? 1.0f
       : (segment_ == SEGMENT_DECAY ? sustain : 0.0f);
   // Elements' quartic attack deliberately stays near zero before arriving
-  // abruptly. That articulation works as an exciter contour, but turns short
-  // synth VCA attacks into late blips. Dedicated triggered mode uses a linear
-  // amplitude rise; the Elements hybrid and gated experiments keep the source
-  // curvature, and all modes retain the exponential decay.
-  const float curve = attack_segment
-      ? (mode == MODE_TRIGGERED ? phase_ : QuarticCurve(phase_))
-      : ExponentialCurve(phase_);
+  // abruptly. That articulation works as an exciter contour, but turns a VCA
+  // contour into a late blip. Triggered mode is linear; gated mode uses a
+  // gentler t^1.7 swell; the source hybrid retains Elements' original curve.
+  float curve = ExponentialCurve(phase_);
+  if (attack_segment) {
+    curve = mode == MODE_TRIGGERED
+        ? phase_
+        : (mode == MODE_GATED
+            ? GatedAttackCurve(phase_)
+            : QuarticCurve(phase_));
+  }
   value_ = start_value_ + (target - start_value_) * curve;
   phase_ += TimeIncrement(attack_segment ? attack : decay_release);
   return value_;
@@ -314,6 +397,10 @@ float OneKnobEnvelope::Process(
 #if defined(TEST)
 float OneKnobEnvelope::TestQuarticCurve(float phase) {
   return QuarticCurve(phase);
+}
+
+float OneKnobEnvelope::TestGatedAttackCurve(float phase) {
+  return GatedAttackCurve(phase);
 }
 
 float OneKnobEnvelope::TestExponentialCurve(float phase) {

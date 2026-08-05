@@ -2528,6 +2528,7 @@ void ValidateOneKnobEnvelope() {
   // The compact tables must remain perceptually transparent relative to the
   // original Elements formulas.
   float max_quartic_error = 0.0f;
+  float max_gated_attack_error = 0.0f;
   float max_exponential_error = 0.0f;
   float max_rate_relative_error = 0.0f;
   const float normalization = 1.0f - expf(-4.0f);
@@ -2540,6 +2541,7 @@ void ValidateOneKnobEnvelope() {
   for (int i = 0; i <= 10000; ++i) {
     const float t = static_cast<float>(i) / 10000.0f;
     const float expected_quartic = powf(t, 3.32f);
+    const float expected_gated_attack = powf(t, 1.7f);
     const float expected_exponential =
         (1.0f - expf(-4.0f * t)) / normalization;
     const float expected_rate =
@@ -2547,6 +2549,11 @@ void ValidateOneKnobEnvelope() {
     max_quartic_error = max(
         max_quartic_error,
         fabsf(OneKnobEnvelope::TestQuarticCurve(t) - expected_quartic));
+    max_gated_attack_error = max(
+        max_gated_attack_error,
+        fabsf(
+            OneKnobEnvelope::TestGatedAttackCurve(t) -
+            expected_gated_attack));
     max_exponential_error = max(
         max_exponential_error,
         fabsf(
@@ -2557,12 +2564,15 @@ void ValidateOneKnobEnvelope() {
         fabsf(OneKnobEnvelope::TestTimeIncrement(t) / expected_rate - 1.0f));
   }
   if (max_quartic_error > 0.00025f ||
+      max_gated_attack_error > 0.00025f ||
       max_exponential_error > 0.00050f ||
       max_rate_relative_error > 0.0017f) {
     fprintf(
         stderr,
-        "One-knob envelope table error: quartic=%f exponential=%f rate=%f\n",
+        "One-knob envelope table error: quartic=%f gated=%f "
+        "exponential=%f rate=%f\n",
         max_quartic_error,
+        max_gated_attack_error,
         max_exponential_error,
         max_rate_relative_error);
     abort();
@@ -2911,36 +2921,125 @@ void ValidateOneKnobEnvelope() {
     abort();
   }
 
-  // The dedicated gated contour always reaches full sustain and follows the
-  // gate. Its slow end is intentionally a long attack/release gesture.
+  // The gated fast endpoint remains immediate without spending travel on the
+  // sub-2-ms attack and 4-ms release inherited from a linear Elements-control
+  // sweep. The v2 target is about 6 ms of attack and 25 ms of release.
   envelope.Init();
-  for (int block = 0; block < 500; ++block) {
-    envelope.Process(
+  int gated_fast_peak_block = -1;
+  for (int block = 0; block < 100; ++block) {
+    const float value = envelope.Process(
         0.0f,
         true,
         block == 0,
         OneKnobEnvelope::PROFILE_SYNTH,
         OneKnobEnvelope::MODE_GATED);
+    if (value > 0.999f) {
+      gated_fast_peak_block = block;
+      break;
+    }
   }
-  if (envelope.value() < 0.999f) {
-    fprintf(stderr, "Gated minimum did not reach full sustain\n");
+  if (gated_fast_peak_block < 18 || gated_fast_peak_block >= 36) {
+    fprintf(
+        stderr,
+        "Gated minimum attack outside 4.5-to-9-ms window: %d\n",
+        gated_fast_peak_block);
     abort();
   }
-  for (int block = 0; block < 500; ++block) {
+  int gated_fast_done_block = -1;
+  for (int block = 0; block < 200; ++block) {
     envelope.Process(
         0.0f,
         false,
         false,
         OneKnobEnvelope::PROFILE_SYNTH,
         OneKnobEnvelope::MODE_GATED);
+    if (!envelope.active()) {
+      gated_fast_done_block = block;
+      break;
+    }
   }
-  if (envelope.active()) {
-    fprintf(stderr, "Gated minimum did not release promptly\n");
+  if (gated_fast_done_block < 80 || gated_fast_done_block >= 140) {
+    fprintf(
+        stderr,
+        "Gated minimum release outside 20-to-35-ms window: %d\n",
+        gated_fast_done_block);
     abort();
   }
 
+  // Far clockwise expands to a clearly slow but finite 2.6-second synth
+  // attack and 4.5-second release.
   envelope.Init();
-  for (int block = 0; block < 2000; ++block) {
+  int gated_slow_peak_block = -1;
+  for (int block = 0; block < 12000; ++block) {
+    const float value = envelope.Process(
+        1.0f,
+        true,
+        block == 0,
+        OneKnobEnvelope::PROFILE_SYNTH,
+        OneKnobEnvelope::MODE_GATED);
+    if (value > 0.999f) {
+      gated_slow_peak_block = block;
+      break;
+    }
+  }
+  if (gated_slow_peak_block < 9500 || gated_slow_peak_block >= 11500) {
+    fprintf(
+        stderr,
+        "Gated maximum attack outside 2.4-to-2.9-second window: %d\n",
+        gated_slow_peak_block);
+    abort();
+  }
+  int gated_slow_done_block = -1;
+  for (int block = 0; block < 20000; ++block) {
+    envelope.Process(
+        1.0f,
+        false,
+        false,
+        OneKnobEnvelope::PROFILE_SYNTH,
+        OneKnobEnvelope::MODE_GATED);
+    if (!envelope.active()) {
+      gated_slow_done_block = block;
+      break;
+    }
+  }
+  if (gated_slow_done_block < 17000 || gated_slow_done_block >= 19000) {
+    fprintf(
+        stderr,
+        "Gated maximum release outside 4.25-to-4.75-second window: %d\n",
+        gated_slow_done_block);
+    abort();
+  }
+
+  // Resonator engines keep the same useful fast end but compress long gestures
+  // because their acoustic bodies provide additional tail.
+  envelope.Init();
+  int gated_resonator_peak_block = -1;
+  for (int block = 0; block < 6000; ++block) {
+    const float value = envelope.Process(
+        1.0f,
+        true,
+        block == 0,
+        OneKnobEnvelope::PROFILE_ELEMENTS_RESONATOR,
+        OneKnobEnvelope::MODE_GATED);
+    if (value > 0.999f) {
+      gated_resonator_peak_block = block;
+      break;
+    }
+  }
+  if (gated_resonator_peak_block < 4200 ||
+      gated_resonator_peak_block >= 5400) {
+    fprintf(
+        stderr,
+        "Gated resonator attack outside 1.05-to-1.35-second window: %d\n",
+        gated_resonator_peak_block);
+    abort();
+  }
+
+  // A gate returning during release reverses continuously and plays only the
+  // remaining attack. It must not take another complete 2.6 seconds to move
+  // from an already audible level back to the peak.
+  envelope.Init();
+  for (int block = 0; block < 8000; ++block) {
     envelope.Process(
         1.0f,
         true,
@@ -2948,20 +3047,55 @@ void ValidateOneKnobEnvelope() {
         OneKnobEnvelope::PROFILE_SYNTH,
         OneKnobEnvelope::MODE_GATED);
   }
-  if (envelope.value() >= 0.999f) {
-    fprintf(stderr, "Gated maximum attack was not slow\n");
+  for (int block = 0; block < 800; ++block) {
+    envelope.Process(
+        1.0f,
+        false,
+        false,
+        OneKnobEnvelope::PROFILE_SYNTH,
+        OneKnobEnvelope::MODE_GATED);
+  }
+  const float gated_before_retrigger = envelope.value();
+  const float gated_at_retrigger = envelope.Process(
+      1.0f,
+      true,
+      true,
+      OneKnobEnvelope::PROFILE_SYNTH,
+      OneKnobEnvelope::MODE_GATED);
+  const float gated_after_retrigger = envelope.Process(
+      1.0f,
+      true,
+      false,
+      OneKnobEnvelope::PROFILE_SYNTH,
+      OneKnobEnvelope::MODE_GATED);
+  if (fabsf(gated_at_retrigger - gated_before_retrigger) > 0.000001f ||
+      gated_after_retrigger <= gated_at_retrigger) {
+    fprintf(
+        stderr,
+        "Gated retrigger was not a smooth reversal: before=%f at=%f after=%f\n",
+        gated_before_retrigger,
+        gated_at_retrigger,
+        gated_after_retrigger);
     abort();
   }
-  for (int block = 0; block < 6000; ++block) {
-    envelope.Process(
+  int gated_retrigger_peak_block = -1;
+  for (int block = 0; block < 5000; ++block) {
+    const float value = envelope.Process(
         1.0f,
         true,
         false,
         OneKnobEnvelope::PROFILE_SYNTH,
         OneKnobEnvelope::MODE_GATED);
+    if (value > 0.999f) {
+      gated_retrigger_peak_block = block;
+      break;
+    }
   }
-  if (envelope.value() < 0.999f) {
-    fprintf(stderr, "Gated maximum did not reach sustain\n");
+  if (gated_retrigger_peak_block < 0 || gated_retrigger_peak_block >= 5000) {
+    fprintf(
+        stderr,
+        "Gated retrigger restarted the complete attack: %d\n",
+        gated_retrigger_peak_block);
     abort();
   }
 }
