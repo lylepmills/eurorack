@@ -288,7 +288,7 @@ system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-812937f27ada` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-174d93845372` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a
 new image, wait for `wrangler containers list` to report `ready` before smoke
@@ -299,7 +299,7 @@ Schema 17, including selectable stock LPC banks, custom text/recording-derived
 Speech banks, source/engine previews, and the earlier recipe-driven scale banks
 and automatic LEVEL routing, is live. The generalized
 schema-inheritance hardening from `5b2b077` is also live: current production
-source `9f8fe4de4c67` descends from that commit, so future supported schemas
+source `174d93845372` descends from that commit, so future supported schemas
 inherit older feature shapes without another version-list edit.
 
 ### Rolling back
@@ -363,6 +363,7 @@ target.
 | August 4, 2026 (restore saved custom-bank previews from their LPC frames) | `c8b7d7736d40` | `rev-c8b7d7736d40` |
 | August 5, 2026 (recover default-palette flash headroom after Six-op CPU work) | `77cff28e2e70` | `rev-77cff28e2e70` |
 | August 5, 2026 (match custom Speech bank levels to stock) | `812937f27ada` | `rev-812937f27ada` |
+| August 5, 2026 (split Speech Sounds and LPC Words with shared custom banks) | `174d93845372` | `rev-174d93845372` |
 
 Three consequences a rollback has that a forward deploy does not:
 
