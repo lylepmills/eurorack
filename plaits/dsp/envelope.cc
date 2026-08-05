@@ -234,24 +234,25 @@ float OneKnobEnvelope::Process(
   } else if (mode == MODE_GATED) {
     // Preserve the intuitive clockwise-is-slower gesture, but place explicit
     // waypoints in perceived time rather than linearly sweeping the already
-    // nonlinear Elements time control. The synth path spans 6 ms..2.6 s of
-    // attack and 25 ms..4.5 s of release. Resonators share the useful fast end
-    // but compress the acoustic tail to 1.2 s / 3.0 s.
+    // nonlinear Elements time control. The synth path spans 8 ms..2.6 s of
+    // attack and 30 ms..4.5 s of release. Medium gestures arrive early enough
+    // to make the first third of the knob distinct. Resonators share the useful
+    // fast end but compress the acoustic tail to 1.2 s / 3.0 s.
     static const float kSynthAttack[] = {
-      0.122648f, 0.155171f, 0.204219f, 0.269687f, 0.343899f,
-      0.433192f, 0.541704f, 0.666283f, 0.781246f,
+      0.140606f, 0.221317f, 0.322106f, 0.405549f, 0.500136f,
+      0.584476f, 0.653884f, 0.727494f, 0.781246f,
     };
     static const float kSynthRelease[] = {
-      0.221317f, 0.269687f, 0.333503f, 0.405549f, 0.500136f,
-      0.602406f, 0.699271f, 0.794383f, 0.882649f,
+      0.235792f, 0.333503f, 0.456250f, 0.541704f, 0.626280f,
+      0.709131f, 0.774362f, 0.834983f, 0.882649f,
     };
     static const float kResonatorAttack[] = {
-      0.122648f, 0.155171f, 0.196374f, 0.248396f, 0.309466f,
-      0.385743f, 0.472360f, 0.564453f, 0.653884f,
+      0.140606f, 0.204219f, 0.287373f, 0.362348f, 0.442869f,
+      0.515241f, 0.574760f, 0.626280f, 0.653884f,
     };
     static const float kResonatorRelease[] = {
-      0.221317f, 0.269687f, 0.322106f, 0.385743f, 0.464526f,
-      0.553470f, 0.640600f, 0.727494f, 0.806767f,
+      0.235792f, 0.315960f, 0.417285f, 0.500136f, 0.574760f,
+      0.653884f, 0.718523f, 0.767248f, 0.806767f,
     };
     const float* attack_waypoints = profile == PROFILE_SYNTH
         ? kSynthAttack

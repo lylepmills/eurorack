@@ -2923,7 +2923,7 @@ void ValidateOneKnobEnvelope() {
 
   // The gated fast endpoint remains immediate without spending travel on the
   // sub-2-ms attack and 4-ms release inherited from a linear Elements-control
-  // sweep. The v2 target is about 6 ms of attack and 25 ms of release.
+  // sweep. The v3 target is about 8 ms of attack and 30 ms of release.
   envelope.Init();
   int gated_fast_peak_block = -1;
   for (int block = 0; block < 100; ++block) {
@@ -2938,10 +2938,10 @@ void ValidateOneKnobEnvelope() {
       break;
     }
   }
-  if (gated_fast_peak_block < 18 || gated_fast_peak_block >= 36) {
+  if (gated_fast_peak_block < 26 || gated_fast_peak_block >= 40) {
     fprintf(
         stderr,
-        "Gated minimum attack outside 4.5-to-9-ms window: %d\n",
+        "Gated minimum attack outside 6.5-to-10-ms window: %d\n",
         gated_fast_peak_block);
     abort();
   }
@@ -2958,11 +2958,56 @@ void ValidateOneKnobEnvelope() {
       break;
     }
   }
-  if (gated_fast_done_block < 80 || gated_fast_done_block >= 140) {
+  if (gated_fast_done_block < 100 || gated_fast_done_block >= 150) {
     fprintf(
         stderr,
-        "Gated minimum release outside 20-to-35-ms window: %d\n",
+        "Gated minimum release outside 25-to-37.5-ms window: %d\n",
         gated_fast_done_block);
+    abort();
+  }
+
+  // By one quarter turn, the contour must be clearly distinct from the fast
+  // endpoint: about 80 ms of attack and 280 ms of release. This prevents the
+  // first third of the physical knob collapsing into one immediate gesture.
+  envelope.Init();
+  int gated_quarter_peak_block = -1;
+  for (int block = 0; block < 500; ++block) {
+    const float value = envelope.Process(
+        0.25f,
+        true,
+        block == 0,
+        OneKnobEnvelope::PROFILE_SYNTH,
+        OneKnobEnvelope::MODE_GATED);
+    if (value > 0.999f) {
+      gated_quarter_peak_block = block;
+      break;
+    }
+  }
+  if (gated_quarter_peak_block < 280 || gated_quarter_peak_block >= 360) {
+    fprintf(
+        stderr,
+        "Gated quarter attack outside 70-to-90-ms window: %d\n",
+        gated_quarter_peak_block);
+    abort();
+  }
+  int gated_quarter_done_block = -1;
+  for (int block = 0; block < 1400; ++block) {
+    envelope.Process(
+        0.25f,
+        false,
+        false,
+        OneKnobEnvelope::PROFILE_SYNTH,
+        OneKnobEnvelope::MODE_GATED);
+    if (!envelope.active()) {
+      gated_quarter_done_block = block;
+      break;
+    }
+  }
+  if (gated_quarter_done_block < 1000 || gated_quarter_done_block >= 1240) {
+    fprintf(
+        stderr,
+        "Gated quarter release outside 250-to-310-ms window: %d\n",
+        gated_quarter_done_block);
     abort();
   }
 
