@@ -299,7 +299,7 @@ Schema 17, including selectable stock LPC banks, custom text/recording-derived
 Speech banks, source/engine previews, and the earlier recipe-driven scale banks
 and automatic LEVEL routing, is live. The generalized
 schema-inheritance hardening from `5b2b077` is also live: current production
-source `9f8fe4de4c67` descends from that commit, so future supported schemas
+source `812937f27ada` descends from that commit, so future supported schemas
 inherit older feature shapes without another version-list edit.
 
 ### Rolling back
