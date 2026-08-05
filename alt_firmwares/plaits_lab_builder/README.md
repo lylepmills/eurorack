@@ -44,6 +44,13 @@ schema 18. Production was immediately rolled back to `rev-9f8fe4de4c67` while
 the private container contract was amended to accept only that legacy-equivalent
 value; Drift and Step remain schema-18-only.
 
+The corrected production canary, build
+`d0e1fe7acbec6c77e26198da2b5afb71e3d83dcbf473114c1614830747a12697`,
+compiled the original two custom banks at `rev-93a95c419688`. Its downloaded
+WAV (`8861a201…`) matched the same recipe built directly by that immutable image
+byte for byte. Keep the public editor disabled until this production-served WAV
+also passes the module test.
+
 The service is split across two isolation layers:
 
 - A Cloudflare Worker validates and hashes recipes, stores job state in Durable
