@@ -37,9 +37,9 @@ An August 4 hardware regression exposed two firmware defects in the custom
 Speech path: inconsistent `PLAITS_HAS_CUSTOM_SPEECH_BANKS` values changed the
 `Voice` class layout between compilation units, and discrete LPC playback could
 read one frame past a word boundary. A patched build passed both the stock-bank-
-only control and the original two-custom-bank recipe on hardware. Keep the
-public custom-bank editor disabled until the patched compiler image has also
-passed a build through the deployed production service.
+only control and the original two-custom-bank recipe on hardware. The recovery
+completed at `rev-812937f27ada`, including custom-bank level matching and the
+Six-op flash fix, before the split Speech rollout below.
 
 The first production canary at `rev-4749aec727af` failed safely before
 compilation: the newer Worker normalized a pre-v18 recipe with the no-op
@@ -52,8 +52,18 @@ The corrected production canary, build
 `d0e1fe7acbec6c77e26198da2b5afb71e3d83dcbf473114c1614830747a12697`,
 compiled the original two custom banks at `rev-93a95c419688`. Its downloaded
 WAV (`8861a201…`) matched the same recipe built directly by that immutable image
-byte for byte. Keep the public editor disabled until this production-served WAV
-also passes the module test.
+byte for byte. The recovered path later passed its module test and returned to
+production at `rev-812937f27ada`.
+
+The August 5 Speech split shipped at `rev-174d93845372`: Original Speech remains
+available, Speech Sounds travels continuously from Naive through SAM to LPC
+phonemes, and LPC Words shares the selectable stock/custom word-bank resource.
+Production canary build
+`1df4bbb1c13c114b2c1ab802c5f31652b292c19f3fd1b64ccb13bdcf0404e140`
+compiled all three models with two custom banks at 58,804 B text + 48 B data and
+20,172 B BSS. Its public 48 kHz mono WAV is 4,803,692 bytes with SHA-256
+`b2af16801f581279ba2107dc1a308ac389e12f483f0e6eb5a1adb0e723e6674f`;
+the matching field guide also reached ready.
 
 The service is split across two isolation layers:
 
