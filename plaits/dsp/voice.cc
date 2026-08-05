@@ -72,6 +72,7 @@ void Voice::Init(BufferAllocator* allocator) {
 #if PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE
   one_knob_envelope_.Init();
   one_knob_envelope_active_ = false;
+  one_knob_envelope_mode_ = OneKnobEnvelope::MODE_TRIGGERED;
 #endif
   
   trigger_state_ = false;
@@ -163,7 +164,8 @@ void Voice::Render(
   bool level_patched = modulations.level_patched;
 #if PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE
   const bool one_knob_envelope_mode =
-      patch.locked_frequency_pot_option == 4;
+      patch.locked_frequency_pot_option == 4 ||
+      patch.locked_frequency_pot_option == 5;
   const bool resonator_envelope_mode =
 #if PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE && \
     defined(PLAITS_RESONATOR_ENVELOPE_ENGINE_MASK)
@@ -304,20 +306,21 @@ void Voice::Render(
   // rather than waiting for a second gate cycle.
   const bool use_one_knob_envelope =
       one_knob_envelope_mode && modulations.trigger_patched;
+  const OneKnobEnvelope::Mode contour_mode =
+      patch.locked_frequency_pot_option == 4
+          ? OneKnobEnvelope::MODE_TRIGGERED
+          : OneKnobEnvelope::MODE_GATED;
+  const bool contour_mode_changed =
+      one_knob_envelope_active_ && contour_mode != one_knob_envelope_mode_;
+  if (contour_mode_changed) {
+    one_knob_envelope_.Init();
+  }
   const bool start_one_knob_envelope =
       rising_edge ||
-      (use_one_knob_envelope && !one_knob_envelope_active_ && trigger_state_);
+      (use_one_knob_envelope &&
+       (!one_knob_envelope_active_ || contour_mode_changed) &&
+       trigger_state_);
   if (use_one_knob_envelope) {
-#if PLAITS_BUILD_ONE_KNOB_ENVELOPE_MODE == 1
-    const OneKnobEnvelope::Mode contour_mode =
-        OneKnobEnvelope::MODE_TRIGGERED;
-#elif PLAITS_BUILD_ONE_KNOB_ENVELOPE_MODE == 2
-    const OneKnobEnvelope::Mode contour_mode =
-        OneKnobEnvelope::MODE_GATED;
-#else
-    const OneKnobEnvelope::Mode contour_mode =
-        OneKnobEnvelope::MODE_ELEMENTS_HYBRID;
-#endif
     articulation_envelope = one_knob_envelope_.Process(
         patch.freqlock_param,
         trigger_state_,
@@ -330,6 +333,7 @@ void Voice::Render(
     one_knob_envelope_.Init();
   }
   one_knob_envelope_active_ = use_one_knob_envelope;
+  one_knob_envelope_mode_ = contour_mode;
 #endif
 
   float compressed_level = 1.3f * modulations_level / (0.3f + fabsf(modulations_level));

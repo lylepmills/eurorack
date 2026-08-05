@@ -114,7 +114,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
         # plaits/build_config.h. Its nonzero upper byte makes it disjoint from
         # every legacy 16-bit profile, forcing one correct defaults apply.
         recipe = validate_recipe(self.load("default_recipe.json"))
-        self.assertEqual(recipe.options_profile_id, 0x02DEBE)
+        self.assertEqual(recipe.options_profile_id, 0x0561A4)
         self.assertEqual(recipe.attenuverter_mode, 0)
 
     def test_option_values_match_the_firmware_numbering(self) -> None:
@@ -143,6 +143,31 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertEqual(build.chord_set_option, 2)
         self.assertEqual(build.hold_on_trigger_option, 1)
         self.assertEqual(build.attenuverter_mode, 0)
+
+    def test_one_knob_envelopes_are_schema_19_values_four_and_five(self) -> None:
+        recipe = self.load("default_recipe.json")
+        recipe["schemaVersion"] = 19
+        recipe["preferences"] = {"navigationMode": "linear"}
+        recipe["resources"] = {"chordTables": DEFAULT_CHORD_TABLES}
+
+        for name, numeric in (("triggered-envelope", 4), ("gated-envelope", 5)):
+            recipe["initialOptions"] = dict(
+                DEFAULT_CONFIGURATION["initialOptions"],
+                lockedFrequencyKnob=name,
+                attenuverterMode="stock",
+            )
+            build = validate_recipe(recipe)
+            self.assertEqual(build.locked_frequency_pot_option, numeric)
+            config = render_config(build)
+            self.assertIn(
+                f"#define PLAITS_BUILD_LOCKED_FREQUENCY_POT_OPTION {numeric}",
+                config,
+            )
+            self.assertIn("#define PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE 1", config)
+
+        recipe["schemaVersion"] = 18
+        with self.assertRaisesRegex(ValueError, "schemaVersion 19"):
+            validate_recipe(recipe)
 
     def test_attenuverter_starting_mode_is_schema_18_and_changes_the_profile(self) -> None:
         recipe = self.load("default_recipe.json")
@@ -423,11 +448,14 @@ class GenerateEngineConfigTest(unittest.TestCase):
 
     def test_every_option_profile_has_a_unique_legacy_safe_marker(self) -> None:
         recipe = self.load("default_recipe.json")
-        recipe["schemaVersion"] = 18
+        recipe["schemaVersion"] = 19
         recipe["preferences"] = {"navigationMode": "linear"}
         recipe["resources"] = {"chordTables": DEFAULT_CHORD_TABLES}
         option_values = (
-            ("lockedFrequencyKnob", ["octaves", "decay", "aux-crossfade", "macro-4"]),
+            ("lockedFrequencyKnob", [
+                "octaves", "decay", "aux-crossfade", "macro-4",
+                "triggered-envelope", "gated-envelope",
+            ]),
             ("modelInput", ["model", "lpg-colour", "aux-crossfade", "macro-4"]),
             ("levelInput", ["level", "decay", "auto"]),
             ("auxOutput", ["alternate-model", "square-subosc", "sine-subosc", "stereo"]),
@@ -445,8 +473,8 @@ class GenerateEngineConfigTest(unittest.TestCase):
             self.assertGreater(marker & 0xff, 1)
             markers.add(marker)
         # Every option combination must map to a distinct profile marker.
-        # Product of the cardinalities: 4 * 4 * 3 * 4 * 3 * 3 * 2 * 3.
-        self.assertEqual(len(markers), 10368)
+        # Product of the cardinalities: 6 * 4 * 3 * 4 * 3 * 3 * 2 * 3.
+        self.assertEqual(len(markers), 15552)
 
     def test_registry_translates_green_red_amber_to_amber_green_red(self) -> None:
         recipe = self.load("mixed_recipe.json")

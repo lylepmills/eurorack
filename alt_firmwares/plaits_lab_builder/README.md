@@ -1,7 +1,7 @@
 # Plaits Lab firmware build service
 
 This directory contains the approved-engine backend for Plaits Lab. It accepts
-legacy recipes and manifests through schema 18 containing 24 or 32 versioned
+legacy recipes and manifests through schema 19 containing 24 or 32 versioned
 engine references, firmware preferences and starting options, and bounded
 chord-table/custom-FM/scale-bank/Speech-bank resources. Schema 15 can target either Mutable
 Instruments Plaits or Plum Audio Ro'Ved and adds the color-blind bank display.
@@ -13,8 +13,11 @@ the five shipped Speech banks plus up to eight total stock/custom LPC banks;
 custom banks carry bounded 14-byte decoded frames and word boundaries rather
 than source recordings or synthesis-model data. Schema 18 adds the Stock,
 Drift, or Step unpatched-attenuverter mode to Starting Options. The selected
-mode participates in the generated options profile. A one-shot marker in the
-application image is restored by every WAV or HEX flash, so first boot applies
+mode participates in the generated options profile. Schema 19 adds triggered
+and gated one-knob envelopes as the fifth and sixth locked-FREQUENCY
+assignments. Selecting either compiles both runtime choices into the firmware;
+builds that do not select a contour omit their code to preserve flash. A
+one-shot marker in the application image is restored by every WAV or HEX flash, so first boot applies
 all embedded Starting Options even when reinstalling the exact same build;
 ordinary power cycles still preserve later runtime changes. It generates a compile-time
 configuration, builds with the pinned Mutable

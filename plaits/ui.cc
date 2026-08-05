@@ -91,7 +91,7 @@ enum OptionLight {
 
 static const uint8_t kNumOptions = OPTION_LIGHT_LAST;
 static const uint8_t kNumLockedFrequencyPotOptions =
-    4 + PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE;
+    4 + 2 * PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE;
 static const uint8_t kNumModelCVOptions = 4;
 static const uint8_t kNumLevelCVOptions = 3;
 // Aux output: regular aux model, stereo (true L/R pair on stereo-capable

@@ -48,7 +48,7 @@ PACKED_BANK_SIZE = PATCHES_PER_BANK * PACKED_PATCH_SIZE  # 4096
 # versions so adding a schema at the ceiling does not require extending a trail
 # of "10, 11, 12..." whitelists in the build container.
 MIN_RECIPE_SCHEMA_VERSION = 2
-MAX_RECIPE_SCHEMA_VERSION = 18
+MAX_RECIPE_SCHEMA_VERSION = 19
 CONFIGURATION_MIN_SCHEMA_VERSION = 4
 RESOURCES_MIN_SCHEMA_VERSION = 5
 FOUR_BANK_MIN_SCHEMA_VERSION = 6
@@ -64,6 +64,7 @@ SCALE_BANK_MIN_SCHEMA_VERSION = 16
 LEVEL_AUTO_MIN_SCHEMA_VERSION = 16
 SPEECH_BANKS_MIN_SCHEMA_VERSION = 17
 ATTENUVERTER_MODE_MIN_SCHEMA_VERSION = 18
+ONE_KNOB_ENVELOPE_MIN_SCHEMA_VERSION = 19
 
 # These two stock physical-model engines can treat the alternate contour as
 # energy entering a resonator rather than as a VCA after it.  Keep this list in
@@ -92,7 +93,9 @@ SCALE_UNITS_PER_OCTAVE = 12 * SCALE_UNITS_PER_SEMITONE
 # the LEVEL light adds Auto as value 2, expanding that digit's radix (2026-07).
 # Version 4 adds LIGHT 8's attenuverter mode to recipe starting options and
 # moves the collision-free profile identity into three persisted bytes.
-OPTIONS_LAYOUT_VERSION = 4
+# Version 5 appends the triggered and gated contours to LIGHT 4 and expands its
+# profile digit from four values to six.
+OPTIONS_LAYOUT_VERSION = 5
 
 
 @dataclass(frozen=True)
@@ -582,7 +585,14 @@ def validate_recipe(value: Any) -> BuildRecipe:
         # order: it decides which LED color each setting shows and is baked into
         # the DSP's comparisons. Recipes bind by NAME, so reordering here is
         # invisible to the recipe format - but see OPTIONS_LAYOUT_VERSION.
-        "locked_frequency_pot_option": (options.get("lockedFrequencyKnob"), {"octaves": 0, "macro-4": 1, "aux-crossfade": 2, "decay": 3}),
+        "locked_frequency_pot_option": (options.get("lockedFrequencyKnob"), {
+            "octaves": 0,
+            "macro-4": 1,
+            "aux-crossfade": 2,
+            "decay": 3,
+            "triggered-envelope": 4,
+            "gated-envelope": 5,
+        }),
         "model_cv_option": (options.get("modelInput"), {"model": 0, "macro-4": 1, "aux-crossfade": 2, "lpg-colour": 3}),
         "level_cv_option": (
             options.get("levelInput"),
@@ -614,6 +624,11 @@ def validate_recipe(value: Any) -> BuildRecipe:
         raise ValueError(
             f"automatic LEVEL routing requires schemaVersion "
             f"{LEVEL_AUTO_MIN_SCHEMA_VERSION} or newer")
+    if (normalized_options["locked_frequency_pot_option"] >= 4
+            and schema_version < ONE_KNOB_ENVELOPE_MIN_SCHEMA_VERSION):
+        raise ValueError(
+            f"one-knob envelopes require schemaVersion "
+            f"{ONE_KNOB_ENVELOPE_MIN_SCHEMA_VERSION} or newer")
     # Shape and octave share one firmware value (plaits/dsp/voice.h): 0-2 square
     # at 0/-1/-2 octaves, 3-5 sine at the same three. The octave landed above;
     # the shape comes from auxOutput, the only place the recipe records it. It
@@ -634,7 +649,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
     # radix from two to three, so every profile id moves without renumbering the
     # two existing stored values.
     profile_code = OPTIONS_LAYOUT_VERSION
-    profile_code = profile_code * 4 + normalized_options["locked_frequency_pot_option"]
+    profile_code = profile_code * 6 + normalized_options["locked_frequency_pot_option"]
     for name, radix in (
         ("model_cv_option", 4),
         ("level_cv_option", 3),
@@ -993,6 +1008,7 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_BUILD_NAVIGATION_MODE {recipe.navigation_mode}
 #define PLAITS_BUILD_COLOR_BLIND_MODE {recipe.color_blind_mode}
 #define PLAITS_BUILD_LOCKED_FREQUENCY_POT_OPTION {recipe.locked_frequency_pot_option}
+#define PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE {1 if recipe.locked_frequency_pot_option >= 4 else 0}
 #define PLAITS_BUILD_MODEL_CV_OPTION {recipe.model_cv_option}
 #define PLAITS_BUILD_LEVEL_CV_OPTION {recipe.level_cv_option}
 #define PLAITS_BUILD_AUX_OUTPUT_OPTION {recipe.aux_output_option}

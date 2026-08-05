@@ -73,19 +73,13 @@
 #define PLAITS_BUILD_LOCKED_FREQUENCY_POT_OPTION 0
 #endif
 
-// Compile the Elements-style one-knob envelope into builds that select it.
-// Keeping this recipe-scoped matters for the fixed 256 KB target: the fullest
-// legacy layouts do not have room for another global feature, while Palette
-// builds that ask for the envelope can budget for it alongside their engines.
+// Compile the two Elements-derived one-knob envelopes into builds that select
+// either one as their starting FREQUENCY assignment. Keeping this recipe-scoped
+// matters for the fixed 256 KB target: the fullest legacy layouts do not have
+// room for another global feature. An enabled build exposes both the triggered
+// and gated contours in its runtime options menu.
 #ifndef PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE
 #define PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE 0
-#endif
-
-// Select the one-knob contour topology when it is compiled in: 0 keeps the
-// original Elements hybrid, 1 is a dedicated one-shot attack/decay contour,
-// and 2 is a dedicated gated attack/sustain/release contour.
-#ifndef PLAITS_BUILD_ONE_KNOB_ENVELOPE_MODE
-#define PLAITS_BUILD_ONE_KNOB_ENVELOPE_MODE 0
 #endif
 
 #ifndef PLAITS_BUILD_MODEL_CV_OPTION

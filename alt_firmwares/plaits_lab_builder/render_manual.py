@@ -43,7 +43,10 @@ MENU_LIGHTS = (
         "Square", "Square, -1 octave", "Square, -2 octaves",
         "Sine", "Sine, -1 octave", "Sine, -2 octaves",
     )),
-    ("FREQUENCY knob", ("Octaves", "MACRO (fourth control)", "Aux crossfade", "LPG decay")),
+    ("FREQUENCY knob", (
+        "Octaves", "MACRO (fourth control)", "Aux crossfade", "LPG decay",
+        "Triggered envelope", "Gated envelope",
+    )),
     ("MODEL input", ("Model select", "MACRO (fourth control)", "Aux crossfade", "LPG colour (VCFA->VCA)")),
     ("LEVEL input", ("Level", "LPG decay", "Auto: decay or velocity")),
     ("Hold on trigger", ("Off (live CV)", "Sample & hold")),
@@ -497,6 +500,10 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
     for light_index, (assigns, meanings) in enumerate(MENU_LIGHTS):
         if meanings is None:
             meanings = document["chordTables"]
+        elif light_index == 3 and document.get("lockedFrequencyPotOption", 0) < 4:
+            # The contour code is recipe-scoped for flash. Selecting either one
+            # as the starting assignment compiles both runtime choices in.
+            meanings = meanings[:4]
         lines = [led_setting(k, meaning) for k, meaning in enumerate(meanings)]
         menu_rows.append([
             Paragraph(str(light_index + 1), small_muted_style),
@@ -561,10 +568,18 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
             "green, red, and yellow, then the same three colors blinking for a fourth, fifth, or sixth setting — "
             "and, on LIGHT 1, blinking fast for a seventh, eighth, or ninth."
         )
+    contour_options_note = (
+        "With TRIG patched, LIGHT 4's Elements-derived Triggered envelope plays a complete "
+        "one-shot attack/decay on each trigger; Gated envelope attacks, sustains while the "
+        "gate is high, and releases when it falls. "
+        "Both shape amplitude and the LPG opening, and FREQUENCY controls their timing. "
+        if document.get("lockedFrequencyPotOption", 0) >= 4 else ""
+    )
     options_note = (
         "LIGHT 1 applies to chord-capable models and lists the chord tables loaded in this build (up to nine). "
         "LIGHT 3 stays dark, and the light navigation skips it, unless LIGHT 2 is set to a suboscillator — it has nothing to act on otherwise. "
         "LIGHT 4 applies in octave-switching (frequency-locked) mode. LIGHT 6's LPG-decay and Auto settings apply only when TRIG is patched. "
+        f"{contour_options_note}"
         "Auto sends LEVEL to LPG decay on ordinary oscillator models, but keeps LEVEL as velocity/accent on models with their own envelope. "
         f"{ATTENUVERTER_OPTIONS_NOTE}"
         "Outside the menu, click FREQUENCY/TIMBRE for previous/next bank and "
@@ -573,6 +588,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         "LIGHT 1 applies to chord-capable models and lists the chord tables loaded in this build (up to nine). "
         "LIGHT 3 stays dark, and the left button walks past it, unless LIGHT 2 is set to a suboscillator — it has nothing to act on otherwise. "
         "LIGHT 4 applies in octave-switching (frequency-locked) mode. Whenever LIGHT 4 is not Octaves, hold the right button and turn MORPH to change octaves. "
+        f"{contour_options_note}"
         "LIGHT 6's LPG-decay and Auto settings apply only when TRIG is patched. "
         "Auto sends LEVEL to LPG decay on ordinary oscillator models, but keeps LEVEL as velocity/accent on models with their own envelope. "
         f"{ATTENUVERTER_OPTIONS_NOTE}"

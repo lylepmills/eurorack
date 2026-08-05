@@ -106,6 +106,64 @@ test("schema 18 carries the unpatched attenuverter starting mode", async () => {
   );
 });
 
+test("schema 19 carries triggered and gated locked-frequency envelopes", async () => {
+  const publicCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const chordCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_chord_tables/catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const engines = new Map(
+    publicCatalog.engines.map((engine: { id: string }) => [engine.id, engine]),
+  );
+  const recipe = structuredClone(fixture) as any;
+  recipe.schemaVersion = 19;
+  recipe.slots = fixture.slots.map((engineId: string) => {
+    const engine = engines.get(engineId) as {
+      packageId: string;
+      version: string;
+      digest: string;
+    };
+    return {
+      engine: engineId,
+      package: engine.packageId,
+      version: engine.version,
+      digest: engine.digest,
+    };
+  });
+  recipe.preferences = { navigationMode: "linear" };
+  recipe.initialOptions = {
+    lockedFrequencyKnob: "triggered-envelope",
+    modelInput: "model",
+    levelInput: "level",
+    auxOutput: "alternate-model",
+    suboscillatorOctave: 0,
+    chordTable: "original",
+    holdOnTrigger: false,
+    attenuverterMode: "stock",
+  };
+  recipe.resources = { chordTables: chordCatalog.tables };
+
+  assert.equal(normalizeRecipe(recipe).schemaVersion, 19);
+  assert.equal(
+    normalizeRecipe(recipe).initialOptions.lockedFrequencyKnob,
+    "triggered-envelope",
+  );
+  recipe.initialOptions.lockedFrequencyKnob = "gated-envelope";
+  assert.equal(normalizeRecipe(recipe).schemaVersion, 19);
+  assert.equal(
+    normalizeRecipe(recipe).initialOptions.lockedFrequencyKnob,
+    "gated-envelope",
+  );
+
+  assert.throws(
+    () => normalizeRecipe({ ...recipe, schemaVersion: 18 }),
+    /schema version 19/,
+  );
+});
+
 test("automatic LEVEL routing is carried only by schema 16", async () => {
   const publicCatalog = JSON.parse(await readFile(
     new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),

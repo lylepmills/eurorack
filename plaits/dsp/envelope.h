@@ -125,20 +125,11 @@ class DecayEnvelope {
   DISALLOW_COPY_AND_ASSIGN(DecayEnvelope);
 };
 
-// Gate-aware, one-knob envelope adapted from Elements' exciter envelope.
-//
-// The control travels through three regions:
-//   0.0 .. 0.4  one-shot AD, from a short pluck to a slow swell
-//   0.4 .. 0.6  the same slow attack/decay, with sustain rising from 0 to 1
-//   0.6 .. 1.0  full sustain, with attack/release accelerating toward the end
-// The resonator profile preserves Elements' compact gesture timing; the synth
-// profile expands the slow center because an oscillator has no acoustic body
-// to provide a tail after the contour itself closes.
-//
-// MODE_ELEMENTS_HYBRID preserves Elements' pluck-to-sustain topology.
+// Gate-aware, one-knob envelopes adapted from Elements' exciter contour.
 // MODE_TRIGGERED spends the entire range on a one-shot AD shape spectrum and
 // ignores the falling edge. MODE_GATED spends the entire range on a full-
-// sustain ASR gesture and follows the gate.
+// sustain ASR gesture and follows the gate. Each mode has resonator and synth
+// timing profiles because a resonator supplies more of its own audible tail.
 //
 // Process is called once per Plaits audio block. Curve and rate lookup tables
 // live in envelope.cc; their compact fixed-point representation keeps the
@@ -152,7 +143,6 @@ class OneKnobEnvelope {
   };
 
   enum Mode {
-    MODE_ELEMENTS_HYBRID,
     MODE_TRIGGERED,
     MODE_GATED
   };
@@ -166,8 +156,8 @@ class OneKnobEnvelope {
       float shape,
       bool gate,
       bool rising_edge,
-      Profile profile = PROFILE_ELEMENTS_RESONATOR,
-      Mode mode = MODE_ELEMENTS_HYBRID);
+      Profile profile,
+      Mode mode);
 
   inline float value() const { return value_; }
   inline bool active() const { return segment_ != SEGMENT_DONE; }
@@ -175,7 +165,6 @@ class OneKnobEnvelope {
 #if defined(TEST)
   // Host-test access to the curve approximations. These are not part of the
   // firmware API and compile out of production builds.
-  static float TestQuarticCurve(float phase);
   static float TestGatedAttackCurve(float phase);
   static float TestExponentialCurve(float phase);
   static float TestTimeIncrement(float time);
@@ -190,7 +179,6 @@ class OneKnobEnvelope {
     SEGMENT_DONE
   };
 
-  static float QuarticCurve(float phase);
   static float GatedAttackCurve(float phase);
   static float InverseGatedAttackCurve(float value);
   static float ExponentialCurve(float phase);

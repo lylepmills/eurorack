@@ -2527,7 +2527,6 @@ void ValidateLPCDiscreteFrameBounds() {
 void ValidateOneKnobEnvelope() {
   // The compact tables must remain perceptually transparent relative to the
   // original Elements formulas.
-  float max_quartic_error = 0.0f;
   float max_gated_attack_error = 0.0f;
   float max_exponential_error = 0.0f;
   float max_rate_relative_error = 0.0f;
@@ -2540,15 +2539,11 @@ void ValidateOneKnobEnvelope() {
   const float b = powf(min_increment, -gamma);
   for (int i = 0; i <= 10000; ++i) {
     const float t = static_cast<float>(i) / 10000.0f;
-    const float expected_quartic = powf(t, 3.32f);
     const float expected_gated_attack = powf(t, 1.7f);
     const float expected_exponential =
         (1.0f - expf(-4.0f * t)) / normalization;
     const float expected_rate =
         powf(a + (b - a) * t, -1.0f / gamma);
-    max_quartic_error = max(
-        max_quartic_error,
-        fabsf(OneKnobEnvelope::TestQuarticCurve(t) - expected_quartic));
     max_gated_attack_error = max(
         max_gated_attack_error,
         fabsf(
@@ -2563,127 +2558,15 @@ void ValidateOneKnobEnvelope() {
         max_rate_relative_error,
         fabsf(OneKnobEnvelope::TestTimeIncrement(t) / expected_rate - 1.0f));
   }
-  if (max_quartic_error > 0.00025f ||
-      max_gated_attack_error > 0.00025f ||
+  if (max_gated_attack_error > 0.00025f ||
       max_exponential_error > 0.00050f ||
       max_rate_relative_error > 0.0017f) {
     fprintf(
         stderr,
-        "One-knob envelope table error: quartic=%f gated=%f "
-        "exponential=%f rate=%f\n",
-        max_quartic_error,
+        "One-knob envelope table error: gated=%f exponential=%f rate=%f\n",
         max_gated_attack_error,
         max_exponential_error,
         max_rate_relative_error);
-    abort();
-  }
-
-  // A narrow trigger at the pluck end must complete the one-shot; treating
-  // Plaits' usual 1 ms trigger as an ADSR gate would cut the attack off.
-  OneKnobEnvelope envelope;
-  envelope.Init();
-  float peak = 0.0f;
-  for (int block = 0; block < 800; ++block) {
-    const bool rising = block == 0;
-    const bool gate = block == 0;
-    peak = max(peak, envelope.Process(0.0f, gate, rising));
-  }
-  if (peak < 0.999f || envelope.value() > 0.001f) {
-    fprintf(
-        stderr,
-        "One-knob pluck did not complete: peak=%f tail=%f\n",
-        peak,
-        envelope.value());
-    abort();
-  }
-
-  // The midpoint settles at half sustain while held, then follows the same
-  // slow Elements release when the gate falls.
-  envelope.Init();
-  for (int block = 0; block < 16000; ++block) {
-    envelope.Process(0.5f, true, block == 0);
-  }
-  if (fabsf(envelope.value() - 0.5f) > 0.001f) {
-    fprintf(stderr, "One-knob midpoint sustain=%f\n", envelope.value());
-    abort();
-  }
-  for (int block = 0; block < 16000; ++block) {
-    envelope.Process(0.5f, false, false);
-  }
-  if (envelope.value() > 0.001f) {
-    fprintf(stderr, "One-knob midpoint release tail=%f\n", envelope.value());
-    abort();
-  }
-
-  // The right edge is a fast gate: full sustain while high, silence shortly
-  // after release.
-  envelope.Init();
-  for (int block = 0; block < 500; ++block) {
-    envelope.Process(1.0f, true, block == 0);
-  }
-  if (envelope.value() < 0.999f) {
-    fprintf(stderr, "One-knob gated sustain=%f\n", envelope.value());
-    abort();
-  }
-
-  // Live moves in the gated half update sustain immediately, and crossing
-  // into the one-shot half must release rather than latch the old sustain.
-  envelope.Process(0.5f, true, false);
-  if (fabsf(envelope.value() - 0.5f) > 0.001f) {
-    fprintf(stderr, "One-knob live sustain=%f\n", envelope.value());
-    abort();
-  }
-  for (int block = 0; block < 16000; ++block) {
-    envelope.Process(0.0f, true, false);
-  }
-  if (envelope.value() > 0.001f) {
-    fprintf(stderr, "One-knob live region-crossing tail=%f\n", envelope.value());
-    abort();
-  }
-
-  envelope.Init();
-  for (int block = 0; block < 500; ++block) {
-    envelope.Process(1.0f, true, block == 0);
-  }
-  for (int block = 0; block < 500; ++block) {
-    envelope.Process(1.0f, false, false);
-  }
-  if (envelope.value() > 0.001f) {
-    fprintf(stderr, "One-knob gated release tail=%f\n", envelope.value());
-    abort();
-  }
-
-  // A synth has no resonant body to carry the gesture, so its midpoint release
-  // deliberately outlasts Elements' resonator-oriented timing. At four seconds
-  // the Elements profile is done while the expanded synth profile is not.
-  envelope.Init();
-  for (int block = 0; block < 30000; ++block) {
-    envelope.Process(
-        0.5f,
-        true,
-        block == 0,
-        OneKnobEnvelope::PROFILE_SYNTH);
-  }
-  for (int block = 0; block < 16000; ++block) {
-    envelope.Process(
-        0.5f,
-        false,
-        false,
-        OneKnobEnvelope::PROFILE_SYNTH);
-  }
-  if (!envelope.active()) {
-    fprintf(stderr, "One-knob synth profile did not preserve the long release\n");
-    abort();
-  }
-  for (int block = 0; block < 8000; ++block) {
-    envelope.Process(
-        0.5f,
-        false,
-        false,
-        OneKnobEnvelope::PROFILE_SYNTH);
-  }
-  if (envelope.active()) {
-    fprintf(stderr, "One-knob synth profile release did not finish\n");
     abort();
   }
 
@@ -2724,6 +2607,7 @@ void ValidateOneKnobEnvelope() {
 
   // The fast endpoint must remain articulated rather than collapsing into a
   // click: roughly 19 ms of linear attack and 80 ms of exponential decay.
+  OneKnobEnvelope envelope;
   envelope.Init();
   int fast_peak_block = -1;
   int fast_done_block = -1;

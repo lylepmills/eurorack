@@ -72,6 +72,30 @@ class RenderManualTest(unittest.TestCase):
         self.assertIn("in Drift also the speed", ATTENUVERTER_OPTIONS_NOTE)
         self.assertNotIn("Stock", ATTENUVERTER_OPTIONS_NOTE)
 
+    def test_frequency_menu_places_triggered_and_gated_envelopes_fifth_and_sixth(self) -> None:
+        self.assertEqual(
+            MENU_LIGHTS[3][1],
+            (
+                "Octaves", "MACRO (fourth control)", "Aux crossfade", "LPG decay",
+                "Triggered envelope", "Gated envelope",
+            ),
+        )
+
+    @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
+    def test_envelope_build_prints_both_contours_and_their_gate_behavior(self) -> None:
+        recipe = self.calibration_recipe(False)
+        recipe["schemaVersion"] = 19
+        recipe["initialOptions"]["lockedFrequencyKnob"] = "triggered-envelope"
+        recipe["initialOptions"]["attenuverterMode"] = "stock"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "envelopes.pdf"
+            render_pdf(manual_document(recipe), output)
+            printed = pdf_strings(output).replace(")(", " ")
+            self.assertIn("Triggered envelope", printed)
+            self.assertIn("Gated envelope", printed)
+            self.assertIn("Elements-derived Triggered envelope", printed)
+            self.assertIn("sustains while the gate is high", printed)
+
     def short_bank_recipe(self) -> dict:
         # v7 short bank: green full (8), red partly empty (3 + 5 empty), amber
         # full (8). The Worker normalizes filled slots to bare IDs interleaved

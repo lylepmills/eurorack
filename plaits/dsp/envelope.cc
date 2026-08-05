@@ -35,17 +35,6 @@ namespace {
 const int kCurveTableSize = 64;
 const int kTimeTableSize = 128;
 
-// round(65535 * t^3.32), t = i / 64. This is Elements' quartic attack
-// (the historical name is retained even though the fitted exponent is 3.32).
-const uint16_t kQuarticCurve[kCurveTableSize + 1] = {
-  0, 0, 1, 3, 7, 14, 25, 42, 66, 97, 138, 189, 253,
-  330, 422, 530, 657, 804, 972, 1163, 1378, 1621, 1891, 2192, 2525, 2891,
-  3294, 3733, 4212, 4733, 5297, 5906, 6562, 7268, 8025, 8836, 9702, 10626,
-  11610, 12656, 13766, 14942, 16186, 17501, 18889, 20353, 21893, 23514,
-  25216, 27003, 28876, 30838, 32892, 35039, 37282, 39624, 42067, 44613,
-  47265, 50025, 52895, 55879, 58979, 62197, 65535,
-};
-
 // round(65535 * t^1.7), t = i / 64. A gated VCA benefits from a gentle swell,
 // but Elements' t^3.32 exciter curve spends too much of a long attack near
 // silence before arriving abruptly. This keeps the onset soft while making the
@@ -115,10 +104,6 @@ void OneKnobEnvelope::Init() {
   phase_ = 0.0f;
   start_value_ = 0.0f;
   value_ = 0.0f;
-}
-
-float OneKnobEnvelope::QuarticCurve(float phase) {
-  return LookupCurve(kQuarticCurve, phase);
 }
 
 float OneKnobEnvelope::GatedAttackCurve(float phase) {
@@ -231,7 +216,7 @@ float OneKnobEnvelope::Process(
     }
     sustain = 0.0f;
     gated = false;
-  } else if (mode == MODE_GATED) {
+  } else {
     // Preserve the intuitive clockwise-is-slower gesture, but place explicit
     // waypoints in perceived time rather than linearly sweeping the already
     // nonlinear Elements time control. The synth path spans 8 ms..2.6 s of
@@ -273,36 +258,6 @@ float OneKnobEnvelope::Process(
         (release_waypoints[segment + 1] - release_waypoints[segment]) * amount;
     sustain = 1.0f;
     gated = true;
-  } else {
-    // Elements keeps the slow point compact: about 266 ms of attack and 3.05 s
-    // of decay/release. That is natural when the resonator supplies the rest of
-    // the audible tail. A memoryless synth needs the contour itself to carry a
-    // long gesture, so its slow point reaches about 1.17 s / 4.92 s. Both keep
-    // the same fast endpoints and the same pluck -> sustain topology.
-    const float slow_attack =
-        profile == PROFILE_SYNTH ? 0.65f : 0.45f;
-    const float slow_decay_release =
-        profile == PROFILE_SYNTH ? 0.90f : 0.81f;
-    if (shape < 0.4f) {
-      const float slow_amount = shape * 2.5f;
-      attack = 0.15f + (slow_attack - 0.15f) * slow_amount;
-      decay_release =
-          0.27f + (slow_decay_release - 0.27f) * slow_amount;
-      sustain = 0.0f;
-      gated = false;
-    } else if (shape < 0.6f) {
-      attack = slow_attack;
-      decay_release = slow_decay_release;
-      sustain = (shape - 0.4f) * 5.0f;
-      gated = true;
-    } else {
-      const float slow_amount = (1.0f - shape) * 2.5f;
-      attack = 0.15f + (slow_attack - 0.15f) * slow_amount;
-      decay_release =
-          0.27f + (slow_decay_release - 0.27f) * slow_amount;
-      sustain = 1.0f;
-      gated = true;
-    }
   }
 
   if (rising_edge) {
@@ -315,15 +270,12 @@ float OneKnobEnvelope::Process(
       // resetting phase to zero from the current value.
       start_value_ = 0.0f;
       phase_ = value_;
-    } else if (mode == MODE_GATED) {
+    } else {
       // Reverse from a release without restarting a complete attack from the
       // current level. Reconstructing the absolute attack phase keeps the edge
       // continuous and makes only the perceptually remaining rise play out.
       start_value_ = 0.0f;
       phase_ = InverseGatedAttackCurve(value_);
-    } else {
-      start_value_ = segment_ == SEGMENT_DONE ? 0.0f : value_;
-      phase_ = 0.0f;
     }
     segment_ = SEGMENT_ATTACK;
   } else if (segment_ == SEGMENT_SUSTAIN && !gated) {
@@ -381,14 +333,12 @@ float OneKnobEnvelope::Process(
   // Elements' quartic attack deliberately stays near zero before arriving
   // abruptly. That articulation works as an exciter contour, but turns a VCA
   // contour into a late blip. Triggered mode is linear; gated mode uses a
-  // gentler t^1.7 swell; the source hybrid retains Elements' original curve.
+  // gentler t^1.7 swell.
   float curve = ExponentialCurve(phase_);
   if (attack_segment) {
     curve = mode == MODE_TRIGGERED
         ? phase_
-        : (mode == MODE_GATED
-            ? GatedAttackCurve(phase_)
-            : QuarticCurve(phase_));
+        : GatedAttackCurve(phase_);
   }
   value_ = start_value_ + (target - start_value_) * curve;
   phase_ += TimeIncrement(attack_segment ? attack : decay_release);
@@ -396,10 +346,6 @@ float OneKnobEnvelope::Process(
 }
 
 #if defined(TEST)
-float OneKnobEnvelope::TestQuarticCurve(float phase) {
-  return QuarticCurve(phase);
-}
-
 float OneKnobEnvelope::TestGatedAttackCurve(float phase) {
   return GatedAttackCurve(phase);
 }

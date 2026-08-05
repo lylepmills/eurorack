@@ -139,7 +139,8 @@ struct Patch {
   // 1 - fourth synthesis macro
   // 2 - manual aux crossfade
   // 3 - manual control of decay (without button press)
-  // 4 - Elements-style one-knob envelope (pluck through gated sustain)
+  // 4 - triggered one-shot envelope
+  // 5 - gated attack/sustain/release envelope
   uint8_t locked_frequency_pot_option;
   // 0 - cv control of model (original)
   // 1 - cv control of the fourth synthesis macro
@@ -278,6 +279,7 @@ class Voice {
 #if PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE
   OneKnobEnvelope one_knob_envelope_;
   bool one_knob_envelope_active_;
+  OneKnobEnvelope::Mode one_knob_envelope_mode_;
 #endif
   
   float trigger_delay_line_[kMaxTriggerDelay];
