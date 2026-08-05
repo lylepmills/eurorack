@@ -1,13 +1,20 @@
 from __future__ import annotations
 
 import json
+import base64
+import struct
+import tempfile
 import unittest
+import wave
 from pathlib import Path
 
 from container_server import (
     ALL_STEREO_MACROS,
     MAX_REQUEST_BYTES,
     _build_targets,
+    _concatenate_pcm_wavs,
+    _validate_saved_bank_preview_request,
+    _write_saved_plan,
     _recipe_is_stereo,
     _stereo_disable_flags,
     classify_link_failure,
@@ -128,6 +135,55 @@ class RequestSizeBudgetTest(unittest.TestCase):
         self.assertFalse(request_size_is_valid(0))
         self.assertTrue(request_size_is_valid(MAX_REQUEST_BYTES))
         self.assertFalse(request_size_is_valid(MAX_REQUEST_BYTES + 1))
+
+
+class SavedSpeechPreviewTest(unittest.TestCase):
+    def request(self) -> dict:
+        frame = struct.Struct("<BBhh8b")
+        first = (5, 20, 100, -100, 1, 2, 3, 4, 5, 6, 7, 8)
+        second = (6, 21, 101, -101, -1, -2, -3, -4, -5, -6, -7, -8)
+        packed = frame.pack(*first) + frame.pack(*second) + frame.pack(*second)
+        return {
+            "format": "rubato.plaits-lpc-bank-preview/v1",
+            "bank": {
+                "words": ["hello"],
+                "wordBoundaries": [0, 3],
+                "frameData": base64.b64encode(packed).decode("ascii"),
+            },
+        }
+
+    def test_saved_bank_reuses_the_firmware_resource_shape(self) -> None:
+        bank = _validate_saved_bank_preview_request(self.request())
+        self.assertEqual(bank["words"], ["hello"])
+        self.assertEqual(len(bank["frames"]), 3)
+
+    def test_plan_writer_removes_only_the_duplicate_firmware_guard(self) -> None:
+        frames = _validate_saved_bank_preview_request(self.request())["frames"]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "word.plan"
+            _write_saved_plan(path, frames)
+            self.assertEqual(len(path.read_text(encoding="utf-8").splitlines()), 2)
+
+    def test_malformed_saved_bank_is_rejected(self) -> None:
+        request = self.request()
+        request["bank"]["wordBoundaries"] = [0, 4]
+        with self.assertRaisesRegex(Exception, "saved Speech bank is invalid"):
+            _validate_saved_bank_preview_request(request)
+
+    def test_word_previews_with_different_lengths_concatenate(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            sources = [root / "short.wav", root / "long.wav"]
+            for source, frames in zip(sources, (b"\x00\x00", b"\x01\x00\x02\x00")):
+                with wave.open(str(source), "wb") as output:
+                    output.setnchannels(1)
+                    output.setsampwidth(2)
+                    output.setframerate(48000)
+                    output.writeframes(frames)
+            target = root / "bank.wav"
+            _concatenate_pcm_wavs(sources, target)
+            with wave.open(str(target), "rb") as result:
+                self.assertEqual(result.getnframes(), 3)
 
 
 class FirmwareOutputTargetTest(unittest.TestCase):

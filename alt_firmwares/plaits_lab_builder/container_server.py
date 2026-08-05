@@ -14,6 +14,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import wave
 from dataclasses import dataclass
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -22,7 +23,7 @@ from typing import Any, Literal
 
 from generate_engine_config import render_config, validate_recipe
 from render_manual import manual_document, render_pdf
-from speech_banks import render_speech_config
+from speech_banks import render_speech_config, validate_speech_banks
 
 
 WORKSPACE = Path(os.environ.get("PLAITS_WORKSPACE", "/workspace")).resolve()
@@ -235,6 +236,89 @@ def encode_speech_bank(value: Any) -> dict[str, Any]:
         "cache": manifest.get("cache"),
         "wordBoundaries": boundaries,
         "frameData": frame_data,
+    }
+
+
+def _validate_saved_bank_preview_request(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict) or set(value) != {"format", "bank"} \
+            or value.get("format") != "rubato.plaits-lpc-bank-preview/v1":
+        raise BuildError("invalid_request", "The saved Speech preview request is invalid.")
+    try:
+        normalized = validate_speech_banks({"stockBankIds": [], "customBanks": [value["bank"]]})
+    except (KeyError, ValueError, TypeError) as error:
+        raise BuildError("invalid_request", "The saved Speech bank is invalid.", str(error)) from error
+    return normalized["customBanks"][0]
+
+
+def _write_saved_plan(path: Path, frames: list[tuple[int, ...]]) -> None:
+    # Banks produced by _pack_plans carry a duplicated final frame as the
+    # firmware's interpolation guard. It was not part of the original listening
+    # preview, so omit it when the duplicate is present.
+    audible = frames[:-1] if len(frames) > 1 and frames[-1] == frames[-2] else frames
+    path.write_text(
+        "".join(" ".join(str(value) for value in frame) + "\n" for frame in audible),
+        encoding="utf-8",
+    )
+
+
+def _concatenate_pcm_wavs(sources: list[Path], target: Path) -> None:
+    parameters = None
+    chunks = []
+    for source_path in sources:
+        with wave.open(str(source_path), "rb") as source:
+            source_parameters = source.getparams()
+            comparable = (
+                source_parameters.nchannels,
+                source_parameters.sampwidth,
+                source_parameters.framerate,
+                source_parameters.comptype,
+            )
+            if parameters is None:
+                parameters = comparable
+            elif comparable != parameters:
+                raise BuildError("speech_encoding_failed", "The LPC renderer returned incompatible audio.")
+            chunks.append(source.readframes(source.getnframes()))
+    if parameters is None:
+        raise BuildError("speech_encoding_failed", "The LPC renderer returned no audio.")
+    channels, sample_width, sample_rate, _compression = parameters
+    with wave.open(str(target), "wb") as output:
+        output.setnchannels(channels)
+        output.setsampwidth(sample_width)
+        output.setframerate(sample_rate)
+        output.writeframes(b"".join(chunks))
+
+
+def render_saved_speech_bank(value: Any) -> dict[str, Any]:
+    bank = _validate_saved_bank_preview_request(value)
+    encoded = json.dumps(value, sort_keys=True, ensure_ascii=False).encode("utf-8")
+    job_id = _speech_job_key(encoded, "saved-lpc-bank-preview-v1")
+    output = SPEECH_ROOT / "saved-banks" / job_id
+    targets = {mode: output / f"bank-{mode}.wav" for mode in ("natural", "flat")}
+    cached = all(path.is_file() for path in targets.values())
+    if not cached:
+        with SPEECH_LOCK:
+            cached = all(path.is_file() for path in targets.values())
+            if not cached:
+                output.mkdir(parents=True, exist_ok=True)
+                plans = []
+                boundaries = bank["wordBoundaries"]
+                for index in range(len(bank["words"])):
+                    plan = output / f"word-{index:02d}.plan"
+                    _write_saved_plan(plan, bank["frames"][boundaries[index]:boundaries[index + 1]])
+                    plans.append(plan)
+                for mode, prosody in (("natural", "1.0"), ("flat", "0.0")):
+                    chunks = []
+                    for index, plan in enumerate(plans):
+                        chunk = output / f"word-{index:02d}-{mode}.wav"
+                        subprocess.run([
+                            "/usr/local/bin/plaits-render-lpc-bank", str(chunk), prosody, str(plan),
+                        ], check=True, capture_output=True, text=True, timeout=60)
+                        chunks.append(chunk)
+                    _concatenate_pcm_wavs(chunks, targets[mode])
+    return {
+        "jobId": job_id,
+        "cached": cached,
+        "bankAudio": {mode: _data_audio(target) for mode, target in targets.items()},
     }
 
 
@@ -681,6 +765,9 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/speech/encode":
             self.handle_speech_encode()
             return
+        if self.path == "/speech/render-bank":
+            self.handle_speech_render_bank()
+            return
         if self.path == "/speech/encode-recording":
             self.handle_speech_recording()
             return
@@ -748,6 +835,22 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as error:  # noqa: BLE001
             print(f"builder: speech encoding failed: {redact_log(str(error))}", flush=True)
             self.send_json_error(BuildError("speech_encoding_failed", "The Speech bank could not be encoded."), HTTPStatus.INTERNAL_SERVER_ERROR)
+
+    def handle_speech_render_bank(self) -> None:
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            if not 0 < length <= MAX_SPEECH_JSON_BYTES:
+                raise BuildError("invalid_request", "The saved Speech preview request size is invalid.")
+            value = json.loads(self.rfile.read(length))
+            self.send_json(render_saved_speech_bank(value), HTTPStatus.OK)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            self.send_json_error(BuildError("invalid_request", "The saved Speech preview request is not valid JSON."), HTTPStatus.BAD_REQUEST)
+        except BuildError as error:
+            status = HTTPStatus.BAD_REQUEST if error.code == "invalid_request" else HTTPStatus.UNPROCESSABLE_ENTITY
+            self.send_json_error(error, status)
+        except Exception as error:  # noqa: BLE001
+            print(f"builder: saved speech preview failed: {redact_log(str(error))}", flush=True)
+            self.send_json_error(BuildError("speech_encoding_failed", "The saved Speech bank preview could not be rendered."), HTTPStatus.INTERNAL_SERVER_ERROR)
 
     def handle_speech_recording(self) -> None:
         try:

@@ -708,6 +708,11 @@ export default {
           cacheNamespace: "banks-v1",
           maxBytes: 64 * 1024,
         });
+      } else if (request.method === "POST" && url.pathname === "/v1/speech/render-bank") {
+        response = await proxySpeechJson(request, env, "/speech/render-bank", {
+          cacheNamespace: "rendered-banks-v1",
+          maxBytes: 64 * 1024,
+        });
       } else if (request.method === "POST" && url.pathname === "/v1/speech/encode-recording") {
         response = await proxySpeechJson(request, env, "/speech/encode-recording", {
           maxBytes: 4 * 1024 * 1024,
