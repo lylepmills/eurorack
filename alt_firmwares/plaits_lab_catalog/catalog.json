@@ -440,13 +440,14 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Vocal",
-      "description": "The Naive, SAM, and LPC phoneme sides of Mutable Instruments Speech, spread continuously across one playable model.",
+      "description": "A split of Emilie Gillet's Speech model in the Plaits source: Naive, SAM, and LPC phonemes spread continuously across one playable model.",
       "tags": [
         "speech",
         "vocal",
         "formant",
         "sam",
-        "phoneme"
+        "phoneme",
+        "variant"
       ],
       "controls": [
         "Model",
@@ -489,12 +490,13 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Vocal",
-      "description": "The LPC word-bank side of Mutable Instruments Speech, with selected stock or custom banks, direct speed, and recorded prosody.",
+      "description": "A split of Emilie Gillet's Speech model in the Plaits source: LPC word banks with selected stock or custom banks, direct speed, and recorded prosody.",
       "tags": [
         "speech",
         "vocal",
         "words",
-        "lpc"
+        "lpc",
+        "variant"
       ],
       "controls": [
         "Word bank",
