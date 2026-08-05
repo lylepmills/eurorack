@@ -539,13 +539,20 @@ class GenerateEngineConfigTest(unittest.TestCase):
         recipe = self.v6_recipe(slots, [{"index": 0, "bank": self.bank_document(first_byte=42)}])
         config = render_config(validate_recipe(recipe))
         self.assertIn("#define PLAITS_HAS_USER_DATA_BANK_OVERRIDE 1", config)
-        self.assertIn("static const uint8_t kUserDataBankOverride_0[4096] = { 42, 0,", config)
-        # Bank 0 is overridden; banks 1 and 2 are live stock slots, so the resolved
-        # table names syx_bank_1/2 (not NULL). Only syx_bank_0 goes unreferenced and
-        # is dropped by --gc-sections.
+        self.assertIn(
+            'extern const uint8_t kUserDataBankOverride_0[4096] __attribute__(('
+            'section(".user_data_banks.0"), aligned(2048)));',
+            config)
+        self.assertIn(
+            "extern const uint8_t kUserDataBankOverride_0[4096] = { 42, 0,", config)
+        # Bank 0 is overridden; banks 1 and 2 are live stock. All three are
+        # swappable regions, so all three are generator-emitted and no syx_bank_N
+        # is named — --gc-sections drops every factory blob, exactly as it drops
+        # syx_bank_0 alone in the locked build.
         self.assertIn(
             "static const uint8_t* const kResolvedUserDataBank[3] = "
-            "{ kUserDataBankOverride_0, syx_bank_1, syx_bank_2 };",
+            "{ kUserDataBankOverride_0, kUserDataBankOverride_1, "
+            "kUserDataBankOverride_2 };",
             config)
 
     def test_override_for_a_bank_no_engine_uses_is_pruned(self) -> None:
@@ -554,6 +561,26 @@ class GenerateEngineConfigTest(unittest.TestCase):
         config = render_config(validate_recipe(recipe))
         self.assertIn("#define PLAITS_HAS_USER_DATA_BANK_OVERRIDE 0", config)
         self.assertNotIn("kUserDataBankOverride_0", config)
+
+    def locked_recipe(self, slots: list, user_data_banks: list[dict]) -> dict:
+        """A v19 recipe with FM banks LOCKED.
+
+        This is the pre-swappable emission shape — natural bank lengths, no page
+        alignment, syx_bank_N linked in place, no replacement over TIMBRE — and
+        it stays covered because it is exactly what the Advanced preference
+        reverts a build to.
+        """
+        recipe = self.v12_recipe(slots, user_data_banks)
+        recipe["schemaVersion"] = 20
+        recipe["preferences"] = {
+            "navigationMode": "linear",
+            "calibration": False,
+            "colorBlindMode": False,
+            "lockFmBanks": True,
+        }
+        recipe["initialOptions"] = dict(
+            DEFAULT_CONFIGURATION["initialOptions"], attenuverterMode="stock")
+        return recipe
 
     def v12_recipe(self, slots: list, user_data_banks: list[dict]) -> dict:
         return {
@@ -572,7 +599,8 @@ class GenerateEngineConfigTest(unittest.TestCase):
 
     def test_v12_per_slot_bank_gets_a_fresh_index_above_the_factory_three(self) -> None:
         slots = ["dx7-bank-a", "dx7-bank-b", "dx7-bank-c"] + ["virtual-analog"] * 21
-        recipe = self.v12_recipe(slots, [{"slot": 0, "bank": self.bank_document(first_byte=7)}])
+        recipe = self.locked_recipe(
+            slots, [{"slot": 0, "bank": self.bank_document(first_byte=7)}])
         config = render_config(validate_recipe(recipe))
         self.assertIn("#define PLAITS_HAS_USER_DATA_BANK_OVERRIDE 1", config)
         # The customized slot gets index 3 (above factory 0/1/2), with its own array.
@@ -584,10 +612,78 @@ class GenerateEngineConfigTest(unittest.TestCase):
             "{ NULL, syx_bank_1, syx_bank_2, kUserDataBankOverride_3 };",
             config)
 
+    def test_swappable_build_re_emits_live_stock_banks_page_aligned(self) -> None:
+        # The same palette with banks swappable (the default). Every live bank —
+        # including the two STOCK ones — becomes a page-aligned region the module
+        # can erase and reprogram, so the build re-emits them as its own arrays
+        # and never names syx_bank_N. Net flash is unchanged: --gc-sections drops
+        # the factory blobs the copies replaced.
+        slots = ["dx7-bank-a", "dx7-bank-b", "dx7-bank-c"] + ["virtual-analog"] * 21
+        recipe = self.v12_recipe(slots, [{"slot": 0, "bank": self.bank_document(first_byte=7)}])
+        config = render_config(validate_recipe(recipe))
+        self.assertIn("#define PLAITS_HAS_SWAPPABLE_USER_DATA_BANKS 1", config)
+        self.assertNotIn("syx_bank_", config)
+        self.assertIn(
+            "static const uint8_t* const kResolvedUserDataBank[4] = "
+            "{ NULL, kUserDataBankOverride_1, kUserDataBankOverride_2, "
+            "kUserDataBankOverride_3 };",
+            config)
+        # One region per bank the firmware carries, keyed on BANK so two slots
+        # sharing a factory bank both see a transfer through either. The absent
+        # bank 0 gets none, so Save refuses that slot rather than erasing flash
+        # it does not own.
+        self.assertIn(
+            "static const UserDataRegion kUserDataRegions[3] = "
+            "{ { kUserDataBankOverride_1, 1 }, { kUserDataBankOverride_2, 2 }, "
+            "{ kUserDataBankOverride_3, 3 } };",
+            config)
+        self.assertIn("static const int kNumUserDataRegions = 3;", config)
+
+    def test_swappable_banks_are_page_aligned_and_singly_defined(self) -> None:
+        slots = ["dx7-bank-a"] + ["virtual-analog"] * 23
+        recipe = self.v12_recipe(slots, [{"slot": 0, "bank": self.bank_document(first_byte=7)}])
+        config = render_config(validate_recipe(recipe))
+        # 2 KB alignment + a whole-region length is the correctness gate, not
+        # tidiness: UserData::Save erases 2 KB pages, so a bank sharing a page
+        # with code would erase firmware on the first transfer.
+        self.assertIn(
+            'extern const uint8_t kUserDataBankOverride_3[4096] __attribute__(('
+            'section(".user_data_banks.3"), aligned(2048)));',
+            config)
+        # ONE definition program-wide, and EXTERNAL. A namespace-scope const has
+        # internal linkage by default in C++, which left voice.o's copy
+        # file-local and plaits.o's declaration unresolved; and two per-unit
+        # copies at different addresses would have Save (plaits.o) write one
+        # while the engine (voice.o) read the other, so a transfer would appear
+        # to do nothing at all.
+        self.assertIn(
+            "extern const uint8_t kUserDataBankOverride_3[4096] = { 7, 0,", config)
+        self.assertIn("#ifdef PLAITS_ENGINE_CONFIG_OWNS_USER_DATA_BANKS", config)
+        self.assertIn("extern const uint8_t kUserDataBankOverride_3[4096];", config)
+
+    def test_swappable_bank_clears_the_transfer_tag_bytes(self) -> None:
+        # A baked bank must never read back as a TRANSFERRED one: the last two
+        # bytes are where UserData::ptr looks for 'U' + bank. They are the tail
+        # of voice 32's name field, which Plaits never displays, so the generator
+        # clears them (along with the two count bytes below them).
+        slots = ["dx7-bank-a"] + ["virtual-analog"] * 23
+        document = self.bank_document(first_byte=7)
+        document["voices"][31]["packed"] = [ord("X")] * 128
+        recipe = self.v12_recipe(slots, [{"slot": 0, "bank": document}])
+        config = render_config(validate_recipe(recipe))
+        self.assertIn("88, 88, 0, 0, 0, 0 };", config)
+
+    def test_locking_fm_banks_requires_v20(self) -> None:
+        slots = ["dx7-bank-a"] + ["virtual-analog"] * 23
+        recipe = self.locked_recipe(slots, [])
+        recipe["schemaVersion"] = 19
+        with self.assertRaisesRegex(ValueError, "schemaVersion 20"):
+            validate_recipe(recipe)
+
     def test_v12_two_slots_of_the_same_engine_get_distinct_banks(self) -> None:
         # The whole point of v12: two dx7-bank-a placements, each its OWN bank.
         slots = ["dx7-bank-a", "dx7-bank-a", "dx7-bank-c"] + ["virtual-analog"] * 21
-        recipe = self.v12_recipe(slots, [
+        recipe = self.locked_recipe(slots, [
             {"slot": 0, "bank": self.bank_document(first_byte=11)},
             {"slot": 1, "bank": self.bank_document(first_byte=22)},
         ])
@@ -604,7 +700,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
 
     def test_v12_uncustomized_fm_slot_keeps_its_factory_index(self) -> None:
         slots = ["dx7-bank-b"] + ["virtual-analog"] * 23
-        recipe = self.v12_recipe(slots, [])
+        recipe = self.locked_recipe(slots, [])
         config = render_config(validate_recipe(recipe))
         self.assertIn("#define PLAITS_HAS_USER_DATA_BANK_OVERRIDE 0", config)
         self.assertIn("static const int8_t kEngineUserDataBank[24] = {", config)
@@ -654,7 +750,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
 
     def test_v13_short_bank_emits_its_real_size(self) -> None:
         slots = ["dx7-bank-a"] + ["virtual-analog"] * 23
-        recipe = self.v13_recipe(
+        recipe = self.locked_recipe(
             slots, [{"slot": 0, "bank": self.short_bank_document(4, first_byte=9)}])
         config = render_config(validate_recipe(recipe))
         # 4 patches * 128 bytes = a 512-byte array, and a matching size-table entry
@@ -664,9 +760,26 @@ class GenerateEngineConfigTest(unittest.TestCase):
             "static const size_t kResolvedUserDataBankSize[4] = { 4096, 4096, 4096, 512 };",
             config)
 
-    def test_v13_full_bank_keeps_full_size(self) -> None:
+    def test_swappable_short_bank_pads_the_array_but_not_its_length(self) -> None:
+        # A transfer always writes a whole region, so a swappable short bank is
+        # padded up to one — this is the ONLY case where making banks swappable
+        # costs flash, and the Advanced lock preference is what reclaims it.
+        #
+        # The SIZE table must keep the real content length regardless. Padding it
+        # too would make a 4-patch bank sweep 32 Harmonics steps with 28 silent
+        # ones, undoing the short banks shipped in schema v13.
         slots = ["dx7-bank-a"] + ["virtual-analog"] * 23
         recipe = self.v13_recipe(
+            slots, [{"slot": 0, "bank": self.short_bank_document(4, first_byte=9)}])
+        config = render_config(validate_recipe(recipe))
+        self.assertIn("const uint8_t kUserDataBankOverride_3[4096]", config)
+        self.assertIn(
+            "static const size_t kResolvedUserDataBankSize[4] = { 4096, 4096, 4096, 512 };",
+            config)
+
+    def test_v13_full_bank_keeps_full_size(self) -> None:
+        slots = ["dx7-bank-a"] + ["virtual-analog"] * 23
+        recipe = self.locked_recipe(
             slots, [{"slot": 0, "bank": self.bank_document(first_byte=5)}])
         config = render_config(validate_recipe(recipe))
         self.assertIn("static const uint8_t kUserDataBankOverride_3[4096] = { 5, 0,", config)

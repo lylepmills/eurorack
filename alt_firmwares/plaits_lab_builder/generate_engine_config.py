@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,8 @@ from typing import Any
 from speech_banks import validate_speech_banks
 
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+RESOURCES_PATH = REPO_ROOT / "plaits/resources.cc"
 CATALOG_PATH = Path(__file__).resolve().parents[1] / "plaits_lab_catalog/catalog.json"
 PUBLIC_CATALOG_PATH = Path(__file__).resolve().parents[1] / "plaits_lab_catalog/public_catalog.json"
 CHORD_CATALOG_PATH = Path(__file__).resolve().parents[1] / "plaits_lab_chord_tables/catalog.json"
@@ -43,12 +46,17 @@ MAX_USER_DATA_BANKS = 3
 PATCHES_PER_BANK = 32
 PACKED_PATCH_SIZE = 128
 PACKED_BANK_SIZE = PATCHES_PER_BANK * PACKED_PATCH_SIZE  # 4096
+# STM32F37x flash page (stmlib/system/flash_programming.h). A swappable bank is
+# erased a page at a time, so PACKED_BANK_SIZE must be a whole number of pages
+# and each bank must start on one — see the alignment note in render_config.
+FLASH_PAGE_SIZE = 2048
+assert PACKED_BANK_SIZE % FLASH_PAGE_SIZE == 0
 
 # Keep this ceiling in lockstep with src/contract.ts. Feature gates use minimum
 # versions so adding a schema at the ceiling does not require extending a trail
 # of "10, 11, 12..." whitelists in the build container.
 MIN_RECIPE_SCHEMA_VERSION = 2
-MAX_RECIPE_SCHEMA_VERSION = 19
+MAX_RECIPE_SCHEMA_VERSION = 20
 CONFIGURATION_MIN_SCHEMA_VERSION = 4
 RESOURCES_MIN_SCHEMA_VERSION = 5
 FOUR_BANK_MIN_SCHEMA_VERSION = 6
@@ -65,6 +73,7 @@ LEVEL_AUTO_MIN_SCHEMA_VERSION = 16
 SPEECH_BANKS_MIN_SCHEMA_VERSION = 17
 ATTENUVERTER_MODE_MIN_SCHEMA_VERSION = 18
 ONE_KNOB_ENVELOPE_MIN_SCHEMA_VERSION = 19
+LOCK_FM_BANKS_MIN_SCHEMA_VERSION = 20
 
 # These two stock physical-model engines can treat the alternate contour as
 # energy entering a resonator rather than as a VCA after it.  Keep this list in
@@ -138,6 +147,46 @@ class BuildRecipe:
     stereo_engines: tuple[str, ...] | None = None
     # v17: selected stock LPC banks followed by custom decoded-frame banks.
     speech_banks: dict[str, Any] | None = None
+    # v19: 1 locks FM banks into place — they are emitted at their natural length
+    # with no page alignment, and no bank can be replaced over TIMBRE. 0 (the
+    # default) makes every FM bank swappable: its baked array is the flash region
+    # a transfer erases and reprograms, so swapping costs nothing beyond padding
+    # a SHORT bank up to a whole 4096-byte region. Locking is therefore only ever
+    # worth it to reclaim that short-bank padding.
+    lock_fm_banks: int = 0
+
+
+_FACTORY_BANK_RE = re.compile(
+    r"const uint8_t syx_bank_(\d+)\[\] = \{(.*?)\};", re.DOTALL)
+_factory_bank_cache: dict[int, bytes] | None = None
+
+
+def load_factory_bank_bytes() -> dict[int, bytes]:
+    """The three built-in DX7 banks, read out of the generated resources.cc.
+
+    A swappable build re-emits these rather than linking resources.cc's arrays
+    in place, so it can clear the tag bytes (see render_config). resources.cc is
+    itself generated ("make resources") and its shape is stable; every bank is
+    asserted to be exactly one region so a format drift fails the build loudly
+    instead of silently producing a mis-sized region.
+    """
+    global _factory_bank_cache
+    if _factory_bank_cache is None:
+        source = RESOURCES_PATH.read_text(encoding="utf-8")
+        banks: dict[int, bytes] = {}
+        for match in _FACTORY_BANK_RE.finditer(source):
+            values = [int(token) for token in match.group(2).split(",") if token.strip()]
+            if len(values) != PACKED_BANK_SIZE:
+                raise ValueError(
+                    f"syx_bank_{match.group(1)} is {len(values)} bytes, "
+                    f"expected {PACKED_BANK_SIZE}")
+            banks[int(match.group(1))] = bytes(values)
+        if len(banks) != MAX_USER_DATA_BANKS:
+            raise ValueError(
+                f"expected {MAX_USER_DATA_BANKS} factory banks in "
+                f"{RESOURCES_PATH.name}, found {len(banks)}")
+        _factory_bank_cache = banks
+    return _factory_bank_cache
 
 
 def load_catalog() -> dict[str, Engine]:
@@ -562,6 +611,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
         {"navigationMode"},
         {"navigationMode", "calibration"},
         {"navigationMode", "calibration", "colorBlindMode"},
+        {"navigationMode", "calibration", "colorBlindMode", "lockFmBanks"},
     ) or (set(options) != legacy_option_keys and not carries_attenuverter_mode):
         raise ValueError("recipe contains an unsupported firmware option")
     # The Worker stores a fully normalized option profile and therefore adds
@@ -720,6 +770,19 @@ def validate_recipe(value: Any) -> BuildRecipe:
             f"color-blind bank display requires schemaVersion "
             f"{COLOR_BLIND_MODE_MIN_SCHEMA_VERSION}")
 
+    # Locking FM banks (v19). Compile-time-only like the two above, so it must
+    # not touch the profile-id fold either. Default FALSE: every FM bank is
+    # replaceable over TIMBRE, which is free for a full 32-voice bank and costs a
+    # SHORT bank the padding up to a whole 4096-byte flash region. Locking gives
+    # that padding back and disables replacement.
+    lock_fm_banks = bool(preferences.get("lockFmBanks", False))
+    if not isinstance(preferences.get("lockFmBanks", False), bool):
+        raise ValueError("recipe contains an unsupported firmware option")
+    if lock_fm_banks and schema_version < LOCK_FM_BANKS_MIN_SCHEMA_VERSION:
+        raise ValueError(
+            f"locking FM banks requires schemaVersion "
+            f"{LOCK_FM_BANKS_MIN_SCHEMA_VERSION}")
+
     return BuildRecipe(
         public_slots=public_slots,
         chord_tables=chord_tables,
@@ -728,6 +791,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
         enable_calibration=1 if enable_calibration else 0,
         roved_panel=1 if target == "plum-audio-roved" else 0,
         color_blind_mode=1 if color_blind_mode else 0,
+        lock_fm_banks=1 if lock_fm_banks else 0,
         user_data_bank_overrides=tuple(user_data_banks),
         slot_bank_overrides=tuple(slot_banks),
         stereo_engines=stereo_engines,
@@ -911,28 +975,110 @@ def render_config(recipe: BuildRecipe) -> str:
     factory_arrays = [(index, factory_override[index]) for index in sorted(used_factory)
                       if index in factory_override]
     override_arrays_all = factory_arrays + custom_arrays           # unique indices
-    override_by_index = {index for index, _ in override_arrays_all}
     # The pointer table must span every bank index the engine table can reference:
     # indices 0..2 (factory, possibly overridden) plus every allocated custom one.
     table_size = next_custom_index
     has_user_data_bank = any(item.user_data_bank >= 0 for item in selected)
-    # Each baked override array is only as long as its bank needs (n patches * 128
-    # bytes); a short bank costs proportionally less flash. voice.cc reads the
-    # matching length from kResolvedUserDataBankSize (below) so the engine sizes
-    # its Harmonics quantizer to that count.
-    size_by_index = {index: len(data) for index, data in override_arrays_all}
-    override_arrays = "\n".join(
-        "static const uint8_t kUserDataBankOverride_{index}[{size}] = {{ {body} }};".format(
-            index=index, size=len(data), body=", ".join(str(byte) for byte in data)
+
+    # Every FM bank in the build is REPLACEABLE over audio: a bank's baked array
+    # IS the flash region a transfer erases and reprograms. Nothing is reserved —
+    # the 4 KB a bank already occupies simply becomes rewritable — which is why
+    # this is free, and why an un-transferred slot needs no empty state: it reads
+    # its baked bank like any other slot.
+    #
+    # The one cost is alignment. UserData::Save erases 2 KB flash PAGES, so a
+    # region must cover whole pages with nothing else in them; a region sharing a
+    # page with code or rodata would destroy the firmware on the first transfer.
+    # So each bank is padded to PACKED_BANK_SIZE (= two pages) and 2 KB-aligned
+    # in its OWN .user_data_banks.<i> section. Per-bank sections matter: one
+    # shared section would defeat --gc-sections' ability to drop an unreferenced
+    # bank individually, undoing the factory-bank strip.
+    #
+    # The Advanced "lock FM banks" preference (v19) turns all of this off, giving
+    # a SHORT bank its padding back at the cost of live replacement.
+    swappable = has_user_data_bank and not recipe.lock_fm_banks
+
+    # A LIVE STOCK bank normally links straight to resources.cc's syx_bank_N. A
+    # swappable build cannot use those in place: their last bytes are real DX7
+    # name characters, and 'U' followed by ' ' + bank would make a baked bank
+    # read back as a transferred one. (None of the three alias today — their
+    # tails are " 4  ", "SNAR", "MPET" — but that is luck, not a guarantee, and
+    # the failure would be silent and data-dependent.) So the generator emits its
+    # own copy with those bytes cleared. syx_bank_N then goes unreferenced and
+    # --gc-sections drops it, so this costs nothing.
+    if swappable:
+        stock_live = sorted(
+            index for index in used_factory
+            if index not in {i for i, _ in override_arrays_all}
         )
-        for index, data in override_arrays_all
+        if stock_live:
+            factory_banks = load_factory_bank_bytes()
+            override_arrays_all = override_arrays_all + [
+                (index, factory_banks[index]) for index in stock_live
+            ]
+    override_by_index = {index for index, _ in override_arrays_all}
+    # Each baked bank's REAL content length — the number of packed patch bytes
+    # behind the pointer, NOT the emitted array size. A swappable short bank is
+    # padded up to a whole region, but voice.cc must still size the engine's
+    # Harmonics quantizer to the patches that are actually there, or a 3-patch
+    # bank would sweep 32 steps with 29 silent ones and schema v13's short banks
+    # would be undone.
+    size_by_index = {index: len(data) for index, data in override_arrays_all}
+
+    def _bank_bytes(data: bytes) -> bytes:
+        """The bytes actually emitted for a baked bank array."""
+        if not swappable:
+            return bytes(data)
+        padded = bytearray(data) + bytes(PACKED_BANK_SIZE - len(data))
+        # Clear the count/tag bytes so a BAKED bank can never be misread as a
+        # TRANSFERRED one by UserData::ptr. They are the tail of voice 32's name
+        # field, which Plaits never displays.
+        padded[PACKED_BANK_SIZE - 4:] = b"\x00\x00\x00\x00"
+        return bytes(padded)
+
+    def _bank_attribute(index: int) -> str:
+        if not swappable:
+            return ""
+        return (f' __attribute__((section(".user_data_banks.{index}"),'
+                f" aligned({FLASH_PAGE_SIZE})))")
+
+    def _render_bank_array(index: int, data: bytes) -> str:
+        body = ", ".join(str(byte) for byte in _bank_bytes(data))
+        size = len(_bank_bytes(data))
+        if not swappable:
+            return (f"static const uint8_t kUserDataBankOverride_{index}[{size}]"
+                    f" = {{ {body} }};")
+        # ONE definition program-wide, not a static per translation unit: the
+        # region table hands its address to UserData::Save (plaits.cc) while
+        # voice.cc reads through the same pointer, and two copies at different
+        # addresses would have Save write one and the engine read the other. The
+        # makefile gives voice.o the owning define; every other unit that force-
+        # includes this header sees a declaration and skips the initializer.
+        # `extern` on the DEFINITION is load-bearing, not decoration: a
+        # namespace-scope const has INTERNAL linkage by default in C++, so
+        # without it voice.o's definition stays file-local and plaits.o's
+        # declaration fails to link.
+        return (
+            f"#ifdef PLAITS_ENGINE_CONFIG_OWNS_USER_DATA_BANKS\n"
+            f"extern const uint8_t kUserDataBankOverride_{index}[{size}]"
+            f"{_bank_attribute(index)};\n"
+            f"extern const uint8_t kUserDataBankOverride_{index}[{size}]"
+            f" = {{ {body} }};\n"
+            f"#else\n"
+            f"extern const uint8_t kUserDataBankOverride_{index}[{size}];\n"
+            f"#endif"
+        )
+
+    override_arrays = "\n".join(
+        _render_bank_array(index, data) for index, data in override_arrays_all
     )
     # Resolve every reachable bank index to its actual data pointer AT BUILD TIME,
     # so the firmware never NAMES a factory blob it can't reach. Per index:
     #   * overridden (a v6 whole-bank override, or a v12 per-slot custom bank) ->
     #     its baked kUserDataBankOverride_i array;
     #   * a live stock factory bank (a placed, un-customized slot maps to it) ->
-    #     syx_bank_i;
+    #     syx_bank_i, or — in a swappable build — the generator's own cleared,
+    #     page-aligned copy of it, which is likewise a kUserDataBankOverride_i;
     #   * absent (customized away, or a factory bank no slot placed) -> NULL.
     # Because syx_bank_i is now referenced ONLY here and ONLY for live banks, and
     # voice.cc no longer names fm_patches_table in a generated build, --gc-sections
@@ -961,9 +1107,24 @@ def render_config(recipe: BuildRecipe) -> str:
         count=table_size,
         sizes=", ".join(str(_resolved_size(i)) for i in range(table_size)),
     ) if has_user_data_bank else ""
+    # One region per BANK the firmware actually carries — the flash that bank's
+    # baked array occupies, which a TIMBRE transfer erases and reprograms in
+    # place. Keyed on bank, not slot: two placed slots may map to one factory
+    # bank and share its 4 KB, and both must see a transfer made through either.
+    # An absent (NULL) bank gets no region, so Save refuses that slot instead of
+    # erasing an address it does not own.
+    region_banks = [i for i in range(table_size) if _resolved_pointer(i) != "NULL"]
+    regions_table = (
+        "static const UserDataRegion kUserDataRegions[{count}] = {{ {entries} }};\n"
+        "static const int kNumUserDataRegions = {count};".format(
+            count=len(region_banks),
+            entries=", ".join(
+                f"{{ {_resolved_pointer(i)}, {i} }}" for i in region_banks),
+        )
+    ) if swappable and region_banks else ""
     user_data_bank_override_block = (
         f"\n#if PLAITS_HAS_USER_DATA_BANK\n{override_arrays}\n{resolved_table}\n"
-        f"{resolved_size_table}\n#endif\n"
+        f"{resolved_size_table}\n{regions_table}\n#endif\n"
         if has_user_data_bank else ""
     )
 
@@ -980,6 +1141,7 @@ def render_config(recipe: BuildRecipe) -> str:
 
 {includes}
 #include "plaits/resources.h"
+#include "plaits/user_data_region.h"
 
 #define PLAITS_ENGINE_COUNT {len(selected)}
 #define PLAITS_BANK_SIZES {{ {", ".join(str(size) for size in bank_sizes)} }}
@@ -991,6 +1153,11 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_HAS_USER_DATA_BANK_OVERRIDE {1 if override_arrays_all else 0}
 #define PLAITS_HAS_RESOLVED_USER_DATA_BANK {1 if has_user_data_bank else 0}
 #define PLAITS_RESONATOR_ENVELOPE_ENGINE_MASK 0x{resonator_envelope_mask:08x}u
+// Every FM bank's baked array doubles as the flash region a TIMBRE transfer
+// erases and reprograms, so any bank can be replaced without a reflash. 0 when
+// the Advanced "lock FM banks" preference is set (or there are no FM banks):
+// banks are then emitted at their natural length, unaligned and unreplaceable.
+#define PLAITS_HAS_SWAPPABLE_USER_DATA_BANKS {1 if swappable and region_banks else 0}
 
 #define PLAITS_RANDOMIZER_PROFILES {{ {randomizer_profile_values} }}
 #define PLAITS_ENGINE_RANDOMIZER_PROFILE_INDICES {{ {randomizer_pair_values} }}

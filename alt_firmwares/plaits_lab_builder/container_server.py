@@ -24,9 +24,20 @@ from typing import Any, Literal
 from generate_engine_config import render_config, validate_recipe
 from render_manual import manual_document, render_pdf
 from speech_banks import render_speech_config, validate_speech_banks
+from user_data_regions import check_elf, render_linker_script
 
 
 WORKSPACE = Path(os.environ.get("PLAITS_WORKSPACE", "/workspace")).resolve()
+STOCK_LINKER_SCRIPT = (
+    WORKSPACE / "stmlib/linker_scripts/stm32f373x_flash_application_large.ld")
+_REGION_COUNT_RE = re.compile(r"^static const int kNumUserDataRegions = (\d+);", re.MULTILINE)
+
+
+def _declared_region_count(config_text: str) -> int:
+    """How many swappable FM bank regions the generated config declares."""
+    match = _REGION_COUNT_RE.search(config_text)
+    return int(match.group(1)) if match else 0
+
 BUILD_ROOT = Path(os.environ.get("PLAITS_BUILD_ROOT", "/tmp/plaits-builds")).resolve()
 SOURCE_REVISION = os.environ.get("PLAITS_SOURCE_REVISION", "development")
 BUILD_CONTRACT_VERSION = os.environ.get("PLAITS_BUILD_CONTRACT", "2")
@@ -402,6 +413,30 @@ def parse_size(elf_path: Path) -> tuple[int, int, int]:
     return int(fields[0]), int(fields[1]), int(fields[2])
 
 
+# Where the bootloader starts writing, and so where the application image
+# begins (stmlib/makefile.inc BASE_ADDRESS, plaits/bootloader kStartAddress).
+APPLICATION_BASE_ADDRESS = 0x08008000
+
+
+def _linked_flash_span(elf_path: Path) -> int:
+    """Bytes of flash the linked image actually occupies, padding included.
+
+    `size` reports the sum of SECTION sizes, which silently omits alignment
+    padding between them — and page-aligning the swappable bank regions creates
+    exactly that kind of gap. The gap is real: objcopy writes it into plaits.bin
+    and the bootloader programs it. _etext marks the end of everything loaded
+    into flash, so the span from the application base is the honest figure.
+    """
+    result = subprocess.run(
+        ["/usr/local/arm-4.8.3/bin/arm-none-eabi-nm", str(elf_path)],
+        check=True, capture_output=True, text=True, timeout=30)
+    for line in result.stdout.splitlines():
+        fields = line.split()
+        if len(fields) == 3 and fields[2] == "_etext":
+            return int(fields[0], 16) - APPLICATION_BASE_ADDRESS
+    return 0
+
+
 # The application flash region (224 KB) and usable RAM budget (32 KB less a 1 KB
 # stack reserve) the linked firmware must fit — kept in sync with the values the
 # post-link size check and the stm32f373x_flash_application_large.ld linker
@@ -561,10 +596,25 @@ def build_firmware(payload: Any) -> tuple[Path, FirmwareOutput, dict[str, str]]:
     config_path = build_dir / "engine_config.h"
     speech_config_path = build_dir / "speech_config.h"
     recipe_path = build_dir / "recipe.json"
-    config_path.write_text(render_config(validated_recipe), encoding="utf-8")
+    config_text = render_config(validated_recipe)
+    config_path.write_text(config_text, encoding="utf-8")
     speech_config_path.write_text(
         render_speech_config(validated_recipe.speech_banks), encoding="utf-8")
     recipe_path.write_text(json.dumps(recipe, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
+
+    # Swappable FM banks need their own page-aligned output section, which means
+    # a linker script this build owns. stmlib is an UPSTREAM submodule
+    # (pichenettes/stmlib) and is never edited: the stock script is read, the
+    # section spliced in, and the result passed with LINKER_SCRIPT. A build with
+    # banks locked (or with no FM banks) passes nothing and links against the
+    # stock script byte-for-byte, exactly as before.
+    region_count = _declared_region_count(config_text)
+    linker_script_path: Path | None = None
+    if region_count:
+        linker_script_path = build_dir / "plaits_user_banks.ld"
+        linker_script_path.write_text(
+            render_linker_script(STOCK_LINKER_SCRIPT.read_text(encoding="utf-8")),
+            encoding="utf-8")
 
     command = [
         "make",
@@ -583,6 +633,10 @@ def build_firmware(payload: Any) -> tuple[Path, FirmwareOutput, dict[str, str]]:
         "DEPS=",
         "-j4",
     ]
+    if linker_script_path is not None:
+        # A command-line variable beats makefile.inc's own assignment, so this
+        # overrides the stock script without touching the stmlib submodule.
+        command.append(f"LINKER_SCRIPT={linker_script_path}")
     # Both formats come from the same application ELF. WAV encodes its raw
     # binary for Plaits' audio bootloader; Intel HEX preserves the linked
     # application addresses for a direct programmer. The HEX deliberately does
@@ -646,9 +700,30 @@ def build_firmware(payload: Any) -> tuple[Path, FirmwareOutput, dict[str, str]]:
     if not artifact_path.is_file() or not bin_path.is_file() or not elf_path.is_file():
         raise BuildError("invalid_artifact", "The compiler did not produce every required firmware artifact.", log)
 
+    # THE correctness gate for swappable FM banks. UserData::Save erases 2 KB
+    # flash pages, so a bank region that shares a page with .text or .rodata
+    # would erase firmware the first time a user sends that slot a bank — a
+    # bricked module, not a degraded feature. Only the linked ELF can prove the
+    # placement held, so the build fails here rather than shipping the image.
+    if region_count:
+        try:
+            check_elf(elf_path, region_count)
+        except ValueError as error:
+            raise BuildError(
+                "internal_error",
+                "The firmware build produced an unsafe flash layout. This is a "
+                "fault on our end rather than your palette — please report it.",
+                f"{log}\nuser-data region check: {error}",
+            ) from error
+
     text_bytes, data_bytes, bss_bytes = parse_size(elf_path)
-    if text_bytes + data_bytes > FLASH_BUDGET_BYTES:
-        over = text_bytes + data_bytes - FLASH_BUDGET_BYTES
+    # Measure the image the way flash actually holds it. `size` sums SECTION
+    # sizes, which excludes the padding the linker inserts to page-align the
+    # bank regions — real bytes that are present in plaits.bin. Using the span
+    # from the application base to _etext counts them.
+    flash_bytes = max(text_bytes + data_bytes, _linked_flash_span(elf_path))
+    if flash_bytes > FLASH_BUDGET_BYTES:
+        over = flash_bytes - FLASH_BUDGET_BYTES
         raise BuildError(
             "flash_budget_exceeded",
             f"This palette is too large for Plaits' flash memory by {over} bytes. "

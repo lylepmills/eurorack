@@ -229,12 +229,16 @@ void Voice::Render(
     }
     UserData user_data;
     const uint8_t* data = user_data.ptr(engine_index);
-    // Number of valid packed patch bytes behind `data`. A runtime TIMBRE-loaded
-    // bank and every built-in factory bank are full 32-patch banks; only a
-    // recipe-baked custom bank may be shorter, in which case its length comes
-    // from the generated size table. LoadUserData sizes the engine's Harmonics
-    // quantizer to length / SYX_SIZE, so a short bank sweeps only its own patches.
-    size_t data_length = UserData::SIZE;
+    // Number of valid packed patch bytes behind `data`. Every built-in factory
+    // bank is a full 32-patch bank; a recipe-baked custom bank may be shorter,
+    // in which case its length comes from the generated size table, and a
+    // TIMBRE-transferred bank declares its own count (below). LoadUserData sizes
+    // the engine's Harmonics quantizer to length / SYX_SIZE, so a short bank
+    // sweeps only its own patches.
+    // A transferred bank declares its own patch count (UserData::bank_length),
+    // so a short pick list sent over TIMBRE gives that many HARMONICS steps
+    // rather than repeating to fill 32.
+    size_t data_length = UserData::bank_length(data);
 #if PLAITS_HAS_USER_DATA_BANK
     if (!data && kEngineUserDataBank[engine_index] >= 0) {
       const int bank = kEngineUserDataBank[engine_index];

@@ -36,7 +36,7 @@ export type NormalizedChordTable = {
 // feature gates below use minimums so a newly supported schema cannot get
 // stranded behind an old "10, 11, 12..." whitelist.
 export const minRecipeSchemaVersion = 2;
-export const maxRecipeSchemaVersion = 19;
+export const maxRecipeSchemaVersion = 20;
 const configurationMinSchemaVersion = 4;
 const resourcesMinSchemaVersion = 5;
 const fourBankMinSchemaVersion = 6;       // 32 slots

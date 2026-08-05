@@ -104,6 +104,14 @@ RECIPE_CONFIG_OBJS = voice.o plaits.o ui.o settings.o chord_bank.o scale_voices.
 ifneq ($(ENGINE_CONFIG),)
 $(patsubst %,$(BUILD_DIR)%,$(RECIPE_CONFIG_OBJS)): CPPFLAGS += -include $(ENGINE_CONFIG)
 $(patsubst %,$(BUILD_DIR)%,$(RECIPE_CONFIG_OBJS)): $(ENGINE_CONFIG)
+# Exactly ONE object defines the swappable FM bank arrays; the rest see a
+# declaration and skip the initializers. The single definition is what makes the
+# region table meaningful — two per-unit copies would sit at different addresses,
+# so UserData::Save (plaits.o) would erase and reprogram one while the engine
+# (voice.o) kept reading the other, and a transfer would appear to do nothing.
+# It also keeps six of the seven recipe-config objects from parsing up to 16 KB
+# of packed patch data they never reference.
+$(BUILD_DIR)voice.o: CPPFLAGS += -DPLAITS_ENGINE_CONFIG_OWNS_USER_DATA_BANKS
 endif
 
 # Speech-bank data is independent of the engine registry and can be much larger
