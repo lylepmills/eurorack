@@ -15,8 +15,6 @@ import {
 import { deadLetterAction } from "./dead_letter";
 import { corsHeaders } from "./cors";
 
-const DEAD_LETTER_QUEUE = "plaits-lab-builds-dead-letter";
-
 type JobStatus = "queued" | "building" | "succeeded" | "failed";
 
 type ManualState = {
@@ -613,6 +611,13 @@ async function processBuild(message: Message<BuildMessage>, env: Env): Promise<v
     message.ack();
   } catch (error) {
     if (message.attempts >= 5) {
+      console.error(JSON.stringify({
+        message: "firmware build retries exhausted",
+        deploymentEnvironment: env.DEPLOYMENT_ENVIRONMENT,
+        buildId,
+        errorCode: "compiler_retry_exhausted",
+        error: String(error),
+      }));
       await job.setState({
         ...baseState,
         status: "failed",
@@ -629,7 +634,13 @@ async function processBuild(message: Message<BuildMessage>, env: Env): Promise<v
       manual: { status: "pending", manualKey },
       error: { code: "retrying", message: "The compiler is retrying this build." },
     });
-    console.error(JSON.stringify({ message: "firmware build will retry", buildId, error: String(error) }));
+    console.error(JSON.stringify({
+      message: "firmware build will retry",
+      deploymentEnvironment: env.DEPLOYMENT_ENVIRONMENT,
+      buildId,
+      errorCode: "compiler_retry",
+      error: String(error),
+    }));
     message.retry({ delaySeconds: Math.min(300, 60 * message.attempts) });
   } finally {
     await container.destroy().catch(() => undefined);
@@ -685,6 +696,8 @@ export default {
         response = json({
           schemaVersion: 2,
           recipeSchemaVersion: maxRecipeSchemaVersion,
+          deploymentEnvironment: env.DEPLOYMENT_ENVIRONMENT,
+          sourceRevision: env.PLAITS_SOURCE_REVISION,
           approvedEngineIds,
           chordTables: approvedChordTables,
           // userDataBanks: v12 keys banks per slot, so the ceiling is the slot
@@ -750,12 +763,30 @@ export default {
       }));
       response = json({ error: { code: "internal_error", message: "The firmware service could not complete this request." } }, { status: 500 });
     }
+    if (!response.ok) {
+      let errorCode = "unknown_error";
+      try {
+        const payload = await response.clone().json() as { error?: string | { code?: string } };
+        errorCode = typeof payload.error === "object" && payload.error?.code
+          ? payload.error.code
+          : typeof payload.error === "string" ? "speech_request_failed" : errorCode;
+      } catch { /* A non-JSON failure still gets a status/path event. */ }
+      console.warn(JSON.stringify({
+        message: "build-service request failed",
+        environment: env.DEPLOYMENT_ENVIRONMENT,
+        method: request.method,
+        path: url.pathname,
+        status: response.status,
+        errorCode,
+        ray: request.headers.get("CF-Ray"),
+      }));
+    }
     cors.forEach((value, name) => response.headers.set(name, value));
     return response;
   },
 
   async queue(batch: MessageBatch<BuildMessage>, env: Env): Promise<void> {
-    if (batch.queue === DEAD_LETTER_QUEUE) {
+    if (batch.queue === env.DEAD_LETTER_QUEUE) {
       await Promise.all(batch.messages.map((message) => recordDeadLetter(message, env)));
       return;
     }

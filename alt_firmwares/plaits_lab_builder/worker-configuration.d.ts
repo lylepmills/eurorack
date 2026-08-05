@@ -5,6 +5,8 @@ interface __BaseEnv_Env {
 	ARTIFACTS: R2Bucket;
 	BUILD_QUEUE: Queue;
 	BUILD_RATE_LIMITER: RateLimit;
+	DEPLOYMENT_ENVIRONMENT: "production" | "staging";
+	DEAD_LETTER_QUEUE: string;
 	PUBLIC_ORIGINS: "https://rubato.audio,https://www.rubato.audio";
 	PLAITS_SOURCE_REVISION: "8ab5c8c018a2";
 	PLAITS_TOOLCHAIN_ID: "gcc-arm-none-eabi-4.8-2013q4";

@@ -34,3 +34,14 @@ test("CORS does not permit untrusted origins", () => {
   assert.equal(headers.get("Access-Control-Allow-Methods"), null);
   assert.equal(headers.get("Vary"), "Origin");
 });
+
+test("the isolated staging site is an explicit allowed origin", () => {
+  const origin = "https://rubato-audio-staging.pages.dev";
+  const headers = corsHeaders(
+    new Request("https://plaits-api-staging.rubato.audio/v1/catalog", {
+      headers: { Origin: origin },
+    }),
+    "https://rubato-audio-staging.pages.dev,https://staging.rubato.audio",
+  );
+  assert.equal(headers.get("Access-Control-Allow-Origin"), origin);
+});

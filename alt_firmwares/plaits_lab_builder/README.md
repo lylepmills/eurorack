@@ -292,8 +292,42 @@ Container are managed by `wrangler.jsonc`. Before each firmware-source rollout:
    substitute for deploying the builder allowlist and website snapshot from one
    commit.
 5. Run the contract, generator, type, and dry-run deployment checks.
-6. Deploy with `pnpm run deploy` (not `pnpm deploy`, which is pnpm's built-in
-   workspace-deploy command) and wait for the Container image rollout.
+6. Deploy the candidate to the named staging environment with `pnpm run
+   deploy:staging`. Staging uses a one-step Container rollout so the old and new
+   image do not temporarily consume its two-instance test capacity. It uses the
+   same immutable image tag and source
+   revision as production, but separate Durable Object namespaces, queues,
+   dead-letter queue, R2 artifact bucket, and rate-limit namespace. Its stable
+   endpoint is `https://plaits-api-staging.rubato.audio`.
+7. Deploy the noindex `rubato-audio-staging` Pages project, then run the one
+   intentionally slow release gate:
+
+   ```sh
+   PLAITS_EXPECTED_SOURCE_REVISION=<revision> \
+   PLAITS_STAGING_ARTIFACT_DIR=<hardware-gate-dir> \
+   pnpm run smoke:staging
+   ```
+
+   It checks CORS and environment identity, source-voice and stock-bank
+   previews, text encoding, saved-bank preview restoration, one real
+   Speech-only firmware compile with reduced stock banks, both downloads, and
+   writes the exact WAV/recipe used by the gate. A repeat against the same
+   revision reuses the staging caches. The smoke tolerates only the bounded
+   503/522 window while a newly created Container application provisions; all
+   other failures stop immediately.
+8. Flash and play the exact staged WAV. Only after that pass, deploy production
+   with `pnpm run deploy` (not `pnpm deploy`, which is pnpm's built-in
+   workspace-deploy command). This promotes the already-pushed image; do not
+   rebuild it between staging and production. Wait for the Container rollout,
+   then exercise the production canary before enabling a new public UI flag.
+
+Website-only releases keep their ordinary build path. The real compiler smoke
+is a builder/firmware release gate, not a tax on every copy or CSS deploy.
+
+The first full staging gate passed on physical Plaits hardware on August 5,
+2026, using the exact `rev-812937f27ada` staged WAV. The module booted and
+navigated normally, produced audio, and played the custom "staging speech
+hardware check" bank.
 
 Cloudflare's rate-limit binding allows five new compilation requests per source
 IP per minute. Cache hits and repeated polls for an already queued build bypass
@@ -304,10 +338,12 @@ artifacts.
 The production compiler image is
 `plaits-lab-build-service-firmwarebuilder:rev-d554b7f46dc0` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
-full history — keep this line in step with its last row). After deploying a
-new image, wait for `wrangler containers list` to report `ready` before smoke
-testing; requests made while the application was still `provisioning` reached
-the previous live instance during the schema-5 rollout.
+full history — keep this line in step with its last row). After deploying a new
+image, use `wrangler containers info <application-id>` and wait for a healthy
+instance before treating preview/compile failures as application failures. A
+first-time staging application can temporarily return "no Container instance
+available" while its image is starting; the bounded staging smoke retries that
+response.
 
 Schema 19 is live, adding the triggered and gated FREQUENCY contours as the
 fifth and sixth locked-knob assignments. It inherits schema 18's Stock, Drift,

@@ -14,6 +14,8 @@
     "cpu_ms": 300000
   },
   "vars": {
+    "DEPLOYMENT_ENVIRONMENT": "production",
+    "DEAD_LETTER_QUEUE": "plaits-lab-builds-dead-letter",
     "PUBLIC_ORIGINS": "https://rubato.audio,https://www.rubato.audio",
     "PLAITS_SOURCE_REVISION": "d554b7f46dc0",
     "PLAITS_TOOLCHAIN_ID": "gcc-arm-none-eabi-4.8-2013q4",
@@ -110,6 +112,114 @@
     "traces": {
       "enabled": true,
       "head_sampling_rate": 0.1
+    }
+  },
+  "env": {
+    "staging": {
+      "name": "plaits-lab-build-service-staging",
+      "routes": [
+        {
+          "pattern": "plaits-api-staging.rubato.audio",
+          "custom_domain": true
+        }
+      ],
+      "limits": {
+        "cpu_ms": 300000
+      },
+      "vars": {
+        "DEPLOYMENT_ENVIRONMENT": "staging",
+        "DEAD_LETTER_QUEUE": "plaits-lab-builds-dead-letter-staging",
+        "PUBLIC_ORIGINS": "https://rubato-audio-staging.pages.dev,https://staging.rubato.audio",
+        "PLAITS_SOURCE_REVISION": "174d93845372",
+        "PLAITS_TOOLCHAIN_ID": "gcc-arm-none-eabi-4.8-2013q4",
+        "PLAITS_BUILD_CONTRACT": "2",
+        "PLAITS_MANUAL_CONTRACT": "14"
+      },
+      "containers": [
+        {
+          "class_name": "FirmwareBuilder",
+          "image": "registry.cloudflare.com/256bac4d555b969399df16f575c5f464/plaits-lab-build-service-firmwarebuilder:rev-174d93845372",
+          "instance_type": "standard-4",
+          "max_instances": 2
+        }
+      ],
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "FIRMWARE_BUILDER",
+            "class_name": "FirmwareBuilder"
+          },
+          {
+            "name": "BUILD_JOBS",
+            "class_name": "BuildJob"
+          }
+        ]
+      },
+      "migrations": [
+        {
+          "tag": "v1",
+          "new_sqlite_classes": ["FirmwareBuilder", "BuildJob"]
+        },
+        {
+          "tag": "v2",
+          "new_sqlite_classes": ["CustomerGate"]
+        },
+        {
+          "tag": "v3",
+          "deleted_classes": ["CustomerGate"]
+        }
+      ],
+      "ratelimits": [
+        {
+          "name": "BUILD_RATE_LIMITER",
+          "namespace_id": "7241702",
+          "simple": {
+            "limit": 5,
+            "period": 60
+          }
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "ARTIFACTS",
+          "bucket_name": "plaits-lab-firmwares-preview"
+        }
+      ],
+      "queues": {
+        "producers": [
+          {
+            "binding": "BUILD_QUEUE",
+            "queue": "plaits-lab-builds-staging"
+          }
+        ],
+        "consumers": [
+          {
+            "queue": "plaits-lab-builds-staging",
+            "max_batch_size": 1,
+            "max_batch_timeout": 1,
+            "max_retries": 5,
+            "max_concurrency": 1,
+            "dead_letter_queue": "plaits-lab-builds-dead-letter-staging"
+          },
+          {
+            "queue": "plaits-lab-builds-dead-letter-staging",
+            "max_batch_size": 10,
+            "max_batch_timeout": 5,
+            "max_retries": 1
+          }
+        ]
+      },
+      "observability": {
+        "enabled": true,
+        "logs": {
+          "enabled": true,
+          "head_sampling_rate": 1
+        },
+        "traces": {
+          "enabled": true,
+          "head_sampling_rate": 0.1
+        }
+      }
     }
   }
 }
