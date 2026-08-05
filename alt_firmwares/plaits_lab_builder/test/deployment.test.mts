@@ -5,6 +5,7 @@ import test from "node:test";
 const source = await readFile(new URL("../wrangler.jsonc", import.meta.url), "utf8");
 const config = JSON.parse(source.replace(/^\s*\/\/.*$/gm, ""));
 const staging = config.env.staging;
+const smoke = await readFile(new URL("../scripts/staging_smoke.mts", import.meta.url), "utf8");
 
 test("staging promotes the same immutable source and container image", () => {
   assert.equal(staging.vars.PLAITS_SOURCE_REVISION, config.vars.PLAITS_SOURCE_REVISION);
@@ -23,4 +24,10 @@ test("staging cannot consume production jobs, artifacts, rate limits, or dead le
 test("every environment's queue consumer agrees with its dead-letter variable", () => {
   assert.equal(config.queues.consumers[0].dead_letter_queue, config.vars.DEAD_LETTER_QUEUE);
   assert.equal(staging.queues.consumers[0].dead_letter_queue, staging.vars.DEAD_LETTER_QUEUE);
+});
+
+test("the hardware smoke carries both shared-bank Speech models", () => {
+  assert.match(smoke, /engine\.id === "speech"/);
+  assert.match(smoke, /engine\.id === "lpc-speech"/);
+  assert.match(smoke, /slots: \[reference\(speech\), reference\(lpcSpeech\)/);
 });
