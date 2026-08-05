@@ -80,21 +80,19 @@ class UserData {
   UserData() { }
   ~UserData() { }
 
-#if defined(TEST) && !(defined(PLAITS_HAS_SWAPPABLE_USER_DATA_BANKS) \
-    && PLAITS_HAS_SWAPPABLE_USER_DATA_BANKS)
-  // A host build has no flash behind the hardcoded ADDRESS, so the stock
-  // single-region path can only answer "nothing transferred". Swappable regions
-  // are ordinary array addresses and work on the host unchanged, which is what
-  // makes user_data_region_test able to exercise the real lookup.
-  inline const uint8_t* ptr(int slot) const {
-    return NULL;
-  }
-#else
   inline const uint8_t* ptr(int slot) const {
     const uint8_t* data = region(slot);
     if (!data) {
       return NULL;
     }
+#ifdef TEST
+    // A host build has no flash behind the legacy address, so reading the tag
+    // there would fault. Swappable bank regions are ordinary arrays and are read
+    // normally, which is what user_data_region_test exercises.
+    if (data == (const uint8_t*)(ADDRESS)) {
+      return NULL;
+    }
+#endif  // TEST
     // The tag distinguishes a TRANSFERRED bank from the baked bank sitting in
     // the same region. The generator clears these two bytes in every baked bank
     // (they are the tail of voice 32's name field, which Plaits never displays)
@@ -106,7 +104,6 @@ class UserData {
       return NULL;
     }
   }
-#endif  // TEST && !PLAITS_HAS_SWAPPABLE_USER_DATA_BANKS
 
   // Bytes of packed patch data behind a TRANSFERRED bank.
   //
@@ -175,39 +172,67 @@ class UserData {
   }
 
  private:
+  // The user-data area is GENERIC, not an FM feature: SixOpEngine reads it as a
+  // patch bank, WavetableEngine as wave indices plus custom wave data, and
+  // WaveTerrainEngine as a ninth terrain. Only the FM banks have a baked blob
+  // that can double as a rewritable region, so the three cases differ:
+  //
+  //   FM slot, banks swappable  -> the bank's own array (per-bank, independent)
+  //   FM slot, banks locked     -> nothing; the transfer is refused
+  //   any other user-data slot  -> the legacy single region at ADDRESS
+  //
+  // That last case matters. A wavetable or terrain slot has no baked user-data
+  // blob to make rewritable, so keying purely on the bank table would silently
+  // drop custom wavetable/terrain transfers that work on stock firmware today.
+  // They keep the module's own 0x08007000 area, tagged by slot, exactly as
+  // before — which is also what stops that area going to waste once FM banks
+  // stop using it.
+#if defined(PLAITS_HAS_USER_DATA_BANK) && PLAITS_HAS_USER_DATA_BANK
+  inline int bank_of(int slot) const { return kEngineUserDataBank[slot]; }
+#else
+  inline int bank_of(int slot) const { (void) slot; return -1; }
+#endif
+
+  // What a region's tag identifies. An FM region is keyed on the BANK the slot
+  // maps to, so two slots sharing one factory bank both read a transfer made
+  // through either; the legacy region is keyed on the slot, as it always was.
+  inline int tag_of(int slot) const {
 #if defined(PLAITS_HAS_SWAPPABLE_USER_DATA_BANKS) \
     && PLAITS_HAS_SWAPPABLE_USER_DATA_BANKS
-  // What a region's tag identifies. Keyed on the BANK the slot maps to, so two
-  // slots sharing one factory bank both read a transfer made through either.
-  inline int tag_of(int slot) const { return kEngineUserDataBank[slot]; }
+    const int bank = bank_of(slot);
+    if (bank >= 0) {
+      return bank;
+    }
+#endif
+    return slot;
+  }
 
-  // The flash a slot's bank owns, or NULL if it owns none.
+  // The flash a slot may be transferred into, or NULL if it owns none.
   //
   // The mapping is STATIC — Plaits Palette knows at build time which banks the
   // firmware carries, so the generator bakes the table. That deletes an entire
   // category of design: no dynamic allocation, no eviction policy, no "banks
   // full" state, no user-facing choice of where a transfer lands.
   inline const uint8_t* region(int slot) const {
-    const int bank = kEngineUserDataBank[slot];
-    if (bank < 0) {
-      return NULL;  // not an FM bank engine
-    }
-    for (int i = 0; i < kNumUserDataRegions; ++i) {
-      if (kUserDataRegions[i].bank == bank) {
-        return kUserDataRegions[i].data;
+#if defined(PLAITS_HAS_SWAPPABLE_USER_DATA_BANKS)
+    if (bank_of(slot) >= 0) {
+#if PLAITS_HAS_SWAPPABLE_USER_DATA_BANKS
+      const int bank = bank_of(slot);
+      for (int i = 0; i < kNumUserDataRegions; ++i) {
+        if (kUserDataRegions[i].bank == bank) {
+          return kUserDataRegions[i].data;
+        }
       }
+#endif
+      // Banks locked (or this one was stripped): an FM bank is not transferable.
+      // Deliberately NOT falling back to the legacy region — that would still
+      // accept a bank, into an area no FM slot reads in this build, and the
+      // transfer would appear to succeed and do nothing.
+      return NULL;
     }
-    return NULL;
-  }
-#else
-  // Stock / default firmware: one region, whichever slot is active, tagged with
-  // the slot itself.
-  inline int tag_of(int slot) const { return slot; }
-  inline const uint8_t* region(int slot) const {
-    (void) slot;
+#endif  // PLAITS_HAS_SWAPPABLE_USER_DATA_BANKS
     return (const uint8_t*)(ADDRESS);
   }
-#endif  // PLAITS_HAS_SWAPPABLE_USER_DATA_BANKS
 };
 
 }  // namespace plaits

@@ -20,6 +20,9 @@
 
 #include "plaits/user_data_region.h"
 
+// Both, as the generator always emits them together: the region table is only
+// non-empty when the palette carries FM banks in the first place.
+#define PLAITS_HAS_USER_DATA_BANK 1
 #define PLAITS_HAS_SWAPPABLE_USER_DATA_BANKS 1
 
 namespace plaits {
@@ -113,15 +116,18 @@ int main() {
   assert(user_data.ptr(2) == NULL);
   Tag(bank_1, 1);
 
-  // ---- A slot whose engine has no bank at all owns no region.
-  assert(user_data.ptr(3) == NULL);
-
-  // ---- Save refuses a slot with no region instead of erasing flash it does not
-  // own. Slot 3 is not an FM engine.
+  // ---- A slot whose engine reads user data but has no BANK — a wavetable or
+  // wave-terrain slot — keeps the module's own legacy area. It has no baked blob
+  // that could double as a rewritable region, so keying purely on the bank table
+  // would silently drop custom wavetable/terrain transfers that work on stock
+  // firmware. Slot 3 is such a slot, and it still resolves to a region.
+  assert(user_data.ptr(3) == NULL);          // nothing transferred there yet
   FillPayload(payload, 0x11);
   save_slot = 3;
   Quietly(DoSave);
-  assert(!save_result);
+  assert(save_result);
+  assert(payload[kRegionSize - 2] == 'U');
+  assert(payload[kRegionSize - 1] == ' ' + 3);   // legacy region: tagged by SLOT
 
   // ---- Save still honours the payload's declared slot range.
   FillPayload(payload, 0x11);
