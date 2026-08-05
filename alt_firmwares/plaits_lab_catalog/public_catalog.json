@@ -453,13 +453,14 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Vocal",
-      "description": "The Naive, SAM, and LPC phoneme sides of Mutable Instruments Speech, spread continuously across one playable model.",
+      "description": "A split of Emilie Gillet's Speech model in the Plaits source: Naive, SAM, and LPC phonemes spread continuously across one playable model.",
       "tags": [
         "speech",
         "vocal",
         "formant",
         "sam",
-        "phoneme"
+        "phoneme",
+        "variant"
       ],
       "controls": [
         "Model",
@@ -477,8 +478,8 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:cb3bf4d58136ece9b3d72bbb8300901ed0e140d84846e594a3b139b142d2f0ae",
-      "documentationDigest": "sha256:13d42b1ce9683a57c3fa3ef62e8e57e7d40d842b4a81bbb08db99b7e23687003",
+      "digest": "sha256:41285412f3f18058cd74ec849a29c362aefcd173327e41b5b08156342549a0eb",
+      "documentationDigest": "sha256:3d68b2c92890135afab9b886a201d895c59cb2ab25750afb395bd8ef9105eac5",
       "manual": {
         "controls": {
           "harmonics": "Moves continuously from the five-formant naive voice through SAM to interpolated LPC phonemes.",
@@ -499,12 +500,13 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Vocal",
-      "description": "The LPC word-bank side of Mutable Instruments Speech, with selected stock or custom banks, direct speed, and recorded prosody.",
+      "description": "A split of Emilie Gillet's Speech model in the Plaits source: LPC word banks with selected stock or custom banks, direct speed, and recorded prosody.",
       "tags": [
         "speech",
         "vocal",
         "words",
-        "lpc"
+        "lpc",
+        "variant"
       ],
       "controls": [
         "Word bank",
@@ -522,8 +524,8 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:a5d7b629f5ba9c18b21c840d905483e505aabcffb702632d6e6efb32e623db46",
-      "documentationDigest": "sha256:ca904d7d63694d2a24f0bf87212c36940e7d1e98a7966988296be587396f0527",
+      "digest": "sha256:47ba77bdbaa92f0354d53016923b1ea531994f8c42667407df643905e6504fce",
+      "documentationDigest": "sha256:b56f91f03baa3b73380c34dfc688db1307019afb57e9745319a04c3b2ebe116f",
       "manual": {
         "controls": {
           "harmonics": "Selects one of the active stock or custom LPC word banks across the full dial.",
