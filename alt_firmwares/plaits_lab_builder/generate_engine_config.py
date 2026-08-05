@@ -549,8 +549,17 @@ def validate_recipe(value: Any) -> BuildRecipe:
         {"navigationMode", "calibration", "colorBlindMode"},
     ) or (set(options) != legacy_option_keys and not carries_attenuverter_mode):
         raise ValueError("recipe contains an unsupported firmware option")
-    if ((schema_version >= ATTENUVERTER_MODE_MIN_SCHEMA_VERSION)
-            != carries_attenuverter_mode):
+    # The Worker stores a fully normalized option profile and therefore adds
+    # the legacy-equivalent `stock` value before handing a pre-v18 recipe to
+    # this private container. Accept that no-op representation, but keep Drift
+    # and Step gated to schema 18 just as they are at the public boundary.
+    carries_new_attenuverter_mode = (
+        carries_attenuverter_mode and options.get("attenuverterMode") != "stock"
+    )
+    if ((schema_version >= ATTENUVERTER_MODE_MIN_SCHEMA_VERSION
+            and not carries_attenuverter_mode)
+            or (schema_version < ATTENUVERTER_MODE_MIN_SCHEMA_VERSION
+                and carries_new_attenuverter_mode)):
         raise ValueError(
             f"unpatched attenuverter starting mode requires schemaVersion "
             f"{ATTENUVERTER_MODE_MIN_SCHEMA_VERSION}")

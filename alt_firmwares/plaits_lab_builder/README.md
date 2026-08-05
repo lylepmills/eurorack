@@ -37,6 +37,13 @@ only control and the original two-custom-bank recipe on hardware. Keep the
 public custom-bank editor disabled until the patched compiler image has also
 passed a build through the deployed production service.
 
+The first production canary at `rev-4749aec727af` failed safely before
+compilation: the newer Worker normalized a pre-v18 recipe with the no-op
+`attenuverterMode: stock` value, while the container rejected the field below
+schema 18. Production was immediately rolled back to `rev-9f8fe4de4c67` while
+the private container contract was amended to accept only that legacy-equivalent
+value; Drift and Step remain schema-18-only.
+
 The service is split across two isolation layers:
 
 - A Cloudflare Worker validates and hashes recipes, stores job state in Durable
@@ -274,7 +281,7 @@ system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-4749aec727af` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-9f8fe4de4c67` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a
 new image, wait for `wrangler containers list` to report `ready` before smoke
@@ -344,6 +351,7 @@ target.
 | August 4, 2026 (gate custom Speech code out of legacy builds; recover default-palette flash) | `2e963f7402b9` | `rev-2e963f7402b9` |
 | August 4, 2026 (bake the English speech model for network-isolated previews) | `9f8fe4de4c67` | `rev-9f8fe4de4c67` |
 | August 4, 2026 (repair custom Speech class layout and LPC frame bounds) | `4749aec727af` | `rev-4749aec727af` |
+| August 4, 2026 (rollback after schema-18 compatibility canary) | `9f8fe4de4c67` | `rev-9f8fe4de4c67` |
 
 Three consequences a rollback has that a forward deploy does not:
 

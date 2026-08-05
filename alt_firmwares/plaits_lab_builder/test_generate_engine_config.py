@@ -123,6 +123,13 @@ class GenerateEngineConfigTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "schemaVersion 18"):
             validate_recipe(recipe)
 
+        # The public Worker normalizes missing legacy options to the musically
+        # identical stock value before calling the private container. This
+        # exact cross-layer shape must remain buildable for every pre-v18
+        # recipe, while genuinely new Drift/Step choices stay gated above.
+        recipe["initialOptions"]["attenuverterMode"] = "stock"
+        self.assertEqual(validate_recipe(recipe).attenuverter_mode, 0)
+
     def test_auto_level_routing_is_schema_16_and_firmware_value_two(self) -> None:
         recipe = self.load("default_recipe.json")
         recipe["schemaVersion"] = 16
