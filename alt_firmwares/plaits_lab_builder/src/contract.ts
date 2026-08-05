@@ -790,8 +790,11 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
       scaleBank = normalizeScaleBank(resourceValues.scaleBank);
     }
     if (carriesSpeechBanks) {
-      if (!slots.includes("speech")) {
-        throw new ContractError("invalid_speech_banks", "Speech word banks require the Speech model in the palette.");
+      if (!slots.includes("speech") && !slots.includes("lpc-speech")) {
+        throw new ContractError(
+          "invalid_speech_banks",
+          "Speech word banks require the Speech or LPC Words model in the palette.",
+        );
       }
       speechBanks = normalizeSpeechBanks(resourceValues.speechBanks);
     }

@@ -32,12 +32,20 @@ namespace plaits {
 using namespace stmlib;
 
 void LPCSpeechEngine::Init(BufferAllocator* allocator) {
+#if PLAITS_HAS_CUSTOM_SPEECH_BANKS
+  InitRecipeSpeechWordBank(&lpc_speech_synth_word_bank_, allocator);
+#else
   lpc_speech_synth_word_bank_.Init(
       word_banks_,
       LPC_SPEECH_SYNTH_NUM_WORD_BANKS,
       allocator);
+#endif
   lpc_speech_synth_controller_.Init(&lpc_speech_synth_word_bank_);
+#if PLAITS_HAS_CUSTOM_SPEECH_BANKS
+  word_bank_quantizer_.Init(RecipeSpeechWordBankCount(), 0.1f, false);
+#else
   word_bank_quantizer_.Init(LPC_SPEECH_SYNTH_NUM_WORD_BANKS, 0.1f, false);
+#endif
   prosody_amount_ = 0.0f;
 }
 
@@ -51,8 +59,8 @@ void LPCSpeechEngine::Render(
     float* aux,
     size_t size,
     bool* already_enveloped) {
-  // The phoneme position moved to Speech Sounds, leaving the five stock word
-  // banks evenly addressable across the whole HARMONICS dial.
+  // The phoneme position moved to Speech Sounds, leaving the recipe's selected
+  // stock and custom word banks evenly addressable across HARMONICS.
   const int word_bank = word_bank_quantizer_.Process(parameters.harmonics);
   const bool free_running = parameters.trigger & TRIGGER_UNPATCHED;
   const bool trigger = parameters.trigger & TRIGGER_RISING_EDGE;

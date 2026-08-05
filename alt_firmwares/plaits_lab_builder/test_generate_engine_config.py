@@ -43,6 +43,25 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertIn("#define PLAITS_HAS_LPC_WORDS_ENGINE 0", config)
         self.assertIn("static const uint32_t kLPCWordsEngineMask = 0x00000000;", config)
 
+    def test_speech_banks_allow_lpc_words_without_original_speech(self) -> None:
+        recipe = self.load("default_recipe.json")
+        recipe["slots"][7] = "lpc-speech"
+        recipe.update({
+            "schemaVersion": 17,
+            "preferences": dict(DEFAULT_CONFIGURATION["preferences"]),
+            "initialOptions": dict(DEFAULT_CONFIGURATION["initialOptions"]),
+            "resources": {
+                "chordTables": DEFAULT_CHORD_TABLES,
+                "speechBanks": {"stockBankIds": [1, 4], "customBanks": []},
+            },
+        })
+        build = validate_recipe(recipe)
+        self.assertEqual(build.speech_banks["stockBankIds"], [1, 4])
+
+        recipe["slots"][7] = "virtual-analog"
+        with self.assertRaisesRegex(ValueError, "Speech or LPC Words"):
+            validate_recipe(recipe)
+
     def test_randomizer_profiles_are_compact_and_cover_every_selected_slot(self) -> None:
         build = validate_recipe(self.load("default_recipe.json"))
         config = render_config(build)

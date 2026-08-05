@@ -510,8 +510,11 @@ def validate_recipe(value: Any) -> BuildRecipe:
         if carries_scale_bank:
             scale_bank = validate_scale_bank(resources.get("scaleBank"))
         if carries_speech_banks:
-            if "speech" not in public_slots:
-                raise ValueError("speechBanks requires the Speech engine in the palette")
+            if not any(
+                engine_id in public_slots for engine_id in ("speech", "lpc-speech")
+            ):
+                raise ValueError(
+                    "speechBanks requires Speech or LPC Words in the palette")
             speech_banks = validate_speech_banks(resources.get("speechBanks"))
         if carries_user_data_banks:
             if schema_version >= SLOT_BANK_MIN_SCHEMA_VERSION:

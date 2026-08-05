@@ -39,12 +39,7 @@ void SpeechEngine::Init(BufferAllocator* allocator) {
   sam_speech_synth_.Init();
   naive_speech_synth_.Init();
 #if PLAITS_HAS_CUSTOM_SPEECH_BANKS
-  lpc_speech_synth_word_bank_.Init(
-      custom_speech_stock_word_banks,
-      CUSTOM_SPEECH_NUM_STOCK_BANKS,
-      custom_speech_word_banks,
-      CUSTOM_SPEECH_NUM_WORD_BANKS,
-      allocator);
+  InitRecipeSpeechWordBank(&lpc_speech_synth_word_bank_, allocator);
 #else
   lpc_speech_synth_word_bank_.Init(
       word_banks_,
@@ -54,7 +49,7 @@ void SpeechEngine::Init(BufferAllocator* allocator) {
   lpc_speech_synth_controller_.Init(&lpc_speech_synth_word_bank_);
 #if PLAITS_HAS_CUSTOM_SPEECH_BANKS
   word_bank_quantizer_.Init(
-      CUSTOM_SPEECH_NUM_STOCK_BANKS + CUSTOM_SPEECH_NUM_WORD_BANKS + 1,
+      RecipeSpeechWordBankCount() + 1,
       0.1f,
       false);
 #else

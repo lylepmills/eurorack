@@ -431,7 +431,7 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:ca5c43ceaeab09b6ae17f7e2a34e2c2f7f05e62cad75ad3cdbd5eda28720b9ff",
+      "digest": "sha256:a09b14850caebe59a3dc5c9d9f656381019383d1236d65b39ba6025606606bab",
       "documentationDigest": "sha256:f078efcc10babcd476d02a48261f6b76c2cf4dfb0b56692e72e4ebb6c44fabd2",
       "manual": {
         "controls": {
@@ -472,7 +472,7 @@
         "Raw excitation or widened voice"
       ],
       "version": "1.0.0",
-      "digest": "sha256:c00931e7138514951c0e5890a266a9e169c708a3355f728af368ce06b7d1845d",
+      "digest": "sha256:1e6f648b0078b41b8699a0388b4abacc0bcb12ac3ff6c4aca411784a04efb1cd",
       "documentationDigest": "sha256:495080935e72a54c8da82472ce50e98deb579103fe57d9dedecf4346f309068f",
       "manual": {
         "controls": {
@@ -494,7 +494,7 @@
       "author": "Lyle Mills, after Emilie Gillet",
       "origin": "Rubato Lab",
       "family": "Vocal",
-      "description": "Five LPC word banks with direct word, speed, vocal-tract, and recorded-prosody controls.",
+      "description": "Selected stock and custom LPC word banks with direct word, speed, vocal-tract, and recorded-prosody controls.",
       "tags": [
         "speech",
         "vocal",
@@ -502,7 +502,7 @@
         "lpc"
       ],
       "controls": [
-        "Bank",
+        "Word bank",
         "Speed",
         "Word",
         "Vocal tract"
@@ -512,11 +512,11 @@
         "Raw excitation or widened voice"
       ],
       "version": "1.0.0",
-      "digest": "sha256:917a719143c42c6eae9f4bee281c467730d7896065ea40ad4e2f85b324fa3d81",
-      "documentationDigest": "sha256:b759d7f4595e570a72ea7879e172f728cfe8846ccb16a096821b228f35290316",
+      "digest": "sha256:e3e8d3b51966e93bae056cb66969622a56b703bc034a3fdcc8d235a7b88fdbee",
+      "documentationDigest": "sha256:feb9bbb9afcd5ad48a17f7c392232735f82475a41a9afcb899748eeeadf80865",
       "manual": {
         "controls": {
-          "harmonics": "Selects one of the five stock LPC word banks across the full dial.",
+          "harmonics": "Selects one of the active stock or custom LPC word banks across the full dial.",
           "timbre": "Changes playback speed around the original recording speed at noon.",
           "morph": "Selects a word or a position within the active LPC word bank.",
           "macro": "Shifts the LPC vocal tract while keeping the played note as the pitch reference."

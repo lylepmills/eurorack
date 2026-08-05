@@ -628,6 +628,23 @@ test("version 17 carries bounded Speech banks and hashes their LPC frames", asyn
   assert.equal(normalized.schemaVersion, 17);
   assert.deepEqual(normalized.resources.speechBanks, speechBanks);
 
+  const lpcWordsOnly = structuredClone(recipe);
+  const lpcWords = byId.get("lpc-speech")!;
+  lpcWordsOnly.slots = lpcWordsOnly.slots.map(
+    (slot: { engine: string }) => slot.engine === "speech"
+      ? {
+        engine: "lpc-speech",
+        package: lpcWords.packageId,
+        version: lpcWords.version,
+        digest: lpcWords.digest,
+      }
+      : slot,
+  );
+  assert.deepEqual(
+    normalizeRecipe(lpcWordsOnly).resources.speechBanks,
+    speechBanks,
+  );
+
   const identity = { sourceRevision: "source", toolchain: "toolchain", contract: "17" };
   const changed = structuredClone(recipe);
   changed.resources.speechBanks.customBanks[0].frameData = Buffer.from([
@@ -645,13 +662,16 @@ test("version 17 carries bounded Speech banks and hashes their LPC frames", asyn
     (error: { code?: string }) => error.code === "invalid_resources",
   );
 
-  const withoutSpeech = structuredClone(recipe);
-  withoutSpeech.slots = withoutSpeech.slots.map(
-    (slot: { engine: string }) => slot.engine === "speech"
-      ? structuredClone(withoutSpeech.slots[0])
+  const withoutSpeechEngine = structuredClone(lpcWordsOnly);
+  withoutSpeechEngine.slots = withoutSpeechEngine.slots.map(
+    (slot: { engine: string }) => slot.engine === "speech" || slot.engine === "lpc-speech"
+      ? structuredClone(withoutSpeechEngine.slots[0])
       : slot,
   );
-  assert.throws(() => normalizeRecipe(withoutSpeech), /require.*Speech model/);
+  assert.throws(
+    () => normalizeRecipe(withoutSpeechEngine),
+    /require.*Speech or LPC Words model/,
+  );
 });
 
 test("version 6 carries a validated custom FM bank and hashes its packed bytes", async () => {

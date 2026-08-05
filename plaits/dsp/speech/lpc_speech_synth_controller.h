@@ -192,6 +192,17 @@ class LPCSpeechSynthWordBank {
   static const int8_t k9_lut_[8];
 };
 
+#if PLAITS_HAS_CUSTOM_SPEECH_BANKS
+// The generated bank data is compiled once into this controller translation
+// unit, then shared by every speech engine in the palette. Keeping engines
+// behind these helpers prevents a palette containing both Original Speech and
+// LPC Words from embedding a second copy of the same frames.
+void InitRecipeSpeechWordBank(
+    LPCSpeechSynthWordBank* word_bank,
+    stmlib::BufferAllocator* allocator);
+int RecipeSpeechWordBankCount();
+#endif
+
 class LPCSpeechSynthController {
  public:
   LPCSpeechSynthController() { }

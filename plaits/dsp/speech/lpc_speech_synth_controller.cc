@@ -152,6 +152,23 @@ void LPCSpeechSynthWordBank::Reset() {
   // Load() overwrites every live boundary before publishing a non-zero count.
 }
 
+#if PLAITS_HAS_CUSTOM_SPEECH_BANKS
+void InitRecipeSpeechWordBank(
+    LPCSpeechSynthWordBank* word_bank,
+    BufferAllocator* allocator) {
+  word_bank->Init(
+      custom_speech_stock_word_banks,
+      CUSTOM_SPEECH_NUM_STOCK_BANKS,
+      custom_speech_word_banks,
+      CUSTOM_SPEECH_NUM_WORD_BANKS,
+      allocator);
+}
+
+int RecipeSpeechWordBankCount() {
+  return CUSTOM_SPEECH_NUM_STOCK_BANKS + CUSTOM_SPEECH_NUM_WORD_BANKS;
+}
+#endif
+
 size_t LPCSpeechSynthWordBank::LoadNextWord(const uint8_t* data) {
   BitStream bitstream;
   bitstream.Init(data);

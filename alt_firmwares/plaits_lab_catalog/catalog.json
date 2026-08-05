@@ -484,7 +484,7 @@
       "author": "Lyle Mills, after Emilie Gillet",
       "origin": "Rubato Lab",
       "family": "Vocal",
-      "description": "Five LPC word banks with direct word, speed, vocal-tract, and recorded-prosody controls.",
+      "description": "Selected stock and custom LPC word banks with direct word, speed, vocal-tract, and recorded-prosody controls.",
       "tags": [
         "speech",
         "vocal",
@@ -492,7 +492,7 @@
         "lpc"
       ],
       "controls": [
-        "Bank",
+        "Word bank",
         "Speed",
         "Word",
         "Vocal tract"
@@ -3538,7 +3538,7 @@
     },
     "lpc-speech": {
       "controls": {
-        "harmonics": "Selects one of the five stock LPC word banks across the full dial.",
+        "harmonics": "Selects one of the active stock or custom LPC word banks across the full dial.",
         "timbre": "Changes playback speed around the original recording speed at noon.",
         "morph": "Selects a word or a position within the active LPC word bank.",
         "macro": "Shifts the LPC vocal tract while keeping the played note as the pitch reference."

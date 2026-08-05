@@ -106,10 +106,10 @@ $(patsubst %,$(BUILD_DIR)%,$(RECIPE_CONFIG_OBJS)): CPPFLAGS += -include $(ENGINE
 endif
 
 # Speech-bank data is independent of the engine registry and can be much larger
-# than the ordinary recipe config. Force it into Speech alone so the other
-# recipe-dependent objects do not parse or carry duplicate copies of the data.
+# than the ordinary recipe config. Compile it once into the shared LPC
+# controller; Original Speech and LPC Words reach it through small helpers.
 ifneq ($(SPEECH_CONFIG),)
-$(BUILD_DIR)speech_engine.o: CPPFLAGS += -include $(SPEECH_CONFIG)
+$(BUILD_DIR)lpc_speech_synth_controller.o: CPPFLAGS += -include $(SPEECH_CONFIG)
 endif
 
 # Compile the decoded-frame controller path only for recipes that carry a
@@ -117,9 +117,10 @@ endif
 # so every object that lays out Voice, SpeechEngine, or LPCSpeechEngine must see
 # the same value. Applying it only to the method implementations corrupts the
 # following Voice members during startup even when the recipe has no raw banks.
-# Legacy/default palettes keep the stock code footprint by compiling all of
-# these objects with the value 0.
-SPEECH_LAYOUT_OBJS = voice.o plaits.o ui.o lpc_speech_engine.o lpc_speech_synth_controller.o lpc_speech_synth_phonemes.o
+# The split engines both use the shared custom-bank helpers, so their method
+# implementations must see the same value too. Legacy/default palettes keep the
+# stock code footprint by compiling all of these objects with the value 0.
+SPEECH_LAYOUT_OBJS = voice.o plaits.o ui.o speech_engine.o lpc_speech_engine.o lpc_speech_synth_controller.o lpc_speech_synth_phonemes.o
 ifneq ($(SPEECH_BANKS_ENABLED),)
 $(patsubst %,$(BUILD_DIR)%,$(SPEECH_LAYOUT_OBJS)): CPPFLAGS += -DPLAITS_HAS_CUSTOM_SPEECH_BANKS=$(SPEECH_BANKS_ENABLED)
 endif
