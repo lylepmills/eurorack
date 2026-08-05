@@ -28,9 +28,10 @@ at the firmware's linked application address and deliberately excludes the
 bootloader.
 
 Schema-15/Ro'Ved support passed its hardware checklist on July 30, 2026.
-Schema 17 is available in production with recipe-driven scale banks, automatic
+Schema 19 is available in production with recipe-driven scale banks, automatic
 LEVEL routing, selectable/custom LPC Speech banks, text and recording encoders,
-and source/engine audio previews.
+source/engine audio previews, unpatched-attenuverter modes, and the triggered
+and gated FREQUENCY contours.
 
 An August 4 hardware regression exposed two firmware defects in the custom
 Speech path: inconsistent `PLAITS_HAS_CUSTOM_SPEECH_BANKS` values changed the
@@ -291,19 +292,20 @@ system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-174d93845372` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-d554b7f46dc0` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a
 new image, wait for `wrangler containers list` to report `ready` before smoke
 testing; requests made while the application was still `provisioning` reached
 the previous live instance during the schema-5 rollout.
 
-Schema 18 is live, adding Stock, Drift, and Step starting modes for the
-unpatched attenuverters. It inherits schema 17's selectable stock LPC banks,
-custom text/recording-derived Speech banks, source/engine previews, and the
+Schema 19 is live, adding the triggered and gated FREQUENCY contours as the
+fifth and sixth locked-knob assignments. It inherits schema 18's Stock, Drift,
+and Step unpatched-attenuverter modes; schema 17's selectable stock LPC banks,
+custom text/recording-derived Speech banks, source/engine previews; and the
 earlier recipe-driven scale banks and automatic LEVEL routing. The generalized
 schema-inheritance hardening from `5b2b077` is also live: current production
-source `174d93845372` descends from that commit, so future supported schemas
+source `d554b7f46dc0` descends from that commit, so future supported schemas
 inherit older feature shapes without another version-list edit.
 
 ### Rolling back
@@ -368,6 +370,7 @@ target.
 | August 5, 2026 (recover default-palette flash headroom after Six-op CPU work) | `77cff28e2e70` | `rev-77cff28e2e70` |
 | August 5, 2026 (match custom Speech bank levels to stock) | `812937f27ada` | `rev-812937f27ada` |
 | August 5, 2026 (split Speech Sounds and LPC Words with shared custom banks) | `174d93845372` | `rev-174d93845372` |
+| August 5, 2026 (schema 19 triggered and gated FREQUENCY contours, manual contract 15) | `d554b7f46dc0` | `rev-d554b7f46dc0` |
 
 Three consequences a rollback has that a forward deploy does not:
 
