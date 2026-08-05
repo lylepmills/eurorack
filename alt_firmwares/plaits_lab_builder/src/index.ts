@@ -105,7 +105,7 @@ function manualArtifactKey(manualKey: string): string {
 // The name is the Durable Object identity, not just a label. Bump it when the
 // compiler image's baked speech dependencies change so a long-lived encoder
 // instance cannot keep serving the previous image after a container rollout.
-const SPEECH_ENCODER_CONTAINER = "speech-encoder-v4";
+const SPEECH_ENCODER_CONTAINER = "speech-encoder-v5";
 
 async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", bytes);
@@ -705,12 +705,12 @@ export default {
         });
       } else if (request.method === "POST" && url.pathname === "/v1/speech/encode") {
         response = await proxySpeechJson(request, env, "/speech/encode", {
-          cacheNamespace: "banks-v1",
+          cacheNamespace: "banks-v3",
           maxBytes: 64 * 1024,
         });
       } else if (request.method === "POST" && url.pathname === "/v1/speech/render-bank") {
         response = await proxySpeechJson(request, env, "/speech/render-bank", {
-          cacheNamespace: "rendered-banks-v1",
+          cacheNamespace: "rendered-banks-v2",
           maxBytes: 64 * 1024,
         });
       } else if (request.method === "POST" && url.pathname === "/v1/speech/encode-recording") {

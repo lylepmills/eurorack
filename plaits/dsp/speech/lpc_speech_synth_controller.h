@@ -96,6 +96,15 @@ const int kLPCSpeechSynthNumPhonemes = \
     kLPCSpeechSynthNumVowels + kLPCSpeechSynthNumConsonants;
 const float kLPCSpeechSynthFPS = 40.0f;
 
+// The custom-bank analyzer was calibrated at one fifth of the shipped TI
+// banks' level. Match decoded custom frames to the stock energy range while
+// preserving silence and capping at the highest playable stock energy (0xa1;
+// the next TI nibble is the end-of-word marker).
+inline uint8_t MatchCustomSpeechBankEnergy(uint8_t energy) {
+  const uint16_t matched = static_cast<uint16_t>(energy) * 5;
+  return matched > 0xa1 ? 0xa1 : static_cast<uint8_t>(matched);
+}
+
 struct LPCSpeechSynthWordBankData {
   const uint8_t* data;
   size_t size;

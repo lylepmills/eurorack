@@ -2919,6 +2919,17 @@ void ValidateParameterRandomizer() {
   }
 }
 
+void ValidateCustomSpeechBankLevelMatching() {
+  if (MatchCustomSpeechBankEnergy(0) != 0 ||
+      MatchCustomSpeechBankEnergy(1) != 5 ||
+      MatchCustomSpeechBankEnergy(32) != 160 ||
+      MatchCustomSpeechBankEnergy(33) != 161 ||
+      MatchCustomSpeechBankEnergy(255) != 161) {
+    fprintf(stderr, "Custom Speech bank energy matching is incorrect\n");
+    abort();
+  }
+}
+
 int main(void) {
 #if defined(__SSE2__)
   _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
@@ -2969,5 +2980,7 @@ int main(void) {
   // TestLPGAttackDecay();
   printf("Validating unpatched attenuverter modes...\n");
   ValidateParameterRandomizer();
+  printf("Validating custom Speech bank level matching...\n");
+  ValidateCustomSpeechBankLevelMatching();
   TestExperimentalEngines();
 }

@@ -11,6 +11,7 @@
 
 #include "plaits/dsp/oscillator/oscillator.h"
 #include "plaits/dsp/speech/lpc_speech_synth.h"
+#include "plaits/dsp/speech/lpc_speech_synth_controller.h"
 #include "stmlib/utils/random.h"
 
 namespace {
@@ -37,6 +38,15 @@ bool WriteWav(const char* path, const std::vector<float>& samples) {
   return true;
 }
 
+void NormalizePreview(std::vector<float>* samples) {
+  float peak = 0.0f;
+  for (size_t i = 0; i < samples->size(); ++i) {
+    peak = std::max(peak, std::fabs((*samples)[i]));
+  }
+  const float gain = peak > 0.0f ? std::min(1.5f, 0.75f / peak) : 1.0f;
+  for (size_t i = 0; i < samples->size(); ++i) (*samples)[i] *= gain;
+}
+
 bool ReadPlan(const char* path, std::vector<plaits::LPCSpeechSynth::Frame>* out) {
   std::ifstream input(path);
   int v[12];
@@ -45,7 +55,9 @@ bool ReadPlan(const char* path, std::vector<plaits::LPCSpeechSynth::Frame>* out)
     plaits::LPCSpeechSynth::Frame f;
     f.energy=v[0]; f.period=v[1]; f.k0=v[2]; f.k1=v[3]; f.k2=v[4];
     f.k3=v[5]; f.k4=v[6]; f.k5=v[7]; f.k6=v[8]; f.k7=v[9];
-    f.k8=v[10]; f.k9=v[11]; out->push_back(f);
+    f.k8=v[10]; f.k9=v[11];
+    f.energy = plaits::MatchCustomSpeechBankEnergy(f.energy);
+    out->push_back(f);
   }
   return !out->empty() && input.eof();
 }
@@ -90,5 +102,6 @@ int main(int argc, char** argv) {
     }
     if (word + 1 < words.size()) output.insert(output.end(), kGap, 0.0f);
   }
+  NormalizePreview(&output);
   return WriteWav(argv[1], output) ? 0 : 2;
 }

@@ -220,6 +220,9 @@ bool LPCSpeechSynthWordBank::Load(int bank) {
     num_frames_ = raw.num_frames;
     num_words_ = raw.num_words;
     copy(raw.frames, raw.frames + num_frames_, frames_);
+    for (int i = 0; i < num_frames_; ++i) {
+      frames_[i].energy = MatchCustomSpeechBankEnergy(frames_[i].energy);
+    }
     copy(
         raw.word_boundaries,
         raw.word_boundaries + num_words_ + 1,

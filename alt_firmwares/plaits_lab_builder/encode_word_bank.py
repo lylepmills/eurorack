@@ -25,7 +25,7 @@ from preview_artifacts import (
 
 FRAME_BYTES = 14
 FRAME_RATE = 40
-LPC_ARTIFACT_REVISION = "continuous-lpc-v1-voicing60-silence42-energy70-center100"
+LPC_ARTIFACT_REVISION = "continuous-lpc-v2-stock-level-matched-preview"
 
 
 def parse_args() -> argparse.Namespace:
