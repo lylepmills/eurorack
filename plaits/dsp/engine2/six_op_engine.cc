@@ -245,12 +245,6 @@ void SixOpEngine::Render(
     }
   }
 
-  // Naive block rendering.
-  // fill(temp_buffer_[0], temp_buffer_[size], 0.0f);
-  // for (int i = 0; i < kNumSixOpVoices; ++i) {
-  //   voice_[i].Render(temp_buffer_, size);
-  // }
-
   if (parameters.trigger & TRIGGER_UNPATCHED) {
     // Render the single sustained voice at the native block size. The old
     // staggered path rendered 2 * size samples every other block while also
@@ -276,22 +270,16 @@ void SixOpEngine::Render(
     rendered_voice_ = (rendered_voice_ + 1) % kNumSixOpVoices;
     voice_[rendered_voice_].Render(temp_buffer_, size * kNumSixOpVoices);
 
-    // A free-running drone sustains a single voice: keep it centred rather
-    // than parked on one side. With a trigger patched, the round-robin voice
-    // allocation makes successive notes alternate between the two sides.
-    const bool unpatched = parameters.trigger & TRIGGER_UNPATCHED;
-    const float previous_left_gain = unpatched
-        ? kSixOpCenterPan * 0.25f
-        : kSixOpPanLeft[previous_voice] * 0.25f;
-    const float previous_right_gain = unpatched
-        ? kSixOpCenterPan * 0.25f
-        : kSixOpPanRight[previous_voice] * 0.25f;
-    const float current_left_gain = unpatched
-        ? kSixOpCenterPan * 0.25f
-        : kSixOpPanLeft[rendered_voice_] * 0.25f;
-    const float current_right_gain = unpatched
-        ? kSixOpCenterPan * 0.25f
-        : kSixOpPanRight[rendered_voice_] * 0.25f;
+    // The unpatched drone returned through the dedicated centred path above.
+    // Triggered notes use round-robin allocation and alternate sides.
+    const float previous_left_gain =
+        kSixOpPanLeft[previous_voice] * 0.25f;
+    const float previous_right_gain =
+        kSixOpPanRight[previous_voice] * 0.25f;
+    const float current_left_gain =
+        kSixOpPanLeft[rendered_voice_] * 0.25f;
+    const float current_right_gain =
+        kSixOpPanRight[rendered_voice_] * 0.25f;
     const float macro = parameters.macro;
     const float darkness = (0.5f - macro) * 2.0f;
     const float coefficient = 1.0f - darkness * 0.92f;

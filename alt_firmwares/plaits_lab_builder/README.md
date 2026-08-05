@@ -295,9 +295,10 @@ new image, wait for `wrangler containers list` to report `ready` before smoke
 testing; requests made while the application was still `provisioning` reached
 the previous live instance during the schema-5 rollout.
 
-Schema 17, including selectable stock LPC banks, custom text/recording-derived
-Speech banks, source/engine previews, and the earlier recipe-driven scale banks
-and automatic LEVEL routing, is live. The generalized
+Schema 18 is live, adding Stock, Drift, and Step starting modes for the
+unpatched attenuverters. It inherits schema 17's selectable stock LPC banks,
+custom text/recording-derived Speech banks, source/engine previews, and the
+earlier recipe-driven scale banks and automatic LEVEL routing. The generalized
 schema-inheritance hardening from `5b2b077` is also live: current production
 source `174d93845372` descends from that commit, so future supported schemas
 inherit older feature shapes without another version-list edit.

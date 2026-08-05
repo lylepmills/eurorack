@@ -115,12 +115,18 @@ class SixOpEngine : public Engine {
   void LoadBank(int bank);
   
  private:
-  void __attribute__((noinline, optimize("Os"))) RenderMonoOutput(
+#if defined(__clang__)
+#define SIX_OP_RENDER_ATTRIBUTES __attribute__((noinline))
+#else
+#define SIX_OP_RENDER_ATTRIBUTES __attribute__((noinline, optimize("Os")))
+#endif
+  void SIX_OP_RENDER_ATTRIBUTES RenderMonoOutput(
       float gain,
       float macro,
       float* out,
       float* aux,
       size_t size);
+#undef SIX_OP_RENDER_ATTRIBUTES
   stmlib::HysteresisQuantizer2 patch_index_quantizer_;
   fm::Algorithms<6> algorithms_;
   fm::Patch* patches_;
