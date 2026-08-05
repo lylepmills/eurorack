@@ -2481,7 +2481,34 @@ void ValidateSpeechEngineSplit() {
   }
 }
 
+void ValidateLPCDiscreteFrameBounds() {
+  // This address/formant combination deterministically selects consonant 10,
+  // the final frame in LPCSpeechSynthController::phonemes_. Under ASan the
+  // old discrete PlayFrame path failed here because it also dereferenced frame
+  // 15 just to apply a zero blend.
+  LPCSpeechSynthController controller;
+  controller.Init(NULL);
+  float excitation[kAudioBlockSize];
+  float output[kAudioBlockSize];
+  controller.Render(
+      false,
+      true,
+      -1,
+      0.0f,
+      0.0f,
+      1.0f,
+      0.125f,
+      1.0f / 3.0f,
+      1.0f,
+      excitation,
+      output,
+      kAudioBlockSize);
+}
+
 void TestExperimentalEngines() {
+  printf("Validating LPC discrete frame bounds...\n");
+  fflush(stdout);
+  ValidateLPCDiscreteFrameBounds();
   printf("Validating Speech engine split anchors...\n");
   fflush(stdout);
   ValidateSpeechEngineSplit();

@@ -71,14 +71,18 @@ class LPCSpeechSynth {
   
   void PlayFrame(const Frame* frames, float frame, bool interpolate) {
     MAKE_INTEGRAL_FRACTIONAL(frame);
-    
-    if (!interpolate) {
-      frame_fractional = 0.0f;
+
+    if (interpolate) {
+      PlayFrame(
+          frames[frame_integral],
+          frames[frame_integral + 1],
+          frame_fractional);
+    } else {
+      // Discrete playback is allowed to select the final frame in a bank.
+      // Do not read the following frame merely to blend it by zero: for the
+      // final consonant or final word frame, that would be one-past-the-end.
+      PlayFrame(frames[frame_integral], frames[frame_integral], 0.0f);
     }
-    PlayFrame(
-        frames[frame_integral],
-        frames[frame_integral + 1],
-        frame_fractional);
   }
 
  private:
