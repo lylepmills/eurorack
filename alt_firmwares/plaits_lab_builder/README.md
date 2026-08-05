@@ -274,7 +274,7 @@ system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-9f8fe4de4c67` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-4749aec727af` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a
 new image, wait for `wrangler containers list` to report `ready` before smoke
@@ -343,6 +343,7 @@ target.
 | August 4, 2026 (schema 17 custom Speech banks, manual contract 14) | `017f95a1f59f` | `rev-017f95a1f59f` |
 | August 4, 2026 (gate custom Speech code out of legacy builds; recover default-palette flash) | `2e963f7402b9` | `rev-2e963f7402b9` |
 | August 4, 2026 (bake the English speech model for network-isolated previews) | `9f8fe4de4c67` | `rev-9f8fe4de4c67` |
+| August 4, 2026 (repair custom Speech class layout and LPC frame bounds) | `4749aec727af` | `rev-4749aec727af` |
 
 Three consequences a rollback has that a forward deploy does not:
 
