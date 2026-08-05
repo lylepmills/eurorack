@@ -450,10 +450,10 @@
       "id": "formant-speech",
       "packageId": "rubato/formant-speech",
       "name": "Speech Sounds",
-      "author": "Lyle Mills, after Emilie Gillet",
-      "origin": "Rubato Lab",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
       "family": "Vocal",
-      "description": "Naive, SAM, and LPC phoneme voices spread continuously across one playable model.",
+      "description": "The Naive, SAM, and LPC phoneme sides of Mutable Instruments Speech, spread continuously across one playable model.",
       "tags": [
         "speech",
         "vocal",
@@ -471,9 +471,14 @@
         "Speech sounds voice",
         "Raw excitation or widened voice"
       ],
+      "artwork": {
+        "icon": "/model-icons/speech-sounds.png",
+        "kind": "official",
+        "tone": "green"
+      },
       "version": "1.0.0",
-      "digest": "sha256:1e6f648b0078b41b8699a0388b4abacc0bcb12ac3ff6c4aca411784a04efb1cd",
-      "documentationDigest": "sha256:495080935e72a54c8da82472ce50e98deb579103fe57d9dedecf4346f309068f",
+      "digest": "sha256:cb3bf4d58136ece9b3d72bbb8300901ed0e140d84846e594a3b139b142d2f0ae",
+      "documentationDigest": "sha256:13d42b1ce9683a57c3fa3ef62e8e57e7d40d842b4a81bbb08db99b7e23687003",
       "manual": {
         "controls": {
           "harmonics": "Moves continuously from the five-formant naive voice through SAM to interpolated LPC phonemes.",
@@ -491,10 +496,10 @@
       "id": "lpc-speech",
       "packageId": "rubato/lpc-speech",
       "name": "LPC Words",
-      "author": "Lyle Mills, after Emilie Gillet",
-      "origin": "Rubato Lab",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
       "family": "Vocal",
-      "description": "Selected stock and custom LPC word banks with the original word and vocal-tract controls plus direct speed and recorded prosody.",
+      "description": "The LPC word-bank side of Mutable Instruments Speech, with selected stock or custom banks, direct speed, and recorded prosody.",
       "tags": [
         "speech",
         "vocal",
@@ -511,9 +516,14 @@
         "LPC speech voice",
         "Raw excitation or widened voice"
       ],
+      "artwork": {
+        "icon": "/model-icons/lpc-words.png",
+        "kind": "official",
+        "tone": "green"
+      },
       "version": "1.0.0",
-      "digest": "sha256:026f2b3c04b06565c686eda4409ceafdffe0584675fa2a27d40855691404022c",
-      "documentationDigest": "sha256:3dd9dea7a3a4b5f950a44d187a00128d76ce78836b2dbff980b373348bf21a77",
+      "digest": "sha256:a5d7b629f5ba9c18b21c840d905483e505aabcffb702632d6e6efb32e623db46",
+      "documentationDigest": "sha256:ca904d7d63694d2a24f0bf87212c36940e7d1e98a7966988296be587396f0527",
       "manual": {
         "controls": {
           "harmonics": "Selects one of the active stock or custom LPC word banks across the full dial.",
