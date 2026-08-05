@@ -87,6 +87,47 @@ const float kSixOpPanRight[kNumSixOpVoices] = {
 };
 const float kSixOpTailThreshold = 0.00001f;  // -100 dB carrier amplitude
 
+// GCC 4.8 expands SoftClip's rational limiter at every call site under -O2.
+// Six-op keeps separate dark/neutral/drive loops so it can avoid expensive work
+// in each hot path, but inlining the same transfer function into all three mono
+// loops costs several kilobytes of flash. Keep one shared copy;
+// the call overhead is tiny beside the floating-point divide inside SoftClip.
+static float __attribute__((noinline)) SixOpSoftClip(float sample) {
+  return SoftClip(sample);
+}
+
+void SixOpEngine::RenderMonoOutput(
+    float gain,
+    float macro,
+    float* out,
+    float* aux,
+    size_t size) {
+  const float darkness = (0.5f - macro) * 2.0f;
+  const float coefficient = 1.0f - darkness * 0.92f;
+  const float saturation = (macro - 0.5f) * 2.0f;
+  if (macro < 0.5f) {
+    for (size_t i = 0; i < size; ++i) {
+      float sample = SixOpSoftClip(temp_buffer_[i] * gain);
+      ONE_POLE(post_filter_, sample, coefficient);
+      sample = post_filter_;
+      aux[i] = out[i] = sample;
+    }
+  } else if (macro > 0.5f) {
+    for (size_t i = 0; i < size; ++i) {
+      float sample = SixOpSoftClip(temp_buffer_[i] * gain);
+      post_filter_ = sample;
+      sample += (SoftLimit(sample * 3.0f) - sample) * saturation;
+      aux[i] = out[i] = sample;
+    }
+  } else {
+    for (size_t i = 0; i < size; ++i) {
+      const float sample = SixOpSoftClip(temp_buffer_[i] * gain);
+      post_filter_ = sample;
+      aux[i] = out[i] = sample;
+    }
+  }
+}
+
 void SixOpEngine::Init(BufferAllocator* allocator) {
   patch_index_quantizer_.Init(32, 0.005f, false);
 
@@ -224,31 +265,7 @@ void SixOpEngine::Render(
         ((PLAITS_STEREO_SIX_OP && parameters.stereo)
             ? kSixOpCenterPan
             : 1.0f);
-    const float macro = parameters.macro;
-    const float darkness = (0.5f - macro) * 2.0f;
-    const float coefficient = 1.0f - darkness * 0.92f;
-    const float saturation = (macro - 0.5f) * 2.0f;
-    if (macro < 0.5f) {
-      for (size_t i = 0; i < size; ++i) {
-        float sample = SoftClip(temp_buffer_[i] * output_gain);
-        ONE_POLE(post_filter_, sample, coefficient);
-        sample = post_filter_;
-        aux[i] = out[i] = sample;
-      }
-    } else if (macro > 0.5f) {
-      for (size_t i = 0; i < size; ++i) {
-        float sample = SoftClip(temp_buffer_[i] * output_gain);
-        post_filter_ = sample;
-        sample += (SoftLimit(sample * 3.0f) - sample) * saturation;
-        aux[i] = out[i] = sample;
-      }
-    } else {
-      for (size_t i = 0; i < size; ++i) {
-        const float sample = SoftClip(temp_buffer_[i] * output_gain);
-        post_filter_ = sample;
-        aux[i] = out[i] = sample;
-      }
-    }
+    RenderMonoOutput(output_gain, parameters.macro, out, aux, size);
     post_filter_right_ = post_filter_;
   } else if ((PLAITS_STEREO_SIX_OP && parameters.stereo)) {
     // Staggered rendering, split by voice: the accumulation buffer always
@@ -342,32 +359,7 @@ void SixOpEngine::Render(
     rendered_voice_ = (rendered_voice_ + 1) % kNumSixOpVoices;
     voice_[rendered_voice_].Render(temp_buffer_, size * kNumSixOpVoices);
 
-    const float macro = parameters.macro;
-    const float darkness = (0.5f - macro) * 2.0f;
-    const float coefficient = 1.0f - darkness * 0.92f;
-    const float saturation = (macro - 0.5f) * 2.0f;
-    if (macro < 0.5f) {
-      for (size_t i = 0; i < size; ++i) {
-        float sample = SoftClip(temp_buffer_[i] * 0.25f);
-        ONE_POLE(post_filter_, sample, coefficient);
-        sample = post_filter_;
-        aux[i] = out[i] = sample;
-      }
-    } else if (macro > 0.5f) {
-      for (size_t i = 0; i < size; ++i) {
-        float sample = SoftClip(temp_buffer_[i] * 0.25f);
-        post_filter_ = sample;
-        const float saturated = SoftLimit(sample * 3.0f);
-        sample += (saturated - sample) * saturation;
-        aux[i] = out[i] = sample;
-      }
-    } else {
-      for (size_t i = 0; i < size; ++i) {
-        const float sample = SoftClip(temp_buffer_[i] * 0.25f);
-        post_filter_ = sample;
-        aux[i] = out[i] = sample;
-      }
-    }
+    RenderMonoOutput(0.25f, parameters.macro, out, aux, size);
     for (size_t i = 0; i < (kNumSixOpVoices - 1) * size; ++i) {
       acc_buffer_[i] = temp_buffer_[size + i];
     }
