@@ -7,8 +7,15 @@ const config = JSON.parse(source.replace(/^\s*\/\/.*$/gm, ""));
 const staging = config.env.staging;
 const smoke = await readFile(new URL("../scripts/staging_smoke.mts", import.meta.url), "utf8");
 
-test("staging promotes the same immutable source and container image", () => {
-  assert.equal(staging.vars.PLAITS_SOURCE_REVISION, config.vars.PLAITS_SOURCE_REVISION);
+test("staging promotes the same immutable release identity and container image", () => {
+  for (const key of [
+    "PLAITS_SOURCE_REVISION",
+    "PLAITS_TOOLCHAIN_ID",
+    "PLAITS_BUILD_CONTRACT",
+    "PLAITS_MANUAL_CONTRACT",
+  ]) {
+    assert.equal(staging.vars[key], config.vars[key], key);
+  }
   assert.equal(staging.containers[0].image, config.containers[0].image);
 });
 

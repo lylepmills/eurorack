@@ -309,10 +309,11 @@ Container are managed by `wrangler.jsonc`. Before each firmware-source rollout:
    ```
 
    It checks CORS and environment identity, source-voice and stock-bank
-   previews, text encoding, saved-bank preview restoration, one real
-   Speech-only firmware compile with reduced stock banks, both downloads, and
-   writes the exact WAV/recipe used by the gate. A repeat against the same
-   revision reuses the staging caches. The smoke tolerates only the bounded
+   previews, text encoding, saved-bank preview restoration, one real firmware
+   compile containing both Speech Sounds and LPC Words with reduced stock
+   banks, both downloads, and writes the exact WAV/recipe used by the gate. A
+   repeat against the same revision reuses the staging caches. The smoke
+   tolerates only the bounded
    503/522 window while a newly created Container application provisions; all
    other failures stop immediately.
 8. Flash and play the exact staged WAV. Only after that pass, deploy production
@@ -328,6 +329,14 @@ The first full staging gate passed on physical Plaits hardware on August 5,
 2026, using the exact `rev-812937f27ada` staged WAV. The module booted and
 navigated normally, produced audio, and played the custom "staging speech
 hardware check" bank.
+
+The split-Speech gate then passed on physical hardware at
+`rev-174d93845372`, build
+`80ffa4164cebc2b73f94a347b646a8d6fdc8274c39dc61e5fe354655b64bba41`.
+Its exact staged WAV contained both Speech Sounds and LPC Words, booted and
+navigated normally, produced audio from both models, and played the shared
+custom bank. Its SHA-256 is
+`0845885d1cc89d2b66bddef6ea583dabc3f9b43865ec420023ec26069633b1c9`.
 
 Cloudflare's rate-limit binding allows five new compilation requests per source
 IP per minute. Cache hits and repeated polls for an already queued build bypass
