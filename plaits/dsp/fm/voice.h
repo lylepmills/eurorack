@@ -130,6 +130,21 @@ class Voice {
   inline float op_level(int i) const {
     return level_[i];
   }
+
+  inline bool audible(float threshold) const {
+    if (!patch_) {
+      return false;
+    }
+    for (int i = 0; i < num_operators; ++i) {
+      // Only carrier operators contribute directly to the output. A modulator
+      // cannot be audible once every carrier it feeds has faded out.
+      if (!algorithms_->is_modulator(patch_->algorithm, i) &&
+          fabsf(operator_[i].amplitude) > threshold) {
+        return true;
+      }
+    }
+    return false;
+  }
   
   inline void Render(
       const Parameters& parameters,

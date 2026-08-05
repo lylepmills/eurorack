@@ -85,6 +85,7 @@ const float kSixOpPanRight[kNumSixOpVoices] = {
   0.447213595f,  // sqrt(0.2)
   0.894427191f,  // sqrt(0.8)
 };
+const float kSixOpTailThreshold = 0.00001f;  // -100 dB carrier amplitude
 
 void SixOpEngine::Init(BufferAllocator* allocator) {
   patch_index_quantizer_.Init(32, 0.005f, false);
@@ -263,25 +264,24 @@ void SixOpEngine::Render(
     // allocation makes successive notes alternate between the two sides.
     const bool unpatched = parameters.trigger & TRIGGER_UNPATCHED;
     const float previous_left_gain = unpatched
-        ? kSixOpCenterPan
-        : kSixOpPanLeft[previous_voice];
+        ? kSixOpCenterPan * 0.25f
+        : kSixOpPanLeft[previous_voice] * 0.25f;
     const float previous_right_gain = unpatched
-        ? kSixOpCenterPan
-        : kSixOpPanRight[previous_voice];
+        ? kSixOpCenterPan * 0.25f
+        : kSixOpPanRight[previous_voice] * 0.25f;
     const float current_left_gain = unpatched
-        ? kSixOpCenterPan
-        : kSixOpPanLeft[rendered_voice_];
+        ? kSixOpCenterPan * 0.25f
+        : kSixOpPanLeft[rendered_voice_] * 0.25f;
     const float current_right_gain = unpatched
-        ? kSixOpCenterPan
-        : kSixOpPanRight[rendered_voice_];
+        ? kSixOpCenterPan * 0.25f
+        : kSixOpPanRight[rendered_voice_] * 0.25f;
     const float macro = parameters.macro;
     const float darkness = (0.5f - macro) * 2.0f;
     const float coefficient = 1.0f - darkness * 0.92f;
-    const float saturation = (macro - 0.5f) * 2.0f;
     if (macro < 0.5f) {
       for (size_t i = 0; i < size; ++i) {
-        const float previous = acc_buffer_[i] * 0.25f;
-        const float current = temp_buffer_[i] * 0.25f;
+        const float previous = acc_buffer_[i];
+        const float current = temp_buffer_[i];
         float left = SoftClip(
             previous * previous_left_gain + current * current_left_gain);
         float right = SoftClip(
@@ -293,46 +293,42 @@ void SixOpEngine::Render(
         out[i] = left;
         aux[i] = right;
       }
-    } else if (macro > 0.5f) {
-      for (size_t i = 0; i < size; ++i) {
-        const float previous = acc_buffer_[i] * 0.25f;
-        const float current = temp_buffer_[i] * 0.25f;
-        float left = SoftClip(
-            previous * previous_left_gain + current * current_left_gain);
-        float right = SoftClip(
-            previous * previous_right_gain + current * current_right_gain);
-        post_filter_ = left;
-        post_filter_right_ = right;
-        // The first SoftClip bounds each channel to [-1, 1], so the driven
-        // sample is already inside SoftClip's rational section. Calling
-        // SoftLimit directly removes redundant range checks without changing
-        // the transfer function.
-        left += (SoftLimit(left * 3.0f) - left) * saturation;
-        right += (SoftLimit(right * 3.0f) - right) * saturation;
-        out[i] = left;
-        aux[i] = right;
-      }
     } else {
-      // At the neutral MACRO position saturation is exactly zero. Avoid doing
-      // two additional soft clips per sample only to crossfade them away.
+      // The extra high-MACRO drive costs two rational divides per sample. That
+      // is safe for one free-running voice, but pushes expensive two-voice FM
+      // algorithms over the deadline in triggered stereo mode. Keep MACRO's
+      // network detune here and reserve the added drive for mono and the
+      // dedicated single-voice drone path.
+      float last_left = post_filter_;
+      float last_right = post_filter_right_;
       for (size_t i = 0; i < size; ++i) {
-        const float previous = acc_buffer_[i] * 0.25f;
-        const float current = temp_buffer_[i] * 0.25f;
+        const float previous = acc_buffer_[i];
+        const float current = temp_buffer_[i];
         const float left = SoftClip(
             previous * previous_left_gain + current * current_left_gain);
         const float right = SoftClip(
             previous * previous_right_gain + current * current_right_gain);
-        post_filter_ = left;
-        post_filter_right_ = right;
+        last_left = left;
+        last_right = right;
         out[i] = left;
         aux[i] = right;
       }
+      post_filter_ = last_left;
+      post_filter_right_ = last_right;
     }
     // std::copy lowers to a generic memmove in GCC 4.8.3. This fixed, small
     // transfer is cheaper as a plain loop and has identical copy semantics
     // because these buffers never overlap.
     for (size_t i = 0; i < (kNumSixOpVoices - 1) * size; ++i) {
       acc_buffer_[i] = temp_buffer_[size + i];
+    }
+    // Once a released voice's carriers are below -100 dB, its continued FM
+    // render is inaudible but can consume nearly half the callback budget.
+    // Unload only the older voice; the active note and real release overlap are
+    // preserved until that threshold is actually crossed.
+    if (rendered_voice_ != active_voice_ &&
+        !voice_[rendered_voice_].audible(kSixOpTailThreshold)) {
+      voice_[rendered_voice_].UnloadPatch();
     }
   } else {
     // Staggered rendering.

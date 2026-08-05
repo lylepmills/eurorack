@@ -33,6 +33,15 @@ class AuditCatalogTest(unittest.TestCase):
                  estimate.sweep_positions("extreme", "wavetable-chord")]
         self.assertEqual(names.count("harm-six"), 1)
 
+    def test_six_op_sweep_covers_every_program_at_high_macro(self):
+        positions = estimate.sweep_positions("extreme", "dx7-bank-c")
+        programs = [position for position in positions
+                    if position[0].startswith("program-")]
+        self.assertEqual(len(programs), 32)
+        self.assertEqual(programs[0][0], "program-01-macro-high")
+        self.assertEqual(programs[-1][0], "program-32-macro-high")
+        self.assertTrue(all(position[4] == 0.999 for position in programs))
+
     def test_every_current_catalog_model_advertises_stereo(self):
         ids = audit_catalog.stereo_catalog_ids()
         self.assertEqual(len(ids), 85)

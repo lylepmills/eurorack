@@ -231,6 +231,8 @@ def main() -> int:
     # with nothing in TRIG -- the calibration condition. patched-idle = 0.
     parser.add_argument("--trigger", choices=("unpatched", "patched-idle", "periodic", "both"),
                         default="unpatched")
+    parser.add_argument("--trigger-period", type=int, default=16,
+        help="periodic-trigger interval in audio blocks (default: 16)")
     parser.add_argument("--stereo", action="store_true",
         help="measure the stereo (OUT/AUX as L/R) render path instead of mono")
     parser.add_argument("--quiet", action="store_true")
@@ -242,6 +244,8 @@ def main() -> int:
         help="per-function instruction histogram (single position)")
     parser.add_argument("--keep", action="store_true")
     args = parser.parse_args()
+    if args.trigger_period < 1:
+        parser.error("--trigger-period must be at least 1")
 
     sys.path.insert(0, str(SDK_DIR))
     import plaits_lab  # noqa: E402
@@ -340,7 +344,7 @@ def main() -> int:
                     harness_obj = f"/output/h_{workload}_{label}.o"
                     elf = f"/output/h_{workload}_{label}.elf"
                     trigger_value = 2 if trigger_mode == "unpatched" else 0
-                    trigger_period = 16 if trigger_mode == "periodic" else 0
+                    trigger_period = args.trigger_period if trigger_mode == "periodic" else 0
                     defines = [
                         f"-DPLAITS_QEMU_BLOCKS={blocks}",
                         f"-DPLAITS_QEMU_HARMONICS={harm}f",

@@ -62,6 +62,10 @@ class FMVoice {
   inline const fm::Patch* patch() const {
     return patch_;
   }
+
+  inline bool audible(float threshold) const {
+    return patch_ && voice_.audible(threshold);
+  }
   
   inline fm::Voice<6>::Parameters* mutable_parameters() {
     return &parameters_;
