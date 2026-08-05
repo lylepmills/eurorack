@@ -222,10 +222,13 @@
 //     accumulator, so the phase runs on -- the same choice z-filter and
 //     noise-bank make, and the one that keeps a HARMONICS sweep from clicking.
 //   - A wave that is not in the four-slot cache is decoded into a staging
-//     buffer three samples per 4 kHz render block, then swapped in whole. The
-//     current wave remains valid during the 43-block / 10.75 ms fill. This
-//     bounds the audio-callback cost under abrupt or audio-rate modulation;
-//     stationary output is byte-exact, while a newly addressed wave can lag.
+//     buffer one sample per 4 kHz render block, then swapped in whole. The
+//     current wave remains valid during the 127-block / 31.75 ms fill. The
+//     deliberately small slice is hardware-derived: advancing all four WMAP
+//     decoders by three samples per block crossed Plaits' deadline under
+//     opposite-corner modulation. This bounds the audio-callback cost under
+//     abrupt or audio-rate modulation; stationary output is byte-exact, while
+//     a newly addressed wave can lag.
 
 #ifndef PLAITS_DSP_ENGINE2_WAVE_SCAN_ENGINE_H_
 #define PLAITS_DSP_ENGINE2_WAVE_SCAN_ENGINE_H_
@@ -251,7 +254,7 @@ const uint32_t kWaveScanWaveMask = 127;
 const size_t kWaveScanNumWaves = 256;
 const size_t kWaveScanCacheSize = 4;
 const size_t kWaveScanCacheBuffersPerSlot = 2;
-const size_t kWaveScanDecodeChunkSize = 3;
+const size_t kWaveScanDecodeChunkSize = 1;
 
 struct WaveScanDecodeState {
   const uint8_t* data;
