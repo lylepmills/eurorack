@@ -51,8 +51,17 @@ class FMEngine : public Engine {
       size_t size,
       bool* already_enveloped);
   virtual bool stereo_capable() const { return PLAITS_STEREO_TWO_OP_FM; }
+  virtual bool hard_sync_capable() const { return true; }
 
  private:
+  template<bool process_hard_sync>
+  void RenderInternal(
+      const EngineParameters& parameters,
+      float* out,
+      float* aux,
+      size_t size,
+      bool* already_enveloped);
+
   uint32_t carrier_phase_;
   uint32_t modulator_phase_;
   uint32_t sub_phase_;

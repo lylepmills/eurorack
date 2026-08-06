@@ -34,6 +34,7 @@
 
 #include "stmlib/dsp/parameter_interpolator.h"
 
+#include "plaits/build_config.h"
 #include "plaits/dsp/oscillator/sine_oscillator.h"
 #include "plaits/dsp/downsampler/4x_downsampler.h"
 
@@ -63,6 +64,25 @@ void FMEngine::Render(
     float* aux,
     size_t size,
     bool* already_enveloped) {
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
+  if (parameters.hard_sync) {
+    RenderInternal<true>(parameters, out, aux, size, already_enveloped);
+  } else {
+#endif
+    RenderInternal<false>(parameters, out, aux, size, already_enveloped);
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
+  }
+#endif
+}
+
+template<bool process_hard_sync>
+void FMEngine::RenderInternal(
+    const EngineParameters& parameters,
+    float* out,
+    float* aux,
+    size_t size,
+    bool* already_enveloped) {
+  uint32_t hard_sync = process_hard_sync ? parameters.hard_sync : 0;
   
   // 4x oversampling
   const float note = parameters.note - 24.0f;
@@ -112,6 +132,18 @@ void FMEngine::Render(
   }
 
   while (size--) {
+    if (process_hard_sync) {
+      if (hard_sync & 1) {
+        // Reset the complete oscillator relationship at the output-sample
+        // boundary. Keep the downsampler histories intact so the reset is
+        // filtered by the existing 4x reconstruction path.
+        carrier_phase_ = 0;
+        modulator_phase_ = 0;
+        sub_phase_ = 0;
+        previous_sample_ = 0.0f;
+      }
+      hard_sync >>= 1;
+    }
     const float max_uint32 = 4294967296.0f;
     const float amount = amount_modulation.Next();
     const float feedback = feedback_modulation.Next();

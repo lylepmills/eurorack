@@ -30,6 +30,7 @@
 
 #include <algorithm>
 
+#include "plaits/build_config.h"
 #include "plaits/dsp/oscillator/sine_oscillator.h"
 #include "plaits/resources.h"
 
@@ -139,6 +140,25 @@ void WavetableEngine::Render(
     float* aux,
     size_t size,
     bool* already_enveloped) {
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
+  if (parameters.hard_sync) {
+    RenderInternal<true>(parameters, out, aux, size, already_enveloped);
+  } else {
+#endif
+    RenderInternal<false>(parameters, out, aux, size, already_enveloped);
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
+  }
+#endif
+}
+
+template<bool process_hard_sync>
+void WavetableEngine::RenderInternal(
+    const EngineParameters& parameters,
+    float* out,
+    float* aux,
+    size_t size,
+    bool* already_enveloped) {
+  uint32_t hard_sync = process_hard_sync ? parameters.hard_sync : 0;
   const float f0 = NoteToFrequency(parameters.note);
   
   ONE_POLE(x_pre_lp_, parameters.timbre * 6.9999f, 0.2f);
@@ -188,6 +208,14 @@ void WavetableEngine::Render(
     MAKE_INTEGRAL_FRACTIONAL(y);
     MAKE_INTEGRAL_FRACTIONAL(z);
 
+    if (process_hard_sync) {
+      if (hard_sync & 1) {
+        // Reset only the table traversal. Coordinate smoothing,
+        // differentiation, and stereo phase rotation remain continuous.
+        phase_ = 0.0f;
+      }
+      hard_sync >>= 1;
+    }
     phase_ += f0;
     if (phase_ >= 1.0f) {
       phase_ -= 1.0f;

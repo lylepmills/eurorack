@@ -32,6 +32,14 @@
 
 #include "stmlib/dsp/parameter_interpolator.h"
 
+#include "plaits/build_config.h"
+
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
+#define PLAITS_HARD_SYNC_EVENTS(parameters) ((parameters).hard_sync)
+#else
+#define PLAITS_HARD_SYNC_EVENTS(parameters) 0u
+#endif
+
 using namespace std;
 
 namespace plaits {
@@ -79,8 +87,10 @@ void VirtualAnalogVCFEngine::Render(
   
   float sub_gain = max(fabsf(parameters.morph - 0.5f) - 0.3f, 0.0f) * 5.0f;
 
-  oscillator_.Render(f0, pw, shape, out, size);
-  sub_oscillator_.Render(f0 * 0.501f, 0.5f, 1.0f, aux, size);
+  const uint32_t hard_sync = PLAITS_HARD_SYNC_EVENTS(parameters);
+  oscillator_.Render(f0, pw, shape, out, size, hard_sync);
+  sub_oscillator_.Render(
+      f0 * 0.501f, 0.5f, 1.0f, aux, size, hard_sync);
   
   const float cutoff = f0 * SemitonesToRatio(
       (parameters.timbre - 0.2f) * 120.0f);
@@ -142,3 +152,5 @@ void VirtualAnalogVCFEngine::Render(
 }
 
 }  // namespace plaits
+
+#undef PLAITS_HARD_SYNC_EVENTS

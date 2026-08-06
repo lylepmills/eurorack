@@ -54,8 +54,17 @@ class WavetableEngine : public Engine {
       size_t size,
       bool* already_enveloped);
   virtual bool stereo_capable() const { return PLAITS_STEREO_WAVETABLE; }
+  virtual bool hard_sync_capable() const { return true; }
 
  private:
+  template<bool process_hard_sync>
+  void RenderInternal(
+      const EngineParameters& parameters,
+      float* out,
+      float* aux,
+      size_t size,
+      bool* already_enveloped);
+
   float ReadCell(
       int x0, int x1, int y0, int y1, int z0, int z1,
       float x_fractional, float y_fractional, float z_fractional,

@@ -53,6 +53,7 @@ class WaveshapingEngine : public Engine {
       size_t size,
       bool* already_enveloped);
   virtual bool stereo_capable() const { return PLAITS_STEREO_WAVESHAPING; }
+  virtual bool hard_sync_capable() const { return true; }
 
  private:
   Oscillator slope_;

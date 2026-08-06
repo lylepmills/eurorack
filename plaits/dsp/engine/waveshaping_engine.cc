@@ -35,6 +35,13 @@
 
 #include "plaits/dsp/oscillator/sine_oscillator.h"
 #include "plaits/resources.h"
+#include "plaits/build_config.h"
+
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
+#define PLAITS_HARD_SYNC_EVENTS(parameters) ((parameters).hard_sync)
+#else
+#define PLAITS_HARD_SYNC_EVENTS(parameters) 0u
+#endif
 
 namespace plaits {
 
@@ -73,8 +80,11 @@ void WaveshapingEngine::Render(
   const float pw = parameters.morph * 0.45f + 0.5f;
   
   // Start from bandlimited slope signal.
-  slope_.Render<OSCILLATOR_SHAPE_SLOPE>(f0, pw, out, size);
-  triangle_.Render<OSCILLATOR_SHAPE_SLOPE>(f0, 0.5f, aux, size);
+  const uint32_t hard_sync = PLAITS_HARD_SYNC_EVENTS(parameters);
+  slope_.Render<OSCILLATOR_SHAPE_SLOPE>(
+      f0, pw, out, size, hard_sync);
+  triangle_.Render<OSCILLATOR_SHAPE_SLOPE>(
+      f0, 0.5f, aux, size, hard_sync);
 
   // Try to estimate how rich the spectrum is, and reduce the range of the
   // waveshaping control accordingly.
@@ -151,3 +161,5 @@ void WaveshapingEngine::Render(
 }
 
 }  // namespace plaits
+
+#undef PLAITS_HARD_SYNC_EVENTS

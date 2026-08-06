@@ -68,7 +68,24 @@ class Oscillator {
 
   template<OscillatorShape shape>
   void Render(float frequency, float pw, float* out, size_t size) {
-    Render<shape, false, false>(frequency, pw, NULL, out, size);
+    RenderInternal<shape, false, false, false>(
+        frequency, pw, NULL, out, size, 0);
+  }
+
+  template<OscillatorShape shape>
+  void Render(
+      float frequency,
+      float pw,
+      float* out,
+      size_t size,
+      uint32_t hard_sync) {
+    if (hard_sync) {
+      RenderInternal<shape, false, false, true>(
+          frequency, pw, NULL, out, size, hard_sync);
+    } else {
+      RenderInternal<shape, false, false, false>(
+          frequency, pw, NULL, out, size, 0);
+    }
   }
   
   template<OscillatorShape shape>
@@ -79,9 +96,11 @@ class Oscillator {
       float* out,
       size_t size) {
     if (!fm) {
-      Render<shape, false, false>(frequency, pw, NULL, out, size);
+      RenderInternal<shape, false, false, false>(
+          frequency, pw, NULL, out, size, 0);
     } else {
-      Render<shape, true, true>(frequency, pw, fm, out, size);
+      RenderInternal<shape, true, true, false>(
+          frequency, pw, fm, out, size, 0);
     }
   }
 
@@ -92,6 +111,23 @@ class Oscillator {
       const float* external_fm,
       float* out,
       size_t size) {
+    RenderInternal<shape, has_external_fm, through_zero_fm, false>(
+        frequency, pw, external_fm, out, size, 0);
+  }
+
+ private:
+  template<
+      OscillatorShape shape,
+      bool has_external_fm,
+      bool through_zero_fm,
+      bool process_hard_sync>
+  void RenderInternal(
+      float frequency,
+      float pw,
+      const float* external_fm,
+      float* out,
+      size_t size,
+      uint32_t hard_sync) {
     
     if (!has_external_fm) {
       if (!through_zero_fm) {
@@ -124,6 +160,30 @@ class Oscillator {
                   shape == OSCILLATOR_SHAPE_TRIANGLE) ? 0.5f : pwm.Next();
       if (has_external_fm) {
         CONSTRAIN(pw, fabsf(frequency) * 2.0f, 1.0f - 2.0f * fabsf(frequency))
+      }
+
+      if (process_hard_sync) {
+        if (hard_sync & 1) {
+          float value = phase_;
+          if (shape > OSCILLATOR_SHAPE_SAW &&
+              shape <= OSCILLATOR_SHAPE_SLOPE) {
+            const float slope_up = 1.0f / pw;
+            const float slope_down = 1.0f / (1.0f - pw);
+            value = phase_ < pw
+                ? phase_ * slope_up
+                : 1.0f - (phase_ - pw) * slope_down;
+          } else if (shape > OSCILLATOR_SHAPE_SLOPE) {
+            value = phase_ < pw ? 0.0f : 1.0f;
+          }
+          // Reset at this sample boundary. The two-sample polyBLEP removes
+          // the arbitrary value discontinuity without clearing the oscillator
+          // filters or parameter interpolators.
+          this_sample -= value * stmlib::ThisBlepSample(1.0f);
+          next_sample -= value * stmlib::NextBlepSample(1.0f);
+          phase_ = 0.0f;
+          high_ = shape <= OSCILLATOR_SHAPE_SLOPE;
+        }
+        hard_sync >>= 1;
       }
       phase_ += frequency;
       
@@ -234,7 +294,6 @@ class Oscillator {
     next_sample_ = next_sample;
   }
   
- private:
   // Oscillator state.
   float phase_;
   float next_sample_;
