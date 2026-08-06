@@ -38,8 +38,12 @@ test("every environment's queue consumer agrees with its dead-letter variable", 
   assert.equal(staging.queues.consumers[0].dead_letter_queue, staging.vars.DEAD_LETTER_QUEUE);
 });
 
-test("the hardware smoke carries both shared-bank Speech models", () => {
+test("the hardware smoke carries all three Speech engines", () => {
   assert.match(smoke, /engine\.id === "speech"/);
+  assert.match(smoke, /engine\.id === "formant-speech"/);
   assert.match(smoke, /engine\.id === "lpc-speech"/);
-  assert.match(smoke, /slots: \[reference\(speech\), reference\(lpcSpeech\)/);
+  assert.match(
+    smoke,
+    /slots:\s*\[\s*reference\(originalSpeech\),\s*reference\(speechSounds\),\s*reference\(lpcWords\),/s,
+  );
 });

@@ -102,10 +102,12 @@ const publicCatalog = JSON.parse(await readFile(
 const chordCatalog = JSON.parse(await readFile(
   new URL("../../plaits_lab_chord_tables/catalog.json", import.meta.url), "utf8",
 ));
-const speech = publicCatalog.engines.find((engine: { id: string }) => engine.id === "speech");
-const lpcSpeech = publicCatalog.engines.find((engine: { id: string }) => engine.id === "lpc-speech");
-assert.ok(speech, "Speech Sounds is missing from the public catalog");
-assert.ok(lpcSpeech, "LPC Words is missing from the public catalog");
+const originalSpeech = publicCatalog.engines.find((engine: { id: string }) => engine.id === "speech");
+const speechSounds = publicCatalog.engines.find((engine: { id: string }) => engine.id === "formant-speech");
+const lpcWords = publicCatalog.engines.find((engine: { id: string }) => engine.id === "lpc-speech");
+assert.ok(originalSpeech, "Original Speech is missing from the public catalog");
+assert.ok(speechSounds, "Speech Sounds is missing from the public catalog");
+assert.ok(lpcWords, "LPC Words is missing from the public catalog");
 const reference = (engine: any) => ({
   engine: engine.id,
   package: engine.packageId,
@@ -116,10 +118,14 @@ const recipe = {
   schemaVersion: 17,
   target: "mutable-instruments-plaits",
   firmware: "rubato-plaits",
-  // Keep both destinations for the shared bank in this hardware gate. The
-  // split models have different playback behavior and must both boot, navigate,
-  // and speak before an image is promoted.
-  slots: [reference(speech), reference(lpcSpeech), ...Array.from({ length: 22 }, () => null)],
+  // Keep Original Speech beside both split engines in this hardware gate. All
+  // three paths must boot, navigate, and speak before an image is promoted.
+  slots: [
+    reference(originalSpeech),
+    reference(speechSounds),
+    reference(lpcWords),
+    ...Array.from({ length: 21 }, () => null),
+  ],
   output: "audio-wav",
   preferences: { navigationMode: "linear" },
   initialOptions: {

@@ -321,10 +321,10 @@ Container are managed by `wrangler.jsonc`. Before each firmware-source rollout:
 
    It checks CORS and environment identity, source-voice and stock-bank
    previews, text encoding, saved-bank preview restoration, one real firmware
-   compile containing both Speech Sounds and LPC Words with reduced stock
-   banks, both downloads, and writes the exact WAV/recipe used by the gate. A
-   repeat against the same revision reuses the staging caches. The smoke
-   tolerates only the bounded
+   compile containing Original Speech, Speech Sounds, and LPC Words with
+   reduced stock banks, both downloads, and writes the exact WAV/recipe used by
+   the gate. A repeat against the same revision reuses the staging caches. The
+   smoke tolerates only the bounded
    503/522 window while a newly created Container application provisions; all
    other failures stop immediately.
 8. Flash and play the exact staged WAV. Only after that pass, deploy production
@@ -344,9 +344,10 @@ hardware check" bank.
 The split-Speech gate then passed on physical hardware at
 `rev-174d93845372`, build
 `80ffa4164cebc2b73f94a347b646a8d6fdc8274c39dc61e5fe354655b64bba41`.
-Its exact staged WAV contained both Speech Sounds and LPC Words, booted and
+Its exact staged WAV contained Original Speech and LPC Words, booted and
 navigated normally, produced audio from both models, and played the shared
-custom bank. Its SHA-256 is
+custom bank. The later production canary covered all three Speech engines. Its
+SHA-256 is
 `0845885d1cc89d2b66bddef6ea583dabc3f9b43865ec420023ec26069633b1c9`.
 
 Cloudflare's rate-limit binding allows five new compilation requests per source
@@ -435,7 +436,7 @@ target.
 | August 4, 2026 (restore saved custom-bank previews from their LPC frames) | `c8b7d7736d40` | `rev-c8b7d7736d40` |
 | August 5, 2026 (recover default-palette flash headroom after Six-op CPU work) | `77cff28e2e70` | `rev-77cff28e2e70` |
 | August 5, 2026 (match custom Speech bank levels to stock) | `812937f27ada` | `rev-812937f27ada` |
-| August 5, 2026 (split Speech Sounds and LPC Words with shared custom banks) | `174d93845372` | `rev-174d93845372` |
+| August 5, 2026 (split Speech engines with custom banks shared by Original Speech and LPC Words) | `174d93845372` | `rev-174d93845372` |
 | August 5, 2026 (schema 19 triggered and gated FREQUENCY contours, manual contract 15) | `d554b7f46dc0` | `rev-d554b7f46dc0` |
 | August 5, 2026 (credit split Speech engines to Mutable Instruments; divided Speech icons) | `769417c8b8e3` | `rev-769417c8b8e3` |
 
