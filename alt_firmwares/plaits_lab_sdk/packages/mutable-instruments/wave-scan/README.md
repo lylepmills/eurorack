@@ -37,6 +37,39 @@ so the port stores 128 and wraps the index instead. All 256 waves are reachable
 — the 20 bank definitions between them name every one — so there is no unused
 subset to drop, and that is the whole saving available.
 
+## Rejected compression experiment
+
+In August 2026 this table was packed losslessly as fixed-width second
+differences and decoded on demand. It reduced the engine's tables from 33,448 B
+to 25,204 B, saving 8,244 B of flash, at the cost of a 1,152 B four-wave cache.
+Byte-for-byte tests proved that every decoded wave matched the source bank, and
+the settled stationary render was effectively identical to the direct-table
+engine.
+
+The real-time behavior was not identical. Bounding the decoder tightly enough
+for the audio callback meant advancing one cache slot by two samples per 4 kHz
+render block. Filling the four waves needed by a cold WMAP cell therefore took
+about 64 ms. The original Rice-coded version reached 92–93% CPU under forced
+opposite-corner modulation; fixed-width decoding and a global work budget
+brought that first to 89–91%, then to 85–87% after simplifying the WMAP mix.
+That cleared the probe's 90% red line, but only by retaining the cache-fill
+latency.
+
+Hardware listening rejected that tradeoff. A two-engine firmware compared the
+direct-table and packed implementations in adjacent slots and exposed a
+definite audible difference, including without deliberate modulation. Plaits'
+`Voice::Render` resets an engine whenever its model is selected, so each toggle
+also starts the packed engine with an empty cache; a stationary control setting
+does not avoid the cold-fill path. Offline data equality and a steady-state
+render comparison had therefore tested the wrong invariant: the availability
+of the requested waves over time is part of the sound.
+
+Decision: keep the direct 33,448 B table. Do not put Wave Scan behind an
+incremental decode cache. Any future attempt must preserve immediate table
+availability, be tested in a minimal side-by-side hardware firmware, and pass
+cold-start, stationary, and fast-modulation listening—not only byte equality,
+CPU probes, and warmed-up renders.
+
 ## What it has that Plaits' wavetable engine does not
 
 **Twenty named banks that are not uniform grids.** `wavetable_definitions` gives
