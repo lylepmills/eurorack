@@ -1738,11 +1738,20 @@ inline int32_t Parameter(float macro) {
 // reproduced by carrying Braids' own bytes; what is NOT reproduced is the
 // >> 16 truncation of the interpolation term, which loses at most one count of
 // the +/-32768 range this returns, before the port box-averages four of them.
-inline float ReadWave(const uint8_t* wave, int32_t index, float fraction) {
+inline float ReadWaveRaw(
+    const uint8_t* wave, int32_t index, float fraction) {
   const float a = static_cast<float>(wave[index]);
   const float b = static_cast<float>(
       wave[static_cast<uint32_t>(index + 1) & kWaveScanWaveMask]);
-  return (a + (b - a) * fraction) * (1.0f / 128.0f) - 1.0f;
+  return a + (b - a) * fraction;
+}
+
+inline float NormalizeWave(float value) {
+  return value * (1.0f / 128.0f) - 1.0f;
+}
+
+inline float ReadWave(const uint8_t* wave, int32_t index, float fraction) {
+  return NormalizeWave(ReadWaveRaw(wave, index, fraction));
 }
 
 // The same read with the interpolation switched off, which is what WLIN's
@@ -2092,17 +2101,18 @@ void WaveScanEngine::Render(
         int32_t index = static_cast<int32_t>(scaled);
         const float fraction = scaled - static_cast<float>(index);
 
-        const float r00 = ReadWave(wave_00, index, fraction);
-        const float r01 = ReadWave(wave_01, index, fraction);
-        const float r10 = ReadWave(wave_10, index, fraction);
-        const float r11 = ReadWave(wave_11, index, fraction);
+        const float r00 = ReadWaveRaw(wave_00, index, fraction);
+        const float r01 = ReadWaveRaw(wave_01, index, fraction);
+        const float r10 = ReadWaveRaw(wave_10, index, fraction);
+        const float r11 = ReadWaveRaw(wave_11, index, fraction);
 
         main_accumulator += Blend(
             Blend(r00, r01, y_main), Blend(r10, r11, y_main), x_main);
         side_accumulator += Blend(
             Blend(r00, r01, y_side), Blend(r10, r11, y_side), x_side);
         if (j & 1) {
-          Push(main_accumulator * 0.5f, side_accumulator * 0.5f);
+          Push(NormalizeWave(main_accumulator * 0.5f),
+               NormalizeWave(side_accumulator * 0.5f));
           main_accumulator = 0.0f;
           side_accumulator = 0.0f;
         }

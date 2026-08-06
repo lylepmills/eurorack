@@ -222,9 +222,9 @@
 //     accumulator, so the phase runs on -- the same choice z-filter and
 //     noise-bank make, and the one that keeps a HARMONICS sweep from clicking.
 //   - A wave that is not in the four-slot cache is decoded into a staging
-//     buffer. One cache slot advances by one sample per 4 kHz render block,
+//     buffer. One cache slot advances by two samples per 4 kHz render block,
 //     round-robin, then swaps in whole. Four simultaneous WMAP misses therefore
-//     fill in about 508 blocks / 127 ms. The current waves remain valid during
+//     fill in about 256 blocks / 64 ms. The current waves remain valid during
 //     the fill. This bounds the audio-callback cost under abrupt or audio-rate
 //     modulation; stationary output is byte-exact, while newly addressed waves
 //     can lag.
@@ -253,7 +253,7 @@ const uint32_t kWaveScanWaveMask = 127;
 const size_t kWaveScanNumWaves = 256;
 const size_t kWaveScanCacheSize = 4;
 const size_t kWaveScanCacheBuffersPerSlot = 2;
-const size_t kWaveScanDecodeChunkSize = 1;
+const size_t kWaveScanDecodeChunkSize = 2;
 const size_t kWaveScanResidualBlockSize = 16;
 
 struct WaveScanDecodeState {
