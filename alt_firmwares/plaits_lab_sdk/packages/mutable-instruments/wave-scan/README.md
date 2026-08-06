@@ -62,8 +62,10 @@ source byte domain and normalizes only each box-averaged output; linearity makes
 that the same surface and signal while removing repeated arithmetic. With the
 two-sample global budget restored, steady WMAP measures 398.8 and the forced
 every-block stress measures 408.9 instructions/sample after the cache pipeline
-has settled, approximately 77% and 79% by the calibrated QEMU model. Hardware
-remains the publication authority for CPU.
+has settled, approximately 77% and 79% by the calibrated QEMU model. The module
+measures 850–870 Hz (85–87% of the render budget) under the same forced
+opposite-corner thrash, below the probe's 90% red line. Hardware remains the
+publication authority for CPU.
 
 The storage change is exact, not a new resampling step. Braids stores 129
 samples and reads index 128 as a wrap guard; that byte equals the wave's own
