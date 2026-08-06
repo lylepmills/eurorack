@@ -44,9 +44,9 @@ WMAP four, and WLIN three. Cached waves survive from block to block, and the
 replacement policy preserves every wave requested by the incoming block, so a
 one-cell scan only decodes the newly exposed edge.
 
-Decoding has one global budget: one slot advances by two samples per 4 kHz
-render block, round-robin. A four-corner WMAP miss fills in about 256 blocks,
-or 64 ms, while the prior cached waves remain valid. That makes an abrupt
+Decoding has one global budget: one slot advances by one sample per 4 kHz
+render block, round-robin. A four-corner WMAP miss fills in about 508 blocks,
+or 127 ms, while the prior cached waves remain valid. That makes an abrupt
 four-corner jump safe for the audio callback rather than doing four complete
 decodes at once. The waveform content and stationary output are exact; the one
 declared behavioral tradeoff is that a newly addressed, uncached wave can lag
@@ -56,9 +56,11 @@ The first Rice-coded prototype serviced every cache slot on every block. Even
 after reducing each slot to one sample, hardware measured 920–930 Hz on the CPU
 probe (92–93% of the render budget) and crossed the probe's 90% red line under
 opposite-corner WMAP modulation. The fixed-width, globally budgeted decoder
-measures 436.9 instructions/sample in the same forced every-block stress after
-the cache pipeline has settled, approximately 84% by the calibrated QEMU model.
-Hardware remains the publication authority for CPU.
+at two samples per block measured 890–910 Hz on hardware, still intermittently
+crossing the red line. The final one-sample global budget measures 433.6
+instructions/sample in the same forced every-block stress after the cache
+pipeline has settled, approximately 83% by the calibrated QEMU model. Hardware
+remains the publication authority for CPU.
 
 The storage change is exact, not a new resampling step. Braids stores 129
 samples and reads index 128 as a wrap guard; that byte equals the wave's own
