@@ -2819,7 +2819,7 @@
         "Its complement: the adjacent wave, the opposite corner of the map cell, or the other end of the crush."
       ],
       "version": "1.0.0",
-      "digest": "sha256:219109874214bbb0bf280aa2ab05934885f717ac93ef2a8850fd9e1087aa2039",
+      "digest": "sha256:7c81edf76beb177d584e8a315c41f3211a03dd60f082e32eea19ba0e46d22ca3",
       "documentationDigest": "sha256:314a59aceba9ffe8883b1dffa46836639befa04b6c4dbb83bc41474e9fe36451",
       "manual": {
         "controls": {
