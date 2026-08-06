@@ -165,6 +165,7 @@ class SawCombEngine : public Engine {
       bool* already_enveloped);
   // Pattern A: two comb taps a fifth apart on one line.
   virtual bool stereo_capable() const { return true; }
+  virtual void HardSync() { exciter_.Init(); }
 
  private:
   VariableShapeOscillator exciter_;

@@ -312,6 +312,7 @@ class ParticleBurstEngine : public Engine {
       size_t size,
       bool* already_enveloped);
   virtual bool stereo_capable() const { return PLAITS_STEREO_PARTICLE_BURST; }
+  virtual void HardSync() { Reset(); }
 
  private:
   // Per-channel resonator bank state: 0 = mono/left (always runs), 1 = right

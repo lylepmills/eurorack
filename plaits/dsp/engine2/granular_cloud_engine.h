@@ -295,6 +295,12 @@ class GranularCloudEngine : public Engine {
       size_t size,
       bool* already_enveloped);
   virtual bool stereo_capable() const { return PLAITS_STEREO_GRANULAR_CLOUD; }
+  virtual void HardSync() {
+    for (int i = 0; i < kGranularCloudNumGrains; ++i) {
+      grain_[i].phase = 0.0f;
+    }
+    aux_phase_ = 0.0f;
+  }
 
  private:
   void ScheduleGrains(int timbre_code, int color_code, uint32_t spawn_threshold,

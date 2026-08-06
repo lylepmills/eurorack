@@ -58,6 +58,10 @@ class PhaseDistortionEngine : public Engine {
   // The synced and free-running oscillators are inherently decorrelated (see
   // header comment): stereo mode just relabels the OUT/AUX pair as left/right.
   virtual bool stereo_capable() const { return true; }
+  virtual void HardSync() {
+    shaper_.Init();
+    modulator_.Init();
+  }
 
  private:
   VariableShapeOscillator shaper_;

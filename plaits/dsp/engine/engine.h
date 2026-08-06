@@ -101,8 +101,9 @@ struct EngineParameters {
   uint8_t chord_set_option;
 
   // Per-sample rising edges from the optional audio-rate sync input. Bit n
-  // requests a phase reset immediately before sample n is rendered. The voice
-  // only forwards this to engines that explicitly report hard_sync_capable().
+  // requests a phase reset immediately before sample n is rendered. Engines
+  // reporting hard_sync_capable() consume the complete mask themselves. The
+  // voice adapts every other engine through the bounded fallback below.
   uint32_t hard_sync;
   // alt firmware: when true, the voice requests a true stereo render — OUT
   // becomes the left channel and AUX the right channel. The voice only sets
@@ -198,13 +199,65 @@ class Engine {
   // that the voice post-processes both channels symmetrically. Engines that
   // keep the default also keep their regular aux in stereo mode.
   virtual bool stereo_capable() const { return false; }
-  // alt firmware: engines opt in only after their oscillator state has an
-  // explicit, sample-accurate phase-reset path. Unsupported engines safely
-  // ignore MODEL-input edges rather than abusing Reset(), which is a model
-  // lifecycle hook and would create block-boundary clicks/state loss.
+  // Engines opt in only after their oscillator state has an explicit,
+  // sample-accurate path for every edge in the mask. Other engines use the
+  // bounded first-edge fallback below.
   virtual bool hard_sync_capable() const { return false; }
+  // Experimental fallback hook for engines that do not inspect trigger edges.
+  // It must be cheap: the voice can call it once per audio callback while an
+  // audio-rate sync source is connected. Trigger-aware engines leave this as a
+  // no-op and receive a synthetic rising edge instead.
+  virtual void HardSync() { }
   PostProcessingSettings post_processing_settings;
 };
+
+// Give every engine useful experimental sync behavior without making the
+// highest-cost engines render once for EVERY edge in an audio callback.
+//
+// Native engines consume the full sample mask. The fallback honors the first
+// edge exactly, renders the block in at most two pieces, calls the engine's
+// light-weight HardSync hook, and injects a trigger rising edge for engines
+// whose existing strike/reset behavior is their most meaningful sync action.
+// Additional edges in the same callback are intentionally dropped; this caps
+// fallback setup cost and makes the distinction easy to measure/audition.
+inline void RenderEngineWithHardSync(
+    Engine* engine,
+    const EngineParameters& parameters,
+    float* out,
+    float* aux,
+    size_t size,
+    bool* already_enveloped) {
+  if (!parameters.hard_sync || engine->hard_sync_capable()) {
+    engine->Render(parameters, out, aux, size, already_enveloped);
+    return;
+  }
+
+  uint32_t events = parameters.hard_sync;
+  size_t edge = 0;
+  while (edge < size && !(events & 1u)) {
+    events >>= 1;
+    ++edge;
+  }
+
+  EngineParameters segment = parameters;
+  segment.hard_sync = 0;
+  if (edge >= size) {
+    engine->Render(segment, out, aux, size, already_enveloped);
+    return;
+  }
+
+  if (edge) {
+    engine->Render(segment, out, aux, edge, already_enveloped);
+  }
+  engine->HardSync();
+  segment.trigger = TRIGGER_RISING_EDGE;
+  engine->Render(
+      segment,
+      out + edge,
+      aux + edge,
+      size - edge,
+      already_enveloped);
+}
 
 template<int max_size>
 class EngineRegistry {

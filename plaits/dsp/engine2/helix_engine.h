@@ -29,6 +29,12 @@ class HelixEngine : public Engine {
   void Render(const EngineParameters& parameters, float* out, float* aux,
       size_t size, bool* already_enveloped);
   bool stereo_capable() const { return true; }  // OUT/AUX render as a true L/R pair
+  void HardSync() {
+    for (int i = 0; i < kHelixOctaves * kChordNumNotes; ++i) {
+      osc_x_[i] = 1.0f;
+      osc_y_[i] = 0.0f;
+    }
+  }
 
  private:
   ChordBank chords_;

@@ -52,6 +52,7 @@
 #include "plaits/dsp/engine2/attractor_engine.h"
 #include "plaits/dsp/engine2/gendy_engine.h"
 #include "plaits/dsp/engine2/glisson_engine.h"
+#include "plaits/dsp/engine2/helix_engine.h"
 #include "plaits/dsp/engine2/lockstep_engine.h"
 #include "plaits/dsp/engine2/loopback_engine.h"
 #include "plaits/dsp/engine2/phase_flock_engine.h"
@@ -1647,6 +1648,81 @@ void ValidateExperimentalEngineExtremes(
 }
 
 template<typename T>
+void ValidateFallbackHardSync(const char* name) {
+  static T free_engine;
+  static T sync_engine;
+  uint32_t free_memory[4096];
+  uint32_t sync_memory[4096];
+  BufferAllocator free_allocator(free_memory, sizeof(free_memory));
+  BufferAllocator sync_allocator(sync_memory, sizeof(sync_memory));
+  free_engine.Init(&free_allocator);
+  sync_engine.Init(&sync_allocator);
+  free_engine.Reset();
+  sync_engine.Reset();
+  free_engine.LoadUserData(NULL);
+  sync_engine.LoadUserData(NULL);
+  if (free_engine.hard_sync_capable()) {
+    fprintf(stderr, "%s unexpectedly bypasses fallback hard sync\n", name);
+    abort();
+  }
+
+  EngineParameters p;
+  p.trigger = TRIGGER_LOW;
+  p.note = 52.0f;
+  p.timbre = 1.0f;
+  p.morph = 0.37f;
+  p.harmonics = 0.72f;
+  p.accent = 0.8f;
+  p.macro = 0.5f;
+  p.chord_set_option = 0;
+  p.stereo = false;
+  float free_out[kAudioBlockSize];
+  float free_aux[kAudioBlockSize];
+  float sync_out[kAudioBlockSize];
+  float sync_aux[kAudioBlockSize];
+  bool already_enveloped = false;
+
+  Random::Seed(0x21);
+  for (int block = 0; block < 64; ++block) {
+    free_engine.Render(
+        p, free_out, free_aux, kAudioBlockSize, &already_enveloped);
+  }
+  free_engine.Render(
+      p, free_out, free_aux, kAudioBlockSize, &already_enveloped);
+
+  Random::Seed(0x21);
+  for (int block = 0; block < 64; ++block) {
+    sync_engine.Render(
+        p, sync_out, sync_aux, kAudioBlockSize, &already_enveloped);
+  }
+  sync_engine.HardSync();
+  sync_engine.Render(
+      p, sync_out, sync_aux, kAudioBlockSize, &already_enveloped);
+
+  for (size_t i = 0; i < kAudioBlockSize; ++i) {
+    if (fabsf(free_out[i] - sync_out[i]) > 1.0e-6f ||
+        fabsf(free_aux[i] - sync_aux[i]) > 1.0e-6f) {
+      return;
+    }
+  }
+  fprintf(stderr, "%s did not react to fallback hard sync\n", name);
+  abort();
+}
+
+void ValidatePhaseHookHardSyncCoverage() {
+  ValidateFallbackHardSync<ChordEngine>("Chords");
+  ValidateFallbackHardSync<CymbalEngine>("Cymbal");
+  ValidateFallbackHardSync<GranularCloudEngine>("Granular Cloud");
+  ValidateFallbackHardSync<HelixEngine>("Helix");
+  ValidateFallbackHardSync<ParticleBurstEngine>("Particle Burst");
+  ValidateFallbackHardSync<PhaseDistortionEngine>("Phase Distortion");
+  ValidateFallbackHardSync<SawCombEngine>("Saw Comb");
+  ValidateFallbackHardSync<StringMachineEngine>("String Machine");
+  ValidateFallbackHardSync<SubOscillatorEngine>("Sub Oscillator");
+  ValidateFallbackHardSync<WaveScanEngine>("Wave Scan");
+}
+
+template<typename T>
 double StockMacroSignature(float macro) {
   BufferAllocator allocator(ram_block, 16384);
   Random::Seed(0x21);
@@ -3103,6 +3179,9 @@ void ValidateModalContourExcitation() {
 }
 
 void TestExperimentalEngines() {
+  printf("Validating fallback hard-sync phase hooks...\n");
+  fflush(stdout);
+  ValidatePhaseHookHardSyncCoverage();
   printf("Validating LPC discrete frame bounds...\n");
   fflush(stdout);
   ValidateLPCDiscreteFrameBounds();

@@ -41,6 +41,75 @@ bool Equal(float a, float b) {
   return fabsf(a - b) <= 1.0e-7f;
 }
 
+class DispatchProbeEngine : public plaits::Engine {
+ public:
+  explicit DispatchProbeEngine(bool native)
+      : native_(native), render_count_(0), sync_count_(0) { }
+
+  void Init(stmlib::BufferAllocator* allocator) { (void) allocator; }
+  void Reset() { }
+  void LoadUserData(const uint8_t* user_data) { (void) user_data; }
+  void Render(
+      const plaits::EngineParameters& parameters,
+      float* out,
+      float* aux,
+      size_t size,
+      bool* already_enveloped) {
+    sizes_[render_count_] = size;
+    triggers_[render_count_] = parameters.trigger;
+    masks_[render_count_] = parameters.hard_sync;
+    for (size_t i = 0; i < size; ++i) {
+      out[i] = static_cast<float>(render_count_ + 1);
+      aux[i] = -out[i];
+    }
+    ++render_count_;
+    *already_enveloped = false;
+  }
+  bool hard_sync_capable() const { return native_; }
+  void HardSync() { ++sync_count_; }
+
+  bool native_;
+  int render_count_;
+  int sync_count_;
+  size_t sizes_[3];
+  int triggers_[3];
+  uint32_t masks_[3];
+};
+
+bool TestHardSyncDispatch() {
+  plaits::EngineParameters parameters = TestParameters();
+  parameters.trigger = plaits::TRIGGER_UNPATCHED;
+  parameters.hard_sync = (1u << 5) | (1u << 9);
+  float out[kBlockSize];
+  float aux[kBlockSize];
+  bool already_enveloped = false;
+
+  DispatchProbeEngine fallback(false);
+  plaits::RenderEngineWithHardSync(
+      &fallback, parameters, out, aux, kBlockSize, &already_enveloped);
+  if (fallback.render_count_ != 2 || fallback.sync_count_ != 1 ||
+      fallback.sizes_[0] != 5 || fallback.sizes_[1] != 19 ||
+      fallback.triggers_[0] != plaits::TRIGGER_UNPATCHED ||
+      fallback.triggers_[1] != plaits::TRIGGER_RISING_EDGE ||
+      fallback.masks_[0] || fallback.masks_[1] ||
+      out[4] != 1.0f || out[5] != 2.0f) {
+    fprintf(stderr, "fallback sync dispatch did not split at first edge\n");
+    return false;
+  }
+
+  DispatchProbeEngine native(true);
+  plaits::RenderEngineWithHardSync(
+      &native, parameters, out, aux, kBlockSize, &already_enveloped);
+  if (native.render_count_ != 1 || native.sync_count_ != 0 ||
+      native.sizes_[0] != kBlockSize ||
+      native.masks_[0] != parameters.hard_sync ||
+      native.triggers_[0] != plaits::TRIGGER_UNPATCHED) {
+    fprintf(stderr, "native sync dispatch did not preserve full mask\n");
+    return false;
+  }
+  return true;
+}
+
 template<typename EngineType>
 bool TestResetPlacement(const char* name) {
   EngineType free_engine;
@@ -107,7 +176,8 @@ int main() {
   fprintf(stderr, "compile with -DPLAITS_BUILD_ENABLE_SYNC_INPUT=1\n");
   return 1;
 #endif
-  if (!TestResetPlacement<plaits::WaveshapingEngine>("waveshaping") ||
+  if (!TestHardSyncDispatch() ||
+      !TestResetPlacement<plaits::WaveshapingEngine>("waveshaping") ||
       !TestResetPlacement<plaits::FMEngine>("two-op FM") ||
       !TestResetPlacement<plaits::WavetableEngine>("wavetable") ||
       !TestResetPlacement<plaits::VirtualAnalogVCFEngine>("VA+VCF") ||
