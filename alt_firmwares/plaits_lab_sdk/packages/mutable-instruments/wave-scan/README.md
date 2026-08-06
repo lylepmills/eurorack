@@ -9,7 +9,7 @@ The DSP is Emilie Gillet's `DigitalOscillator::RenderWavetables`,
 `RenderWaveMap` and `RenderWaveLine`. All three read the same 256-wave, 8-bit
 bank; what differs is how the two knobs address it.
 
-## Which bank, and how it fits in 22 KB
+## Which bank, and why it costs 33 KB
 
 Plaits already ships a wavetable engine, and it draws on the same source data —
 `plaits/resources/waves.bin` is byte-identical to `braids/data/waves.bin`. That
@@ -29,50 +29,46 @@ those only as a different waveform. `WAVE_LINE` alone names 45 waves that are
 not in it at any phase. There is no substitution to make, and Plaits'
 `wav_integrated_waves` is 50,688 B — larger than the bank it would be replacing.
 
-This engine therefore vendors Braids' own data, but stores it losslessly as
-second differences in byte-aligned blocks of 16, each with a fixed signed bit
-width. The residual payload is 23,754 B; first samples and packet offsets bring
-the wave bank to 24,524 B. Add 256 B of `wt_map`, 64 B of `wave_line` and 360 B
-of bank definitions for **25,204 B of tables** — 8,244 B less than the direct
-array. Fixed-width extraction costs a little more flash than the original Rice
-prototype but avoids its data-dependent unary loop on the Cortex-M4.
+This engine therefore vendors Braids' own data: 32,768 B of waves, 256 B of
+`wt_map`, 64 B of `wave_line` and 360 B of bank definitions, **33,448 B**. One
+byte per wave was saved honestly: Braids stores 129 samples and reads index 128
+as a wrap guard, and that byte equals the wave's own sample 0 in all 256 waves,
+so the port stores 128 and wraps the index instead. All 256 waves are reachable
+— the 20 bank definitions between them name every one — so there is no unused
+subset to drop, and that is the whole saving available.
 
-At runtime the engine decodes only the waves used by the current block into a
-four-slot cache from Plaits' shared engine arena. Each slot has an active and a
-staging wave; with decoder state, the cache uses 1,152 B. WTBL needs two slots,
-WMAP four, and WLIN three. Cached waves survive from block to block, and the
-replacement policy preserves every wave requested by the incoming block, so a
-one-cell scan only decodes the newly exposed edge.
+## Rejected compression experiment
 
-Decoding has one global budget: one slot advances by two samples per 4 kHz
-render block, round-robin. A four-corner WMAP miss fills in about 256 blocks,
-or 64 ms, while the prior cached waves remain valid. That makes an abrupt
-four-corner jump safe for the audio callback rather than doing four complete
-decodes at once. The waveform content and stationary output are exact; the one
-declared behavioral tradeoff is that a newly addressed, uncached wave can lag
-the control by that cache-fill interval.
+In August 2026 this table was packed losslessly as fixed-width second
+differences and decoded on demand. It reduced the engine's tables from 33,448 B
+to 25,204 B, saving 8,244 B of flash, at the cost of a 1,152 B four-wave cache.
+Byte-for-byte tests proved that every decoded wave matched the source bank, and
+the settled stationary render was effectively identical to the direct-table
+engine.
 
-The first Rice-coded prototype serviced every cache slot on every block. Even
-after reducing each slot to one sample, hardware measured 920–930 Hz on the CPU
-probe (92–93% of the render budget) and crossed the probe's 90% red line under
-opposite-corner WMAP modulation. The fixed-width, globally budgeted decoder
-at two samples per block measured 890–910 Hz on hardware, still intermittently
-crossing the red line. WMAP now performs its bilinear interpolation in the
-source byte domain and normalizes only each box-averaged output; linearity makes
-that the same surface and signal while removing repeated arithmetic. With the
-two-sample global budget restored, steady WMAP measures 398.8 and the forced
-every-block stress measures 408.9 instructions/sample after the cache pipeline
-has settled, approximately 77% and 79% by the calibrated QEMU model. The module
-measures 850–870 Hz (85–87% of the render budget) under the same forced
-opposite-corner thrash, below the probe's 90% red line. Hardware remains the
-publication authority for CPU.
+The real-time behavior was not identical. Bounding the decoder tightly enough
+for the audio callback meant advancing one cache slot by two samples per 4 kHz
+render block. Filling the four waves needed by a cold WMAP cell therefore took
+about 64 ms. The original Rice-coded version reached 92–93% CPU under forced
+opposite-corner modulation; fixed-width decoding and a global work budget
+brought that first to 89–91%, then to 85–87% after simplifying the WMAP mix.
+That cleared the probe's 90% red line, but only by retaining the cache-fill
+latency.
 
-The storage change is exact, not a new resampling step. Braids stores 129
-samples and reads index 128 as a wrap guard; that byte equals the wave's own
-sample 0 in all 256 waves, so the port reconstructs 128 and wraps the index.
-All 256 waves remain reachable. `compress_wave_scan.py --check` makes the C++
-arrays reproducible from `plaits/resources/waves.bin`, and the host test decodes
-all 32,768 samples and requires a byte-for-byte match with that source bank.
+Hardware listening rejected that tradeoff. A two-engine firmware compared the
+direct-table and packed implementations in adjacent slots and exposed a
+definite audible difference, including without deliberate modulation. Plaits'
+`Voice::Render` resets an engine whenever its model is selected, so each toggle
+also starts the packed engine with an empty cache; a stationary control setting
+does not avoid the cold-fill path. Offline data equality and a steady-state
+render comparison had therefore tested the wrong invariant: the availability
+of the requested waves over time is part of the sound.
+
+Decision: keep the direct 33,448 B table. Do not put Wave Scan behind an
+incremental decode cache. Any future attempt must preserve immediate table
+availability, be tested in a minimal side-by-side hardware firmware, and pass
+cold-start, stationary, and fast-modulation listening—not only byte equality,
+CPU probes, and warmed-up renders.
 
 ## What it has that Plaits' wavetable engine does not
 

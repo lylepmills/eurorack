@@ -3529,40 +3529,6 @@ void ValidateCustomSpeechBankLevelMatching() {
   }
 }
 
-void ValidateWaveScanCompression() {
-  const char* path = "plaits/resources/waves.bin";
-  FILE* source = fopen(path, "rb");
-  if (!source) {
-    fprintf(stderr, "Could not open Wave Scan source bank: %s\n", path);
-    abort();
-  }
-
-  uint8_t stored_wave[129];
-  uint8_t decoded_wave[kWaveScanWaveSize];
-  for (size_t wave = 0; wave < kWaveScanNumWaves; ++wave) {
-    if (fread(stored_wave, 1, sizeof(stored_wave), source) !=
-        sizeof(stored_wave)) {
-      fprintf(stderr, "Wave Scan source bank ended at wave %zu\n", wave);
-      abort();
-    }
-    if (stored_wave[128] != stored_wave[0]) {
-      fprintf(stderr, "Wave Scan wrap guard differs at wave %zu\n", wave);
-      abort();
-    }
-    WaveScanEngine::TestDecodeWave(
-        static_cast<uint8_t>(wave), decoded_wave);
-    if (memcmp(stored_wave, decoded_wave, kWaveScanWaveSize)) {
-      fprintf(stderr, "Wave Scan compressed data differs at wave %zu\n", wave);
-      abort();
-    }
-  }
-  if (fgetc(source) != EOF) {
-    fprintf(stderr, "Wave Scan source bank contains trailing data\n");
-    abort();
-  }
-  fclose(source);
-}
-
 int main(void) {
 #if defined(__SSE2__)
   _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
@@ -3615,7 +3581,5 @@ int main(void) {
   ValidateParameterRandomizer();
   printf("Validating custom Speech bank level matching...\n");
   ValidateCustomSpeechBankLevelMatching();
-  printf("Validating Wave Scan lossless compression...\n");
-  ValidateWaveScanCompression();
   TestExperimentalEngines();
 }

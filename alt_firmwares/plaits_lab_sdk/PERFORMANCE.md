@@ -81,3 +81,22 @@ any cost intuition, including these.
   the deadline: the beacon channels, the LED bar, and the report-pacing
   stretch agreed with each other, the image checksum decoded exactly, and the
   overrun produced zero false diagnostics.
+
+## Listening A/B firmware
+
+When comparing an optimization with its reference on hardware, register only
+the two engines under test. This keeps the audio updater short and removes
+unrelated models from the experiment. Before flashing, inspect the ELF's
+demangled symbol table and require exactly the expected engine renderers; use
+the updater size or duration as a second sanity check.
+
+For hand-written `make` invocations, put the generated config's `-include`
+directly in `CPPFLAGS`. Assigning `CPPFLAGS` on the command line overrides the
+makefile's target-specific `CPPFLAGS += -include $(ENGINE_CONFIG)`, so passing
+`ENGINE_CONFIG` alongside a command-line `CPPFLAGS` can silently build the
+default registry even though the build succeeds.
+
+Listen separately for cold-start, stationary, and modulated behavior. Plaits
+resets an engine when its model is selected, so an optimization with lazy
+initialization or a cache can differ every time the A/B is toggled even if its
+warmed-up stationary samples compare exactly offline.
