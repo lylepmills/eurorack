@@ -63,6 +63,55 @@ class ZOscillator {
       float mode,
       float* out,
       size_t size) {
+    RenderInternal<false>(
+        carrier_frequency,
+        formant_frequency,
+        carrier_shape,
+        mode,
+        out,
+        size,
+        0);
+  }
+
+  void Render(
+      float carrier_frequency,
+      float formant_frequency,
+      float carrier_shape,
+      float mode,
+      float* out,
+      size_t size,
+      uint32_t hard_sync) {
+    if (hard_sync) {
+      RenderInternal<true>(
+          carrier_frequency,
+          formant_frequency,
+          carrier_shape,
+          mode,
+          out,
+          size,
+          hard_sync);
+    } else {
+      RenderInternal<false>(
+          carrier_frequency,
+          formant_frequency,
+          carrier_shape,
+          mode,
+          out,
+          size,
+          0);
+    }
+  }
+
+ private:
+  template<bool process_hard_sync>
+  void RenderInternal(
+      float carrier_frequency,
+      float formant_frequency,
+      float carrier_shape,
+      float mode,
+      float* out,
+      size_t size,
+      uint32_t hard_sync) {
     if (carrier_frequency >= kMaxFrequency * 0.5f) {
       carrier_frequency = kMaxFrequency * 0.5f;
     }
@@ -98,6 +147,15 @@ class ZOscillator {
     
       const float f0 = carrier_frequency_modulation.Next();
       const float f1 = formant_frequency_modulation.Next();
+
+      if (process_hard_sync) {
+        if (hard_sync & 1) {
+          carrier_phase_ = 0.0f;
+          discontinuity_phase_ = 0.0f;
+          formant_phase_ = 0.0f;
+        }
+        hard_sync >>= 1;
+      }
     
       discontinuity_phase_ += 2.0f * f0;
       carrier_phase_ += f0;
@@ -154,7 +212,6 @@ class ZOscillator {
     next_sample_ = next_sample;
   }
 
- private:
   inline float Z(float c, float d, float f, float shape, float mode) {
     float ramp_down = 0.5f * (1.0f + Sine(0.5f * d + 0.25f));
     

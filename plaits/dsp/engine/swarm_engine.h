@@ -148,6 +148,30 @@ class AdditiveSawOscillator {
       float level,
       float* out,
       size_t size) {
+    RenderInternal<false>(frequency, level, out, size, 0);
+  }
+
+  inline void Render(
+      float frequency,
+      float level,
+      float* out,
+      size_t size,
+      uint32_t hard_sync) {
+    if (hard_sync) {
+      RenderInternal<true>(frequency, level, out, size, hard_sync);
+    } else {
+      RenderInternal<false>(frequency, level, out, size, 0);
+    }
+  }
+
+ private:
+  template<bool process_hard_sync>
+  inline void RenderInternal(
+      float frequency,
+      float level,
+      float* out,
+      size_t size,
+      uint32_t hard_sync) {
     if (frequency >= kMaxFrequency) {
       frequency = kMaxFrequency;
     }
@@ -162,6 +186,16 @@ class AdditiveSawOscillator {
       next_sample = 0.0f;
 
       const float frequency = fm.Next();
+
+      if (process_hard_sync) {
+        if (hard_sync & 1) {
+          // Align every member of the swarm at the requested output-sample
+          // boundary. Keep the pending polyBLEP contribution so a reset does
+          // not discard the oscillator's antialiasing history.
+          phase = 0.0f;
+        }
+        hard_sync >>= 1;
+      }
 
       phase += frequency;
   
@@ -179,7 +213,6 @@ class AdditiveSawOscillator {
     next_sample_ = next_sample;
   }
 
- private:
   // Oscillator state.
   float phase_;
   float next_sample_;
@@ -212,11 +245,12 @@ class SwarmVoice {
       float size_ratio,
       float* saw,
       float* sine,
-      size_t size) {
+      size_t size,
+      uint32_t hard_sync) {
     const float amplitude = Step(
         density, burst_mode, start_burst, spread, size_ratio, &f0);
-    saw_.Render(f0, amplitude, saw, size);
-    sine_.Render(f0, amplitude, sine, size);
+    saw_.Render(f0, amplitude, saw, size, hard_sync);
+    sine_.Render(f0, amplitude, sine, size, hard_sync);
   };
 
   // alt firmware: stereo render - the sawtooth only, the sine bank is
@@ -229,10 +263,11 @@ class SwarmVoice {
       float spread,
       float size_ratio,
       float* saw,
-      size_t size) {
+      size_t size,
+      uint32_t hard_sync) {
     const float amplitude = Step(
         density, burst_mode, start_burst, spread, size_ratio, &f0);
-    saw_.Render(f0, amplitude, saw, size);
+    saw_.Render(f0, amplitude, saw, size, hard_sync);
   };
 
  private:
@@ -278,6 +313,7 @@ class SwarmEngine : public Engine {
       size_t size,
       bool* already_enveloped);
   virtual bool stereo_capable() const { return PLAITS_STEREO_SWARM; }
+  virtual bool hard_sync_capable() const { return true; }
 
  private:
   SwarmVoice* swarm_voice_;

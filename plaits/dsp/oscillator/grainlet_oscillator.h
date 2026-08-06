@@ -62,6 +62,55 @@ class GrainletOscillator {
       float carrier_bleed,
       float* out,
       size_t size) {
+    RenderInternal<false>(
+        carrier_frequency,
+        formant_frequency,
+        carrier_shape,
+        carrier_bleed,
+        out,
+        size,
+        0);
+  }
+
+  void Render(
+      float carrier_frequency,
+      float formant_frequency,
+      float carrier_shape,
+      float carrier_bleed,
+      float* out,
+      size_t size,
+      uint32_t hard_sync) {
+    if (hard_sync) {
+      RenderInternal<true>(
+          carrier_frequency,
+          formant_frequency,
+          carrier_shape,
+          carrier_bleed,
+          out,
+          size,
+          hard_sync);
+    } else {
+      RenderInternal<false>(
+          carrier_frequency,
+          formant_frequency,
+          carrier_shape,
+          carrier_bleed,
+          out,
+          size,
+          0);
+    }
+  }
+
+ private:
+  template<bool process_hard_sync>
+  void RenderInternal(
+      float carrier_frequency,
+      float formant_frequency,
+      float carrier_shape,
+      float carrier_bleed,
+      float* out,
+      size_t size,
+      uint32_t hard_sync) {
     if (carrier_frequency >= kMaxFrequency * 0.5f) {
       carrier_frequency = kMaxFrequency * 0.5f;
     }
@@ -97,6 +146,17 @@ class GrainletOscillator {
     
       const float f0 = carrier_frequency_modulation.Next();
       const float f1 = formant_frequency_modulation.Next();
+
+      if (process_hard_sync) {
+        if (hard_sync & 1) {
+          // The formant oscillator is natively reset by every carrier cycle;
+          // resetting both phases preserves that relationship for an external
+          // master edge. Leave the pending BLEP sample intact.
+          carrier_phase_ = 0.0f;
+          formant_phase_ = 0.0f;
+        }
+        hard_sync >>= 1;
+      }
     
       carrier_phase_ += f0;
       reset = carrier_phase_ >= 1.0f;
@@ -138,7 +198,6 @@ class GrainletOscillator {
     next_sample_ = next_sample;
   }
 
- private:
   inline float Carrier(float phase, float shape) {
     shape *= 3.0f;
     MAKE_INTEGRAL_FRACTIONAL(shape);

@@ -31,7 +31,14 @@
 #include <cmath>
 #include <algorithm>
 
+#include "plaits/build_config.h"
 #include "plaits/dsp/oscillator/wavetable_oscillator.h"
+
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
+#define PLAITS_HARD_SYNC_EVENTS(parameters) ((parameters).hard_sync)
+#else
+#define PLAITS_HARD_SYNC_EVENTS(parameters) 0u
+#endif
 
 namespace plaits {
 
@@ -197,8 +204,15 @@ void WaveTerrainEngine::Render(
 
   // Use the "magic sine" algorithm to generate sin and cos functions for the
   // trajectory coordinates.
+  const uint32_t hard_sync = PLAITS_HARD_SYNC_EVENTS(parameters);
   path_.RenderQuadrature(
-      f0 * kScale, radius, path_x, path_y, size * kOversampling);
+      f0 * kScale,
+      radius,
+      path_x,
+      path_y,
+      size * kOversampling,
+      hard_sync,
+      kOversampling);
   
   ParameterInterpolator offset(&offset_, 1.9f * parameters.morph - 1.0f, size);
   ParameterInterpolator y_offset(
@@ -238,3 +252,5 @@ void WaveTerrainEngine::Render(
 }
 
 }  // namespace plaits
+
+#undef PLAITS_HARD_SYNC_EVENTS

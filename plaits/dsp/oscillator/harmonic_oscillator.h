@@ -59,6 +59,33 @@ class HarmonicOscillator {
       const float* amplitudes,
       float* out,
       size_t size) {
+    RenderInternal<first_harmonic_index, false>(
+        frequency, amplitudes, out, size, 0);
+  }
+
+  template<int first_harmonic_index>
+  void Render(
+      float frequency,
+      const float* amplitudes,
+      float* out,
+      size_t size,
+      uint32_t hard_sync) {
+    if (hard_sync) {
+      RenderInternal<first_harmonic_index, true>(
+          frequency, amplitudes, out, size, hard_sync);
+    } else {
+      RenderInternal<first_harmonic_index, false>(
+          frequency, amplitudes, out, size, 0);
+    }
+  }
+
+  template<int first_harmonic_index, bool process_hard_sync>
+  void RenderInternal(
+      float frequency,
+      const float* amplitudes,
+      float* out,
+      size_t size,
+      uint32_t hard_sync) {
     if (frequency >= 0.5f) {
       frequency = 0.5f;
     }
@@ -75,6 +102,14 @@ class HarmonicOscillator {
     }
 
     while (size--) {
+      if (process_hard_sync) {
+        if (hard_sync & 1) {
+          // All partials in a batch are derived from this one fundamental
+          // phase, so one reset coherently aligns the entire spectrum.
+          phase_ = 0.0f;
+        }
+        hard_sync >>= 1;
+      }
       phase_ += fm.Next();
       if (phase_ >= 1.0f) {
         phase_ -= 1.0f;

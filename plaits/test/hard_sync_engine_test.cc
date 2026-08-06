@@ -5,10 +5,14 @@
 #include <stdio.h>
 
 #include "plaits/build_config.h"
+#include "plaits/dsp/engine/additive_engine.h"
 #include "plaits/dsp/engine/fm_engine.h"
+#include "plaits/dsp/engine/grain_engine.h"
+#include "plaits/dsp/engine/swarm_engine.h"
 #include "plaits/dsp/engine/waveshaping_engine.h"
 #include "plaits/dsp/engine/wavetable_engine.h"
 #include "plaits/dsp/engine2/virtual_analog_vcf_engine.h"
+#include "plaits/dsp/engine2/wave_terrain_engine.h"
 #include "stmlib/utils/buffer_allocator.h"
 
 namespace {
@@ -106,7 +110,11 @@ int main() {
   if (!TestResetPlacement<plaits::WaveshapingEngine>("waveshaping") ||
       !TestResetPlacement<plaits::FMEngine>("two-op FM") ||
       !TestResetPlacement<plaits::WavetableEngine>("wavetable") ||
-      !TestResetPlacement<plaits::VirtualAnalogVCFEngine>("VA+VCF")) {
+      !TestResetPlacement<plaits::VirtualAnalogVCFEngine>("VA+VCF") ||
+      !TestResetPlacement<plaits::GrainEngine>("granular formant") ||
+      !TestResetPlacement<plaits::AdditiveEngine>("harmonic") ||
+      !TestResetPlacement<plaits::SwarmEngine>("swarm") ||
+      !TestResetPlacement<plaits::WaveTerrainEngine>("wave terrain")) {
     return 1;
   }
   printf("hard_sync_engine_test: all checks passed\n");

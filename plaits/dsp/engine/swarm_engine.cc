@@ -35,6 +35,14 @@
 
 #include <algorithm>
 
+#include "plaits/build_config.h"
+
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
+#define PLAITS_HARD_SYNC_EVENTS(parameters) ((parameters).hard_sync)
+#else
+#define PLAITS_HARD_SYNC_EVENTS(parameters) 0u
+#endif
+
 namespace plaits {
 
 using namespace std;
@@ -77,6 +85,7 @@ void SwarmEngine::Render(
   
   const bool burst_mode = !(parameters.trigger & TRIGGER_UNPATCHED);
   const bool start_burst = parameters.trigger & TRIGGER_RISING_EDGE;
+  const uint32_t hard_sync = PLAITS_HARD_SYNC_EVENTS(parameters);
 
   fill(&out[0], &out[size], 0.0f);
   fill(&aux[0], &aux[size], 0.0f);
@@ -93,7 +102,8 @@ void SwarmEngine::Render(
           spread,
           size_ratio,
           saw,
-          size);
+          size,
+          hard_sync);
       float left_gain, right_gain;
       StereoPanGains(swarm_pan[i], &left_gain, &right_gain);
       for (size_t j = 0; j < size; ++j) {
@@ -113,10 +123,13 @@ void SwarmEngine::Render(
           size_ratio,
           out,
           aux,
-          size);
+          size,
+          hard_sync);
       size_ratio *= size_dispersion;
     }
   }
 }
 
 }  // namespace plaits
+
+#undef PLAITS_HARD_SYNC_EVENTS

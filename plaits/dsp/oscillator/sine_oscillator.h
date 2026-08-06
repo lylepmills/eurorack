@@ -185,22 +185,83 @@ class FastSineOscillator {
   }
   
   void Render(float frequency, float* out, size_t size) {
-    RenderInternal<NORMAL>(frequency, 1.0f, out, NULL, size);
+    RenderInternal<NORMAL, false>(
+        frequency, 1.0f, out, NULL, size, 0, 1);
+  }
+
+  void Render(
+      float frequency, float* out, size_t size, uint32_t hard_sync) {
+    if (hard_sync) {
+      RenderInternal<NORMAL, true>(
+          frequency, 1.0f, out, NULL, size, hard_sync, 1);
+    } else {
+      RenderInternal<NORMAL, false>(
+          frequency, 1.0f, out, NULL, size, 0, 1);
+    }
   }
   
   void Render(float frequency, float amplitude, float* out, size_t size) {
-    RenderInternal<ADDITIVE>(frequency, amplitude, out, NULL, size);
+    RenderInternal<ADDITIVE, false>(
+        frequency, amplitude, out, NULL, size, 0, 1);
+  }
+
+  void Render(
+      float frequency,
+      float amplitude,
+      float* out,
+      size_t size,
+      uint32_t hard_sync) {
+    if (hard_sync) {
+      RenderInternal<ADDITIVE, true>(
+          frequency, amplitude, out, NULL, size, hard_sync, 1);
+    } else {
+      RenderInternal<ADDITIVE, false>(
+          frequency, amplitude, out, NULL, size, 0, 1);
+    }
   }
 
   void RenderQuadrature(
       float frequency, float amplitude, float* x, float* y, size_t size) {
-    RenderInternal<QUADRATURE>(frequency, amplitude, x, y, size);
+    RenderInternal<QUADRATURE, false>(
+        frequency, amplitude, x, y, size, 0, 1);
+  }
+
+  // hard_sync contains one bit per OUTPUT sample. sync_sample_span maps each
+  // bit to this many oscillator samples, which lets an oversampled engine reset
+  // before the first sub-sample without expanding a 24-bit event mask to 48.
+  void RenderQuadrature(
+      float frequency,
+      float amplitude,
+      float* x,
+      float* y,
+      size_t size,
+      uint32_t hard_sync,
+      size_t sync_sample_span) {
+    if (hard_sync) {
+      RenderInternal<QUADRATURE, true>(
+          frequency,
+          amplitude,
+          x,
+          y,
+          size,
+          hard_sync,
+          sync_sample_span);
+    } else {
+      RenderInternal<QUADRATURE, false>(
+          frequency, amplitude, x, y, size, 0, 1);
+    }
   }
   
  private:
-  template<Mode mode>
+  template<Mode mode, bool process_hard_sync>
   void RenderInternal(
-      float frequency, float amplitude, float* out, float* out_2, size_t size) {
+      float frequency,
+      float amplitude,
+      float* out,
+      float* out_2,
+      size_t size,
+      uint32_t hard_sync,
+      size_t sync_sample_span) {
     if (frequency >= 0.25f) {
       frequency = 0.25f;
       amplitude = 0.0f;
@@ -219,8 +280,24 @@ class FastSineOscillator {
       x *= scale;
       y *= scale;
     }
+
+    size_t sync_subsample = 0;
     
     while (size--) {
+      if (process_hard_sync) {
+        if (sync_subsample == 0) {
+          if (hard_sync & 1) {
+            // Phase zero for the magic-circle oscillator is (1, 0). Reset
+            // only the trajectory; parameter interpolation stays continuous.
+            x = 1.0f;
+            y = 0.0f;
+          }
+          hard_sync >>= 1;
+        }
+        if (++sync_subsample >= sync_sample_span) {
+          sync_subsample = 0;
+        }
+      }
       const float e = epsilon.Next();
       x += e * y;
       y -= e * x;

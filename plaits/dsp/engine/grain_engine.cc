@@ -34,7 +34,14 @@
 
 #include <algorithm>
 
+#include "plaits/build_config.h"
 #include "plaits/dsp/engine/grain_engine.h"
+
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
+#define PLAITS_HARD_SYNC_EVENTS(parameters) ((parameters).hard_sync)
+#else
+#define PLAITS_HARD_SYNC_EVENTS(parameters) 0u
+#endif
 
 namespace plaits {
 
@@ -74,8 +81,17 @@ void GrainEngine::Render(
   const float carrier_shape = 0.33f + (parameters.morph - 0.33f) * \
       max(1.0f - f0 * 24.0f, 0.0f);
   
-  grainlet_[0].Render(f0, f1, carrier_shape, carrier_bleed_fixed, out, size);
-  grainlet_[1].Render(f0, f1 * ratio, carrier_shape, carrier_bleed_fixed, aux, size);
+  const uint32_t hard_sync = PLAITS_HARD_SYNC_EVENTS(parameters);
+  grainlet_[0].Render(
+      f0, f1, carrier_shape, carrier_bleed_fixed, out, size, hard_sync);
+  grainlet_[1].Render(
+      f0,
+      f1 * ratio,
+      carrier_shape,
+      carrier_bleed_fixed,
+      aux,
+      size,
+      hard_sync);
   dc_blocker_[0].set_f<FREQUENCY_DIRTY>(0.3f * f0);
 
   if ((PLAITS_STEREO_GRANULAR_FORMANT && parameters.stereo)) {
@@ -110,10 +126,13 @@ void GrainEngine::Render(
       parameters.morph,
       parameters.harmonics,
       aux,
-      size);
+      size,
+      hard_sync);
   
   dc_blocker_[1].set_f<FREQUENCY_DIRTY>(0.3f * f0);
   dc_blocker_[1].Process<FILTER_MODE_HIGH_PASS>(aux, size);
 }
 
 }  // namespace plaits
+
+#undef PLAITS_HARD_SYNC_EVENTS

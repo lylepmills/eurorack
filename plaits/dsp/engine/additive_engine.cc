@@ -36,7 +36,14 @@
 #include <algorithm>
 
 #include "stmlib/dsp/cosine_oscillator.h"
+#include "plaits/build_config.h"
 #include "plaits/dsp/oscillator/sine_oscillator.h"
+
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
+#define PLAITS_HARD_SYNC_EVENTS(parameters) ((parameters).hard_sync)
+#else
+#define PLAITS_HARD_SYNC_EVENTS(parameters) 0u
+#endif
 
 namespace plaits {
 
@@ -148,17 +155,23 @@ void AdditiveEngine::Render(
     amplitudes_[i] *= (i & 1) ? even_gain : odd_gain;
   }
 
+  const uint32_t hard_sync = PLAITS_HARD_SYNC_EVENTS(parameters);
+
   if ((PLAITS_STEREO_HARMONIC && parameters.stereo)) {
-    harmonic_oscillator_[0].Render<1>(f0, &amplitudes_[0], out, size);
-    harmonic_oscillator_[1].Render<13>(f0, &amplitudes_[12], out, size);
+    harmonic_oscillator_[0].Render<1>(
+        f0, &amplitudes_[0], out, size, hard_sync);
+    harmonic_oscillator_[1].Render<13>(
+        f0, &amplitudes_[12], out, size, hard_sync);
     for (size_t i = 0; i < size; ++i) {
       aux[i] = stereo_allpass_.Process(out[i]);
     }
     return;
   }
 
-  harmonic_oscillator_[0].Render<1>(f0, &amplitudes_[0], out, size);
-  harmonic_oscillator_[1].Render<13>(f0, &amplitudes_[12], out, size);
+  harmonic_oscillator_[0].Render<1>(
+      f0, &amplitudes_[0], out, size, hard_sync);
+  harmonic_oscillator_[1].Render<13>(
+      f0, &amplitudes_[12], out, size, hard_sync);
 
   UpdateAmplitudes(
       centroid,
@@ -168,7 +181,10 @@ void AdditiveEngine::Render(
       organ_harmonics,
       8);
 
-  harmonic_oscillator_[2].Render<1>(f0, &amplitudes_[24], aux, size);
+  harmonic_oscillator_[2].Render<1>(
+      f0, &amplitudes_[24], aux, size, hard_sync);
 }
 
 }  // namespace plaits
+
+#undef PLAITS_HARD_SYNC_EVENTS

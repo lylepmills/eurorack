@@ -54,6 +54,7 @@ class GrainEngine : public Engine {
   // OUT/AUX carry L/R when stereo is requested: the two grainlets are
   // DC-blocked separately and panned, and the AUX Z-oscillator is dropped.
   virtual bool stereo_capable() const { return PLAITS_STEREO_GRANULAR_FORMANT; }
+  virtual bool hard_sync_capable() const { return true; }
 
  private:
   GrainletOscillator grainlet_[2];
