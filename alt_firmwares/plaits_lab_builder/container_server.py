@@ -418,14 +418,22 @@ def parse_size(elf_path: Path) -> tuple[int, int, int]:
 APPLICATION_BASE_ADDRESS = 0x08008000
 
 
-def _linked_flash_span(elf_path: Path) -> int:
+def _linked_flash_span(elf_path: Path, data_bytes: int) -> int:
     """Bytes of flash the linked image actually occupies, padding included.
 
     `size` reports the sum of SECTION sizes, which silently omits alignment
     padding between them — and page-aligning the swappable bank regions creates
     exactly that kind of gap. The gap is real: objcopy writes it into plaits.bin
-    and the bootloader programs it. _etext marks the end of everything loaded
-    into flash, so the span from the application base is the honest figure.
+    and the bootloader programs it.
+
+    `data_bytes` is added because .data's INITIALIZERS live in flash at
+    `_sidata = _etext` even though the section itself lives in RAM. GNU ld
+    region-checks a section's VMA, not its LMA, so it will happily place that
+    initializer image past the end of FLASH and link without complaint — which
+    is precisely what a build whose bank regions reach the top of flash does.
+    Measuring only up to _etext reports such a build as exactly at budget
+    instead of over it, and the firmware would then copy .data from an address
+    past the end of the chip at startup.
     """
     result = subprocess.run(
         ["/usr/local/arm-4.8.3/bin/arm-none-eabi-nm", str(elf_path)],
@@ -433,7 +441,7 @@ def _linked_flash_span(elf_path: Path) -> int:
     for line in result.stdout.splitlines():
         fields = line.split()
         if len(fields) == 3 and fields[2] == "_etext":
-            return int(fields[0], 16) - APPLICATION_BASE_ADDRESS
+            return int(fields[0], 16) - APPLICATION_BASE_ADDRESS + data_bytes
     return 0
 
 
@@ -721,7 +729,7 @@ def build_firmware(payload: Any) -> tuple[Path, FirmwareOutput, dict[str, str]]:
     # sizes, which excludes the padding the linker inserts to page-align the
     # bank regions — real bytes that are present in plaits.bin. Using the span
     # from the application base to _etext counts them.
-    flash_bytes = max(text_bytes + data_bytes, _linked_flash_span(elf_path))
+    flash_bytes = max(text_bytes + data_bytes, _linked_flash_span(elf_path, data_bytes))
     if flash_bytes > FLASH_BUDGET_BYTES:
         over = flash_bytes - FLASH_BUDGET_BYTES
         raise BuildError(
