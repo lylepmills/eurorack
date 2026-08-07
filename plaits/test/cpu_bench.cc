@@ -97,6 +97,8 @@
 #include "plaits/dsp/engine2/wavetable_scale_stack_engine.h"
 #include "plaits/dsp/engine2/shakers_engine.h"
 #include "plaits/dsp/engine2/brass_engine.h"
+#include "plaits/dsp/engine2/clap_engine.h"
+#include "plaits/dsp/engine2/freshets_formant_engine.h"
 #include "plaits/dsp/engine2/z_filter_engine.h"
 #include "plaits/dsp/engine2/string_machine_engine.h"
 #include "plaits/dsp/engine2/tapfield_engine.h"
@@ -232,6 +234,8 @@ int main() {
   bench<WavetableScaleStackEngine>("wavetable-scale-stack");
   bench<ShakersEngine>("shakers");
   bench<BrassEngine>("brass");
+  bench<ClapEngine>("clap");
+  bench<FreshetsFormantEngine>("freshets-formant");
   bench<ZFilterEngine>("z-filter");
   bench<LoopbackEngine>("loopback");
   bench<LockstepEngine>("lockstep");
