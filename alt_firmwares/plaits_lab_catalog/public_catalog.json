@@ -3590,6 +3590,97 @@
       "implementation": {
         "className": "HelixEngine"
       }
+    },
+    {
+      "id": "clap",
+      "packageId": "community/clap",
+      "name": "Clap",
+      "author": "Dylan Bolink",
+      "origin": "Community",
+      "family": "Drums",
+      "description": "808 style clap, noise gated a few milliseconds at a time into a wide band with a steep bottom, and a longer tail for the room. Four hands become seven that disagree; unpatched, an audience.",
+      "tags": [
+        "community",
+        "drum",
+        "clap",
+        "808",
+        "percussion",
+        "noise",
+        "applause"
+      ],
+      "controls": [
+        "Hands",
+        "Tone",
+        "Room",
+        "Spacing"
+      ],
+      "outputs": [
+        "The whole clap, hands and room",
+        "The dry hands alone, their top an octave up, or in stereo the right channel: the same clap from an independent noise source, with each hand landing in its own place"
+      ],
+      "artwork": {
+        "color": "#009a98"
+      },
+      "version": "1.0.0",
+      "digest": "sha256:e4174efa19962bdfb510d9c1b5b4a2873eb403c93539125f070b114a9c47265b",
+      "documentationDigest": "sha256:854a80e922a2b49bad4084e2f2318789aa07c4e91ebd6e58b509d6030effc392",
+      "manual": {
+        "controls": {
+          "harmonics": "Sets the hands in a triggered clap from one through seven. Past noon, their timing and level begin to disagree. With TRIG unpatched, this becomes the audience density instead.",
+          "timbre": "Sets the width of the noise band around a fixed centre, from narrow and hollow through the original width at noon to open and crisp.",
+          "morph": "Sets the room tail behind the hands, from 8 ms to 1.2 seconds, with the original 32 ms at noon.",
+          "macro": "Sets the interval between hands from 4 ms to 35 ms, with the 808's 10 ms at noon. In the unpatched single-hand audience mode, it has no audible effect."
+        },
+        "trigger": "With TRIG patched, each rising edge fires the selected multi-hand clap. Unpatched, the engine becomes a free-running audience of single claps."
+      },
+      "implementation": {
+        "className": "ClapEngine"
+      }
+    },
+    {
+      "id": "freshets-formant",
+      "packageId": "community/freshets-formant",
+      "name": "Freshets Formant",
+      "author": "Dylan Bolink",
+      "origin": "Community",
+      "family": "Formant",
+      "description": "A driver oscillator firing a Serge-style AD envelope read through a waveshaper. Pulses arriving mid-attack are skipped, so low ratios subdivide the driver instead of retriggering it. Ported from Tides 2 Freshets alternative firmware.",
+      "tags": [
+        "community",
+        "formant",
+        "serge",
+        "tides",
+        "waveshaping",
+        "sub-octave"
+      ],
+      "controls": [
+        "Ratio",
+        "Smoothness",
+        "Slope",
+        "Shape"
+      ],
+      "outputs": [
+        "Formant waveform",
+        "Hollow three-state logic pulse with optional sub-octave, or in stereo the right channel: the same formant from an envelope slightly detuned"
+      ],
+      "artwork": {
+        "color": "#009a98"
+      },
+      "version": "1.0.0",
+      "digest": "sha256:6f7096fdfbc4e58643a92ed1ca7507cc46f15f571ed283e55289d6962f73b53a",
+      "documentationDigest": "sha256:f1e90e41eb374ee3105a11cacd9fedb043a6edf6be18cb2257a1305c07fa76f7",
+      "manual": {
+        "controls": {
+          "harmonics": "Sets the formant frequency as a ratio of the driver across plus or minus four octaves, with an exact unison detent at noon.",
+          "timbre": "Below noon, closes a low-pass filter on MAIN while AUX fades out. Above noon, opens a wavefolder and adds a sub-octave to AUX.",
+          "morph": "Sets the attack and decay balance of the formant envelope.",
+          "macro": "Sweeps the envelope transfer curve from arccos S-curves through triangle at noon to near-sine and bump shapes."
+        },
+        "trigger": "Realigns the driver oscillator and retriggers any envelope that is no longer in its attack stage."
+      },
+      "implementation": {
+        "className": "FreshetsFormantEngine"
+      }
     }
   ],
   "presets": {
