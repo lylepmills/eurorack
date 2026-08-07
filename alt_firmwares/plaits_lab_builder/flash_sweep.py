@@ -71,11 +71,12 @@ NEW = ARGV or [
     'z-filter', 'toy', 'csaw', 'bowed', 'ring-mod', 'sub-oscillator',
     'digital-modulation', 'saw-comb', 'vowel-fof', 'raw-fm', 'triple']
 
-# Engines to difference in --stereo mode: the five Pattern-B Braids ports, the
-# ones with a real second render path behind a PLAITS_STEREO_<X> gate. `toy`
+# Engines to difference in --stereo mode: engines with a real second render
+# path behind a PLAITS_STEREO_<X> gate. `toy`
 # shipped as the only one (a second sample-and-hold clock); bowed, csaw,
 # ring-mod and vowel-fof joined it in c84a06a, which gave each a distinct mono
-# AUX voice. The other six are Pattern A -- always a stereo pair at ~0 extra --
+# AUX voice. Clap and Freshets Formant joined as community engines in 2026-08.
+# The other Braids ports are Pattern A -- always a stereo pair at ~0 extra --
 # and so want no entry. Keep this list matching STEREO_MACROS below in
 # container_server.py.
 #
@@ -88,23 +89,22 @@ NEW = ARGV or [
 # KEEP THESE IN SYNC with website/src/components/plaits-palette/flash-budget.ts.
 # They are a snapshot of someone else's table, so they rot on every flash-meter
 # re-calibration; a control that silently drifts is worse than no control. These
-# are the rev-94e84165 values (2026-07-27). If a run reports a large control
+# are the d554b7f46dc0 values (2026-08-05). If a run reports a large control
 # gap, re-read that file before believing the engine you actually came to
 # measure.
 STEREO_DEFAULT = ['toy', 'bowed', 'csaw', 'ring-mod', 'vowel-fof',
-                  'digital-modulation',
+                  'digital-modulation', 'clap', 'freshets-formant',
                   'harmonic', 'glisson']
-STEREO_CONTROLS = {'harmonic': 2_560, 'glisson': 432}
+STEREO_CONTROLS = {'harmonic': 2_512, 'glisson': 432}
 
 # The MONO sweep's controls, same idea: engines whose marginal flash-budget.ts
 # already records, measured in the same pair as the new engines. If they
 # reproduce their published values the method and the base line up and the new
 # numbers can be trusted as if measured against the deployed builder -- the same
-# check the Helix measurement used (Speech re-measured 23,296 against a published
-# 23,312, a 16 B agreement). If a control does NOT reproduce, stop: the toolchain
+# check the Helix measurement used. If a control does NOT reproduce, stop: the toolchain
 # or the base moved, and every new marginal is being compared against a different
 # baseline than the rest of the table.
-CONTROLS = {'speech': 23_312, 'reed-pipe': 2_000, 'spectral-spiral': 2_064}
+CONTROLS = {'speech': 23_200, 'reed-pipe': 2_000, 'spectral-spiral': 2_032}
 
 
 def build_size(tag, recipe):

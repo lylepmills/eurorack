@@ -504,6 +504,8 @@ STEREO_MACROS = {
     "reed-pipe": "REED_PIPE",
     "phase-flock": "PHASE_FLOCK",
     "rulefield": "RULEFIELD",
+    "clap": "CLAP",
+    "freshets-formant": "FRESHETS_FORMANT",
 }
 ALL_STEREO_MACROS = frozenset(STEREO_MACROS.values())
 

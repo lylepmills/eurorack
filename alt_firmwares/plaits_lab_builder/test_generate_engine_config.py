@@ -27,7 +27,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
         return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
 
     def test_catalog_matches_the_approved_product_catalog(self) -> None:
-        self.assertEqual(len(CATALOG), 85)
+        self.assertEqual(len(CATALOG), 87)
 
     def test_lpc_words_emits_its_prosody_behavior_mask(self) -> None:
         recipe = self.load("default_recipe.json")
