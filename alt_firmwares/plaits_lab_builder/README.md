@@ -1,7 +1,7 @@
 # Plaits Lab firmware build service
 
 This directory contains the approved-engine backend for Plaits Lab. It accepts
-legacy recipes and manifests through schema 19 containing 24 or 32 versioned
+legacy recipes and manifests through schema 20 containing 24 or 32 versioned
 engine references, firmware preferences and starting options, and bounded
 chord-table/custom-FM/scale-bank/Speech-bank resources. Schema 15 can target either Mutable
 Instruments Plaits or Plum Audio Ro'Ved and adds the color-blind bank display.
@@ -16,7 +16,17 @@ Drift, or Step unpatched-attenuverter mode to Starting Options. The selected
 mode participates in the generated options profile. Schema 19 adds triggered
 and gated one-knob envelopes as the fifth and sixth locked-FREQUENCY
 assignments. Selecting either compiles both runtime choices into the firmware;
-builds that do not select a contour omit their code to preserve flash. A
+builds that do not select a contour omit their code to preserve flash. Schema 20
+adds the opt-in `replaceableFmBanks` preference: each 6-Op FM bank's baked array
+becomes the flash region a TIMBRE transfer erases and reprograms, so any or all
+of a build's FM banks can be replaced independently, repeatedly, and without a
+reflash. It is OPT-IN because page-aligning the banks costs ~816 bytes and the
+stock 24-model preset has 768 bytes spare — defaulting it on would have pushed
+the default build past the flash limit. An un-flagged recipe emits the
+historical layout and keeps the module's single legacy user-data region, so
+opting out is the behaviour Plaits has always had. Independently of the flag, a
+transferred bank now records how many patches it holds, so a short bank sizes
+the HARMONICS quantizer to its real count instead of repeating to fill 32. A
 one-shot marker in the application image is restored by every WAV or HEX flash, so first boot applies
 all embedded Starting Options even when reinstalling the exact same build;
 ordinary power cycles still preserve later runtime changes. It generates a compile-time
