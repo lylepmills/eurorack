@@ -199,9 +199,9 @@ struct Modulations {
   // Sample-position bit mask filled by the MODEL-input sync detector.
   uint32_t hard_sync;
 
-  // Audio-rate FM readings transformed with the regular FM calibration. Each
-  // value is in semitones (12 units/volt); Voice converts it to an absolute
-  // Hz offset only for engines that explicitly implement linear TZFM.
+  // Audio-rate FM readings transformed with the regular FM calibration. Voice
+  // converts those hardware-calibrated units to an absolute Hz offset only for
+  // engines that explicitly implement linear TZFM.
   float frequency_audio[kMaxBlockSize];
   bool frequency_patched;
   bool timbre_patched;
