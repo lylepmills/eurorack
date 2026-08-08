@@ -322,6 +322,11 @@ void CvAdc::ConfigureSdadc2(FmAcquisitionMode mode) {
     audio_rate_fm_resampler_.SetRate(
         mode == FM_ACQUISITION_FAST_WITH_LEVEL ? 677 : 47,
         mode == FM_ACQUISITION_FAST_WITH_LEVEL ? 720 : 45);
+    // Interrupted regular conversions need a deeper reservoir than the
+    // continuous Green path. The 128-sample DMA ring keeps that extra latency
+    // local to the experimental LEVEL-sharing mode.
+    audio_rate_fm_resampler_.SetNominalLag(
+        mode == FM_ACQUISITION_FAST_WITH_LEVEL ? 64 : 32);
     audio_rate_fm_resampler_.SetAdaptiveRate(
         mode == FM_ACQUISITION_FAST_WITH_LEVEL);
     audio_rate_fm_resampler_.Restart(AudioRateFmWriteIndex());

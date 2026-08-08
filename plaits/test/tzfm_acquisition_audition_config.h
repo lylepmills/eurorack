@@ -17,6 +17,10 @@
 //   amber (indices 0..2): fast FM periodically interrupted for LEVEL
 #define PLAITS_TZFM_CONTROL_RATE_ENGINE_MASK 0x1c0u
 #define PLAITS_TZFM_INTERRUPTED_LEVEL_ENGINE_MASK 0x007u
+// Two-op FM is already Plaits' heaviest stock engine. Evaluate its exponential
+// pitch law at 24 kHz and linearly reconstruct the intervening samples; the FM
+// ADC itself remains in the 50 kHz acquisition mode.
+#define PLAITS_TZFM_HALF_RATE_EXP_ENGINE_MASK 0x092u
 
 #include "plaits/dsp/engine/waveshaping_engine.h"
 #include "plaits/dsp/engine/fm_engine.h"

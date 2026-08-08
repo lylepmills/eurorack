@@ -30,6 +30,10 @@
 #include "plaits/dsp/fast_semitone_ratio.h"
 #include "plaits/user_data.h"
 
+#ifndef PLAITS_TZFM_HALF_RATE_EXP_ENGINE_MASK
+#define PLAITS_TZFM_HALF_RATE_EXP_ENGINE_MASK 0u
+#endif
+
 namespace plaits {
 
 using namespace std;
@@ -93,6 +97,10 @@ void Voice::Init(BufferAllocator* allocator) {
   previous_note_ = 0.0f;
   parameter_randomizer_.Init();
   previous_attenuverter_mode_ = ATTENUVERTER_MODE_STOCK;
+#if PLAITS_BUILD_LINEAR_TZFM
+  previous_audio_rate_exponential_fm_ = 0.0f;
+  audio_rate_exponential_fm_active_ = false;
+#endif
   
   trigger_delay_.Init(trigger_delay_line_);
 }
@@ -252,6 +260,9 @@ void Voice::Render(
       use_exponential_fm && modulations.frequency_audio_rate;
   const bool use_frequency_offset =
       use_linear_tzfm || use_audio_rate_exponential_fm;
+  if (!use_audio_rate_exponential_fm) {
+    audio_rate_exponential_fm_active_ = false;
+  }
   if (use_linear_tzfm) {
     // Convert the hardware-calibrated input back to volts, then apply a nominal
     // 1 kHz/V slope. CCW magnitude controls depth; its sign selects the law
@@ -515,14 +526,48 @@ void Voice::Render(
     amount *= std::max(fabsf(amount) - 0.05f, 0.05f);
     amount *= 1.05f;
     const float base_frequency = NoteToFrequency(p.note);
-    for (size_t i = 0; i < size; ++i) {
-      // This is algebraically the stock law evaluated per sample:
-      //   f = base * 2^(amount * calibrated_fm / 12)
-      // Engines consume an absolute normalized-frequency displacement, so
-      // subtract the base and reuse their signed audio-rate increment path.
-      frequency_offset[i] = base_frequency *
-          (FastSemitonesToRatio(
-              amount * modulations.frequency_audio[i]) - 1.0f);
+    const bool half_rate =
+        (PLAITS_TZFM_HALF_RATE_EXP_ENGINE_MASK & (1u << engine_index)) != 0;
+    if (half_rate && size >= 2) {
+      // Two-op FM has very little headroom after its 4x oscillator core. Sample
+      // the nonlinear pitch law on odd samples and reconstruct the even ones
+      // between adjacent results. This halves the expensive lookup rate while
+      // retaining a uniform 24 kHz modulation path rather than falling back to
+      // the roughly 4 kHz control-rate bank.
+      float previous = previous_audio_rate_exponential_fm_;
+      bool primed = audio_rate_exponential_fm_active_;
+      size_t i = 1;
+      for (; i < size; i += 2) {
+        const float current = base_frequency *
+            (FastSemitonesToRatio(
+                amount * modulations.frequency_audio[i]) - 1.0f);
+        if (!primed) {
+          previous = current;
+          primed = true;
+        }
+        frequency_offset[i - 1] = 0.5f * (previous + current);
+        frequency_offset[i] = current;
+        previous = current;
+      }
+      if (size & 1) {
+        previous = base_frequency *
+            (FastSemitonesToRatio(
+                amount * modulations.frequency_audio[size - 1]) - 1.0f);
+        frequency_offset[size - 1] = previous;
+      }
+      previous_audio_rate_exponential_fm_ = previous;
+      audio_rate_exponential_fm_active_ = true;
+    } else {
+      for (size_t i = 0; i < size; ++i) {
+        // This is algebraically the stock law evaluated per sample:
+        //   f = base * 2^(amount * calibrated_fm / 12)
+        // Engines consume an absolute normalized-frequency displacement, so
+        // subtract the base and reuse their signed audio-rate increment path.
+        frequency_offset[i] = base_frequency *
+            (FastSemitonesToRatio(
+                amount * modulations.frequency_audio[i]) - 1.0f);
+      }
+      audio_rate_exponential_fm_active_ = false;
     }
   }
 #endif

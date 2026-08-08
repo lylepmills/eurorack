@@ -20,7 +20,7 @@ namespace plaits {
 // input bandwidth is far below either Nyquist frequency.
 class AudioRateFmResampler {
  public:
-  static const size_t kRingBufferSize = 64;
+  static const size_t kRingBufferSize = 128;
   static const uint32_t kSourceStep = 47;
   static const uint32_t kPhaseDenominator = 45;
   static const size_t kAdaptiveWindowSamples = 32 * 12;
@@ -37,6 +37,8 @@ class AudioRateFmResampler {
     read_index_ = 0;
     last_write_index_ = 0;
     startup_samples_ = 0;
+    available_samples_ = 0;
+    nominal_lag_ = kNominalLag;
     phase_ = 0;
     consumed_samples_ = 0;
     resync_count_ = 0;
@@ -82,6 +84,15 @@ class AudioRateFmResampler {
     adaptive_update_samples_ = 0;
   }
 
+  void SetNominalLag(size_t lag) {
+    if (lag < 2) {
+      lag = 2;
+    } else if (lag > kRingBufferSize - 2) {
+      lag = kRingBufferSize - 2;
+    }
+    nominal_lag_ = lag;
+  }
+
   // `write_index` is the DMA position immediately after the newest completed
   // sample. Returns false only while the ring is filling for the first time.
   // In that case the destination is still initialized with the newest scalar
@@ -94,6 +105,9 @@ class AudioRateFmResampler {
     write_index %= kRingBufferSize;
     const size_t produced = Distance(last_write_index_, write_index);
     last_write_index_ = write_index;
+    if (running_) {
+      available_samples_ += produced;
+    }
 
     if (adaptive_rate_) {
       adaptive_source_samples_ += produced;
@@ -130,7 +144,7 @@ class AudioRateFmResampler {
       Seed(write_index, target_lag);
       running_ = true;
     } else {
-      const size_t available = Distance(read_index_, write_index);
+      const size_t available = available_samples_;
       // AudioDac deliberately services both DMA halves, oldest first, when
       // both interrupt flags are pending. In that catch-up case the FM producer
       // can be roughly two blocks ahead, and both back-to-back renders consume
@@ -166,6 +180,7 @@ class AudioRateFmResampler {
       const size_t advance = phase_ / phase_denominator_;
       phase_ %= phase_denominator_;
       read_index_ = (read_index_ + advance) % kRingBufferSize;
+      available_samples_ -= advance;
       consumed_samples_ += advance;
     }
     return true;
@@ -181,6 +196,7 @@ class AudioRateFmResampler {
     write_index %= kRingBufferSize;
     last_write_index_ = write_index;
     startup_samples_ = 0;
+    available_samples_ = 0;
     phase_ = 0;
     adaptive_source_samples_ = 0;
     adaptive_output_samples_ = 0;
@@ -195,6 +211,7 @@ class AudioRateFmResampler {
   inline uint32_t excess_lag_count() const { return excess_lag_count_; }
   inline uint32_t source_step() const { return source_step_; }
   inline uint32_t phase_denominator() const { return phase_denominator_; }
+  inline size_t available_samples() const { return available_samples_; }
   inline bool running() const { return running_; }
 
  private:
@@ -213,8 +230,8 @@ class AudioRateFmResampler {
 
   size_t TargetLag(size_t size) const {
     size_t lag = RequiredSamples(size, 0) + 3;
-    if (lag < kNominalLag) {
-      lag = kNominalLag;
+    if (lag < nominal_lag_) {
+      lag = nominal_lag_;
     }
     if (lag > kRingBufferSize - 2) {
       lag = kRingBufferSize - 2;
@@ -225,6 +242,7 @@ class AudioRateFmResampler {
   void Seed(size_t write_index, size_t lag) {
     read_index_ =
         (write_index + kRingBufferSize - lag) % kRingBufferSize;
+    available_samples_ = lag;
     phase_ = 0;
   }
 
@@ -245,6 +263,8 @@ class AudioRateFmResampler {
   size_t read_index_;
   size_t last_write_index_;
   size_t startup_samples_;
+  size_t available_samples_;
+  size_t nominal_lag_;
   uint32_t source_step_;
   uint32_t phase_denominator_;
   uint32_t phase_;

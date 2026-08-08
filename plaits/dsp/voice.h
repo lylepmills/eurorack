@@ -289,6 +289,10 @@ class Voice {
 
   ParameterRandomizer parameter_randomizer_;
   uint8_t previous_attenuverter_mode_;
+#if PLAITS_BUILD_LINEAR_TZFM
+  float previous_audio_rate_exponential_fm_;
+  bool audio_rate_exponential_fm_active_;
+#endif
   
   DecayEnvelope decay_envelope_;
   LPGEnvelope lpg_envelope_;

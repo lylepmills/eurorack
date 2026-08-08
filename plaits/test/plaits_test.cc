@@ -3811,6 +3811,7 @@ void ValidateAudioRateFmRecovery() {
   AudioRateFmResampler interrupted_resampler;
   interrupted_resampler.Init();
   interrupted_resampler.SetRate(677, 720);
+  interrupted_resampler.SetNominalLag(64);
   size_t interrupted_write_index = 0;
   uint32_t interrupted_source_phase = 0;
   for (int block = 0; block < 64; ++block) {
@@ -3837,6 +3838,7 @@ void ValidateAudioRateFmRecovery() {
   AudioRateFmResampler adaptive_resampler;
   adaptive_resampler.Init();
   adaptive_resampler.SetRate(677, 720);
+  adaptive_resampler.SetNominalLag(64);
   adaptive_resampler.SetAdaptiveRate(true);
   size_t adaptive_write_index = 0;
   uint32_t adaptive_source_phase = 0;
