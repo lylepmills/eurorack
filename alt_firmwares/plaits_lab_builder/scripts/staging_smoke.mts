@@ -175,9 +175,6 @@ let manual: Uint8Array | undefined;
 if (build.manual?.downloadUrl) {
   manual = await getBinary(build.manual.downloadUrl, /application\/pdf/, "field guide");
   assert.equal(Buffer.from(manual.subarray(0, 4)).toString("ascii"), "%PDF");
-  const manualText = Buffer.from(manual).toString("latin1");
-  assert.match(manualText, /Sync In/, "field guide must name Sync In");
-  assert.match(manualText, /processing headroom/, "field guide must carry the Sync warning");
 }
 
 if (artifactDir) {

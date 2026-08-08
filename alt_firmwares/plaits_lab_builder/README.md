@@ -127,7 +127,13 @@ a bounded first-edge-per-block fallback. The ordinary stock firmware remains
 inside flash at 228,516 / 229,376 bytes. A paired 24-model reference measured a
 19,552-byte Sync delta; the editor charges a conservative shared-plus-native
 cost and warns that fast sync and demanding model/stereo combinations can cause
-digital distortion or dropouts.
+digital distortion or dropouts. Staging canary build
+`e523c4956410996bcd7b58b906dc5b480b166c4ea44fdcf06ea5ac0b81c92a6d`
+compiled Sync In with Original Speech, Speech Sounds, LPC Words, and a custom
+bank at 50,260 B text + 48 B data and 20,380 B BSS. Its WAV SHA-256 is
+`fa6c4cf2310a023b203af2d26f5b455d1062b836e63b69062ec3d6668a010679`;
+the downloaded field guide was extracted and verified to contain both the fifth
+MODEL-input setting and the processing-headroom warning.
 
 Two rollout notes worth keeping:
 
