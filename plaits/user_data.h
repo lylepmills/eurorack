@@ -71,8 +71,8 @@ class UserData {
  public:
   enum {
     // Stock / default firmware keeps its single region in the bootloader's own
-    // area, below the application. A generated build maps slots to regions with
-    // kUserDataRegions instead and never reads this.
+    // area, below the application. Generated custom-model and replaceable-FM
+    // slots use dedicated application-flash regions; all others keep this one.
     ADDRESS = 0x08007000,
     SIZE = 0x1000
   };
@@ -143,9 +143,9 @@ class UserData {
       return false;
     }
 
-    // A slot with no region of its own cannot be written — a non-FM engine, or
-    // any slot at all in a build with FM bank swapping locked off. The module
-    // shows the existing transfer-error state, and nothing is erased.
+    // A dedicated custom-model or replaceable-FM slot writes its own region;
+    // every other slot retains the module's historical single legacy region.
+    // If a generated mapping explicitly refuses a slot, nothing is erased.
     const uint8_t* destination = region(slot);
     if (!destination) {
       return false;
@@ -174,17 +174,17 @@ class UserData {
  private:
   // The user-data area is GENERIC, not an FM feature: SixOpEngine reads it as a
   // patch bank, WavetableEngine as wave indices plus custom wave data, and
-  // WaveTerrainEngine as a ninth terrain. Only the FM banks have a baked blob
-  // that can double as a rewritable region, so there are two cases:
+  // WaveTerrainEngine as a ninth terrain. Generated builds can now carry two
+  // kinds of dedicated region:
   //
-  //   FM slot in a build with REPLACEABLE banks -> that bank's own array
-  //   everything else                           -> the legacy region at ADDRESS
+  //   customized Terrain/Wavetable slot          -> that slot's seeded array
+  //   FM slot in a build with REPLACEABLE banks  -> that bank's baked array
+  //   everything else                            -> legacy region at ADDRESS
   //
-  // The fallback is what keeps replaceable banks a pure addition. A wavetable or
-  // terrain slot has no baked user-data blob to make rewritable, so keying
-  // purely on the bank table would silently drop custom wavetable/terrain
-  // transfers that work today; and a build that does not opt in keeps the
-  // module's single 0x08007000 area for every slot, exactly as it always has.
+  // A custom-model assignment is itself the opt-in: its 4 KB recipe payload is
+  // page-aligned and doubles as the flash region that future TIMBRE transfers
+  // erase and rewrite. Uncustomized Terrain/Wavetable slots keep the legacy
+  // area, so old transfer files and builds behave exactly as before.
 #if defined(PLAITS_HAS_USER_DATA_BANK) && PLAITS_HAS_USER_DATA_BANK
   inline int bank_of(int slot) const { return kEngineUserDataBank[slot]; }
 #else
@@ -195,6 +195,11 @@ class UserData {
   // maps to, so two slots sharing one factory bank both read a transfer made
   // through either; the legacy region is keyed on the slot, as it always was.
   inline int tag_of(int slot) const {
+#if defined(PLAITS_HAS_CUSTOM_MODEL_DATA) && PLAITS_HAS_CUSTOM_MODEL_DATA
+    if (kEngineCustomModelData[slot]) {
+      return slot;
+    }
+#endif
 #if defined(PLAITS_HAS_SWAPPABLE_USER_DATA_BANKS) \
     && PLAITS_HAS_SWAPPABLE_USER_DATA_BANKS
     const int bank = bank_of(slot);
@@ -212,6 +217,14 @@ class UserData {
   // category of design: no dynamic allocation, no eviction policy, no "banks
   // full" state, no user-facing choice of where a transfer lands.
   inline const uint8_t* region(int slot) const {
+#if defined(PLAITS_HAS_CUSTOM_MODEL_DATA) && PLAITS_HAS_CUSTOM_MODEL_DATA
+    // Custom model regions are keyed by ENGINE SLOT, not by engine instance or
+    // payload digest. Two identical seeds still own different flash pages so a
+    // later transfer can change one without changing the other.
+    if (kEngineCustomModelData[slot]) {
+      return kEngineCustomModelData[slot];
+    }
+#endif
 #if defined(PLAITS_HAS_SWAPPABLE_USER_DATA_BANKS) \
     && PLAITS_HAS_SWAPPABLE_USER_DATA_BANKS
     const int bank = bank_of(slot);

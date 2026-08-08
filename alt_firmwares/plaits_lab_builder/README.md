@@ -61,8 +61,10 @@ experiment and borderline Brass result are not part of schema 23. The
 schema-21 `customModelData` resource can additionally attach one sampled,
 Mutable-compatible 4 KB block to each Wave Terrain or Wavetable slot. The
 browser stores the source equation for editing, but the trusted build boundary
-accepts only bounded sampled bytes; identical blocks are interned once in flash,
-and a later audio transfer still overrides the baked block at runtime. A
+accepts only bounded sampled bytes. Each assignment is an opt-in independently
+rewritable flash region: the recipe data seeds it, and a later TIMBRE audio
+transfer while that slot is active erases and replaces those same pages. Even
+identical seeds remain separate because their slots must be able to diverge. A
 one-shot marker in the application image is restored by every WAV or HEX flash, so first boot applies
 all embedded Starting Options even when reinstalling the exact same build;
 ordinary power cycles still preserve later runtime changes. It generates a compile-time

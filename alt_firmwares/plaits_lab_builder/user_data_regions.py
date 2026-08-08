@@ -1,16 +1,16 @@
-"""Placement of swappable FM bank regions, and the assertion that guards it.
+"""Placement of rewritable user-data regions, and the assertion that guards it.
 
-A Plaits Palette build makes every FM bank replaceable over the TIMBRE input by
-letting the bank's BAKED array double as the flash region a transfer erases and
-reprograms. Nothing is reserved — the 4 KB a bank already occupies simply becomes
-rewritable.
+A Plaits Palette build can make an FM bank or a recipe-seeded Wave Terrain /
+Wavetable slot replaceable over the TIMBRE input by letting its BAKED 4 KB array
+double as the flash region a transfer erases and reprograms. Nothing separate is
+reserved: the bytes that seed the slot are the bytes later rewritten in place.
 
 That only works if a region covers whole flash pages with nothing else in them.
 `UserData::Save` calls `FLASH_ErasePage` on 2 KB pages, so a region sharing a
 page with .text or .rodata would erase firmware on the first transfer — a bricked
 module, not a degraded feature. Two things make it hold:
 
-  * `render_linker_script` gives the banks their own page-aligned output section,
+  * `render_linker_script` gives the regions their own page-aligned output section,
     so the linker cannot pack other data into their pages. It must be a separate
     section: putting a 2 KB alignment on arrays inside `.text` propagates to the
     whole output section and costs ~4 KB of padding after the vector table.
@@ -26,12 +26,12 @@ from pathlib import Path
 
 # stmlib/system/flash_programming.h, STM32F37X.
 FLASH_PAGE_SIZE = 2048
-# One bank: 32 packed DX7 voices, and exactly two flash pages.
+# One user-data payload, exactly two flash pages.
 REGION_SIZE = 4096
 
 # The stock script defines _etext/_sidata at the end of .text, and .data is
-# loaded from there. The bank section has to sit BEFORE that anchor, or the
-# .data initializers would be stored on top of the banks.
+# loaded from there. The region section has to sit BEFORE that anchor, or the
+# .data initializers would be stored on top of the rewritable payloads.
 _ANCHOR = """    . = ALIGN(16);
      _etext = .;
      _sidata = _etext;
@@ -42,14 +42,14 @@ _REPLACEMENT = """    . = ALIGN(16);
   }} >FLASH
 
   /* The install marker (plaits/settings.cc) is an ORPHAN section in the stock
-     script, which ld places by heuristic. Introducing the bank section below
+     script, which ld places by heuristic. Introducing the region section below
      changes that heuristic — it lands at the top of FLASH and collides with
      .data's load address — so pin it explicitly.
 
-     It must also stay OUT of the bank pages. The audio updater erases the page
+     It must also stay OUT of the user-data pages. The audio updater erases the page
      holding this word on every firmware install, and the firmware reads it to
-     tell a reflash from a power cycle; if it shared a page with a bank, sending
-     that bank a new patch set would erase it and the next boot would silently
+     tell a reflash from a power cycle; if it shared a user-data page, sending
+     that slot a new payload would erase it and the next boot would silently
      reset the user's Starting Options. */
   .plaits_install_marker :
   {{
@@ -58,21 +58,22 @@ _REPLACEMENT = """    . = ALIGN(16);
     . = ALIGN(16);
   }} >FLASH
 
-  /* Swappable FM bank regions.
+  /* Rewritable user-data regions.
 
-     Each bank is {region} bytes ({pages} flash pages) in its own
-     .user_data_banks.<i> input section, and an audio transfer erases and
+     Each FM bank or custom Terrain/Wavetable seed is {region} bytes ({pages}
+     flash pages) in its own input section, and an audio transfer erases and
      reprograms one of them in place. They live in a dedicated OUTPUT section so
      that (a) nothing else can be packed into their pages, which UserData::Save
      erases wholesale, and (b) their {align}-byte alignment does not propagate to
      .text, which would waste a page of padding after the vector table.
 
-     Per-bank INPUT sections, matched by wildcard rather than KEEP, so
-     --gc-sections can still drop an individual bank no slot reaches. */
-  .user_data_banks :
+     Input sections are matched by wildcard rather than KEEP, so --gc-sections
+     can still drop an individual region no slot reaches. */
+  .user_data_regions :
   {{
     . = ALIGN({align});
     *(.user_data_banks.*)
+    *(.user_data_models.*)
     . = ALIGN({align});
     _etext = .;
     _sidata = _etext;
@@ -81,7 +82,7 @@ _REPLACEMENT = """    . = ALIGN(16);
 
 
 def render_linker_script(stock_source: str) -> str:
-    """The stock application linker script, plus the bank region section.
+    """The stock application linker script, plus the user-data region section.
 
     Takes the stock text rather than reading it, because stmlib is an UPSTREAM
     submodule (pichenettes/stmlib) and must not be edited — the builder passes
@@ -92,7 +93,7 @@ def render_linker_script(stock_source: str) -> str:
             "the stock linker script no longer ends .text with the expected "
             "_etext/_sidata anchor; re-derive render_linker_script against it "
             "rather than emitting a script that silently places .data over the "
-            "bank regions")
+            "user-data regions")
     return stock_source.replace(
         _ANCHOR,
         _REPLACEMENT.format(
@@ -122,23 +123,23 @@ def _allocated_sections(objdump: str) -> list[tuple[str, int, int]]:
 
 
 def check_regions(objdump_output: str, nm_output: str, expected_count: int) -> list[str]:
-    """Assert every bank region is safely erasable. Returns the region symbols.
+    """Assert every user-data region is safely erasable. Returns its symbols.
 
     Raises ValueError naming the specific violation. The caller must fail the
     build on it: a region that overlaps code is not a degraded feature, it is a
-    module that erases its own firmware the first time a user sends it a bank.
+    module that erases its own firmware on the first transfer to that slot.
     """
-    # Matched as a SUBSTRING: the banks are C++ objects in namespace plaits, so
-    # nm reports them mangled (_ZN6plaits23kUserDataBankOverride_0E). Prefix
-    # matching silently found nothing and turned this gate into a no-op.
+    # Matched as SUBSTRINGS: the arrays are C++ objects in namespace plaits, so
+    # nm reports mangled names. Prefix matching silently found nothing and once
+    # turned this safety gate into a no-op.
     regions = [
         (name, int(address, 16), int(size, 16))
         for address, size, name in _SYMBOL_RE.findall(nm_output)
-        if "kUserDataBankOverride_" in name
+        if ("kUserDataBankOverride_" in name or "kCustomModelData_" in name)
     ]
     if len(regions) != expected_count:
         raise ValueError(
-            f"linked firmware carries {len(regions)} bank regions, "
+            f"linked firmware carries {len(regions)} user-data regions, "
             f"but the generated config declares {expected_count}")
 
     for name, address, size in regions:
@@ -158,14 +159,14 @@ def check_regions(objdump_output: str, nm_output: str, expected_count: int) -> l
     for name, address, size in regions:
         pages.append((name, address, address + size))
     for section, address, size in _allocated_sections(objdump_output):
-        if section == ".user_data_banks":
+        if section == ".user_data_regions":
             continue
         for name, start, end in pages:
             if address < end and start < address + size:
                 raise ValueError(
                     f"section {section} ({address:#010x}+{size}) overlaps the "
                     f"flash pages of region {name} ({start:#010x}..{end:#010x}); "
-                    f"the first transfer to that bank would erase it")
+                    f"the first transfer to that slot would erase it")
     return [name for name, _, _ in regions]
 
 

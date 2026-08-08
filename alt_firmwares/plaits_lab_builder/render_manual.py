@@ -1057,7 +1057,8 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
             details_text = (
                 f'This slot uses the recipe-baked “{custom_model["name"]}” '
                 f'{"wave terrain" if custom_model["kind"] == "wave-terrain" else "wavetable"} data. '
-                "Its panel controls behave like the original model."
+                "Its panel controls behave like the original model. A compatible "
+                "audio transfer through TIMBRE replaces this slot independently."
                 if custom_model else model["description"]
             )
         details = Paragraph(_escape(details_text), body_style)

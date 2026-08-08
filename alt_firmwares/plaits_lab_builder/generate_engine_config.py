@@ -1314,33 +1314,48 @@ def render_config(recipe: BuildRecipe) -> str:
     sync_input_enabled = 1 if recipe.sync_input else 0
 
     # Per-slot terrain/wavetable payloads use the same 4096-byte format as an
-    # audio transfer, but are immutable recipe data. Map their PUBLIC slots
-    # through the bank rotation to selected-engine indices. Identical sampled
-    # payloads share one array, even when several slots use them.
+    # audio transfer. Each customized slot owns a DISTINCT flash region, seeded
+    # by the recipe data and later rewritable through TIMBRE while that slot is
+    # active. Never intern identical bytes here: two slots that start alike must
+    # still be independently erasable and able to diverge after a transfer.
+    # Map PUBLIC slots through the bank rotation to selected-engine indices.
     custom_model_by_slot = {
         slot: data for slot, _kind, data in recipe.custom_model_data
     }
     custom_model_arrays: list[bytes] = []
-    custom_model_array_index: dict[bytes, int] = {}
     custom_model_pointers: list[str] = []
     for public_slot in public_slot_of_selected:
         data = custom_model_by_slot.get(public_slot)
         if data is None:
             custom_model_pointers.append("NULL")
             continue
-        if data not in custom_model_array_index:
-            custom_model_array_index[data] = len(custom_model_arrays)
-            custom_model_arrays.append(data)
+        array_index = len(custom_model_arrays)
+        custom_model_arrays.append(data)
         custom_model_pointers.append(
-            f"kCustomModelData_{custom_model_array_index[data]}")
-    custom_model_array_definitions = "\n".join(
-        "static const uint8_t kCustomModelData_{index}[{size}] = {{ {body} }};".format(
-            index=index,
-            size=len(data),
-            body=", ".join(str(byte) for byte in data),
+            f"kCustomModelData_{array_index}")
+
+    def _render_custom_model_array(index: int, data: bytes) -> str:
+        size = len(data)
+        body = ", ".join(str(byte) for byte in data)
+        attribute = (
+            f' __attribute__((section(".user_data_models.{index}"),'
+            f' aligned({FLASH_PAGE_SIZE})))')
+        # As with replaceable FM banks, Save (plaits.o) and the engine fallback
+        # (voice.o) must name the SAME object. One external definition lives in
+        # voice.o; every other force-included translation unit sees a declaration.
+        return (
+            f"#ifdef PLAITS_ENGINE_CONFIG_OWNS_USER_DATA_BANKS\n"
+            f"extern const uint8_t kCustomModelData_{index}[{size}]{attribute};\n"
+            f"extern const uint8_t kCustomModelData_{index}[{size}]"
+            f" = {{ {body} }};\n"
+            f"#else\n"
+            f"extern const uint8_t kCustomModelData_{index}[{size}];\n"
+            f"#endif"
         )
-        for index, data in enumerate(custom_model_arrays)
-    )
+
+    custom_model_array_definitions = "\n".join(
+        _render_custom_model_array(index, data)
+        for index, data in enumerate(custom_model_arrays))
     custom_model_data_block = (
         f"\n#if PLAITS_HAS_CUSTOM_MODEL_DATA\n{custom_model_array_definitions}\n"
         f"static const uint8_t* const kEngineCustomModelData[{len(selected)}] = "
@@ -1378,6 +1393,7 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_HAS_USER_DATA_BANK_OVERRIDE {1 if override_arrays_all else 0}
 #define PLAITS_HAS_RESOLVED_USER_DATA_BANK {1 if has_user_data_bank else 0}
 #define PLAITS_HAS_CUSTOM_MODEL_DATA {1 if custom_model_arrays else 0}
+#define PLAITS_USER_DATA_REGION_COUNT {len(region_banks) + len(custom_model_arrays)}
 #define PLAITS_RESONATOR_ENVELOPE_ENGINE_MASK 0x{resonator_envelope_mask:08x}u
 // Every FM bank's baked array doubles as the flash region a TIMBRE transfer
 // erases and reprograms, so any bank can be replaced without a reflash. 0 when

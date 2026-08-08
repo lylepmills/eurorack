@@ -319,11 +319,11 @@ void Voice::Render(
     // rather than repeating to fill 32.
     size_t data_length = UserData::bank_length(data);
 #if PLAITS_HAS_CUSTOM_MODEL_DATA
-    // A transferred block in the legacy user-data region wins, preserving the
-    // module's existing audio-transfer workflow. With no matching transfer,
-    // Wave Terrain and Wavetable slots can fall back to their own recipe-baked
-    // 4 KB block. The table is keyed by ENGINE INDEX (not engine instance), so
-    // duplicate placements of the same engine class may carry different data.
+    // A custom Terrain/Wavetable slot's baked seed and a later TIMBRE transfer
+    // occupy the SAME rewritable 4 KB region. ptr() returns it when its transfer
+    // tag matches; before the first transfer this fallback returns that same
+    // pointer as recipe-baked data. The table is keyed by ENGINE INDEX (not
+    // engine instance), so duplicate placements may carry independent data.
     if (!data && kEngineCustomModelData[engine_index]) {
       data = kEngineCustomModelData[engine_index];
       data_length = UserData::SIZE;

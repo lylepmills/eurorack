@@ -18,6 +18,7 @@ from container_server import (
     RAM_STACK_RESERVE_BYTES,
     _build_targets,
     _concatenate_pcm_wavs,
+    _declared_region_count,
     _validate_saved_bank_preview_request,
     _validate_speech_request,
     _write_saved_plan,
@@ -123,6 +124,13 @@ class LinkedFirmwareSafetyTest(unittest.TestCase):
             with self.assertRaises(BuildError) as raised:
                 validate_linked_firmware(self.elf(directory), config)
         self.assertEqual(raised.exception.code, "unsafe_flash_layout")
+
+
+class UserDataRegionCountTest(unittest.TestCase):
+    def test_generated_region_macro_counts_fm_and_custom_model_regions(self) -> None:
+        config = "#define PLAITS_USER_DATA_REGION_COUNT 5\n"
+        self.assertEqual(_declared_region_count(config), 5)
+        self.assertEqual(_declared_region_count("#define PLAITS_ENGINE_COUNT 24\n"), 0)
 
 
 class RequestSizeBudgetTest(unittest.TestCase):

@@ -156,7 +156,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
             },
         }
 
-    def test_v21_custom_model_data_maps_by_slot_and_deduplicates_bytes(self) -> None:
+    def test_v21_custom_model_data_maps_to_independently_rewritable_slots(self) -> None:
         recipe = self.custom_model_recipe([
             self.custom_model_assignment(0, "wave-terrain", 17),
             self.custom_model_assignment(1, "wave-terrain", 17),
@@ -166,18 +166,43 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertEqual(len(build.custom_model_data), 3)
         config = render_config(build)
         self.assertIn("#define PLAITS_HAS_CUSTOM_MODEL_DATA 1", config)
-        self.assertEqual(config.count("static const uint8_t kCustomModelData_0[4096] ="), 1)
-        self.assertEqual(config.count("static const uint8_t kCustomModelData_1[4096] ="), 1)
+        # The first two seeds contain identical bytes, but they must NOT share a
+        # flash array: after installation each slot can be rewritten over TIMBRE
+        # and must be able to diverge without changing the other one.
+        self.assertEqual(config.count("extern const uint8_t kCustomModelData_0[4096] ="), 1)
+        self.assertEqual(config.count("extern const uint8_t kCustomModelData_1[4096] ="), 1)
+        self.assertEqual(config.count("extern const uint8_t kCustomModelData_2[4096] ="), 1)
+        self.assertIn(
+            'section(".user_data_models.0"), aligned(2048)', config)
+        self.assertIn("#define PLAITS_USER_DATA_REGION_COUNT 3", config)
         pointer_line = next(
             line for line in config.splitlines()
             if "kEngineCustomModelData[24]" in line
         )
-        # Green public slots 0..2 land at internal indices 8..10. The first two
-        # share bytes/array while Wavetable owns the second unique array.
+        # Green public slots 0..2 land at internal indices 8..10, each pointing
+        # at its own independently erasable seed region.
         pointers = pointer_line.split("{", 1)[1].split("}", 1)[0].split(", ")
         self.assertEqual(pointers[8:11], [
-            "kCustomModelData_0", "kCustomModelData_0", "kCustomModelData_1",
+            "kCustomModelData_0", "kCustomModelData_1", "kCustomModelData_2",
         ])
+
+    def test_v21_counts_fm_banks_and_custom_models_in_one_region_section(self) -> None:
+        recipe = self.custom_model_recipe([
+            self.custom_model_assignment(0, "wave-terrain"),
+        ])
+        recipe["slots"][3] = "dx7-bank-a"
+        recipe["preferences"] = {
+            "navigationMode": "linear",
+            "calibration": False,
+            "colorBlindMode": False,
+            "replaceableFmBanks": True,
+        }
+        build = validate_recipe(recipe)
+        config = render_config(build)
+
+        self.assertIn('section(".user_data_banks.0"), aligned(2048)', config)
+        self.assertIn('section(".user_data_models.0"), aligned(2048)', config)
+        self.assertIn("#define PLAITS_USER_DATA_REGION_COUNT 2", config)
 
     def test_v21_custom_model_data_rejects_wrong_model_or_size(self) -> None:
         wrong_kind = self.custom_model_recipe([
@@ -727,7 +752,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
             config)
 
     def test_swappable_build_re_emits_live_stock_banks_page_aligned(self) -> None:
-        # The same palette with banks swappable (the default). Every live bank —
+        # The same palette with banks swappable (the opt-in mode). Every live bank —
         # including the two STOCK ones — becomes a page-aligned region the module
         # can erase and reprogram, so the build re-emits them as its own arrays
         # and never names syx_bank_N. Net flash is unchanged: --gc-sections drops
