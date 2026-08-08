@@ -105,6 +105,8 @@
 #include "plaits/dsp/engine2/wavetable_scale_stack_engine.h"
 #include "plaits/dsp/engine2/shakers_engine.h"
 #include "plaits/dsp/engine2/brass_engine.h"
+#include "plaits/dsp/engine2/clap_engine.h"
+#include "plaits/dsp/engine2/freshets_formant_engine.h"
 #include "plaits/dsp/engine2/z_filter_engine.h"
 #include "plaits/dsp/engine2/string_machine_engine.h"
 #include "plaits/dsp/engine2/tapfield_engine.h"
@@ -3191,6 +3193,8 @@ void TestExperimentalEngines() {
   RenderAuditionEngine<WavetableScaleStackEngine>("53-wavetable-scale-stack.wav");
   RenderAuditionEngine<ShakersEngine>("26-shakers.wav");
   RenderAuditionEngine<BrassEngine>("28-brass.wav");
+  RenderAuditionEngine<ClapEngine>("54-clap.wav");
+  RenderAuditionEngine<FreshetsFormantEngine>("55-freshets-formant.wav");
   RenderAuditionEngine<RawFmEngine>("21-raw-fm.wav");
   RenderAuditionEngine<VowelFofEngine>("20-vowel-fof.wav");
   RenderAuditionEngine<SawCombEngine>("19-saw-comb.wav");
@@ -3263,6 +3267,8 @@ void TestExperimentalEngines() {
   ValidateExperimentalEngineExtremes<WavetableScaleStackEngine>();
   ValidateExperimentalEngineExtremes<ShakersEngine>();
   ValidateExperimentalEngineExtremes<BrassEngine>();
+  ValidateExperimentalEngineExtremes<ClapEngine>();
+  ValidateExperimentalEngineExtremes<FreshetsFormantEngine>();
   ValidateExperimentalEngineExtremes<ZFilterEngine>();
   ValidateExperimentalEngineExtremes<ToyEngine>();
   ValidateExperimentalEngineExtremes<CSawEngine>();
@@ -3322,6 +3328,8 @@ void TestExperimentalEngines() {
   ValidateExperimentalControlResponse<WavetableScaleStackEngine>("Wavetable Scale Stack");
   ValidateExperimentalControlResponse<ShakersEngine>("Shakers");
   ValidateExperimentalControlResponse<BrassEngine>("Brass");
+  ValidateExperimentalControlResponse<ClapEngine>("Clap");
+  ValidateExperimentalControlResponse<FreshetsFormantEngine>("Freshets Formant");
   ValidateExperimentalControlResponse<ZFilterEngine>("Z Filter");
   ValidateExperimentalControlResponse<ToyEngine>("Toy");
   ValidateExperimentalControlResponse<CSawEngine>("CSaw");

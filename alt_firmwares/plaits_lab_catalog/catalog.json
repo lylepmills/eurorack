@@ -3446,6 +3446,94 @@
       "artwork": {
         "color": "#5796E4"
       }
+    },
+    {
+      "id": "clap",
+      "packageId": "community/clap",
+      "name": "Clap",
+      "author": "Dylan Bolink",
+      "origin": "Community",
+      "family": "Drums",
+      "description": "808 style clap, noise gated a few milliseconds at a time into a wide band with a steep bottom, and a longer tail for the room. Four hands become seven that disagree; unpatched, an audience.",
+      "tags": [
+        "community",
+        "drum",
+        "clap",
+        "808",
+        "percussion",
+        "noise",
+        "applause"
+      ],
+      "controls": [
+        "Hands",
+        "Tone",
+        "Room",
+        "Spacing"
+      ],
+      "outputs": [
+        "The whole clap, hands and room",
+        "The dry hands alone, their top an octave up, or in stereo the right channel: the same clap from an independent noise source, with each hand landing in its own place"
+      ],
+      "source": {
+        "header": "plaits/dsp/engine2/clap_engine.h",
+        "className": "ClapEngine",
+        "member": "clap_engine_",
+        "files": [
+          "plaits/dsp/engine2/clap_engine.cc"
+        ]
+      },
+      "postProcessing": {
+        "alreadyEnveloped": true,
+        "outGain": 0.8,
+        "auxGain": 0.8
+      },
+      "artwork": {
+        "color": "#009a98"
+      }
+    },
+    {
+      "id": "freshets-formant",
+      "packageId": "community/freshets-formant",
+      "name": "Freshets Formant",
+      "author": "Dylan Bolink",
+      "origin": "Community",
+      "family": "Formant",
+      "description": "A driver oscillator firing a Serge-style AD envelope read through a waveshaper. Pulses arriving mid-attack are skipped, so low ratios subdivide the driver instead of retriggering it. Ported from Tides 2 Freshets alternative firmware.",
+      "tags": [
+        "community",
+        "formant",
+        "serge",
+        "tides",
+        "waveshaping",
+        "sub-octave"
+      ],
+      "controls": [
+        "Ratio",
+        "Smoothness",
+        "Slope",
+        "Shape"
+      ],
+      "outputs": [
+        "Formant waveform",
+        "Hollow three-state logic pulse with optional sub-octave, or in stereo the right channel: the same formant from an envelope slightly detuned"
+      ],
+      "source": {
+        "header": "plaits/dsp/engine2/freshets_formant_engine.h",
+        "className": "FreshetsFormantEngine",
+        "member": "freshets_formant_engine_",
+        "files": [
+          "plaits/dsp/engine2/freshets_formant_engine.cc",
+          "plaits/dsp/engine2/freshets_formant_shapes.cc"
+        ]
+      },
+      "postProcessing": {
+        "alreadyEnveloped": false,
+        "outGain": 0.9,
+        "auxGain": 0.55
+      },
+      "artwork": {
+        "color": "#009a98"
+      }
     }
   ],
   "manuals": {
@@ -4213,6 +4301,24 @@
         "macro": "Sets how much of the helix you hear at once, from a tight chord to a wide cloud of octaves."
       },
       "trigger": "Strikes the low-pass gate while the helix keeps gliding underneath."
+    },
+    "clap": {
+      "controls": {
+        "harmonics": "Sets the hands in a triggered clap from one through seven. Past noon, their timing and level begin to disagree. With TRIG unpatched, this becomes the audience density instead.",
+        "timbre": "Sets the width of the noise band around a fixed centre, from narrow and hollow through the original width at noon to open and crisp.",
+        "morph": "Sets the room tail behind the hands, from 8 ms to 1.2 seconds, with the original 32 ms at noon.",
+        "macro": "Sets the interval between hands from 4 ms to 35 ms, with the 808's 10 ms at noon. In the unpatched single-hand audience mode, it has no audible effect."
+      },
+      "trigger": "With TRIG patched, each rising edge fires the selected multi-hand clap. Unpatched, the engine becomes a free-running audience of single claps."
+    },
+    "freshets-formant": {
+      "controls": {
+        "harmonics": "Sets the formant frequency as a ratio of the driver across plus or minus four octaves, with an exact unison detent at noon.",
+        "timbre": "Below noon, closes a low-pass filter on MAIN while AUX fades out. Above noon, opens a wavefolder and adds a sub-octave to AUX.",
+        "morph": "Sets the attack and decay balance of the formant envelope.",
+        "macro": "Sweeps the envelope transfer curve from arccos S-curves through triangle at noon to near-sine and bump shapes."
+      },
+      "trigger": "Realigns the driver oscillator and retriggers any envelope that is no longer in its attack stage."
     }
   },
   "presets": {
