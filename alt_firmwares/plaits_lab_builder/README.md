@@ -86,6 +86,24 @@ and binary SHA-256
 both match the exact local release candidate, confirming the follow-up changed
 catalog provenance and artwork without changing compiled firmware bytes.
 
+The August 7 community-engine rollout shipped Dylan Bolink's Clap and Freshets
+Formant at `rev-1b8ecdaddb33`. Their one-model CPU-probe builds passed on a
+physical Plaits at 4–5 LEDs for Clap and no more than 6 LEDs for Freshets, with
+no audible faults. The exact staged release canary, build
+`43bb706c50fe971029a4b6e565d754ff069827cd8bbd3a778587c51085c07253`,
+then installed, booted, navigated and produced audio on the module; its WAV
+SHA-256 is
+`641b68925496d07dc1cbf9d8ed77038e8625c4c1a645fa3427fc872dfdb29619`.
+Production canary build
+`5ff65ceee30ad7c746266b7dcd5c45a45c648b7ee033a660fa37452b46687761`
+compiled both new engines alongside Original Speech, Speech Sounds and LPC
+Words at 59,044 B text + 48 B data and 20,636 B BSS. Its 4,803,692-byte WAV
+has SHA-256
+`a0e531633008a18d6dc90e545b1c55c566fc15c8578a9993816ecb3005783075`
+and binary SHA-256
+`9356cc152e3392368e86835418296f2422a94b989685d70374d0868117f016b9`;
+the matching field guide also reached ready.
+
 The service is split across two isolation layers:
 
 - A Cloudflare Worker validates and hashes recipes, stores job state in Durable
@@ -367,7 +385,7 @@ system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-769417c8b8e3` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-1b8ecdaddb33` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a new
 image, use `wrangler containers info <application-id>` and wait for a healthy
@@ -382,7 +400,7 @@ and Step unpatched-attenuverter modes; schema 17's selectable stock LPC banks,
 custom text/recording-derived Speech banks, source/engine previews; and the
 earlier recipe-driven scale banks and automatic LEVEL routing. The generalized
 schema-inheritance hardening from `5b2b077` is also live: current production
-source `769417c8b8e3` descends from that commit, so future supported schemas
+source `1b8ecdaddb33` descends from that commit, so future supported schemas
 inherit older feature shapes without another version-list edit.
 
 ### Rolling back
@@ -449,6 +467,7 @@ target.
 | August 5, 2026 (split Speech engines with custom banks shared by Original Speech and LPC Words) | `174d93845372` | `rev-174d93845372` |
 | August 5, 2026 (schema 19 triggered and gated FREQUENCY contours, manual contract 15) | `d554b7f46dc0` | `rev-d554b7f46dc0` |
 | August 5, 2026 (credit split Speech engines to Mutable Instruments; divided Speech icons) | `769417c8b8e3` | `rev-769417c8b8e3` |
+| August 7, 2026 (Clap and Freshets Formant community engines) | `1b8ecdaddb33` | `rev-1b8ecdaddb33` |
 
 Three consequences a rollback has that a forward deploy does not:
 
