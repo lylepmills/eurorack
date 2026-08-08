@@ -120,6 +120,15 @@ schema-20 recipe with `replaceableFmBanks` enabled and all three FM banks placed
 its 9,630,764-byte WAV has SHA-256
 `4704cae93316315c7017c7b39b4c01e47beeb397dd20ee1125235478b992c8f1`.
 
+The August 8 Sync In rollout shipped at `rev-fc594b275f0d` as schema 21 and
+manual contract 16. MODEL can now detect audio-rate rising edges: eleven
+oscillator engines use sample-accurate reset paths, while all other engines use
+a bounded first-edge-per-block fallback. The ordinary stock firmware remains
+inside flash at 228,516 / 229,376 bytes. A paired 24-model reference measured a
+19,552-byte Sync delta; the editor charges a conservative shared-plus-native
+cost and warns that fast sync and demanding model/stereo combinations can cause
+digital distortion or dropouts.
+
 Two rollout notes worth keeping:
 
 - The Worker's preference set is CLOSED and it rebuilds normalized preferences
@@ -418,7 +427,7 @@ system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-1b8ecdaddb33` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-fc594b275f0d` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a new
 image, use `wrangler containers info <application-id>` and wait for a healthy
@@ -427,8 +436,9 @@ first-time staging application can temporarily return "no Container instance
 available" while its image is starting; the bounded staging smoke retries that
 response.
 
-Schema 19 is live, adding the triggered and gated FREQUENCY contours as the
-fifth and sixth locked-knob assignments. It inherits schema 18's Stock, Drift,
+Schema 21 is live, adding experimental Sync In as the fifth MODEL-input
+assignment. It inherits schema 20's replaceable FM-bank preference, schema 19's
+triggered and gated FREQUENCY contours, and schema 18's Stock, Drift,
 and Step unpatched-attenuverter modes; schema 17's selectable stock LPC banks,
 custom text/recording-derived Speech banks, source/engine previews; and the
 earlier recipe-driven scale banks and automatic LEVEL routing. The generalized
@@ -501,6 +511,8 @@ target.
 | August 5, 2026 (schema 19 triggered and gated FREQUENCY contours, manual contract 15) | `d554b7f46dc0` | `rev-d554b7f46dc0` |
 | August 5, 2026 (credit split Speech engines to Mutable Instruments; divided Speech icons) | `769417c8b8e3` | `rev-769417c8b8e3` |
 | August 7, 2026 (Clap and Freshets Formant community engines) | `1b8ecdaddb33` | `rev-1b8ecdaddb33` |
+| August 8, 2026 (schema 20 replaceable FM banks) | `8d56c1936c5c` | `rev-8d56c1936c5c` |
+| August 8, 2026 (schema 21 experimental Sync In, manual contract 16) | `fc594b275f0d` | `rev-fc594b275f0d` |
 
 Three consequences a rollback has that a forward deploy does not:
 
