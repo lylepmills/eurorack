@@ -11,6 +11,8 @@ file's catalog can influence C++ output.
 from __future__ import annotations
 
 import argparse
+import base64
+import binascii
 import json
 import re
 from dataclasses import dataclass
@@ -74,6 +76,8 @@ SPEECH_BANKS_MIN_SCHEMA_VERSION = 17
 ATTENUVERTER_MODE_MIN_SCHEMA_VERSION = 18
 ONE_KNOB_ENVELOPE_MIN_SCHEMA_VERSION = 19
 SWAPPABLE_FM_BANKS_MIN_SCHEMA_VERSION = 20
+CUSTOM_MODEL_DATA_MIN_SCHEMA_VERSION = 21
+CUSTOM_MODEL_DATA_SIZE = 4096
 SYNC_INPUT_MIN_SCHEMA_VERSION = 21
 # v22 moves Sync In's COMPILE-TIME switch off the starting value and onto its own
 # preference. Starting Options are the module's initial RUNTIME values and the
@@ -182,6 +186,10 @@ class BuildRecipe:
     stereo_engines: tuple[str, ...] | None = None
     # v17: selected stock LPC banks followed by custom decoded-frame banks.
     speech_banks: dict[str, Any] | None = None
+    # v21: public slot, engine kind, and the sampled Mutable-compatible 4 KB
+    # user-data block. The equation and display name stay in the public recipe;
+    # firmware needs only these bounded bytes.
+    custom_model_data: tuple[tuple[int, str, bytes], ...] = ()
     # v22: 1 compiles Sync In in, making it selectable as a MODEL-input mode at
     # RUNTIME. Before v22 this was derived from the starting value, which meant a
     # user who did not choose Sync In at build time could never reach it.
@@ -468,6 +476,50 @@ def validate_user_data_banks_v12(value: Any, num_slots: int) -> list[tuple[int, 
     return result
 
 
+def validate_custom_model_data(
+        value: Any,
+        public_slots: list[str | None]) -> list[tuple[int, str, bytes]]:
+    """Validate v21 per-slot Wave Terrain/Wavetable payloads.
+
+    Equations are evaluated by the public editor. The trusted generator accepts
+    only one canonical, exact-size data block per matching model slot.
+    """
+    if not isinstance(value, list) or len(value) > len(public_slots):
+        raise ValueError("recipe contains an unsupported set of custom model data")
+    result: list[tuple[int, str, bytes]] = []
+    seen: set[int] = set()
+    for entry in value:
+        if not isinstance(entry, dict) or set(entry) != {"slot", "model"}:
+            raise ValueError("recipe contains an invalid custom model-data assignment")
+        slot = entry["slot"]
+        model = entry["model"]
+        if (type(slot) is not int or not 0 <= slot < len(public_slots)
+                or slot in seen or not isinstance(model, dict)
+                or set(model) != {"kind", "name", "equation", "data"}):
+            raise ValueError("custom model data must target a distinct palette slot")
+        expected_kind = public_slots[slot] if public_slots[slot] in (
+            "wave-terrain", "wavetable") else None
+        if (expected_kind is None or model.get("kind") != expected_kind
+                or not isinstance(model.get("name"), str)
+                or not model["name"].strip() or len(model["name"]) > 80
+                or not isinstance(model.get("equation"), str)
+                or not model["equation"].strip() or len(model["equation"]) > 500
+                or not isinstance(model.get("data"), str)):
+            raise ValueError(
+                "custom model data must match a Wave Terrain or Wavetable slot")
+        try:
+            data = base64.b64decode(model["data"], validate=True)
+        except (binascii.Error, ValueError) as error:
+            raise ValueError("custom model data is not valid base64") from error
+        if (len(data) != CUSTOM_MODEL_DATA_SIZE
+                or base64.b64encode(data).decode("ascii") != model["data"]):
+            raise ValueError(
+                f"custom model data must contain exactly {CUSTOM_MODEL_DATA_SIZE} bytes")
+        seen.add(slot)
+        result.append((slot, expected_kind, data))
+    return result
+
+
 def normalize_slots(slots: list[Any], schema_version: int) -> list[str | None]:
     if schema_version in (2, 4, 5, 6) and all(isinstance(engine_id, str) for engine_id in slots):
         if any(engine_id not in CATALOG for engine_id in slots):
@@ -571,6 +623,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
     user_data_banks: list[tuple[int, bytes]] = []   # v6 index-keyed
     slot_banks: list[tuple[int, bytes]] = []        # v12 slot-keyed
     speech_banks: dict[str, Any] | None = None
+    custom_model_data: list[tuple[int, str, bytes]] = []  # v21 slot-keyed
     scale_bank = validate_scale_bank(DEFAULT_SCALE_BANK)
     if schema_version >= RESOURCES_MIN_SCHEMA_VERSION:
         resources = value.get("resources")
@@ -602,11 +655,18 @@ def validate_recipe(value: Any) -> BuildRecipe:
             and isinstance(resources, dict)
             and "speechBanks" in resources
         )
+        carries_custom_model_data = (
+            schema_version >= CUSTOM_MODEL_DATA_MIN_SCHEMA_VERSION
+            and isinstance(resources, dict)
+            and "customModelData" in resources
+        )
         base_resource_keys = {"chordTables"}
         if carries_scale_bank:
             base_resource_keys.add("scaleBank")
         if carries_speech_banks:
             base_resource_keys.add("speechBanks")
+        if carries_custom_model_data:
+            base_resource_keys.add("customModelData")
         carries_user_data_banks = expect_user_data_banks or (
             schema_version >= CALIBRATION_MIN_SCHEMA_VERSION
             and isinstance(resources, dict)
@@ -627,6 +687,9 @@ def validate_recipe(value: Any) -> BuildRecipe:
                 raise ValueError(
                     "speechBanks requires Speech or LPC Words in the palette")
             speech_banks = validate_speech_banks(resources.get("speechBanks"))
+        if carries_custom_model_data:
+            custom_model_data = validate_custom_model_data(
+                resources.get("customModelData"), public_slots)
         if carries_user_data_banks:
             if schema_version >= SLOT_BANK_MIN_SCHEMA_VERSION:
                 slot_banks = validate_user_data_banks_v12(resources.get("userDataBanks"), len(slots))
@@ -911,6 +974,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
         slot_bank_overrides=tuple(slot_banks),
         stereo_engines=stereo_engines,
         speech_banks=speech_banks,
+        custom_model_data=tuple(custom_model_data),
         **normalized_options,
     )
 
@@ -1249,6 +1313,41 @@ def render_config(recipe: BuildRecipe) -> str:
     # 4 + PLAITS_BUILD_ENABLE_SYNC_INPUT) while starting the module at index 4.
     sync_input_enabled = 1 if recipe.sync_input else 0
 
+    # Per-slot terrain/wavetable payloads use the same 4096-byte format as an
+    # audio transfer, but are immutable recipe data. Map their PUBLIC slots
+    # through the bank rotation to selected-engine indices. Identical sampled
+    # payloads share one array, even when several slots use them.
+    custom_model_by_slot = {
+        slot: data for slot, _kind, data in recipe.custom_model_data
+    }
+    custom_model_arrays: list[bytes] = []
+    custom_model_array_index: dict[bytes, int] = {}
+    custom_model_pointers: list[str] = []
+    for public_slot in public_slot_of_selected:
+        data = custom_model_by_slot.get(public_slot)
+        if data is None:
+            custom_model_pointers.append("NULL")
+            continue
+        if data not in custom_model_array_index:
+            custom_model_array_index[data] = len(custom_model_arrays)
+            custom_model_arrays.append(data)
+        custom_model_pointers.append(
+            f"kCustomModelData_{custom_model_array_index[data]}")
+    custom_model_array_definitions = "\n".join(
+        "static const uint8_t kCustomModelData_{index}[{size}] = {{ {body} }};".format(
+            index=index,
+            size=len(data),
+            body=", ".join(str(byte) for byte in data),
+        )
+        for index, data in enumerate(custom_model_arrays)
+    )
+    custom_model_data_block = (
+        f"\n#if PLAITS_HAS_CUSTOM_MODEL_DATA\n{custom_model_array_definitions}\n"
+        f"static const uint8_t* const kEngineCustomModelData[{len(selected)}] = "
+        f"{{ {', '.join(custom_model_pointers)} }};\n#endif\n"
+        if custom_model_arrays else ""
+    )
+
     registry_order = (
         "orange, green, red, amber"
         if len(public_banks) > 3
@@ -1278,6 +1377,7 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_HAS_USER_DATA_BANK {1 if has_user_data_bank else 0}
 #define PLAITS_HAS_USER_DATA_BANK_OVERRIDE {1 if override_arrays_all else 0}
 #define PLAITS_HAS_RESOLVED_USER_DATA_BANK {1 if has_user_data_bank else 0}
+#define PLAITS_HAS_CUSTOM_MODEL_DATA {1 if custom_model_arrays else 0}
 #define PLAITS_RESONATOR_ENVELOPE_ENGINE_MASK 0x{resonator_envelope_mask:08x}u
 // Every FM bank's baked array doubles as the flash region a TIMBRE transfer
 // erases and reprograms, so any bank can be replaced without a reflash. 0 when
@@ -1328,6 +1428,7 @@ namespace plaits {{
 static const int8_t kEngineUserDataBank[{len(selected)}] = {{ {user_data_banks} }};
 #endif
 {user_data_bank_override_block}
+{custom_model_data_block}
 #if PLAITS_HAS_SPEECH_ENGINE
 static const uint32_t kSpeechEngineMask = 0x{speech_mask:08x};
 #endif

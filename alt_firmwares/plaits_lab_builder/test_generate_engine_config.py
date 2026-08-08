@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import re
 import unittest
@@ -126,7 +127,69 @@ class GenerateEngineConfigTest(unittest.TestCase):
         # container cannot see. It is held in step by its own guard (its tier
         # list must match defaultFirmwareConfiguration) plus the comment on each
         # copy. A conditional check here would silently never run.
+    def custom_model_recipe(self, assignments: list[dict]) -> dict:
+        recipe = self.load("default_recipe.json")
+        recipe["schemaVersion"] = 21
+        recipe["slots"][0] = "wave-terrain"
+        recipe["slots"][1] = "wave-terrain"
+        recipe["slots"][2] = "wavetable"
+        recipe["preferences"] = {"navigationMode": "linear"}
+        recipe["initialOptions"] = {
+            **DEFAULT_CONFIGURATION["initialOptions"],
+            "attenuverterMode": "stock",
+        }
+        recipe["resources"] = {
+            "chordTables": DEFAULT_CHORD_TABLES,
+            "customModelData": assignments,
+        }
+        return recipe
 
+    def custom_model_assignment(
+            self, slot: int, kind: str, fill: int = 17) -> dict:
+        return {
+            "slot": slot,
+            "model": {
+                "kind": kind,
+                "name": f"Custom {slot}",
+                "equation": "x + y" if kind == "wave-terrain" else "sin(phi)",
+                "data": base64.b64encode(bytes([fill]) * 4096).decode("ascii"),
+            },
+        }
+
+    def test_v21_custom_model_data_maps_by_slot_and_deduplicates_bytes(self) -> None:
+        recipe = self.custom_model_recipe([
+            self.custom_model_assignment(0, "wave-terrain", 17),
+            self.custom_model_assignment(1, "wave-terrain", 17),
+            self.custom_model_assignment(2, "wavetable", 29),
+        ])
+        build = validate_recipe(recipe)
+        self.assertEqual(len(build.custom_model_data), 3)
+        config = render_config(build)
+        self.assertIn("#define PLAITS_HAS_CUSTOM_MODEL_DATA 1", config)
+        self.assertEqual(config.count("static const uint8_t kCustomModelData_0[4096] ="), 1)
+        self.assertEqual(config.count("static const uint8_t kCustomModelData_1[4096] ="), 1)
+        pointer_line = next(
+            line for line in config.splitlines()
+            if "kEngineCustomModelData[24]" in line
+        )
+        # Green public slots 0..2 land at internal indices 8..10. The first two
+        # share bytes/array while Wavetable owns the second unique array.
+        pointers = pointer_line.split("{", 1)[1].split("}", 1)[0].split(", ")
+        self.assertEqual(pointers[8:11], [
+            "kCustomModelData_0", "kCustomModelData_0", "kCustomModelData_1",
+        ])
+
+    def test_v21_custom_model_data_rejects_wrong_model_or_size(self) -> None:
+        wrong_kind = self.custom_model_recipe([
+            self.custom_model_assignment(0, "wavetable"),
+        ])
+        with self.assertRaisesRegex(ValueError, "must match"):
+            validate_recipe(wrong_kind)
+
+        wrong_size = self.custom_model_assignment(0, "wave-terrain")
+        wrong_size["model"]["data"] = base64.b64encode(bytes(4095)).decode("ascii")
+        with self.assertRaisesRegex(ValueError, "exactly 4096"):
+            validate_recipe(self.custom_model_recipe([wrong_size]))
     def test_output_format_accepts_wav_and_intel_hex_only(self) -> None:
         recipe = self.load("default_recipe.json")
         validate_recipe(recipe)

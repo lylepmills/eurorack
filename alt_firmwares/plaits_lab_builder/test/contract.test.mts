@@ -43,6 +43,69 @@ test("the Worker and compiler catalogs contain the same approved IDs", async () 
   assert.equal(approvedEngineIds.length, 88);
 });
 
+test("schema 21 carries distinct per-slot Wave Terrain and Wavetable data", async () => {
+  const publicCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const chordCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_chord_tables/catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const engines = new Map(
+    publicCatalog.engines.map((engine: any) => [engine.id, engine]),
+  );
+  const recipe = structuredClone(fixture) as any;
+  recipe.schemaVersion = 21;
+  recipe.slots[0] = "wave-terrain";
+  recipe.slots[1] = "wavetable";
+  recipe.slots = recipe.slots.map((engineId: string) => {
+    const engine = engines.get(engineId) as any;
+    return {
+      engine: engineId,
+      package: engine.packageId,
+      version: engine.version,
+      digest: engine.digest,
+    };
+  });
+  recipe.preferences = { navigationMode: "linear" };
+  recipe.initialOptions = {
+    lockedFrequencyKnob: "octaves",
+    modelInput: "model",
+    levelInput: "level",
+    auxOutput: "alternate-model",
+    suboscillatorOctave: 0,
+    chordTable: "original",
+    holdOnTrigger: false,
+    attenuverterMode: "stock",
+  };
+  const terrainData = Buffer.alloc(4096, 17).toString("base64");
+  const wavetableData = Buffer.alloc(4096, 29).toString("base64");
+  recipe.resources = {
+    chordTables: chordCatalog.tables,
+    customModelData: [
+      { slot: 0, model: { kind: "wave-terrain", name: "Terrain A", equation: "x + y", data: terrainData } },
+      { slot: 1, model: { kind: "wavetable", name: "Table B", equation: "sin(phi)", data: wavetableData } },
+    ],
+  };
+
+  const normalized = normalizeRecipe(recipe);
+  assert.equal(normalized.schemaVersion, 21);
+  assert.deepEqual(normalized.resources.customModelData, recipe.resources.customModelData);
+
+  const wrongKind = structuredClone(recipe);
+  wrongKind.resources.customModelData[0].model.kind = "wavetable";
+  assert.throws(() => normalizeRecipe(wrongKind), /match a Wave Terrain or Wavetable slot/);
+
+  const shortData = structuredClone(recipe);
+  shortData.resources.customModelData[0].model.data = Buffer.alloc(4095).toString("base64");
+  assert.throws(() => normalizeRecipe(shortData), /exactly 4096 bytes/);
+
+  const wrongSlot = structuredClone(recipe);
+  wrongSlot.resources.customModelData[0].slot = 2;
+  assert.throws(() => normalizeRecipe(wrongSlot), /match a Wave Terrain or Wavetable slot/);
+});
+
 test("normalization removes nondeterministic manifest fields", () => {
   const normalized = normalizeRecipe({ ...fixture, createdAt: "2099-01-01T00:00:00Z" });
   assert.equal("createdAt" in normalized, false);

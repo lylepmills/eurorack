@@ -477,6 +477,43 @@ class RenderManualTest(unittest.TestCase):
         self.assertEqual(document["slots"][31]["position"]["number"], 8)
         self.assertEqual(document["slots"][23]["position"]["bank"], "amber")
 
+    def test_custom_model_data_names_distinct_terrain_slots(self) -> None:
+        recipe = self.load("default_recipe.json")
+        recipe["schemaVersion"] = 21
+        recipe["slots"][0] = "wave-terrain"
+        recipe["slots"][1] = "wave-terrain"
+        recipe["preferences"] = dict(DEFAULT_CONFIGURATION["preferences"])
+        recipe["initialOptions"] = dict(DEFAULT_CONFIGURATION["initialOptions"])
+        recipe["initialOptions"]["attenuverterMode"] = "stock"
+        recipe["resources"] = {
+            "chordTables": [dict(table) for table in DEFAULT_CHORD_TABLES],
+            "customModelData": [
+                {
+                    "slot": 0,
+                    "model": {
+                        "kind": "wave-terrain",
+                        "name": "Spiral",
+                        "equation": "sin(5 * (y + theta))",
+                        "data": base64.b64encode(bytes(4096)).decode("ascii"),
+                    },
+                },
+                {
+                    "slot": 1,
+                    "model": {
+                        "kind": "wave-terrain",
+                        "name": "Rings",
+                        "equation": "sin(9 * r)",
+                        "data": base64.b64encode(bytes([1]) * 4096).decode("ascii"),
+                    },
+                },
+            ],
+        }
+        document = manual_document(recipe)
+        self.assertEqual(document["slots"][0]["customModel"]["name"], "Spiral")
+        self.assertEqual(document["slots"][1]["customModel"]["name"], "Rings")
+        customized = [model for model in document["models"] if model["customModel"]]
+        self.assertEqual([model["customModel"]["name"] for model in customized], ["Spiral", "Rings"])
+
     @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
     def test_fourth_bank_pdf_renders(self) -> None:
         document = manual_document(self.fourth_bank_recipe())

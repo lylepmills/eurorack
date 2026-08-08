@@ -63,6 +63,8 @@ export const levelAutoMinSchemaVersion = 16; // engine-aware LEVEL routing
 const speechBanksMinSchemaVersion = 17;      // selectable/custom Speech LPC banks
 const attenuverterModeMinSchemaVersion = 18; // recipe-driven LIGHT 8 starting mode
 const oneKnobEnvelopeMinSchemaVersion = 19;  // triggered/gated FREQUENCY contours
+const customModelDataMinSchemaVersion = 21;  // per-slot Wave Terrain/Wavetable data
+const customModelDataBytes = 4096;
 
 export const minScaleBankSize = 1;
 export const maxScaleBankSize = 16;
@@ -134,6 +136,16 @@ export type NormalizedSpeechBanks = {
   customBanks: NormalizedSpeechBank[];
 };
 
+export type NormalizedCustomModelData = {
+  slot: number;
+  model: {
+    kind: "wave-terrain" | "wavetable";
+    name: string;
+    equation: string;
+    data: string;
+  };
+};
+
 export type NormalizedRecipe = {
   schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24;
   target: "mutable-instruments-plaits" | "plum-audio-roved";
@@ -191,6 +203,8 @@ export type NormalizedRecipe = {
     userDataBanks?: NormalizedUserDataBank[] | NormalizedSlotBank[];
     // v17: selected shipped LPC banks followed by custom decoded-frame banks.
     speechBanks?: NormalizedSpeechBanks;
+    // v21: equation metadata plus the sampled 4 KB data for one terrain/table slot.
+    customModelData?: NormalizedCustomModelData[];
   };
   // Catalog ids of the engines built with the stereo render path (introduced in
   // schema 10). Absent on schema <= 9 (the global-stereo recipes, which the
@@ -509,6 +523,68 @@ function normalizeSpeechBanks(value: unknown): NormalizedSpeechBanks {
     };
   });
   return { stockBankIds: stockBankIds.map(Number), customBanks };
+}
+
+function normalizeCustomModelData(
+  value: unknown,
+  slots: (string | null)[],
+): NormalizedCustomModelData[] {
+  if (!Array.isArray(value) || value.length > slots.length) {
+    throw new ContractError(
+      "invalid_custom_model_data",
+      "The recipe contains an unsupported set of custom model data.",
+    );
+  }
+  const seen = new Set<number>();
+  return value.map((raw) => {
+    if (!raw || typeof raw !== "object") {
+      throw new ContractError("invalid_custom_model_data", "A custom model-data assignment is invalid.");
+    }
+    const entry = raw as Record<string, unknown>;
+    const slot = Number(entry.slot);
+    if (!hasExactKeys(entry, ["slot", "model"])
+        || !Number.isInteger(entry.slot) || slot < 0 || slot >= slots.length
+        || seen.has(slot) || !entry.model || typeof entry.model !== "object") {
+      throw new ContractError(
+        "invalid_custom_model_data",
+        "Custom model data must target a distinct palette slot.",
+      );
+    }
+    const model = entry.model as Record<string, unknown>;
+    const kind = slots[slot] === "wave-terrain" ? "wave-terrain"
+      : slots[slot] === "wavetable" ? "wavetable" : undefined;
+    if (!kind || !hasExactKeys(model, ["kind", "name", "equation", "data"])
+        || model.kind !== kind || !shortText(model.name, 80)
+        || !shortText(model.equation, 500) || typeof model.data !== "string"
+        || !canonicalBase64Pattern.test(model.data)) {
+      throw new ContractError(
+        "invalid_custom_model_data",
+        "Custom model data must match a Wave Terrain or Wavetable slot.",
+      );
+    }
+    let decoded: string;
+    try {
+      decoded = atob(model.data);
+    } catch {
+      throw new ContractError("invalid_custom_model_data", "Custom model data is not valid base64.");
+    }
+    if (decoded.length !== customModelDataBytes || btoa(decoded) !== model.data) {
+      throw new ContractError(
+        "invalid_custom_model_data",
+        `Custom model data must contain exactly ${customModelDataBytes} bytes.`,
+      );
+    }
+    seen.add(slot);
+    return {
+      slot,
+      model: {
+        kind,
+        name: String(model.name).trim(),
+        equation: String(model.equation).trim(),
+        data: model.data,
+      },
+    };
+  });
 }
 
 export class ContractError extends Error {
@@ -887,6 +963,7 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
   let userDataBanks: NormalizedUserDataBank[] | undefined;   // v6 index-keyed
   let slotBanks: NormalizedSlotBank[] | undefined;           // v12 slot-keyed
   let speechBanks: NormalizedSpeechBanks | undefined;        // v17
+  let customModelData: NormalizedCustomModelData[] | undefined; // v21
   if (schemaVersion >= resourcesMinSchemaVersion) {
     const resources = candidate.resources;
     // v6 always carries index-keyed banks; v12 always carries per-slot banks (its
@@ -913,10 +990,13 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
       && Object.hasOwn(resourceValues, "scaleBank");
     const carriesSpeechBanks = schemaVersion >= speechBanksMinSchemaVersion
       && Object.hasOwn(resourceValues, "speechBanks");
+    const carriesCustomModelData = schemaVersion >= customModelDataMinSchemaVersion
+      && Object.hasOwn(resourceValues, "customModelData");
     const baseKeys = [
       "chordTables",
       ...(carriesScaleBank ? ["scaleBank"] : []),
       ...(carriesSpeechBanks ? ["speechBanks"] : []),
+      ...(carriesCustomModelData ? ["customModelData"] : []),
     ];
     const carriesUserDataBanks = expectsUserDataBanks
       || (schemaVersion >= calibrationMinSchemaVersion
@@ -938,6 +1018,9 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
         );
       }
       speechBanks = normalizeSpeechBanks(resourceValues.speechBanks);
+    }
+    if (carriesCustomModelData) {
+      customModelData = normalizeCustomModelData(resourceValues.customModelData, slots);
     }
     if (carriesUserDataBanks) {
       const rawBanks = resourceValues.userDataBanks;
@@ -994,6 +1077,7 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
       : configuration.preferences.linearTzfm
       || configuration.preferences.fastFm ? 23
       : configuration.preferences.syncInput ? 22
+      : customModelData !== undefined ? 21
       : configuration.preferences.replaceableFmBanks ? 20
       : configuration.initialOptions.lockedFrequencyKnob === "triggered-envelope"
       || configuration.initialOptions.lockedFrequencyKnob === "gated-envelope" ? 19
@@ -1022,6 +1106,7 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
       chordTables,
       ...(scaleBank !== undefined ? { scaleBank } : {}),
       ...(speechBanks !== undefined ? { speechBanks } : {}),
+      ...(customModelData !== undefined ? { customModelData } : {}),
       ...((userDataBanks ?? slotBanks)
         ? { userDataBanks: userDataBanks ?? slotBanks }
         : {}),
@@ -1083,6 +1168,11 @@ export async function computeManualKey(
     chordTables: recipe.resources.chordTables.map((table) => table.name),
     scaleBank: recipe.resources.scaleBank?.map((scale) => scale.name) ?? [],
     customBanks,
+    customModelData: recipe.resources.customModelData?.map((entry) => [
+      entry.slot,
+      entry.model.kind,
+      entry.model.name,
+    ]) ?? [],
     // The control instructions differ completely: Plaits has two buttons;
     // Ro'Ved has four clickable knobs. Never share a cached guide between them.
     target: recipe.target,

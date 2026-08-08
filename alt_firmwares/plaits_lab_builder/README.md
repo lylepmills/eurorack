@@ -3,7 +3,7 @@
 This directory contains the approved-engine backend for Plaits Palette. It accepts
 legacy recipes and manifests through schema 24 containing 24 or 32 versioned
 engine references, firmware preferences and starting options, and bounded
-chord-table/custom-FM/scale-bank/Speech-bank resources. Schema 15 can target either Mutable
+chord-table/custom-FM/scale-bank/Speech-bank/custom-model resources. Schema 15 can target either Mutable
 Instruments Plaits or Plum Audio Ro'Ved and adds the color-blind bank display.
 Schema 16 adds an ordered bank of up to 16 editable scales shared by Diatonic
 Chord and Scale Stack, plus automatic LEVEL routing, which
@@ -58,6 +58,11 @@ those per-model differences in the editor and generated field guide. Guides
 show the same active-only `TZ` and `50k` badges beside model references, with a
 legend on the bank-map page. The failed periodic-LEVEL
 experiment and borderline Brass result are not part of schema 23. The
+schema-21 `customModelData` resource can additionally attach one sampled,
+Mutable-compatible 4 KB block to each Wave Terrain or Wavetable slot. The
+browser stores the source equation for editing, but the trusted build boundary
+accepts only bounded sampled bytes; identical blocks are interned once in flash,
+and a later audio transfer still overrides the baked block at runtime. A
 one-shot marker in the application image is restored by every WAV or HEX flash, so first boot applies
 all embedded Starting Options even when reinstalling the exact same build;
 ordinary power cycles still preserve later runtime changes. It generates a compile-time
