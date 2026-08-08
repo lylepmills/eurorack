@@ -11,6 +11,13 @@
 #define PLAITS_INPUT_FAULT_DIAGNOSTICS 1
 #define PLAITS_BUILD_NAVIGATION_MODE 1
 
+// Preserve the regular bank/model and ADC-fault LEDs. AUX becomes a precise
+// whole-callback CPU meter: measured usage u is reported as u * 1000 Hz.
+#define PLAITS_CPU_PROBE 1
+#define PLAITS_CPU_PROBE_LEDS 0
+#define PLAITS_CPU_PROBE_AUX 1
+#define PLAITS_CPU_PROBE_WHOLE_CALLBACK 1
+
 // Internal three-bank registry order is amber, green, red. Public audition:
 //   green (indices 3..5): uninterrupted fast FM, no LEVEL
 //   red   (indices 6..8): stock control-rate FM + LEVEL scan

@@ -322,6 +322,8 @@ void CvAdc::ConfigureSdadc2(FmAcquisitionMode mode) {
     audio_rate_fm_resampler_.SetRate(
         mode == FM_ACQUISITION_FAST_WITH_LEVEL ? 677 : 47,
         mode == FM_ACQUISITION_FAST_WITH_LEVEL ? 720 : 45);
+    audio_rate_fm_resampler_.SetAdaptiveRate(
+        mode == FM_ACQUISITION_FAST_WITH_LEVEL);
     audio_rate_fm_resampler_.Restart(AudioRateFmWriteIndex());
   } else {
     SDADC_SoftwareStartInjectedConv(SDADC2);
@@ -370,8 +372,10 @@ void CvAdc::Convert() {
       // One LEVEL conversion every four 12-sample blocks. The injected
       // channel needs a 360-cycle filter fill and the resumed regular channel
       // needs another; compared with uninterrupted 120-cycle FM results, five
-      // samples are lost. The resampler's 677/720 mode compensates that
-      // average while leaving the local interruption audible for comparison.
+      // samples are nominally lost. The hardware producer runs slightly
+      // slower still, so 677/720 is only the safe starting estimate; the
+      // resampler measures and follows its actual long-term DMA rate while
+      // leaving the local interruption audible for comparison.
       if (!level_injection_pending_ && ++level_injection_divider_ >= 4) {
         level_injection_divider_ = 0;
         SDADC_SoftwareStartInjectedConv(SDADC2);

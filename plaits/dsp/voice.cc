@@ -27,6 +27,7 @@
 // Main synthesis voice.
 
 #include "plaits/dsp/voice.h"
+#include "plaits/dsp/fast_semitone_ratio.h"
 #include "plaits/user_data.h"
 
 namespace plaits {
@@ -520,7 +521,8 @@ void Voice::Render(
       // Engines consume an absolute normalized-frequency displacement, so
       // subtract the base and reuse their signed audio-rate increment path.
       frequency_offset[i] = base_frequency *
-          (SemitonesToRatio(amount * modulations.frequency_audio[i]) - 1.0f);
+          (FastSemitonesToRatio(
+              amount * modulations.frequency_audio[i]) - 1.0f);
     }
   }
 #endif

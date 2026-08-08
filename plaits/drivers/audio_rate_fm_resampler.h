@@ -23,6 +23,8 @@ class AudioRateFmResampler {
   static const size_t kRingBufferSize = 64;
   static const uint32_t kSourceStep = 47;
   static const uint32_t kPhaseDenominator = 45;
+  static const size_t kAdaptiveWindowSamples = 32 * 12;
+  static const size_t kAdaptiveHistorySamples = 16 * kAdaptiveWindowSamples;
   // Keep enough source history to survive both audio DMA halves becoming
   // pending across a model-change/flash pause. Thirty-two 50 kHz samples add
   // 0.64 ms of FM latency and cover two back-to-back 12-sample renders even
@@ -40,6 +42,10 @@ class AudioRateFmResampler {
     resync_count_ = 0;
     underflow_count_ = 0;
     excess_lag_count_ = 0;
+    adaptive_source_samples_ = 0;
+    adaptive_output_samples_ = 0;
+    adaptive_update_samples_ = 0;
+    adaptive_rate_ = false;
     running_ = false;
   }
 
@@ -47,10 +53,10 @@ class AudioRateFmResampler {
   // clock ratio above. The LEVEL-interruption audition deliberately steals
   // one 360-cycle conversion every four 12-sample audio blocks. Filling the
   // LEVEL filter and then refilling the restarted FM filter removes five
-  // ordinary FM results per 48 output samples, giving the exact average ratio
-  // 677/720. Keeping this configurable lets the
-  // resampler preserve long-term pitch while the listening test exposes the
-  // short local interruption itself.
+  // ordinary FM results per 48 output samples, giving a nominal starting ratio
+  // of 677/720. Keeping this configurable lets the resampler preserve
+  // long-term pitch while the listening test exposes the short local
+  // interruption itself.
   void SetRate(uint32_t source_step, uint32_t phase_denominator) {
     if (!source_step || !phase_denominator) {
       source_step = kSourceStep;
@@ -59,6 +65,21 @@ class AudioRateFmResampler {
     source_step_ = source_step;
     phase_denominator_ = phase_denominator;
     phase_ = 0;
+  }
+
+  // Interrupted conversions do not sustain the theoretical rate implied by
+  // their nominal filter-fill times on real hardware. Measure completed DMA
+  // samples against the audio clock instead of accumulating that mismatch.
+  // The first 32-block window contains eight LEVEL interruptions: long enough
+  // to average their phase against the audio callback, but short enough to
+  // learn the rate before the nominal 32-sample safety lead can drain. Keep a
+  // bounded history after that first update so integer sample-count jitter
+  // cannot turn into a new 31 Hz modulation of the FM timebase.
+  void SetAdaptiveRate(bool enabled) {
+    adaptive_rate_ = enabled;
+    adaptive_source_samples_ = 0;
+    adaptive_output_samples_ = 0;
+    adaptive_update_samples_ = 0;
   }
 
   // `write_index` is the DMA position immediately after the newest completed
@@ -73,6 +94,22 @@ class AudioRateFmResampler {
     write_index %= kRingBufferSize;
     const size_t produced = Distance(last_write_index_, write_index);
     last_write_index_ = write_index;
+
+    if (adaptive_rate_) {
+      adaptive_source_samples_ += produced;
+      adaptive_output_samples_ += size;
+      adaptive_update_samples_ += size;
+      if (adaptive_update_samples_ >= kAdaptiveWindowSamples &&
+          adaptive_source_samples_) {
+        SetRatePreservingPhase(
+            adaptive_source_samples_, adaptive_output_samples_);
+        adaptive_update_samples_ = 0;
+        if (adaptive_output_samples_ >= kAdaptiveHistorySamples) {
+          adaptive_source_samples_ = (adaptive_source_samples_ + 1) / 2;
+          adaptive_output_samples_ = (adaptive_output_samples_ + 1) / 2;
+        }
+      }
+    }
 
     const size_t target_lag = TargetLag(size);
     if (!running_) {
@@ -145,6 +182,9 @@ class AudioRateFmResampler {
     last_write_index_ = write_index;
     startup_samples_ = 0;
     phase_ = 0;
+    adaptive_source_samples_ = 0;
+    adaptive_output_samples_ = 0;
+    adaptive_update_samples_ = 0;
     running_ = false;
   }
 
@@ -153,6 +193,8 @@ class AudioRateFmResampler {
   inline uint32_t resync_count() const { return resync_count_; }
   inline uint32_t underflow_count() const { return underflow_count_; }
   inline uint32_t excess_lag_count() const { return excess_lag_count_; }
+  inline uint32_t source_step() const { return source_step_; }
+  inline uint32_t phase_denominator() const { return phase_denominator_; }
   inline bool running() const { return running_; }
 
  private:
@@ -186,6 +228,20 @@ class AudioRateFmResampler {
     phase_ = 0;
   }
 
+  void SetRatePreservingPhase(
+      uint32_t source_step, uint32_t phase_denominator) {
+    if (!source_step || !phase_denominator) {
+      return;
+    }
+    const uint32_t new_phase = static_cast<uint32_t>(
+        static_cast<float>(phase_) *
+        static_cast<float>(phase_denominator) /
+        static_cast<float>(phase_denominator_) + 0.5f);
+    source_step_ = source_step;
+    phase_denominator_ = phase_denominator;
+    phase_ = new_phase < phase_denominator_ ? new_phase : 0;
+  }
+
   size_t read_index_;
   size_t last_write_index_;
   size_t startup_samples_;
@@ -196,6 +252,10 @@ class AudioRateFmResampler {
   uint32_t resync_count_;
   uint32_t underflow_count_;
   uint32_t excess_lag_count_;
+  uint32_t adaptive_source_samples_;
+  uint32_t adaptive_output_samples_;
+  uint32_t adaptive_update_samples_;
+  bool adaptive_rate_;
   bool running_;
 };
 

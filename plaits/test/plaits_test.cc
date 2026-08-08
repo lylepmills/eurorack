@@ -25,6 +25,7 @@
 #include "plaits/dsp/dsp.h"
 #include "plaits/build_config.h"
 #include "plaits/drivers/audio_rate_fm_resampler.h"
+#include "plaits/dsp/fast_semitone_ratio.h"
 #include "plaits/pot_controller.h"
 
 #include "plaits/dsp/chords/chord_bank.h"
@@ -3767,6 +3768,19 @@ void ValidateCustomSpeechBankLevelMatching() {
 }
 
 void ValidateAudioRateFmRecovery() {
+  for (int i = 0; i <= 4096; ++i) {
+    const float semitones = -127.875f + i * (255.75f / 4096.0f);
+    const float reference = SemitonesToRatio(semitones);
+    const float optimized = FastSemitonesToRatio(semitones);
+    const float relative_error = fabsf(optimized / reference - 1.0f);
+    // A float rounding boundary can select the adjacent 1/256-semitone entry;
+    // that is at most 0.0002257 relative error (about 0.39 cents).
+    if (relative_error > 0.00023f) {
+      fprintf(stderr, "Fast semitone lookup exceeded one table step\n");
+      abort();
+    }
+  }
+
   AudioRateFmResampler resampler;
   volatile int16_t ring[AudioRateFmResampler::kRingBufferSize];
   float output[12];
@@ -3813,6 +3827,39 @@ void ValidateAudioRateFmRecovery() {
     fprintf(
         stderr,
         "Interrupted-LEVEL FM resampler drifted at the 677/720 rate\n");
+    abort();
+  }
+
+  // Real hardware produces fewer samples around an injected conversion than
+  // the nominal filter timing predicts. Start from 677/720 but feed a slower,
+  // deliberately unknown producer. Clock recovery must learn it before the
+  // safety lead drains, without creating a resync of its own.
+  AudioRateFmResampler adaptive_resampler;
+  adaptive_resampler.Init();
+  adaptive_resampler.SetRate(677, 720);
+  adaptive_resampler.SetAdaptiveRate(true);
+  size_t adaptive_write_index = 0;
+  uint32_t adaptive_source_phase = 0;
+  for (int block = 0; block < 256; ++block) {
+    adaptive_source_phase += 12 * 641;
+    const size_t produced = adaptive_source_phase / 720;
+    adaptive_source_phase %= 720;
+    adaptive_write_index =
+        (adaptive_write_index + produced) %
+        AudioRateFmResampler::kRingBufferSize;
+    adaptive_resampler.Process(
+        ring, adaptive_write_index, output, 12);
+  }
+  const int32_t learned_rate_error = static_cast<int32_t>(
+      adaptive_resampler.source_step() * 720) - static_cast<int32_t>(
+          641 * adaptive_resampler.phase_denominator());
+  if (adaptive_resampler.resync_count() ||
+      adaptive_resampler.phase_denominator() <=
+          AudioRateFmResampler::kAdaptiveWindowSamples ||
+      abs(learned_rate_error) > 720) {
+    fprintf(
+        stderr,
+        "Interrupted-LEVEL FM clock recovery did not learn the producer\n");
     abort();
   }
 
