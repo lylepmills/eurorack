@@ -203,7 +203,7 @@ class Engine {
   // sample-accurate path for every edge in the mask. Other engines use the
   // bounded first-edge fallback below.
   virtual bool hard_sync_capable() const { return false; }
-  // Experimental fallback hook for engines that do not inspect trigger edges.
+  // Bounded fallback hook for engines that do not inspect sync edges directly.
   // It must be cheap: the voice can call it once per audio callback while an
   // audio-rate sync source is connected. Trigger-aware engines leave this as a
   // no-op and receive a synthetic rising edge instead.
@@ -211,7 +211,7 @@ class Engine {
   PostProcessingSettings post_processing_settings;
 };
 
-// Give every engine useful experimental sync behavior without making the
+// Give every engine useful sync behavior without making the
 // highest-cost engines render once for EVERY edge in an audio callback.
 //
 // Native engines consume the full sample mask. The fallback honors the first

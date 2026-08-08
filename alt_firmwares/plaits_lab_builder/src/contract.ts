@@ -36,7 +36,7 @@ export type NormalizedChordTable = {
 // feature gates below use minimums so a newly supported schema cannot get
 // stranded behind an old "10, 11, 12..." whitelist.
 export const minRecipeSchemaVersion = 2;
-export const maxRecipeSchemaVersion = 20;
+export const maxRecipeSchemaVersion = 21;
 const configurationMinSchemaVersion = 4;
 const resourcesMinSchemaVersion = 5;
 const fourBankMinSchemaVersion = 6;       // 32 slots
@@ -49,6 +49,7 @@ const calibrationMinSchemaVersion = 14;   // CV calibration procedure
 const rovedMinSchemaVersion = 15;         // four-knob Ro'Ved panel
 const colorBlindModeMinSchemaVersion = 15; // brightness-coded banks
 const replaceableFmBanksMinSchemaVersion = 20; // FM banks replaceable over TIMBRE
+const syncInputMinSchemaVersion = 21; // audio-rate hard sync on MODEL
 const scaleBankMinSchemaVersion = 16;      // recipe-driven scale bank
 export const levelAutoMinSchemaVersion = 16; // engine-aware LEVEL routing
 const speechBanksMinSchemaVersion = 17;      // selectable/custom Speech LPC banks
@@ -126,7 +127,7 @@ export type NormalizedSpeechBanks = {
 };
 
 export type NormalizedRecipe = {
-  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20;
+  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21;
   target: "mutable-instruments-plaits" | "plum-audio-roved";
   firmware: "rubato-plaits";
   // A null entry is an empty slot (v7 short banks); filled slots are engine ids.
@@ -150,7 +151,7 @@ export type NormalizedRecipe = {
   initialOptions: {
     lockedFrequencyKnob: "octaves" | "decay" | "aux-crossfade" | "macro-4"
       | "triggered-envelope" | "gated-envelope";
-    modelInput: "model" | "lpg-colour" | "aux-crossfade" | "macro-4";
+    modelInput: "model" | "lpg-colour" | "aux-crossfade" | "macro-4" | "sync-in";
     levelInput: "level" | "decay" | "auto";
     auxOutput: "alternate-model" | "square-subosc" | "sine-subosc" | "stereo";
     suboscillatorOctave: 0 | -1 | -2;
@@ -590,7 +591,7 @@ function normalizeConfiguration(
         "octaves", "decay", "aux-crossfade", "macro-4",
         "triggered-envelope", "gated-envelope",
       ] as const)
-      || !isOneOf(optionValues.modelInput, ["model", "lpg-colour", "aux-crossfade", "macro-4"] as const)
+      || !isOneOf(optionValues.modelInput, ["model", "lpg-colour", "aux-crossfade", "macro-4", "sync-in"] as const)
       || !isOneOf(optionValues.levelInput, ["level", "decay", "auto"] as const)
       || !isOneOf(optionValues.auxOutput, ["alternate-model", "square-subosc", "sine-subosc", "stereo"] as const)
       || !isOneOf(optionValues.suboscillatorOctave, [0, -1, -2] as const)
@@ -649,6 +650,13 @@ function normalizeConfiguration(
     throw new ContractError(
       "unsupported_schema",
       `One-knob envelopes require recipe schema version ${oneKnobEnvelopeMinSchemaVersion}.`,
+    );
+  }
+  if (optionValues.modelInput === "sync-in"
+      && Number(candidate.schemaVersion) < syncInputMinSchemaVersion) {
+    throw new ContractError(
+      "unsupported_schema",
+      `Sync In requires recipe schema version ${syncInputMinSchemaVersion}.`,
     );
   }
   return {
@@ -888,7 +896,8 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     // (v8); a short-bank recipe (a trailing empty slot) stays v7; a candidate that
     // carried v6 resources (even an empty custom-bank list, e.g. a 32-slot recipe)
     // stays v6; else v5.
-    schemaVersion: configuration.preferences.replaceableFmBanks ? 20
+    schemaVersion: configuration.initialOptions.modelInput === "sync-in" ? 21
+      : configuration.preferences.replaceableFmBanks ? 20
       : configuration.initialOptions.lockedFrequencyKnob === "triggered-envelope"
       || configuration.initialOptions.lockedFrequencyKnob === "gated-envelope" ? 19
       : schemaVersion >= attenuverterModeMinSchemaVersion ? 18
@@ -973,6 +982,8 @@ export async function computeManualKey(
     colorBlindMode: recipe.preferences.colorBlindMode,
     // A non-Octaves starting assignment adds the locked-octave shortcut callout.
     lockedFrequencyKnob: recipe.initialOptions.lockedFrequencyKnob,
+    // A Sync-enabled guide adds the fifth MODEL-input setting and its warning.
+    modelInput: recipe.initialOptions.modelInput,
   });
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical));
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");

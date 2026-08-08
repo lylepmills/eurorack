@@ -18,6 +18,7 @@ from render_manual import (
     ATTENUVERTER_OPTIONS_NOTE,
     CONTROL_IDS,
     MENU_LIGHTS,
+    SYNC_INPUT_OPTIONS_NOTE,
     _clip,
     display_name,
     manual_document,
@@ -80,6 +81,25 @@ class RenderManualTest(unittest.TestCase):
                 "Triggered envelope", "Gated envelope",
             ),
         )
+
+    def test_model_input_menu_places_sync_in_fifth(self) -> None:
+        self.assertEqual(MENU_LIGHTS[4][1][-1], "Sync In (experimental)")
+        self.assertIn("stereo output may exceed", SYNC_INPUT_OPTIONS_NOTE)
+
+    @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
+    def test_sync_build_prints_the_warning_and_fifth_model_input_setting(self) -> None:
+        recipe = self.calibration_recipe(False)
+        recipe["schemaVersion"] = 21
+        recipe["initialOptions"]["modelInput"] = "sync-in"
+        recipe["initialOptions"]["attenuverterMode"] = "stock"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "sync-in.pdf"
+            render_pdf(manual_document(recipe), output)
+            printed = pdf_strings(output).replace(")(", " ")
+            # PDF literal strings escape parentheses; assert the extracted form.
+            self.assertIn(r"Sync In \(experimental\)", printed)
+            self.assertIn("processing headroom", printed)
+            self.assertIn("disable stereo output", printed)
 
     @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
     def test_envelope_build_prints_both_contours_and_their_gate_behavior(self) -> None:

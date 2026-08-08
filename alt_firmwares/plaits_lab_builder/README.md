@@ -1,7 +1,7 @@
 # Plaits Lab firmware build service
 
 This directory contains the approved-engine backend for Plaits Lab. It accepts
-legacy recipes and manifests through schema 20 containing 24 or 32 versioned
+legacy recipes and manifests through schema 21 containing 24 or 32 versioned
 engine references, firmware preferences and starting options, and bounded
 chord-table/custom-FM/scale-bank/Speech-bank resources. Schema 15 can target either Mutable
 Instruments Plaits or Plum Audio Ro'Ved and adds the color-blind bank display.
@@ -24,7 +24,15 @@ reflash. It is OPT-IN because page-aligning the banks costs ~816 bytes and the
 stock 24-model preset has 768 bytes spare — defaulting it on would have pushed
 the default build past the flash limit. An un-flagged recipe emits the
 historical layout and keeps the module's single legacy user-data region, so
-opting out is the behaviour Plaits has always had. Independently of the flag, a
+opting out is the behaviour Plaits has always had. Schema 21 adds experimental
+`Sync In` as a fifth MODEL-input assignment. Rising edges reset oscillator phase
+sample-accurately in engines with a native reset path; every other engine uses a
+bounded first-edge-per-audio-block fallback so the feature cannot multiply an
+expensive engine's render cost without limit. Fast sync and demanding model,
+parameter, or stereo combinations can produce digital distortion or dropouts;
+the generated field guide carries the same warning as the editor. Sync code is
+compiled only when selected, and its flash cost varies with the engines in the
+palette. Independently of the flag, a
 transferred bank now records how many patches it holds, so a short bank sizes
 the HARMONICS quantizer to its real count instead of repeating to fill 32. A
 one-shot marker in the application image is restored by every WAV or HEX flash, so first boot applies
@@ -38,7 +46,7 @@ at the firmware's linked application address and deliberately excludes the
 bootloader.
 
 Schema-15/Ro'Ved support passed its hardware checklist on July 30, 2026.
-Schema 19 is available in production with recipe-driven scale banks, automatic
+Schema 20 is available in production with recipe-driven scale banks, automatic
 LEVEL routing, selectable/custom LPC Speech banks, text and recording encoders,
 source/engine audio previews, unpatched-attenuverter modes, and the triggered
 and gated FREQUENCY contours.

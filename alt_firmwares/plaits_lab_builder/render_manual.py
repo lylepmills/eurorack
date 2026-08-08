@@ -47,7 +47,10 @@ MENU_LIGHTS = (
         "Octaves", "MACRO (fourth control)", "Aux crossfade", "LPG decay",
         "Triggered envelope", "Gated envelope",
     )),
-    ("MODEL input", ("Model select", "MACRO (fourth control)", "Aux crossfade", "LPG colour (VCFA->VCA)")),
+    ("MODEL input", (
+        "Model select", "MACRO (fourth control)", "Aux crossfade",
+        "LPG colour (VCFA->VCA)", "Sync In (experimental)",
+    )),
     ("LEVEL input", ("Level", "LPG decay", "Auto: decay or velocity")),
     ("Hold on trigger", ("Off (live CV)", "Sample & hold")),
     ("Unpatched attenuverters", (
@@ -61,6 +64,12 @@ ATTENUVERTER_OPTIONS_NOTE = (
     "restrained movement close to the knob setting and CW selects broader, farther-reaching movement; both directions are "
     "bipolar. Moving farther from center increases the range, and in Drift also the speed. Patched CV and each model's "
     "dedicated attenuverter behavior always take priority. "
+)
+
+SYNC_INPUT_OPTIONS_NOTE = (
+    "Sync In is experimental. Its character varies by model, and fast sync signals can produce harsh or aliased textures. "
+    "Some combinations of model, parameter settings, and stereo output may exceed the module's processing headroom, causing digital distortion or dropouts. "
+    "If this occurs, reduce the sync frequency, adjust the model parameters, or disable stereo output. "
 )
 
 # LED appearance for option values 0..8 (plaits ui.cc): green/red/yellow solid
@@ -207,6 +216,7 @@ def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]
         "calibration": build.enable_calibration == 1,
         "colorBlindMode": color_blind_mode,
         "lockedFrequencyPotOption": build.locked_frequency_pot_option,
+        "modelCVOption": build.model_cv_option,
     }
 
 
@@ -504,6 +514,10 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
             # The contour code is recipe-scoped for flash. Selecting either one
             # as the starting assignment compiles both runtime choices in.
             meanings = meanings[:4]
+        elif light_index == 4 and document.get("modelCVOption", 0) < 4:
+            # Sync detection and engine reset paths are recipe-scoped for flash.
+            # Guides for ordinary builds keep the original four settings.
+            meanings = meanings[:4]
         lines = [led_setting(k, meaning) for k, meaning in enumerate(meanings)]
         menu_rows.append([
             Paragraph(str(light_index + 1), small_muted_style),
@@ -575,11 +589,16 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         "Both shape amplitude and the LPG opening, and FREQUENCY controls their timing. "
         if document.get("lockedFrequencyPotOption", 0) >= 4 else ""
     )
+    sync_input_options_note = (
+        SYNC_INPUT_OPTIONS_NOTE
+        if document.get("modelCVOption", 0) == 4 else ""
+    )
     options_note = (
         "LIGHT 1 applies to chord-capable models and lists the chord tables loaded in this build (up to nine). "
         "LIGHT 3 stays dark, and the light navigation skips it, unless LIGHT 2 is set to a suboscillator — it has nothing to act on otherwise. "
         "LIGHT 4 applies in octave-switching (frequency-locked) mode. LIGHT 6's LPG-decay and Auto settings apply only when TRIG is patched. "
         f"{contour_options_note}"
+        f"{sync_input_options_note}"
         "Auto sends LEVEL to LPG decay on ordinary oscillator models, but keeps LEVEL as velocity/accent on models with their own envelope. "
         f"{ATTENUVERTER_OPTIONS_NOTE}"
         "Outside the menu, click FREQUENCY/TIMBRE for previous/next bank and "
@@ -589,6 +608,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         "LIGHT 3 stays dark, and the left button walks past it, unless LIGHT 2 is set to a suboscillator — it has nothing to act on otherwise. "
         "LIGHT 4 applies in octave-switching (frequency-locked) mode. Whenever LIGHT 4 is not Octaves, hold the right button and turn MORPH to change octaves. "
         f"{contour_options_note}"
+        f"{sync_input_options_note}"
         "LIGHT 6's LPG-decay and Auto settings apply only when TRIG is patched. "
         "Auto sends LEVEL to LPG decay on ordinary oscillator models, but keeps LEVEL as velocity/accent on models with their own envelope. "
         f"{ATTENUVERTER_OPTIONS_NOTE}"

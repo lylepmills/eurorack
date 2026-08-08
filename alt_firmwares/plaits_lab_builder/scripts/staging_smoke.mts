@@ -56,7 +56,7 @@ const catalogResponse = await fetch(new URL("/v1/catalog", apiBase), { headers, 
 const catalog = await json(catalogResponse, "catalog");
 assert.equal(catalogResponse.headers.get("access-control-allow-origin"), origin, "staging CORS origin");
 assert.equal(catalog.deploymentEnvironment, "staging");
-assert.ok(catalog.recipeSchemaVersion >= 17, "staging builder must support custom Speech banks");
+assert.ok(catalog.recipeSchemaVersion >= 21, "staging builder must support Sync In");
 if (expectedRevision) assert.equal(catalog.sourceRevision, expectedRevision);
 
 await getBinary("/v1/speech/voice-preview/en-US/af_heart.wav", /audio\/wav/, "voice preview");
@@ -115,11 +115,13 @@ const reference = (engine: any) => ({
   digest: engine.digest,
 });
 const recipe = {
-  schemaVersion: 17,
+  schemaVersion: 21,
   target: "mutable-instruments-plaits",
   firmware: "rubato-plaits",
   // Keep Original Speech beside both split engines in this hardware gate. All
   // three paths must boot, navigate, and speak before an image is promoted.
+  // They also exercise the bounded Sync fallback in a compact build that
+  // leaves enough flash headroom for an honest release canary.
   slots: [
     reference(originalSpeech),
     reference(speechSounds),
@@ -130,12 +132,13 @@ const recipe = {
   preferences: { navigationMode: "linear" },
   initialOptions: {
     lockedFrequencyKnob: "octaves",
-    modelInput: "model",
+    modelInput: "sync-in",
     levelInput: "level",
     auxOutput: "alternate-model",
     suboscillatorOctave: 0,
     chordTable: chordCatalog.tables[0].id,
     holdOnTrigger: false,
+    attenuverterMode: "stock",
   },
   resources: {
     chordTables: [chordCatalog.tables[0]],
@@ -172,14 +175,17 @@ let manual: Uint8Array | undefined;
 if (build.manual?.downloadUrl) {
   manual = await getBinary(build.manual.downloadUrl, /application\/pdf/, "field guide");
   assert.equal(Buffer.from(manual.subarray(0, 4)).toString("ascii"), "%PDF");
+  const manualText = Buffer.from(manual).toString("latin1");
+  assert.match(manualText, /Sync In/, "field guide must name Sync In");
+  assert.match(manualText, /processing headroom/, "field guide must carry the Sync warning");
 }
 
 if (artifactDir) {
   const output = resolve(artifactDir);
   await mkdir(output, { recursive: true });
-  await writeFile(resolve(output, `speech-staging-${build.buildId}.wav`), firmware);
-  await writeFile(resolve(output, `speech-staging-${build.buildId}.recipe.json`), `${JSON.stringify(recipe, null, 2)}\n`);
-  if (manual) await writeFile(resolve(output, `speech-staging-${build.buildId}.pdf`), manual);
+  await writeFile(resolve(output, `sync-speech-staging-${build.buildId}.wav`), firmware);
+  await writeFile(resolve(output, `sync-speech-staging-${build.buildId}.recipe.json`), `${JSON.stringify(recipe, null, 2)}\n`);
+  if (manual) await writeFile(resolve(output, `sync-speech-staging-${build.buildId}.pdf`), manual);
   console.log(`Saved exact hardware-gate artifacts to ${output}`);
 }
 

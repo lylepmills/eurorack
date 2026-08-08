@@ -114,7 +114,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
         # plaits/build_config.h. Its nonzero upper byte makes it disjoint from
         # every legacy 16-bit profile, forcing one correct defaults apply.
         recipe = validate_recipe(self.load("default_recipe.json"))
-        self.assertEqual(recipe.options_profile_id, 0x0561A4)
+        self.assertEqual(recipe.options_profile_id, 0x081276)
         self.assertEqual(recipe.attenuverter_mode, 0)
 
     def test_option_values_match_the_firmware_numbering(self) -> None:
@@ -167,6 +167,26 @@ class GenerateEngineConfigTest(unittest.TestCase):
 
         recipe["schemaVersion"] = 18
         with self.assertRaisesRegex(ValueError, "schemaVersion 19"):
+            validate_recipe(recipe)
+
+    def test_sync_in_is_schema_21_model_input_value_four(self) -> None:
+        recipe = self.load("default_recipe.json")
+        recipe["schemaVersion"] = 21
+        recipe["preferences"] = {"navigationMode": "linear"}
+        recipe["resources"] = {"chordTables": DEFAULT_CHORD_TABLES}
+        recipe["initialOptions"] = dict(
+            DEFAULT_CONFIGURATION["initialOptions"],
+            modelInput="sync-in",
+            attenuverterMode="stock",
+        )
+        build = validate_recipe(recipe)
+        self.assertEqual(build.model_cv_option, 4)
+        config = render_config(build)
+        self.assertIn("#define PLAITS_BUILD_MODEL_CV_OPTION 4", config)
+        self.assertIn("#define PLAITS_BUILD_ENABLE_SYNC_INPUT 1", config)
+
+        recipe["schemaVersion"] = 20
+        with self.assertRaisesRegex(ValueError, "schemaVersion 21"):
             validate_recipe(recipe)
 
     def test_attenuverter_starting_mode_is_schema_18_and_changes_the_profile(self) -> None:

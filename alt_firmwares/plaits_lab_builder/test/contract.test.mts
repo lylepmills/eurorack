@@ -164,6 +164,55 @@ test("schema 19 carries triggered and gated locked-frequency envelopes", async (
   );
 });
 
+test("schema 21 carries the experimental MODEL-input Sync In option", async () => {
+  const publicCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const chordCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_chord_tables/catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const engines = new Map(
+    publicCatalog.engines.map((engine: { id: string }) => [engine.id, engine]),
+  );
+  const recipe = structuredClone(fixture) as any;
+  recipe.schemaVersion = 21;
+  recipe.slots = fixture.slots.map((engineId: string) => {
+    const engine = engines.get(engineId) as {
+      packageId: string;
+      version: string;
+      digest: string;
+    };
+    return {
+      engine: engineId,
+      package: engine.packageId,
+      version: engine.version,
+      digest: engine.digest,
+    };
+  });
+  recipe.preferences = { navigationMode: "linear" };
+  recipe.initialOptions = {
+    lockedFrequencyKnob: "octaves",
+    modelInput: "sync-in",
+    levelInput: "level",
+    auxOutput: "alternate-model",
+    suboscillatorOctave: 0,
+    chordTable: "original",
+    holdOnTrigger: false,
+    attenuverterMode: "stock",
+  };
+  recipe.resources = { chordTables: chordCatalog.tables };
+
+  const normalized = normalizeRecipe(recipe);
+  assert.equal(normalized.schemaVersion, 21);
+  assert.equal(normalized.initialOptions.modelInput, "sync-in");
+  assert.throws(
+    () => normalizeRecipe({ ...recipe, schemaVersion: 20 }),
+    /schema version 21/,
+  );
+});
+
 test("automatic LEVEL routing is carried only by schema 16", async () => {
   const publicCatalog = JSON.parse(await readFile(
     new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),
@@ -1024,6 +1073,15 @@ test("manual keys derive from documentation identity, not build identity", async
     lockedFrequencyKnob: "decay",
   };
   assert.notEqual(first, await computeManualKey(lockedFrequencyChanged, "1"));
+
+  // Sync In adds a recipe-specific warning to the options page.
+  const syncInputChanged = structuredClone(recipe);
+  syncInputChanged.schemaVersion = 21;
+  syncInputChanged.initialOptions = {
+    ...syncInputChanged.initialOptions,
+    modelInput: "sync-in",
+  };
+  assert.notEqual(first, await computeManualKey(syncInputChanged, "1"));
 
   // The accessible bank display IS printed beside the bank map.
   const displayChanged = normalizeRecipe(fixture);

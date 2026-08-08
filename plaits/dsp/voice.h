@@ -146,7 +146,7 @@ struct Patch {
   // 1 - cv control of the fourth synthesis macro
   // 2 - cv control of aux crossfade
   // 3 - cv control of lpg colour
-  // 4 - audio-rate hard sync (supported engines only)
+  // 4 - audio-rate Sync In (native phase reset or bounded engine fallback)
   uint8_t model_cv_option;
   // 0 - cv control of level (original)
   // 1 - cv control of decay
