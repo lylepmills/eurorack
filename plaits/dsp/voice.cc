@@ -473,9 +473,15 @@ void Voice::Render(
       patch.attenuverter_mode != ATTENUVERTER_MODE_STOCK &&
       !modulations.morph_patched && !preserve_speech_morph;
   
+  // Once the FM jack is routed to an engine's linear input, the attenuverter
+  // must not also fall through to Plaits' unpatched fine-tune/internal pitch
+  // envelope behavior. That fallback is selected by `use_external_modulation`
+  // being false, so explicitly zero its amount for the linear path.
+  const float note_modulation_amount =
+      use_linear_tzfm ? 0.0f : patch.frequency_modulation_amount;
   p.note = ApplyModulations(
       patch.note + note,
-      patch.frequency_modulation_amount,
+      note_modulation_amount,
       modulations.frequency_patched && !use_linear_tzfm,
       modulations.frequency,
       use_internal_frequency_envelope,
