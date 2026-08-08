@@ -408,6 +408,19 @@ void Ui::UpdateLEDs() {
   // those over would make the probe build untestable.
   if (mode_ == UI_MODE_NORMAL) {
     const float usage = cpu_usage_;
+    int first_meter_led = 0;
+    int meter_leds = kNumLEDs;
+#if defined(PLAITS_CPU_PROBE_BANK_MARKER) && PLAITS_CPU_PROBE_BANK_MARKER
+    // A multi-bank qualification build still needs to identify which strategy
+    // is under test while the meter owns the normal model display. Reserve the
+    // top LED for the ordinary bank color and scale the meter over the other
+    // seven; one press can then A/B/C without relying on remembered state.
+    const int active_bank =
+        BankOfEngine(kBankSizes, kNumBanks, active_engine_);
+    leds_.set(0, BankToColor(active_bank));
+    first_meter_led = 1;
+    meter_leds = kNumLEDs - 1;
+#endif
     // The red line sits at 90%, not 100%: this meter brackets Voice::Render
     // only, and the UI poll, watchdog and readout ride the same interrupt
     // OUTSIDE the bracket. Hardware-calibrated: an engine reading 87-100%
@@ -417,7 +430,7 @@ void Ui::UpdateLEDs() {
       // Deadline at risk: blink everything red, faster the worse it is.
       const int shift = usage > 1.8f ? 5 : (usage > 1.2f ? 6 : 7);
       if ((pwm_counter_ >> shift) & 1) {
-        for (int i = 0; i < kNumLEDs; ++i) {
+        for (int i = first_meter_led; i < kNumLEDs; ++i) {
           leds_.set(i, LED_COLOR_RED);
         }
       }
@@ -427,20 +440,20 @@ void Ui::UpdateLEDs() {
       // first PARTIAL eighth shows as the next LED's brightness: 16-level PWM
       // on the fractional part, so the bar reads to ~1% instead of in eight
       // discrete steps.
-      const float scaled = usage * static_cast<float>(kNumLEDs);
+      const float scaled = usage * static_cast<float>(meter_leds);
       int full = static_cast<int>(scaled);
-      if (full > kNumLEDs) full = kNumLEDs;
+      if (full > meter_leds) full = meter_leds;
       // Amber from 62.5% up: the top three eighths are where un-bracketed
       // ISR overhead starts to matter.
       for (int i = 0; i < full; ++i) {
         leds_.set(kNumLEDs - 1 - i,
-                  i >= kNumLEDs - 3 ? LED_COLOR_YELLOW : LED_COLOR_GREEN);
+                  i >= meter_leds - 3 ? LED_COLOR_YELLOW : LED_COLOR_GREEN);
       }
-      if (full < kNumLEDs) {
+      if (full < meter_leds) {
         const float frac = scaled - static_cast<float>(full);
         if (static_cast<int>(frac * 16.0f) > static_cast<int>(pwm_counter_ & 15)) {
           leds_.set(kNumLEDs - 1 - full,
-                    full >= kNumLEDs - 3 ? LED_COLOR_YELLOW : LED_COLOR_GREEN);
+                    full >= meter_leds - 3 ? LED_COLOR_YELLOW : LED_COLOR_GREEN);
         }
       }
     }

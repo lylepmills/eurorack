@@ -21,6 +21,7 @@
 #define PLAITS_CPU_PROBE_LEDS 1
 #define PLAITS_CPU_PROBE_AUX 0
 #define PLAITS_CPU_PROBE_WHOLE_CALLBACK 1
+#define PLAITS_CPU_PROBE_BANK_MARKER 1
 
 // Internal three-bank registry order is amber, green, red. Public audition:
 //   green (indices 3..5): uninterrupted fast FM, no LEVEL
