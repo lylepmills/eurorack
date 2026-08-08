@@ -17,7 +17,7 @@
     "DEPLOYMENT_ENVIRONMENT": "production",
     "DEAD_LETTER_QUEUE": "plaits-lab-builds-dead-letter",
     "PUBLIC_ORIGINS": "https://rubato.audio,https://www.rubato.audio",
-    "PLAITS_SOURCE_REVISION": "fc594b275f0d",
+    "PLAITS_SOURCE_REVISION": "c6684dea562b",
     "PLAITS_TOOLCHAIN_ID": "gcc-arm-none-eabi-4.8-2013q4",
     "PLAITS_BUILD_CONTRACT": "2",
     "PLAITS_MANUAL_CONTRACT": "16"
@@ -25,7 +25,7 @@
   "containers": [
     {
       "class_name": "FirmwareBuilder",
-      "image": "registry.cloudflare.com/256bac4d555b969399df16f575c5f464/plaits-lab-build-service-firmwarebuilder:rev-fc594b275f0d",
+      "image": "registry.cloudflare.com/256bac4d555b969399df16f575c5f464/plaits-lab-build-service-firmwarebuilder:rev-c6684dea562b",
       "instance_type": "standard-4",
       "max_instances": 2
     }
@@ -130,7 +130,7 @@
         "DEPLOYMENT_ENVIRONMENT": "staging",
         "DEAD_LETTER_QUEUE": "plaits-lab-builds-dead-letter-staging",
         "PUBLIC_ORIGINS": "https://rubato-audio-staging.pages.dev,https://staging.rubato.audio",
-        "PLAITS_SOURCE_REVISION": "fc594b275f0d",
+        "PLAITS_SOURCE_REVISION": "c6684dea562b",
         "PLAITS_TOOLCHAIN_ID": "gcc-arm-none-eabi-4.8-2013q4",
         "PLAITS_BUILD_CONTRACT": "2",
         "PLAITS_MANUAL_CONTRACT": "16"
@@ -138,7 +138,7 @@
       "containers": [
         {
           "class_name": "FirmwareBuilder",
-          "image": "registry.cloudflare.com/256bac4d555b969399df16f575c5f464/plaits-lab-build-service-firmwarebuilder:rev-fc594b275f0d",
+          "image": "registry.cloudflare.com/256bac4d555b969399df16f575c5f464/plaits-lab-build-service-firmwarebuilder:rev-c6684dea562b",
           "instance_type": "standard-4",
           "max_instances": 2
         }

@@ -115,7 +115,7 @@ const reference = (engine: any) => ({
   digest: engine.digest,
 });
 const recipe = {
-  schemaVersion: 21,
+  schemaVersion: 22,
   target: "mutable-instruments-plaits",
   firmware: "rubato-plaits",
   // Keep Original Speech beside both split engines in this hardware gate. All
@@ -129,7 +129,16 @@ const recipe = {
     ...Array.from({ length: 21 }, () => null),
   ],
   output: "audio-wav",
-  preferences: { navigationMode: "linear" },
+  // Sync In's compile switch moved onto its own preference in v22. The starting
+  // value alone no longer enables it — and is now rejected without it, since that
+  // pair would start the module past the end of its own MODEL menu.
+  preferences: {
+    navigationMode: "linear",
+    calibration: false,
+    colorBlindMode: false,
+    replaceableFmBanks: false,
+    syncInput: true,
+  },
   initialOptions: {
     lockedFrequencyKnob: "octaves",
     modelInput: "sync-in",

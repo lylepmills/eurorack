@@ -680,6 +680,16 @@ function normalizeConfiguration(
       `Sync In requires recipe schema version ${syncInputMinSchemaVersion}.`,
     );
   }
+  if (optionValues.modelInput === "sync-in" && !syncInput) {
+    // Since v22 the capability comes from the preference alone. Starting in a
+    // mode whose code was never compiled would leave MODEL pointing past the
+    // end of its own menu, so reject the pair here rather than let the builder
+    // discover it. generate_engine_config.py refuses the same pair.
+    throw new ContractError(
+      "invalid_recipe",
+      "Starting in Sync In requires the syncInput preference.",
+    );
+  }
   return {
     preferences: {
       navigationMode: preferenceValues.navigationMode,
@@ -905,7 +915,10 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     configuration.initialOptions.auxOutput,
   );
   return {
-    // Newest first: a recipe-driven scale bank or engine-aware automatic LEVEL
+    // Newest first: the Sync In compile switch is a preference of its own as of
+    // v22 — a recipe that merely STARTS in Sync In no longer implies it (and is
+    // rejected without it), so the starting value never sets the version alone.
+    // A recipe-driven scale bank or engine-aware automatic LEVEL
     // routing requires v16. Ro'Ved's four-clickable-knob UI and the accessible
     // display each require v15, followed by the optional v14 calibration
     // procedure. These say nothing about the recipe's resource shape. A
@@ -918,7 +931,7 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     // (v8); a short-bank recipe (a trailing empty slot) stays v7; a candidate that
     // carried v6 resources (even an empty custom-bank list, e.g. a 32-slot recipe)
     // stays v6; else v5.
-    schemaVersion: configuration.initialOptions.modelInput === "sync-in" ? 21
+    schemaVersion: configuration.preferences.syncInput ? 22
       : configuration.preferences.replaceableFmBanks ? 20
       : configuration.initialOptions.lockedFrequencyKnob === "triggered-envelope"
       || configuration.initialOptions.lockedFrequencyKnob === "gated-envelope" ? 19

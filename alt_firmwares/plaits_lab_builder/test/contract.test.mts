@@ -191,7 +191,14 @@ test("schema 21 carries the experimental MODEL-input Sync In option", async () =
       digest: engine.digest,
     };
   });
-  recipe.preferences = { navigationMode: "linear" };
+  recipe.preferences = {
+    navigationMode: "linear",
+    calibration: false,
+    colorBlindMode: false,
+    replaceableFmBanks: false,
+    syncInput: true,
+  };
+  recipe.schemaVersion = 22;
   recipe.initialOptions = {
     lockedFrequencyKnob: "octaves",
     modelInput: "sync-in",
@@ -205,12 +212,29 @@ test("schema 21 carries the experimental MODEL-input Sync In option", async () =
   recipe.resources = { chordTables: chordCatalog.tables };
 
   const normalized = normalizeRecipe(recipe);
-  assert.equal(normalized.schemaVersion, 21);
+  assert.equal(normalized.schemaVersion, 22);
   assert.equal(normalized.initialOptions.modelInput, "sync-in");
+  assert.equal(normalized.preferences.syncInput, true);
   assert.throws(
-    () => normalizeRecipe({ ...recipe, schemaVersion: 20 }),
-    /schema version 21/,
+    () => normalizeRecipe({ ...recipe, schemaVersion: 21 }),
+    /schema version 22/,
   );
+
+  // Since v22 the starting value no longer implies the capability: without the
+  // preference the module would boot with MODEL past the end of its own menu.
+  const startsWithoutPreference = structuredClone(recipe);
+  startsWithoutPreference.preferences.syncInput = false;
+  assert.throws(
+    () => normalizeRecipe(startsWithoutPreference),
+    /requires the syncInput preference/,
+  );
+
+  // The preference alone is legitimate — that is the whole point of making it
+  // opt-in: pay Sync In's flash so it can be reached later from the menu.
+  const preferenceOnly = structuredClone(recipe);
+  preferenceOnly.initialOptions.modelInput = "model";
+  assert.equal(normalizeRecipe(preferenceOnly).schemaVersion, 22);
+  assert.equal(normalizeRecipe(preferenceOnly).preferences.syncInput, true);
 });
 
 test("automatic LEVEL routing is carried only by schema 16", async () => {
