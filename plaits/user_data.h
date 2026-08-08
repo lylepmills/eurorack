@@ -175,18 +175,16 @@ class UserData {
   // The user-data area is GENERIC, not an FM feature: SixOpEngine reads it as a
   // patch bank, WavetableEngine as wave indices plus custom wave data, and
   // WaveTerrainEngine as a ninth terrain. Only the FM banks have a baked blob
-  // that can double as a rewritable region, so the three cases differ:
+  // that can double as a rewritable region, so there are two cases:
   //
-  //   FM slot, banks swappable  -> the bank's own array (per-bank, independent)
-  //   FM slot, banks locked     -> nothing; the transfer is refused
-  //   any other user-data slot  -> the legacy single region at ADDRESS
+  //   FM slot in a build with REPLACEABLE banks -> that bank's own array
+  //   everything else                           -> the legacy region at ADDRESS
   //
-  // That last case matters. A wavetable or terrain slot has no baked user-data
-  // blob to make rewritable, so keying purely on the bank table would silently
-  // drop custom wavetable/terrain transfers that work on stock firmware today.
-  // They keep the module's own 0x08007000 area, tagged by slot, exactly as
-  // before — which is also what stops that area going to waste once FM banks
-  // stop using it.
+  // The fallback is what keeps replaceable banks a pure addition. A wavetable or
+  // terrain slot has no baked user-data blob to make rewritable, so keying
+  // purely on the bank table would silently drop custom wavetable/terrain
+  // transfers that work today; and a build that does not opt in keeps the
+  // module's single 0x08007000 area for every slot, exactly as it always has.
 #if defined(PLAITS_HAS_USER_DATA_BANK) && PLAITS_HAS_USER_DATA_BANK
   inline int bank_of(int slot) const { return kEngineUserDataBank[slot]; }
 #else
@@ -214,20 +212,19 @@ class UserData {
   // category of design: no dynamic allocation, no eviction policy, no "banks
   // full" state, no user-facing choice of where a transfer lands.
   inline const uint8_t* region(int slot) const {
-#if defined(PLAITS_HAS_SWAPPABLE_USER_DATA_BANKS)
-    if (bank_of(slot) >= 0) {
-#if PLAITS_HAS_SWAPPABLE_USER_DATA_BANKS
-      const int bank = bank_of(slot);
+#if defined(PLAITS_HAS_SWAPPABLE_USER_DATA_BANKS) \
+    && PLAITS_HAS_SWAPPABLE_USER_DATA_BANKS
+    const int bank = bank_of(slot);
+    if (bank >= 0) {
       for (int i = 0; i < kNumUserDataRegions; ++i) {
         if (kUserDataRegions[i].bank == bank) {
           return kUserDataRegions[i].data;
         }
       }
-#endif
-      // Banks locked (or this one was stripped): an FM bank is not transferable.
-      // Deliberately NOT falling back to the legacy region — that would still
-      // accept a bank, into an area no FM slot reads in this build, and the
-      // transfer would appear to succeed and do nothing.
+      // An FM bank the generator stripped: no slot reads it, so there is nothing
+      // to replace. Refused rather than sent to the legacy region, which would
+      // accept the transfer into an area this build never reads and so appear to
+      // succeed while doing nothing.
       return NULL;
     }
 #endif  // PLAITS_HAS_SWAPPABLE_USER_DATA_BANKS

@@ -539,20 +539,17 @@ class GenerateEngineConfigTest(unittest.TestCase):
         recipe = self.v6_recipe(slots, [{"index": 0, "bank": self.bank_document(first_byte=42)}])
         config = render_config(validate_recipe(recipe))
         self.assertIn("#define PLAITS_HAS_USER_DATA_BANK_OVERRIDE 1", config)
-        self.assertIn(
-            'extern const uint8_t kUserDataBankOverride_0[4096] __attribute__(('
-            'section(".user_data_banks.0"), aligned(2048)));',
-            config)
-        self.assertIn(
-            "extern const uint8_t kUserDataBankOverride_0[4096] = { 42, 0,", config)
-        # Bank 0 is overridden; banks 1 and 2 are live stock. All three are
-        # swappable regions, so all three are generator-emitted and no syx_bank_N
-        # is named — --gc-sections drops every factory blob, exactly as it drops
-        # syx_bank_0 alone in the locked build.
+        self.assertIn("static const uint8_t kUserDataBankOverride_0[4096] = { 42, 0,", config)
+        # Bank 0 is overridden; banks 1 and 2 are live stock slots, so the resolved
+        # table names syx_bank_1/2 (not NULL). Only syx_bank_0 goes unreferenced and
+        # is dropped by --gc-sections.
+        #
+        # A v6 recipe cannot opt in to replaceable banks (that needs v20), so this
+        # is also the guard that a legacy recipe still emits the layout it always
+        # did — no page alignment, no per-bank regions, no re-emitted factory data.
         self.assertIn(
             "static const uint8_t* const kResolvedUserDataBank[3] = "
-            "{ kUserDataBankOverride_0, kUserDataBankOverride_1, "
-            "kUserDataBankOverride_2 };",
+            "{ kUserDataBankOverride_0, syx_bank_1, syx_bank_2 };",
             config)
 
     def test_override_for_a_bank_no_engine_uses_is_pruned(self) -> None:
@@ -562,13 +559,13 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertIn("#define PLAITS_HAS_USER_DATA_BANK_OVERRIDE 0", config)
         self.assertNotIn("kUserDataBankOverride_0", config)
 
-    def locked_recipe(self, slots: list, user_data_banks: list[dict]) -> dict:
-        """A v19 recipe with FM banks LOCKED.
+    def replaceable_recipe(self, slots: list, user_data_banks: list[dict]) -> dict:
+        """A v20 recipe that OPTS IN to replaceable FM banks.
 
-        This is the pre-swappable emission shape — natural bank lengths, no page
-        alignment, syx_bank_N linked in place, no replacement over TIMBRE — and
-        it stays covered because it is exactly what the Advanced preference
-        reverts a build to.
+        Opting in is what page-aligns the banks and gives each one its own flash
+        region. Every other recipe in this file leaves it off, which is the
+        default and keeps the historical layout — so the un-flagged tests below
+        are also the regression guard that opting out changes nothing.
         """
         recipe = self.v12_recipe(slots, user_data_banks)
         recipe["schemaVersion"] = 20
@@ -576,7 +573,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
             "navigationMode": "linear",
             "calibration": False,
             "colorBlindMode": False,
-            "lockFmBanks": True,
+            "replaceableFmBanks": True,
         }
         recipe["initialOptions"] = dict(
             DEFAULT_CONFIGURATION["initialOptions"], attenuverterMode="stock")
@@ -599,7 +596,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
 
     def test_v12_per_slot_bank_gets_a_fresh_index_above_the_factory_three(self) -> None:
         slots = ["dx7-bank-a", "dx7-bank-b", "dx7-bank-c"] + ["virtual-analog"] * 21
-        recipe = self.locked_recipe(
+        recipe = self.v12_recipe(
             slots, [{"slot": 0, "bank": self.bank_document(first_byte=7)}])
         config = render_config(validate_recipe(recipe))
         self.assertIn("#define PLAITS_HAS_USER_DATA_BANK_OVERRIDE 1", config)
@@ -619,7 +616,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
         # and never names syx_bank_N. Net flash is unchanged: --gc-sections drops
         # the factory blobs the copies replaced.
         slots = ["dx7-bank-a", "dx7-bank-b", "dx7-bank-c"] + ["virtual-analog"] * 21
-        recipe = self.v12_recipe(slots, [{"slot": 0, "bank": self.bank_document(first_byte=7)}])
+        recipe = self.replaceable_recipe(slots, [{"slot": 0, "bank": self.bank_document(first_byte=7)}])
         config = render_config(validate_recipe(recipe))
         self.assertIn("#define PLAITS_HAS_SWAPPABLE_USER_DATA_BANKS 1", config)
         self.assertNotIn("syx_bank_", config)
@@ -641,7 +638,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
 
     def test_swappable_banks_are_page_aligned_and_singly_defined(self) -> None:
         slots = ["dx7-bank-a"] + ["virtual-analog"] * 23
-        recipe = self.v12_recipe(slots, [{"slot": 0, "bank": self.bank_document(first_byte=7)}])
+        recipe = self.replaceable_recipe(slots, [{"slot": 0, "bank": self.bank_document(first_byte=7)}])
         config = render_config(validate_recipe(recipe))
         # 2 KB alignment + a whole-region length is the correctness gate, not
         # tidiness: UserData::Save erases 2 KB pages, so a bank sharing a page
@@ -669,13 +666,13 @@ class GenerateEngineConfigTest(unittest.TestCase):
         slots = ["dx7-bank-a"] + ["virtual-analog"] * 23
         document = self.bank_document(first_byte=7)
         document["voices"][31]["packed"] = [ord("X")] * 128
-        recipe = self.v12_recipe(slots, [{"slot": 0, "bank": document}])
+        recipe = self.replaceable_recipe(slots, [{"slot": 0, "bank": document}])
         config = render_config(validate_recipe(recipe))
         self.assertIn("88, 88, 0, 0, 0, 0 };", config)
 
-    def test_locking_fm_banks_requires_v20(self) -> None:
+    def test_replaceable_fm_banks_require_v20(self) -> None:
         slots = ["dx7-bank-a"] + ["virtual-analog"] * 23
-        recipe = self.locked_recipe(slots, [])
+        recipe = self.replaceable_recipe(slots, [])
         recipe["schemaVersion"] = 19
         with self.assertRaisesRegex(ValueError, "schemaVersion 20"):
             validate_recipe(recipe)
@@ -683,7 +680,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
     def test_v12_two_slots_of_the_same_engine_get_distinct_banks(self) -> None:
         # The whole point of v12: two dx7-bank-a placements, each its OWN bank.
         slots = ["dx7-bank-a", "dx7-bank-a", "dx7-bank-c"] + ["virtual-analog"] * 21
-        recipe = self.locked_recipe(slots, [
+        recipe = self.v12_recipe(slots, [
             {"slot": 0, "bank": self.bank_document(first_byte=11)},
             {"slot": 1, "bank": self.bank_document(first_byte=22)},
         ])
@@ -700,7 +697,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
 
     def test_v12_uncustomized_fm_slot_keeps_its_factory_index(self) -> None:
         slots = ["dx7-bank-b"] + ["virtual-analog"] * 23
-        recipe = self.locked_recipe(slots, [])
+        recipe = self.v12_recipe(slots, [])
         config = render_config(validate_recipe(recipe))
         self.assertIn("#define PLAITS_HAS_USER_DATA_BANK_OVERRIDE 0", config)
         self.assertIn("static const int8_t kEngineUserDataBank[24] = {", config)
@@ -750,7 +747,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
 
     def test_v13_short_bank_emits_its_real_size(self) -> None:
         slots = ["dx7-bank-a"] + ["virtual-analog"] * 23
-        recipe = self.locked_recipe(
+        recipe = self.v13_recipe(
             slots, [{"slot": 0, "bank": self.short_bank_document(4, first_byte=9)}])
         config = render_config(validate_recipe(recipe))
         # 4 patches * 128 bytes = a 512-byte array, and a matching size-table entry
@@ -769,7 +766,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
         # too would make a 4-patch bank sweep 32 Harmonics steps with 28 silent
         # ones, undoing the short banks shipped in schema v13.
         slots = ["dx7-bank-a"] + ["virtual-analog"] * 23
-        recipe = self.v13_recipe(
+        recipe = self.replaceable_recipe(
             slots, [{"slot": 0, "bank": self.short_bank_document(4, first_byte=9)}])
         config = render_config(validate_recipe(recipe))
         self.assertIn("const uint8_t kUserDataBankOverride_3[4096]", config)
@@ -779,7 +776,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
 
     def test_v13_full_bank_keeps_full_size(self) -> None:
         slots = ["dx7-bank-a"] + ["virtual-analog"] * 23
-        recipe = self.locked_recipe(
+        recipe = self.v13_recipe(
             slots, [{"slot": 0, "bank": self.bank_document(first_byte=5)}])
         config = render_config(validate_recipe(recipe))
         self.assertIn("static const uint8_t kUserDataBankOverride_3[4096] = { 5, 0,", config)

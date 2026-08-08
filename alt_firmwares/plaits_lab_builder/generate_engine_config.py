@@ -73,7 +73,7 @@ LEVEL_AUTO_MIN_SCHEMA_VERSION = 16
 SPEECH_BANKS_MIN_SCHEMA_VERSION = 17
 ATTENUVERTER_MODE_MIN_SCHEMA_VERSION = 18
 ONE_KNOB_ENVELOPE_MIN_SCHEMA_VERSION = 19
-LOCK_FM_BANKS_MIN_SCHEMA_VERSION = 20
+SWAPPABLE_FM_BANKS_MIN_SCHEMA_VERSION = 20
 
 # These two stock physical-model engines can treat the alternate contour as
 # energy entering a resonator rather than as a VCA after it.  Keep this list in
@@ -147,13 +147,16 @@ class BuildRecipe:
     stereo_engines: tuple[str, ...] | None = None
     # v17: selected stock LPC banks followed by custom decoded-frame banks.
     speech_banks: dict[str, Any] | None = None
-    # v19: 1 locks FM banks into place — they are emitted at their natural length
-    # with no page alignment, and no bank can be replaced over TIMBRE. 0 (the
-    # default) makes every FM bank swappable: its baked array is the flash region
-    # a transfer erases and reprograms, so swapping costs nothing beyond padding
-    # a SHORT bank up to a whole 4096-byte region. Locking is therefore only ever
-    # worth it to reclaim that short-bank padding.
-    lock_fm_banks: int = 0
+    # v20: 1 makes every FM bank replaceable over TIMBRE — each bank's baked
+    # array becomes the flash region a transfer erases and reprograms. 0 (the
+    # DEFAULT) is the historical layout, byte-for-byte: banks at their natural
+    # length, unaligned, and the module's single legacy user-data region.
+    #
+    # Opt-IN rather than opt-out because the cost, though small, is not free:
+    # page-aligning the banks costs ~832 bytes on a full palette, and the stock
+    # 24-model preset has under 800 bytes of headroom. Defaulting it on would
+    # have pushed the DEFAULT build over the flash limit.
+    swappable_fm_banks: int = 0
 
 
 _FACTORY_BANK_RE = re.compile(
@@ -611,7 +614,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
         {"navigationMode"},
         {"navigationMode", "calibration"},
         {"navigationMode", "calibration", "colorBlindMode"},
-        {"navigationMode", "calibration", "colorBlindMode", "lockFmBanks"},
+        {"navigationMode", "calibration", "colorBlindMode", "replaceableFmBanks"},
     ) or (set(options) != legacy_option_keys and not carries_attenuverter_mode):
         raise ValueError("recipe contains an unsupported firmware option")
     # The Worker stores a fully normalized option profile and therefore adds
@@ -770,18 +773,18 @@ def validate_recipe(value: Any) -> BuildRecipe:
             f"color-blind bank display requires schemaVersion "
             f"{COLOR_BLIND_MODE_MIN_SCHEMA_VERSION}")
 
-    # Locking FM banks (v19). Compile-time-only like the two above, so it must
-    # not touch the profile-id fold either. Default FALSE: every FM bank is
-    # replaceable over TIMBRE, which is free for a full 32-voice bank and costs a
-    # SHORT bank the padding up to a whole 4096-byte flash region. Locking gives
-    # that padding back and disables replacement.
-    lock_fm_banks = bool(preferences.get("lockFmBanks", False))
-    if not isinstance(preferences.get("lockFmBanks", False), bool):
+    # Replaceable FM banks (v20). Compile-time-only like the two above, so it
+    # must not touch the profile-id fold either. Default FALSE — see the field
+    # comment on BuildRecipe: page-aligning the banks costs more than the stock
+    # preset has spare, so this is opt-in and an un-flagged recipe keeps the
+    # historical layout exactly.
+    swappable_fm_banks = bool(preferences.get("replaceableFmBanks", False))
+    if not isinstance(preferences.get("replaceableFmBanks", False), bool):
         raise ValueError("recipe contains an unsupported firmware option")
-    if lock_fm_banks and schema_version < LOCK_FM_BANKS_MIN_SCHEMA_VERSION:
+    if swappable_fm_banks and schema_version < SWAPPABLE_FM_BANKS_MIN_SCHEMA_VERSION:
         raise ValueError(
-            f"locking FM banks requires schemaVersion "
-            f"{LOCK_FM_BANKS_MIN_SCHEMA_VERSION}")
+            f"replaceable FM banks require schemaVersion "
+            f"{SWAPPABLE_FM_BANKS_MIN_SCHEMA_VERSION}")
 
     return BuildRecipe(
         public_slots=public_slots,
@@ -791,7 +794,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
         enable_calibration=1 if enable_calibration else 0,
         roved_panel=1 if target == "plum-audio-roved" else 0,
         color_blind_mode=1 if color_blind_mode else 0,
-        lock_fm_banks=1 if lock_fm_banks else 0,
+        swappable_fm_banks=1 if swappable_fm_banks else 0,
         user_data_bank_overrides=tuple(user_data_banks),
         slot_bank_overrides=tuple(slot_banks),
         stereo_engines=stereo_engines,
@@ -994,9 +997,9 @@ def render_config(recipe: BuildRecipe) -> str:
     # shared section would defeat --gc-sections' ability to drop an unreferenced
     # bank individually, undoing the factory-bank strip.
     #
-    # The Advanced "lock FM banks" preference (v19) turns all of this off, giving
-    # a SHORT bank its padding back at the cost of live replacement.
-    swappable = has_user_data_bank and not recipe.lock_fm_banks
+    # All of this is OPT-IN (the v20 "replaceable FM banks" preference). Left
+    # off, the build keeps the historical layout byte-for-byte.
+    swappable = has_user_data_bank and recipe.swappable_fm_banks
 
     # A LIVE STOCK bank normally links straight to resources.cc's syx_bank_N. A
     # swappable build cannot use those in place: their last bytes are real DX7
