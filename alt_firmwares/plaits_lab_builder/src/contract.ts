@@ -48,6 +48,7 @@ const shortBankMinSchemaVersion = 13;     // fewer than 32 FM voices
 const calibrationMinSchemaVersion = 14;   // CV calibration procedure
 const rovedMinSchemaVersion = 15;         // four-knob Ro'Ved panel
 const colorBlindModeMinSchemaVersion = 15; // brightness-coded banks
+const replaceableFmBanksMinSchemaVersion = 20; // FM banks replaceable over TIMBRE
 const scaleBankMinSchemaVersion = 16;      // recipe-driven scale bank
 export const levelAutoMinSchemaVersion = 16; // engine-aware LEVEL routing
 const speechBanksMinSchemaVersion = 17;      // selectable/custom Speech LPC banks
@@ -125,7 +126,7 @@ export type NormalizedSpeechBanks = {
 };
 
 export type NormalizedRecipe = {
-  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19;
+  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20;
   target: "mutable-instruments-plaits" | "plum-audio-roved";
   firmware: "rubato-plaits";
   // A null entry is an empty slot (v7 short banks); filled slots are engine ids.
@@ -141,6 +142,10 @@ export type NormalizedRecipe = {
     // lights use yellow, with one steady PWM brightness per bank. It deliberately
     // has no power-up gesture, leaving right-button boot available to calibration.
     colorBlindMode: boolean;
+    // Let every 6-Op FM bank be replaced over the TIMBRE input (v20). Opt-in:
+    // page-aligning the banks costs ~816 bytes, more than the stock preset has
+    // spare, so an un-flagged build keeps the historical single-region layout.
+    replaceableFmBanks?: boolean;
   };
   initialOptions: {
     lockedFrequencyKnob: "octaves" | "decay" | "aux-crossfade" | "macro-4"
@@ -554,6 +559,15 @@ function normalizeConfiguration(
     preferenceValues,
     ["calibration", "colorBlindMode", "navigationMode"],
   );
+  // v20 adds replaceableFmBanks. The preference set is CLOSED, so a new key has
+  // to be admitted here as well as version-gated below — bumping
+  // maxRecipeSchemaVersion alone leaves the Worker rejecting the field before
+  // the container ever sees it, which is the Worker/container contract split
+  // that failed the rev-4749aec727af canary.
+  const carriesReplaceableFmBanks = hasExactKeys(
+    preferenceValues,
+    ["calibration", "colorBlindMode", "navigationMode", "replaceableFmBanks"],
+  );
   const legacyInitialOptions = hasExactKeys(optionValues, [
     "auxOutput", "chordTable", "holdOnTrigger", "levelInput",
     "lockedFrequencyKnob", "modelInput", "suboscillatorOctave",
@@ -562,10 +576,14 @@ function normalizeConfiguration(
     "attenuverterMode", "auxOutput", "chordTable", "holdOnTrigger", "levelInput",
     "lockedFrequencyKnob", "modelInput", "suboscillatorOctave",
   ]);
-  if ((!legacyPreferences && !carriesCalibration && !carriesColorBlindMode)
-      || ((carriesCalibration || carriesColorBlindMode)
+  if ((!legacyPreferences && !carriesCalibration && !carriesColorBlindMode
+        && !carriesReplaceableFmBanks)
+      || ((carriesCalibration || carriesColorBlindMode || carriesReplaceableFmBanks)
         && typeof preferenceValues.calibration !== "boolean")
-      || (carriesColorBlindMode && typeof preferenceValues.colorBlindMode !== "boolean")
+      || ((carriesColorBlindMode || carriesReplaceableFmBanks)
+        && typeof preferenceValues.colorBlindMode !== "boolean")
+      || (carriesReplaceableFmBanks
+        && typeof preferenceValues.replaceableFmBanks !== "boolean")
       || (!legacyInitialOptions && !carriesAttenuverterMode)
       || !isOneOf(preferenceValues.navigationMode, ["linear", "banked"] as const)
       || !isOneOf(optionValues.lockedFrequencyKnob, [
@@ -589,9 +607,19 @@ function normalizeConfiguration(
       `Unpatched attenuverter starting mode requires recipe schema version ${attenuverterModeMinSchemaVersion}.`,
     );
   }
-  const calibration = (carriesCalibration || carriesColorBlindMode)
+  const calibration = (carriesCalibration || carriesColorBlindMode || carriesReplaceableFmBanks)
     && preferenceValues.calibration === true;
-  const colorBlindMode = carriesColorBlindMode && preferenceValues.colorBlindMode === true;
+  const colorBlindMode = (carriesColorBlindMode || carriesReplaceableFmBanks)
+    && preferenceValues.colorBlindMode === true;
+  const replaceableFmBanks = carriesReplaceableFmBanks
+    && preferenceValues.replaceableFmBanks === true;
+  if (replaceableFmBanks
+      && Number(candidate.schemaVersion) < replaceableFmBanksMinSchemaVersion) {
+    throw new ContractError(
+      "unsupported_schema",
+      `Replaceable FM banks require recipe schema version ${replaceableFmBanksMinSchemaVersion}.`,
+    );
+  }
   // Same shape as the sparse-bank and short-FM-bank gates: a recipe may only ask
   // for a feature its declared schema version covers, so a client that has not
   // been told this builder understands calibration cannot slip it in under an
@@ -628,6 +656,7 @@ function normalizeConfiguration(
       navigationMode: preferenceValues.navigationMode,
       calibration,
       colorBlindMode,
+      replaceableFmBanks,
     },
     initialOptions: {
       lockedFrequencyKnob: optionValues.lockedFrequencyKnob,
@@ -859,7 +888,8 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     // (v8); a short-bank recipe (a trailing empty slot) stays v7; a candidate that
     // carried v6 resources (even an empty custom-bank list, e.g. a 32-slot recipe)
     // stays v6; else v5.
-    schemaVersion: configuration.initialOptions.lockedFrequencyKnob === "triggered-envelope"
+    schemaVersion: configuration.preferences.replaceableFmBanks ? 20
+      : configuration.initialOptions.lockedFrequencyKnob === "triggered-envelope"
       || configuration.initialOptions.lockedFrequencyKnob === "gated-envelope" ? 19
       : schemaVersion >= attenuverterModeMinSchemaVersion ? 18
       : speechBanks !== undefined ? 17
