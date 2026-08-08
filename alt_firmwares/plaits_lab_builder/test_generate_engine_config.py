@@ -169,10 +169,17 @@ class GenerateEngineConfigTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "schemaVersion 19"):
             validate_recipe(recipe)
 
-    def test_sync_in_is_schema_21_model_input_value_four(self) -> None:
+    def test_sync_in_is_model_input_value_four(self) -> None:
+        # Since v22 the capability comes from the preference, so the starting
+        # value has to be accompanied by it; on its own it is rejected rather
+        # than compiled (see test_starting_in_sync_in_requires_the_preference).
         recipe = self.load("default_recipe.json")
-        recipe["schemaVersion"] = 21
-        recipe["preferences"] = {"navigationMode": "linear"}
+        recipe["schemaVersion"] = 22
+        recipe["preferences"] = {
+            "navigationMode": "linear", "calibration": False,
+            "colorBlindMode": False, "replaceableFmBanks": False,
+            "syncInput": True,
+        }
         recipe["resources"] = {"chordTables": DEFAULT_CHORD_TABLES}
         recipe["initialOptions"] = dict(
             DEFAULT_CONFIGURATION["initialOptions"],
@@ -186,7 +193,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertIn("#define PLAITS_BUILD_ENABLE_SYNC_INPUT 1", config)
 
         recipe["schemaVersion"] = 20
-        with self.assertRaisesRegex(ValueError, "schemaVersion 21"):
+        with self.assertRaisesRegex(ValueError, "schemaVersion"):
             validate_recipe(recipe)
 
     def test_attenuverter_starting_mode_is_schema_18_and_changes_the_profile(self) -> None:
@@ -706,18 +713,30 @@ class GenerateEngineConfigTest(unittest.TestCase):
         # ...and the starting value is untouched by it.
         self.assertIn("#define PLAITS_BUILD_MODEL_CV_OPTION 0", config)
 
-    def test_sync_in_starting_value_still_compiles_it_for_older_recipes(self) -> None:
-        # Back-compat, and not redundancy: every schema-21 recipe encodes the
-        # capability ONLY through the starting value, so dropping that path would
-        # silently strip Sync In from recipes already saved and shared.
+    def test_starting_in_sync_in_requires_the_preference(self) -> None:
+        # The starting value no longer implies the capability, so the pair has to
+        # agree. Emitting it would compile a 4-entry MODEL menu (ui.cc sizes it
+        # 4 + PLAITS_BUILD_ENABLE_SYNC_INPUT) while starting the module at index
+        # 4 — off the end of its own menu.
         slots = ["virtual-analog"] * 24
         recipe = self.v12_recipe(slots, [])
         recipe["schemaVersion"] = 21
         recipe["initialOptions"] = dict(
             DEFAULT_CONFIGURATION["initialOptions"],
             attenuverterMode="stock", modelInput="sync-in")
+        with self.assertRaisesRegex(ValueError, "requires the syncInput preference"):
+            validate_recipe(recipe)
+
+    def test_sync_in_starting_value_is_accepted_alongside_the_preference(self) -> None:
+        slots = ["virtual-analog"] * 24
+        recipe = self.replaceable_recipe(slots, [])
+        recipe["schemaVersion"] = 22
+        recipe["preferences"]["syncInput"] = True
+        recipe["initialOptions"] = dict(
+            recipe["initialOptions"], modelInput="sync-in")
         config = render_config(validate_recipe(recipe))
         self.assertIn("#define PLAITS_BUILD_ENABLE_SYNC_INPUT 1", config)
+        self.assertIn("#define PLAITS_BUILD_MODEL_CV_OPTION 4", config)
 
     def test_sync_in_is_off_by_default(self) -> None:
         slots = ["virtual-analog"] * 24

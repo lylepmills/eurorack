@@ -36,9 +36,10 @@ preference. Before v22 it was derived from the STARTING value, which made a
 compile-time capability depend on an initial runtime setting: Starting Options
 are values the user can change on the module afterwards, so a build that did not
 pre-select Sync In could never reach it — `ui.cc` sizes the MODEL-input menu as
-`4 + PLAITS_BUILD_ENABLE_SYNC_INPUT`, so the mode is simply absent. A schema-21
-recipe still compiles it from the starting value, since that is the only place
-those recipes record it. Independently of the flag, a
+`4 + PLAITS_BUILD_ENABLE_SYNC_INPUT`, so the mode is simply absent. The starting value no longer implies the
+capability: a recipe that starts the module in Sync In without the preference is
+REJECTED, because emitting it would compile a four-entry MODEL menu while
+starting the module at index four — past the end of its own menu. Independently of the flag, a
 transferred bank now records how many patches it holds, so a short bank sizes
 the HARMONICS quantizer to its real count instead of repeating to fill 32. A
 one-shot marker in the application image is restored by every WAV or HEX flash, so first boot applies

@@ -809,6 +809,13 @@ def validate_recipe(value: Any) -> BuildRecipe:
             f"the Sync In preference requires schemaVersion "
             f"{SYNC_INPUT_PREFERENCE_MIN_SCHEMA_VERSION}")
 
+    if normalized_options["model_cv_option"] == 4 and not sync_input:
+        # Starting the module in a mode whose code was not compiled would leave
+        # model_cv_option pointing past the end of the MODEL menu. Since v22 the
+        # capability comes from the preference alone, so the pair must agree.
+        raise ValueError(
+            "starting in Sync In requires the syncInput preference")
+
     # Replaceable FM banks (v20). Compile-time-only like the two above, so it
     # must not touch the profile-id fold either. Default FALSE — see the field
     # comment on BuildRecipe: page-aligning the banks costs more than the stock
@@ -1168,13 +1175,11 @@ def render_config(recipe: BuildRecipe) -> str:
         if has_user_data_bank else ""
     )
 
-    # Sync In is compiled in when the v22 preference asks for it OR when the
-    # starting value selects it. The second half is back-compat, not redundancy:
-    # every schema-21 recipe encodes the capability ONLY through that starting
-    # value, so dropping it would silently strip Sync In from recipes already
-    # saved and shared. It also makes the two controls impossible to contradict —
-    # picking Sync In as the starting mode can never leave it uncompiled.
-    sync_input_enabled = 1 if (recipe.sync_input or recipe.model_cv_option == 4) else 0
+    # Compiled in solely from the v22 preference. The starting value does NOT
+    # imply it: validate_recipe rejects sync-in-without-the-preference outright,
+    # because emitting that pair would build a 4-entry MODEL menu (ui.cc sizes it
+    # 4 + PLAITS_BUILD_ENABLE_SYNC_INPUT) while starting the module at index 4.
+    sync_input_enabled = 1 if recipe.sync_input else 0
 
     registry_order = (
         "orange, green, red, amber"
