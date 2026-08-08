@@ -6,6 +6,10 @@ const apiBase = process.env.PLAITS_STAGING_API ?? "https://plaits-api-staging.ru
 const siteBase = process.env.PLAITS_STAGING_SITE ?? "https://rubato-audio-staging.pages.dev";
 const artifactDir = process.env.PLAITS_STAGING_ARTIFACT_DIR;
 const expectedRevision = process.env.PLAITS_EXPECTED_SOURCE_REVISION;
+// The same recipe is both the staging release gate and the production canary the
+// README requires after a rollout. Defaults target staging, so an unset
+// environment runs the gate exactly as before; the canary opts in explicitly.
+const deploymentEnvironment = process.env.PLAITS_DEPLOYMENT_ENVIRONMENT ?? "staging";
 const origin = new URL(siteBase).origin;
 const headers = { Accept: "application/json", Origin: origin };
 
@@ -43,20 +47,29 @@ async function getBinary(path: string, contentType: RegExp, label: string): Prom
   return bytes;
 }
 
-console.log(`Checking staging site ${siteBase}`);
+console.log(`Checking ${deploymentEnvironment} site ${siteBase}`);
 const page = await fetchEventually(
   new URL("/plaits-palette/", siteBase), { cache: "no-store" }, "staging site",
 );
 assert.equal(page.ok, true, `staging Plaits Palette returned ${page.status}`);
-assert.match(page.headers.get("x-robots-tag") ?? "", /noindex/i, "staging must be noindex");
+// Staging must never be indexable; production must never be accidentally
+// noindexed. Same header, opposite expectation — checking only one direction
+// would let a bad robots rule reach the public site unnoticed.
+if (deploymentEnvironment === "staging") {
+  assert.match(page.headers.get("x-robots-tag") ?? "", /noindex/i, "staging must be noindex");
+} else {
+  assert.doesNotMatch(
+    page.headers.get("x-robots-tag") ?? "", /noindex/i, "production must stay indexable",
+  );
+}
 assert.match(await page.text(), /PlaitsEditor\.[A-Za-z0-9_-]+\.js/, "staging page must hydrate the editor");
 
-console.log(`Checking staging builder ${apiBase}`);
+console.log(`Checking ${deploymentEnvironment} builder ${apiBase}`);
 const catalogResponse = await fetch(new URL("/v1/catalog", apiBase), { headers, cache: "no-store" });
 const catalog = await json(catalogResponse, "catalog");
-assert.equal(catalogResponse.headers.get("access-control-allow-origin"), origin, "staging CORS origin");
-assert.equal(catalog.deploymentEnvironment, "staging");
-assert.ok(catalog.recipeSchemaVersion >= 21, "staging builder must support Sync In");
+assert.equal(catalogResponse.headers.get("access-control-allow-origin"), origin, "CORS origin");
+assert.equal(catalog.deploymentEnvironment, deploymentEnvironment);
+assert.ok(catalog.recipeSchemaVersion >= 22, "builder must support the Sync In preference");
 if (expectedRevision) assert.equal(catalog.sourceRevision, expectedRevision);
 
 await getBinary("/v1/speech/voice-preview/en-US/af_heart.wav", /audio\/wav/, "voice preview");
@@ -160,7 +173,7 @@ const recipe = {
   },
 };
 
-console.log("Submitting representative firmware build (repeat runs should hit staging cache)");
+console.log(`Submitting representative firmware build (repeat runs should hit the ${deploymentEnvironment} cache)`);
 let build = await json(await fetch(new URL("/v1/builds", apiBase), {
   method: "POST",
   headers: { ...headers, "Content-Type": "application/json" },
@@ -189,10 +202,14 @@ if (build.manual?.downloadUrl) {
 if (artifactDir) {
   const output = resolve(artifactDir);
   await mkdir(output, { recursive: true });
-  await writeFile(resolve(output, `sync-speech-staging-${build.buildId}.wav`), firmware);
-  await writeFile(resolve(output, `sync-speech-staging-${build.buildId}.recipe.json`), `${JSON.stringify(recipe, null, 2)}\n`);
-  if (manual) await writeFile(resolve(output, `sync-speech-staging-${build.buildId}.pdf`), manual);
-  console.log(`Saved exact hardware-gate artifacts to ${output}`);
+  await writeFile(resolve(output, `sync-speech-${deploymentEnvironment}-${build.buildId}.wav`), firmware);
+  await writeFile(resolve(output, `sync-speech-${deploymentEnvironment}-${build.buildId}.recipe.json`), `${JSON.stringify(recipe, null, 2)}\n`);
+  if (manual) await writeFile(resolve(output, `sync-speech-${deploymentEnvironment}-${build.buildId}.pdf`), manual);
+  console.log(`Saved exact ${deploymentEnvironment} artifacts to ${output}`);
 }
 
-console.log(`Staging smoke passed for ${catalog.sourceRevision}; build ${build.buildId}${build.cacheHit ? " (cache hit)" : ""}`);
+console.log(
+  `${deploymentEnvironment} smoke passed for ${catalog.sourceRevision}; `
+  + `build ${build.buildId}${build.cacheHit ? " (cache hit)" : ""}`,
+);
+console.log(`  firmware WAV ${firmware.byteLength} bytes`);

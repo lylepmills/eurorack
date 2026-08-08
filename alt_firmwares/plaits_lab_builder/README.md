@@ -149,6 +149,21 @@ SHA-256, and its 9,590-byte contract-16 field guide again contained the Sync In
 setting and warning. The production container pool settled with both configured
 instances healthy on `rev-fc594b275f0d`.
 
+Sync In became an opt-in Advanced preference the same day, at `rev-c6684dea562b`
+as schema 22. Its compile switch had been inferred from a STARTING value: a
+recipe that began in Sync In got the code and silently paid its flash, and one
+that did not could never reach the mode from the menu it advertised. The
+capability is now its own preference, and the two must agree — starting in Sync
+In without it would leave `model_cv_option` pointing past the end of the
+compiled MODEL menu, so the Worker and `generate_engine_config.py` both refuse
+that pair. The staged WAV passed on physical hardware. Production canary build
+`10739dcb15f67551df83af5bf4dad8aefe581fa8ecba77419c3a7d989952eb58` compiled
+Sync In with all three Speech engines and a custom bank; its 4,180,844-byte WAV
+has SHA-256
+`fa6c4cf2310a023b203af2d26f5b455d1062b836e63b69062ec3d6668a010679` — the same
+bytes the hardware gate flashed, since the build is content-addressed and both
+environments resolved the same id.
+
 Two rollout notes worth keeping:
 
 - The Worker's preference set is CLOSED and it rebuilds normalized preferences
@@ -157,7 +172,11 @@ Two rollout notes worth keeping:
   re-emitted. Bumping `maxRecipeSchemaVersion` alone left staging rejecting the
   field with `invalid_preferences` before the container saw it — the same
   Worker/container split that failed the `rev-4749aec727af` canary, caught in
-  staging this time.
+  staging this time. The re-emission is the edit that hides: schema 22 shipped
+  to staging with `normalizeRecipe` still stamping 21 from the old sync-in
+  starting value, so the Worker accepted a valid recipe, re-emitted it a version
+  too low, and the container rejected the Worker's own output. A new version is
+  not landed until something asserts the version it NORMALIZES to.
 - **`wrangler containers info` reporting `healthy >= 1` does NOT mean the new
   image is serving.** Production rolls gradually, so during a rollout the healthy
   instance is the OLD one; the first production canary failed with the previous
@@ -534,6 +553,7 @@ target.
 | August 7, 2026 (Clap and Freshets Formant community engines) | `1b8ecdaddb33` | `rev-1b8ecdaddb33` |
 | August 8, 2026 (schema 20 replaceable FM banks) | `8d56c1936c5c` | `rev-8d56c1936c5c` |
 | August 8, 2026 (schema 21 experimental Sync In, manual contract 16) | `fc594b275f0d` | `rev-fc594b275f0d` |
+| August 8, 2026 (schema 22 Sync In as an opt-in Advanced preference) | `c6684dea562b` | `rev-c6684dea562b` |
 
 Three consequences a rollback has that a forward deploy does not:
 
