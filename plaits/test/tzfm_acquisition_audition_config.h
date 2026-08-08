@@ -8,8 +8,19 @@
 #define PLAITS_BANK_SIZES { 3, 3, 3 }
 #define PLAITS_ENGINE_ROWS { 0, 1, 2, 0, 1, 2, 0, 1, 2 }
 #define PLAITS_BUILD_LINEAR_TZFM 1
-#define PLAITS_INPUT_FAULT_DIAGNOSTICS 1
+#define PLAITS_INPUT_FAULT_DIAGNOSTICS 0
 #define PLAITS_BUILD_NAVIGATION_MODE 1
+
+// Hardware-diagnostic build: measure the entire audio callback with the
+// Cortex-M4 cycle counter and report it on the normal-view LEDs.  Keep AUX
+// completely untouched; the earlier tone readout added enough work after the
+// measured section to perturb the acquisition behavior we were investigating.
+// Ring warnings are deliberately disabled above so they cannot obscure the
+// CPU meter.  This is an audition-only configuration, not a shipping UI.
+#define PLAITS_CPU_PROBE 1
+#define PLAITS_CPU_PROBE_LEDS 1
+#define PLAITS_CPU_PROBE_AUX 0
+#define PLAITS_CPU_PROBE_WHOLE_CALLBACK 1
 
 // Internal three-bank registry order is amber, green, red. Public audition:
 //   green (indices 3..5): uninterrupted fast FM, no LEVEL
