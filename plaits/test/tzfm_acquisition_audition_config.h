@@ -26,9 +26,15 @@
 // Internal three-bank registry order is amber, green, red. Public audition:
 //   green (indices 3..5): uninterrupted fast FM, no LEVEL
 //   red   (indices 6..8): stock control-rate FM + LEVEL scan
-//   amber (indices 0..2): fast FM periodically interrupted for LEVEL
+//   amber (indices 0..2): uninterrupted fast FM, no LEVEL
 #define PLAITS_TZFM_CONTROL_RATE_ENGINE_MASK 0x1c0u
-#define PLAITS_TZFM_INTERRUPTED_LEVEL_ENGINE_MASK 0x007u
+// Two-op renderer A/B/C, with all other models acting as acquisition/load
+// controls. Green keeps the carrier and modulator at stock 4x and evaluates
+// only AUX's sub oscillator at 2x. Red is the untouched 4x reference. Amber
+// runs the complete Two-op core at 2x. Amber deliberately does not sample
+// LEVEL in this build: doing so would confound the renderer comparison.
+#define PLAITS_TWO_OP_HYBRID_OVERSAMPLING_ENGINE_MASK 0x010u
+#define PLAITS_TWO_OP_2X_OVERSAMPLING_ENGINE_MASK 0x002u
 // Two-op FM is already Plaits' heaviest stock engine. Evaluate its exponential
 // pitch law at 24 kHz and linearly reconstruct the intervening samples; the FM
 // ADC itself remains in the 50 kHz acquisition mode.

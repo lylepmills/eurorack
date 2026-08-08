@@ -347,6 +347,16 @@ void Voice::Render(
 #if PLAITS_BUILD_LINEAR_TZFM
   p.linear_fm = use_frequency_offset ? frequency_offset : NULL;
 #endif
+#if defined(PLAITS_TWO_OP_HYBRID_OVERSAMPLING_ENGINE_MASK)
+  if (PLAITS_TWO_OP_HYBRID_OVERSAMPLING_ENGINE_MASK & (1u << engine_index)) {
+    p.fm_oversampling_mode = 1;
+  }
+#endif
+#if defined(PLAITS_TWO_OP_2X_OVERSAMPLING_ENGINE_MASK)
+  if (PLAITS_TWO_OP_2X_OVERSAMPLING_ENGINE_MASK & (1u << engine_index)) {
+    p.fm_oversampling_mode = 2;
+  }
+#endif
   p.macro = patch.locked_frequency_pot_option == 1
       ? patch.freqlock_param
       : 0.5f;

@@ -75,6 +75,7 @@ class FMEngine : public Engine {
   
   float sub_fir_;
   float carrier_fir_;
+  uint8_t previous_oversampling_mode_;
   
   DISALLOW_COPY_AND_ASSIGN(FMEngine);
 };

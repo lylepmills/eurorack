@@ -230,7 +230,7 @@ void ValidateLinearTzfmOscillator() {
   }
 }
 
-void ValidateLinearTzfmTwoOpFm() {
+void ValidateLinearTzfmTwoOpFmMode(uint8_t oversampling_mode) {
   FMEngine forward;
   FMEngine reverse;
   FMEngine stopped;
@@ -244,6 +244,7 @@ void ValidateLinearTzfmTwoOpFm() {
   p.timbre = 0.0f;
   p.morph = 0.5f;
   p.macro = 0.5f;
+  p.fm_oversampling_mode = oversampling_mode;
 
   const float base_frequency = NoteToFrequency(p.note);
   float forward_fm[kAudioBlockSize];
@@ -299,10 +300,18 @@ void ValidateLinearTzfmTwoOpFm() {
   if (normalized_dot > -0.8 || stopped_span > 1.0e-4f) {
     fprintf(
         stderr,
-        "Two-op FM TZFM direction failed: correlation=%f stopped_span=%g\n",
+        "Two-op FM TZFM direction failed in mode %u: "
+        "correlation=%f stopped_span=%g\n",
+        oversampling_mode,
         normalized_dot,
         stopped_span);
     abort();
+  }
+}
+
+void ValidateLinearTzfmTwoOpFm() {
+  for (uint8_t mode = 0; mode < 3; ++mode) {
+    ValidateLinearTzfmTwoOpFmMode(mode);
   }
 }
 

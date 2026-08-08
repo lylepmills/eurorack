@@ -79,6 +79,7 @@ struct EngineParameters {
         articulation_envelope_active(false),
         hard_sync(0),
         linear_fm(NULL),
+        fm_oversampling_mode(0),
         stereo(false) { }
 
   int trigger;
@@ -111,6 +112,10 @@ struct EngineParameters {
   // Engines advertise support with linear_tzfm_capable(); unsupported engines
   // keep the stock exponential/control-rate FM path in Voice.
   const float* linear_fm;
+  // Two-op FM qualification only: 0 keeps the stock 4x renderer, 1 evaluates
+  // the AUX sub oscillator at 2x while preserving the 4x carrier/modulator,
+  // and 2 runs the complete core at 2x. Other engines ignore this field.
+  uint8_t fm_oversampling_mode;
   // alt firmware: when true, the voice requests a true stereo render — OUT
   // becomes the left channel and AUX the right channel. The voice only sets
   // this for engines reporting stereo_capable(); an engine that ignores the
