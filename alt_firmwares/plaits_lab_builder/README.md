@@ -104,6 +104,31 @@ and binary SHA-256
 `9356cc152e3392368e86835418296f2422a94b989685d70374d0868117f016b9`;
 the matching field guide also reached ready.
 
+The August 8 replaceable-FM-banks rollout shipped at `rev-8d56c1936c5c`, a
+revision merging the community engines already in production with schema 20. The
+staged WAV passed on physical hardware. Production canary build
+`080a0ce6212b257d1af4ee8be3f649dd1875fa41ab1261b1329365bfa7ba7500` compiled a
+schema-20 recipe with `replaceableFmBanks` enabled and all three FM banks placed;
+its 9,630,764-byte WAV has SHA-256
+`4704cae93316315c7017c7b39b4c01e47beeb397dd20ee1125235478b992c8f1`.
+
+Two rollout notes worth keeping:
+
+- The Worker's preference set is CLOSED and it rebuilds normalized preferences
+  field by field, so a new preference needs FOUR edits, not one: admitted by
+  `hasExactKeys`, version-gated, added to the `schemaVersion` union, and
+  re-emitted. Bumping `maxRecipeSchemaVersion` alone left staging rejecting the
+  field with `invalid_preferences` before the container saw it — the same
+  Worker/container split that failed the `rev-4749aec727af` canary, caught in
+  staging this time.
+- **`wrangler containers info` reporting `healthy >= 1` does NOT mean the new
+  image is serving.** Production rolls gradually, so during a rollout the healthy
+  instance is the OLD one; the first production canary failed with the previous
+  image's `schemaVersion must be 2 through 19`. Gate on
+  `configuration.image` matching the new tag with `starting == 0`, not on the
+  health count. A build that fails against a stale instance is not cached
+  permanently — the same recipe recompiles and succeeds once the rollout lands.
+
 The service is split across two isolation layers:
 
 - A Cloudflare Worker validates and hashes recipes, stores job state in Durable
