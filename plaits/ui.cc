@@ -72,6 +72,22 @@ static const int kNumBanks = sizeof(kBankSizes) / sizeof(kBankSizes[0]);
 // exactly as before. See PLAITS_ENGINE_ROWS in build_config.h.
 static const uint8_t kEngineRows[] = PLAITS_ENGINE_ROWS;
 
+#if PLAITS_BUILD_LINEAR_TZFM
+static CvAdc::FmAcquisitionMode FmAcquisitionModeForEngine(int engine) {
+#if defined(PLAITS_TZFM_CONTROL_RATE_ENGINE_MASK)
+  if (PLAITS_TZFM_CONTROL_RATE_ENGINE_MASK & (1u << engine)) {
+    return CvAdc::FM_ACQUISITION_CONTROL_RATE;
+  }
+#endif
+#if defined(PLAITS_TZFM_INTERRUPTED_LEVEL_ENGINE_MASK)
+  if (PLAITS_TZFM_INTERRUPTED_LEVEL_ENGINE_MASK & (1u << engine)) {
+    return CvAdc::FM_ACQUISITION_FAST_WITH_LEVEL;
+  }
+#endif
+  return CvAdc::FM_ACQUISITION_FAST;
+}
+#endif
+
 // The options menu, in light order: the lights the player reaches for most sit
 // closest to the entry point, since the left button only walks forward. Two
 // chains below are indexed by this (the LED render and the value cycler), so
@@ -137,6 +153,11 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
 
   LoadState();
 
+  active_engine_ = patch_->engine;
+#if PLAITS_BUILD_LINEAR_TZFM
+  cv_adc_.SetFmAcquisitionMode(FmAcquisitionModeForEngine(active_engine_));
+#endif
+
   // Bind pots to parameters.
   pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].Init(
       &transposition_, NULL, 0.005f, 2.0f, -1.0f);
@@ -167,7 +188,6 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
   fill(&press_time_[0], &press_time_[SWITCH_LAST], 0);
   fill(&ignore_release_[0], &ignore_release_[SWITCH_LAST], false);
 
-  active_engine_ = 0;
   audio_rate_fm_needed_ = false;
   pitch_lp_ = 0.0f;
   data_transfer_progress_ = 0.0f;
@@ -217,9 +237,9 @@ bool Ui::OptionInert(int index) const {
     return true;
   }
 #if PLAITS_BUILD_LINEAR_TZFM
-  // SDADC2 is dedicated to the continuous FM stream, so no LEVEL setting can
-  // have an effect in this build.
-  if (index == OPTION_LIGHT_LEVEL_CV) {
+  // The green fast-only bank dedicates SDADC2 to FM. Red scans LEVEL normally;
+  // amber periodically injects it into the fast stream.
+  if (index == OPTION_LIGHT_LEVEL_CV && !cv_adc_.level_available()) {
     return true;
   }
 #endif
@@ -1048,9 +1068,7 @@ void Ui::DetectNormalization() {
   for (int i = 0; i < kNumNormalizedChannels; ++i) {
     CvAdcChannel channel = normalized_channels_[i];
 #if PLAITS_BUILD_LINEAR_TZFM
-    // SDADC2 is dedicated to FM in this build, so LEVEL cannot participate in
-    // normalization detection and must always behave as unpatched.
-    if (channel == CV_ADC_CHANNEL_LEVEL) {
+    if (channel == CV_ADC_CHANNEL_LEVEL && !cv_adc_.level_available()) {
       normalization_detection_mismatches_[i] = 0;
       continue;
     }
@@ -1085,6 +1103,16 @@ void Ui::ReadAudioRateFm(float* destination, size_t size) {
   }
 }
 
+void Ui::set_active_engine(int active_engine) {
+  if (active_engine_ == active_engine) {
+    return;
+  }
+  active_engine_ = active_engine;
+#if PLAITS_BUILD_LINEAR_TZFM
+  cv_adc_.SetFmAcquisitionMode(FmAcquisitionModeForEngine(active_engine_));
+#endif
+}
+
 void Ui::RealignAudioInputAfterEngineChange() {
 #if PLAITS_BUILD_LINEAR_TZFM
   cv_adc_.RealignAudioRateFmAfterKnownPause(kBlockSize);
@@ -1112,6 +1140,7 @@ void Ui::Poll() {
   modulations_->hard_sync = 0;
 #endif
 #if PLAITS_BUILD_LINEAR_TZFM
+  modulations_->frequency_audio_rate = cv_adc_.fm_is_audio_rate();
   if (audio_rate_fm_needed_) {
     ReadAudioRateFm(modulations_->frequency_audio, kBlockSize);
   }
@@ -1126,11 +1155,12 @@ void Ui::Poll() {
         cv_adc_.float_value(CvAdcChannel(i)));
   }
 #if PLAITS_BUILD_LINEAR_TZFM
-  // The Level jack shares SDADC2 with FM and is intentionally unavailable.
-  // Zeroing both fields also prevents a recipe whose saved level-input option
-  // was "decay" from applying a phantom modulation.
-  modulations_->level = 0.0f;
-  modulations_->level_patched = false;
+  if (!cv_adc_.level_available()) {
+    // Prevent a saved LEVEL-as-decay option from applying phantom modulation in
+    // the green fast-only bank.
+    modulations_->level = 0.0f;
+    modulations_->level_patched = false;
+  }
 #endif
 
   ONE_POLE(pitch_lp_, modulations_->note, 0.7f);

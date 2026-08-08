@@ -92,9 +92,7 @@ class Ui {
   // of the callback budget of already-expensive engines.
   void SetAudioRateFmNeeded(bool needed);
 
-  void set_active_engine(int active_engine) {
-    active_engine_ = active_engine;
-  }
+  void set_active_engine(int active_engine);
 
   void DisplayDataTransferProgress(float progress) {
     mode_ = UI_MODE_DISPLAY_DATA_TRANSFER_PROGRESS;

@@ -51,6 +51,12 @@ enum CvAdcChannel {
 
 class CvAdc {
  public:
+  enum FmAcquisitionMode {
+    FM_ACQUISITION_CONTROL_RATE,
+    FM_ACQUISITION_FAST,
+    FM_ACQUISITION_FAST_WITH_LEVEL
+  };
+
   static const size_t kAudioRateFmBufferSize =
       AudioRateFmResampler::kRingBufferSize;
 
@@ -60,6 +66,18 @@ class CvAdc {
   void Init();
   void DeInit();
   void Convert();
+  // The TZFM qualification firmware assigns one acquisition strategy to each
+  // bank. Ordinary firmware never changes this after Init().
+  void SetFmAcquisitionMode(FmAcquisitionMode mode);
+  inline FmAcquisitionMode fm_acquisition_mode() const {
+    return fm_acquisition_mode_;
+  }
+  inline bool level_available() const {
+    return fm_acquisition_mode_ != FM_ACQUISITION_FAST;
+  }
+  inline bool fm_is_audio_rate() const {
+    return fm_acquisition_mode_ != FM_ACQUISITION_CONTROL_RATE;
+  }
   // Resamples the continuous 50 kHz FM conversion stream onto the exact Plaits
   // synthesis clock. In a regular build this repeats the latest control-rate
   // reading, keeping the driver API and class layout recipe-independent.
@@ -98,6 +116,9 @@ class CvAdc {
   }
   
  private:
+  void ConfigureSdadc2(FmAcquisitionMode mode);
+  size_t AudioRateFmWriteIndex() const;
+
   int channel_map_[CV_ADC_CHANNEL_LAST];
   int16_t values_[CV_ADC_CHANNEL_LAST];
   volatile int16_t audio_rate_fm_[kAudioRateFmBufferSize];
@@ -106,6 +127,9 @@ class CvAdc {
   uint32_t audio_rate_fm_acknowledged_resyncs_;
   uint32_t audio_rate_fm_acknowledged_underflows_;
   uint32_t audio_rate_fm_acknowledged_excess_lag_;
+  FmAcquisitionMode fm_acquisition_mode_;
+  uint8_t level_injection_divider_;
+  bool level_injection_pending_;
   
   DISALLOW_COPY_AND_ASSIGN(CvAdc);
 };

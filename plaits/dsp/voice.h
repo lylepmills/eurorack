@@ -203,6 +203,10 @@ struct Modulations {
   // converts those hardware-calibrated units to an absolute Hz offset only for
   // engines that explicitly implement linear TZFM.
   float frequency_audio[kMaxBlockSize];
+  // True when frequency_audio contains independently sampled input values.
+  // False in the red audition bank, where one control-rate value is repeated
+  // for the block so linear TZFM can be compared without changing its law.
+  bool frequency_audio_rate;
   bool frequency_patched;
   bool timbre_patched;
   bool morph_patched;

@@ -30,6 +30,8 @@ class AudioRateFmResampler {
   static const size_t kNominalLag = 32;
 
   void Init() {
+    source_step_ = kSourceStep;
+    phase_denominator_ = kPhaseDenominator;
     read_index_ = 0;
     last_write_index_ = 0;
     startup_samples_ = 0;
@@ -39,6 +41,24 @@ class AudioRateFmResampler {
     underflow_count_ = 0;
     excess_lag_count_ = 0;
     running_ = false;
+  }
+
+  // Most builds consume the uninterrupted 50 kHz stream at the exact 47/45
+  // clock ratio above. The LEVEL-interruption audition deliberately steals
+  // one 360-cycle conversion every four 12-sample audio blocks. Filling the
+  // LEVEL filter and then refilling the restarted FM filter removes five
+  // ordinary FM results per 48 output samples, giving the exact average ratio
+  // 677/720. Keeping this configurable lets the
+  // resampler preserve long-term pitch while the listening test exposes the
+  // short local interruption itself.
+  void SetRate(uint32_t source_step, uint32_t phase_denominator) {
+    if (!source_step || !phase_denominator) {
+      source_step = kSourceStep;
+      phase_denominator = kPhaseDenominator;
+    }
+    source_step_ = source_step;
+    phase_denominator_ = phase_denominator;
+    phase_ = 0;
   }
 
   // `write_index` is the DMA position immediately after the newest completed
@@ -101,13 +121,13 @@ class AudioRateFmResampler {
       const float b = static_cast<float>(ring[next]);
       const float fraction =
           static_cast<float>(phase_) /
-          static_cast<float>(kPhaseDenominator);
+          static_cast<float>(phase_denominator_);
       destination[i] =
           (a + (b - a) * fraction) * (1.0f / 32768.0f);
 
-      phase_ += kSourceStep;
-      const size_t advance = phase_ / kPhaseDenominator;
-      phase_ %= kPhaseDenominator;
+      phase_ += source_step_;
+      const size_t advance = phase_ / phase_denominator_;
+      phase_ %= phase_denominator_;
       read_index_ = (read_index_ + advance) % kRingBufferSize;
       consumed_samples_ += advance;
     }
@@ -140,16 +160,16 @@ class AudioRateFmResampler {
     return (to + kRingBufferSize - from) % kRingBufferSize;
   }
 
-  static size_t RequiredSamples(size_t size, uint32_t phase) {
+  size_t RequiredSamples(size_t size, uint32_t phase) const {
     if (!size) {
       return 0;
     }
     // The last output reads both its bracketing source samples.
-    return (phase + (size - 1) * kSourceStep) /
-        kPhaseDenominator + 2;
+    return (phase + (size - 1) * source_step_) /
+        phase_denominator_ + 2;
   }
 
-  static size_t TargetLag(size_t size) {
+  size_t TargetLag(size_t size) const {
     size_t lag = RequiredSamples(size, 0) + 3;
     if (lag < kNominalLag) {
       lag = kNominalLag;
@@ -169,6 +189,8 @@ class AudioRateFmResampler {
   size_t read_index_;
   size_t last_write_index_;
   size_t startup_samples_;
+  uint32_t source_step_;
+  uint32_t phase_denominator_;
   uint32_t phase_;
   uint32_t consumed_samples_;
   uint32_t resync_count_;

@@ -3791,6 +3791,31 @@ void ValidateAudioRateFmRecovery() {
     abort();
   }
 
+  // The interrupted-LEVEL bank loses five 50 kHz FM results every 48 output
+  // samples. Its exact 677/720 average rate must remain stable rather than
+  // periodically draining the ring and re-seeding.
+  AudioRateFmResampler interrupted_resampler;
+  interrupted_resampler.Init();
+  interrupted_resampler.SetRate(677, 720);
+  size_t interrupted_write_index = 0;
+  uint32_t interrupted_source_phase = 0;
+  for (int block = 0; block < 64; ++block) {
+    interrupted_source_phase += 12 * 677;
+    const size_t produced = interrupted_source_phase / 720;
+    interrupted_source_phase %= 720;
+    interrupted_write_index =
+        (interrupted_write_index + produced) %
+        AudioRateFmResampler::kRingBufferSize;
+    interrupted_resampler.Process(
+        ring, interrupted_write_index, output, 12);
+  }
+  if (interrupted_resampler.resync_count()) {
+    fprintf(
+        stderr,
+        "Interrupted-LEVEL FM resampler drifted at the 677/720 rate\n");
+    abort();
+  }
+
   // If both audio DMA halves became pending, their two callbacks run back to
   // back. The producer has advanced for both blocks before the first callback;
   // the first render must retain the second block's backlog rather than
