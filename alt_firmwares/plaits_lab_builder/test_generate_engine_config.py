@@ -690,6 +690,48 @@ class GenerateEngineConfigTest(unittest.TestCase):
         config = render_config(validate_recipe(recipe))
         self.assertIn("88, 88, 0, 0, 0, 0 };", config)
 
+    def test_sync_in_preference_compiles_it_without_the_starting_value(self) -> None:
+        # The point of v22: Sync In is reachable at RUNTIME without having been
+        # pre-selected. Starting Options are initial values the user can change on
+        # the module, so deriving compiled capability from one meant changing your
+        # mind later left the mode missing from the menu entirely (ui.cc sizes it
+        # as 4 + PLAITS_BUILD_ENABLE_SYNC_INPUT).
+        slots = ["virtual-analog"] * 24
+        recipe = self.replaceable_recipe(slots, [])
+        recipe["schemaVersion"] = 22
+        recipe["preferences"]["syncInput"] = True
+        recipe["preferences"]["replaceableFmBanks"] = False
+        config = render_config(validate_recipe(recipe))
+        self.assertIn("#define PLAITS_BUILD_ENABLE_SYNC_INPUT 1", config)
+        # ...and the starting value is untouched by it.
+        self.assertIn("#define PLAITS_BUILD_MODEL_CV_OPTION 0", config)
+
+    def test_sync_in_starting_value_still_compiles_it_for_older_recipes(self) -> None:
+        # Back-compat, and not redundancy: every schema-21 recipe encodes the
+        # capability ONLY through the starting value, so dropping that path would
+        # silently strip Sync In from recipes already saved and shared.
+        slots = ["virtual-analog"] * 24
+        recipe = self.v12_recipe(slots, [])
+        recipe["schemaVersion"] = 21
+        recipe["initialOptions"] = dict(
+            DEFAULT_CONFIGURATION["initialOptions"],
+            attenuverterMode="stock", modelInput="sync-in")
+        config = render_config(validate_recipe(recipe))
+        self.assertIn("#define PLAITS_BUILD_ENABLE_SYNC_INPUT 1", config)
+
+    def test_sync_in_is_off_by_default(self) -> None:
+        slots = ["virtual-analog"] * 24
+        config = render_config(validate_recipe(self.v12_recipe(slots, [])))
+        self.assertIn("#define PLAITS_BUILD_ENABLE_SYNC_INPUT 0", config)
+
+    def test_sync_in_preference_requires_v22(self) -> None:
+        slots = ["virtual-analog"] * 24
+        recipe = self.replaceable_recipe(slots, [])
+        recipe["schemaVersion"] = 21
+        recipe["preferences"]["syncInput"] = True
+        with self.assertRaisesRegex(ValueError, "schemaVersion 22"):
+            validate_recipe(recipe)
+
     def test_replaceable_fm_banks_require_v20(self) -> None:
         slots = ["dx7-bank-a"] + ["virtual-analog"] * 23
         recipe = self.replaceable_recipe(slots, [])

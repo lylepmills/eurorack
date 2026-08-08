@@ -36,7 +36,7 @@ export type NormalizedChordTable = {
 // feature gates below use minimums so a newly supported schema cannot get
 // stranded behind an old "10, 11, 12..." whitelist.
 export const minRecipeSchemaVersion = 2;
-export const maxRecipeSchemaVersion = 21;
+export const maxRecipeSchemaVersion = 22;
 const configurationMinSchemaVersion = 4;
 const resourcesMinSchemaVersion = 5;
 const fourBankMinSchemaVersion = 6;       // 32 slots
@@ -50,6 +50,9 @@ const rovedMinSchemaVersion = 15;         // four-knob Ro'Ved panel
 const colorBlindModeMinSchemaVersion = 15; // brightness-coded banks
 const replaceableFmBanksMinSchemaVersion = 20; // FM banks replaceable over TIMBRE
 const syncInputMinSchemaVersion = 21; // audio-rate hard sync on MODEL
+// v22 moves Sync In's compile-time switch onto its own preference, so a module
+// can reach the mode at runtime without its owner having pre-selected it.
+const syncInputPreferenceMinSchemaVersion = 22;
 const scaleBankMinSchemaVersion = 16;      // recipe-driven scale bank
 export const levelAutoMinSchemaVersion = 16; // engine-aware LEVEL routing
 const speechBanksMinSchemaVersion = 17;      // selectable/custom Speech LPC banks
@@ -127,7 +130,7 @@ export type NormalizedSpeechBanks = {
 };
 
 export type NormalizedRecipe = {
-  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21;
+  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22;
   target: "mutable-instruments-plaits" | "plum-audio-roved";
   firmware: "rubato-plaits";
   // A null entry is an empty slot (v7 short banks); filled slots are engine ids.
@@ -147,6 +150,10 @@ export type NormalizedRecipe = {
     // page-aligning the banks costs ~816 bytes, more than the stock preset has
     // spare, so an un-flagged build keeps the historical single-region layout.
     replaceableFmBanks?: boolean;
+    // Compile Sync In in, making it selectable as a MODEL-input mode at RUNTIME
+    // (v22). Before v22 this was derived from the starting value, so a user who
+    // did not pick it at build time could never reach it on the module.
+    syncInput?: boolean;
   };
   initialOptions: {
     lockedFrequencyKnob: "octaves" | "decay" | "aux-crossfade" | "macro-4"
@@ -569,6 +576,10 @@ function normalizeConfiguration(
     preferenceValues,
     ["calibration", "colorBlindMode", "navigationMode", "replaceableFmBanks"],
   );
+  const carriesSyncInput = hasExactKeys(
+    preferenceValues,
+    ["calibration", "colorBlindMode", "navigationMode", "replaceableFmBanks", "syncInput"],
+  );
   const legacyInitialOptions = hasExactKeys(optionValues, [
     "auxOutput", "chordTable", "holdOnTrigger", "levelInput",
     "lockedFrequencyKnob", "modelInput", "suboscillatorOctave",
@@ -578,13 +589,15 @@ function normalizeConfiguration(
     "lockedFrequencyKnob", "modelInput", "suboscillatorOctave",
   ]);
   if ((!legacyPreferences && !carriesCalibration && !carriesColorBlindMode
-        && !carriesReplaceableFmBanks)
-      || ((carriesCalibration || carriesColorBlindMode || carriesReplaceableFmBanks)
+        && !carriesReplaceableFmBanks && !carriesSyncInput)
+      || ((carriesCalibration || carriesColorBlindMode || carriesReplaceableFmBanks
+          || carriesSyncInput)
         && typeof preferenceValues.calibration !== "boolean")
-      || ((carriesColorBlindMode || carriesReplaceableFmBanks)
+      || ((carriesColorBlindMode || carriesReplaceableFmBanks || carriesSyncInput)
         && typeof preferenceValues.colorBlindMode !== "boolean")
-      || (carriesReplaceableFmBanks
+      || ((carriesReplaceableFmBanks || carriesSyncInput)
         && typeof preferenceValues.replaceableFmBanks !== "boolean")
+      || (carriesSyncInput && typeof preferenceValues.syncInput !== "boolean")
       || (!legacyInitialOptions && !carriesAttenuverterMode)
       || !isOneOf(preferenceValues.navigationMode, ["linear", "banked"] as const)
       || !isOneOf(optionValues.lockedFrequencyKnob, [
@@ -612,8 +625,16 @@ function normalizeConfiguration(
     && preferenceValues.calibration === true;
   const colorBlindMode = (carriesColorBlindMode || carriesReplaceableFmBanks)
     && preferenceValues.colorBlindMode === true;
-  const replaceableFmBanks = carriesReplaceableFmBanks
+  const replaceableFmBanks = (carriesReplaceableFmBanks || carriesSyncInput)
     && preferenceValues.replaceableFmBanks === true;
+  const syncInput = carriesSyncInput && preferenceValues.syncInput === true;
+  if (syncInput
+      && Number(candidate.schemaVersion) < syncInputPreferenceMinSchemaVersion) {
+    throw new ContractError(
+      "unsupported_schema",
+      `The Sync In preference requires recipe schema version ${syncInputPreferenceMinSchemaVersion}.`,
+    );
+  }
   if (replaceableFmBanks
       && Number(candidate.schemaVersion) < replaceableFmBanksMinSchemaVersion) {
     throw new ContractError(
@@ -665,6 +686,7 @@ function normalizeConfiguration(
       calibration,
       colorBlindMode,
       replaceableFmBanks,
+      syncInput,
     },
     initialOptions: {
       lockedFrequencyKnob: optionValues.lockedFrequencyKnob,

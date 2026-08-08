@@ -1,7 +1,7 @@
 # Plaits Palette firmware build service
 
 This directory contains the approved-engine backend for Plaits Palette. It accepts
-legacy recipes and manifests through schema 21 containing 24 or 32 versioned
+legacy recipes and manifests through schema 22 containing 24 or 32 versioned
 engine references, firmware preferences and starting options, and bounded
 chord-table/custom-FM/scale-bank/Speech-bank resources. Schema 15 can target either Mutable
 Instruments Plaits or Plum Audio Ro'Ved and adds the color-blind bank display.
@@ -30,9 +30,15 @@ sample-accurately in engines with a native reset path; every other engine uses a
 bounded first-edge-per-audio-block fallback so the feature cannot multiply an
 expensive engine's render cost without limit. Fast sync and demanding model,
 parameter, or stereo combinations can produce digital distortion or dropouts;
-the generated field guide carries the same warning as the editor. Sync code is
-compiled only when selected, and its flash cost varies with the engines in the
-palette. Independently of the flag, a
+the generated field guide carries the same warning as the editor. Sync code is compiled only when asked for, and its flash cost varies with the
+engines in the palette. Schema 22 moves that decision onto its own `syncInput`
+preference. Before v22 it was derived from the STARTING value, which made a
+compile-time capability depend on an initial runtime setting: Starting Options
+are values the user can change on the module afterwards, so a build that did not
+pre-select Sync In could never reach it — `ui.cc` sizes the MODEL-input menu as
+`4 + PLAITS_BUILD_ENABLE_SYNC_INPUT`, so the mode is simply absent. A schema-21
+recipe still compiles it from the starting value, since that is the only place
+those recipes record it. Independently of the flag, a
 transferred bank now records how many patches it holds, so a short bank sizes
 the HARMONICS quantizer to its real count instead of repeating to fill 32. A
 one-shot marker in the application image is restored by every WAV or HEX flash, so first boot applies

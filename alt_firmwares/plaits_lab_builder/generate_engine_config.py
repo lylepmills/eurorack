@@ -56,7 +56,7 @@ assert PACKED_BANK_SIZE % FLASH_PAGE_SIZE == 0
 # versions so adding a schema at the ceiling does not require extending a trail
 # of "10, 11, 12..." whitelists in the build container.
 MIN_RECIPE_SCHEMA_VERSION = 2
-MAX_RECIPE_SCHEMA_VERSION = 21
+MAX_RECIPE_SCHEMA_VERSION = 22
 CONFIGURATION_MIN_SCHEMA_VERSION = 4
 RESOURCES_MIN_SCHEMA_VERSION = 5
 FOUR_BANK_MIN_SCHEMA_VERSION = 6
@@ -75,6 +75,13 @@ ATTENUVERTER_MODE_MIN_SCHEMA_VERSION = 18
 ONE_KNOB_ENVELOPE_MIN_SCHEMA_VERSION = 19
 SWAPPABLE_FM_BANKS_MIN_SCHEMA_VERSION = 20
 SYNC_INPUT_MIN_SCHEMA_VERSION = 21
+# v22 moves Sync In's COMPILE-TIME switch off the starting value and onto its own
+# preference. Starting Options are the module's initial RUNTIME values and the
+# user can change them on the hardware afterwards, so deriving compiled
+# capability from one meant Sync In only ever existed on a module whose owner
+# happened to pick it at build time — change your mind later and it is not in
+# the menu (ui.cc sizes that menu as 4 + PLAITS_BUILD_ENABLE_SYNC_INPUT).
+SYNC_INPUT_PREFERENCE_MIN_SCHEMA_VERSION = 22
 
 # These two stock physical-model engines can treat the alternate contour as
 # energy entering a resonator rather than as a VCA after it.  Keep this list in
@@ -149,6 +156,10 @@ class BuildRecipe:
     stereo_engines: tuple[str, ...] | None = None
     # v17: selected stock LPC banks followed by custom decoded-frame banks.
     speech_banks: dict[str, Any] | None = None
+    # v22: 1 compiles Sync In in, making it selectable as a MODEL-input mode at
+    # RUNTIME. Before v22 this was derived from the starting value, which meant a
+    # user who did not choose Sync In at build time could never reach it.
+    sync_input: int = 0
     # v20: 1 makes every FM bank replaceable over TIMBRE — each bank's baked
     # array becomes the flash region a transfer erases and reprograms. 0 (the
     # DEFAULT) is the historical layout, byte-for-byte: banks at their natural
@@ -617,6 +628,8 @@ def validate_recipe(value: Any) -> BuildRecipe:
         {"navigationMode", "calibration"},
         {"navigationMode", "calibration", "colorBlindMode"},
         {"navigationMode", "calibration", "colorBlindMode", "replaceableFmBanks"},
+        {"navigationMode", "calibration", "colorBlindMode", "replaceableFmBanks",
+         "syncInput"},
     ) or (set(options) != legacy_option_keys and not carries_attenuverter_mode):
         raise ValueError("recipe contains an unsupported firmware option")
     # The Worker stores a fully normalized option profile and therefore adds
@@ -786,6 +799,16 @@ def validate_recipe(value: Any) -> BuildRecipe:
             f"color-blind bank display requires schemaVersion "
             f"{COLOR_BLIND_MODE_MIN_SCHEMA_VERSION}")
 
+    # Sync In (v22). Compile-time-only, and deliberately NOT derived from the
+    # starting value any more — see SYNC_INPUT_PREFERENCE_MIN_SCHEMA_VERSION.
+    sync_input = bool(preferences.get("syncInput", False))
+    if not isinstance(preferences.get("syncInput", False), bool):
+        raise ValueError("recipe contains an unsupported firmware option")
+    if sync_input and schema_version < SYNC_INPUT_PREFERENCE_MIN_SCHEMA_VERSION:
+        raise ValueError(
+            f"the Sync In preference requires schemaVersion "
+            f"{SYNC_INPUT_PREFERENCE_MIN_SCHEMA_VERSION}")
+
     # Replaceable FM banks (v20). Compile-time-only like the two above, so it
     # must not touch the profile-id fold either. Default FALSE — see the field
     # comment on BuildRecipe: page-aligning the banks costs more than the stock
@@ -808,6 +831,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
         roved_panel=1 if target == "plum-audio-roved" else 0,
         color_blind_mode=1 if color_blind_mode else 0,
         swappable_fm_banks=1 if swappable_fm_banks else 0,
+        sync_input=1 if sync_input else 0,
         user_data_bank_overrides=tuple(user_data_banks),
         slot_bank_overrides=tuple(slot_banks),
         stereo_engines=stereo_engines,
@@ -1144,6 +1168,14 @@ def render_config(recipe: BuildRecipe) -> str:
         if has_user_data_bank else ""
     )
 
+    # Sync In is compiled in when the v22 preference asks for it OR when the
+    # starting value selects it. The second half is back-compat, not redundancy:
+    # every schema-21 recipe encodes the capability ONLY through that starting
+    # value, so dropping it would silently strip Sync In from recipes already
+    # saved and shared. It also makes the two controls impossible to contradict —
+    # picking Sync In as the starting mode can never leave it uncompiled.
+    sync_input_enabled = 1 if (recipe.sync_input or recipe.model_cv_option == 4) else 0
+
     registry_order = (
         "orange, green, red, amber"
         if len(public_banks) > 3
@@ -1193,7 +1225,7 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_BUILD_LOCKED_FREQUENCY_POT_OPTION {recipe.locked_frequency_pot_option}
 #define PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE {1 if recipe.locked_frequency_pot_option >= 4 else 0}
 #define PLAITS_BUILD_MODEL_CV_OPTION {recipe.model_cv_option}
-#define PLAITS_BUILD_ENABLE_SYNC_INPUT {1 if recipe.model_cv_option == 4 else 0}
+#define PLAITS_BUILD_ENABLE_SYNC_INPUT {sync_input_enabled}
 #define PLAITS_BUILD_LEVEL_CV_OPTION {recipe.level_cv_option}
 #define PLAITS_BUILD_AUX_OUTPUT_OPTION {recipe.aux_output_option}
 #define PLAITS_BUILD_AUX_SUBOSC_OPTION {recipe.aux_subosc_option}
