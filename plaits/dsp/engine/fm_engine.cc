@@ -52,6 +52,8 @@ void FMEngine::Init(BufferAllocator* allocator) {
   previous_amount_ = 0.0f;
   previous_feedback_ = 0.0f;
   previous_sample_ = 0.0f;
+  sub_fir_ = 0.0f;
+  carrier_fir_ = 0.0f;
 }
 
 void FMEngine::Reset() {
@@ -140,6 +142,15 @@ void FMEngine::RenderInternal(
             : 1.0e-9f);
     const float* linear_fm = parameters.linear_fm;
     while (size--) {
+      if (process_hard_sync) {
+        if (hard_sync & 1) {
+          carrier_phase_ = 0;
+          modulator_phase_ = 0;
+          sub_phase_ = 0;
+          previous_sample_ = 0.0f;
+        }
+        hard_sync >>= 1;
+      }
       const float max_uint32 = 4294967296.0f;
       const float amount = amount_modulation.Next();
       const float feedback = feedback_modulation.Next();
