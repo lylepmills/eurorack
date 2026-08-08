@@ -20,8 +20,55 @@ release notes, and user documentation become the source of truth.
 
 | Feature | Status | Last reviewed | Resume from |
 | --- | --- | --- | --- |
+| Linear TZFM | Planned | 2026-08-08 | `codex/plaits-tzfm-finish` at `cadf6fa` |
 | Renaissance-style Speech remix | Parked | 2026-08-03 | `codex/renaissance-sam-prototype` at `a815337` |
 | Four independent pitch CVs for chord engines | Parked | 2026-08-03 | `session/plaits-four-voct` at `ebed081` |
+
+## Planned
+
+### Linear TZFM
+
+**Concept.** Sample the FM jack at audio rate and use the attenuverter as a
+fixed-Hz linear modulation amount, allowing the instantaneous oscillator
+frequency to pass smoothly through zero. Keep ordinary exponential FM as the
+default and compile the audio-rate path only into firmware that explicitly
+selects it.
+
+**Decision.** Planned after Sync In reached production. The prototype proves the
+hardware path and meaningful DSP behavior, but it predates the current builder
+and Sync In implementation and is not release-ready. Its current engine support
+is deliberately narrow: Waveshaping, Two-op FM, and Vowel FOF opt in; every other
+engine keeps ordinary exponential FM.
+
+**Prototype.** Branch `codex/plaits-tzfm-finish`, through commit `cadf6fa`
+(`Stabilize Plaits audio-rate TZFM`; initial implementation `6fdbd94`). It
+continuously samples the FM jack in the STM32F373 SDADC's 50 kHz fast mode,
+resamples it without clock drift to Plaits' 47.872 kHz synthesis clock, and uses
+a nominal 1 kHz/V modulation slope. Host tests cover oscillator through-zero
+direction, Two-op FM behavior, finite output, and resampler recovery; a focused
+relative benchmark and QEMU flag are included.
+
+#### Constraints and work required
+
+1. Rebase the prototype onto current `origin/master` and reconcile its ADC/audio
+   callback changes with the shipped Sync In timer and event path. Prove that the
+   two optional features either compose safely or are rejected as a combination.
+2. Decide whether the hardware tradeoff is acceptable: SDADC fast mode can
+   convert only one channel, so a TZFM build dedicates SDADC2 to FM and disables
+   the LEVEL CV input for the whole firmware. Surface that prominently in the
+   editor and generated field guide if the feature ships.
+3. Re-run the full synthesis suite, the focused resampler/TZFM tests, ARM flash
+   builds, and the catalog CPU sweep on the rebased implementation. Pay special
+   attention to stereo and already-heavy models.
+4. Hardware-audition the existing three engines across carrier frequency,
+   modulation rate/depth, negative-frequency crossings, model changes, and
+   prolonged operation. Confirm that ADC recovery diagnostics stay quiet.
+5. Decide the engine policy before exposing it: ship the useful three-engine
+   subset with an explicit compatibility list, or implement and benchmark
+   additional engines individually. Do not imply universal model support.
+6. Add the hosted-builder schema/contract option, compile-time generator flag,
+   measured flash estimator, website control/help, analytics, field-guide copy,
+   and staging/production canaries only after the firmware behavior is settled.
 
 ## Parked
 

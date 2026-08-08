@@ -1,6 +1,6 @@
-# Plaits Lab firmware build service
+# Plaits Palette firmware build service
 
-This directory contains the approved-engine backend for Plaits Lab. It accepts
+This directory contains the approved-engine backend for Plaits Palette. It accepts
 legacy recipes and manifests through schema 21 containing 24 or 32 versioned
 engine references, firmware preferences and starting options, and bounded
 chord-table/custom-FM/scale-bank/Speech-bank resources. Schema 15 can target either Mutable
@@ -46,10 +46,11 @@ at the firmware's linked application address and deliberately excludes the
 bootloader.
 
 Schema-15/Ro'Ved support passed its hardware checklist on July 30, 2026.
-Schema 20 is available in production with recipe-driven scale banks, automatic
+Schema 21 is available in production with recipe-driven scale banks, automatic
 LEVEL routing, selectable/custom LPC Speech banks, text and recording encoders,
 source/engine audio previews, unpatched-attenuverter modes, and the triggered
-and gated FREQUENCY contours.
+and gated FREQUENCY contours. It also includes schema 20's replaceable FM banks
+and schema 21's experimental Sync In.
 
 An August 4 hardware regression exposed two firmware defects in the custom
 Speech path: inconsistent `PLAITS_HAS_CUSTOM_SPEECH_BANKS` values changed the
@@ -133,7 +134,13 @@ compiled Sync In with Original Speech, Speech Sounds, LPC Words, and a custom
 bank at 50,260 B text + 48 B data and 20,380 B BSS. Its WAV SHA-256 is
 `fa6c4cf2310a023b203af2d26f5b455d1062b836e63b69062ec3d6668a010679`;
 the downloaded field guide was extracted and verified to contain both the fifth
-MODEL-input setting and the processing-headroom warning.
+MODEL-input setting and the processing-headroom warning. Production then rebuilt
+the same deterministic build id from its separate cache (`cacheHit: false`): the
+4,180,844-byte WAV had the same
+`fa6c4cf2310a023b203af2d26f5b455d1062b836e63b69062ec3d6668a010679`
+SHA-256, and its 9,590-byte contract-16 field guide again contained the Sync In
+setting and warning. The production container pool settled with both configured
+instances healthy on `rev-fc594b275f0d`.
 
 Two rollout notes worth keeping:
 
@@ -436,11 +443,12 @@ The production compiler image is
 `plaits-lab-build-service-firmwarebuilder:rev-fc594b275f0d` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a new
-image, use `wrangler containers info <application-id>` and wait for a healthy
-instance before treating preview/compile failures as application failures. A
-first-time staging application can temporarily return "no Container instance
-available" while its image is starting; the bounded staging smoke retries that
-response.
+image, use `wrangler containers info <application-id>` and wait until
+`configuration.image` matches the intended immutable tag and `starting == 0`;
+`healthy >= 1` alone can still mean the previous image is serving during a
+gradual rollout. A first-time staging application can temporarily return "no
+Container instance available" while its image is starting; the bounded staging
+smoke retries that response.
 
 Schema 21 is live, adding experimental Sync In as the fifth MODEL-input
 assignment. It inherits schema 20's replaceable FM-bank preference, schema 19's
@@ -449,7 +457,7 @@ and Step unpatched-attenuverter modes; schema 17's selectable stock LPC banks,
 custom text/recording-derived Speech banks, source/engine previews; and the
 earlier recipe-driven scale banks and automatic LEVEL routing. The generalized
 schema-inheritance hardening from `5b2b077` is also live: current production
-source `1b8ecdaddb33` descends from that commit, so future supported schemas
+source `fc594b275f0d` descends from that commit, so future supported schemas
 inherit older feature shapes without another version-list edit.
 
 ### Rolling back
