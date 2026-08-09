@@ -6,6 +6,7 @@
 // ways of addressing it.
 
 #include "plaits/dsp/engine2/wave_scan_engine.h"
+#include "plaits/build_config.h"
 
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/dsp/parameter_interpolator.h"
@@ -2358,13 +2359,21 @@ void WaveScanEngine::Render(
         : 1.0f - position;
 
     for (size_t i = 0; i < size; ++i) {
-      const float step = fm.Next();
+      float step = fm.Next();
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+      if (parameters.frequency_offset) {
+        step += parameters.frequency_offset[i] * 0.25f;
+        CONSTRAIN(step, -kWaveScanMaxIncrement, kWaveScanMaxIncrement);
+      }
+#endif
       float main_accumulator = 0.0f;
       float side_accumulator = 0.0f;
       for (int j = 0; j < 4; ++j) {
         phase_ += step;
         if (phase_ >= 1.0f) {
           phase_ -= 1.0f;
+        } else if (phase_ < 0.0f) {
+          phase_ += 1.0f;
         }
         const float scaled = phase_ * 128.0f;
         int32_t index = static_cast<int32_t>(scaled);
@@ -2416,13 +2425,21 @@ void WaveScanEngine::Render(
     const float x_side = stereo ? Offset(x, spread) : 1.0f - x;
 
     for (size_t i = 0; i < size; ++i) {
-      const float step = fm.Next();
+      float step = fm.Next();
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+      if (parameters.frequency_offset) {
+        step += parameters.frequency_offset[i] * 0.25f;
+        CONSTRAIN(step, -kWaveScanMaxIncrement, kWaveScanMaxIncrement);
+      }
+#endif
       float main_accumulator = 0.0f;
       float side_accumulator = 0.0f;
       for (int j = 0; j < 4; ++j) {
         phase_ += step;
         if (phase_ >= 1.0f) {
           phase_ -= 1.0f;
+        } else if (phase_ < 0.0f) {
+          phase_ += 1.0f;
         }
         const float scaled = phase_ * 128.0f;
         int32_t index = static_cast<int32_t>(scaled);
@@ -2497,7 +2514,13 @@ void WaveScanEngine::Render(
         : 0.0f;
 
     for (size_t i = 0; i < size; ++i) {
-      const float step = fm.Next();
+      float step = fm.Next();
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+      if (parameters.frequency_offset) {
+        step += parameters.frequency_offset[i] * 0.25f;
+        CONSTRAIN(step, -kWaveScanMaxIncrement, kWaveScanMaxIncrement);
+      }
+#endif
       float main_accumulator = 0.0f;
       float side_accumulator = 0.0f;
       for (int j = 0; j < 4; ++j) {
@@ -2549,6 +2572,8 @@ void WaveScanEngine::Render(
         phase_ += step;
         if (phase_ >= 1.0f) {
           phase_ -= 1.0f;
+        } else if (phase_ < 0.0f) {
+          phase_ += 1.0f;
         }
         rough_xfade += rough_increment;
       }

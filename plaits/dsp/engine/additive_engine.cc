@@ -157,6 +157,37 @@ void AdditiveEngine::Render(
 
   const uint32_t hard_sync = PLAITS_HARD_SYNC_EVENTS(parameters);
 
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  const float* frequency_offset = parameters.frequency_offset;
+  if (frequency_offset) {
+    if ((PLAITS_STEREO_HARMONIC && parameters.stereo)) {
+      harmonic_oscillator_[0].RenderLinearFm<1>(
+          f0, frequency_offset, &amplitudes_[0], out, size, hard_sync);
+      harmonic_oscillator_[1].RenderLinearFm<13>(
+          f0, frequency_offset, &amplitudes_[12], out, size, hard_sync);
+      for (size_t i = 0; i < size; ++i) {
+        aux[i] = stereo_allpass_.Process(out[i]);
+      }
+      return;
+    }
+
+    harmonic_oscillator_[0].RenderLinearFm<1>(
+        f0, frequency_offset, &amplitudes_[0], out, size, hard_sync);
+    harmonic_oscillator_[1].RenderLinearFm<13>(
+        f0, frequency_offset, &amplitudes_[12], out, size, hard_sync);
+    UpdateAmplitudes(
+        centroid,
+        slope,
+        bumps,
+        &amplitudes_[24],
+        organ_harmonics,
+        8);
+    harmonic_oscillator_[2].RenderLinearFm<1>(
+        f0, frequency_offset, &amplitudes_[24], aux, size, hard_sync);
+    return;
+  }
+#endif
+
   if ((PLAITS_STEREO_HARMONIC && parameters.stereo)) {
     harmonic_oscillator_[0].Render<1>(
         f0, &amplitudes_[0], out, size, hard_sync);

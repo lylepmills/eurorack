@@ -205,6 +205,25 @@ void WaveTerrainEngine::Render(
   // Use the "magic sine" algorithm to generate sin and cos functions for the
   // trajectory coordinates.
   const uint32_t hard_sync = PLAITS_HARD_SYNC_EVENTS(parameters);
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  if (parameters.frequency_offset) {
+    float frequency_offset[kMaxBlockSize * kOversampling];
+    for (size_t i = 0; i < size; ++i) {
+      const float offset = parameters.frequency_offset[i] * kScale;
+      frequency_offset[kOversampling * i] = offset;
+      frequency_offset[kOversampling * i + 1] = offset;
+    }
+    path_.RenderQuadratureLinearFm(
+        f0 * kScale,
+        radius,
+        frequency_offset,
+        path_x,
+        path_y,
+        size * kOversampling,
+        hard_sync,
+        kOversampling);
+  } else {
+#endif
   path_.RenderQuadrature(
       f0 * kScale,
       radius,
@@ -213,6 +232,9 @@ void WaveTerrainEngine::Render(
       size * kOversampling,
       hard_sync,
       kOversampling);
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  }
+#endif
   
   ParameterInterpolator offset(&offset_, 1.9f * parameters.morph - 1.0f, size);
   ParameterInterpolator y_offset(

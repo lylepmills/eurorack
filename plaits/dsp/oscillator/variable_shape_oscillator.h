@@ -130,6 +130,155 @@ class VariableShapeOscillator {
     }
   }
 
+  // Signed, per-sample frequency displacement for linear through-zero FM.
+  // This is deliberately a separate loop: the stock positive-frequency path
+  // above remains byte-for-byte available to ordinary builds, while this path
+  // permits both the master and slave phasors to reverse direction.
+  void RenderLinearFm(
+      float frequency,
+      float pw,
+      float waveshape,
+      const float* frequency_offset,
+      float* out,
+      size_t size,
+      uint32_t hard_sync = 0) {
+    RenderLinearFm<false, false>(
+        0.0f,
+        frequency,
+        pw,
+        waveshape,
+        0.0f,
+        NULL,
+        frequency_offset,
+        out,
+        size,
+        hard_sync);
+  }
+
+  template<bool enable_sync, bool output_phase>
+  void RenderLinearFm(
+      float master_frequency,
+      float frequency,
+      float pw,
+      float waveshape,
+      float phase_modulation_amount,
+      const float* master_frequency_offset,
+      const float* frequency_offset,
+      float* out,
+      size_t size,
+      uint32_t hard_sync = 0) {
+    if (!master_frequency_offset && !frequency_offset) {
+      Render<enable_sync, output_phase>(
+          master_frequency,
+          frequency,
+          pw,
+          waveshape,
+          phase_modulation_amount,
+          out,
+          size,
+          hard_sync);
+      return;
+    }
+
+    CONSTRAIN(master_frequency, -kMaxFrequency, kMaxFrequency);
+    CONSTRAIN(frequency, -kMaxFrequency, kMaxFrequency);
+
+    const float maximum_frequency = fabsf(frequency);
+    if (maximum_frequency >= 0.25f) {
+      pw = 0.5f;
+    } else {
+      CONSTRAIN(
+          pw,
+          maximum_frequency * 2.0f,
+          1.0f - 2.0f * maximum_frequency);
+    }
+
+    stmlib::ParameterInterpolator master_fm(
+        &master_frequency_, master_frequency, size);
+    stmlib::ParameterInterpolator fm(&slave_frequency_, frequency, size);
+    stmlib::ParameterInterpolator pwm(&pw_, pw, size);
+    stmlib::ParameterInterpolator waveshape_modulation(
+        &waveshape_, waveshape, size);
+    stmlib::ParameterInterpolator phase_modulation(
+        &phase_modulation_, phase_modulation_amount, size);
+
+    while (size--) {
+      float master_f = master_fm.Next();
+      float slave_f = fm.Next();
+      if (master_frequency_offset) {
+        master_f += *master_frequency_offset++;
+      }
+      if (frequency_offset) {
+        slave_f += *frequency_offset++;
+      }
+      CONSTRAIN(master_f, -kMaxFrequency, kMaxFrequency);
+      CONSTRAIN(slave_f, -kMaxFrequency, kMaxFrequency);
+
+      const float pw = pwm.Next();
+      const float waveshape = waveshape_modulation.Next();
+      const float square_amount =
+          std::max(waveshape - 0.5f, 0.0f) * 2.0f;
+      const float triangle_amount =
+          std::max(1.0f - waveshape * 2.0f, 0.0f);
+      const float slope_up = 1.0f / pw;
+      const float slope_down = 1.0f / (1.0f - pw);
+
+      bool reset = false;
+      if (hard_sync & 1) {
+        master_phase_ = 0.0f;
+        slave_phase_ = 0.0f;
+        reset = true;
+      }
+      hard_sync >>= 1;
+
+      if (enable_sync || output_phase) {
+        master_phase_ += master_f;
+        if (master_phase_ >= 1.0f) {
+          master_phase_ -= 1.0f;
+          reset = enable_sync;
+        } else if (master_phase_ < 0.0f) {
+          master_phase_ += 1.0f;
+          reset = enable_sync;
+        }
+      }
+
+      if (reset && enable_sync) {
+        slave_phase_ = 0.0f;
+      } else {
+        slave_phase_ += slave_f;
+        if (slave_phase_ >= 1.0f) {
+          slave_phase_ -= 1.0f;
+        } else if (slave_phase_ < 0.0f) {
+          slave_phase_ += 1.0f;
+        }
+      }
+      high_ = slave_phase_ >= pw;
+
+      const float sample = ComputeNaiveSample(
+          slave_phase_,
+          pw,
+          slope_up,
+          slope_down,
+          triangle_amount,
+          square_amount);
+      if (output_phase) {
+        float phasor = master_phase_;
+        float shaped_sample = sample;
+        if (enable_sync) {
+          const float w = 4.0f * (1.0f - master_phase_) * master_phase_;
+          shaped_sample *= w * (2.0f - w);
+          const float p2 = phasor * phasor;
+          phasor += (p2 * p2 - phasor) * fabsf(pw - 0.5f) * 2.0f;
+        }
+        *out++ = phasor + phase_modulation.Next() * shaped_sample;
+      } else {
+        *out++ = 2.0f * sample - 1.0f;
+      }
+      previous_pw_ = pw;
+      next_sample_ = sample;
+    }
+  }
+
  private:
   template<bool enable_sync, bool output_phase, bool process_hard_sync>
   void RenderInternal(

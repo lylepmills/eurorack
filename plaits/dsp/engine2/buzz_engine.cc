@@ -6,6 +6,7 @@
 // summed.
 
 #include "plaits/dsp/engine2/buzz_engine.h"
+#include "plaits/build_config.h"
 
 #include <algorithm>
 #include <cmath>
@@ -715,23 +716,38 @@ void BuzzEngine::Render(
       &zone_position0_, target_zone_position0, size * 2);
   ParameterInterpolator zone1_modulation(
       &zone_position1_, target_zone_position1, size * 2);
+  const float voice_ratio = target_frequency1 /
+      (target_frequency0 > 1.0e-9f ? target_frequency0 : 1.0e-9f);
 
   for (size_t i = 0; i < size; ++i) {
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    const float root_offset = parameters.frequency_offset
+        ? parameters.frequency_offset[i] * 0.5f
+        : 0.0f;
+#else
+    const float root_offset = 0.0f;
+#endif
     float osc0_sub[2];
     float osc1_sub[2];
     for (int s = 0; s < 2; ++s) {
-      const float f0 = fm0.Next();
-      const float f1 = fm1.Next();
+      float f0 = fm0.Next() + root_offset;
+      float f1 = fm1.Next() + root_offset * voice_ratio;
+      CONSTRAIN(f0, -0.25f, 0.249999f);
+      CONSTRAIN(f1, -0.25f, 0.249999f);
       const float zp0 = zone0_modulation.Next();
       const float zp1 = zone1_modulation.Next();
 
       phase0_ += f0;
       if (phase0_ >= 1.0f) {
         phase0_ -= 1.0f;
+      } else if (phase0_ < 0.0f) {
+        phase0_ += 1.0f;
       }
       phase1_ += f1;
       if (phase1_ >= 1.0f) {
         phase1_ -= 1.0f;
+      } else if (phase1_ < 0.0f) {
+        phase1_ += 1.0f;
       }
 
       osc0_sub[s] = ReadZoneCrossfade(zp0, phase0_);

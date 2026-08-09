@@ -103,7 +103,8 @@ void SwarmEngine::Render(
           size_ratio,
           saw,
           size,
-          hard_sync);
+          hard_sync,
+          parameters.frequency_offset);
       float left_gain, right_gain;
       StereoPanGains(swarm_pan[i], &left_gain, &right_gain);
       for (size_t j = 0; j < size; ++j) {
@@ -124,7 +125,8 @@ void SwarmEngine::Render(
           out,
           aux,
           size,
-          hard_sync);
+          hard_sync,
+          parameters.frequency_offset);
       size_ratio *= size_dispersion;
     }
   }

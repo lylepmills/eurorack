@@ -294,6 +294,7 @@ class HarmonicsEngine : public Engine {
       size_t size,
       bool* already_enveloped);
   virtual bool stereo_capable() const { return PLAITS_STEREO_HARMONICS; }
+  virtual bool linear_tzfm_capable() const { return true; }
 
  private:
   void ComputeTargets(

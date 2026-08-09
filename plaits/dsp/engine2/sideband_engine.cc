@@ -4,6 +4,7 @@
 // Finite discrete-summation-formula sideband engine.
 
 #include "plaits/dsp/engine2/sideband_engine.h"
+#include "plaits/build_config.h"
 
 #include <algorithm>
 #include <cmath>
@@ -139,10 +140,34 @@ void SidebandEngine::Render(
       lower_rolloff, lower_count);
 
   for (size_t i = 0; i < size; ++i) {
-    carrier_phase_ += carrier_frequency;
-    carrier_phase_ -= static_cast<int>(carrier_phase_);
-    sideband_phase_ += sideband_frequency;
-    sideband_phase_ -= static_cast<int>(sideband_phase_);
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      float root_frequency =
+          carrier_frequency + parameters.frequency_offset[i];
+      CONSTRAIN(root_frequency, -0.24f, 0.24f);
+      float band_frequency = root_frequency * spacing;
+      CONSTRAIN(band_frequency, -0.49f, 0.49f);
+      carrier_phase_ += root_frequency;
+      if (carrier_phase_ >= 1.0f) {
+        carrier_phase_ -= 1.0f;
+      } else if (carrier_phase_ < 0.0f) {
+        carrier_phase_ += 1.0f;
+      }
+      sideband_phase_ += band_frequency;
+      if (sideband_phase_ >= 1.0f) {
+        sideband_phase_ -= 1.0f;
+      } else if (sideband_phase_ < 0.0f) {
+        sideband_phase_ += 1.0f;
+      }
+    } else {
+#endif
+      carrier_phase_ += carrier_frequency;
+      carrier_phase_ -= static_cast<int>(carrier_phase_);
+      sideband_phase_ += sideband_frequency;
+      sideband_phase_ -= static_cast<int>(sideband_phase_);
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    }
+#endif
 
     const float carrier_sin = SineNoWrap(carrier_phase_);
     const float carrier_cos = SineNoWrap(carrier_phase_ + 0.25f);

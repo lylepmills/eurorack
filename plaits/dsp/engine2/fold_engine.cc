@@ -5,6 +5,7 @@
 // Braids' FOLD: a sine wavefolder and a triangle wavefolder, crossfaded.
 
 #include "plaits/dsp/engine2/fold_engine.h"
+#include "plaits/build_config.h"
 
 #include <algorithm>
 #include <cmath>
@@ -243,9 +244,18 @@ void FoldEngine::Render(
 
   Downsampler downsampler(&downsampler_state_);
   Downsampler downsampler_aux(&downsampler_state_aux_);
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  const float* frequency_offset = parameters.frequency_offset;
+#else
+  const float* frequency_offset = NULL;
+#endif
 
   while (size--) {
-    const float f = fm.Next();
+    float f = fm.Next();
+    if (frequency_offset) {
+      f += *frequency_offset++;
+      CONSTRAIN(f, -0.5f, 0.499999f);
+    }
     const float depth = depth_modulation.Next();
     const float blend = blend_modulation.Next();
     const float symmetry = symmetry_modulation.Next();
@@ -268,6 +278,8 @@ void FoldEngine::Render(
       phase_ += increment;
       if (phase_ >= 1.0f) {
         phase_ -= 1.0f;
+      } else if (phase_ < 0.0f) {
+        phase_ += 1.0f;
       }
 
       // Braids drives the sine folder from its sine table and the triangle

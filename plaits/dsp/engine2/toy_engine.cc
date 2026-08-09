@@ -6,6 +6,7 @@
 // clock, 4x oversampled and decimated.
 
 #include "plaits/dsp/engine2/toy_engine.h"
+#include "plaits/build_config.h"
 
 #include <algorithm>
 
@@ -100,13 +101,21 @@ void ToyEngine::Render(
   Downsampler downsampler_r(&downsampler_state_r_);
 
   for (size_t i = 0; i < size; ++i) {
-    const float increment = increment_modulation.Next();
+    float increment = increment_modulation.Next();
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      increment += parameters.frequency_offset[i] * 0.25f;
+      CONSTRAIN(increment, -0.125f, 0.124999f);
+    }
+#endif
     float raw = 0.0f;
 
     for (int t = 0; t < 4; ++t) {
       phase_ += increment;
       if (phase_ >= 1.0f) {
         phase_ -= 1.0f;
+      } else if (phase_ < 0.0f) {
+        phase_ += 1.0f;
       }
       const uint8_t ramp = static_cast<uint8_t>(phase_ * 256.0f);
 

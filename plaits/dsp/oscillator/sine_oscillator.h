@@ -220,10 +220,108 @@ class FastSineOscillator {
     }
   }
 
+  void RenderLinearFm(
+      float frequency,
+      float amplitude,
+      const float* frequency_offset,
+      float* out,
+      size_t size,
+      uint32_t hard_sync = 0) {
+    if (!frequency_offset) {
+      Render(frequency, amplitude, out, size, hard_sync);
+      return;
+    }
+
+    stmlib::ParameterInterpolator am(&amplitude_, amplitude, size);
+    float x = x_;
+    float y = y_;
+    const float norm = x * x + y * y;
+    if (norm <= 0.5f || norm >= 2.0f) {
+      const float scale = stmlib::fast_rsqrt_carmack(norm);
+      x *= scale;
+      y *= scale;
+    }
+    while (size--) {
+      if (hard_sync & 1) {
+        x = 1.0f;
+        y = 0.0f;
+      }
+      hard_sync >>= 1;
+      float f = frequency + *frequency_offset++;
+      CONSTRAIN(f, -0.249999f, 0.249999f);
+      const float e = Fast2Sin(f);
+      x += e * y;
+      y -= e * x;
+      const float level = am.Next() * (1.0f - fabsf(f) * 4.0f);
+      *out++ += level * x;
+    }
+    x_ = x;
+    y_ = y;
+    epsilon_ = Fast2Sin(frequency);
+  }
+
   void RenderQuadrature(
       float frequency, float amplitude, float* x, float* y, size_t size) {
     RenderInternal<QUADRATURE, false>(
         frequency, amplitude, x, y, size, 0, 1);
+  }
+
+  void RenderQuadratureLinearFm(
+      float frequency,
+      float amplitude,
+      const float* frequency_offset,
+      float* out,
+      float* out_2,
+      size_t size,
+      uint32_t hard_sync = 0,
+      size_t sync_sample_span = 1) {
+    if (!frequency_offset) {
+      RenderQuadrature(
+          frequency,
+          amplitude,
+          out,
+          out_2,
+          size,
+          hard_sync,
+          sync_sample_span);
+      return;
+    }
+
+    stmlib::ParameterInterpolator am(&amplitude_, amplitude, size);
+    float x = x_;
+    float y = y_;
+    const float norm = x * x + y * y;
+    if (norm <= 0.5f || norm >= 2.0f) {
+      const float scale = stmlib::fast_rsqrt_carmack(norm);
+      x *= scale;
+      y *= scale;
+    }
+
+    size_t sync_subsample = 0;
+    while (size--) {
+      if (sync_subsample == 0) {
+        if (hard_sync & 1) {
+          x = 1.0f;
+          y = 0.0f;
+        }
+        hard_sync >>= 1;
+      }
+      if (++sync_subsample >= sync_sample_span) {
+        sync_subsample = 0;
+      }
+
+      float f = frequency + *frequency_offset++;
+      CONSTRAIN(f, -0.249999f, 0.249999f);
+      const float e = Fast2Sin(f);
+      x += e * y;
+      y -= e * x;
+      const float level = am.Next() * (1.0f - fabsf(f) * 4.0f);
+      *out++ = x * level;
+      *out_2++ = y * level;
+    }
+    x_ = x;
+    y_ = y;
+    epsilon_ = Fast2Sin(frequency);
   }
 
   // hard_sync contains one bit per OUTPUT sample. sync_sample_span maps each

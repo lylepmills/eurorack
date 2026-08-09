@@ -5,6 +5,7 @@
 // Braids' QPSK model: a carrier driven by a framed packet of dibits.
 
 #include "plaits/dsp/engine2/digital_modulation_engine.h"
+#include "plaits/build_config.h"
 
 #include <algorithm>
 
@@ -146,9 +147,18 @@ void DigitalModulationEngine::Render(
   const bool stereo = PLAITS_STEREO_DIGITAL_MODULATION && parameters.stereo;
 
   for (size_t i = 0; i < size; ++i) {
-    phase_ += carrier_increment;
+    float carrier_frequency = carrier_increment;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      carrier_frequency += parameters.frequency_offset[i];
+      CONSTRAIN(carrier_frequency, -0.5f, 0.499999f);
+    }
+#endif
+    phase_ += carrier_frequency;
     if (phase_ >= 1.0f) {
       phase_ -= 1.0f;
+    } else if (phase_ < 0.0f) {
+      phase_ += 1.0f;
     }
     symbol_phase_ += symbol_increment;
     if (symbol_phase_ >= 1.0f) {

@@ -4,6 +4,7 @@
 // Mean-field coupled phase-oscillator synthesis engine.
 
 #include "plaits/dsp/engine2/phase_flock_engine.h"
+#include "plaits/build_config.h"
 
 #include <algorithm>
 #include <cmath>
@@ -104,10 +105,17 @@ void PhaseFlockEngine::Render(
   const float spread = 14.0f * parameters.harmonics * \
       parameters.harmonics;
   float natural_frequency[kNumPhaseFlockOscillators];
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  float natural_ratio[kNumPhaseFlockOscillators];
+#endif
   for (int i = 0; i < kNumPhaseFlockOscillators; ++i) {
     natural_frequency[i] = min(
         0.23f,
         base_frequency * SemitonesToRatio(spread * kFlockDetuning[i]));
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    natural_ratio[i] = natural_frequency[i] /
+        (base_frequency > 1.0e-9f ? base_frequency : 1.0e-9f);
+#endif
   }
 
   const float coupling = min(
@@ -216,9 +224,22 @@ void PhaseFlockEngine::Render(
         const float correction = (attraction - lag * quadrature) * \
             lag_normalization;
         float increment = natural_frequency[i] + coupling * correction;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+        if (parameters.frequency_offset) {
+          increment += parameters.frequency_offset[sample] * natural_ratio[i];
+          CONSTRAIN(increment, -0.24f, 0.24f);
+        } else {
+          CONSTRAIN(increment, 0.0f, 0.24f);
+        }
+#else
         CONSTRAIN(increment, 0.0f, 0.24f);
+#endif
+        const float rotation_phase = fabsf(increment);
         SineCosineNoWrap(
-            increment, &rotation_sine[i], &rotation_cosine[i]);
+            rotation_phase, &rotation_sine[i], &rotation_cosine[i]);
+        if (increment < 0.0f) {
+          rotation_sine[i] = -rotation_sine[i];
+        }
         const float rotation_norm = 1.5f - 0.5f * (
             rotation_sine[i] * rotation_sine[i] + \
             rotation_cosine[i] * rotation_cosine[i]);

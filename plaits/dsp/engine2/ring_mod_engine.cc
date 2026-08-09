@@ -6,6 +6,7 @@
 // through a saturating shaper.
 
 #include "plaits/dsp/engine2/ring_mod_engine.h"
+#include "plaits/build_config.h"
 
 #include <algorithm>
 
@@ -125,6 +126,11 @@ void RingModEngine::Render(
   const float increment = NoteToFrequency(carrier_note) * 0.5f;
   const float increment_1 = NoteToFrequency(note_1) * 0.5f;
   const float increment_2 = NoteToFrequency(note_2) * 0.5f;
+  const float carrier_frequency = increment * 2.0f;
+  const float ratio_1 = increment_1 /
+      (increment > 1.0e-9f ? increment : 1.0e-9f);
+  const float ratio_2 = increment_2 /
+      (increment > 1.0e-9f ? increment : 1.0e-9f);
 
   const float depth = parameters.morph;
   const float drive = ApplyMacro(1.0f, 0.5f, 4.0f, parameters.macro);
@@ -135,18 +141,37 @@ void RingModEngine::Render(
   const bool stereo = PLAITS_STEREO_RING_MOD && parameters.stereo;
 
   for (size_t i = 0; i < size; ++i) {
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    const float root_offset = parameters.frequency_offset
+        ? parameters.frequency_offset[i]
+        : 0.0f;
+#else
+    const float root_offset = 0.0f;
+#endif
+    float carrier_step = (carrier_frequency + root_offset) * 0.5f;
+    float modulator_step_1 = increment_1 + root_offset * 0.5f * ratio_1;
+    float modulator_step_2 = increment_2 + root_offset * 0.5f * ratio_2;
+    CONSTRAIN(carrier_step, -0.5f, 0.499999f);
+    CONSTRAIN(modulator_step_1, -0.5f, 0.499999f);
+    CONSTRAIN(modulator_step_2, -0.5f, 0.499999f);
     for (int s = 0; s < 2; ++s) {
-      phase_ += increment;
+      phase_ += carrier_step;
       if (phase_ >= 1.0f) {
         phase_ -= 1.0f;
+      } else if (phase_ < 0.0f) {
+        phase_ += 1.0f;
       }
-      modulator_phase_ += increment_1;
+      modulator_phase_ += modulator_step_1;
       if (modulator_phase_ >= 1.0f) {
         modulator_phase_ -= 1.0f;
+      } else if (modulator_phase_ < 0.0f) {
+        modulator_phase_ += 1.0f;
       }
-      modulator_phase_2_ += increment_2;
+      modulator_phase_2_ += modulator_step_2;
       if (modulator_phase_2_ >= 1.0f) {
         modulator_phase_2_ -= 1.0f;
+      } else if (modulator_phase_2_ < 0.0f) {
+        modulator_phase_2_ += 1.0f;
       }
 
       const float carrier = SineNoWrap(phase_);

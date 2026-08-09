@@ -190,11 +190,22 @@ void WavetableEngine::RenderInternal(
       &previous_z_, static_cast<float>(z_integral) + z_fractional, size);
 
   ParameterInterpolator f0_modulation(&previous_f0_, f0, size);
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  const float* frequency_offset = parameters.frequency_offset;
+#else
+  const float* frequency_offset = NULL;
+#endif
   
   while (size--) {
-    const float f0 = f0_modulation.Next();
-    const float gain = (1.0f / (f0 * 131072.0f)) * (0.95f - f0);
-    const float cutoff = min(kTableSizeF * f0, 1.0f);
+    float f0 = f0_modulation.Next();
+    if (frequency_offset) {
+      f0 += *frequency_offset++;
+      CONSTRAIN(f0, -0.5f, 0.499999f);
+    }
+    const float absolute_f0 = max(fabsf(f0), 1.0e-7f);
+    const float gain =
+        (1.0f / (absolute_f0 * 131072.0f)) * (0.95f - absolute_f0);
+    const float cutoff = min(kTableSizeF * absolute_f0, 1.0f);
     
     ONE_POLE(x_lp_, x_modulation.Next(), lp_coefficient);
     ONE_POLE(y_lp_, y_modulation.Next(), lp_coefficient);
@@ -219,6 +230,8 @@ void WavetableEngine::RenderInternal(
     phase_ += f0;
     if (phase_ >= 1.0f) {
       phase_ -= 1.0f;
+    } else if (phase_ < 0.0f) {
+      phase_ += 1.0f;
     }
     
     const float warped_phase = phase_ + phase_warp * Sine(phase_);

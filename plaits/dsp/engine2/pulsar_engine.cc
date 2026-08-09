@@ -4,6 +4,7 @@
 // Pulsar synthesis engine.
 
 #include "plaits/dsp/engine2/pulsar_engine.h"
+#include "plaits/build_config.h"
 
 #include <algorithm>
 
@@ -95,8 +96,20 @@ void PulsarEngine::Render(
     const float current_cluster = cluster_modulation.Next();
     const float current_skew = skew_modulation.Next();
 
-    phase_ += frequency;
-    phase_ -= static_cast<int>(phase_);
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    float f = frequency + (parameters.frequency_offset
+        ? parameters.frequency_offset[i]
+        : 0.0f);
+#else
+    float f = frequency;
+#endif
+    CONSTRAIN(f, -0.24f, 0.24f);
+    phase_ += f;
+    if (phase_ >= 1.0f) {
+      phase_ -= 1.0f;
+    } else if (phase_ < 0.0f) {
+      phase_ += 1.0f;
+    }
 
     const float main_window = ClusterWindow(
         phase_, current_cluster, current_duty, current_skew, 0.0f);

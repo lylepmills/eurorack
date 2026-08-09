@@ -59,6 +59,7 @@ class AdditiveEngine : public Engine {
       bool* already_enveloped);
   virtual bool stereo_capable() const { return PLAITS_STEREO_HARMONIC; }
   virtual bool hard_sync_capable() const { return true; }
+  virtual bool linear_tzfm_capable() const { return true; }
 
  private:
   void UpdateAmplitudes(

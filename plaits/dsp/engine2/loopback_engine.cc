@@ -4,6 +4,7 @@
 // Normalized feedback-amplitude-modulation engine.
 
 #include "plaits/dsp/engine2/loopback_engine.h"
+#include "plaits/build_config.h"
 
 #include <algorithm>
 #include <cmath>
@@ -72,10 +73,28 @@ void LoopbackEngine::Render(
     const float current_morph = morph_modulation.Next();
     const float current_polarity = polarity_modulation.Next();
 
-    carrier_phase_ += frequency;
-    carrier_phase_ -= static_cast<int>(carrier_phase_);
-    feedback_phase_ += min(0.24f, frequency * current_ratio);
-    feedback_phase_ -= static_cast<int>(feedback_phase_);
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    float root_frequency = frequency + (parameters.frequency_offset
+        ? parameters.frequency_offset[i]
+        : 0.0f);
+#else
+    float root_frequency = frequency;
+#endif
+    CONSTRAIN(root_frequency, -0.24f, 0.24f);
+    float feedback_frequency = root_frequency * current_ratio;
+    CONSTRAIN(feedback_frequency, -0.24f, 0.24f);
+    carrier_phase_ += root_frequency;
+    if (carrier_phase_ >= 1.0f) {
+      carrier_phase_ -= 1.0f;
+    } else if (carrier_phase_ < 0.0f) {
+      carrier_phase_ += 1.0f;
+    }
+    feedback_phase_ += feedback_frequency;
+    if (feedback_phase_ >= 1.0f) {
+      feedback_phase_ -= 1.0f;
+    } else if (feedback_phase_ < 0.0f) {
+      feedback_phase_ += 1.0f;
+    }
 
     const float carrier = SineNoWrap(carrier_phase_);
     // The feedback oscillator phase-modulates itself: as MORPH raises the

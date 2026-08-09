@@ -280,6 +280,7 @@ class WaveScanEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
+  virtual bool linear_tzfm_capable() const { return true; }
   virtual bool stereo_capable() const { return PLAITS_STEREO_WAVE_SCAN; }
   virtual void HardSync() { phase_ = 0.0f; }
 

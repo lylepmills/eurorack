@@ -11,6 +11,7 @@
 // AUX is dropped.
 
 #include "plaits/dsp/engine2/phase_weave_engine.h"
+#include "plaits/build_config.h"
 
 #include <algorithm>
 #include <cmath>
@@ -144,9 +145,18 @@ void PhaseWeaveEngine::Render(
     const float cancellation = cancellation_modulation.Next();
     const float rotation = rotation_modulation.Next();
 
-    phase_ += frequency;
+    float f = frequency;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      f += parameters.frequency_offset[i];
+    }
+#endif
+    CONSTRAIN(f, -0.24f, 0.24f);
+    phase_ += f;
     if (phase_ >= 1.0f) {
       phase_ -= 1.0f;
+    } else if (phase_ < 0.0f) {
+      phase_ += 1.0f;
     }
 
     // This intentionally is not an evenly spaced saw bank. The asymmetric

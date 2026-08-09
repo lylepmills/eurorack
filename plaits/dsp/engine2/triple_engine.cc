@@ -5,6 +5,7 @@
 // Braids' four TRIPLE models merged into one slot.
 
 #include "plaits/dsp/engine2/triple_engine.h"
+#include "plaits/build_config.h"
 
 #include <algorithm>
 
@@ -134,13 +135,43 @@ void TripleEngine::Render(
     }
     const float dc = square_amount * (1.0f - 2.0f * voice_pw);
 
-    voice_[v].Render(frequency[v], pw, waveshape, voice_buffer, size);
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    float voice_frequency_offset[kMaxBlockSize];
+    const float voice_ratio = frequency[v] /
+        (root > 1.0e-9f ? root : 1.0e-9f);
+    if (parameters.frequency_offset) {
+      for (size_t i = 0; i < size; ++i) {
+        voice_frequency_offset[i] =
+            parameters.frequency_offset[i] * voice_ratio;
+      }
+      voice_[v].RenderLinearFm(
+          frequency[v],
+          pw,
+          waveshape,
+          voice_frequency_offset,
+          voice_buffer,
+          size);
+    } else {
+#endif
+      voice_[v].Render(frequency[v], pw, waveshape, voice_buffer, size);
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    }
+#endif
     for (size_t i = 0; i < size; ++i) {
       float sample = voice_buffer[i] - dc;
       if (sine_amount > 0.0f) {
-        sine_phase_[v] += frequency[v];
+        float sine_frequency = frequency[v];
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+        if (parameters.frequency_offset) {
+          sine_frequency += voice_frequency_offset[i];
+          CONSTRAIN(sine_frequency, -0.49f, 0.49f);
+        }
+#endif
+        sine_phase_[v] += sine_frequency;
         if (sine_phase_[v] >= 1.0f) {
           sine_phase_[v] -= 1.0f;
+        } else if (sine_phase_[v] < 0.0f) {
+          sine_phase_[v] += 1.0f;
         }
         // MACRO is deliberately INERT here: the phase skew that would shape a
         // sine is only C-zero, falls at -12 dB/oct past ~10*f0 with no BLEP,

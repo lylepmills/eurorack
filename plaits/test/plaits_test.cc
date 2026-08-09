@@ -60,6 +60,7 @@
 #include "plaits/dsp/engine2/phase_flock_engine.h"
 #include "plaits/dsp/engine2/phase_distortion_engine.h"
 #include "plaits/dsp/engine2/phase_weave_engine.h"
+#include "plaits/dsp/engine2/pulsar_engine.h"
 #include "plaits/dsp/engine2/reed_pipe_engine.h"
 #include "plaits/dsp/engine2/rulefield_engine.h"
 #include "plaits/dsp/engine2/scanned_engine.h"
@@ -304,6 +305,131 @@ void ValidateLinearTzfmTwoOpFm() {
         stopped_span);
     abort();
   }
+}
+
+template<typename T>
+void ValidateLinearTzfmEngine(const char* name) {
+  const size_t kBlocks = 16;
+  const size_t kSamples = kBlocks * kAudioBlockSize;
+  static T engine;
+  float reference_out[kSamples];
+  float reference_aux[kSamples];
+
+  EngineParameters p;
+  p.note = 48.0f;
+  p.harmonics = 0.37f;
+  p.timbre = 0.58f;
+  p.morph = 0.63f;
+  p.accent = 0.8f;
+  p.macro = 0.41f;
+  p.articulation_envelope = 0.0f;
+  p.articulation_envelope_active = false;
+  p.chord_set_option = 0;
+  p.hard_sync = 0;
+  p.stereo = false;
+
+  Random::Seed(0x71f00d);
+  BufferAllocator reference_allocator(ram_block, sizeof(ram_block));
+  engine.Init(&reference_allocator);
+  engine.LoadUserData(NULL);
+  engine.Reset();
+  p.frequency_offset = NULL;
+  for (size_t block = 0; block < kBlocks; ++block) {
+    p.trigger = block == 0
+        ? TRIGGER_RISING_EDGE | TRIGGER_HIGH
+        : TRIGGER_UNPATCHED;
+    bool already_enveloped = false;
+    engine.Render(
+        p,
+        &reference_out[block * kAudioBlockSize],
+        &reference_aux[block * kAudioBlockSize],
+        kAudioBlockSize,
+        &already_enveloped);
+  }
+
+  Random::Seed(0x71f00d);
+  BufferAllocator modulated_allocator(ram_block, sizeof(ram_block));
+  engine.Init(&modulated_allocator);
+  engine.LoadUserData(NULL);
+  engine.Reset();
+
+  const float base_frequency = NoteToFrequency(p.note);
+  double difference = 0.0;
+  double reference_energy = 0.0;
+  for (size_t block = 0; block < kBlocks; ++block) {
+    float frequency_offset[kAudioBlockSize];
+    for (size_t i = 0; i < kAudioBlockSize; ++i) {
+      const size_t sample = block * kAudioBlockSize + i;
+      const float phase = static_cast<float>(sample & 31) / 32.0f;
+      // The absolute oscillator increment becomes a bipolar sine: each cycle
+      // crosses through zero and spends equal time rotating both directions.
+      frequency_offset[i] = -base_frequency +
+          2.0f * base_frequency * Sine(phase);
+    }
+    p.frequency_offset = frequency_offset;
+    p.trigger = block == 0
+        ? TRIGGER_RISING_EDGE | TRIGGER_HIGH
+        : TRIGGER_UNPATCHED;
+    float out[kAudioBlockSize];
+    float aux[kAudioBlockSize];
+    bool already_enveloped = false;
+    engine.Render(p, out, aux, kAudioBlockSize, &already_enveloped);
+    for (size_t i = 0; i < kAudioBlockSize; ++i) {
+      const size_t sample = block * kAudioBlockSize + i;
+      if (!isfinite(out[i]) || !isfinite(aux[i])) {
+        fprintf(stderr, "%s produced non-finite TZFM output\n", name);
+        abort();
+      }
+      difference += fabsf(out[i] - reference_out[sample]);
+      difference += 0.61803398875f *
+          fabsf(aux[i] - reference_aux[sample]);
+      reference_energy += fabsf(reference_out[sample]);
+      reference_energy += 0.61803398875f * fabsf(reference_aux[sample]);
+    }
+  }
+
+  const double threshold = max(0.001, reference_energy * 0.0001);
+  if (difference < threshold) {
+    fprintf(
+        stderr,
+        "%s did not respond to signed frequency offsets: diff=%f ref=%f\n",
+        name,
+        difference,
+        reference_energy);
+    abort();
+  }
+}
+
+void ValidateLinearTzfmEngineCoverage() {
+  ValidateLinearTzfmEngine<WaveshapingEngine>("Waveshaping");
+  ValidateLinearTzfmEngine<VowelFofEngine>("Vowel FOF");
+  ValidateLinearTzfmEngine<VirtualAnalogEngine>("Virtual Analog");
+  ValidateLinearTzfmEngine<VirtualAnalogDualEngine>("Virtual Analog Dual");
+  ValidateLinearTzfmEngine<VirtualAnalogCrossfadeEngine>(
+      "Virtual Analog Crossfade");
+  ValidateLinearTzfmEngine<VirtualAnalogVCFEngine>("Virtual Analog VCF");
+  ValidateLinearTzfmEngine<PhaseDistortionEngine>("Phase Distortion");
+  ValidateLinearTzfmEngine<WavetableEngine>("Wavetable");
+  ValidateLinearTzfmEngine<AdditiveEngine>("Additive");
+  ValidateLinearTzfmEngine<HarmonicsEngine>("Harmonics");
+  ValidateLinearTzfmEngine<FoldEngine>("Fold");
+  ValidateLinearTzfmEngine<RingModEngine>("Ring Mod");
+  ValidateLinearTzfmEngine<RawFmEngine>("Raw FM");
+  ValidateLinearTzfmEngine<PulsarEngine>("Pulsar");
+  ValidateLinearTzfmEngine<LoopbackEngine>("Loopback");
+  ValidateLinearTzfmEngine<SidebandEngine>("Sideband Bank");
+  ValidateLinearTzfmEngine<PhaseWeaveEngine>("Phase Weave");
+  ValidateLinearTzfmEngine<ToyEngine>("Toy");
+  ValidateLinearTzfmEngine<DigitalModulationEngine>("Digital Modulation");
+  ValidateLinearTzfmEngine<PhaseFlockEngine>("Phase Flock");
+  ValidateLinearTzfmEngine<SpectralSpiralEngine>("Spectral Spiral");
+  ValidateLinearTzfmEngine<BuzzEngine>("Buzz");
+  ValidateLinearTzfmEngine<SawSwarmEngine>("Saw Swarm");
+  ValidateLinearTzfmEngine<TripleEngine>("Triple");
+  ValidateLinearTzfmEngine<VosimEngine>("VOSIM");
+  ValidateLinearTzfmEngine<WaveScanEngine>("Wave Scan");
+  ValidateLinearTzfmEngine<WaveTerrainEngine>("Wave Terrain");
+  ValidateLinearTzfmEngine<SwarmEngine>("Swarm");
 }
 
 void TestVariableShapeOscillator() {
@@ -3352,6 +3478,7 @@ void TestExperimentalEngines() {
   fflush(stdout);
   ValidateLinearTzfmOscillator();
   ValidateLinearTzfmTwoOpFm();
+  ValidateLinearTzfmEngineCoverage();
 #endif  // PLAITS_BUILD_LINEAR_TZFM
   printf("Validating selectable chord tables...\n");
   fflush(stdout);
@@ -3881,11 +4008,82 @@ void ValidateFmCapabilityPolicy() {
   WaveshapingEngine waveshaping;
   FMEngine two_op_fm;
   VowelFofEngine vowel_fof;
+  VirtualAnalogEngine virtual_analog;
+  VirtualAnalogDualEngine virtual_analog_dual;
+  VirtualAnalogCrossfadeEngine virtual_analog_crossfade;
+  VirtualAnalogVCFEngine virtual_analog_vcf;
+  PhaseDistortionEngine phase_distortion;
+  WavetableEngine wavetable;
+  AdditiveEngine additive;
+  HarmonicsEngine harmonics;
+  FoldEngine fold;
+  RingModEngine ring_mod;
+  RawFmEngine raw_fm;
+  PulsarEngine pulsar;
+  LoopbackEngine loopback;
+  SidebandEngine sideband;
+  PhaseWeaveEngine phase_weave;
+  ToyEngine toy;
+  DigitalModulationEngine digital_modulation;
+  PhaseFlockEngine phase_flock;
+  SpectralSpiralEngine spectral_spiral;
+  BuzzEngine buzz;
+  SawSwarmEngine saw_swarm;
+  TripleEngine triple;
+  VosimEngine vosim;
+  WaveScanEngine wave_scan;
+  WaveTerrainEngine wave_terrain;
+  SwarmEngine swarm;
+  Engine* linear_engines[] = {
+    &waveshaping,
+    &two_op_fm,
+    &vowel_fof,
+    &virtual_analog,
+    &virtual_analog_dual,
+    &virtual_analog_crossfade,
+    &virtual_analog_vcf,
+    &phase_distortion,
+    &wavetable,
+    &additive,
+    &harmonics,
+    &fold,
+    &ring_mod,
+    &raw_fm,
+    &pulsar,
+    &loopback,
+    &sideband,
+    &phase_weave,
+    &toy,
+    &digital_modulation,
+    &phase_flock,
+    &spectral_spiral,
+    &buzz,
+    &saw_swarm,
+    &triple,
+    &vosim,
+    &wave_scan,
+    &wave_terrain,
+    &swarm,
+  };
+  for (size_t i = 0; i < sizeof(linear_engines) / sizeof(linear_engines[0]);
+       ++i) {
+    if (!linear_engines[i]->linear_tzfm_capable()) {
+      fprintf(stderr, "A TZFM oscillator engine lost frequency-offset support\n");
+      abort();
+    }
+  }
 
-  if (!waveshaping.linear_tzfm_capable()
-      || !two_op_fm.linear_tzfm_capable()
-      || !vowel_fof.linear_tzfm_capable()) {
-    fprintf(stderr, "A TZFM audition engine lost frequency-offset support\n");
+  // These pitches configure a resonator, delay line, noise process, or drum
+  // rather than an oscillator phase that can reverse through zero.
+  ModalEngine modal;
+  StringEngine string;
+  NoiseEngine noise;
+  BassDrumEngine bass_drum;
+  if (modal.linear_tzfm_capable()
+      || string.linear_tzfm_capable()
+      || noise.linear_tzfm_capable()
+      || bass_drum.linear_tzfm_capable()) {
+    fprintf(stderr, "A non-oscillator engine was mislabeled as TZFM\n");
     abort();
   }
   // Two-op FM's 4x renderer exceeded the hardware callback budget in Fast FM

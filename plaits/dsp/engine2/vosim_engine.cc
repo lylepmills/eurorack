@@ -5,6 +5,7 @@
 // Braids' VOSM: two sine formants under a bell window restarted by the note.
 
 #include "plaits/dsp/engine2/vosim_engine.h"
+#include "plaits/build_config.h"
 
 #include <algorithm>
 
@@ -261,10 +262,23 @@ void VosimEngine::Render(
   }
 
   for (size_t i = 0; i < size; ++i) {
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    float carrier_increment = increment + (parameters.frequency_offset
+        ? parameters.frequency_offset[i] * 0.5f
+        : 0.0f);
+#else
+    float carrier_increment = increment;
+#endif
+    CONSTRAIN(carrier_increment, -0.25f, 0.249999f);
     for (int s = 0; s < 2; ++s) {
-      phase_ += increment;
+      bool carrier_wrapped = false;
+      phase_ += carrier_increment;
       if (phase_ >= 1.0f) {
         phase_ -= 1.0f;
+        carrier_wrapped = true;
+      } else if (phase_ < 0.0f) {
+        phase_ += 1.0f;
+        carrier_wrapped = true;
       }
       formant_phase_[0] += formant_increment_1;
       if (formant_phase_[0] >= 1.0f) {
@@ -288,7 +302,7 @@ void VosimEngine::Render(
       // pedestal subtraction below is the output's floor at -0.75. The window
       // is already ~0 there, so the forced value changes almost nothing; the
       // phase reset is the whole point of the model.
-      if (phase_ < increment) {
+      if (carrier_wrapped) {
         formant_phase_[0] = 0.75f;
         formant_phase_[1] = 0.75f;
         sample = 0.0f;

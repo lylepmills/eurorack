@@ -6,6 +6,7 @@
 // note-tracking resonant filter.
 
 #include "plaits/dsp/engine2/saw_swarm_engine.h"
+#include "plaits/build_config.h"
 
 #include <algorithm>
 #include <cmath>
@@ -151,6 +152,9 @@ void SawSwarmEngine::Render(
       &resonance_, target_resonance, size);
   ParameterInterpolator morph_modulation(&morph_, target_morph, size);
 
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  size_t sample_index = 0;
+#endif
   while (size--) {
     const float f_norm = cutoff_modulation.Next();
     const float resonance = resonance_modulation.Next();
@@ -162,10 +166,23 @@ void SawSwarmEngine::Render(
     svf_.set_f_q<FREQUENCY_FAST>(f_norm, resonance);
 
     float sum = 0.0f;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    const float root_offset = parameters.frequency_offset
+        ? parameters.frequency_offset[sample_index]
+        : 0.0f;
+#else
+    const float root_offset = 0.0f;
+#endif
     for (int i = 0; i < kNumSawSwarmVoices; ++i) {
-      phase_[i] += freq_mod[i].Next();
+      const float ratio = target_frequency[i] /
+          (f0 > 1.0e-9f ? f0 : 1.0e-9f);
+      float frequency = freq_mod[i].Next() + root_offset * ratio;
+      CONSTRAIN(frequency, -0.49f, 0.49f);
+      phase_[i] += frequency;
       if (phase_[i] >= 1.0f) {
         phase_[i] -= 1.0f;
+      } else if (phase_[i] < 0.0f) {
+        phase_[i] += 1.0f;
       }
       sum += 2.0f * phase_[i] - 1.0f;
     }
@@ -180,6 +197,9 @@ void SawSwarmEngine::Render(
 
     *out++ = out_main;
     *aux++ = stereo ? stereo_allpass_.Process(out_main) : out_comp;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    ++sample_index;
+#endif
   }
 }
 
