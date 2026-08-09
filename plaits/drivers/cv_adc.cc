@@ -76,7 +76,7 @@ void CvAdc::Init() {
     channel_map_[i] = 0;
     values_[i] = 0;
   }
-#if PLAITS_BUILD_LINEAR_TZFM
+#if PLAITS_BUILD_FAST_FM
   for (size_t i = 0; i < kAudioRateFmBufferSize; ++i) {
     audio_rate_fm_[i] = 0;
   }
@@ -129,13 +129,13 @@ void CvAdc::Init() {
   // Configure all SDADCs, all their input channels, and all the DMA channels.
   for (int i = 0; i < 3; ++i) {
     const ConverterConfiguration& config = converter_configuration[i];
-    const bool audio_rate_fm = PLAITS_BUILD_LINEAR_TZFM && i == 1;
+    const bool audio_rate_fm = PLAITS_BUILD_FAST_FM && i == 1;
 
     // With one continuous channel, FAST mode performs the first conversion in
     // 360 SDADC cycles and every subsequent conversion in 120 cycles: exactly
     // 50 kHz from Plaits' 6 MHz SDADC clock. FAST must be selected while the
     // peripheral is disabled (or in initialization mode).
-#if PLAITS_BUILD_LINEAR_TZFM
+#if PLAITS_BUILD_FAST_FM
     if (audio_rate_fm) {
       SDADC_FastConversionCmd(config.sdadc, ENABLE);
     }
@@ -157,7 +157,9 @@ void CvAdc::Init() {
     
     // Configure DMA to read injected values into a slice of the
     // values_ array.
-    dma_init.DMA_PeripheralBaseAddr = (uint32_t)&(config.sdadc->JDATAR);
+    dma_init.DMA_PeripheralBaseAddr = audio_rate_fm
+        ? (uint32_t)&(config.sdadc->RDATAR)
+        : (uint32_t)&(config.sdadc->JDATAR);
     dma_init.DMA_MemoryBaseAddr = audio_rate_fm
         ? (uint32_t)(&audio_rate_fm_[0])
         : (uint32_t)(&values_[current_channel]);
@@ -181,22 +183,29 @@ void CvAdc::Init() {
       channel_map_[config.channel[j].map_to] = current_channel++;
       SDADC_ChannelConfig(
           config.sdadc, config.channel[j].channel, SDADC_Conf_0);
-      // At 47.872 kHz SDADC2 has time for one conversion only. LEVEL remains
-      // configured as an analog pin but is intentionally not selected.
+      // Fast FM uses the regular single-channel group. Keep LEVEL configured in
+      // the injected group but never start it: the hardware cannot interleave a
+      // second channel without interrupting the continuous FM stream.
       if (!audio_rate_fm ||
-          config.channel[j].map_to == CV_ADC_CHANNEL_FM) {
+          config.channel[j].map_to == CV_ADC_CHANNEL_LEVEL) {
         channels |= config.channel[j].channel;
       }
     }
     
     // Select injected channels.
     SDADC_InjectedChannelSelect(config.sdadc, channels);
+
+#if PLAITS_BUILD_FAST_FM
+    if (audio_rate_fm) {
+      SDADC_ChannelSelect(config.sdadc, SDADC_Channel_7);
+      SDADC_ContinuousModeCmd(config.sdadc, ENABLE);
+    }
+#endif
     
     // Control-rate converters are restarted once per UI poll. SDADC2 instead
     // free-runs its sole FM channel; timer-triggered one-shot conversions would
     // take 360 cycles each and reach only 16.7 kHz.
-    SDADC_InjectedContinuousModeCmd(
-        config.sdadc, audio_rate_fm ? ENABLE : DISABLE);
+    SDADC_InjectedContinuousModeCmd(config.sdadc, DISABLE);
     
     // Terminate initialization sequence.
     SDADC_CalibrationSequenceConfig(config.sdadc, SDADC_CalibrationSequence_3);
@@ -209,14 +218,19 @@ void CvAdc::Init() {
 
     // Enable DMA.
     DMA_Cmd(config.dma_channel, ENABLE);
-    SDADC_DMAConfig(config.sdadc, SDADC_DMATransfer_Injected, ENABLE);
+    SDADC_DMAConfig(
+        config.sdadc,
+        audio_rate_fm
+            ? SDADC_DMATransfer_Regular
+            : SDADC_DMATransfer_Injected,
+        ENABLE);
   }
 
-#if PLAITS_BUILD_LINEAR_TZFM
-  // One software start launches the perpetual 50 kHz injected conversion
+#if PLAITS_BUILD_FAST_FM
+  // One software start launches the perpetual 50 kHz regular conversion
   // stream. Convert() must never restart SDADC2 in this build mode.
-  SDADC_ClearFlag(SDADC2, SDADC_FLAG_JOVR);
-  SDADC_SoftwareStartInjectedConv(SDADC2);
+  SDADC_ClearFlag(SDADC2, SDADC_FLAG_ROVR | SDADC_FLAG_JOVR);
+  SDADC_SoftwareStartConv(SDADC2);
 #endif
   Convert();
 }
@@ -225,6 +239,7 @@ void CvAdc::DeInit() {
   for (int i = 0; i < 3; ++i) {
     const ConverterConfiguration& config = converter_configuration[i];
     SDADC_Cmd(config.sdadc, DISABLE);
+    SDADC_DMAConfig(config.sdadc, SDADC_DMATransfer_Regular, DISABLE);
     SDADC_DMAConfig(config.sdadc, SDADC_DMATransfer_Injected, DISABLE);
     DMA_Cmd(config.dma_channel, DISABLE);
   }
@@ -232,10 +247,10 @@ void CvAdc::DeInit() {
 
 void CvAdc::Convert() {
   SDADC_SoftwareStartInjectedConv(SDADC1);
-#if PLAITS_BUILD_LINEAR_TZFM
-  // Cache a scalar reading for normalization detection and for engines that do
-  // not implement linear TZFM. The continuous DMA remains the source used by
-  // capable engines; LEVEL is unavailable in this build mode.
+#if PLAITS_BUILD_FAST_FM
+  // Cache a scalar reading for normalization detection and for engines that
+  // deliberately fall back to control-rate FM. The continuous DMA remains the
+  // source for fast-capable engines; LEVEL is unavailable in this build mode.
   const size_t next = (
       kAudioRateFmBufferSize - DMA_GetCurrDataCounter(DMA2_Channel4)) %
       kAudioRateFmBufferSize;
@@ -250,10 +265,11 @@ void CvAdc::Convert() {
 }
 
 void CvAdc::CopyAudioRateFm(float* destination, size_t size) {
-#if PLAITS_BUILD_LINEAR_TZFM
-  if (SDADC_GetFlagStatus(SDADC2, SDADC_FLAG_JOVR) == SET) {
+#if PLAITS_BUILD_FAST_FM
+  if (SDADC_GetFlagStatus(SDADC2, SDADC_FLAG_ROVR) == SET ||
+      SDADC_GetFlagStatus(SDADC2, SDADC_FLAG_JOVR) == SET) {
     ++audio_rate_fm_overruns_;
-    SDADC_ClearFlag(SDADC2, SDADC_FLAG_JOVR);
+    SDADC_ClearFlag(SDADC2, SDADC_FLAG_ROVR | SDADC_FLAG_JOVR);
   }
   // CNDTR points to the next DMA write. DMA stores the sample before it
   // decrements CNDTR; the barrier keeps the following ring reads ordered after
@@ -275,12 +291,12 @@ void CvAdc::CopyAudioRateFm(float* destination, size_t size) {
 }
 
 void CvAdc::RealignAudioRateFmAfterKnownPause(size_t block_size) {
-#if PLAITS_BUILD_LINEAR_TZFM
+#if PLAITS_BUILD_FAST_FM
   (void)block_size;
   // The caller invokes this immediately after a known blocking operation. A
   // JOVR flag present now was caused by that deliberate pause and must not
   // become a fault.
-  SDADC_ClearFlag(SDADC2, SDADC_FLAG_JOVR);
+  SDADC_ClearFlag(SDADC2, SDADC_FLAG_ROVR | SDADC_FLAG_JOVR);
   const size_t next = (
       kAudioRateFmBufferSize - DMA_GetCurrDataCounter(DMA2_Channel4)) %
       kAudioRateFmBufferSize;

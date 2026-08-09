@@ -215,6 +215,8 @@ def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]
         # gesture, so only that build's guide documents it.
         "calibration": build.enable_calibration == 1,
         "colorBlindMode": color_blind_mode,
+        "linearTzfm": build.linear_tzfm == 1,
+        "fastFm": build.fast_fm == 1,
         "lockedFrequencyPotOption": build.locked_frequency_pot_option,
         "modelCVOption": build.model_cv_option,
     }
@@ -623,6 +625,26 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         "Release the button, then turn FREQUENCY to tune one semitone above or below the current manual pitch. The pitch starts where it was, responds as soon as you turn, and saves automatically two seconds after you stop. "
         "That saved pitch becomes the root used by octave switching and remains after power cycles. Patched V/OCT and FM are not folded into the saved tuning."
     )
+    linear_tzfm = bool(document.get("linearTzfm"))
+    fast_fm = bool(document.get("fastFm"))
+    if linear_tzfm and fast_fm:
+        experimental_fm_note = (
+            "This build enables both experimental FM options. On Waveshaping, Two-op FM, and Vowel FOF, turn the FM attenuverter counter-clockwise for linear through-zero FM or clockwise for regular exponential FM; the center is off. "
+            "FM is digitized continuously at audio rate on Waveshaping and Vowel FOF. Two-op FM keeps both laws at the normal control rate because its oversampled renderer does not have safe fast-mode headroom. "
+            "Fast FM dedicates the shared converter to FM, so LEVEL CV is unavailable throughout this firmware."
+        )
+    elif linear_tzfm:
+        experimental_fm_note = (
+            "This build enables experimental linear TZFM. On Waveshaping, Two-op FM, and Vowel FOF, turn the FM attenuverter counter-clockwise for linear through-zero FM or clockwise for regular exponential FM; the center is off. "
+            "Both laws use the normal control-rate input, and LEVEL CV remains available."
+        )
+    elif fast_fm:
+        experimental_fm_note = (
+            "This build enables experimental Fast FM. Exponential FM keeps its normal bipolar attenuverter response and is digitized continuously at audio rate on Waveshaping and Vowel FOF. "
+            "Models without safe fast-mode headroom, including Two-op FM, automatically retain normal control-rate FM. Fast FM dedicates the shared converter to FM, so LEVEL CV is unavailable throughout this firmware."
+        )
+    else:
+        experimental_fm_note = ""
 
     story.append(bank_map)
     if color_blind_mode:
@@ -671,6 +693,26 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
             ]),
         ),
     ])
+    if experimental_fm_note:
+        story.extend([
+            Spacer(1, 0.12 * inch),
+            Table(
+                [[
+                    Paragraph("EXPERIMENTAL FM", table_header_style),
+                    Paragraph(experimental_fm_note, small_style),
+                ]],
+                colWidths=[1.1 * inch, 5.2 * inch],
+                style=TableStyle([
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#EFECE3")),
+                    ("BOX", (0, 0), (-1, -1), 0.5, line),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                    ("TOPPADDING", (0, 0), (-1, -1), 7),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+                ]),
+            ),
+        ])
     story.extend([
         Spacer(1, 0.12 * inch),
         Table(

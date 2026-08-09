@@ -27,6 +27,7 @@
 // Main synthesis voice.
 
 #include "plaits/dsp/voice.h"
+#include "plaits/dsp/fast_semitone_ratio.h"
 #include "plaits/user_data.h"
 
 namespace plaits {
@@ -236,17 +237,41 @@ void Voice::Render(
   }
   CONSTRAIN(patch_lpg_colour, 0.0f, 1.0f);
 
+  const float raw_fm_amount = patch.frequency_modulation_amount;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  float frequency_offset[kMaxBlockSize];
 #if PLAITS_BUILD_LINEAR_TZFM
-  // The FM attenuverter controls a fixed Hz/volt slope instead of a semitone
-  // span for engines that opt in. Convert the hardware-calibrated FM value back
-  // to volts, then apply a nominal 1 kHz/V slope. A fixed Hz slope is what makes
-  // this linear FM; dividing by the carrier here would turn it back into
-  // exponential/ratio modulation.
-  float linear_fm[kMaxBlockSize];
-  const bool use_linear_tzfm =
+  const bool frequency_offset_capable =
       modulations.frequency_patched && e->linear_tzfm_capable();
+  // On capable engines the attenuverter selects two laws: CCW is fixed-Hz
+  // linear through-zero FM; CW remains Plaits' exponential FM. A narrow centre
+  // zone is genuinely off. Unsupported engines retain stock bipolar exp FM.
+  const bool split_fm_capable = frequency_offset_capable;
+  const bool use_linear_tzfm =
+      split_fm_capable && raw_fm_amount < -0.05f;
+#else
+  const bool split_fm_capable = false;
+  const bool use_linear_tzfm = false;
+#endif
+#if PLAITS_BUILD_FAST_FM
+  // Fast-only builds keep exponential FM on both attenuverter sides. When
+  // linear TZFM is also present, only the CW side uses the exponential law.
+  // Two-op FM deliberately does not opt in: hardware measurements showed its
+  // stock 4x renderer misses deadlines when fed sample-rate modulation.
+  const bool use_audio_rate_exponential_fm =
+      modulations.frequency_patched &&
+      modulations.frequency_audio_rate &&
+      e->fast_fm_capable() &&
+      fabsf(raw_fm_amount) > 0.001f &&
+      (!split_fm_capable || raw_fm_amount > 0.05f);
+#else
+  const bool use_audio_rate_exponential_fm = false;
+#endif
+  const bool use_frequency_offset =
+      use_linear_tzfm || use_audio_rate_exponential_fm;
+#if PLAITS_BUILD_LINEAR_TZFM
   if (use_linear_tzfm) {
-    float amount = patch.frequency_modulation_amount;
+    float amount = -raw_fm_amount;
     amount *= std::max(fabsf(amount) - 0.05f, 0.05f);
     amount *= 1.05f;
     const float scale =
@@ -254,11 +279,14 @@ void Voice::Render(
         (kLinearTzfmHzPerVolt / kFmCalibrationUnitsPerVolt) /
         kCorrectedSampleRate;
     for (size_t i = 0; i < size; ++i) {
-      linear_fm[i] = modulations.frequency_audio[i] * scale;
+      frequency_offset[i] = modulations.frequency_audio[i] * scale;
     }
   }
+#endif
 #else
-  const bool use_linear_tzfm = false;
+  const bool split_fm_capable = false;
+  const bool use_audio_rate_exponential_fm = false;
+  const bool use_frequency_offset = false;
 #endif
 
   if (engine_index != previous_engine_index_ || reload_user_data_) {
@@ -319,8 +347,10 @@ void Voice::Render(
   // PLAITS_STEREO_<X> flag off, so stereo is never routed to it.
   const bool stereo_render = patch.aux_is_stereo() && e->stereo_capable();
   p.stereo = stereo_render;
-#if PLAITS_BUILD_LINEAR_TZFM
-  p.linear_fm = use_linear_tzfm ? linear_fm : NULL;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  p.frequency_offset = use_frequency_offset ? frequency_offset : NULL;
+#else
+  p.frequency_offset = NULL;
 #endif
   p.macro = patch.locked_frequency_pot_option == 1
       ? patch.freqlock_param
@@ -473,16 +503,20 @@ void Voice::Render(
       patch.attenuverter_mode != ATTENUVERTER_MODE_STOCK &&
       !modulations.morph_patched && !preserve_speech_morph;
   
-  // Once the FM jack is routed to an engine's linear input, the attenuverter
-  // must not also fall through to Plaits' unpatched fine-tune/internal pitch
-  // envelope behavior. That fallback is selected by `use_external_modulation`
-  // being false, so explicitly zero its amount for the linear path.
+  // Split mode reserves CCW for TZFM and leaves CW exponential; Fast-only mode
+  // keeps stock bipolar exponential behavior but evaluates it per sample.
+  // Centre in split mode must not fall through to the unpatched fine-tune or
+  // internal pitch-envelope behavior.
   const float note_modulation_amount =
-      use_linear_tzfm ? 0.0f : patch.frequency_modulation_amount;
+      split_fm_capable
+          ? (raw_fm_amount > 0.05f && !use_audio_rate_exponential_fm
+              ? raw_fm_amount
+              : 0.0f)
+          : (use_audio_rate_exponential_fm ? 0.0f : raw_fm_amount);
   p.note = ApplyModulations(
       patch.note + note,
       note_modulation_amount,
-      modulations.frequency_patched && !use_linear_tzfm,
+      modulations.frequency_patched && !use_frequency_offset,
       modulations.frequency,
       use_internal_frequency_envelope,
       internal_envelope_amplitude * \
@@ -490,6 +524,23 @@ void Voice::Render(
       1.0f,
       -119.0f,
       120.0f);
+
+#if PLAITS_BUILD_FAST_FM
+  if (use_audio_rate_exponential_fm) {
+    float amount = raw_fm_amount;
+    amount *= std::max(fabsf(amount) - 0.05f, 0.05f);
+    amount *= 1.05f;
+    const float base_frequency = NoteToFrequency(p.note);
+    for (size_t i = 0; i < size; ++i) {
+      // This is Plaits' stock exponential law evaluated per sample. Engines
+      // consume a normalized-frequency displacement, so subtract the base and
+      // reuse the same signed increment path as linear TZFM.
+      frequency_offset[i] = base_frequency *
+          (FastSemitonesToRatio(
+              amount * modulations.frequency_audio[i]) - 1.0f);
+    }
+  }
+#endif
 
   p.timbre = ApplyModulations(
       patch.timbre,

@@ -154,10 +154,10 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
       ui.RealignAudioInputAfterEngineChange();
     }
     ui.set_active_engine(active_engine);
-#if PLAITS_BUILD_LINEAR_TZFM
+#if PLAITS_BUILD_FAST_FM
     ui.SetAudioRateFmNeeded(
         modulations.frequency_patched &&
-        voice.active_engine_supports_linear_tzfm());
+        voice.active_engine_supports_fast_fm());
 #endif
   }
   

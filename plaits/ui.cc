@@ -216,7 +216,7 @@ bool Ui::OptionInert(int index) const {
   if (index == OPTION_LIGHT_SUBOSC && !patch_->aux_is_subosc()) {
     return true;
   }
-#if PLAITS_BUILD_LINEAR_TZFM
+#if PLAITS_BUILD_FAST_FM
   // SDADC2 is dedicated to the continuous FM stream, so no LEVEL setting can
   // have an effect in this build.
   if (index == OPTION_LIGHT_LEVEL_CV) {
@@ -300,7 +300,7 @@ void Ui::SaveState() {
   }
 
   settings_->SaveState();
-#if PLAITS_BUILD_LINEAR_TZFM
+#if PLAITS_BUILD_FAST_FM
   cv_adc_.RealignAudioRateFmAfterKnownPause(kBlockSize);
 #endif
   precision_root_save_.MarkSaved(EncodeTunedRoot(tuned_root_note_));
@@ -346,7 +346,7 @@ void Ui::UpdateLEDs() {
   leds_.Clear();
   ++pwm_counter_;
 
-#if PLAITS_BUILD_LINEAR_TZFM && PLAITS_INPUT_FAULT_DIAGNOSTICS
+#if PLAITS_BUILD_FAST_FM && PLAITS_INPUT_FAULT_DIAGNOSTICS
   // Qualification-only fault display, latched until reboot. Top to bottom:
   //   LEDs 1-2: SDADC injected-conversion overrun
   //   LED 4: FM ring did not contain enough source samples
@@ -1047,7 +1047,7 @@ void Ui::DetectNormalization() {
   bool expected_value = normalization_probe_state_ >> 31;
   for (int i = 0; i < kNumNormalizedChannels; ++i) {
     CvAdcChannel channel = normalized_channels_[i];
-#if PLAITS_BUILD_LINEAR_TZFM
+#if PLAITS_BUILD_FAST_FM
     // SDADC2 is dedicated to FM in this build, so LEVEL cannot participate in
     // normalization detection and must always behave as unpatched.
     if (channel == CV_ADC_CHANNEL_LEVEL) {
@@ -1086,13 +1086,13 @@ void Ui::ReadAudioRateFm(float* destination, size_t size) {
 }
 
 void Ui::RealignAudioInputAfterEngineChange() {
-#if PLAITS_BUILD_LINEAR_TZFM
+#if PLAITS_BUILD_FAST_FM
   cv_adc_.RealignAudioRateFmAfterKnownPause(kBlockSize);
 #endif
 }
 
 void Ui::SetAudioRateFmNeeded(bool needed) {
-#if PLAITS_BUILD_LINEAR_TZFM
+#if PLAITS_BUILD_FAST_FM
   if (needed && !audio_rate_fm_needed_) {
     // The producer may have wrapped many times while no consumer was active,
     // so a modulo cursor cannot safely resume the previous read position.
@@ -1111,9 +1111,13 @@ void Ui::Poll() {
 #else
   modulations_->hard_sync = 0;
 #endif
-#if PLAITS_BUILD_LINEAR_TZFM
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  modulations_->frequency_audio_rate = false;
+#endif
+#if PLAITS_BUILD_FAST_FM
   if (audio_rate_fm_needed_) {
     ReadAudioRateFm(modulations_->frequency_audio, kBlockSize);
+    modulations_->frequency_audio_rate = true;
   }
 #endif
   for (int i = 0; i < POTS_ADC_CHANNEL_LAST; ++i) {
@@ -1125,7 +1129,17 @@ void Ui::Poll() {
     destination[i] = settings_->calibration_data(i).Transform(
         cv_adc_.float_value(CvAdcChannel(i)));
   }
-#if PLAITS_BUILD_LINEAR_TZFM
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  if (!modulations_->frequency_audio_rate) {
+    // Slow TZFM and fast-mode fallback engines use the ordinary calibrated FM
+    // reading, repeated across the block. This preserves LEVEL and stock ADC
+    // scanning whenever the Fast FM preference is disabled.
+    for (size_t i = 0; i < kBlockSize; ++i) {
+      modulations_->frequency_audio[i] = modulations_->frequency;
+    }
+  }
+#endif
+#if PLAITS_BUILD_FAST_FM
   // The Level jack shares SDADC2 with FM and is intentionally unavailable.
   // Zeroing both fields also prevents a recipe whose saved level-input option
   // was "decay" from applying a phantom modulation.
@@ -1270,7 +1284,7 @@ void Ui::CalibrateC3() {
     c->scale = 24.0f / delta;
     c->offset = 12.0f - c->scale * c1;
     settings_->SavePersistentData();
-#if PLAITS_BUILD_LINEAR_TZFM
+#if PLAITS_BUILD_FAST_FM
     cv_adc_.RealignAudioRateFmAfterKnownPause(kBlockSize);
 #endif
     mode_ = UI_MODE_NORMAL;

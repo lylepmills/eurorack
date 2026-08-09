@@ -36,7 +36,7 @@ export type NormalizedChordTable = {
 // feature gates below use minimums so a newly supported schema cannot get
 // stranded behind an old "10, 11, 12..." whitelist.
 export const minRecipeSchemaVersion = 2;
-export const maxRecipeSchemaVersion = 22;
+export const maxRecipeSchemaVersion = 23;
 const configurationMinSchemaVersion = 4;
 const resourcesMinSchemaVersion = 5;
 const fourBankMinSchemaVersion = 6;       // 32 slots
@@ -53,6 +53,7 @@ const syncInputMinSchemaVersion = 21; // audio-rate hard sync on MODEL
 // v22 moves Sync In's compile-time switch onto its own preference, so a module
 // can reach the mode at runtime without its owner having pre-selected it.
 const syncInputPreferenceMinSchemaVersion = 22;
+const experimentalFmMinSchemaVersion = 23; // independent TZFM law / fast ADC
 const scaleBankMinSchemaVersion = 16;      // recipe-driven scale bank
 export const levelAutoMinSchemaVersion = 16; // engine-aware LEVEL routing
 const speechBanksMinSchemaVersion = 17;      // selectable/custom Speech LPC banks
@@ -130,7 +131,7 @@ export type NormalizedSpeechBanks = {
 };
 
 export type NormalizedRecipe = {
-  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22;
+  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23;
   target: "mutable-instruments-plaits" | "plum-audio-roved";
   firmware: "rubato-plaits";
   // A null entry is an empty slot (v7 short banks); filled slots are engine ids.
@@ -154,6 +155,12 @@ export type NormalizedRecipe = {
     // (v22). Before v22 this was derived from the starting value, so a user who
     // did not pick it at build time could never reach it on the module.
     syncInput?: boolean;
+    // Experimental (v23): on supporting engines, use the FM attenuverter's
+    // CCW side for linear through-zero FM and retain exponential FM on CW.
+    linearTzfm?: boolean;
+    // Experimental (v23): digitize FM continuously at audio rate. FM and LEVEL
+    // share a converter, so this makes LEVEL CV unavailable in the whole build.
+    fastFm?: boolean;
   };
   initialOptions: {
     lockedFrequencyKnob: "octaves" | "decay" | "aux-crossfade" | "macro-4"
@@ -580,6 +587,13 @@ function normalizeConfiguration(
     preferenceValues,
     ["calibration", "colorBlindMode", "navigationMode", "replaceableFmBanks", "syncInput"],
   );
+  const carriesExperimentalFm = hasExactKeys(
+    preferenceValues,
+    [
+      "calibration", "colorBlindMode", "fastFm", "linearTzfm",
+      "navigationMode", "replaceableFmBanks", "syncInput",
+    ],
+  );
   const legacyInitialOptions = hasExactKeys(optionValues, [
     "auxOutput", "chordTable", "holdOnTrigger", "levelInput",
     "lockedFrequencyKnob", "modelInput", "suboscillatorOctave",
@@ -589,15 +603,20 @@ function normalizeConfiguration(
     "lockedFrequencyKnob", "modelInput", "suboscillatorOctave",
   ]);
   if ((!legacyPreferences && !carriesCalibration && !carriesColorBlindMode
-        && !carriesReplaceableFmBanks && !carriesSyncInput)
+        && !carriesReplaceableFmBanks && !carriesSyncInput && !carriesExperimentalFm)
       || ((carriesCalibration || carriesColorBlindMode || carriesReplaceableFmBanks
-          || carriesSyncInput)
+          || carriesSyncInput || carriesExperimentalFm)
         && typeof preferenceValues.calibration !== "boolean")
-      || ((carriesColorBlindMode || carriesReplaceableFmBanks || carriesSyncInput)
+      || ((carriesColorBlindMode || carriesReplaceableFmBanks || carriesSyncInput
+          || carriesExperimentalFm)
         && typeof preferenceValues.colorBlindMode !== "boolean")
-      || ((carriesReplaceableFmBanks || carriesSyncInput)
+      || ((carriesReplaceableFmBanks || carriesSyncInput || carriesExperimentalFm)
         && typeof preferenceValues.replaceableFmBanks !== "boolean")
-      || (carriesSyncInput && typeof preferenceValues.syncInput !== "boolean")
+      || ((carriesSyncInput || carriesExperimentalFm)
+        && typeof preferenceValues.syncInput !== "boolean")
+      || (carriesExperimentalFm
+        && (typeof preferenceValues.linearTzfm !== "boolean"
+          || typeof preferenceValues.fastFm !== "boolean"))
       || (!legacyInitialOptions && !carriesAttenuverterMode)
       || !isOneOf(preferenceValues.navigationMode, ["linear", "banked"] as const)
       || !isOneOf(optionValues.lockedFrequencyKnob, [
@@ -621,13 +640,26 @@ function normalizeConfiguration(
       `Unpatched attenuverter starting mode requires recipe schema version ${attenuverterModeMinSchemaVersion}.`,
     );
   }
-  const calibration = (carriesCalibration || carriesColorBlindMode || carriesReplaceableFmBanks)
+  const calibration = (carriesCalibration || carriesColorBlindMode || carriesReplaceableFmBanks
+    || carriesSyncInput || carriesExperimentalFm)
     && preferenceValues.calibration === true;
-  const colorBlindMode = (carriesColorBlindMode || carriesReplaceableFmBanks)
+  const colorBlindMode = (carriesColorBlindMode || carriesReplaceableFmBanks
+    || carriesSyncInput || carriesExperimentalFm)
     && preferenceValues.colorBlindMode === true;
-  const replaceableFmBanks = (carriesReplaceableFmBanks || carriesSyncInput)
+  const replaceableFmBanks = (carriesReplaceableFmBanks || carriesSyncInput
+    || carriesExperimentalFm)
     && preferenceValues.replaceableFmBanks === true;
-  const syncInput = carriesSyncInput && preferenceValues.syncInput === true;
+  const syncInput = (carriesSyncInput || carriesExperimentalFm)
+    && preferenceValues.syncInput === true;
+  const linearTzfm = carriesExperimentalFm && preferenceValues.linearTzfm === true;
+  const fastFm = carriesExperimentalFm && preferenceValues.fastFm === true;
+  if ((linearTzfm || fastFm)
+      && Number(candidate.schemaVersion) < experimentalFmMinSchemaVersion) {
+    throw new ContractError(
+      "unsupported_schema",
+      `Experimental FM preferences require recipe schema version ${experimentalFmMinSchemaVersion}.`,
+    );
+  }
   if (syncInput
       && Number(candidate.schemaVersion) < syncInputPreferenceMinSchemaVersion) {
     throw new ContractError(
@@ -697,6 +729,8 @@ function normalizeConfiguration(
       colorBlindMode,
       replaceableFmBanks,
       syncInput,
+      linearTzfm,
+      fastFm,
     },
     initialOptions: {
       lockedFrequencyKnob: optionValues.lockedFrequencyKnob,
@@ -931,7 +965,9 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     // (v8); a short-bank recipe (a trailing empty slot) stays v7; a candidate that
     // carried v6 resources (even an empty custom-bank list, e.g. a 32-slot recipe)
     // stays v6; else v5.
-    schemaVersion: configuration.preferences.syncInput ? 22
+    schemaVersion: configuration.preferences.linearTzfm
+      || configuration.preferences.fastFm ? 23
+      : configuration.preferences.syncInput ? 22
       : configuration.preferences.replaceableFmBanks ? 20
       : configuration.initialOptions.lockedFrequencyKnob === "triggered-envelope"
       || configuration.initialOptions.lockedFrequencyKnob === "gated-envelope" ? 19
@@ -1015,6 +1051,8 @@ export async function computeManualKey(
     // prints, so they must change its cache identity.
     calibration: recipe.preferences.calibration,
     colorBlindMode: recipe.preferences.colorBlindMode,
+    linearTzfm: recipe.preferences.linearTzfm,
+    fastFm: recipe.preferences.fastFm,
     // A non-Octaves starting assignment adds the locked-octave shortcut callout.
     lockedFrequencyKnob: recipe.initialOptions.lockedFrequencyKnob,
     // A Sync-enabled guide adds the fifth MODEL-input setting and its warning.
