@@ -134,6 +134,7 @@ class RingModEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
+  virtual bool linear_tzfm_capable() const { return true; }
   // Pattern B: mono AUX is the bare modulator; the stereo branch replaces it
   // with the two-way ring product so L/R stay a matched pair.
   virtual bool stereo_capable() const { return PLAITS_STEREO_RING_MOD; }

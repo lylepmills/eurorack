@@ -259,6 +259,26 @@ void VirtualAnalogEngine::Render(
   const float auxiliary_sync_f = NoteToFrequency(
       parameters.note + auxiliary_detune + sync_amount * 48.0f);
 
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  float auxiliary_frequency_offset[kMaxBlockSize];
+  float primary_sync_frequency_offset[kMaxBlockSize];
+  float auxiliary_sync_frequency_offset[kMaxBlockSize];
+  const float auxiliary_ratio = auxiliary_f /
+      (primary_f > 1.0e-9f ? primary_f : 1.0e-9f);
+  const float primary_sync_ratio = primary_sync_f /
+      (primary_f > 1.0e-9f ? primary_f : 1.0e-9f);
+  const float auxiliary_sync_ratio = auxiliary_sync_f /
+      (primary_f > 1.0e-9f ? primary_f : 1.0e-9f);
+  if (parameters.frequency_offset) {
+    for (size_t i = 0; i < size; ++i) {
+      const float offset = parameters.frequency_offset[i];
+      auxiliary_frequency_offset[i] = offset * auxiliary_ratio;
+      primary_sync_frequency_offset[i] = offset * primary_sync_ratio;
+      auxiliary_sync_frequency_offset[i] = offset * auxiliary_sync_ratio;
+    }
+  }
+#endif
+
   float shape = parameters.morph * 1.5f;
   CONSTRAIN(shape, 0.0f, 1.0f);
 
@@ -269,6 +289,32 @@ void VirtualAnalogEngine::Render(
   // right channel instead. primary_/auxiliary_ are only used here, so freezing
   // their phases in stereo has no audible effect on the OUT oscillators.
   if (!(PLAITS_STEREO_VIRTUAL_ANALOG && parameters.stereo)) {
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      primary_.RenderLinearFm<true, false>(
+          primary_f,
+          primary_sync_f,
+          pw,
+          shape,
+          0.0f,
+          parameters.frequency_offset,
+          primary_sync_frequency_offset,
+          out,
+          size,
+          PLAITS_HARD_SYNC_EVENTS(parameters));
+      auxiliary_.RenderLinearFm<true, false>(
+          auxiliary_f,
+          auxiliary_sync_f,
+          pw,
+          shape,
+          0.0f,
+          auxiliary_frequency_offset,
+          auxiliary_sync_frequency_offset,
+          aux,
+          size,
+          PLAITS_HARD_SYNC_EVENTS(parameters));
+    } else {
+#endif
     primary_.Render(
         primary_f,
         primary_sync_f,
@@ -285,6 +331,9 @@ void VirtualAnalogEngine::Render(
         aux,
         size,
         PLAITS_HARD_SYNC_EVENTS(parameters));
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    }
+#endif
     for (size_t i = 0; i < size; ++i) {
       aux[i] = (aux[i] - out[i]) * 0.5f;
     }
@@ -314,6 +363,37 @@ void VirtualAnalogEngine::Render(
   
   const float square_sync_f = NoteToFrequency(
       parameters.note + square_sync_ratio);
+
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  float square_sync_frequency_offset[kMaxBlockSize];
+  if (parameters.frequency_offset) {
+    const float square_ratio = square_sync_f /
+        (primary_f > 1.0e-9f ? primary_f : 1.0e-9f);
+    for (size_t i = 0; i < size; ++i) {
+      square_sync_frequency_offset[i] =
+          parameters.frequency_offset[i] * square_ratio;
+    }
+    sync_.RenderLinearFm<true, false>(
+        primary_f,
+        square_sync_f,
+        square_pw,
+        1.0f,
+        0.0f,
+        parameters.frequency_offset,
+        square_sync_frequency_offset,
+        temp_buffer_,
+        size,
+        PLAITS_HARD_SYNC_EVENTS(parameters));
+    variable_saw_.RenderLinearFm(
+        auxiliary_f,
+        saw_pw,
+        saw_shape,
+        auxiliary_frequency_offset,
+        out,
+        size,
+        PLAITS_HARD_SYNC_EVENTS(parameters));
+  } else {
+#endif
   
   sync_.Render(
       primary_f,
@@ -330,6 +410,9 @@ void VirtualAnalogEngine::Render(
       out,
       size,
       PLAITS_HARD_SYNC_EVENTS(parameters));
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  }
+#endif
   
   float norm = 1.0f / (std::max(square_gain, saw_gain));
   const float oscillator_balance = parameters.macro;

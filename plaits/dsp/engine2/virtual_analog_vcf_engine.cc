@@ -88,9 +88,36 @@ void VirtualAnalogVCFEngine::Render(
   float sub_gain = max(fabsf(parameters.morph - 0.5f) - 0.3f, 0.0f) * 5.0f;
 
   const uint32_t hard_sync = PLAITS_HARD_SYNC_EVENTS(parameters);
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  if (parameters.frequency_offset) {
+    float sub_frequency_offset[kMaxBlockSize];
+    for (size_t i = 0; i < size; ++i) {
+      sub_frequency_offset[i] = parameters.frequency_offset[i] * 0.501f;
+    }
+    oscillator_.RenderLinearFm(
+        f0,
+        pw,
+        shape,
+        parameters.frequency_offset,
+        out,
+        size,
+        hard_sync);
+    sub_oscillator_.RenderLinearFm(
+        f0 * 0.501f,
+        0.5f,
+        1.0f,
+        sub_frequency_offset,
+        aux,
+        size,
+        hard_sync);
+  } else {
+#endif
   oscillator_.Render(f0, pw, shape, out, size, hard_sync);
   sub_oscillator_.Render(
       f0 * 0.501f, 0.5f, 1.0f, aux, size, hard_sync);
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  }
+#endif
   
   const float cutoff = f0 * SemitonesToRatio(
       (parameters.timbre - 0.2f) * 120.0f);

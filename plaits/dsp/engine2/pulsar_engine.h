@@ -30,6 +30,7 @@ class PulsarEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
+  virtual bool linear_tzfm_capable() const { return true; }
   // The two pulsaret trains are inherently decorrelated (see header comment):
   // stereo mode just relabels the existing OUT/AUX pair as left/right.
   virtual bool stereo_capable() const { return true; }

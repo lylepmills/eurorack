@@ -5,6 +5,7 @@
 // Braids' three FM models -- FM, FBFM and WTFM -- merged into one slot.
 
 #include "plaits/dsp/engine2/raw_fm_engine.h"
+#include "plaits/build_config.h"
 
 #include <algorithm>
 #include <cmath>
@@ -98,11 +99,24 @@ void RawFmEngine::Render(
   const float index = parameters.timbre * \
       (kRawFmEdgeIndex + (kRawFmCentreIndex - kRawFmEdgeIndex) * centre) * \
       (1.0f + (attenuation - 1.0f) * phase_feedback);
+  const float modulator_ratio = modulator_frequency /
+      (frequency > 1.0e-9f ? frequency : 1.0e-9f);
 
   for (size_t i = 0; i < size; ++i) {
-    phase_ += frequency;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    const float root_offset = parameters.frequency_offset
+        ? parameters.frequency_offset[i]
+        : 0.0f;
+#else
+    const float root_offset = 0.0f;
+#endif
+    float carrier_frequency = frequency + root_offset;
+    CONSTRAIN(carrier_frequency, -0.5f, 0.499999f);
+    phase_ += carrier_frequency;
     if (phase_ >= 1.0f) {
       phase_ -= 1.0f;
+    } else if (phase_ < 0.0f) {
+      phase_ += 1.0f;
     }
 
     // WTFM feeds the output into the modulator's FREQUENCY, around Braids'
@@ -120,7 +134,8 @@ void RawFmEngine::Render(
     float feedback_steps = floorf(previous_sample_ * kRawFmWtfmFeedbackSteps);
     CONSTRAIN(feedback_steps, -kRawFmWtfmFeedbackSteps,
         kRawFmWtfmFeedbackSteps - 1.0f);
-    float increment = modulator_frequency * (centre_ratio + \
+    float increment = (modulator_frequency + root_offset * modulator_ratio) *
+        (centre_ratio + \
         kRawFmFrequencyFeedback * frequency_feedback * depth * \
         feedback_steps * (1.0f / kRawFmWtfmFeedbackSteps));
     // Braids accumulates this into a uint32, which wraps for free at any
@@ -128,10 +143,12 @@ void RawFmEngine::Render(
     // chaotic branch drives the increment past 1.0 the phase runs away, and
     // Sine's int32 truncation then reads far outside lut_sine. Clamping the
     // increment to a real frequency keeps one subtract sufficient.
-    CONSTRAIN(increment, 0.0f, 0.5f);
+    CONSTRAIN(increment, -0.5f, 0.499999f);
     modulator_phase_ += increment;
     if (modulator_phase_ >= 1.0f) {
       modulator_phase_ -= 1.0f;
+    } else if (modulator_phase_ < 0.0f) {
+      modulator_phase_ += 1.0f;
     }
 
     // FBFM feeds it into the modulator's PHASE instead.

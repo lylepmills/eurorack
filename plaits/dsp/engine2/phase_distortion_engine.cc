@@ -28,6 +28,7 @@
 // modulator.
 
 #include "plaits/dsp/engine2/phase_distortion_engine.h"
+#include "plaits/build_config.h"
 
 #include <algorithm>
 
@@ -73,10 +74,48 @@ void PhaseDistortionEngine::Render(
   // Upsample by 2x
   float* synced = &temp_buffer_[0];
   float* free_running = &temp_buffer_[2 * size];
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  if (parameters.frequency_offset) {
+    float master_offset[2 * kMaxBlockSize];
+    float modulator_offset[2 * kMaxBlockSize];
+    const float modulator_ratio = modulator_f /
+        (f0 > 1.0e-9f ? f0 : 1.0e-9f);
+    for (size_t i = 0; i < size; ++i) {
+      const float root_offset = parameters.frequency_offset[i] * 0.5f;
+      master_offset[2 * i] = root_offset;
+      master_offset[2 * i + 1] = root_offset;
+      modulator_offset[2 * i] = root_offset * modulator_ratio;
+      modulator_offset[2 * i + 1] = root_offset * modulator_ratio;
+    }
+    shaper_.RenderLinearFm<true, true>(
+        f0,
+        modulator_f,
+        pw,
+        0.0f,
+        amount,
+        master_offset,
+        modulator_offset,
+        synced,
+        2 * size);
+    modulator_.RenderLinearFm<false, true>(
+        f0,
+        modulator_f,
+        pw,
+        0.0f,
+        amount,
+        master_offset,
+        modulator_offset,
+        free_running,
+        2 * size);
+  } else {
+#endif
   shaper_.Render<true, true>(
       f0, modulator_f, pw, 0.0f, amount, synced, 2 * size);
   modulator_.Render<false, true>(
       f0, modulator_f, pw, 0.0f, amount, free_running, 2 * size);
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  }
+#endif
   
   for (size_t i = 0; i < size; ++i) {
     // Naive 0.5x downsampling.

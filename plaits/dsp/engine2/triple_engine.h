@@ -137,6 +137,7 @@ class TripleEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
+  virtual bool linear_tzfm_capable() const { return true; }
   // Pattern A: the three-voice mix against the undetuned root.
   virtual bool stereo_capable() const { return true; }
 

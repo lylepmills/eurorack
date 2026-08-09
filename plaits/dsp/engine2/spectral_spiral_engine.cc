@@ -4,6 +4,7 @@
 // Complex frequency-shift feedback synthesis engine.
 
 #include "plaits/dsp/engine2/spectral_spiral_engine.h"
+#include "plaits/build_config.h"
 
 #include <algorithm>
 #include <cmath>
@@ -104,7 +105,14 @@ void SpectralSpiralEngine::Render(
 
   const int harmonic[4] = { 1, 2, 3, 5 };
   for (size_t i = 0; i < size; ++i) {
-    source_phase_ = Wrap(source_phase_ + source_frequency);
+    float instantaneous_source_frequency = source_frequency;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      instantaneous_source_frequency += parameters.frequency_offset[i];
+      CONSTRAIN(instantaneous_source_frequency, -0.24f, 0.24f);
+    }
+#endif
+    source_phase_ = Wrap(source_phase_ + instantaneous_source_frequency);
     float source_i = 0.0f;
     float source_q = 0.0f;
     for (int partial = 0; partial < 4; ++partial) {

@@ -107,6 +107,34 @@ void VirtualAnalogDualEngine::Render(
   float auxiliary_pw = 0.5f + (parameters.morph - 0.66f) * 1.4f;
   CONSTRAIN(auxiliary_pw, 0.5f, 0.99f);
 
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  float auxiliary_frequency_offset[kMaxBlockSize];
+  float sync_frequency_offset[kMaxBlockSize];
+  const float auxiliary_ratio = auxiliary_f /
+      (primary_f > 1.0e-9f ? primary_f : 1.0e-9f);
+  const float sync_ratio = sync_f /
+      (primary_f > 1.0e-9f ? primary_f : 1.0e-9f);
+  if (parameters.frequency_offset) {
+    for (size_t i = 0; i < size; ++i) {
+      const float offset = parameters.frequency_offset[i];
+      auxiliary_frequency_offset[i] = offset * auxiliary_ratio;
+      sync_frequency_offset[i] = offset * sync_ratio;
+    }
+  }
+#endif
+
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  if (parameters.frequency_offset) {
+    primary_.RenderLinearFm(
+        primary_f,
+        primary_pw,
+        primary_shape,
+        parameters.frequency_offset,
+        temp_buffer_,
+        size,
+        PLAITS_HARD_SYNC_EVENTS(parameters));
+  } else {
+#endif
   primary_.Render(
       primary_f,
       primary_pw,
@@ -114,8 +142,23 @@ void VirtualAnalogDualEngine::Render(
       temp_buffer_,
       size,
       PLAITS_HARD_SYNC_EVENTS(parameters));
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  }
+#endif
   // OUT is scratch until the final mix. Keeping the normal secondary here
   // leaves AUX available for the synchronized secondary in mono.
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  if (parameters.frequency_offset) {
+    auxiliary_.RenderLinearFm(
+        auxiliary_f,
+        auxiliary_pw,
+        auxiliary_shape,
+        auxiliary_frequency_offset,
+        out,
+        size,
+        PLAITS_HARD_SYNC_EVENTS(parameters));
+  } else {
+#endif
   auxiliary_.Render(
       auxiliary_f,
       auxiliary_pw,
@@ -123,6 +166,9 @@ void VirtualAnalogDualEngine::Render(
       out,
       size,
       PLAITS_HARD_SYNC_EVENTS(parameters));
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  }
+#endif
 
   if (PLAITS_STEREO_VIRTUAL_ANALOG_DUAL && parameters.stereo) {
     // Both channels are complementary views of the same original 50/50 mix.
@@ -136,6 +182,21 @@ void VirtualAnalogDualEngine::Render(
       aux[i] = primary + (secondary - primary) * right_secondary;
     }
   } else {
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      sync_.RenderLinearFm<true, false>(
+          primary_f,
+          sync_f,
+          auxiliary_pw,
+          auxiliary_shape,
+          0.0f,
+          parameters.frequency_offset,
+          sync_frequency_offset,
+          aux,
+          size,
+          PLAITS_HARD_SYNC_EVENTS(parameters));
+    } else {
+#endif
     sync_.Render(
         primary_f,
         sync_f,
@@ -144,6 +205,9 @@ void VirtualAnalogDualEngine::Render(
         aux,
         size,
         PLAITS_HARD_SYNC_EVENTS(parameters));
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    }
+#endif
     for (size_t i = 0; i < size; ++i) {
       const float primary = temp_buffer_[i];
       out[i] = (out[i] + primary) * 0.5f;

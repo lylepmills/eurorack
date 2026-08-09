@@ -164,6 +164,37 @@ class AdditiveSawOscillator {
     }
   }
 
+  inline void RenderLinearFm(
+      float frequency,
+      float level,
+      const float* frequency_offset,
+      float* out,
+      size_t size,
+      uint32_t hard_sync) {
+    if (!frequency_offset) {
+      Render(frequency, level, out, size, hard_sync);
+      return;
+    }
+    stmlib::ParameterInterpolator fm(&frequency_, frequency, size);
+    stmlib::ParameterInterpolator gain(&gain_, level, size);
+    while (size--) {
+      if (hard_sync & 1) {
+        phase_ = 0.0f;
+      }
+      hard_sync >>= 1;
+      float f = fm.Next() + *frequency_offset++;
+      CONSTRAIN(f, -kMaxFrequency, kMaxFrequency);
+      phase_ += f;
+      if (phase_ >= 1.0f) {
+        phase_ -= 1.0f;
+      } else if (phase_ < 0.0f) {
+        phase_ += 1.0f;
+      }
+      *out++ += (2.0f * phase_ - 1.0f) * gain.Next();
+    }
+    next_sample_ = phase_;
+  }
+
  private:
   template<bool process_hard_sync>
   inline void RenderInternal(
@@ -246,11 +277,25 @@ class SwarmVoice {
       float* saw,
       float* sine,
       size_t size,
-      uint32_t hard_sync) {
+      uint32_t hard_sync,
+      const float* frequency_offset) {
+    const float root = f0;
     const float amplitude = Step(
         density, burst_mode, start_burst, spread, size_ratio, &f0);
-    saw_.Render(f0, amplitude, saw, size, hard_sync);
-    sine_.Render(f0, amplitude, sine, size, hard_sync);
+    if (frequency_offset) {
+      float scaled_offset[kMaxBlockSize];
+      const float ratio = f0 / (root > 1.0e-9f ? root : 1.0e-9f);
+      for (size_t i = 0; i < size; ++i) {
+        scaled_offset[i] = frequency_offset[i] * ratio;
+      }
+      saw_.RenderLinearFm(
+          f0, amplitude, scaled_offset, saw, size, hard_sync);
+      sine_.RenderLinearFm(
+          f0, amplitude, scaled_offset, sine, size, hard_sync);
+    } else {
+      saw_.Render(f0, amplitude, saw, size, hard_sync);
+      sine_.Render(f0, amplitude, sine, size, hard_sync);
+    }
   };
 
   // alt firmware: stereo render - the sawtooth only, the sine bank is
@@ -264,10 +309,22 @@ class SwarmVoice {
       float size_ratio,
       float* saw,
       size_t size,
-      uint32_t hard_sync) {
+      uint32_t hard_sync,
+      const float* frequency_offset) {
+    const float root = f0;
     const float amplitude = Step(
         density, burst_mode, start_burst, spread, size_ratio, &f0);
-    saw_.Render(f0, amplitude, saw, size, hard_sync);
+    if (frequency_offset) {
+      float scaled_offset[kMaxBlockSize];
+      const float ratio = f0 / (root > 1.0e-9f ? root : 1.0e-9f);
+      for (size_t i = 0; i < size; ++i) {
+        scaled_offset[i] = frequency_offset[i] * ratio;
+      }
+      saw_.RenderLinearFm(
+          f0, amplitude, scaled_offset, saw, size, hard_sync);
+    } else {
+      saw_.Render(f0, amplitude, saw, size, hard_sync);
+    }
   };
 
  private:
@@ -314,6 +371,7 @@ class SwarmEngine : public Engine {
       bool* already_enveloped);
   virtual bool stereo_capable() const { return PLAITS_STEREO_SWARM; }
   virtual bool hard_sync_capable() const { return true; }
+  virtual bool linear_tzfm_capable() const { return true; }
 
  private:
   SwarmVoice* swarm_voice_;

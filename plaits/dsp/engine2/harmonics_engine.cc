@@ -5,6 +5,7 @@
 // Braids' HARMONICS: twelve partials under two Lorentzian bumps.
 
 #include "plaits/dsp/engine2/harmonics_engine.h"
+#include "plaits/build_config.h"
 
 #include <algorithm>
 
@@ -166,12 +167,23 @@ void HarmonicsEngine::Render(
       &target_aux[0]);
 
   ParameterInterpolator fm(&frequency_, frequency, size);
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  const float* frequency_offset = parameters.frequency_offset;
+#else
+  const float* frequency_offset = NULL;
+#endif
 
   while (size--) {
-    const float f = fm.Next();
+    float f = fm.Next();
+    if (frequency_offset) {
+      f += *frequency_offset++;
+      CONSTRAIN(f, -0.5f, 0.499999f);
+    }
     phase_ += f;
     if (phase_ >= 1.0f) {
       phase_ -= 1.0f;
+    } else if (phase_ < 0.0f) {
+      phase_ += 1.0f;
     }
 
     float sum = 0.0f;
