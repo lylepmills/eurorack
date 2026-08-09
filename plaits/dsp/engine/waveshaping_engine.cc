@@ -82,11 +82,11 @@ void WaveshapingEngine::Render(
   
   // Start from bandlimited slope signal.
   const uint32_t hard_sync = PLAITS_HARD_SYNC_EVENTS(parameters);
-#if PLAITS_BUILD_LINEAR_TZFM
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
   slope_.RenderLinearFm<OSCILLATOR_SHAPE_SLOPE>(
-      f0, pw, parameters.linear_fm, out, size, hard_sync);
+      f0, pw, parameters.frequency_offset, out, size, hard_sync);
   triangle_.RenderLinearFm<OSCILLATOR_SHAPE_SLOPE>(
-      f0, 0.5f, parameters.linear_fm, aux, size, hard_sync);
+      f0, 0.5f, parameters.frequency_offset, aux, size, hard_sync);
 #else
   slope_.Render<OSCILLATOR_SHAPE_SLOPE>(f0, pw, out, size, hard_sync);
   triangle_.Render<OSCILLATOR_SHAPE_SLOPE>(

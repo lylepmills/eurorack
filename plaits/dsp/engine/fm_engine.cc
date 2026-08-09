@@ -134,13 +134,13 @@ void FMEngine::RenderInternal(
     StereoPanGains(0.6f, &sub_left, &sub_right);
   }
 
-#if PLAITS_BUILD_LINEAR_TZFM
-  if (parameters.linear_fm) {
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  if (parameters.frequency_offset) {
     const float modulator_ratio = target_modulator_frequency /
         (target_carrier_frequency > 1.0e-9f
             ? target_carrier_frequency
             : 1.0e-9f);
-    const float* linear_fm = parameters.linear_fm;
+    const float* frequency_offset = parameters.frequency_offset;
     while (size--) {
       if (process_hard_sync) {
         if (hard_sync & 1) {
@@ -165,7 +165,7 @@ void FMEngine::RenderInternal(
       // feedback multiplier is in [0.5, 1.5], which then guarantees every
       // signed inner increment remains representable without four costly
       // floating-point clamp/compare sequences in the oversampling loop.
-      const float root_offset = *linear_fm++ * 0.25f;
+      const float root_offset = *frequency_offset++ * 0.25f;
       float carrier = carrier_frequency.Next() + root_offset;
       float modulator =
           modulator_frequency.Next() + root_offset * modulator_ratio;

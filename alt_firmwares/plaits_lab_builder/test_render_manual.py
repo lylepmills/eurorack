@@ -87,6 +87,32 @@ class RenderManualTest(unittest.TestCase):
         self.assertIn("stereo output may exceed", SYNC_INPUT_OPTIONS_NOTE)
 
     @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
+    def test_experimental_fm_build_prints_law_speed_and_level_tradeoffs(self) -> None:
+        recipe = self.calibration_recipe(False)
+        recipe["schemaVersion"] = 23
+        recipe["preferences"] = {
+            "navigationMode": "linear",
+            "calibration": False,
+            "colorBlindMode": False,
+            "replaceableFmBanks": False,
+            "syncInput": False,
+            "linearTzfm": True,
+            "fastFm": True,
+        }
+        recipe["initialOptions"]["attenuverterMode"] = "stock"
+        document = manual_document(recipe)
+        self.assertIs(document["linearTzfm"], True)
+        self.assertIs(document["fastFm"], True)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "experimental-fm.pdf"
+            render_pdf(document, output)
+            printed = pdf_strings(output).replace(")(", " ")
+            self.assertIn("EXPERIMENTAL FM", printed)
+            self.assertIn("counter-clockwise for linear through-zero FM", printed)
+            self.assertIn("Two-op FM keeps both laws at the normal control rate", printed)
+            self.assertIn("LEVEL CV is unavailable", printed)
+
+    @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
     def test_sync_build_prints_the_warning_and_fifth_model_input_setting(self) -> None:
         recipe = self.calibration_recipe(False)
         recipe["schemaVersion"] = 22

@@ -184,9 +184,9 @@ void VowelFofEngine::Render(
   // once per sample rather than once per block: 77% of the CPU budget against
   // 72%. The five-filter bank is the rest and is irreducible.
   float excitation[kMaxBlockSize];
-#if PLAITS_BUILD_LINEAR_TZFM
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
   excitation_.RenderLinearFm<OSCILLATOR_SHAPE_SAW>(
-      frequency, 0.0f, parameters.linear_fm, excitation, size);
+      frequency, 0.0f, parameters.frequency_offset, excitation, size);
 #else
   excitation_.Render<OSCILLATOR_SHAPE_SAW>(
       frequency, 0.0f, excitation, size);

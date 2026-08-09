@@ -237,6 +237,87 @@ test("schema 21 carries the experimental MODEL-input Sync In option", async () =
   assert.equal(normalizeRecipe(preferenceOnly).preferences.syncInput, true);
 });
 
+test("schema 23 carries independent experimental TZFM and Fast FM preferences", async () => {
+  const publicCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const chordCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_chord_tables/catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const engines = new Map(
+    publicCatalog.engines.map((engine: { id: string }) => [engine.id, engine]),
+  );
+  const base = structuredClone(fixture) as any;
+  base.schemaVersion = 23;
+  base.slots = fixture.slots.map((engineId: string) => {
+    const engine = engines.get(engineId) as {
+      packageId: string;
+      version: string;
+      digest: string;
+    };
+    return {
+      engine: engineId,
+      package: engine.packageId,
+      version: engine.version,
+      digest: engine.digest,
+    };
+  });
+  base.initialOptions = {
+    lockedFrequencyKnob: "octaves",
+    modelInput: "model",
+    levelInput: "level",
+    auxOutput: "alternate-model",
+    suboscillatorOctave: 0,
+    chordTable: "original",
+    holdOnTrigger: false,
+    attenuverterMode: "stock",
+  };
+  base.resources = { chordTables: chordCatalog.tables };
+
+  for (const linearTzfm of [false, true]) {
+    for (const fastFm of [false, true]) {
+      const recipe = structuredClone(base);
+      recipe.preferences = {
+        navigationMode: "linear",
+        calibration: false,
+        colorBlindMode: false,
+        replaceableFmBanks: false,
+        syncInput: false,
+        linearTzfm,
+        fastFm,
+      };
+      const normalized = normalizeRecipe(recipe);
+      assert.equal(normalized.preferences.linearTzfm, linearTzfm);
+      assert.equal(normalized.preferences.fastFm, fastFm);
+      // The explicit attenuverterMode field already requires v18; either FM
+      // experiment raises that normalized floor to v23.
+      assert.equal(normalized.schemaVersion, linearTzfm || fastFm ? 23 : 18);
+    }
+  }
+
+  const tooOld = structuredClone(base);
+  tooOld.schemaVersion = 22;
+  tooOld.preferences = {
+    navigationMode: "linear",
+    calibration: false,
+    colorBlindMode: false,
+    replaceableFmBanks: false,
+    syncInput: false,
+    linearTzfm: true,
+    fastFm: false,
+  };
+  assert.throws(() => normalizeRecipe(tooOld), /schema version 23/);
+
+  const nonBoolean = structuredClone(base);
+  nonBoolean.preferences = { ...tooOld.preferences, linearTzfm: "yes" };
+  assert.throws(
+    () => normalizeRecipe(nonBoolean),
+    (error: { code?: string }) => error.code === "invalid_preferences",
+  );
+});
+
 test("automatic LEVEL routing is carried only by schema 16", async () => {
   const publicCatalog = JSON.parse(await readFile(
     new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),

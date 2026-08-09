@@ -25,6 +25,7 @@
 #include "plaits/dsp/dsp.h"
 #include "plaits/build_config.h"
 #include "plaits/drivers/audio_rate_fm_resampler.h"
+#include "plaits/dsp/fast_semitone_ratio.h"
 #include "plaits/pot_controller.h"
 
 #include "plaits/dsp/chords/chord_bank.h"
@@ -263,13 +264,13 @@ void ValidateLinearTzfmTwoOpFm() {
     float stopped_out[kAudioBlockSize];
     float aux[kAudioBlockSize];
 
-    p.linear_fm = forward_fm;
+    p.frequency_offset = forward_fm;
     forward.Render(
         p, forward_out, aux, kAudioBlockSize, NULL);
-    p.linear_fm = reverse_fm;
+    p.frequency_offset = reverse_fm;
     reverse.Render(
         p, reverse_out, aux, kAudioBlockSize, NULL);
-    p.linear_fm = stopped_fm;
+    p.frequency_offset = stopped_fm;
     stopped.Render(
         p, stopped_out, aux, kAudioBlockSize, NULL);
 
@@ -3767,6 +3768,19 @@ void ValidateCustomSpeechBankLevelMatching() {
 }
 
 void ValidateAudioRateFmRecovery() {
+  for (int i = 0; i <= 4096; ++i) {
+    const float semitones = -127.875f + i * (255.75f / 4096.0f);
+    const float reference = SemitonesToRatio(semitones);
+    const float optimized = FastSemitonesToRatio(semitones);
+    const float relative_error = fabsf(optimized / reference - 1.0f);
+    // Float rounding can choose the adjacent 1/256-semitone entry; this bound
+    // is one table step (about 0.39 cents), not a perceptual tolerance.
+    if (relative_error > 0.00023f) {
+      fprintf(stderr, "Fast semitone lookup exceeded one table step\n");
+      abort();
+    }
+  }
+
   AudioRateFmResampler resampler;
   volatile int16_t ring[AudioRateFmResampler::kRingBufferSize];
   float output[12];
@@ -3863,6 +3877,27 @@ void ValidateAudioRateFmRecovery() {
   }
 }
 
+void ValidateFmCapabilityPolicy() {
+  WaveshapingEngine waveshaping;
+  FMEngine two_op_fm;
+  VowelFofEngine vowel_fof;
+
+  if (!waveshaping.linear_tzfm_capable()
+      || !two_op_fm.linear_tzfm_capable()
+      || !vowel_fof.linear_tzfm_capable()) {
+    fprintf(stderr, "A TZFM audition engine lost frequency-offset support\n");
+    abort();
+  }
+  // Two-op FM's 4x renderer exceeded the hardware callback budget in Fast FM
+  // tests. It must retain slow TZFM while declining only fast acquisition.
+  if (!waveshaping.fast_fm_capable()
+      || two_op_fm.fast_fm_capable()
+      || !vowel_fof.fast_fm_capable()) {
+    fprintf(stderr, "Fast FM engine capability policy changed\n");
+    abort();
+  }
+}
+
 int main(void) {
 #if defined(__SSE2__)
   _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
@@ -3917,5 +3952,6 @@ int main(void) {
   ValidateCustomSpeechBankLevelMatching();
   printf("Validating audio-rate FM recovery...\n");
   ValidateAudioRateFmRecovery();
+  ValidateFmCapabilityPolicy();
   TestExperimentalEngines();
 }

@@ -199,10 +199,11 @@ struct Modulations {
   // Sample-position bit mask filled by the MODEL-input sync detector.
   uint32_t hard_sync;
 
-  // Audio-rate FM readings transformed with the regular FM calibration. Voice
-  // converts those hardware-calibrated units to an absolute Hz offset only for
-  // engines that explicitly implement linear TZFM.
+  // FM readings transformed with the regular calibration. Fast mode supplies
+  // independently sampled values; slow mode and safe fallbacks repeat the
+  // current control-rate value across the block.
   float frequency_audio[kMaxBlockSize];
+  bool frequency_audio_rate;
   bool frequency_patched;
   bool timbre_patched;
   bool morph_patched;
@@ -236,6 +237,10 @@ class Voice {
   inline bool active_engine_supports_linear_tzfm() {
     return previous_engine_index_ >= 0 &&
         engines_.get(previous_engine_index_)->linear_tzfm_capable();
+  }
+  inline bool active_engine_supports_fast_fm() {
+    return previous_engine_index_ >= 0 &&
+        engines_.get(previous_engine_index_)->fast_fm_capable();
   }
     
  private:

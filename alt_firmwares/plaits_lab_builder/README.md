@@ -1,7 +1,7 @@
 # Plaits Palette firmware build service
 
 This directory contains the approved-engine backend for Plaits Palette. It accepts
-legacy recipes and manifests through schema 22 containing 24 or 32 versioned
+legacy recipes and manifests through schema 23 containing 24 or 32 versioned
 engine references, firmware preferences and starting options, and bounded
 chord-table/custom-FM/scale-bank/Speech-bank resources. Schema 15 can target either Mutable
 Instruments Plaits or Plum Audio Ro'Ved and adds the color-blind bank display.
@@ -43,6 +43,16 @@ REJECTED, because emitting it would compile a four-entry MODEL menu while
 starting the module at index four — past the end of its own menu. Independently of the flag, a
 transferred bank now records how many patches it holds, so a short bank sizes
 the HARMONICS quantizer to its real count instead of repeating to fill 32. A
+schema-23 candidate adds two independent Advanced experiments. `linearTzfm`
+changes the FM law on Waveshaping, Two-op FM, and Vowel FOF: counter-clockwise
+is linear through-zero FM, clockwise remains regular exponential FM, and the
+center is off. `fastFm` dedicates the shared fast converter to a continuous
+50 kHz FM stream; that makes LEVEL CV unavailable throughout the build.
+Waveshaping and Vowel FOF use the fast stream, while Two-op FM deliberately
+falls back to normal control-rate conversion after hardware tests found that its
+oversampled renderer could not meet the fast-mode deadline reliably. Either
+option can be selected alone or together. The failed periodic-LEVEL experiment
+is not part of schema 23. This candidate is not deployed.
 one-shot marker in the application image is restored by every WAV or HEX flash, so first boot applies
 all embedded Starting Options even when reinstalling the exact same build;
 ordinary power cycles still preserve later runtime changes. It generates a compile-time
@@ -54,11 +64,12 @@ at the firmware's linked application address and deliberately excludes the
 bootloader.
 
 Schema-15/Ro'Ved support passed its hardware checklist on July 30, 2026.
-Schema 21 is available in production with recipe-driven scale banks, automatic
+Schemas through 22 are available in production with recipe-driven scale banks, automatic
 LEVEL routing, selectable/custom LPC Speech banks, text and recording encoders,
 source/engine audio previews, unpatched-attenuverter modes, and the triggered
 and gated FREQUENCY contours. It also includes schema 20's replaceable FM banks
-and schema 21's experimental Sync In.
+and schema 22's opt-in experimental Sync In. Schema 23 remains an undeployed
+development candidate.
 
 An August 4 hardware regression exposed two firmware defects in the custom
 Speech path: inconsistent `PLAITS_HAS_CUSTOM_SPEECH_BANKS` values changed the

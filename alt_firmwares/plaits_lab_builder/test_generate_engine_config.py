@@ -751,6 +751,46 @@ class GenerateEngineConfigTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "schemaVersion 22"):
             validate_recipe(recipe)
 
+    def test_experimental_fm_preferences_are_independent_v23_flags(self) -> None:
+        slots = ["waveshaping", "two-op-fm", "vowel-fof"] + ["virtual-analog"] * 21
+        for linear_tzfm, fast_fm in product((False, True), repeat=2):
+            with self.subTest(linear_tzfm=linear_tzfm, fast_fm=fast_fm):
+                recipe = self.replaceable_recipe(slots, [])
+                recipe["schemaVersion"] = 23
+                recipe["preferences"].update({
+                    "replaceableFmBanks": False,
+                    "syncInput": False,
+                    "linearTzfm": linear_tzfm,
+                    "fastFm": fast_fm,
+                })
+                config = render_config(validate_recipe(recipe))
+                self.assertIn(
+                    f"#define PLAITS_BUILD_LINEAR_TZFM {int(linear_tzfm)}",
+                    config,
+                )
+                self.assertIn(
+                    f"#define PLAITS_BUILD_FAST_FM {int(fast_fm)}",
+                    config,
+                )
+
+    def test_experimental_fm_preferences_require_v23_booleans(self) -> None:
+        slots = ["waveshaping"] * 24
+        recipe = self.replaceable_recipe(slots, [])
+        recipe["schemaVersion"] = 22
+        recipe["preferences"].update({
+            "replaceableFmBanks": False,
+            "syncInput": False,
+            "linearTzfm": True,
+            "fastFm": False,
+        })
+        with self.assertRaisesRegex(ValueError, "schemaVersion 23"):
+            validate_recipe(recipe)
+
+        recipe["schemaVersion"] = 23
+        recipe["preferences"]["linearTzfm"] = "yes"
+        with self.assertRaisesRegex(ValueError, "unsupported firmware option"):
+            validate_recipe(recipe)
+
     def test_replaceable_fm_banks_require_v20(self) -> None:
         slots = ["dx7-bank-a"] + ["virtual-analog"] * 23
         recipe = self.replaceable_recipe(slots, [])

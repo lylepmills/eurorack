@@ -61,14 +61,14 @@ void Benchmark(const char* name) {
   const std::chrono::high_resolution_clock::time_point baseline_start =
       std::chrono::high_resolution_clock::now();
   for (int i = 0; i < kIterations; ++i) {
-    parameters.linear_fm = NULL;
+    parameters.frequency_offset = NULL;
     engine.Render(
         parameters, out, aux, kBenchBlockSize, &already_enveloped);
   }
   const std::chrono::high_resolution_clock::time_point modulated_start =
       std::chrono::high_resolution_clock::now();
   for (int i = 0; i < kIterations; ++i) {
-    parameters.linear_fm = linear_fm;
+    parameters.frequency_offset = linear_fm;
     engine.Render(
         parameters, out, aux, kBenchBlockSize, &already_enveloped);
   }

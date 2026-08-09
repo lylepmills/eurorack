@@ -161,15 +161,29 @@
 #define PLAITS_ROVED_PANEL 0
 #endif
 
-// Digitize the FM input continuously at the SDADC's 50 kHz fast rate, resample
-// it to the 47.872 kHz synthesis clock, and route it as linear, through-zero
-// frequency modulation to engines that explicitly support it. Fast mode can
-// convert only one channel, so this build dedicates SDADC2 to FM and deliberately
-// disables the LEVEL CV input. The regular exponential/control-rate FM path
-// remains the default.
+// Give capable engines a split FM attenuverter: counter-clockwise selects a
+// fixed-Hz linear through-zero law, clockwise retains Plaits' exponential law.
+// This is independent of acquisition speed. Without Fast FM both laws use the
+// regular control-rate FM reading and LEVEL remains available.
 #ifndef PLAITS_BUILD_LINEAR_TZFM
 #define PLAITS_BUILD_LINEAR_TZFM 0
 #endif
+
+// Digitize FM continuously at the SDADC's 50 kHz fast rate and resample it to
+// the 47.872 kHz synthesis clock. Fast mode improves both exponential FM and,
+// when enabled above, linear TZFM on engines whose CPU budget permits it. The
+// converter can process only one channel at this rate, so LEVEL CV is disabled
+// for the whole firmware. Engines without safe audio-rate headroom fall back to
+// their ordinary control-rate FM rather than risking missed audio deadlines.
+#ifndef PLAITS_BUILD_FAST_FM
+#define PLAITS_BUILD_FAST_FM 0
+#endif
+
+// Engines receive either modulation law as an absolute per-sample frequency
+// displacement. Keep this internal umbrella separate from both user-facing
+// preferences so all four combinations compile cleanly.
+#define PLAITS_BUILD_FREQUENCY_OFFSET_FM \
+    (PLAITS_BUILD_LINEAR_TZFM || PLAITS_BUILD_FAST_FM)
 
 // Qualification builds can distinguish the three latched audio-input fault
 // sources on separate LED positions. Ordinary builds do not replace the model

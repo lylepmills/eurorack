@@ -56,7 +56,7 @@ assert PACKED_BANK_SIZE % FLASH_PAGE_SIZE == 0
 # versions so adding a schema at the ceiling does not require extending a trail
 # of "10, 11, 12..." whitelists in the build container.
 MIN_RECIPE_SCHEMA_VERSION = 2
-MAX_RECIPE_SCHEMA_VERSION = 22
+MAX_RECIPE_SCHEMA_VERSION = 23
 CONFIGURATION_MIN_SCHEMA_VERSION = 4
 RESOURCES_MIN_SCHEMA_VERSION = 5
 FOUR_BANK_MIN_SCHEMA_VERSION = 6
@@ -82,6 +82,11 @@ SYNC_INPUT_MIN_SCHEMA_VERSION = 21
 # happened to pick it at build time — change your mind later and it is not in
 # the menu (ui.cc sizes that menu as 4 + PLAITS_BUILD_ENABLE_SYNC_INPUT).
 SYNC_INPUT_PREFERENCE_MIN_SCHEMA_VERSION = 22
+# v23 adds two independent experimental FM preferences. Linear TZFM changes
+# the attenuverter law on supporting engines; Fast FM changes SDADC2 acquisition
+# and therefore makes LEVEL CV unavailable. Keeping them separate allows all
+# four combinations and makes the hardware tradeoff explicit.
+EXPERIMENTAL_FM_MIN_SCHEMA_VERSION = 23
 
 # These two stock physical-model engines can treat the alternate contour as
 # energy entering a resonator rather than as a VCA after it.  Keep this list in
@@ -160,6 +165,10 @@ class BuildRecipe:
     # RUNTIME. Before v22 this was derived from the starting value, which meant a
     # user who did not choose Sync In at build time could never reach it.
     sync_input: int = 0
+    # v23: independent experimental FM capabilities. Neither is a saved runtime
+    # option, so neither belongs in the options profile-id fold.
+    linear_tzfm: int = 0
+    fast_fm: int = 0
     # v20: 1 makes every FM bank replaceable over TIMBRE — each bank's baked
     # array becomes the flash region a transfer erases and reprograms. 0 (the
     # DEFAULT) is the historical layout, byte-for-byte: banks at their natural
@@ -630,6 +639,8 @@ def validate_recipe(value: Any) -> BuildRecipe:
         {"navigationMode", "calibration", "colorBlindMode", "replaceableFmBanks"},
         {"navigationMode", "calibration", "colorBlindMode", "replaceableFmBanks",
          "syncInput"},
+        {"navigationMode", "calibration", "colorBlindMode", "replaceableFmBanks",
+         "syncInput", "linearTzfm", "fastFm"},
     ) or (set(options) != legacy_option_keys and not carries_attenuverter_mode):
         raise ValueError("recipe contains an unsupported firmware option")
     # The Worker stores a fully normalized option profile and therefore adds
@@ -816,6 +827,22 @@ def validate_recipe(value: Any) -> BuildRecipe:
         raise ValueError(
             "starting in Sync In requires the syncInput preference")
 
+    # Experimental FM (v23). Linear TZFM chooses the modulation law; Fast FM
+    # chooses the converter mode. They are intentionally independent. Fast FM
+    # disables LEVEL CV for the entire firmware because FM and LEVEL share
+    # SDADC2, while engines without enough callback headroom fall back safely to
+    # their ordinary control-rate FM path.
+    linear_tzfm = bool(preferences.get("linearTzfm", False))
+    fast_fm = bool(preferences.get("fastFm", False))
+    if (not isinstance(preferences.get("linearTzfm", False), bool)
+            or not isinstance(preferences.get("fastFm", False), bool)):
+        raise ValueError("recipe contains an unsupported firmware option")
+    if ((linear_tzfm or fast_fm)
+            and schema_version < EXPERIMENTAL_FM_MIN_SCHEMA_VERSION):
+        raise ValueError(
+            f"experimental FM preferences require schemaVersion "
+            f"{EXPERIMENTAL_FM_MIN_SCHEMA_VERSION}")
+
     # Replaceable FM banks (v20). Compile-time-only like the two above, so it
     # must not touch the profile-id fold either. Default FALSE — see the field
     # comment on BuildRecipe: page-aligning the banks costs more than the stock
@@ -839,6 +866,8 @@ def validate_recipe(value: Any) -> BuildRecipe:
         color_blind_mode=1 if color_blind_mode else 0,
         swappable_fm_banks=1 if swappable_fm_banks else 0,
         sync_input=1 if sync_input else 0,
+        linear_tzfm=1 if linear_tzfm else 0,
+        fast_fm=1 if fast_fm else 0,
         user_data_bank_overrides=tuple(user_data_banks),
         slot_bank_overrides=tuple(slot_banks),
         stereo_engines=stereo_engines,
@@ -1231,6 +1260,8 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE {1 if recipe.locked_frequency_pot_option >= 4 else 0}
 #define PLAITS_BUILD_MODEL_CV_OPTION {recipe.model_cv_option}
 #define PLAITS_BUILD_ENABLE_SYNC_INPUT {sync_input_enabled}
+#define PLAITS_BUILD_LINEAR_TZFM {recipe.linear_tzfm}
+#define PLAITS_BUILD_FAST_FM {recipe.fast_fm}
 #define PLAITS_BUILD_LEVEL_CV_OPTION {recipe.level_cv_option}
 #define PLAITS_BUILD_AUX_OUTPUT_OPTION {recipe.aux_output_option}
 #define PLAITS_BUILD_AUX_SUBOSC_OPTION {recipe.aux_subosc_option}
