@@ -41,6 +41,9 @@
 #endif
 #include "plaits/dsp/voice.h"
 #include "plaits/settings.h"
+#if PLAITS_TZFM_DIAGNOSTIC
+#include "plaits/tzfm_diagnostic.h"
+#endif
 #include "plaits/ui.h"
 #include "plaits/user_data.h"
 #include "plaits/user_data_receiver.h"
@@ -62,6 +65,9 @@ PLAITS_CPU_PROBE_DECLARE
 UserData user_data;
 UserDataReceiver user_data_receiver;
 Voice voice;
+#if PLAITS_TZFM_DIAGNOSTIC
+TzfmDiagnostic tzfm_diagnostic;
+#endif
 
 char shared_buffer[16384];
 uint32_t test_ramp;
@@ -91,8 +97,20 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
 #endif
 
   IWDG_ReloadCounter();
-  
+
+#if PLAITS_TZFM_DIAGNOSTIC
+  // The Fast FM resampler and calibration live in Ui::Poll, while the regular
+  // engine probe brackets Voice::Render. Measure both real callback portions
+  // separately and add them; keep the synthetic sweep setup below outside the
+  // ledger so the diagnostic does not charge its own control machinery to the
+  // production feature.
+  cpu_probe.Begin();
+#endif
   ui.Poll();
+#if PLAITS_TZFM_DIAGNOSTIC
+  cpu_probe.End(size);
+  const float diagnostic_ui_usage = cpu_probe.last_usage();
+#endif
   
   if (test_adc_noise) {
     static float note_lp = 0.0f;
@@ -112,7 +130,17 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
       test_ramp += 8947848;
       ++output;
     }
-  } else {
+  }
+#if PLAITS_TZFM_DIAGNOSTIC
+  else if (tzfm_diagnostic.reporting()) {
+    ui.SetAudioRateFmNeeded(false);
+    tzfm_diagnostic.WriteReport((Voice::Frame*)(output), size);
+  }
+#endif
+  else {
+#if PLAITS_TZFM_DIAGNOSTIC
+    tzfm_diagnostic.Prepare(&patch, &modulations, size);
+#endif
     if (modulations.timbre_patched) {
       PacketDecoderState state = \
           user_data_receiver.Process(modulations.timbre);
@@ -148,6 +176,16 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
     cpu_probe.SectionEnd(0);
 #endif
     PLAITS_CPU_PROBE_END(size)
+#if PLAITS_TZFM_DIAGNOSTIC
+    TzfmDiagnosticCounters counters;
+    counters.overruns = ui.audio_rate_fm_overruns();
+    counters.resyncs = ui.audio_rate_fm_resyncs();
+    counters.underflows = ui.audio_rate_fm_underflows();
+    counters.excess_lag = ui.audio_rate_fm_excess_lag();
+    tzfm_diagnostic.Observe(
+        diagnostic_ui_usage + cpu_probe.last_usage(), counters);
+    tzfm_diagnostic.Mute((Voice::Frame*)(output), size);
+#endif
     PLAITS_CPU_PROBE_READOUT((Voice::Frame*)(output), size)
     PLAITS_CPU_PROBE_DISPLAY(ui)
     if (active_engine != previous_engine) {
@@ -155,9 +193,13 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
     }
     ui.set_active_engine(active_engine);
 #if PLAITS_BUILD_FAST_FM
+#if PLAITS_TZFM_DIAGNOSTIC
+    ui.SetAudioRateFmNeeded(tzfm_diagnostic.fast_stage());
+#else
     ui.SetAudioRateFmNeeded(
         modulations.frequency_patched &&
         voice.active_engine_supports_fast_fm());
+#endif
 #endif
   }
   
@@ -184,6 +226,9 @@ void Init() {
   ui.Init(&patch, &modulations, &settings);
   
   PLAITS_CPU_PROBE_INIT
+#if PLAITS_TZFM_DIAGNOSTIC
+  tzfm_diagnostic.Init(PLAITS_TZFM_AUDITION_GROUP);
+#endif
   audio_dac.Init(48000, kBlockSize);
 
   audio_dac.Start(&FillBuffer);
