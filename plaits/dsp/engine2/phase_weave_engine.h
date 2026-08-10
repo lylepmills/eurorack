@@ -24,6 +24,7 @@ class PhaseWeaveEngine : public Engine {
       size_t size,
       bool* already_enveloped);
   virtual bool linear_tzfm_capable() const { return true; }
+  virtual bool fast_fm_capable() const { return true; }
   // OUT/AUX carry L/R when stereo is requested: the four weighted voices are
   // panned across the field rather than summed, and the pair-difference AUX
   // is dropped.

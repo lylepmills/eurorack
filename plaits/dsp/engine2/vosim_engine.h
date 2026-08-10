@@ -282,6 +282,7 @@ class VosimEngine : public Engine {
       size_t size,
       bool* already_enveloped);
   virtual bool linear_tzfm_capable() const { return true; }
+  virtual bool fast_fm_capable() const { return true; }
   virtual bool stereo_capable() const { return PLAITS_STEREO_VOSIM; }
 
  private:

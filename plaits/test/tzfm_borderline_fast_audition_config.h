@@ -1,12 +1,11 @@
 // Private hardware-audition registry for the eight engines that completed the
 // slow-converter TZFM stress matrix but exceeded a deadline or lost FM
-// transport in fast mode. This build intentionally bypasses the conservative
-// per-engine Fast FM capability gate so their failure modes can be judged by
-// ear. It is not a hosted recipe configuration.
+// transport in fast mode. Hardware listening subsequently qualified all eight
+// for the explicitly Experimental Fast FM option. This remains a compact
+// audition registry rather than a hosted recipe configuration.
 #ifndef PLAITS_DSP_ENGINE_CONFIG_H_
 #define PLAITS_DSP_ENGINE_CONFIG_H_
 
-#define PLAITS_TZFM_AUDITION_FORCE_FAST_FM 1
 #define PLAITS_BUILD_LINEAR_TZFM 1
 #define PLAITS_BUILD_FAST_FM 1
 

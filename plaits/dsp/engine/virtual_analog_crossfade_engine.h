@@ -58,6 +58,7 @@ class VirtualAnalogCrossfadeEngine : public Engine {
   }
   virtual bool hard_sync_capable() const { return true; }
   virtual bool linear_tzfm_capable() const { return true; }
+  virtual bool fast_fm_capable() const { return true; }
 
  private:
   float ComputeDetuning(float detune) const;
