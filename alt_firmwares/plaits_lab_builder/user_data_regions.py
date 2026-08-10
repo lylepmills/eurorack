@@ -1,9 +1,10 @@
 """Placement of rewritable user-data regions, and the assertion that guards it.
 
-A Plaits Palette build can make an FM bank or a recipe-seeded Wave Terrain /
-Wavetable slot replaceable over the TIMBRE input by letting its BAKED 4 KB array
-double as the flash region a transfer erases and reprograms. Nothing separate is
-reserved: the bytes that seed the slot are the bytes later rewritten in place.
+A Plaits Palette build can make an FM bank, a shared terrain-bank entry, or a
+recipe-seeded Wavetable slot replaceable over the TIMBRE input by letting its
+BAKED 4 KB array double as the flash region a transfer erases and reprograms.
+Nothing separate is reserved: the bytes that seed the resource are the bytes
+later rewritten in place.
 
 That only works if a region covers whole flash pages with nothing else in them.
 `UserData::Save` calls `FLASH_ErasePage` on 2 KB pages, so a region sharing a
@@ -60,7 +61,7 @@ _REPLACEMENT = """    . = ALIGN(16);
 
   /* Rewritable user-data regions.
 
-     Each FM bank or custom Terrain/Wavetable seed is {region} bytes ({pages}
+     Each FM bank, custom terrain entry, or Wavetable seed is {region} bytes ({pages}
      flash pages) in its own input section, and an audio transfer erases and
      reprograms one of them in place. They live in a dedicated OUTPUT section so
      that (a) nothing else can be packed into their pages, which UserData::Save
@@ -74,6 +75,7 @@ _REPLACEMENT = """    . = ALIGN(16);
     . = ALIGN({align});
     *(.user_data_banks.*)
     *(.user_data_models.*)
+    *(.user_data_terrains.*)
     . = ALIGN({align});
     _etext = .;
     _sidata = _etext;
@@ -135,7 +137,9 @@ def check_regions(objdump_output: str, nm_output: str, expected_count: int) -> l
     regions = [
         (name, int(address, 16), int(size, 16))
         for address, size, name in _SYMBOL_RE.findall(nm_output)
-        if ("kUserDataBankOverride_" in name or "kCustomModelData_" in name)
+        if ("kUserDataBankOverride_" in name
+            or "kCustomModelData_" in name
+            or "kCustomTerrainData_" in name)
     ]
     if len(regions) != expected_count:
         raise ValueError(

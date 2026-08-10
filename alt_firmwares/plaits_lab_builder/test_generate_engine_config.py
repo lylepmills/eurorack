@@ -215,6 +215,64 @@ class GenerateEngineConfigTest(unittest.TestCase):
         wrong_size["model"]["data"] = base64.b64encode(bytes(4095)).decode("ascii")
         with self.assertRaisesRegex(ValueError, "exactly 4096"):
             validate_recipe(self.custom_model_recipe([wrong_size]))
+
+    def terrain_bank_recipe(self, entries: list[dict]) -> dict:
+        recipe = self.load("default_recipe.json")
+        recipe["schemaVersion"] = 23
+        recipe["slots"][0] = "wave-terrain"
+        recipe["preferences"] = {
+            "navigationMode": "linear",
+            "calibration": False,
+            "colorBlindMode": False,
+            "replaceableFmBanks": False,
+            "syncInput": False,
+        }
+        recipe["initialOptions"] = {
+            **DEFAULT_CONFIGURATION["initialOptions"],
+            "attenuverterMode": "stock",
+        }
+        recipe["resources"] = {
+            "chordTables": DEFAULT_CHORD_TABLES,
+            "terrainBank": entries,
+        }
+        return recipe
+
+    def test_v23_terrain_bank_exposes_factory_entries_and_private_custom_regions(self) -> None:
+        custom = self.custom_model_assignment(0, "wave-terrain", 33)["model"]
+        recipe = self.terrain_bank_recipe([
+            {"kind": "factory", "id": "factory-8"},
+            {"kind": "custom", "model": custom},
+            {"kind": "factory", "id": "factory-2"},
+            {"kind": "custom", "model": custom},
+        ])
+        build = validate_recipe(recipe)
+        self.assertEqual([entry[0] for entry in build.terrain_bank], [7, 8, 1, 8])
+        config = render_config(build)
+        self.assertIn("#define PLAITS_HAS_TERRAIN_BANK 1", config)
+        self.assertIn("#define PLAITS_WAVE_TERRAIN_FACTORY_MASK 0x82", config)
+        self.assertIn("static const uint8_t kTerrainBankTypes[4] = { 7, 8, 1, 8 };", config)
+        self.assertIn('section(".user_data_terrains.0"), aligned(2048)', config)
+        self.assertIn('section(".user_data_terrains.1"), aligned(2048)', config)
+        self.assertIn("#define PLAITS_USER_DATA_REGION_COUNT 2", config)
+        self.assertEqual(config.count("extern const uint8_t kCustomTerrainData_0[4096] ="), 1)
+        self.assertEqual(config.count("extern const uint8_t kCustomTerrainData_1[4096] ="), 1)
+
+    def test_v23_terrain_bank_rejects_duplicate_factories_and_slot_terrain_data(self) -> None:
+        duplicate = self.terrain_bank_recipe([
+            {"kind": "factory", "id": "factory-1"},
+            {"kind": "factory", "id": "factory-1"},
+        ])
+        with self.assertRaisesRegex(ValueError, "at most once"):
+            validate_recipe(duplicate)
+
+        legacy_slot = self.terrain_bank_recipe([
+            {"kind": "factory", "id": "factory-1"},
+        ])
+        legacy_slot["resources"]["customModelData"] = [
+            self.custom_model_assignment(0, "wave-terrain")]
+        with self.assertRaisesRegex(ValueError, "shared terrain bank"):
+            validate_recipe(legacy_slot)
+
     def test_output_format_accepts_wav_and_intel_hex_only(self) -> None:
         recipe = self.load("default_recipe.json")
         validate_recipe(recipe)

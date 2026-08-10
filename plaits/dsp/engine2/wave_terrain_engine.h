@@ -45,6 +45,27 @@
 #include "plaits/dsp/oscillator/sine_oscillator.h"
 
 namespace plaits {
+
+enum WaveTerrainType {
+  WAVE_TERRAIN_FACTORY_0,
+  WAVE_TERRAIN_FACTORY_1,
+  WAVE_TERRAIN_FACTORY_2,
+  WAVE_TERRAIN_FACTORY_3,
+  WAVE_TERRAIN_FACTORY_4,
+  WAVE_TERRAIN_FACTORY_5,
+  WAVE_TERRAIN_FACTORY_6,
+  WAVE_TERRAIN_FACTORY_7,
+  WAVE_TERRAIN_CUSTOM
+};
+
+// A recipe-defined HARMONICS bank. Factory entries carry one of the eight
+// factory type values and a NULL data pointer; custom entries carry
+// WAVE_TERRAIN_CUSTOM and point at an independently rewritable 64 x 64 grid.
+struct WaveTerrainBank {
+  const uint8_t* types;
+  const int8_t* const* data;
+  size_t size;
+};
   
 class WaveTerrainEngine : public Engine {
  public:
@@ -54,7 +75,16 @@ class WaveTerrainEngine : public Engine {
   virtual void Init(stmlib::BufferAllocator* allocator);
   virtual void Reset();
   virtual void LoadUserData(const uint8_t* user_data) {
+    terrain_bank_ = NULL;
     user_terrain_ = (const int8_t*)(user_data);
+  }
+  virtual void LoadUserData(const uint8_t* user_data, size_t length) {
+    if (user_data && length == 0) {
+      terrain_bank_ = reinterpret_cast<const WaveTerrainBank*>(user_data);
+      user_terrain_ = NULL;
+    } else {
+      LoadUserData(user_data);
+    }
   }
   virtual void Render(const EngineParameters& parameters,
       float* out,
@@ -66,6 +96,7 @@ class WaveTerrainEngine : public Engine {
   virtual bool linear_tzfm_capable() const { return true; }
 
  private:
+  float FactoryTerrain(float x, float y, int terrain_type);
   float Terrain(float x, float y, int terrain_index);
   
   FastSineOscillator path_;
@@ -74,6 +105,7 @@ class WaveTerrainEngine : public Engine {
   float terrain_;
   
   float* temp_buffer_;
+  const WaveTerrainBank* terrain_bank_;
   const int8_t* user_terrain_;
   
   DISALLOW_COPY_AND_ASSIGN(WaveTerrainEngine);

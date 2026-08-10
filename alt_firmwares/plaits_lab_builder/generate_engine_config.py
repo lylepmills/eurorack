@@ -78,6 +78,9 @@ ONE_KNOB_ENVELOPE_MIN_SCHEMA_VERSION = 19
 SWAPPABLE_FM_BANKS_MIN_SCHEMA_VERSION = 20
 CUSTOM_MODEL_DATA_MIN_SCHEMA_VERSION = 21
 CUSTOM_MODEL_DATA_SIZE = 4096
+TERRAIN_BANK_MIN_SCHEMA_VERSION = 23
+MAX_TERRAIN_BANK_SIZE = 56
+FACTORY_TERRAIN_IDS = tuple(f"factory-{index}" for index in range(1, 9))
 SYNC_INPUT_MIN_SCHEMA_VERSION = 21
 # v22 moves Sync In's COMPILE-TIME switch off the starting value and onto its own
 # preference. Starting Options are the module's initial RUNTIME values and the
@@ -190,6 +193,9 @@ class BuildRecipe:
     # user-data block. The equation and display name stay in the public recipe;
     # firmware needs only these bounded bytes.
     custom_model_data: tuple[tuple[int, str, bytes], ...] = ()
+    # v23: shared ordered Wave Terrain HARMONICS bank. Factory entries carry
+    # their 0..7 type and None; custom entries carry type 8 and a private page.
+    terrain_bank: tuple[tuple[int, bytes | None], ...] = ()
     # v22: 1 compiles Sync In in, making it selectable as a MODEL-input mode at
     # RUNTIME. Before v22 this was derived from the starting value, which meant a
     # user who did not choose Sync In at build time could never reach it.
@@ -520,6 +526,51 @@ def validate_custom_model_data(
     return result
 
 
+def validate_terrain_bank(value: Any) -> list[tuple[int, bytes | None]]:
+    """Validate v23's shared, ordered Wave Terrain bank."""
+    if (not isinstance(value, list)
+            or not 1 <= len(value) <= MAX_TERRAIN_BANK_SIZE):
+        raise ValueError(
+            f"terrain bank must contain between one and {MAX_TERRAIN_BANK_SIZE} terrains")
+    result: list[tuple[int, bytes | None]] = []
+    seen_factories: set[str] = set()
+    for entry in value:
+        if not isinstance(entry, dict):
+            raise ValueError("recipe contains an invalid terrain-bank entry")
+        if entry.get("kind") == "factory":
+            terrain_id = entry.get("id")
+            if (set(entry) != {"kind", "id"}
+                    or terrain_id not in FACTORY_TERRAIN_IDS
+                    or terrain_id in seen_factories):
+                raise ValueError(
+                    "each factory terrain may appear at most once")
+            seen_factories.add(terrain_id)
+            result.append((FACTORY_TERRAIN_IDS.index(terrain_id), None))
+            continue
+        model = entry.get("model")
+        if (set(entry) != {"kind", "model"} or entry.get("kind") != "custom"
+                or not isinstance(model, dict)
+                or set(model) != {"kind", "name", "equation", "data"}
+                or model.get("kind") != "wave-terrain"
+                or not isinstance(model.get("name"), str)
+                or not model["name"].strip() or len(model["name"]) > 80
+                or not isinstance(model.get("equation"), str)
+                or not model["equation"].strip() or len(model["equation"]) > 500
+                or not isinstance(model.get("data"), str)):
+            raise ValueError(
+                "a custom terrain must contain a name, equation, and data")
+        try:
+            data = base64.b64decode(model["data"], validate=True)
+        except (binascii.Error, ValueError) as error:
+            raise ValueError("custom terrain data is not valid base64") from error
+        if (len(data) != CUSTOM_MODEL_DATA_SIZE
+                or base64.b64encode(data).decode("ascii") != model["data"]):
+            raise ValueError(
+                f"custom terrain data must contain exactly {CUSTOM_MODEL_DATA_SIZE} bytes")
+        result.append((8, data))
+    return result
+
+
 def normalize_slots(slots: list[Any], schema_version: int) -> list[str | None]:
     if schema_version in (2, 4, 5, 6) and all(isinstance(engine_id, str) for engine_id in slots):
         if any(engine_id not in CATALOG for engine_id in slots):
@@ -624,6 +675,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
     slot_banks: list[tuple[int, bytes]] = []        # v12 slot-keyed
     speech_banks: dict[str, Any] | None = None
     custom_model_data: list[tuple[int, str, bytes]] = []  # v21 slot-keyed
+    terrain_bank: list[tuple[int, bytes | None]] = []     # v23 shared bank
     scale_bank = validate_scale_bank(DEFAULT_SCALE_BANK)
     if schema_version >= RESOURCES_MIN_SCHEMA_VERSION:
         resources = value.get("resources")
@@ -660,6 +712,11 @@ def validate_recipe(value: Any) -> BuildRecipe:
             and isinstance(resources, dict)
             and "customModelData" in resources
         )
+        carries_terrain_bank = (
+            schema_version >= TERRAIN_BANK_MIN_SCHEMA_VERSION
+            and isinstance(resources, dict)
+            and "terrainBank" in resources
+        )
         base_resource_keys = {"chordTables"}
         if carries_scale_bank:
             base_resource_keys.add("scaleBank")
@@ -667,6 +724,8 @@ def validate_recipe(value: Any) -> BuildRecipe:
             base_resource_keys.add("speechBanks")
         if carries_custom_model_data:
             base_resource_keys.add("customModelData")
+        if carries_terrain_bank:
+            base_resource_keys.add("terrainBank")
         carries_user_data_banks = expect_user_data_banks or (
             schema_version >= CALIBRATION_MIN_SCHEMA_VERSION
             and isinstance(resources, dict)
@@ -690,6 +749,16 @@ def validate_recipe(value: Any) -> BuildRecipe:
         if carries_custom_model_data:
             custom_model_data = validate_custom_model_data(
                 resources.get("customModelData"), public_slots)
+            if (schema_version >= TERRAIN_BANK_MIN_SCHEMA_VERSION
+                    and any(kind == "wave-terrain"
+                            for _slot, kind, _data in custom_model_data)):
+                raise ValueError(
+                    "schema 23 terrain data belongs in the shared terrain bank")
+        if carries_terrain_bank:
+            if "wave-terrain" not in public_slots:
+                raise ValueError(
+                    "a terrain bank requires Wave Terrain in the palette")
+            terrain_bank = validate_terrain_bank(resources.get("terrainBank"))
         if carries_user_data_banks:
             if schema_version >= SLOT_BANK_MIN_SCHEMA_VERSION:
                 slot_banks = validate_user_data_banks_v12(resources.get("userDataBanks"), len(slots))
@@ -975,6 +1044,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
         stereo_engines=stereo_engines,
         speech_banks=speech_banks,
         custom_model_data=tuple(custom_model_data),
+        terrain_bank=tuple(terrain_bank),
         **normalized_options,
     )
 
@@ -1081,6 +1151,11 @@ def render_config(recipe: BuildRecipe) -> str:
         1 << index
         for index, engine_id in enumerate(internal_slots)
         if engine_id in RESONATOR_ENVELOPE_ENGINE_IDS
+    )
+    terrain_engine_mask = sum(
+        1 << index
+        for index, engine_id in enumerate(internal_slots)
+        if engine_id == "wave-terrain"
     )
 
     # Resolve the catalog's semantic archetypes into a compact firmware table.
@@ -1363,6 +1438,58 @@ def render_config(recipe: BuildRecipe) -> str:
         if custom_model_arrays else ""
     )
 
+    # v23 Wave Terrain bank. Each custom entry gets its own independently
+    # rewritable 4 KB page pair; factory entries name only their tiny type code,
+    # allowing the linker to discard any factory equation/table the bank removed.
+    terrain_custom_arrays = [
+        data for terrain_type, data in recipe.terrain_bank
+        if terrain_type == 8 and data is not None
+    ]
+
+    def _render_terrain_array(index: int, data: bytes) -> str:
+        body = ", ".join(str(byte) for byte in data)
+        attribute = (
+            f' __attribute__((section(".user_data_terrains.{index}"),'
+            f' aligned({FLASH_PAGE_SIZE})))')
+        return (
+            f"#ifdef PLAITS_ENGINE_CONFIG_OWNS_USER_DATA_BANKS\n"
+            f"extern const uint8_t kCustomTerrainData_{index}[{len(data)}]{attribute};\n"
+            f"extern const uint8_t kCustomTerrainData_{index}[{len(data)}]"
+            f" = {{ {body} }};\n"
+            f"#else\n"
+            f"extern const uint8_t kCustomTerrainData_{index}[{len(data)}];\n"
+            f"#endif"
+        )
+
+    terrain_array_definitions = "\n".join(
+        _render_terrain_array(index, data)
+        for index, data in enumerate(terrain_custom_arrays))
+    terrain_types: list[str] = []
+    terrain_pointers: list[str] = []
+    terrain_custom_index = 0
+    factory_terrain_mask = 0
+    for terrain_type, data in recipe.terrain_bank:
+        terrain_types.append(str(terrain_type))
+        if terrain_type == 8:
+            terrain_pointers.append(
+                f"reinterpret_cast<const int8_t*>(kCustomTerrainData_{terrain_custom_index})")
+            terrain_custom_index += 1
+        else:
+            terrain_pointers.append("NULL")
+            factory_terrain_mask |= 1 << terrain_type
+    terrain_bank_block = (
+        f"\n#if PLAITS_HAS_TERRAIN_BANK\n{terrain_array_definitions}\n"
+        f"static const uint8_t kTerrainBankTypes[{len(recipe.terrain_bank)}] = "
+        f"{{ {', '.join(terrain_types)} }};\n"
+        f"static const int8_t* const kTerrainBankData[{len(recipe.terrain_bank)}] = "
+        f"{{ {', '.join(terrain_pointers)} }};\n"
+        f"static const WaveTerrainBank kTerrainBank = {{ kTerrainBankTypes, "
+        f"kTerrainBankData, {len(recipe.terrain_bank)} }};\n"
+        f"static const uint32_t kWaveTerrainEngineMask = 0x{terrain_engine_mask:08x}u;\n"
+        f"#endif\n"
+        if recipe.terrain_bank else ""
+    )
+
     registry_order = (
         "orange, green, red, amber"
         if len(public_banks) > 3
@@ -1393,7 +1520,9 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_HAS_USER_DATA_BANK_OVERRIDE {1 if override_arrays_all else 0}
 #define PLAITS_HAS_RESOLVED_USER_DATA_BANK {1 if has_user_data_bank else 0}
 #define PLAITS_HAS_CUSTOM_MODEL_DATA {1 if custom_model_arrays else 0}
-#define PLAITS_USER_DATA_REGION_COUNT {len(region_banks) + len(custom_model_arrays)}
+#define PLAITS_HAS_TERRAIN_BANK {1 if recipe.terrain_bank else 0}
+#define PLAITS_WAVE_TERRAIN_FACTORY_MASK 0x{factory_terrain_mask if recipe.terrain_bank else 0xff:02x}
+#define PLAITS_USER_DATA_REGION_COUNT {len(region_banks) + len(custom_model_arrays) + len(terrain_custom_arrays)}
 #define PLAITS_RESONATOR_ENVELOPE_ENGINE_MASK 0x{resonator_envelope_mask:08x}u
 // Every FM bank's baked array doubles as the flash region a TIMBRE transfer
 // erases and reprograms, so any bank can be replaced without a reflash. 0 when
@@ -1445,6 +1574,7 @@ static const int8_t kEngineUserDataBank[{len(selected)}] = {{ {user_data_banks} 
 #endif
 {user_data_bank_override_block}
 {custom_model_data_block}
+{terrain_bank_block}
 #if PLAITS_HAS_SPEECH_ENGINE
 static const uint32_t kSpeechEngineMask = 0x{speech_mask:08x};
 #endif

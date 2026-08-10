@@ -71,8 +71,9 @@ class UserData {
  public:
   enum {
     // Stock / default firmware keeps its single region in the bootloader's own
-    // area, below the application. Generated custom-model and replaceable-FM
-    // slots use dedicated application-flash regions; all others keep this one.
+    // area, below the application. Generated custom Wavetable slots, shared
+    // terrain-bank entries, and replaceable-FM banks use dedicated application-
+    // flash regions; all others keep this one.
     ADDRESS = 0x08007000,
     SIZE = 0x1000
   };
@@ -138,22 +139,47 @@ class UserData {
     return SIZE;
   }
 
-  inline bool Save(uint8_t* rx_buffer, int slot) {
+  inline bool Save(uint8_t* rx_buffer, int slot, float harmonics = 0.0f) {
     if (slot < rx_buffer[SIZE - 2] || slot > rx_buffer[SIZE - 1]) {
       return false;
     }
 
-    // A dedicated custom-model or replaceable-FM slot writes its own region;
-    // every other slot retains the module's historical single legacy region.
-    // If a generated mapping explicitly refuses a slot, nothing is erased.
-    const uint8_t* destination = region(slot);
+    // A shared custom-terrain entry, dedicated custom-model slot, or replaceable
+    // FM bank writes its own region; every other slot retains the module's
+    // historical single legacy region. If a generated mapping explicitly
+    // refuses a slot, nothing is erased.
+    const uint8_t* destination = NULL;
+    int tag = tag_of(slot);
+#if defined(PLAITS_HAS_TERRAIN_BANK) && PLAITS_HAS_TERRAIN_BANK
+    if ((kWaveTerrainEngineMask & (1u << slot)) != 0) {
+      float position = harmonics * 1.05f;
+      if (position < 0.0f) position = 0.0f;
+      if (position > 1.0f) position = 1.0f;
+      int terrain = static_cast<int>(
+          position * static_cast<float>(kTerrainBank.size - 1.0001f) + 0.5f);
+      if (terrain < 0) terrain = 0;
+      if (terrain >= static_cast<int>(kTerrainBank.size)) {
+        terrain = static_cast<int>(kTerrainBank.size) - 1;
+      }
+      if (kTerrainBank.types[terrain] != WAVE_TERRAIN_CUSTOM
+          || !kTerrainBank.data[terrain]) {
+        // Factory terrains are code/resources, not erase-safe data pages.
+        return false;
+      }
+      destination = reinterpret_cast<const uint8_t*>(kTerrainBank.data[terrain]);
+      tag = 32 + terrain;
+    } else
+#endif  // PLAITS_HAS_TERRAIN_BANK
+    {
+      destination = region(slot);
+    }
     if (!destination) {
       return false;
     }
 
     // Tag the data to identify which bank it should be associated to.
     rx_buffer[SIZE - 2] = 'U';
-    rx_buffer[SIZE - 1] = ' ' + tag_of(slot);
+    rx_buffer[SIZE - 1] = ' ' + tag;
 
     // Write to FLASH. uintptr_t rather than uint32_t so the host test can build:
     // on the target the two are the same type, but a 64-bit host pointer does
@@ -174,10 +200,11 @@ class UserData {
  private:
   // The user-data area is GENERIC, not an FM feature: SixOpEngine reads it as a
   // patch bank, WavetableEngine as wave indices plus custom wave data, and
-  // WaveTerrainEngine as a ninth terrain. Generated builds can now carry two
+  // WaveTerrainEngine as a ninth terrain. Generated builds can now carry three
   // kinds of dedicated region:
   //
-  //   customized Terrain/Wavetable slot          -> that slot's seeded array
+  //   custom entry in the shared terrain bank    -> that entry's seeded array
+  //   customized legacy Terrain/Wavetable slot   -> that slot's seeded array
   //   FM slot in a build with REPLACEABLE banks  -> that bank's baked array
   //   everything else                            -> legacy region at ADDRESS
   //

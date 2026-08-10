@@ -106,6 +106,62 @@ test("schema 21 carries distinct per-slot Wave Terrain and Wavetable data", asyn
   assert.throws(() => normalizeRecipe(wrongSlot), /match a Wave Terrain or Wavetable slot/);
 });
 
+test("schema 23 carries one ordered shared terrain bank", async () => {
+  const publicCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const chordCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_chord_tables/catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const engines = new Map(publicCatalog.engines.map((engine: any) => [engine.id, engine]));
+  const recipe = structuredClone(fixture) as any;
+  recipe.schemaVersion = 23;
+  recipe.slots[0] = "wave-terrain";
+  recipe.slots = recipe.slots.map((engineId: string) => {
+    const engine = engines.get(engineId) as any;
+    return { engine: engineId, package: engine.packageId, version: engine.version, digest: engine.digest };
+  });
+  recipe.preferences = {
+    navigationMode: "linear", calibration: false, colorBlindMode: false,
+    replaceableFmBanks: false, syncInput: false,
+  };
+  recipe.initialOptions = {
+    lockedFrequencyKnob: "octaves", modelInput: "model", levelInput: "level",
+    auxOutput: "alternate-model", suboscillatorOctave: 0, chordTable: "original",
+    holdOnTrigger: false, attenuverterMode: "stock",
+  };
+  const model = {
+    kind: "wave-terrain", name: "Folded basin", equation: "sin(x * y)",
+    data: Buffer.alloc(4096, 41).toString("base64"),
+  };
+  recipe.resources = {
+    chordTables: chordCatalog.tables,
+    terrainBank: [
+      { kind: "factory", id: "factory-8" },
+      { kind: "custom", model },
+      { kind: "factory", id: "factory-2" },
+    ],
+  };
+
+  const normalized = normalizeRecipe(recipe);
+  assert.equal(normalized.schemaVersion, 23);
+  assert.deepEqual(normalized.resources.terrainBank, recipe.resources.terrainBank);
+
+  const duplicate = structuredClone(recipe);
+  duplicate.resources.terrainBank.push({ kind: "factory", id: "factory-8" });
+  assert.throws(() => normalizeRecipe(duplicate), /at most once/);
+
+  const wrongPalette = structuredClone(recipe);
+  wrongPalette.slots[0] = wrongPalette.slots[1];
+  assert.throws(() => normalizeRecipe(wrongPalette), /requires Wave Terrain/);
+
+  const legacySlotShape = structuredClone(recipe);
+  legacySlotShape.resources.customModelData = [{ slot: 0, model }];
+  assert.throws(() => normalizeRecipe(legacySlotShape), /shared terrain bank/);
+});
+
 test("normalization removes nondeterministic manifest fields", () => {
   const normalized = normalizeRecipe({ ...fixture, createdAt: "2099-01-01T00:00:00Z" });
   assert.equal("createdAt" in normalized, false);

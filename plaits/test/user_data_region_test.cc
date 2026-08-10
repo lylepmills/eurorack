@@ -1,9 +1,10 @@
 // Copyright 2026 Rubato Audio.
 //
 // Host checks for rewritable user-data regions (plaits/user_data.h): FM regions
-// keyed by bank, custom Terrain/Wavetable regions keyed by palette slot, the tag
-// separating transferred data from the baked seed in the same flash, and the
-// patch count a transferred FM bank declares.
+// keyed by bank, custom Wavetable regions keyed by palette slot, shared custom
+// terrain-bank entries selected by HARMONICS, the tag separating transferred
+// data from the baked seed in the same flash, and the patch count a transferred
+// FM bank declares.
 //
 // The point of the feature is the case a single-region build cannot express:
 // two banks holding DIFFERENT transferred data at the same time, instead of one
@@ -25,10 +26,18 @@
 #define PLAITS_HAS_USER_DATA_BANK 1
 #define PLAITS_HAS_SWAPPABLE_USER_DATA_BANKS 1
 #define PLAITS_HAS_CUSTOM_MODEL_DATA 1
+#define PLAITS_HAS_TERRAIN_BANK 1
 
 namespace plaits {
 
 enum { kRegionSize = 0x1000 };
+enum { WAVE_TERRAIN_FACTORY_0 = 0, WAVE_TERRAIN_FACTORY_2 = 2, WAVE_TERRAIN_CUSTOM = 8 };
+
+struct WaveTerrainBank {
+  const uint8_t* types;
+  const int8_t* const* data;
+  size_t size;
+};
 
 // Stands in for the generator's output. Six slots: two mapped to bank 0 (the
 // shared-factory-bank case), one to bank 1, two independently rewritable model
@@ -37,11 +46,22 @@ static uint8_t bank_0[kRegionSize];
 static uint8_t bank_1[kRegionSize];
 static uint8_t terrain_0[kRegionSize];
 static uint8_t wavetable_0[kRegionSize];
+static int8_t terrain_bank_custom[kRegionSize];
 // Bank 2 exists in the engine table but was stripped, so it owns no region.
-static const int8_t kEngineUserDataBank[6] = { 0, 0, 1, -1, -1, -1 };
-static const uint8_t* const kEngineCustomModelData[6] = {
-  NULL, NULL, NULL, terrain_0, wavetable_0, NULL,
+static const int8_t kEngineUserDataBank[7] = { 0, 0, 1, -1, -1, -1, -1 };
+static const uint8_t* const kEngineCustomModelData[7] = {
+  NULL, NULL, NULL, terrain_0, wavetable_0, NULL, NULL,
 };
+static const uint8_t kTerrainBankTypes[3] = {
+  WAVE_TERRAIN_FACTORY_0, WAVE_TERRAIN_CUSTOM, WAVE_TERRAIN_FACTORY_2,
+};
+static const int8_t* const kTerrainBankData[3] = {
+  NULL, terrain_bank_custom, NULL,
+};
+static const WaveTerrainBank kTerrainBank = {
+  kTerrainBankTypes, kTerrainBankData, 3,
+};
+static const uint32_t kWaveTerrainEngineMask = 1u << 5;
 static const UserDataRegion kUserDataRegions[2] = { { bank_0, 0 }, { bank_1, 1 } };
 static const int kNumUserDataRegions = 2;
 
@@ -92,12 +112,14 @@ UserData user_data;
 uint8_t payload[kRegionSize];
 bool save_result;
 int save_slot;
+float save_harmonics;
 
-void DoSave() { save_result = user_data.Save(payload, save_slot); }
+void DoSave() { save_result = user_data.Save(payload, save_slot, save_harmonics); }
 
 }  // namespace
 
 int main() {
+  save_harmonics = 0.0f;
   // ---- Nothing transferred: a baked bank must not read as a transferred one.
   std::memset(bank_0, 0, kRegionSize);
   std::memset(bank_1, 0, kRegionSize);
@@ -150,15 +172,32 @@ int main() {
   assert(payload[kRegionSize - 2] == 'U');
   assert(payload[kRegionSize - 1] == ' ' + 3);
 
-  // ---- An uncustomized non-FM slot keeps the module's legacy area. Slot 5 is
-  // such a slot, so old terrain/wavetable transfer files still work there.
-  assert(user_data.ptr(5) == NULL);          // nothing transferred there yet
+  // ---- In a shared terrain bank HARMONICS targets one entry. Factory entries
+  // refuse writes; the custom middle entry owns its private erase-safe region.
   FillPayload(payload, 0x11);
   save_slot = 5;
+  save_harmonics = 0.0f;
+  Quietly(DoSave);
+  assert(!save_result);
+  FillPayload(payload, 0x22);
+  save_harmonics = 0.5f;
   Quietly(DoSave);
   assert(save_result);
   assert(payload[kRegionSize - 2] == 'U');
-  assert(payload[kRegionSize - 1] == ' ' + 5);   // legacy region: tagged by SLOT
+  assert(payload[kRegionSize - 1] == ' ' + 33);  // 32 + terrain index 1
+  FillPayload(payload, 0x33);
+  save_harmonics = 1.0f;
+  Quietly(DoSave);
+  assert(!save_result);
+
+  // ---- An ordinary non-FM slot still keeps the legacy area.
+  assert(user_data.ptr(6) == NULL);
+  FillPayload(payload, 0x11);
+  save_slot = 6;
+  save_harmonics = 0.0f;
+  Quietly(DoSave);
+  assert(save_result);
+  assert(payload[kRegionSize - 1] == ' ' + 6);
 
   // ---- Save still honours the payload's declared slot range.
   FillPayload(payload, 0x11);

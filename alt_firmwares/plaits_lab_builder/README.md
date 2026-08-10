@@ -65,6 +65,15 @@ accepts only bounded sampled bytes. Each assignment is an opt-in independently
 rewritable flash region: the recipe data seeds it, and a later TIMBRE audio
 transfer while that slot is active erases and replaces those same pages. Even
 identical seeds remain separate because their slots must be able to diverge. A
+schema-23 recipe replaces per-slot Wave Terrain data with one ordered terrain
+bank shared by every Wave Terrain slot. The eight Mutable factory terrains are
+first-class entries that may be reordered or omitted; the generator compiles
+only the retained factory equations. Each custom entry carries one bounded
+sampled 4 KB terrain and owns its own independently rewritable flash region.
+HARMONICS sweeps and interpolates across exactly the ordered bank, and also
+selects which custom entry a TIMBRE audio transfer overwrites. A selected
+factory entry refuses the transfer. The default eight-factory bank remains
+implicit, so an untouched recipe stays on its older schema and stock layout.
 one-shot marker in the application image is restored by every WAV or HEX flash, so first boot applies
 all embedded Starting Options even when reinstalling the exact same build;
 ordinary power cycles still preserve later runtime changes. It generates a compile-time

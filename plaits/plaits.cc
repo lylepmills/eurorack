@@ -147,7 +147,8 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
       if (state == PACKET_DECODER_STATE_END_OF_TRANSMISSION) {
         if (user_data_receiver.progress() == 1.0f) {
           int slot = voice.active_engine();
-          bool success = user_data.Save(user_data_receiver.rx_buffer(), slot);
+          bool success = user_data.Save(
+              user_data_receiver.rx_buffer(), slot, patch.harmonics);
           if (success) {
             voice.ReloadUserData();
           } else {
