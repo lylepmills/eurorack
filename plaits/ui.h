@@ -92,6 +92,22 @@ class Ui {
   // of the callback budget of already-expensive engines.
   void SetAudioRateFmNeeded(bool needed);
 
+  // Read-only transport counters for the autonomous TZFM hardware benchmark.
+  // They remain useful diagnostics in ordinary builds and do not change Ui's
+  // layout or the ADC acquisition path.
+  inline uint32_t audio_rate_fm_overruns() const {
+    return cv_adc_.audio_rate_fm_overruns();
+  }
+  inline uint32_t audio_rate_fm_resyncs() const {
+    return cv_adc_.audio_rate_fm_resyncs();
+  }
+  inline uint32_t audio_rate_fm_underflows() const {
+    return cv_adc_.audio_rate_fm_underflows();
+  }
+  inline uint32_t audio_rate_fm_excess_lag() const {
+    return cv_adc_.audio_rate_fm_excess_lag();
+  }
+
   void set_active_engine(int active_engine) {
     active_engine_ = active_engine;
   }

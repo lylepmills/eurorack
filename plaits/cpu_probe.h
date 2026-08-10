@@ -178,6 +178,7 @@ class CpuProbe {
     DWT->CYCCNT = 0;
     DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
     usage_ = 0.0f;
+    last_usage_ = 0.0f;
     phase_ = 0.0f;
     start_ = 0;
     for (int i = 0; i < kMaxSections; ++i) {
@@ -254,6 +255,7 @@ class CpuProbe {
     const float budget = static_cast<float>(size) *
         (static_cast<float>(F_CPU) / kSampleRate);
     const float usage = static_cast<float>(elapsed) / budget;
+    last_usage_ = usage;
     // Fast attack, slow release: a worst-case block is what makes the audio
     // glitch, so the reading must not average it away -- but it should settle
     // rather than latch forever, so a single startup transient does not sit on
@@ -385,6 +387,9 @@ class CpuProbe {
   }
 
   inline float usage() const { return usage_; }
+  // Exact cost of the most recently completed block. Automated sweep builds
+  // aggregate this themselves instead of using the display-oriented EMA.
+  inline float last_usage() const { return last_usage_; }
   inline float section_usage(int index) const {
     return index >= 0 && index < kMaxSections ? section_usage_[index] : 0.0f;
   }
@@ -563,6 +568,7 @@ class CpuProbe {
   uint32_t guard_a_;
   uint32_t start_;
   float usage_;
+  float last_usage_;
   float phase_;
   bool section_used_[kMaxSections];
   uint32_t section_start_[kMaxSections];
