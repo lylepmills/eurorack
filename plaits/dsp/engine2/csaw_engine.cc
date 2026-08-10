@@ -6,6 +6,8 @@
 
 #include "plaits/dsp/engine2/csaw_engine.h"
 
+#include "plaits/build_config.h"
+
 #include <algorithm>
 #include <cmath>
 
@@ -116,7 +118,13 @@ void CSawEngine::Render(
     next_sample = 0.0f;
     next_sample_aux = 0.0f;
 
-    const float f = fm.Next();
+    float f = fm.Next();
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      f += parameters.frequency_offset[i];
+      CONSTRAIN(f, 0.0f, 0.25f);
+    }
+#endif
     const float pw = pwm.Next();
     const float bend = bend_modulation.Next();
     const float tilt = tilt_modulation.Next();

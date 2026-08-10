@@ -45,6 +45,10 @@
 // engines a recipe leaves in mono.
 #include "plaits/dsp/engine/stereo_config.h"
 
+#ifndef PLAITS_FM_DIAGNOSTIC_FORCE_FAST_FM
+#define PLAITS_FM_DIAGNOSTIC_FORCE_FAST_FM 0
+#endif
+
 namespace plaits {
 
 inline float NoteToFrequency(float midi_note) {
@@ -220,7 +224,16 @@ class Engine {
   // Audio-rate acquisition adds work before Render(), and some engines have no
   // callback headroom left. Opt in separately so Fast FM can fall back safely
   // without removing their control-rate TZFM support.
-  virtual bool fast_fm_capable() const { return false; }
+  virtual bool fast_fm_capable() const {
+#if PLAITS_FM_DIAGNOSTIC_FORCE_FAST_FM
+    // A private qualification registry contains only engines with an
+    // implemented per-sample pitch path. Force that curated set through the
+    // real Fast FM routing before any one of them is approved for products.
+    return true;
+#else
+    return false;
+#endif
+  }
   PostProcessingSettings post_processing_settings;
 };
 

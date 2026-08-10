@@ -7,6 +7,8 @@
 
 #include "plaits/dsp/engine2/bytebeat_engine.h"
 
+#include "plaits/build_config.h"
+
 #include <algorithm>
 
 #include "stmlib/dsp/dsp.h"
@@ -120,15 +122,25 @@ void BytebeatEngine::Render(
   const float aux_tick_increment = tick_increment * kBytebeatAuxRatio;
 
   for (size_t i = 0; i < size; ++i) {
+    float main_increment = tick_increment;
+    float secondary_increment = aux_tick_increment;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      float modulated_frequency = f0 + parameters.frequency_offset[i];
+      CONSTRAIN(modulated_frequency, 0.0f, 0.25f);
+      main_increment = modulated_frequency * kBytebeatTicksPerCycle;
+      secondary_increment = main_increment * kBytebeatAuxRatio;
+    }
+#endif
     // Fractional tick advance. Below 1.0 this holds the previous value -- the
     // zero-order hold that gives a bytebeat its stair-stepped character -- and
     // above it, ticks are skipped.
-    tick_phase_ += tick_increment;
+    tick_phase_ += main_increment;
     while (tick_phase_ >= 1.0f) {
       tick_phase_ -= 1.0f;
       ++t_;
     }
-    aux_tick_phase_ += aux_tick_increment;
+    aux_tick_phase_ += secondary_increment;
     while (aux_tick_phase_ >= 1.0f) {
       aux_tick_phase_ -= 1.0f;
       ++aux_t_;

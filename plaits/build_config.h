@@ -179,6 +179,10 @@
 #define PLAITS_BUILD_FAST_FM 0
 #endif
 
+#ifndef PLAITS_FM_DIAGNOSTIC_EXPONENTIAL
+#define PLAITS_FM_DIAGNOSTIC_EXPONENTIAL 0
+#endif
+
 // Engines receive either modulation law as an absolute per-sample frequency
 // displacement. Keep this internal umbrella separate from both user-facing
 // preferences so all four combinations compile cleanly.

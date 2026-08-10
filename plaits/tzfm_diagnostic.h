@@ -44,8 +44,9 @@ class TzfmDiagnostic {
 
   TzfmDiagnostic() { }
 
-  void Init(int group) {
+  void Init(int group, bool exponential = false) {
     group_ = group;
+    exponential_ = exponential;
     engine_ = 0;
     stage_ = 0;
     state_ = 0;
@@ -134,6 +135,9 @@ class TzfmDiagnostic {
     const float increment = StimulusIncrement(stimulus);
     if (stage_ == 0) {
       const float value = StimulusValue(stimulus, phase_);
+      if (exponential_) {
+        modulations->frequency = value;
+      }
       for (size_t i = 0; i < size; ++i) {
         modulations->frequency_audio[i] = value;
       }
@@ -316,6 +320,7 @@ class TzfmDiagnostic {
   }
 
   int group_;
+  bool exponential_;
   int engine_;
   int stage_;
   int state_;

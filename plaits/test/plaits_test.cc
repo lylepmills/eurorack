@@ -432,6 +432,111 @@ void ValidateLinearTzfmEngineCoverage() {
   ValidateLinearTzfmEngine<SwarmEngine>("Swarm");
 }
 
+template<typename T>
+void ValidateFastExponentialFmEngine(const char* name) {
+  const size_t kBlocks = 16;
+  const size_t kSamples = kBlocks * kAudioBlockSize;
+  static T engine;
+  float reference_out[kSamples];
+  float reference_aux[kSamples];
+
+  EngineParameters p;
+  p.note = 48.0f;
+  p.harmonics = 0.37f;
+  p.timbre = 0.58f;
+  p.morph = 0.63f;
+  p.accent = 0.8f;
+  p.macro = 0.41f;
+  p.articulation_envelope = 0.0f;
+  p.articulation_envelope_active = false;
+  p.chord_set_option = 0;
+  p.hard_sync = 0;
+  p.stereo = false;
+
+  Random::Seed(0x5eedf00d);
+  BufferAllocator reference_allocator(ram_block, sizeof(ram_block));
+  engine.Init(&reference_allocator);
+  engine.LoadUserData(NULL);
+  engine.Reset();
+  p.frequency_offset = NULL;
+  for (size_t block = 0; block < kBlocks; ++block) {
+    p.trigger = block == 0
+        ? TRIGGER_RISING_EDGE | TRIGGER_HIGH
+        : TRIGGER_UNPATCHED;
+    bool already_enveloped = false;
+    engine.Render(
+        p,
+        &reference_out[block * kAudioBlockSize],
+        &reference_aux[block * kAudioBlockSize],
+        kAudioBlockSize,
+        &already_enveloped);
+  }
+
+  Random::Seed(0x5eedf00d);
+  BufferAllocator modulated_allocator(ram_block, sizeof(ram_block));
+  engine.Init(&modulated_allocator);
+  engine.LoadUserData(NULL);
+  engine.Reset();
+
+  const float base_frequency = NoteToFrequency(p.note);
+  double difference = 0.0;
+  double reference_energy = 0.0;
+  for (size_t block = 0; block < kBlocks; ++block) {
+    float frequency_offset[kAudioBlockSize];
+    for (size_t i = 0; i < kAudioBlockSize; ++i) {
+      const size_t sample = block * kAudioBlockSize + i;
+      const float phase = static_cast<float>(sample & 31) / 32.0f;
+      // A strictly positive 0.25x..2.0x exponential-frequency trajectory.
+      // It never asks these non-TZFM engines to run their phase backwards.
+      const float ratio = 1.125f + 0.875f * Sine(phase);
+      frequency_offset[i] = base_frequency * (ratio - 1.0f);
+    }
+    p.frequency_offset = frequency_offset;
+    p.trigger = block == 0
+        ? TRIGGER_RISING_EDGE | TRIGGER_HIGH
+        : TRIGGER_UNPATCHED;
+    float out[kAudioBlockSize];
+    float aux[kAudioBlockSize];
+    bool already_enveloped = false;
+    engine.Render(p, out, aux, kAudioBlockSize, &already_enveloped);
+    for (size_t i = 0; i < kAudioBlockSize; ++i) {
+      const size_t sample = block * kAudioBlockSize + i;
+      if (!isfinite(out[i]) || !isfinite(aux[i])) {
+        fprintf(stderr, "%s produced non-finite Fast exponential FM output\n",
+            name);
+        abort();
+      }
+      difference += fabsf(out[i] - reference_out[sample]);
+      difference += 0.61803398875f *
+          fabsf(aux[i] - reference_aux[sample]);
+      reference_energy += fabsf(reference_out[sample]);
+      reference_energy += 0.61803398875f * fabsf(reference_aux[sample]);
+    }
+  }
+
+  const double threshold = max(0.001, reference_energy * 0.0001);
+  if (difference < threshold) {
+    fprintf(
+        stderr,
+        "%s ignored positive frequency offsets: diff=%f ref=%f\n",
+        name,
+        difference,
+        reference_energy);
+    abort();
+  }
+}
+
+void ValidateFastExponentialFmEngineCoverage() {
+  ValidateFastExponentialFmEngine<CSawEngine>("CSaw");
+  ValidateFastExponentialFmEngine<DualSyncEngine>("Dual Sync");
+  ValidateFastExponentialFmEngine<MorphEngine>("Morph");
+  ValidateFastExponentialFmEngine<SawSquareEngine>("Saw Square");
+  ValidateFastExponentialFmEngine<VowelEngine>("Vowel");
+  ValidateFastExponentialFmEngine<SubOscillatorEngine>("Sub Oscillator");
+  ValidateFastExponentialFmEngine<GendyEngine>("GENDY");
+  ValidateFastExponentialFmEngine<BytebeatEngine>("Bytebeat");
+}
+
 void TestVariableShapeOscillator() {
   WavWriter wav_writer(1, kSampleRate, 20);
   wav_writer.Open("plaits_variable_shape_oscillator.wav");
@@ -3480,6 +3585,11 @@ void TestExperimentalEngines() {
   ValidateLinearTzfmTwoOpFm();
   ValidateLinearTzfmEngineCoverage();
 #endif  // PLAITS_BUILD_LINEAR_TZFM
+#if PLAITS_BUILD_FAST_FM
+  printf("Validating non-TZFM Fast exponential FM paths...\n");
+  fflush(stdout);
+  ValidateFastExponentialFmEngineCoverage();
+#endif  // PLAITS_BUILD_FAST_FM
   printf("Validating selectable chord tables...\n");
   fflush(stdout);
   BufferAllocator chord_allocator(ram_block, sizeof(ram_block));
@@ -4034,6 +4144,14 @@ void ValidateFmCapabilityPolicy() {
   WaveScanEngine wave_scan;
   WaveTerrainEngine wave_terrain;
   SwarmEngine swarm;
+  CSawEngine csaw;
+  DualSyncEngine dual_sync;
+  MorphEngine morph;
+  SawSquareEngine saw_square;
+  VowelEngine vowel;
+  SubOscillatorEngine sub_oscillator;
+  GendyEngine gendy;
+  BytebeatEngine bytebeat;
   Engine* linear_engines[] = {
     &waveshaping,
     &two_op_fm,
@@ -4134,6 +4252,28 @@ void ValidateFmCapabilityPolicy() {
        i < sizeof(slow_only_engines) / sizeof(slow_only_engines[0]); ++i) {
     if (slow_only_engines[i]->fast_fm_capable()) {
       fprintf(stderr, "An over-budget engine opted into Fast FM\n");
+      abort();
+    }
+  }
+  // Implemented exponential-only paths remain private until their autonomous
+  // hardware benchmark passes. They must not acquire product capability merely
+  // because their diagnostic renderer exists.
+  Engine* pending_exponential_engines[] = {
+    &csaw,
+    &dual_sync,
+    &morph,
+    &saw_square,
+    &vowel,
+    &sub_oscillator,
+    &gendy,
+    &bytebeat,
+  };
+  for (size_t i = 0;
+       i < sizeof(pending_exponential_engines) /
+           sizeof(pending_exponential_engines[0]); ++i) {
+    if (pending_exponential_engines[i]->linear_tzfm_capable()
+        || pending_exponential_engines[i]->fast_fm_capable()) {
+      fprintf(stderr, "An unqualified exponential-only engine was enabled\n");
       abort();
     }
   }

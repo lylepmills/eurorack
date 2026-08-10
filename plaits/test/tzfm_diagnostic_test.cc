@@ -34,6 +34,13 @@ int main() {
         "slow stage holds one FM value");
   }
 
+  TzfmDiagnostic exponential;
+  exponential.Init(8, true);
+  exponential.Prepare(&patch, &modulations, kBlockSize);
+  Check(
+      modulations.frequency == modulations.frequency_audio[0],
+      "exponential slow stage drives the ordinary block-rate FM input");
+
   const int blocks_per_stage =
       TzfmDiagnostic::kStatesPerStage * TzfmDiagnostic::kBlocksPerState;
   for (int i = 0; i < blocks_per_stage; ++i) {
