@@ -53,6 +53,36 @@ class DecoderTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "no complete"):
             decoder.decode_frequencies([6000.0, 6180.0, 6205.0])
 
+    def test_corrects_recorder_clock_error_and_uses_repeated_frames(self):
+        frame = self.group_four_frame()
+        # Model a recorder whose clock makes every reported frequency read
+        # about 0.3 percent low, plus a small fixed estimator bias.
+        recorded = [(frequency - 1.75) / 1.003 for frequency in frame]
+        noisy = recorded.copy()
+        noisy[3 + 2 * 11 + 1] += 3.0
+        group, results = decoder.decode_frequencies(noisy + recorded + recorded)
+        self.assertEqual(group, 4)
+        self.assertEqual(results[2]["name"], "VOSIM")
+        self.assertEqual(results[2]["slow_peak"], 20)
+        self.assertEqual(results[2]["excess_lag"], 29)
+
+    def test_verdict_ignores_frequency_decoder_counter_floor(self):
+        result = {
+            "slow_peak": 600,
+            "fast_peak": 700,
+            "slow_over90": 0,
+            "fast_over90": 0,
+            "slow_deadline": 0,
+            "fast_deadline": 0,
+            "overruns": 1,
+            "resyncs": decoder.COUNTER_NOISE_FLOOR,
+            "underflows": 0,
+            "excess_lag": 2,
+        }
+        self.assertEqual(decoder.verdict(result), "PASS")
+        result["resyncs"] += 1
+        self.assertEqual(decoder.verdict(result), "FAIL FM transport")
+
 
 if __name__ == "__main__":
     unittest.main()
