@@ -75,7 +75,12 @@ if (expectedRevision) assert.equal(catalog.sourceRevision, expectedRevision);
 await getBinary("/v1/speech/voice-preview/en-US/af_heart.wav", /audio\/wav/, "voice preview");
 await getBinary("/v1/speech/stock/bank-1-natural.wav", /audio\/wav/, "stock-bank preview");
 
-const words = ["staging", "speech", "hardware", "check"];
+const words = [
+  "be", "go", "cat", "dog", "red", "blue", "up", "down",
+  "left", "right", "one", "two", "three", "four", "five", "six",
+  "sun", "moon", "star", "sky", "day", "night", "hot", "cold",
+  "yes", "no", "in", "out", "on", "off", "high", "low",
+];
 const encodeRequest = {
   format: "rubato.plaits-lpc-word-bank/v1",
   name: "Staging speech hardware check",
