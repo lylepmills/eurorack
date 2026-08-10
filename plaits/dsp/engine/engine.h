@@ -220,7 +220,16 @@ class Engine {
   // Audio-rate acquisition adds work before Render(), and some engines have no
   // callback headroom left. Opt in separately so Fast FM can fall back safely
   // without removing their control-rate TZFM support.
-  virtual bool fast_fm_capable() const { return false; }
+  virtual bool fast_fm_capable() const {
+#ifdef PLAITS_TZFM_AUDITION_FORCE_FAST_FM
+    // Private qualification builds can deliberately exercise engines that did
+    // not pass the conservative fast-mode capability gate. Never enabled by a
+    // hosted recipe or ordinary firmware build.
+    return true;
+#else
+    return false;
+#endif
+  }
   PostProcessingSettings post_processing_settings;
 };
 
