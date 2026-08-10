@@ -89,6 +89,7 @@ class BitStream {
 };
 
 const int kLPCSpeechSynthMaxWords = 32;
+const int kLPCSpeechSynthMaxWordBoundaries = kLPCSpeechSynthMaxWords + 1;
 const int kLPCSpeechSynthMaxFrames = 1024;
 const int kLPCSpeechSynthNumVowels = 5;
 const int kLPCSpeechSynthNumConsonants = 10;

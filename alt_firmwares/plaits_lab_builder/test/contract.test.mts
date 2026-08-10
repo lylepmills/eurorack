@@ -759,6 +759,22 @@ test("version 17 carries bounded Speech banks and hashes their LPC frames", asyn
   assert.equal(normalized.schemaVersion, 17);
   assert.deepEqual(normalized.resources.speechBanks, speechBanks);
 
+  const thirtyTwoWords = structuredClone(recipe);
+  thirtyTwoWords.resources.speechBanks.customBanks[0] = {
+    words: Array.from({ length: 32 }, (_unused, index) => `word ${index + 1}`),
+    wordBoundaries: Array.from({ length: 33 }, (_unused, index) => index),
+    frameData: Buffer.alloc(14 * 32).toString("base64"),
+  };
+  assert.equal(
+    normalizeRecipe(thirtyTwoWords).resources.speechBanks?.customBanks[0].words.length,
+    32,
+  );
+  const thirtyThreeWords = structuredClone(thirtyTwoWords);
+  thirtyThreeWords.resources.speechBanks.customBanks[0].words.push("word 33");
+  thirtyThreeWords.resources.speechBanks.customBanks[0].wordBoundaries.push(33);
+  thirtyThreeWords.resources.speechBanks.customBanks[0].frameData = Buffer.alloc(14 * 33).toString("base64");
+  assert.throws(() => normalizeRecipe(thirtyThreeWords), /invalid custom Speech bank/);
+
   const lpcWordsOnly = structuredClone(recipe);
   const lpcWords = byId.get("lpc-speech")!;
   lpcWordsOnly.slots = lpcWordsOnly.slots.map(

@@ -23,7 +23,12 @@ from typing import Any, Literal
 
 from generate_engine_config import render_config, validate_recipe
 from render_manual import manual_document, render_pdf
-from speech_banks import render_speech_config, validate_speech_banks
+from speech_banks import (
+    MAX_FRAMES,
+    MAX_WORDS,
+    render_speech_config,
+    validate_speech_banks,
+)
 from user_data_regions import check_elf, render_linker_script
 
 
@@ -170,8 +175,11 @@ def _pack_plans(paths: list[Path]) -> tuple[list[int], str]:
         for frame in frames:
             packed.extend(LPC_FRAME.pack(*frame))
         boundaries.append(boundaries[-1] + len(frames))
-    if boundaries[-1] > 1024:
-        raise BuildError("speech_bank_too_large", "This bank is too long for Plaits. Use fewer or shorter words.")
+    if boundaries[-1] > MAX_FRAMES:
+        raise BuildError(
+            "speech_bank_too_large",
+            f"This bank needs {boundaries[-1]} of {MAX_FRAMES} frames. Use fewer or shorter words.",
+        )
     return boundaries, base64.b64encode(packed).decode("ascii")
 
 
@@ -184,8 +192,11 @@ def _validate_speech_request(value: Any) -> dict[str, Any]:
     if language not in VOICE_CATALOG or voice not in VOICE_CATALOG[language][0]:
         raise BuildError("invalid_request", "Choose a supported voice for the selected language.")
     entries = value.get("entries")
-    if not isinstance(entries, list) or not 1 <= len(entries) <= 16:
-        raise BuildError("invalid_request", "A Speech bank must contain between 1 and 16 words.")
+    if not isinstance(entries, list) or not 1 <= len(entries) <= MAX_WORDS:
+        raise BuildError(
+            "invalid_request",
+            f"A Speech bank must contain between 1 and {MAX_WORDS} words.",
+        )
     normalized_entries = []
     for index, entry in enumerate(entries):
         if not isinstance(entry, dict):

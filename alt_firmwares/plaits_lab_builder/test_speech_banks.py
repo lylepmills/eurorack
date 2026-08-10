@@ -24,6 +24,16 @@ def bank(words=("hello", "world")):
     }
 
 
+def bank_with_one_frame_per_word(count):
+    frame = struct.pack(
+        "<BBhh8b", 40, 80, 1000, -1000, 1, 2, 3, 4, 5, 6, 7, 8)
+    return {
+        "words": [f"word {index + 1}" for index in range(count)],
+        "wordBoundaries": list(range(count + 1)),
+        "frameData": base64.b64encode(frame * count).decode("ascii"),
+    }
+
+
 class SpeechBanksTest(unittest.TestCase):
     def test_custom_speech_layout_macro_covers_every_firmware_object(self) -> None:
         makefile = (Path(__file__).resolve().parents[2] / "plaits/makefile").read_text(
@@ -82,6 +92,18 @@ class SpeechBanksTest(unittest.TestCase):
         rendered = render_speech_config(value)
         self.assertIn("CUSTOM_SPEECH_NUM_WORD_BANKS 0", rendered)
         self.assertIn("custom_speech_word_banks = NULL", rendered)
+
+    def test_accepts_thirty_two_words_but_not_thirty_three(self) -> None:
+        value = validate_speech_banks({
+            "stockBankIds": [],
+            "customBanks": [bank_with_one_frame_per_word(32)],
+        })
+        self.assertEqual(len(value["customBanks"][0]["words"]), 32)
+        with self.assertRaisesRegex(ValueError, "1 through 32"):
+            validate_speech_banks({
+                "stockBankIds": [],
+                "customBanks": [bank_with_one_frame_per_word(33)],
+            })
 
 
 if __name__ == "__main__":

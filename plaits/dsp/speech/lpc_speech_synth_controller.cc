@@ -121,7 +121,8 @@ void LPCSpeechSynthWordBank::Init(
   num_banks_ = num_banks;
   frames_ = allocator->Allocate<LPCSpeechSynth::Frame>(
       kLPCSpeechSynthMaxFrames);
-  word_boundaries_ = allocator->Allocate<int>(kLPCSpeechSynthMaxWords);
+  word_boundaries_ = allocator->Allocate<int>(
+      kLPCSpeechSynthMaxWordBoundaries);
   Reset();
 #endif
 }
@@ -139,7 +140,8 @@ void LPCSpeechSynthWordBank::Init(
   num_raw_word_banks_ = num_raw_word_banks;
   frames_ = allocator->Allocate<LPCSpeechSynth::Frame>(
       kLPCSpeechSynthMaxFrames);
-  word_boundaries_ = allocator->Allocate<int>(kLPCSpeechSynthMaxWords);
+  word_boundaries_ = allocator->Allocate<int>(
+      kLPCSpeechSynthMaxWordBoundaries);
   Reset();
 }
 #endif
@@ -234,6 +236,10 @@ bool LPCSpeechSynthWordBank::Load(int bank) {
 #if PLAITS_HAS_CUSTOM_SPEECH_BANKS
   if (bank >= num_banks_) {
     const LPCSpeechSynthRawWordBankData& raw = raw_word_banks_[bank - num_banks_];
+    if (raw.num_words > kLPCSpeechSynthMaxWords ||
+        raw.num_frames > kLPCSpeechSynthMaxFrames) {
+      return false;
+    }
     num_frames_ = raw.num_frames;
     num_words_ = raw.num_words;
     copy(raw.frames, raw.frames + num_frames_, frames_);

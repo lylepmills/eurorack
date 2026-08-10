@@ -10,7 +10,8 @@ Chord and Scale Stack, plus automatic LEVEL routing, which
 uses LPG decay on ordinary oscillator models and preserves LEVEL as
 velocity/accent on self-enveloped models. Schema 17 adds a selectable set of
 the five shipped Speech banks plus up to eight total stock/custom LPC banks;
-custom banks carry bounded 14-byte decoded frames and word boundaries rather
+each custom bank has up to 32 selector words within the shared 1,024-frame
+duration ceiling. Custom banks carry bounded 14-byte decoded frames and word boundaries rather
 than source recordings or synthesis-model data. Schema 18 adds the Stock,
 Drift, or Step unpatched-attenuverter mode to Starting Options. The selected
 mode participates in the generated options profile. Schema 19 adds triggered

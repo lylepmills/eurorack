@@ -436,7 +436,7 @@ function normalizeSlotBanks(value: unknown, numSlots: number): NormalizedSlotBan
 
 const lpcFrameBytes = 14;
 const maxSpeechBanks = 8;
-const maxSpeechWords = 16;
+const maxSpeechWords = 32;
 const maxSpeechFrames = 1024;
 const canonicalBase64Pattern = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
 

@@ -14,6 +14,7 @@ from container_server import (
     _build_targets,
     _concatenate_pcm_wavs,
     _validate_saved_bank_preview_request,
+    _validate_speech_request,
     _write_saved_plan,
     _recipe_is_stereo,
     _stereo_disable_flags,
@@ -184,6 +185,29 @@ class SavedSpeechPreviewTest(unittest.TestCase):
             _concatenate_pcm_wavs(sources, target)
             with wave.open(str(target), "rb") as result:
                 self.assertEqual(result.getnframes(), 3)
+
+
+class SpeechEncodeRequestTest(unittest.TestCase):
+    @staticmethod
+    def request(word_count: int) -> dict:
+        return {
+            "format": "rubato.plaits-lpc-word-bank/v1",
+            "name": "Capacity test",
+            "language": "en-US",
+            "entries": [
+                {"word": f"word {index + 1}"} for index in range(word_count)
+            ],
+            "synthesis": {
+                "voice": "af_heart",
+                "pitchContour": "flat-to-natural",
+                "referencePitchHz": 100,
+            },
+        }
+
+    def test_accepts_thirty_two_words_but_not_thirty_three(self) -> None:
+        self.assertEqual(len(_validate_speech_request(self.request(32))["entries"]), 32)
+        with self.assertRaisesRegex(Exception, "between 1 and 32"):
+            _validate_speech_request(self.request(33))
 
 
 class FirmwareOutputTargetTest(unittest.TestCase):

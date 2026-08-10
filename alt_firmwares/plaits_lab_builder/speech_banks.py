@@ -11,7 +11,7 @@ from typing import Any
 FRAME_STRUCT = struct.Struct("<BBhh8b")
 MAX_STOCK_BANK = 4
 MAX_BANKS = 8
-MAX_WORDS = 16
+MAX_WORDS = 32
 MAX_FRAMES = 1024
 
 

@@ -15,11 +15,12 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
+from speech_banks import MAX_WORDS
+
 
 FRAME_BYTES = 14
 FRAME_RATE = 40
 MAX_SECONDS = 15
-MAX_WORDS = 16
 MIN_GAP_FRAMES = 7
 MIN_WORD_FRAMES = 3
 EDGE_PADDING_FRAMES = 2
