@@ -165,6 +165,21 @@ has SHA-256
 bytes the hardware gate flashed, since the build is content-addressed and both
 environments resolved the same id.
 
+The August 10 Speech-bank capacity rollout shipped at `rev-44453427c187`.
+Custom banks now accept up to 32 selector words while retaining the shared
+1,024-frame duration ceiling. Staging canary build
+`c7b17e7de3032579551e8ebb653f0d2d6a1a82a8049aa778d547f822c2107d51`
+compiled a 32-word, 640-frame bank; its 4,803,692-byte WAV has SHA-256
+`c25ad6b8ef216c659d6658bb6e4414d991f5a8e42f05a7216dc545f8bfe92a16`
+and passed boot, navigation, and first/last-word playback on physical hardware.
+After the gradual production rollout settled on both configured instances, a
+fresh Speech encoder identity accepted an explicit 32-entry request at 608
+frames. Production canary build
+`da86571a3d2342eddfbef273f133427c08974e7b923aa769e1dbe915d9024ce2`
+then compiled the full 32-word, 640-frame release gate; its 4,803,692-byte WAV
+has SHA-256
+`ee3f40eebe7b14e007509207356367dfe5b0890ba8c9b26e5f48e8f5fba7a730`.
+
 Two rollout notes worth keeping:
 
 - The Worker's preference set is CLOSED and it rebuilds normalized preferences
@@ -185,6 +200,12 @@ Two rollout notes worth keeping:
   `configuration.image` matching the new tag with `starting == 0`, not on the
   health count. A build that fails against a stale instance is not cached
   permanently — the same recipe recompiles and succeeds once the rollout lands.
+- The named Speech encoder Container can outlive a gradual image rollout. Do
+  not exercise a freshly bumped identity while `configuration.image` still
+  names the old image: it can attach to that image and keep serving it after the
+  pool advances. The 32-word production rollout caught this safely; the early
+  `speech-encoder-v6` probe still enforced 16 words, so production rotated to
+  `speech-encoder-v7` only after the new image had `starting == 0`.
 
 The service is split across two isolation layers:
 
@@ -467,7 +488,7 @@ system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-fc594b275f0d` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-44453427c187` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a new
 image, use `wrangler containers info <application-id>` and wait until
@@ -477,14 +498,16 @@ gradual rollout. A first-time staging application can temporarily return "no
 Container instance available" while its image is starting; the bounded staging
 smoke retries that response.
 
-Schema 21 is live, adding experimental Sync In as the fifth MODEL-input
-assignment. It inherits schema 20's replaceable FM-bank preference, schema 19's
+Schema 22 is live, with Sync In as an opt-in Advanced preference and custom
+Speech banks accepting up to 32 words inside the 1,024-frame ceiling. It
+inherits schema 21's experimental MODEL-input assignment, schema 20's
+replaceable FM-bank preference, schema 19's
 triggered and gated FREQUENCY contours, and schema 18's Stock, Drift,
 and Step unpatched-attenuverter modes; schema 17's selectable stock LPC banks,
 custom text/recording-derived Speech banks, source/engine previews; and the
 earlier recipe-driven scale banks and automatic LEVEL routing. The generalized
 schema-inheritance hardening from `5b2b077` is also live: current production
-source `fc594b275f0d` descends from that commit, so future supported schemas
+source `44453427c187` descends from that commit, so future supported schemas
 inherit older feature shapes without another version-list edit.
 
 ### Rolling back
@@ -555,6 +578,7 @@ target.
 | August 8, 2026 (schema 20 replaceable FM banks) | `8d56c1936c5c` | `rev-8d56c1936c5c` |
 | August 8, 2026 (schema 21 experimental Sync In, manual contract 16) | `fc594b275f0d` | `rev-fc594b275f0d` |
 | August 8, 2026 (schema 22 Sync In as an opt-in Advanced preference) | `c6684dea562b` | `rev-c6684dea562b` |
+| August 10, 2026 (32-word custom Speech banks) | `44453427c187` | `rev-44453427c187` |
 
 Three consequences a rollback has that a forward deploy does not:
 
