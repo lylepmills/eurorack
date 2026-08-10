@@ -7,6 +7,8 @@
 
 #include "plaits/dsp/engine2/vowel_engine.h"
 
+#include "plaits/build_config.h"
+
 #include "stmlib/dsp/dsp.h"
 
 namespace plaits {
@@ -400,8 +402,20 @@ void VowelEngine::Render(
   const int amplitude_2 = formant_amplitude_[2];
 
   for (size_t i = 0; i < size; ++i) {
+    uint32_t phase_increment = phase_increment_;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      float modulated_increment = static_cast<float>(phase_increment_) +
+          parameters.frequency_offset[i] * 0.5f * 4294967296.0f;
+      CONSTRAIN(
+          modulated_increment,
+          0.0f,
+          static_cast<float>(kVowelMaxFormantIncrement));
+      phase_increment = static_cast<uint32_t>(modulated_increment);
+    }
+#endif
     for (int t = 0; t < kVowelOversampling; ++t) {
-      phase_ += phase_increment_;
+      phase_ += phase_increment;
 
       formant_phase_[0] += increment_l[0];
       formant_phase_[1] += increment_l[1];

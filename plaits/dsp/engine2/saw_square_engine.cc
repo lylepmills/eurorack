@@ -7,6 +7,8 @@
 
 #include "plaits/dsp/engine2/saw_square_engine.h"
 
+#include "plaits/build_config.h"
+
 #include <algorithm>
 #include <cmath>
 
@@ -129,7 +131,13 @@ void SawSquareEngine::Render(
     next_sample_saw = 0.0f;
     next_sample_square = 0.0f;
 
-    const float f = fm.Next();
+    float f = fm.Next();
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      f += parameters.frequency_offset[i];
+      CONSTRAIN(f, 0.0f, 0.25f);
+    }
+#endif
     const float pw_saw = pw_saw_modulation.Next();
     const float pw_square = pw_square_modulation.Next();
     const float atten = atten_modulation.Next();

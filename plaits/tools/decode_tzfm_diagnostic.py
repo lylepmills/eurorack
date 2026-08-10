@@ -25,6 +25,12 @@ MODEL_NAMES = {
         "Fold", "Buzz", "Pulsar", "Toy",
     ],
     4: ["Saw Swarm", "Triple", "VOSIM", "Wave Scan", "Swarm"],
+    # Group 8 is intentionally non-adjacent to the TZFM groups: its 6260 Hz
+    # metadata tone stays comfortably clear of the 6208 Hz engine-count tone.
+    8: [
+        "CSaw", "Dual Sync", "Morph", "Saw Square",
+        "Vowel", "Sub Oscillator", "GENDY", "Bytebeat",
+    ],
 }
 
 FIELD_NAMES = [
@@ -272,7 +278,8 @@ def verdict(result: dict[str, int]) -> str:
 
 
 def print_report(group: int, results: list[dict[str, int]]) -> None:
-    print(f"TZFM diagnostic group {group}")
+    label = "Fast exponential FM" if group == 8 else "TZFM"
+    print(f"{label} diagnostic group {group}")
     print("| # | Model | Slow peak | Fast peak | Slow >90 | Fast >90 | "
           "Slow miss | Fast miss | O/R | R/S | U/F | Lag | Verdict |")
     print("|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|")

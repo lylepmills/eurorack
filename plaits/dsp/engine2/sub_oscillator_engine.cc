@@ -6,6 +6,8 @@
 
 #include "plaits/dsp/engine2/sub_oscillator_engine.h"
 
+#include "plaits/build_config.h"
+
 #include <algorithm>
 #include <cmath>
 
@@ -141,7 +143,13 @@ void SubOscillatorEngine::Render(
     next_saw = 0.0f;
     next_sub = 0.0f;
 
-    const float f = fm.Next();
+    float f = fm.Next();
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      f += parameters.frequency_offset[i];
+      CONSTRAIN(f, 0.0f, kMaxFrequency);
+    }
+#endif
     const float pw_square = pw_square_modulation.Next();
     const float pw_saw = pw_saw_modulation.Next();
     const float pw_sub = pw_sub_modulation.Next();

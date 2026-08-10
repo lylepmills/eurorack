@@ -5,6 +5,8 @@
 
 #include "plaits/dsp/engine2/gendy_engine.h"
 
+#include "plaits/build_config.h"
+
 #include <algorithm>
 
 #include "stmlib/utils/random.h"
@@ -104,7 +106,14 @@ void GendyEngine::Render(
       complexity_compensation;
 
   for (size_t i = 0; i < size; ++i) {
-    phase_ += frequency;
+    float f = frequency;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      f += parameters.frequency_offset[i];
+      CONSTRAIN(f, 0.0f, 0.24f);
+    }
+#endif
+    phase_ += f;
     if (phase_ >= 1.0f) {
       phase_ -= 1.0f;
       Mutate(amplitude_step, duration_step);

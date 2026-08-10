@@ -227,7 +227,9 @@ void Init() {
   
   PLAITS_CPU_PROBE_INIT
 #if PLAITS_TZFM_DIAGNOSTIC
-  tzfm_diagnostic.Init(PLAITS_TZFM_AUDITION_GROUP);
+  tzfm_diagnostic.Init(
+      PLAITS_TZFM_AUDITION_GROUP,
+      PLAITS_FM_DIAGNOSTIC_EXPONENTIAL);
 #endif
   audio_dac.Init(48000, kBlockSize);
 

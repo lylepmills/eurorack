@@ -7,6 +7,8 @@
 
 #include "plaits/dsp/engine2/morph_engine.h"
 
+#include "plaits/build_config.h"
+
 #include <algorithm>
 
 #include "stmlib/dsp/dsp.h"
@@ -278,7 +280,16 @@ void MorphEngine::Render(
   float next_sample = next_sample_;
 
   for (size_t i = 0; i < size; ++i) {
-    const float f = fm.Next();
+    float f = fm.Next();
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      f += parameters.frequency_offset[i] /
+          static_cast<float>(kMorphOversampling);
+      CONSTRAIN(
+          f, 0.0f,
+          0.25f / static_cast<float>(kMorphOversampling));
+    }
+#endif
     const float w_saw = saw_modulation.Next();
     const float w_square = square_modulation.Next();
     const float w_triangle = 1.0f - w_saw - w_square;

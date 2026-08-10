@@ -7,6 +7,8 @@
 
 #include "plaits/dsp/engine2/dual_sync_engine.h"
 
+#include "plaits/build_config.h"
+
 #include <algorithm>
 #include <cmath>
 
@@ -139,6 +141,11 @@ void DualSyncEngine::Render(
       float(kDualSyncOversampling);
   CONSTRAIN(master_frequency, 0.0f, internal_ceiling);
   CONSTRAIN(slave_frequency, 0.0f, internal_ceiling);
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  const float slave_offset_ratio = master_frequency > 1.0e-9f
+      ? slave_frequency / master_frequency
+      : 1.0f;
+#endif
 
   const float target_balance = parameters.harmonics;
   const float target_shape = parameters.morph;
@@ -159,8 +166,18 @@ void DualSyncEngine::Render(
   float slave_next = slave_next_sample_;
 
   for (size_t i = 0; i < size; ++i) {
-    const float mf = master_fm.Next();
-    const float sf = slave_fm.Next();
+    float mf = master_fm.Next();
+    float sf = slave_fm.Next();
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      const float root_offset = parameters.frequency_offset[i] /
+          float(kDualSyncOversampling);
+      mf += root_offset;
+      sf += root_offset * slave_offset_ratio;
+      CONSTRAIN(mf, 0.0f, internal_ceiling);
+      CONSTRAIN(sf, 0.0f, internal_ceiling);
+    }
+#endif
     const float balance = balance_modulation.Next();
     const float shape = shape_modulation.Next();
 
