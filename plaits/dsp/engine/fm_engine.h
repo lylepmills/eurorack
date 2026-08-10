@@ -53,6 +53,7 @@ class FMEngine : public Engine {
   virtual bool stereo_capable() const { return PLAITS_STEREO_TWO_OP_FM; }
   virtual bool hard_sync_capable() const { return true; }
   virtual bool linear_tzfm_capable() const { return true; }
+  virtual bool fast_fm_capable() const { return true; }
 
  private:
   template<bool process_hard_sync>

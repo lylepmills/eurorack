@@ -4086,13 +4086,56 @@ void ValidateFmCapabilityPolicy() {
     fprintf(stderr, "A non-oscillator engine was mislabeled as TZFM\n");
     abort();
   }
-  // Two-op FM's 4x renderer exceeded the hardware callback budget in Fast FM
-  // tests. It must retain slow TZFM while declining only fast acquisition.
-  if (!waveshaping.fast_fm_capable()
-      || two_op_fm.fast_fm_capable()
-      || !vowel_fof.fast_fm_capable()) {
-    fprintf(stderr, "Fast FM engine capability policy changed\n");
-    abort();
+  // The 21 engines that completed the slow TZFM stress matrix remain available
+  // in the explicitly Experimental fast mode. The eight that missed deadlines
+  // even with block-rate conversion retain TZFM implementations for future
+  // optimization but decline fast acquisition in product firmware.
+  Engine* fast_engines[] = {
+    &waveshaping,
+    &two_op_fm,
+    &vowel_fof,
+    &virtual_analog,
+    &virtual_analog_dual,
+    &virtual_analog_crossfade,
+    &virtual_analog_vcf,
+    &wavetable,
+    &harmonics,
+    &ring_mod,
+    &raw_fm,
+    &pulsar,
+    &loopback,
+    &sideband,
+    &phase_weave,
+    &toy,
+    &digital_modulation,
+    &phase_flock,
+    &spectral_spiral,
+    &buzz,
+    &vosim,
+  };
+  for (size_t i = 0; i < sizeof(fast_engines) / sizeof(fast_engines[0]);
+       ++i) {
+    if (!fast_engines[i]->fast_fm_capable()) {
+      fprintf(stderr, "A qualified Experimental Fast FM engine opted out\n");
+      abort();
+    }
+  }
+  Engine* slow_only_engines[] = {
+    &phase_distortion,
+    &additive,
+    &fold,
+    &saw_swarm,
+    &triple,
+    &wave_scan,
+    &wave_terrain,
+    &swarm,
+  };
+  for (size_t i = 0;
+       i < sizeof(slow_only_engines) / sizeof(slow_only_engines[0]); ++i) {
+    if (slow_only_engines[i]->fast_fm_capable()) {
+      fprintf(stderr, "An over-budget engine opted into Fast FM\n");
+      abort();
+    }
   }
 }
 

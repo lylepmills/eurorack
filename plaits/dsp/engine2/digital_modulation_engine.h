@@ -169,6 +169,7 @@ class DigitalModulationEngine : public Engine {
       size_t size,
       bool* already_enveloped);
   virtual bool linear_tzfm_capable() const { return true; }
+  virtual bool fast_fm_capable() const { return true; }
   // Pattern B: mono AUX is the symbol staircase, a control signal; the stereo
   // branch drops it and splits OUT into its I and Q components instead. The two
   // are a quadrature pair rather than different waveforms -- heard as phasey
