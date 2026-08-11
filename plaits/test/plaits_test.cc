@@ -4241,11 +4241,11 @@ void ValidateFmCapabilityPolicy() {
     fprintf(stderr, "A non-oscillator engine was mislabeled as TZFM\n");
     abort();
   }
-  // The 21 engines that completed the slow TZFM stress matrix, plus the three
-  // exponential-only engines qualified by the first dedicated hardware batch,
-  // remain available in the explicitly Experimental fast mode. The eight that
-  // missed TZFM deadlines even with block-rate conversion retain their
-  // implementations for future optimization but decline fast acquisition.
+  // The 21 engines that completed the slow TZFM stress matrix, plus the
+  // exponential-only engines qualified by the dedicated hardware batches,
+  // remain available in the explicitly Experimental fast mode. Engines that
+  // missed deadlines retain their implementations for future optimization but
+  // decline fast acquisition.
   Engine* fast_engines[] = {
     &waveshaping,
     &two_op_fm,
@@ -4277,6 +4277,8 @@ void ValidateFmCapabilityPolicy() {
     &rulefield,
     &question_mark,
     &freshets_formant,
+    &reed_pipe,
+    &particle_burst,
   };
   for (size_t i = 0; i < sizeof(fast_engines) / sizeof(fast_engines[0]);
        ++i) {
@@ -4314,11 +4316,9 @@ void ValidateFmCapabilityPolicy() {
     &glisson,
     &scanned,
     &undertow,
-    &reed_pipe,
     &z_filter,
     &granular_cloud,
     &noise_bank,
-    &particle_burst,
     &plucked,
     &blown,
   };
