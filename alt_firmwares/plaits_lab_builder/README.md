@@ -339,6 +339,29 @@ format, source revision, toolchain identity, and build-contract version. Identic
 therefore share the same immutable artifact; WAV and HEX requests remain
 separate cache entries while sharing their field-guide PDF.
 
+## Exporting an editable local build
+
+The browser's **Save configuration** download is accepted directly. Export its
+recipe-specific source layer from this repository checkout with:
+
+```sh
+python3 alt_firmwares/plaits_lab_builder/export_recipe_source.py \
+  my-palette.plaits-palette.json \
+  build/my-palette-source
+```
+
+The output contains the generated engine and Speech configuration headers, the
+optional linker overlay required by replaceable FM banks, a map of the selected
+models' source files, source/toolchain/build metadata, and a `build.sh` wrapper
+with the same recipe flags as the hosted compiler. Its generated `README.md`
+walks through checking out the pinned source revision, using the repository's
+GCC 4.8.3 development container, rebuilding WAV or HEX firmware, and choosing
+where to make code changes.
+
+The exporter refuses to overwrite a non-empty directory so a second run cannot
+silently destroy edits made to a previous export. Use a new output directory
+when regenerating it.
+
 ## Local validation
 
 Run the contract suites:
