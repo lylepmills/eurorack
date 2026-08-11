@@ -33,6 +33,30 @@ const float kPi = 3.14159265358979323846f;
 #define PLAITS_TERRAIN_BENCH_FIXED_CASE -1
 #endif
 
+// The normal diagnostic remains knob-selectable so the QEMU sweep and fixed
+// flash builds keep working. build_autosweep.py changes this one definition in
+// a temporary package to make a self-sequencing hardware probe.
+#ifndef PLAITS_TERRAIN_BENCH_AUTOSWEEP
+#define PLAITS_TERRAIN_BENCH_AUTOSWEEP 0
+#endif
+
+// One autosweep is 116.5 seconds:
+//   6 s sync gap
+//   19 x (1.5 s settling gap + 4 s measured case)
+//   6 s sync gap
+// The adjacent trailer/leader gaps form a unique 12-second cycle marker. Two
+// full cycles therefore guarantee one complete pass in an arbitrarily aligned
+// capture. All durations are exact multiples of Plaits' 48 kHz sample rate.
+const uint32_t kAutosweepLeaderSamples = 6u * 48000u;
+const uint32_t kAutosweepGapSamples = 3u * 24000u;
+const uint32_t kAutosweepCaseSamples = 4u * 48000u;
+const uint32_t kAutosweepSlotSamples =
+    kAutosweepGapSamples + kAutosweepCaseSamples;
+const uint32_t kAutosweepTrailerSamples = 6u * 48000u;
+const uint32_t kAutosweepCycleSamples = kAutosweepLeaderSamples +
+    kTerrainEquationBenchCases * kAutosweepSlotSamples +
+    kAutosweepTrailerSamples;
+
 // A real 4 KB flash object for the sampled-grid baseline. The sparse initializer
 // keeps this diagnostic source readable; the variable coordinates prevent the
 // compiler from replacing the lookup with a constant.
@@ -241,9 +265,11 @@ void TerrainEquationBenchEngine::Init(BufferAllocator* allocator) {
   offset_ = 0.0f;
   y_offset_ = 0.0f;
   temp_buffer_ = allocator->Allocate<float>(kMaxBlockSize * 4);
+  sequence_samples_ = 0;
 }
 
 void TerrainEquationBenchEngine::Reset() {
+  sequence_samples_ = 0;
 }
 
 void TerrainEquationBenchEngine::Render(
@@ -257,19 +283,53 @@ void TerrainEquationBenchEngine::Render(
   float* path_x = &temp_buffer_[0];
   float* path_y = &temp_buffer_[kOversampling * size];
 
-  const float f0 = NoteToFrequency(parameters.note);
+  // The autosweep deliberately ignores the panel and CV inputs. Every case is
+  // measured at exactly the same nominal scan: MIDI note 48 and the three Wave
+  // Terrain controls at 0.5. This removes knob-placement error from the probe.
+#if PLAITS_TERRAIN_BENCH_AUTOSWEEP
+  const float note = 48.0f;
+  const float timbre = 0.5f;
+  const float morph = 0.5f;
+  const float macro = 0.5f;
+#else
+  const float note = parameters.note;
+  const float timbre = parameters.timbre;
+  const float morph = parameters.morph;
+  const float macro = parameters.macro;
+#endif
+
+  const float f0 = NoteToFrequency(note);
   const float attenuation = max(1.0f - 8.0f * f0, 0.0f);
-  const float radius = 0.1f + 0.9f * parameters.timbre * attenuation *
+  const float radius = 0.1f + 0.9f * timbre * attenuation *
       (2.0f - attenuation);
   path_.RenderQuadrature(
       f0 * kScale, radius, path_x, path_y, size * kOversampling);
 
-  ParameterInterpolator offset(&offset_, 1.9f * parameters.morph - 1.0f, size);
+  ParameterInterpolator offset(&offset_, 1.9f * morph - 1.0f, size);
   ParameterInterpolator y_offset(
-      &y_offset_, 1.9f * parameters.macro - 0.95f, size);
+      &y_offset_, 1.9f * macro - 0.95f, size);
 
 #if PLAITS_TERRAIN_BENCH_FIXED_CASE >= 0
   const int terrain_case = PLAITS_TERRAIN_BENCH_FIXED_CASE;
+#elif PLAITS_TERRAIN_BENCH_AUTOSWEEP
+  int terrain_case = -1;
+  uint32_t position = sequence_samples_;
+  if (position >= kAutosweepLeaderSamples) {
+    position -= kAutosweepLeaderSamples;
+    const uint32_t case_region =
+        kTerrainEquationBenchCases * kAutosweepSlotSamples;
+    if (position < case_region) {
+      const int slot = static_cast<int>(position / kAutosweepSlotSamples);
+      const uint32_t within_slot = position % kAutosweepSlotSamples;
+      if (within_slot >= kAutosweepGapSamples) {
+        terrain_case = slot;
+      }
+    }
+  }
+  sequence_samples_ += static_cast<uint32_t>(size);
+  if (sequence_samples_ >= kAutosweepCycleSamples) {
+    sequence_samples_ -= kAutosweepCycleSamples;
+  }
 #else
   const int terrain_case = min(
       int(parameters.harmonics * float(kTerrainEquationBenchCases)),

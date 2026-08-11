@@ -111,6 +111,23 @@ the LED meter remains the overload-safe reading. Set TIMBRE, MORPH and MACRO to
 noon, note to 48, then visit the HARMONICS centres above. Repeat the worst cases
 at path and pitch extremes.
 
+## Autonomous hardware probe
+
+For an interface capture, build the self-sequencing variant instead:
+
+```sh
+python3 alt_firmwares/plaits_lab_sdk/diagnostics/terrain-equation-bench/build_autosweep.py \
+  --output /tmp/terrain-equation-autosweep.wav
+```
+
+It ignores the panel and CV inputs, fixes note, TIMBRE, MORPH and MACRO to the
+same exact nominal values, and measures cases 0 through 18 in order. Each case
+gets a 1.5-second low-cost settling gap followed by a 4-second measurement. A
+unique 12-second low-cost gap marks the loop boundary. One loop is 116.5
+seconds; record at least 233 seconds to guarantee a complete alignable pass no
+matter where capture begins. MAIN still carries the current terrain and AUX is
+the CPU-frequency readout.
+
 ## Per-case flash and firmware matrix
 
 `build_matrix.py` makes fixed-case probe firmwares. In a fixed build the

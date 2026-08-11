@@ -4,6 +4,8 @@
 #ifndef PLAITS_LAB_TERRAIN_EQUATION_BENCH_ENGINE_H_
 #define PLAITS_LAB_TERRAIN_EQUATION_BENCH_ENGINE_H_
 
+#include <stdint.h>
+
 #include "plaits/dsp/engine/engine.h"
 #include "plaits/dsp/oscillator/sine_oscillator.h"
 
@@ -25,6 +27,7 @@ class TerrainEquationBenchEngine : public Engine {
   float offset_;
   float y_offset_;
   float* temp_buffer_;
+  uint32_t sequence_samples_;
 
   DISALLOW_COPY_AND_ASSIGN(TerrainEquationBenchEngine);
 };
