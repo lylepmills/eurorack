@@ -38,6 +38,7 @@ class LockstepEngine : public Engine {
       size_t size,
       bool* already_enveloped);
   virtual bool stereo_capable() const { return PLAITS_STEREO_LOCKSTEP; }
+  virtual bool fast_fm_capable() const { return true; }
 
  private:
   float reference_phase_;

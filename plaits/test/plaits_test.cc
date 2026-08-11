@@ -548,6 +548,14 @@ void ValidateFastExponentialFmEngineCoverage() {
   ValidateFastExponentialFmEngine<QuestionMarkEngine>("Question Mark");
   ValidateFastExponentialFmEngine<FreshetsFormantEngine>(
       "Freshets Formant");
+  ValidateFastExponentialFmEngine<UndertowEngine>("Undertow");
+  ValidateFastExponentialFmEngine<ReedPipeEngine>("Reed Pipe");
+  ValidateFastExponentialFmEngine<ZFilterEngine>("Z Filter");
+  ValidateFastExponentialFmEngine<GranularCloudEngine>("Granular Cloud");
+  ValidateFastExponentialFmEngine<NoiseBankEngine>("Noise Bank");
+  ValidateFastExponentialFmEngine<ParticleBurstEngine>("Particle Burst");
+  ValidateFastExponentialFmEngine<PluckedEngine>("Plucked");
+  ValidateFastExponentialFmEngine<BlownEngine>("Blown");
 }
 
 void TestVariableShapeOscillator() {
@@ -4165,6 +4173,22 @@ void ValidateFmCapabilityPolicy() {
   SubOscillatorEngine sub_oscillator;
   GendyEngine gendy;
   BytebeatEngine bytebeat;
+  GlissonEngine glisson;
+  ScannedEngine scanned;
+  LockstepEngine lockstep;
+  TapfieldEngine tapfield;
+  AttractorEngine attractor;
+  RulefieldEngine rulefield;
+  QuestionMarkEngine question_mark;
+  FreshetsFormantEngine freshets_formant;
+  UndertowEngine undertow;
+  ReedPipeEngine reed_pipe;
+  ZFilterEngine z_filter;
+  GranularCloudEngine granular_cloud;
+  NoiseBankEngine noise_bank;
+  ParticleBurstEngine particle_burst;
+  PluckedEngine plucked;
+  BlownEngine blown;
   Engine* linear_engines[] = {
     &waveshaping,
     &two_op_fm,
@@ -4247,6 +4271,12 @@ void ValidateFmCapabilityPolicy() {
     &csaw,
     &sub_oscillator,
     &gendy,
+    &lockstep,
+    &tapfield,
+    &attractor,
+    &rulefield,
+    &question_mark,
+    &freshets_formant,
   };
   for (size_t i = 0; i < sizeof(fast_engines) / sizeof(fast_engines[0]);
        ++i) {
@@ -4281,6 +4311,16 @@ void ValidateFmCapabilityPolicy() {
     &saw_square,
     &vowel,
     &bytebeat,
+    &glisson,
+    &scanned,
+    &undertow,
+    &reed_pipe,
+    &z_filter,
+    &granular_cloud,
+    &noise_bank,
+    &particle_burst,
+    &plucked,
+    &blown,
   };
   for (size_t i = 0;
        i < sizeof(pending_exponential_engines) /

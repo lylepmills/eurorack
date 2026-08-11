@@ -8,6 +8,7 @@
 
 #include <algorithm>
 
+#include "plaits/build_config.h"
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/dsp/parameter_interpolator.h"
 
@@ -172,13 +173,15 @@ void BlownEngine::Render(
   }
   CONSTRAIN(delay, 4.0f, static_cast<float>(kBlownBoreLength - 2));
 
-  const uint32_t delay_integral = static_cast<uint32_t>(delay);
-  const float delay_fractional = delay - static_cast<float>(delay_integral);
+  const uint32_t base_delay_integral = static_cast<uint32_t>(delay);
+  const float base_delay_fractional =
+      delay - static_cast<float>(base_delay_integral);
 
   float pickup = delay * kBlownStereoPickup;
   CONSTRAIN(pickup, 2.0f, static_cast<float>(kBlownBoreLength - 2));
-  const uint32_t pickup_integral = static_cast<uint32_t>(pickup);
-  const float pickup_fractional = pickup - static_cast<float>(pickup_integral);
+  const uint32_t base_pickup_integral = static_cast<uint32_t>(pickup);
+  const float base_pickup_fractional =
+      pickup - static_cast<float>(base_pickup_integral);
 
   // TIMBRE, line 1322: `28000 - (parameter_[0] >> 1)`, applied at 1334 as
   // `Random::GetSample() * parameter >> 15`. The >> 1 is reproduced because
@@ -202,7 +205,40 @@ void BlownEngine::Render(
   ParameterInterpolator reed_modulation(
       &reed_offset_, target_reed_offset, size);
 
+  size_t sample_index = 0;
   while (size--) {
+    uint32_t delay_integral = base_delay_integral;
+    float delay_fractional = base_delay_fractional;
+    uint32_t pickup_integral = base_pickup_integral;
+    float pickup_fractional = base_pickup_fractional;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      const float instantaneous_frequency = max(
+          1e-6f, frequency + parameters.frequency_offset[sample_index]);
+      float instantaneous_delay = 1.0f / instantaneous_frequency - 1.0f;
+      int instantaneous_guard = 0;
+      while (instantaneous_guard < 16 &&
+             instantaneous_delay > static_cast<float>(kBlownBoreLength - 1)) {
+        instantaneous_delay *= 0.5f;
+        ++instantaneous_guard;
+      }
+      CONSTRAIN(
+          instantaneous_delay,
+          4.0f,
+          static_cast<float>(kBlownBoreLength - 2));
+      delay_integral = static_cast<uint32_t>(instantaneous_delay);
+      delay_fractional =
+          instantaneous_delay - static_cast<float>(delay_integral);
+      float instantaneous_pickup = instantaneous_delay * kBlownStereoPickup;
+      CONSTRAIN(
+          instantaneous_pickup,
+          2.0f,
+          static_cast<float>(kBlownBoreLength - 2));
+      pickup_integral = static_cast<uint32_t>(instantaneous_pickup);
+      pickup_fractional =
+          instantaneous_pickup - static_cast<float>(pickup_integral);
+    }
+#endif
     const float noise_depth = noise_modulation.Next();
     const float body_coefficient = body_modulation.Next();
     const float blow = blow_modulation.Next();
@@ -295,6 +331,7 @@ void BlownEngine::Render(
 
     *out++ = out_dc_output_;
     *aux++ = aux_dc_output_;
+    ++sample_index;
   }
 }
 

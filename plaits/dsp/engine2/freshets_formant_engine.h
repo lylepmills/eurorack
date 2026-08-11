@@ -33,6 +33,7 @@ class FreshetsFormantEngine : public Engine {
   void Render(const EngineParameters& parameters, float* out, float* aux,
       size_t size, bool* already_enveloped);
   virtual bool stereo_capable() const { return PLAITS_STEREO_FRESHETS_FORMANT; }
+  virtual bool fast_fm_capable() const { return true; }
 
  private:
   float driver_phase_;

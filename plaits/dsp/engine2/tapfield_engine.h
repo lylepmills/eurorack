@@ -33,6 +33,7 @@ class TapfieldEngine : public Engine {
       size_t size,
       bool* already_enveloped);
   virtual bool stereo_capable() const { return PLAITS_STEREO_TAPFIELD; }
+  virtual bool fast_fm_capable() const { return true; }
 
  private:
   void ConfigureTopology(float harmonics);
