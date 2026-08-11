@@ -8,6 +8,7 @@
 
 #include <algorithm>
 
+#include "plaits/build_config.h"
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/dsp/units.h"
 
@@ -78,6 +79,43 @@ inline float BowingEnvelope(float index) {
       (kBowedEnvelopeSustain - kBowedEnvelopePeak) * t;
 }
 
+inline void ResolveBowedDelays(
+    float frequency,
+    float bow_position,
+    uint32_t* bridge_integral,
+    uint32_t* neck_integral,
+    uint32_t* bridge_balance,
+    uint32_t* neck_balance) {
+  float delay = 1.0f / max(1e-7f, frequency) - 2.0f;
+  float bridge_delay = delay * bow_position;
+  int guard = 0;
+  while (guard < 16 &&
+         ((delay - bridge_delay) > static_cast<float>(kBowedNeckLength - 1) ||
+          bridge_delay > static_cast<float>(kBowedBridgeLength - 1))) {
+    delay *= 0.5f;
+    bridge_delay *= 0.5f;
+    ++guard;
+  }
+  CONSTRAIN(bridge_delay, 1.0f,
+            static_cast<float>(kBowedBridgeLength - 4));
+  float neck_delay = delay - bridge_delay;
+  CONSTRAIN(neck_delay, 4.0f,
+            static_cast<float>(kBowedNeckLength - 4));
+
+  *bridge_integral = static_cast<uint32_t>(bridge_delay);
+  *neck_integral = static_cast<uint32_t>(neck_delay);
+  *bridge_balance = static_cast<uint32_t>(
+      (bridge_delay - static_cast<float>(*bridge_integral)) * 65536.0f);
+  *neck_balance = static_cast<uint32_t>(
+      (neck_delay - static_cast<float>(*neck_integral)) * 65536.0f);
+  if (*bridge_balance > 65535) {
+    *bridge_balance = 65535;
+  }
+  if (*neck_balance > 65535) {
+    *neck_balance = 65535;
+  }
+}
+
 }  // namespace
 
 void BowedEngine::Init(BufferAllocator* allocator) {
@@ -137,7 +175,6 @@ void BowedEngine::Render(
   // pair of its 96 kHz samples, so the delay is in 48 kHz samples and Braids'
   // `- 2` compensation for the one-pole transfers unchanged.
   const float frequency = max(1e-7f, NoteToFrequency(parameters.note));
-  float delay = 1.0f / frequency - 2.0f;
 
   // Braids' `parameter_1 = 6 + (COLOR >> 9)` is an INTEGER in [6, 69] over
   // 256. The quantization is audible rather than cosmetic: bow position sets
@@ -146,42 +183,14 @@ void BowedEngine::Render(
   const int bow_steps = 6 + (static_cast<int>(
       parameters.harmonics * 32767.0f) >> 9);
   const float bow_position = static_cast<float>(bow_steps) * (1.0f / 256.0f);
-  float bridge_delay = delay * bow_position;
-
-  // Braids' octave fold: halve until both taps fit their line. Keeping its
-  // line lengths keeps its 11.4 Hz floor.
-  int guard = 0;
-  while (guard < 16 &&
-         ((delay - bridge_delay) > static_cast<float>(kBowedNeckLength - 1) ||
-          bridge_delay > static_cast<float>(kBowedBridgeLength - 1))) {
-    delay *= 0.5f;
-    bridge_delay *= 0.5f;
-    ++guard;
-  }
-  // Read(d) is only meaningful for d >= 1: below that the integral part is
-  // zero and the read wraps a whole line back, which is exactly what Braids
-  // does from MIDI 84.5 upward at HARMONICS 0. Clamp the TAP at one sample,
-  // and take the neck delay from the CLAMPED value so the total loop -- and
-  // therefore the pitch -- is unchanged.
-  CONSTRAIN(bridge_delay, 1.0f, static_cast<float>(kBowedBridgeLength - 4));
-  float neck_delay = delay - bridge_delay;
-  CONSTRAIN(neck_delay, 4.0f, static_cast<float>(kBowedNeckLength - 4));
-
-  const uint32_t bridge_integral = static_cast<uint32_t>(bridge_delay);
-  const uint32_t neck_integral = static_cast<uint32_t>(neck_delay);
-  // Braids carries the delays as 16.16 and its interpolation balance is the
-  // low word (`bridge_delay & 0xffff`), a uint16 -- so the balance is on the
-  // same 1/65536 grid here.
-  uint32_t bridge_balance = static_cast<uint32_t>(
-      (bridge_delay - static_cast<float>(bridge_integral)) * 65536.0f);
-  uint32_t neck_balance = static_cast<uint32_t>(
-      (neck_delay - static_cast<float>(neck_integral)) * 65536.0f);
-  if (bridge_balance > 65535) {
-    bridge_balance = 65535;
-  }
-  if (neck_balance > 65535) {
-    neck_balance = 65535;
-  }
+  uint32_t bridge_integral;
+  uint32_t neck_integral;
+  uint32_t bridge_balance;
+  uint32_t neck_balance;
+  ResolveBowedDelays(
+      frequency, bow_position,
+      &bridge_integral, &neck_integral,
+      &bridge_balance, &neck_balance);
 
   // TIMBRE is Braids' `172 - (parameter_[0] >> 8)`, also an integer, in
   // [45, 172] and scaled by 1/32.
@@ -204,6 +213,16 @@ void BowedEngine::Render(
   const float body_a2 = -kBowedBodyRadius * kBowedBodyRadius;
 
   for (size_t i = 0; i < size; ++i) {
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      const float instantaneous_frequency = max(
+          1e-7f, frequency + parameters.frequency_offset[i]);
+      ResolveBowedDelays(
+          instantaneous_frequency, bow_position,
+          &bridge_integral, &neck_integral,
+          &bridge_balance, &neck_balance);
+    }
+#endif
     const uint32_t bridge_read = \
         (delay_pointer_ + 2 * kBowedBridgeLength - bridge_integral);
     const uint32_t neck_read = \

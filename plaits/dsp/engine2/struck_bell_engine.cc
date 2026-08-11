@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "plaits/build_config.h"
 #include "stmlib/dsp/dsp.h"
 
 #include "plaits/dsp/oscillator/sine_oscillator.h"
@@ -177,6 +178,11 @@ void StruckBellEngine::Render(
 
   float increment_sin[kNumBellPartials];
   float increment_cos[kNumBellPartials];
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  float increment_ratio[kNumBellPartials];
+  const float root_frequency = max(
+      1e-7f, NoteToFrequency(parameters.note));
+#endif
   // Braids' int32 Q15 amplitude, read out as the float gain the sample loop
   // wants. Held constant across the block exactly as Braids holds it.
   float partial_gain[kNumBellPartials];
@@ -187,6 +193,9 @@ void StruckBellEngine::Render(
     const float base_note = parameters.note + ratio_semitones +
         sign * detune_semitones;
     const float increment = NoteToFrequency(base_note);
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    increment_ratio[i] = increment / root_frequency;
+#endif
     increment_sin[i] = Sine(increment);
     increment_cos[i] = Sine(increment + 0.25f);
     const float rotation_norm = 1.0f / Sqrt(
@@ -200,6 +209,20 @@ void StruckBellEngine::Render(
     float sum_l = 0.0f;
     float upper = 0.0f;
     for (size_t i = 0; i < kNumBellPartials; ++i) {
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+      if (parameters.frequency_offset) {
+        const float instantaneous_root = max(
+            1e-7f, root_frequency + parameters.frequency_offset[s]);
+        const float increment = instantaneous_root * increment_ratio[i];
+        increment_sin[i] = Sine(increment);
+        increment_cos[i] = Sine(increment + 0.25f);
+        const float rotation_norm = 1.0f / Sqrt(
+            increment_sin[i] * increment_sin[i] +
+            increment_cos[i] * increment_cos[i]);
+        increment_sin[i] *= rotation_norm;
+        increment_cos[i] *= rotation_norm;
+      }
+#endif
       const float phase_sin = phase_sin_[i];
       const float phase_cos = phase_cos_[i];
       phase_sin_[i] = phase_sin * increment_cos[i] +

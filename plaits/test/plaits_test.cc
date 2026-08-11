@@ -564,6 +564,14 @@ void ValidateFastExponentialFmEngineCoverage() {
   ValidateFastExponentialFmEngine<SnareDrumEngine>("Analog Snare");
   ValidateFastExponentialFmEngine<HiHatEngine>("Analog Hi-Hat");
   ValidateFastExponentialFmEngine<StringMachineEngine>("String Machine");
+  ValidateFastExponentialFmEngine<StruckBellEngine>("Struck Bell");
+  ValidateFastExponentialFmEngine<StruckDrumEngine>("Struck Drum");
+  ValidateFastExponentialFmEngine<KickEngine>("Kick");
+  ValidateFastExponentialFmEngine<SnareEngine>("Snare");
+  ValidateFastExponentialFmEngine<CymbalEngine>("Cymbal");
+  ValidateFastExponentialFmEngine<WaveParaphonicEngine>("Wave Paraphonic");
+  ValidateFastExponentialFmEngine<FlutedEngine>("Fluted");
+  ValidateFastExponentialFmEngine<BowedEngine>("Bowed");
 }
 
 void TestVariableShapeOscillator() {
@@ -4246,6 +4254,14 @@ void ValidateFmCapabilityPolicy() {
   SnareDrumEngine snare_drum;
   HiHatEngine hi_hat;
   StringMachineEngine string_machine;
+  StruckBellEngine struck_bell;
+  StruckDrumEngine struck_drum;
+  KickEngine kick;
+  SnareEngine snare;
+  CymbalEngine cymbal;
+  WaveParaphonicEngine wave_paraphonic;
+  FlutedEngine fluted;
+  BowedEngine bowed;
   if (modal.linear_tzfm_capable()
       || string.linear_tzfm_capable()
       || noise.linear_tzfm_capable()
@@ -4341,6 +4357,14 @@ void ValidateFmCapabilityPolicy() {
     &snare_drum,
     &hi_hat,
     &string_machine,
+    &struck_bell,
+    &struck_drum,
+    &kick,
+    &snare,
+    &cymbal,
+    &wave_paraphonic,
+    &fluted,
+    &bowed,
   };
   for (size_t i = 0;
        i < sizeof(pending_exponential_engines) /

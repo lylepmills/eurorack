@@ -8,8 +8,10 @@
 
 #include "plaits/dsp/engine2/snare_engine.h"
 
+#include <algorithm>
 #include <cmath>
 
+#include "plaits/build_config.h"
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/dsp/parameter_interpolator.h"
 #include "stmlib/utils/random.h"
@@ -41,6 +43,17 @@ inline float SvfFrequencyCoefficient(float note_semitones) {
   }
   return 2.0f * sinf(float(M_PI) * f_norm);
 }
+
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+inline float SvfFrequencyCoefficientFromPlaitsFrequency(float frequency) {
+  float f_norm = frequency *
+      (kCorrectedSampleRate / kSnareSvfLutSampleRate);
+  if (f_norm > kSnareSvfMaxNormalizedFrequency) {
+    f_norm = kSnareSvfMaxNormalizedFrequency;
+  }
+  return 2.0f * sinf(float(M_PI) * f_norm);
+}
+#endif
 
 inline float SvfResonanceDomain(float resonance_code) {
   // Interpolate824(lut_svf_damp, resonance << 17) indexes at
@@ -300,6 +313,18 @@ void SnareEngine::Render(
       note + kSnareTone1SemitoneOffset * partial_spread_);
   const float f2 = SvfFrequencyCoefficient(note + kSnareNoiseSemitoneOffset);
 
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  const float root_frequency = std::max(
+      1e-7f, NoteToFrequency(note));
+  const float ratio0 = NoteToFrequency(
+      note + kSnareTone0SemitoneOffset * partial_spread_) / root_frequency;
+  const float ratio1 = NoteToFrequency(
+      note + kSnareTone1SemitoneOffset * partial_spread_) / root_frequency;
+  const float ratio2 = NoteToFrequency(
+      note + kSnareNoiseSemitoneOffset) / root_frequency;
+  size_t frequency_sample = 0;
+#endif
+
   ParameterInterpolator gain0_modulation(&gain0_, target_gain0, size);
   ParameterInterpolator gain1_modulation(&gain1_, target_gain1, size);
   ParameterInterpolator tone_mix_modulation(
@@ -346,11 +371,30 @@ void SnareEngine::Render(
     const float noise_sample = random_sample * pulse3_out;
 
     // digital_oscillator.cc:2440-2442.
-    const float tone0 = SvfStep(excitation0, f0, damp0, svf0_lp, svf0_bp) +
+    float sample_f0 = f0;
+    float sample_f1 = f1;
+    float sample_f2 = f2;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      const float instantaneous_root = std::max(
+          1e-7f, root_frequency +
+              parameters.frequency_offset[frequency_sample]);
+      sample_f0 = SvfFrequencyCoefficientFromPlaitsFrequency(
+          instantaneous_root * ratio0);
+      sample_f1 = SvfFrequencyCoefficientFromPlaitsFrequency(
+          instantaneous_root * ratio1);
+      sample_f2 = SvfFrequencyCoefficientFromPlaitsFrequency(
+          instantaneous_root * ratio2);
+    }
+#endif
+    const float tone0 = SvfStep(
+        excitation0, sample_f0, damp0, svf0_lp, svf0_bp) +
         excitation0 * kSnareDryMix;
-    const float tone1 = SvfStep(excitation1, f1, damp1, svf1_lp, svf1_bp) +
+    const float tone1 = SvfStep(
+        excitation1, sample_f1, damp1, svf1_lp, svf1_bp) +
         excitation1 * kSnareDryMix;
-    const float noise = SvfStep(noise_sample, f2, damp2, svf2_lp, svf2_bp);
+    const float noise = SvfStep(
+        noise_sample, sample_f2, damp2, svf2_lp, svf2_bp);
 
     // MORPH crossfades the tonal sum against the snap resonator around
     // Braids' native unweighted sum (digital_oscillator.cc:2439-2442).
@@ -369,6 +413,9 @@ void SnareEngine::Render(
       *out++ = sample;
       *aux++ = SoftClip(noise);
     }
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    ++frequency_sample;
+#endif
   }
 
   pulse0_state_ = pulse0.state;

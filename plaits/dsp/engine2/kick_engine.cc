@@ -7,8 +7,10 @@
 
 #include "plaits/dsp/engine2/kick_engine.h"
 
+#include <algorithm>
 #include <cmath>
 
+#include "plaits/build_config.h"
 #include "stmlib/dsp/parameter_interpolator.h"
 
 namespace plaits {
@@ -158,6 +160,13 @@ void KickEngine::Render(
   KickPulse pulse0 = { pulse0_state_, pulse0_counter_ };
   KickPulse pulse1 = { pulse1_state_, pulse1_counter_ };
 
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  const float root_frequency = std::max(
+      1e-7f, NoteToFrequency(parameters.note));
+  const float click_ratio = SemitonesToRatio(kKickClickSemitones);
+  size_t frequency_sample = 0;
+#endif
+
   while (size--) {
     // Pulse 2's countdown gates the resonator's centre frequency
     // (digital_oscillator.cc:2351-2352) -- decrement THEN check, matching
@@ -170,6 +179,16 @@ void KickEngine::Render(
     const float note = parameters.note +
         (click_active ? kKickClickSemitones : 0.0f);
     float f_norm = NoteToFrequency(note);
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      f_norm = std::max(
+          1e-7f, root_frequency +
+              parameters.frequency_offset[frequency_sample]);
+      if (click_active) {
+        f_norm *= click_ratio;
+      }
+    }
+#endif
     if (f_norm > kKickSvfMaxNormalizedFrequency) {
       f_norm = kKickSvfMaxNormalizedFrequency;
     }
@@ -231,6 +250,9 @@ void KickEngine::Render(
       *out++ = sample;
       *aux++ = SoftClip(excitation);
     }
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    ++frequency_sample;
+#endif
   }
 
   pulse0_state_ = pulse0.state;

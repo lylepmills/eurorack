@@ -44,6 +44,10 @@ MODEL_NAMES = {
         "Particle Noise", "Analog Bass Drum", "Analog Snare",
         "Analog Hi-Hat", "String Machine",
     ],
+    12: [
+        "Struck Bell", "Struck Drum", "Kick", "Snare", "Cymbal",
+        "Wave Paraphonic", "Fluted", "Bowed",
+    ],
 }
 
 FIELD_NAMES = [
