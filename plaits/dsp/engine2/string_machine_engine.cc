@@ -30,6 +30,7 @@
 
 #include <algorithm>
 
+#include "plaits/build_config.h"
 #include "plaits/resources.h"
 
 namespace plaits {
@@ -102,29 +103,65 @@ void StringMachineEngine::Render(
   fill(&out[0], &out[size], 0.0f);
   fill(&aux[0], &aux[size], 0.0f);
   const float f0 = NoteToFrequency(parameters.note) * 0.998f;
-  for (int note = 0; note < kChordNumNotes; ++note) {
-    const float note_f0 = f0 * chords_.ratio(note);
-    float divide_down_gain = 4.0f - note_f0 * 32.0f;
-    CONSTRAIN(divide_down_gain, 0.0f, 1.0f);
-    divide_down_voice_[note].Render(
-        note_f0,
-        harmonics,
-        0.25f * divide_down_gain,
-        note & 1 ? aux : out,
-        size);
-  }
-  
-  // Pass through VCF.
-  const float cutoff = 2.2f * f0 * SemitonesToRatio(120.0f * parameters.timbre);
-  svf_[0].set_f_q<FREQUENCY_DIRTY>(cutoff, 1.0f);
-  svf_[1].set_f_q<FREQUENCY_DIRTY>(cutoff * 1.5f, 1.0f);
+  const float cutoff_ratio =
+      2.2f * SemitonesToRatio(120.0f * parameters.timbre);
 
-  // Mixdown.
-  for (size_t i = 0; i < size; ++i) {
-    const float l = svf_[0].Process<FILTER_MODE_LOW_PASS>(out[i]);
-    const float r = svf_[1].Process<FILTER_MODE_LOW_PASS>(aux[i]);
-    out[i] = 0.66f * l + 0.33f * r;
-    aux[i] = 0.66f * r + 0.33f * l;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  if (parameters.frequency_offset) {
+    float chord_ratio[kChordNumNotes];
+    for (int note = 0; note < kChordNumNotes; ++note) {
+      chord_ratio[note] = chords_.ratio(note);
+    }
+    for (size_t sample = 0; sample < size; ++sample) {
+      float instantaneous_f0 = max(
+          1e-7f, f0 + parameters.frequency_offset[sample] * 0.998f);
+      instantaneous_f0 = min(instantaneous_f0, 0.49f);
+      for (int note = 0; note < kChordNumNotes; ++note) {
+        const float note_f0 = instantaneous_f0 * chord_ratio[note];
+        float divide_down_gain = 4.0f - note_f0 * 32.0f;
+        CONSTRAIN(divide_down_gain, 0.0f, 1.0f);
+        divide_down_voice_[note].Render(
+            note_f0,
+            harmonics,
+            0.25f * divide_down_gain,
+            (note & 1 ? aux : out) + sample,
+            1);
+      }
+      const float cutoff = instantaneous_f0 * cutoff_ratio;
+      svf_[0].set_f_q<FREQUENCY_DIRTY>(cutoff, 1.0f);
+      svf_[1].set_f_q<FREQUENCY_DIRTY>(cutoff * 1.5f, 1.0f);
+      const float l = svf_[0].Process<FILTER_MODE_LOW_PASS>(out[sample]);
+      const float r = svf_[1].Process<FILTER_MODE_LOW_PASS>(aux[sample]);
+      out[sample] = 0.66f * l + 0.33f * r;
+      aux[sample] = 0.66f * r + 0.33f * l;
+    }
+  } else
+#endif
+  {
+    for (int note = 0; note < kChordNumNotes; ++note) {
+      const float note_f0 = f0 * chords_.ratio(note);
+      float divide_down_gain = 4.0f - note_f0 * 32.0f;
+      CONSTRAIN(divide_down_gain, 0.0f, 1.0f);
+      divide_down_voice_[note].Render(
+          note_f0,
+          harmonics,
+          0.25f * divide_down_gain,
+          note & 1 ? aux : out,
+          size);
+    }
+
+    // Pass through VCF.
+    const float cutoff = f0 * cutoff_ratio;
+    svf_[0].set_f_q<FREQUENCY_DIRTY>(cutoff, 1.0f);
+    svf_[1].set_f_q<FREQUENCY_DIRTY>(cutoff * 1.5f, 1.0f);
+
+    // Mixdown.
+    for (size_t i = 0; i < size; ++i) {
+      const float l = svf_[0].Process<FILTER_MODE_LOW_PASS>(out[i]);
+      const float r = svf_[1].Process<FILTER_MODE_LOW_PASS>(aux[i]);
+      out[i] = 0.66f * l + 0.33f * r;
+      aux[i] = 0.66f * r + 0.33f * l;
+    }
   }
 
   // Ensemble FX.

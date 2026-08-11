@@ -556,6 +556,14 @@ void ValidateFastExponentialFmEngineCoverage() {
   ValidateFastExponentialFmEngine<ParticleBurstEngine>("Particle Burst");
   ValidateFastExponentialFmEngine<PluckedEngine>("Plucked");
   ValidateFastExponentialFmEngine<BlownEngine>("Blown");
+  ValidateFastExponentialFmEngine<ModalEngine>("Modal Resonator");
+  ValidateFastExponentialFmEngine<StringEngine>("Inharmonic String");
+  ValidateFastExponentialFmEngine<NoiseEngine>("Filtered Noise");
+  ValidateFastExponentialFmEngine<ParticleEngine>("Particle Noise");
+  ValidateFastExponentialFmEngine<BassDrumEngine>("Analog Bass Drum");
+  ValidateFastExponentialFmEngine<SnareDrumEngine>("Analog Snare");
+  ValidateFastExponentialFmEngine<HiHatEngine>("Analog Hi-Hat");
+  ValidateFastExponentialFmEngine<StringMachineEngine>("String Machine");
 }
 
 void TestVariableShapeOscillator() {
@@ -4233,7 +4241,11 @@ void ValidateFmCapabilityPolicy() {
   ModalEngine modal;
   StringEngine string;
   NoiseEngine noise;
+  ParticleEngine particle;
   BassDrumEngine bass_drum;
+  SnareDrumEngine snare_drum;
+  HiHatEngine hi_hat;
+  StringMachineEngine string_machine;
   if (modal.linear_tzfm_capable()
       || string.linear_tzfm_capable()
       || noise.linear_tzfm_capable()
@@ -4321,6 +4333,14 @@ void ValidateFmCapabilityPolicy() {
     &noise_bank,
     &plucked,
     &blown,
+    &modal,
+    &string,
+    &noise,
+    &particle,
+    &bass_drum,
+    &snare_drum,
+    &hi_hat,
+    &string_machine,
   };
   for (size_t i = 0;
        i < sizeof(pending_exponential_engines) /

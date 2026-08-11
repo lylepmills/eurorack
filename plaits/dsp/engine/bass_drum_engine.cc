@@ -35,6 +35,8 @@
 
 #include <algorithm>
 
+#include "plaits/build_config.h"
+
 namespace plaits {
 
 using namespace std;
@@ -65,6 +67,62 @@ void BassDrumEngine::Render(
       max(1.0f - 16.0f * f0, 0.0f);
   
   const bool sustain = parameters.trigger & TRIGGER_UNPATCHED;
+
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  if (parameters.frequency_offset) {
+    const bool trigger = parameters.trigger & TRIGGER_RISING_EDGE;
+    for (size_t sample = 0; sample < size; ++sample) {
+      float instantaneous_f0 = max(
+          1e-7f, f0 + parameters.frequency_offset[sample]);
+      instantaneous_f0 = min(instantaneous_f0, 0.49f);
+      analog_bass_drum_.Render(
+          sustain,
+          trigger && sample == 0,
+          parameters.accent,
+          instantaneous_f0,
+          parameters.timbre,
+          parameters.morph,
+          attack_fm_amount,
+          self_fm_amount,
+          out + sample,
+          1);
+      const float instantaneous_drive =
+          max(parameters.harmonics * 2.0f - 1.0f, 0.0f) *
+          max(1.0f - 16.0f * instantaneous_f0, 0.0f);
+      overdrive_.Process(
+          0.5f + 0.5f * instantaneous_drive,
+          out + sample,
+          1);
+      synthetic_bass_drum_.Render(
+          sustain,
+          trigger && sample == 0,
+          parameters.accent,
+          instantaneous_f0,
+          parameters.timbre,
+          parameters.morph,
+          sustain
+              ? parameters.harmonics
+              : 0.4f - 0.25f * parameters.morph * parameters.morph,
+          min(parameters.harmonics * 2.0f, 1.0f) * punch,
+          max(parameters.harmonics * 2.0f - 1.0f, 0.0f),
+          aux + sample,
+          1);
+    }
+    if ((PLAITS_STEREO_ANALOG_BASS_DRUM && parameters.stereo)) {
+      float analog_left, analog_right;
+      float synthetic_left, synthetic_right;
+      StereoPanGains(0.42f, &analog_left, &analog_right);
+      StereoPanGains(0.58f, &synthetic_left, &synthetic_right);
+      for (size_t i = 0; i < size; ++i) {
+        const float analog = out[i];
+        const float synthetic = aux[i];
+        out[i] = analog * analog_left + synthetic * synthetic_left;
+        aux[i] = analog * analog_right + synthetic * synthetic_right;
+      }
+    }
+    return;
+  }
+#endif
   
   analog_bass_drum_.Render(
       sustain,

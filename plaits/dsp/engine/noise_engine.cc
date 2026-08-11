@@ -34,6 +34,7 @@
 
 #include "plaits/dsp/engine/noise_engine.h"
 
+#include "plaits/build_config.h"
 #include "stmlib/dsp/parameter_interpolator.h"
 
 namespace plaits {
@@ -89,6 +90,9 @@ void NoiseEngine::Render(
   ParameterInterpolator mode_modulation(
       &previous_mode_, ApplyMacro(
           parameters.harmonics, 0.0f, 1.0f, parameters.macro), size);
+  const float fast_base_f0 = f0;
+  const float f1_ratio = f1 / max(f0, 1e-7f);
+  size_t sample = 0;
 
   const float* in_1 = aux;
   const float* in_2 = temp_buffer_;
@@ -98,7 +102,14 @@ void NoiseEngine::Render(
     // channel's multimode filter. Its state is reused as-is: a click can be
     // heard when the mode is toggled.
     while (size--) {
-      const float f0 = f0_modulation.Next();
+      float f0 = f0_modulation.Next();
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+      if (parameters.frequency_offset) {
+        f0 = max(
+            1e-7f, fast_base_f0 + parameters.frequency_offset[sample]);
+        f0 = min(f0, 0.49f);
+      }
+#endif
       const float q = q_modulation.Next();
       const float mode = mode_modulation.Next();
       const float gain = 1.0f / Sqrt((0.5f + q) * 40.0f * f0);
@@ -109,13 +120,22 @@ void NoiseEngine::Render(
       float input_2 = *in_2++ * gain;
       lp_hp_filter_.ProcessMultimodeLPtoHP(&input_1, out++, 1, mode);
       bp_filter_[0].ProcessMultimodeLPtoHP(&input_2, aux++, 1, mode);
+      ++sample;
     }
     return;
   }
 
   while (size--) {
-    const float f0 = f0_modulation.Next();
-    const float f1 = f1_modulation.Next();
+    float f0 = f0_modulation.Next();
+    float f1 = f1_modulation.Next();
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      f0 = max(
+          1e-7f, fast_base_f0 + parameters.frequency_offset[sample]);
+      f0 = min(f0, 0.49f);
+      f1 = min(f0 * f1_ratio, 0.49f);
+    }
+#endif
     const float q = q_modulation.Next();
     const float gain = 1.0f / Sqrt((0.5f + q) * 40.0f * f0);
     lp_hp_filter_.set_f_q<FREQUENCY_ACCURATE>(f0, q);
@@ -128,6 +148,7 @@ void NoiseEngine::Render(
         &input_1, out++, 1, mode_modulation.Next());
     *aux++ = bp_filter_[0].Process<FILTER_MODE_BAND_PASS>(input_1) + \
         bp_filter_[1].Process<FILTER_MODE_BAND_PASS>(input_2);
+    ++sample;
   }
 }
 

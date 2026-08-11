@@ -36,6 +36,8 @@
 
 #include <algorithm>
 
+#include "plaits/build_config.h"
+
 namespace plaits {
 
 using namespace std;
@@ -71,13 +73,54 @@ void ModalEngine::Render(
   const float stock_exciter_q = sustain ? 0.7f : 1.5f;
   const float exciter_q = ApplyMacro(
       stock_exciter_q, 0.5f, 6.0f, parameters.macro);
+  const float f0 = NoteToFrequency(parameters.note);
+
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  if (parameters.frequency_offset) {
+    const bool trigger = parameters.trigger & TRIGGER_RISING_EDGE;
+    for (size_t i = 0; i < size; ++i) {
+      const float instantaneous_f0 = max(
+          1e-7f, f0 + parameters.frequency_offset[i]);
+      if ((PLAITS_STEREO_MODAL_RESONATOR && parameters.stereo)) {
+        voice_.RenderStereo(
+            sustain,
+            trigger && i == 0,
+            accent,
+            instantaneous_f0,
+            harmonics_lp_,
+            parameters.timbre,
+            parameters.morph,
+            exciter_q,
+            temp_buffer_ + i,
+            out + i,
+            aux + i,
+            1);
+      } else {
+        voice_.Render(
+            sustain,
+            trigger && i == 0,
+            accent,
+            instantaneous_f0,
+            harmonics_lp_,
+            parameters.timbre,
+            parameters.morph,
+            exciter_q,
+            temp_buffer_ + i,
+            out + i,
+            aux + i,
+            1);
+      }
+    }
+    return;
+  }
+#endif
 
   if ((PLAITS_STEREO_MODAL_RESONATOR && parameters.stereo)) {
     voice_.RenderStereo(
         sustain,
         parameters.trigger & TRIGGER_RISING_EDGE,
         accent,
-        NoteToFrequency(parameters.note),
+        f0,
         harmonics_lp_,
         parameters.timbre,
         parameters.morph,
@@ -93,7 +136,7 @@ void ModalEngine::Render(
       sustain,
       parameters.trigger & TRIGGER_RISING_EDGE,
       accent,
-      NoteToFrequency(parameters.note),
+      f0,
       harmonics_lp_,
       parameters.timbre,
       parameters.morph,

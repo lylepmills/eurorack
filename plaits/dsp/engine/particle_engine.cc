@@ -37,6 +37,8 @@
 
 #include <algorithm>
 
+#include "plaits/build_config.h"
+
 namespace plaits {
 
 using namespace std;
@@ -107,6 +109,62 @@ void ParticleEngine::Render(
   
   fill(&out[0], &out[size], 0.0f);
   fill(&aux[0], &aux[size], 0.0f);
+
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  if (parameters.frequency_offset) {
+    const bool stereo = PLAITS_STEREO_PARTICLE_NOISE && parameters.stereo;
+    const float diffuser_amount = 0.8f * diffusion * diffusion;
+    const float diffuser_time = 0.5f * diffusion + 0.25f;
+    for (size_t sample = 0; sample < size; ++sample) {
+      float instantaneous_f0 = max(
+          1e-7f, f0 + parameters.frequency_offset[sample]);
+      instantaneous_f0 = min(instantaneous_f0, 0.49f);
+      if (stereo) {
+        for (int particle = 0; particle < kNumParticles; ++particle) {
+          particle_[particle].RenderStereo(
+              sync && sample == 0,
+              density,
+              gain,
+              instantaneous_f0,
+              spread,
+              q,
+              particle_pan_left[particle],
+              particle_pan_right[particle],
+              out + sample,
+              aux + sample,
+              1);
+        }
+        post_filter_.set_f_q<FREQUENCY_DIRTY>(instantaneous_f0, 0.5f);
+        right_post_filter_.set_f_q<FREQUENCY_DIRTY>(
+            instantaneous_f0, 0.5f);
+        out[sample] = post_filter_.Process<FILTER_MODE_LOW_PASS>(out[sample]);
+        aux[sample] = right_post_filter_.Process<FILTER_MODE_LOW_PASS>(
+            aux[sample]);
+        float mono = (out[sample] + aux[sample]) * kStereoToMonoGain;
+        diffuser_.Process(1.0f, diffuser_time, &mono, 1);
+        out[sample] += diffuser_amount * (mono - out[sample]);
+        aux[sample] += diffuser_amount * (mono - aux[sample]);
+      } else {
+        for (int particle = 0; particle < kNumParticles; ++particle) {
+          particle_[particle].Render(
+              sync && sample == 0,
+              density,
+              gain,
+              instantaneous_f0,
+              spread,
+              q,
+              out + sample,
+              aux + sample,
+              1);
+        }
+        post_filter_.set_f_q<FREQUENCY_DIRTY>(instantaneous_f0, 0.5f);
+        out[sample] = post_filter_.Process<FILTER_MODE_LOW_PASS>(out[sample]);
+        diffuser_.Process(diffuser_amount, diffuser_time, out + sample, 1);
+      }
+    }
+    return;
+  }
+#endif
 
   if ((PLAITS_STEREO_PARTICLE_NOISE && parameters.stereo)) {
     for (int i = 0; i < kNumParticles; ++i) {

@@ -35,6 +35,8 @@
 
 #include <algorithm>
 
+#include "plaits/build_config.h"
+
 namespace plaits {
 
 using namespace std;
@@ -87,13 +89,60 @@ void StringEngine::Render(
   }
   
   const float f0 = NoteToFrequency(parameters.note);
-  f0_[active_string_] = f0;
-  f0_delay_.Write(f0);
-  
   fill(&out[0], &out[size], 0.0f);
   fill(&aux[0], &aux[size], 0.0f);
   const float exciter_size = ApplyMacro(
       1.0f, 0.25f, 4.0f, parameters.macro);
+
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  if (parameters.frequency_offset) {
+    const bool trigger = parameters.trigger & TRIGGER_RISING_EDGE;
+    const bool stereo = PLAITS_STEREO_INHARMONIC_STRING && parameters.stereo;
+    for (size_t sample = 0; sample < size; ++sample) {
+      f0_[active_string_] = max(
+          1e-7f, f0 + parameters.frequency_offset[sample]);
+      for (int string = 0; string < kNumStrings; ++string) {
+        const bool active = string == active_string_;
+        if (stereo) {
+          float string_out = 0.0f;
+          voice_[string].Render(
+              sustain && active,
+              trigger && sample == 0 && active,
+              accent,
+              f0_[string],
+              parameters.harmonics,
+              parameters.timbre * parameters.timbre,
+              parameters.morph,
+              exciter_size,
+              temp_buffer_ + sample,
+              &string_out,
+              1);
+          out[sample] += string_out * string_pan_left[string];
+          aux[sample] += string_out * string_pan_right[string];
+        } else {
+          voice_[string].Render(
+              sustain && active,
+              trigger && sample == 0 && active,
+              accent,
+              f0_[string],
+              parameters.harmonics,
+              parameters.timbre * parameters.timbre,
+              parameters.morph,
+              exciter_size,
+              temp_buffer_ + sample,
+              out + sample,
+              1);
+          aux[sample] += temp_buffer_[sample];
+        }
+      }
+    }
+    f0_delay_.Write(f0_[active_string_]);
+    return;
+  }
+#endif
+
+  f0_[active_string_] = f0;
+  f0_delay_.Write(f0);
 
   if ((PLAITS_STEREO_INHARMONIC_STRING && parameters.stereo)) {
     for (int i = 0; i < kNumStrings; ++i) {
