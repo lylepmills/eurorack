@@ -30,6 +30,8 @@
 
 #include <algorithm>
 
+#include "plaits/build_config.h"
+
 namespace plaits {
 
 using namespace std;
@@ -119,13 +121,25 @@ void ChiptuneEngine::Render(
     root_transposition = octave;
     if (PLAITS_STEREO_CHIPTUNE && parameters.stereo) {
       float temp[kMaxBlockSize];
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+      voice_[0].Render(
+          note_f0, shape, temp, size, parameters.frequency_offset,
+          chords_.sorted_ratio(arpeggiator_note) * register_transposition);
+#else
       voice_[0].Render(note_f0, shape, temp, size);
+#endif
       for (size_t j = 0; j < size; ++j) {
         out[j] = temp[j] * arp_pan_left_;
         aux[j] = temp[j] * arp_pan_right_;
       }
     } else {
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+      voice_[0].Render(
+          note_f0, shape, out, size, parameters.frequency_offset,
+          chords_.sorted_ratio(arpeggiator_note) * register_transposition);
+#else
       voice_[0].Render(note_f0, shape, out, size);
+#endif
     }
   } else {
     float ratios[kChordNumVoices];
@@ -175,7 +189,13 @@ void ChiptuneEngine::Render(
         StereoPanGains(kStereoVoicePan[voice], &pan_left, &pan_right);
         const float gain_left = amplitudes[voice] * pan_left;
         const float gain_right = amplitudes[voice] * pan_right;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+        voice_[voice].Render(
+            voice_f0, shape, temp, size,
+            parameters.frequency_offset, ratios[voice]);
+#else
         voice_[voice].Render(voice_f0, shape, temp, size);
+#endif
         for (size_t j = 0; j < size; ++j) {
           out[j] += temp[j] * gain_left;
           aux[j] += temp[j] * gain_right;
@@ -184,7 +204,13 @@ void ChiptuneEngine::Render(
     } else {
       for (int voice = 0; voice < kChordNumVoices; ++voice) {
         const float voice_f0 = f0 * ratios[voice];
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+        voice_[voice].Render(
+            voice_f0, shape, aux, size,
+            parameters.frequency_offset, ratios[voice]);
+#else
         voice_[voice].Render(voice_f0, shape, aux, size);
+#endif
         for (size_t j = 0; j < size; ++j) {
           out[j] += aux[j] * amplitudes[voice];
         }
@@ -196,7 +222,16 @@ void ChiptuneEngine::Render(
     // The bass stays centered, and the envelope is applied to each component
     // before it reaches the two channels, like in mono.
     float temp[kMaxBlockSize];
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    bass_.Render(
+        f0 * 0.5f * root_transposition,
+        temp,
+        size,
+        parameters.frequency_offset,
+        0.5f * root_transposition);
+#else
     bass_.Render(f0 * 0.5f * root_transposition, temp, size);
+#endif
     float bass_left, bass_right;
     StereoPanGains(0.5f, &bass_left, &bass_right);
     if (envelope_shape_ != NO_ENVELOPE) {
@@ -222,7 +257,16 @@ void ChiptuneEngine::Render(
     }
   } else {
     // Render bass note.
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    bass_.Render(
+        f0 * 0.5f * root_transposition,
+        aux,
+        size,
+        parameters.frequency_offset,
+        0.5f * root_transposition);
+#else
     bass_.Render(f0 * 0.5f * root_transposition, aux, size);
+#endif
 
     // Apply envelope if necessary.
     if (envelope_shape_ != NO_ENVELOPE) {

@@ -68,8 +68,11 @@ class StringSynthOscillator {
       const float* unshifted_registration,
       float gain,
       float* out,
-      size_t size) {
+      size_t size,
+      const float* root_frequency_offset = NULL,
+      float frequency_offset_scale = 0.0f) {
     frequency *= 8.0f;
+    frequency_offset_scale *= 8.0f;
     
     // Deal with very high frequencies by shifting everything 1 or 2 octave
     // down: Instead of playing the 1st harmonic of a 8kHz wave, we play the
@@ -116,7 +119,11 @@ class StringSynthOscillator {
       float this_sample = next_sample;
       next_sample = 0.0f;
   
-      const float frequency = fm.Next();
+      float frequency = fm.Next();
+      if (root_frequency_offset) {
+        frequency += *root_frequency_offset++ * frequency_offset_scale;
+        CONSTRAIN(frequency, 1.0e-7f, 0.5f);
+      }
       const float saw_8_gain = saw_8_gain_modulation.Next();
       const float saw_4_gain = saw_4_gain_modulation.Next();
       const float saw_2_gain = saw_2_gain_modulation.Next();

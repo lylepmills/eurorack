@@ -25,6 +25,7 @@
 
 #include "plaits/dsp/engine2/lpc_speech_engine.h"
 
+#include "plaits/build_config.h"
 #include "plaits/dsp/speech/lpc_speech_synth_words.h"
 
 namespace plaits {
@@ -59,6 +60,23 @@ void LPCSpeechEngine::Render(
     float* aux,
     size_t size,
     bool* already_enveloped) {
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  if (parameters.frequency_offset) {
+    EngineParameters sample_parameters = parameters;
+    sample_parameters.frequency_offset = NULL;
+    const float base_frequency = NoteToFrequency(parameters.note);
+    for (size_t i = 0; i < size; ++i) {
+      sample_parameters.note = NoteWithFrequencyOffset(
+          parameters.note, base_frequency, parameters.frequency_offset[i]);
+      sample_parameters.trigger = i == 0
+          ? parameters.trigger
+          : parameters.trigger & ~TRIGGER_RISING_EDGE;
+      Render(
+          sample_parameters, out + i, aux + i, 1, already_enveloped);
+    }
+    return;
+  }
+#endif
   // The phoneme position moved to Speech Sounds, leaving the recipe's selected
   // stock and custom word banks evenly addressable across HARMONICS.
   const int word_bank = word_bank_quantizer_.Process(parameters.harmonics);

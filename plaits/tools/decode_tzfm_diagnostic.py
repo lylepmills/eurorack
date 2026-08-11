@@ -48,6 +48,11 @@ MODEL_NAMES = {
         "Struck Bell", "Struck Drum", "Kick", "Snare", "Cymbal",
         "Wave Paraphonic", "Fluted", "Bowed",
     ],
+    13: [
+        "Granular Formant", "Chords", "Speech", "Speech Sounds",
+        "LPC Words", "6-Op FM Bank A", "6-Op FM Bank B",
+        "6-Op FM Bank C", "Chiptune",
+    ],
 }
 
 FIELD_NAMES = [

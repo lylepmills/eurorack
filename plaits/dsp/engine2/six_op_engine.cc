@@ -30,6 +30,7 @@
 
 #include <algorithm>
 
+#include "plaits/build_config.h"
 #include "plaits/resources.h"
 
 namespace plaits {
@@ -196,6 +197,23 @@ void SixOpEngine::Render(
     float* aux,
     size_t size,
     bool* already_enveloped) {
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  if (parameters.frequency_offset) {
+    EngineParameters sample_parameters = parameters;
+    sample_parameters.frequency_offset = NULL;
+    const float base_frequency = NoteToFrequency(parameters.note);
+    for (size_t i = 0; i < size; ++i) {
+      sample_parameters.note = NoteWithFrequencyOffset(
+          parameters.note, base_frequency, parameters.frequency_offset[i]);
+      sample_parameters.trigger = i == 0
+          ? parameters.trigger
+          : parameters.trigger & ~TRIGGER_RISING_EDGE;
+      Render(
+          sample_parameters, out + i, aux + i, 1, already_enveloped);
+    }
+    return;
+  }
+#endif
   int patch_index = patch_index_quantizer_.Process(
       parameters.harmonics * 1.02f);
   const float modulator_detune = 24.0f * (parameters.macro - 0.5f);

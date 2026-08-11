@@ -27,6 +27,7 @@
 #include "plaits/drivers/audio_rate_fm_resampler.h"
 #include "plaits/dsp/fast_semitone_ratio.h"
 #include "plaits/pot_controller.h"
+#include "plaits/resources.h"
 
 #include "plaits/dsp/chords/chord_bank.h"
 
@@ -433,7 +434,9 @@ void ValidateLinearTzfmEngineCoverage() {
 }
 
 template<typename T>
-void ValidateFastExponentialFmEngine(const char* name) {
+void ValidateFastExponentialFmEngine(
+    const char* name,
+    const uint8_t* user_data = NULL) {
   // Scanned's lowest useful physics rate needs just over 400 samples before
   // the initial velocity impulse reaches its position readout. Keep enough
   // runway here to validate slow-initializing engines rather than mistaking
@@ -460,7 +463,7 @@ void ValidateFastExponentialFmEngine(const char* name) {
   Random::Seed(0x5eedf00d);
   BufferAllocator reference_allocator(ram_block, sizeof(ram_block));
   engine.Init(&reference_allocator);
-  engine.LoadUserData(NULL);
+  engine.LoadUserData(user_data);
   engine.Reset();
   p.frequency_offset = NULL;
   for (size_t block = 0; block < kBlocks; ++block) {
@@ -479,7 +482,7 @@ void ValidateFastExponentialFmEngine(const char* name) {
   Random::Seed(0x5eedf00d);
   BufferAllocator modulated_allocator(ram_block, sizeof(ram_block));
   engine.Init(&modulated_allocator);
-  engine.LoadUserData(NULL);
+  engine.LoadUserData(user_data);
   engine.Reset();
 
   const float base_frequency = NoteToFrequency(p.note);
@@ -572,6 +575,13 @@ void ValidateFastExponentialFmEngineCoverage() {
   ValidateFastExponentialFmEngine<WaveParaphonicEngine>("Wave Paraphonic");
   ValidateFastExponentialFmEngine<FlutedEngine>("Fluted");
   ValidateFastExponentialFmEngine<BowedEngine>("Bowed");
+  ValidateFastExponentialFmEngine<GrainEngine>("Granular Formant");
+  ValidateFastExponentialFmEngine<ChordEngine>("Chords");
+  ValidateFastExponentialFmEngine<SpeechEngine>("Speech");
+  ValidateFastExponentialFmEngine<FormantSpeechEngine>("Speech Sounds");
+  ValidateFastExponentialFmEngine<LPCSpeechEngine>("LPC Words");
+  ValidateFastExponentialFmEngine<SixOpEngine>("6-Op FM", syx_bank_0);
+  ValidateFastExponentialFmEngine<ChiptuneEngine>("Chiptune");
 }
 
 void TestVariableShapeOscillator() {
@@ -4043,6 +4053,16 @@ void ValidateCustomSpeechBankLevelMatching() {
 
 void ValidateAudioRateFmRecovery() {
   for (int i = 0; i <= 4096; ++i) {
+    const float ratio = 0.25f + i * (1.75f / 4096.0f);
+    const float reference = 12.0f * logf(ratio) / logf(2.0f);
+    const float optimized = FrequencyRatioToSemitones(ratio);
+    if (fabsf(optimized - reference) > 0.0012f) {
+      fprintf(stderr, "Fast frequency-to-note conversion lost accuracy\n");
+      abort();
+    }
+  }
+
+  for (int i = 0; i <= 4096; ++i) {
     const float semitones = -127.875f + i * (255.75f / 4096.0f);
     const float reference = SemitonesToRatio(semitones);
     const float optimized = FastSemitonesToRatio(semitones);
@@ -4205,6 +4225,13 @@ void ValidateFmCapabilityPolicy() {
   ParticleBurstEngine particle_burst;
   PluckedEngine plucked;
   BlownEngine blown;
+  GrainEngine grain;
+  ChordEngine chords;
+  SpeechEngine speech;
+  FormantSpeechEngine formant_speech;
+  LPCSpeechEngine lpc_speech;
+  SixOpEngine six_op;
+  ChiptuneEngine chiptune;
   Engine* linear_engines[] = {
     &waveshaping,
     &two_op_fm,
@@ -4365,6 +4392,13 @@ void ValidateFmCapabilityPolicy() {
     &wave_paraphonic,
     &fluted,
     &bowed,
+    &grain,
+    &chords,
+    &speech,
+    &formant_speech,
+    &lpc_speech,
+    &six_op,
+    &chiptune,
   };
   for (size_t i = 0;
        i < sizeof(pending_exponential_engines) /

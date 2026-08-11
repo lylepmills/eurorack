@@ -65,6 +65,15 @@ class DecoderTest(unittest.TestCase):
                           for field in range(10))
         return [6000.0, 6340.0, 6208.0] + values + [6500.0]
 
+    @staticmethod
+    def group_thirteen_frame():
+        values = []
+        for engine in range(9):
+            values.append(5000.0 + 50.0 * engine)
+            values.extend(2500.0 + engine * 10.0 + field
+                          for field in range(10))
+        return [6000.0, 6360.0, 6209.0] + values + [6500.0]
+
     def test_decodes_last_complete_frame(self):
         group = 4
         frame = self.group_four_frame()
@@ -128,6 +137,14 @@ class DecoderTest(unittest.TestCase):
         self.assertEqual(len(results), 8)
         self.assertEqual(results[0]["name"], "Struck Bell")
         self.assertEqual(results[-1]["name"], "Bowed")
+
+    def test_decodes_sixth_fast_exponential_group(self):
+        group, results = decoder.decode_frequencies(
+            self.group_thirteen_frame())
+        self.assertEqual(group, 13)
+        self.assertEqual(len(results), 9)
+        self.assertEqual(results[0]["name"], "Granular Formant")
+        self.assertEqual(results[-1]["name"], "Chiptune")
 
     def test_rejects_incomplete_frame(self):
         with self.assertRaisesRegex(ValueError, "no complete"):
