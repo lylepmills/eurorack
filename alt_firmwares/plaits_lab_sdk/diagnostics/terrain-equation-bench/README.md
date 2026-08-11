@@ -128,6 +128,57 @@ seconds; record at least 233 seconds to guarantee a complete alignable pass no
 matter where capture begins. MAIN still carries the current terrain and AUX is
 the CPU-frequency readout.
 
+On macOS, capture the ES-8 directly through Core Audio rather than routing it
+through a DAW. This example selects ES-8 input 1 from its eight-channel stream:
+
+```sh
+ffmpeg -f avfoundation -i ":1" -t 240 \
+  -af "pan=mono|c0=c0" -c:a pcm_s16le terrain-autosweep.wav
+python3 alt_firmwares/plaits_lab_sdk/diagnostics/terrain-equation-bench/decode_autosweep.py \
+  terrain-autosweep.wav
+```
+
+Use `ffmpeg -f avfoundation -list_devices true -i ""` to confirm the ES-8's
+device number first. The decoder identifies the repeating frequency contour,
+so it remains aligned if Core Audio drops buffers or delivers timestamps at a
+slightly different rate from the firmware schedule. The printed conservative
+reading is the higher result across the two captured passes.
+
+## Physical-module results (2026-08-11)
+
+These are the conservative two-pass readings from an ES-8 capture. The probe
+maps 1,000 Hz to 100% of Plaits' 1,500-cycle/sample audio budget.
+
+| case | measured budget |
+|---|---:|
+| Original terrain 1 | 52.6% |
+| 4 KB sampled grid | 48.2% |
+| Soft rings | 53.5% |
+| Lone island | 50.5% |
+| Tilted terraces | 48.3% |
+| River bend | 38.5% |
+| Rippled saddle | 55.4% |
+| Four chambers | 51.9% |
+| Spiral current | 61.7% |
+| Twin pulses | 57.7% |
+| Log crater | 60.5% |
+| Pinched diamond | 56.5% |
+| Saturated saddle | 44.6% |
+| Warped fault | 52.9% |
+| Four-sine stress | 52.4% |
+| Eight-sine stress | 87.3% |
+| Terraces + crater | 87.4% |
+| Spiral + pulses | 102.4% |
+| theta/mu field | 55.8% |
+
+The physical run confirms the pre-flight conclusion. Most individual operators
+and editor recipes are safe native candidates on CPU alone, topping out at
+61.7%. Eight-sine stress and Terraces + crater exceed the 75% native-code gate,
+and Spiral + pulses overruns the audio budget; those three must use the prebaked
+4 KB representation. The sampled-grid control itself measures 48.2%, so
+prebaking trades flash for predictable runtime rather than being universally
+faster than native code.
+
 ## Per-case flash and firmware matrix
 
 `build_matrix.py` makes fixed-case probe firmwares. In a fixed build the
