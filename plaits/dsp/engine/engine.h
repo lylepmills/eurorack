@@ -57,6 +57,37 @@ inline float NoteToFrequency(float midi_note) {
   return a0 * 0.25f * stmlib::SemitonesToRatio(midi_note);
 }
 
+// Bare-metal inverse of NoteToFrequency's ratio step. This avoids libm's
+// log2f (and its __errno dependency) in engines whose existing renderer accepts
+// pitch as MIDI notes rather than normalized oscillator increments. The
+// approximation is accurate to roughly 0.002 semitones over the positive
+// frequency ratios used by Fast exponential FM.
+inline float FrequencyRatioToSemitones(float ratio) {
+  union { float f; uint32_t i; } value = { ratio };
+  const float exponent =
+      static_cast<float>((value.i >> 23) & 0xffu) - 127.0f;
+  value.i = (value.i & 0x007fffffu) | 0x3f800000u;
+  const float mantissa = value.f;
+  // The polynomial approximates ln(m), so convert only its mantissa term to
+  // base 2; the extracted exponent is already in octaves.
+  const float log2_ratio = exponent + 1.44269504089f *
+      (-1.7417939f + (2.8212026f + (-1.4699568f
+      + (0.44717955f - 0.056570851f * mantissa) * mantissa)
+      * mantissa) * mantissa);
+  return 12.0f * log2_ratio;
+}
+
+inline float NoteWithFrequencyOffset(
+    float note,
+    float base_frequency,
+    float frequency_offset) {
+  float frequency = base_frequency + frequency_offset;
+  if (frequency < 1.0e-7f) {
+    frequency = 1.0e-7f;
+  }
+  return note + FrequencyRatioToSemitones(frequency / base_frequency);
+}
+
 // Expands a fourth macro around an engine's stock value. The midpoint is
 // exactly neutral, while the two halves interpolate toward useful extremes.
 inline float ApplyMacro(

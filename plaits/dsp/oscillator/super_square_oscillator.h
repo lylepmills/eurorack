@@ -58,11 +58,14 @@ class SuperSquareOscillator {
       float frequency,
       float shape,
       float* out,
-      size_t size) {
+      size_t size,
+      const float* root_frequency_offset = NULL,
+      float frequency_offset_scale = 0.0f) {
     float master_frequency = frequency;
-    frequency *= shape < 0.5f
+    const float slave_ratio = shape < 0.5f
         ? (0.51f + 0.98f * shape)
         : 1.0f + 16.0f * (shape - 0.5f) * (shape - 0.5f);
+    frequency *= slave_ratio;
 
     if (master_frequency >= kMaxFrequency) {
       master_frequency = kMaxFrequency;
@@ -86,8 +89,16 @@ class SuperSquareOscillator {
       float this_sample = next_sample;
       next_sample = 0.0f;
     
-      const float master_frequency = master_fm.Next();
-      const float slave_frequency = fm.Next();
+      float master_frequency = master_fm.Next();
+      float slave_frequency = fm.Next();
+      if (root_frequency_offset) {
+        const float voice_offset =
+            *root_frequency_offset++ * frequency_offset_scale;
+        master_frequency += voice_offset;
+        slave_frequency += voice_offset * slave_ratio;
+        CONSTRAIN(master_frequency, 1.0e-7f, kMaxFrequency);
+        CONSTRAIN(slave_frequency, 1.0e-7f, kMaxFrequency);
+      }
 
       master_phase_ += master_frequency;
       if (master_phase_ >= 1.0f) {

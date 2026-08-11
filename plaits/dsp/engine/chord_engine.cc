@@ -35,6 +35,7 @@
 
 #include <algorithm>
 
+#include "plaits/build_config.h"
 #include "plaits/resources.h"
 
 namespace plaits {
@@ -172,6 +173,17 @@ void ChordEngine::Render(
       divide_down_amount *= divide_down_gain;
 
       if (wavetable_amount) {
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+        wavetable_voice_[note].Render(
+            note_f0 * 1.004f,
+            note_amplitudes[note] * wavetable_amount * note_gain,
+            waveform,
+            wavetable,
+            destination,
+            size,
+            parameters.frequency_offset,
+            ratios[note] * 0.998f * 1.004f);
+#else
         wavetable_voice_[note].Render(
             note_f0 * 1.004f,
             note_amplitudes[note] * wavetable_amount * note_gain,
@@ -179,15 +191,27 @@ void ChordEngine::Render(
             wavetable,
             destination,
             size);
+#endif
       }
 
       if (divide_down_amount) {
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+        divide_down_voice_[note].Render(
+            note_f0,
+            harmonics,
+            note_amplitudes[note] * divide_down_amount * note_gain,
+            destination,
+            size,
+            parameters.frequency_offset,
+            ratios[note] * 0.998f);
+#else
         divide_down_voice_[note].Render(
             note_f0,
             harmonics,
             note_amplitudes[note] * divide_down_amount * note_gain,
             destination,
             size);
+#endif
       }
     }
 
@@ -219,6 +243,17 @@ void ChordEngine::Render(
     divide_down_amount *= divide_down_gain;
 
     if (wavetable_amount) {
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+      wavetable_voice_[note].Render(
+          note_f0 * 1.004f,
+          note_amplitudes[note] * wavetable_amount,
+          waveform,
+          wavetable,
+          destination,
+          size,
+          parameters.frequency_offset,
+          ratios[note] * 0.998f * 1.004f);
+#else
       wavetable_voice_[note].Render(
           note_f0 * 1.004f,
           note_amplitudes[note] * wavetable_amount,
@@ -226,15 +261,27 @@ void ChordEngine::Render(
           wavetable,
           destination,
           size);
+#endif
     }
 
     if (divide_down_amount) {
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+      divide_down_voice_[note].Render(
+          note_f0,
+          harmonics,
+          note_amplitudes[note] * divide_down_amount,
+          destination,
+          size,
+          parameters.frequency_offset,
+          ratios[note] * 0.998f);
+#else
       divide_down_voice_[note].Render(
           note_f0,
           harmonics,
           note_amplitudes[note] * divide_down_amount,
           destination,
           size);
+#endif
     }
   }
 

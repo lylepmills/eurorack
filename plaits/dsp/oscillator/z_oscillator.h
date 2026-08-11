@@ -70,7 +70,8 @@ class ZOscillator {
         mode,
         out,
         size,
-        0);
+        0,
+        NULL);
   }
 
   void Render(
@@ -89,7 +90,8 @@ class ZOscillator {
           mode,
           out,
           size,
-          hard_sync);
+          hard_sync,
+          NULL);
     } else {
       RenderInternal<false>(
           carrier_frequency,
@@ -98,7 +100,40 @@ class ZOscillator {
           mode,
           out,
           size,
-          0);
+          0,
+          NULL);
+    }
+  }
+
+  void Render(
+      float carrier_frequency,
+      float formant_frequency,
+      float carrier_shape,
+      float mode,
+      float* out,
+      size_t size,
+      uint32_t hard_sync,
+      const float* carrier_frequency_offset) {
+    if (hard_sync) {
+      RenderInternal<true>(
+          carrier_frequency,
+          formant_frequency,
+          carrier_shape,
+          mode,
+          out,
+          size,
+          hard_sync,
+          carrier_frequency_offset);
+    } else {
+      RenderInternal<false>(
+          carrier_frequency,
+          formant_frequency,
+          carrier_shape,
+          mode,
+          out,
+          size,
+          0,
+          carrier_frequency_offset);
     }
   }
 
@@ -111,7 +146,8 @@ class ZOscillator {
       float mode,
       float* out,
       size_t size,
-      uint32_t hard_sync) {
+      uint32_t hard_sync,
+      const float* carrier_frequency_offset) {
     if (carrier_frequency >= kMaxFrequency * 0.5f) {
       carrier_frequency = kMaxFrequency * 0.5f;
     }
@@ -145,8 +181,12 @@ class ZOscillator {
       float this_sample = next_sample;
       next_sample = 0.0f;
     
-      const float f0 = carrier_frequency_modulation.Next();
+      float f0 = carrier_frequency_modulation.Next();
       const float f1 = formant_frequency_modulation.Next();
+      if (carrier_frequency_offset) {
+        f0 += *carrier_frequency_offset++;
+        CONSTRAIN(f0, 1.0e-7f, kMaxFrequency * 0.5f);
+      }
 
       if (process_hard_sync) {
         if (hard_sync & 1) {

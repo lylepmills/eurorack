@@ -114,7 +114,9 @@ class WavetableOscillator {
       float waveform,
       const int16_t* const* wavetable,
       float* out,
-      size_t size) {
+      size_t size,
+      const float* root_frequency_offset = NULL,
+      float frequency_offset_scale = 0.0f) {
     CONSTRAIN(frequency, 0.0000001f, kMaxFrequency)
 
     if (attenuate_high_frequencies) {
@@ -140,7 +142,11 @@ class WavetableOscillator {
     float lp = lp_;
     float phase = phase_;
     while (size--) {
-      const float f0 = frequency_modulation.Next();
+      float f0 = frequency_modulation.Next();
+      if (root_frequency_offset) {
+        f0 += *root_frequency_offset++ * frequency_offset_scale;
+        CONSTRAIN(f0, 0.0000001f, kMaxFrequency);
+      }
       const float cutoff = std::min(float(wavetable_size) * f0, 1.0f);
       const float scale = approximate_scale ? 1.0f : 1.0f / (f0 * 131072.0f);
       

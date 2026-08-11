@@ -82,6 +82,21 @@ void GrainEngine::Render(
       max(1.0f - f0 * 24.0f, 0.0f);
   
   const uint32_t hard_sync = PLAITS_HARD_SYNC_EVENTS(parameters);
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  const float* frequency_offset = parameters.frequency_offset;
+  grainlet_[0].Render(
+      f0, f1, carrier_shape, carrier_bleed_fixed, out, size, hard_sync,
+      frequency_offset);
+  grainlet_[1].Render(
+      f0,
+      f1 * ratio,
+      carrier_shape,
+      carrier_bleed_fixed,
+      aux,
+      size,
+      hard_sync,
+      frequency_offset);
+#else
   grainlet_[0].Render(
       f0, f1, carrier_shape, carrier_bleed_fixed, out, size, hard_sync);
   grainlet_[1].Render(
@@ -92,6 +107,7 @@ void GrainEngine::Render(
       aux,
       size,
       hard_sync);
+#endif
   dc_blocker_[0].set_f<FREQUENCY_DIRTY>(0.3f * f0);
 
   if ((PLAITS_STEREO_GRANULAR_FORMANT && parameters.stereo)) {
@@ -120,6 +136,17 @@ void GrainEngine::Render(
   }
 
   const float cutoff = NoteToFrequency(root + 96.0f * parameters.timbre);
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  z_oscillator_.Render(
+      f0,
+      cutoff,
+      parameters.morph,
+      parameters.harmonics,
+      aux,
+      size,
+      hard_sync,
+      frequency_offset);
+#else
   z_oscillator_.Render(
       f0,
       cutoff,
@@ -128,6 +155,7 @@ void GrainEngine::Render(
       aux,
       size,
       hard_sync);
+#endif
   
   dc_blocker_[1].set_f<FREQUENCY_DIRTY>(0.3f * f0);
   dc_blocker_[1].Process<FILTER_MODE_HIGH_PASS>(aux, size);

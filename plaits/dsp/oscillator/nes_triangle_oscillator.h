@@ -54,7 +54,12 @@ class NESTriangleOscillator {
     frequency_ = 0.001f;
   }
   
-  inline void Render(float frequency, float* out, size_t size) {
+  inline void Render(
+      float frequency,
+      float* out,
+      size_t size,
+      const float* root_frequency_offset = NULL,
+      float frequency_offset_scale = 0.0f) {
     // Compute all constants needed to scale the waveform and its
     // discontinuities.
     const int num_steps = 1 << num_bits;
@@ -71,7 +76,11 @@ class NESTriangleOscillator {
     
     float next_sample = next_sample_;
     while (size--) {
-      const float frequency = fm.Next();
+      float frequency = fm.Next();
+      if (root_frequency_offset) {
+        frequency += *root_frequency_offset++ * frequency_offset_scale;
+        CONSTRAIN(frequency, 1.0e-7f, 0.25f);
+      }
       phase_ += frequency;
       
       // Compute the point at which we transition between the "full resolution"
