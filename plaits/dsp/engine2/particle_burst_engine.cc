@@ -9,6 +9,7 @@
 
 #include <algorithm>
 
+#include "plaits/build_config.h"
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/dsp/units.h"
 #include "stmlib/utils/random.h"
@@ -19,6 +20,15 @@ using namespace std;
 using namespace stmlib;
 
 namespace {
+
+inline float ParticleFastLog2(float x) {
+  union { float f; uint32_t i; } u = { x };
+  const float e = static_cast<float>((u.i >> 23) & 0xffu) - 127.0f;
+  u.i = (u.i & 0x007fffffu) | 0x3f800000u;
+  const float m = u.f;
+  return e + (-1.7417939f + (2.8212026f + (-1.4699568f
+      + (0.44717955f - 0.056570851f * m) * m) * m) * m);
+}
 
 // Braids' lut_resonator_coefficient and lut_resonator_scale
 // (braids/resources.cc:44-115), 129 uint16 entries each, one per MIDI note
@@ -171,6 +181,19 @@ void ParticleBurstEngine::Render(
   // The single upfront pitch-correction shift (see the header's PITCH
   // CORRECTION note) -- everything below stays in this one note-space.
   const float pitch128 = (parameters.note + kParticlePitchCorrection) * 128.0f;
+  float pitch_offset128[kMaxBlockSize];
+  fill(&pitch_offset128[0], &pitch_offset128[size], 0.0f);
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  if (parameters.frequency_offset) {
+    const float base_frequency = NoteToFrequency(parameters.note);
+    for (size_t i = 0; i < size; ++i) {
+      const float instantaneous_frequency = max(
+          1e-7f, base_frequency + parameters.frequency_offset[i]);
+      pitch_offset128[i] = 1536.0f * ParticleFastLog2(
+          instantaneous_frequency / max(base_frequency, 1e-7f));
+    }
+  }
+#endif
 
   const float offset1 = kParticleFilter1Interval * 128.0f * chord_width;
   const float offset2 = kParticleFilter2Interval * 128.0f * chord_width;
@@ -218,19 +241,19 @@ void ParticleBurstEngine::Render(
         // lookup rather than interpolating a float note. One integer LSB of
         // the coefficient table is worth far more than one count of p at low
         // registers, so this grid is not a detail to smooth over.
-        int32_t p1 = static_cast<int32_t>(pitch128 + offset1 +
+        int32_t p1 = static_cast<int32_t>(pitch128 + pitch_offset128[i] + offset1 +
             3.0f * noise_a * harmonics_scaled / kParticleJitter1Divisor);
         CONSTRAIN(p1, 0, 16383);
         c1 = ResonatorCoefficient(p1);
         s1 = ResonatorScale(p1);
 
-        int32_t p2 = static_cast<int32_t>(pitch128 + offset2 +
+        int32_t p2 = static_cast<int32_t>(pitch128 + pitch_offset128[i] + offset2 +
             noise_a * harmonics_scaled / kParticleJitter2Divisor);
         CONSTRAIN(p2, 0, 16383);
         c2 = ResonatorCoefficient(p2);
         s2 = ResonatorScale(p2);
 
-        int32_t p3 = static_cast<int32_t>(pitch128 + offset3 +
+        int32_t p3 = static_cast<int32_t>(pitch128 + pitch_offset128[i] + offset3 +
             noise_b * harmonics_scaled / kParticleJitter3Divisor);
         CONSTRAIN(p3, 0, 16383);
         c3 = ResonatorCoefficient(p3);

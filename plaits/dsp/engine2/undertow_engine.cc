@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "plaits/build_config.h"
 #include "plaits/dsp/dsp.h"
 #include "stmlib/dsp/polyblep.h"
 
@@ -115,6 +116,8 @@ __attribute__((noinline)) void RenderTriangleSawBlock(
     float* phase,
     float* frequency,
     const float* frequency_increment,
+    const float* frequency_scale,
+    const float* root_frequency_offset,
     float* main_amplitude,
     const float* main_increment,
     float* aux_amplitude,
@@ -129,11 +132,19 @@ __attribute__((noinline)) void RenderTriangleSawBlock(
     float aux_sum = 0.0f;
     for (int voice = 0; voice < kNumUndertowVoices; ++voice) {
       frequency[voice] += frequency_increment[voice];
+      float instantaneous_frequency = frequency[voice];
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+      if (root_frequency_offset) {
+        instantaneous_frequency +=
+            root_frequency_offset[i] * frequency_scale[voice];
+        CONSTRAIN(instantaneous_frequency, 0.000001f, 0.24f);
+      }
+#endif
       main_amplitude[voice] += main_increment[voice];
       aux_amplitude[voice] += aux_increment[voice];
-      phase[voice] = WrapPhase(phase[voice] + frequency[voice]);
+      phase[voice] = WrapPhase(phase[voice] + instantaneous_frequency);
       const float sample = TriangleSawWave(
-          phase[voice], frequency[voice], wave_mix);
+          phase[voice], instantaneous_frequency, wave_mix);
       out_sum += sample * main_amplitude[voice];
       aux_sum += sample * aux_amplitude[voice];
     }
@@ -151,6 +162,8 @@ __attribute__((noinline)) void RenderSawPulseBlock(
     float* phase,
     float* frequency,
     const float* frequency_increment,
+    const float* frequency_scale,
+    const float* root_frequency_offset,
     float* main_amplitude,
     const float* main_increment,
     float* aux_amplitude,
@@ -171,15 +184,23 @@ __attribute__((noinline)) void RenderSawPulseBlock(
     // integer dividers are at one third of the anchor frequency or below.
     for (int voice = 0; voice < 2; ++voice) {
       frequency[voice] += frequency_increment[voice];
+      float instantaneous_frequency = frequency[voice];
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+      if (root_frequency_offset) {
+        instantaneous_frequency +=
+            root_frequency_offset[i] * frequency_scale[voice];
+        CONSTRAIN(instantaneous_frequency, 0.000001f, 0.24f);
+      }
+#endif
       main_amplitude[voice] += main_increment[voice];
       aux_amplitude[voice] += aux_increment[voice];
-      float next_phase = phase[voice] + frequency[voice];
+      float next_phase = phase[voice] + instantaneous_frequency;
       const bool wrapped = next_phase >= 1.0f;
       phase[voice] = WrapPhase(next_phase);
       // The raw width never exceeds 0.5 and frequency is capped below 0.25,
       // so only the lower anti-aliasing bound can become active.
       const float voice_pulse_width = max(
-          pulse_width, 2.0f * frequency[voice]);
+          pulse_width, 2.0f * instantaneous_frequency);
       if (entering_pulse && i == begin) {
         pulse_high[voice] = phase[voice] < voice_pulse_width;
         pulse_width_state[voice] = voice_pulse_width;
@@ -187,7 +208,7 @@ __attribute__((noinline)) void RenderSawPulseBlock(
       }
       const float sample = BandlimitedSawPulseWave(
           phase[voice],
-          frequency[voice],
+          instantaneous_frequency,
           wave_mix,
           voice_pulse_width,
           pulse_width_state[voice],
@@ -201,11 +222,19 @@ __attribute__((noinline)) void RenderSawPulseBlock(
 
     for (int voice = 2; voice < kNumUndertowVoices; ++voice) {
       frequency[voice] += frequency_increment[voice];
+      float instantaneous_frequency = frequency[voice];
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+      if (root_frequency_offset) {
+        instantaneous_frequency +=
+            root_frequency_offset[i] * frequency_scale[voice];
+        CONSTRAIN(instantaneous_frequency, 0.000001f, 0.24f);
+      }
+#endif
       main_amplitude[voice] += main_increment[voice];
       aux_amplitude[voice] += aux_increment[voice];
-      phase[voice] = WrapPhase(phase[voice] + frequency[voice]);
+      phase[voice] = WrapPhase(phase[voice] + instantaneous_frequency);
       const float voice_pulse_width = max(
-          pulse_width, 2.0f * frequency[voice]);
+          pulse_width, 2.0f * instantaneous_frequency);
       const float saw = 2.0f * phase[voice] - 1.0f;
       const float pulse = phase[voice] < voice_pulse_width ? 1.0f : -1.0f;
       const float sample = saw + (pulse - saw) * wave_mix;
@@ -304,6 +333,7 @@ void UndertowEngine::Render(
 
   float frequency[kNumUndertowVoices];
   float frequency_increment[kNumUndertowVoices];
+  float frequency_scale[kNumUndertowVoices];
   float main_amplitude[kNumUndertowVoices];
   float main_increment[kNumUndertowVoices];
   float aux_amplitude[kNumUndertowVoices];
@@ -314,6 +344,7 @@ void UndertowEngine::Render(
     const float warped_divisor = divisor + lattice_stretch * \
         distance * distance / static_cast<float>(kNumUndertowVoices - 1);
     const float target_frequency = anchor_frequency / warped_divisor;
+    frequency_scale[voice] = 1.0f / warped_divisor;
 
     float out_channel_target = main_target[voice] * main_gain;
     float aux_channel_target = aux_target[voice] * aux_gain;
@@ -359,14 +390,16 @@ void UndertowEngine::Render(
     if (boundary > 0) {
       RenderSawPulseBlock(
           0, boundary, colour_start, colour_increment, !pulse_mode_,
-          phase_, frequency, frequency_increment,
+          phase_, frequency, frequency_increment, frequency_scale,
+          parameters.frequency_offset,
           main_amplitude, main_increment, aux_amplitude, aux_increment,
           pulse_width_, pulse_high_, next_blep_, out, aux);
     }
     if (boundary < size) {
       RenderTriangleSawBlock(
           boundary, size, colour_start, colour_increment,
-          phase_, frequency, frequency_increment,
+          phase_, frequency, frequency_increment, frequency_scale,
+          parameters.frequency_offset,
           main_amplitude, main_increment, aux_amplitude, aux_increment,
           out, aux);
       fill(&next_blep_[0], &next_blep_[kNumUndertowVoices], 0.0f);
@@ -374,14 +407,16 @@ void UndertowEngine::Render(
   } else {
     RenderTriangleSawBlock(
         0, boundary, colour_start, colour_increment,
-        phase_, frequency, frequency_increment,
+        phase_, frequency, frequency_increment, frequency_scale,
+        parameters.frequency_offset,
         main_amplitude, main_increment, aux_amplitude, aux_increment,
         out, aux);
     fill(&next_blep_[0], &next_blep_[kNumUndertowVoices], 0.0f);
     if (boundary < size) {
       RenderSawPulseBlock(
           boundary, size, colour_start, colour_increment, true,
-          phase_, frequency, frequency_increment,
+          phase_, frequency, frequency_increment, frequency_scale,
+          parameters.frequency_offset,
           main_amplitude, main_increment, aux_amplitude, aux_increment,
           pulse_width_, pulse_high_, next_blep_, out, aux);
     }

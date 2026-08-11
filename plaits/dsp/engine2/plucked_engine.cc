@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "plaits/build_config.h"
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/dsp/parameter_interpolator.h"
 #include "stmlib/utils/random.h"
@@ -178,6 +179,20 @@ void PluckedEngine::Render(
   for (size_t i = 0; i < size; ++i) {
     const float loss_frac = loss_modulation.Next();
     const float update_frac = update_modulation.Next();
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      float instantaneous_frequency =
+          frequency + parameters.frequency_offset[i];
+      instantaneous_frequency *=
+          SemitonesToRatio(active_offset_semitones_);
+      instantaneous_frequency = max(instantaneous_frequency, 1e-7f);
+      float tracked_period = 1.0f / instantaneous_frequency;
+      CONSTRAIN(
+          tracked_period, kPluckedMinPeriod, kPluckedDelaySize - 4.0f);
+      period_[active_voice_] = max(
+          tracked_period, min_period_[active_voice_]);
+    }
+#endif
 
     float voice_sample[kNumPluckVoices];
     float sum_out = 0.0f;

@@ -35,6 +35,10 @@ MODEL_NAMES = {
         "Glisson", "Scanned", "Lockstep", "Tapfield",
         "Attractor", "Rulefield", "Question Mark", "Freshets Formant",
     ],
+    10: [
+        "Undertow", "Reed Pipe", "Z Filter", "Granular Cloud",
+        "Noise Bank", "Particle Burst", "Plucked", "Blown",
+    ],
 }
 
 FIELD_NAMES = [

@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "plaits/build_config.h"
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/dsp/parameter_interpolator.h"
 
@@ -111,11 +112,24 @@ void ReedPipeEngine::Render(
       &pickup_amount_, target_pickup_amount, size);
 
   for (size_t i = 0; i < size; ++i) {
-    const float delay = delay_modulation.Next();
+    float delay = delay_modulation.Next();
     const float reflection_coefficient = \
         reflection_coefficient_modulation.Next();
-    const float reflection_brightness = \
-        reflection_brightness_modulation.Next();
+    float reflection_brightness = reflection_brightness_modulation.Next();
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      float instantaneous_frequency =
+          frequency + parameters.frequency_offset[i];
+      CONSTRAIN(instantaneous_frequency, 0.000001f, 0.24f);
+      reflection_brightness =
+          6.2832f * brightness_harmonic * instantaneous_frequency;
+      CONSTRAIN(reflection_brightness, 0.02f, 0.90f);
+      const float instantaneous_filter_delay = 0.88f *
+          (1.0f - reflection_brightness) / reflection_brightness;
+      delay = 0.5f / instantaneous_frequency - instantaneous_filter_delay;
+      CONSTRAIN(delay, 4.0f, kReedPipeDelaySize - 4.0f);
+    }
+#endif
     const float reed_stiffness = reed_stiffness_modulation.Next();
     const float breath_noise = breath_noise_modulation.Next();
     const float pickup_position = pickup_position_modulation.Next();

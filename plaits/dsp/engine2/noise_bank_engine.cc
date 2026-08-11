@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "plaits/build_config.h"
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/dsp/parameter_interpolator.h"
 #include "stmlib/utils/random.h"
@@ -20,6 +21,15 @@ using namespace std;
 using namespace stmlib;
 
 namespace {
+
+inline float NoiseBankFastLog2(float x) {
+  union { float f; uint32_t i; } u = { x };
+  const float e = static_cast<float>((u.i >> 23) & 0xffu) - 127.0f;
+  u.i = (u.i & 0x007fffffu) | 0x3f800000u;
+  const float m = u.f;
+  return e + (-1.7417939f + (2.8212026f + (-1.4699568f
+      + (0.44717955f - 0.056570851f * m) * m) * m) * m);
+}
 
 // Braids' ws_moderate_overdrive, verbatim from braids/resources.cc.
 //
@@ -288,6 +298,19 @@ void NoiseBankEngine::Render(
 
   float note = parameters.note;
   CONSTRAIN(note, 0.0f, kNoiseBankMaxNote);
+  const float base_frequency = NoteToFrequency(note);
+  float note_offset[kMaxBlockSize];
+  fill(&note_offset[0], &note_offset[size], 0.0f);
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  if (parameters.frequency_offset) {
+    for (size_t i = 0; i < size; ++i) {
+      const float instantaneous_frequency = max(
+          1e-7f, base_frequency + parameters.frequency_offset[i]);
+      note_offset[i] = 12.0f * NoiseBankFastLog2(
+          instantaneous_frequency / max(base_frequency, 1e-7f));
+    }
+  }
+#endif
 
   // MACRO drives the shaper. NOIS and TWNQ already end in it at unity, so
   // their stock value is 1.0 and the detent is Braids exactly; CLKN has no
@@ -303,9 +326,9 @@ void NoiseBankEngine::Render(
   if (model == NOISE_BANK_MODEL_FILTERED) {
     // pitch_ -> lut_svf_cutoff (digital_oscillator.cc:1837).
     const int note_integral = static_cast<int>(note);
-    const float f = Lerp(SvfCutoffAt(note_integral),
-                         SvfCutoffAt(note_integral + 1),
-                         note - static_cast<float>(note_integral));
+    const float base_f = Lerp(SvfCutoffAt(note_integral),
+                              SvfCutoffAt(note_integral + 1),
+                              note - static_cast<float>(note_integral));
 
     // parameter_[0] -> lut_svf_damp and lut_svf_scale (:1838, :1839). The
     // table index is parameter_[0] >> 7 with the remainder as the fraction,
@@ -323,8 +346,6 @@ void NoiseBankEngine::Render(
                              damp_fractional);
 
     // :1855. A level normalization, not a rate constant.
-    const float gain_correction = f > scale ? scale / f : 1.0f;
-
     // parameter_[1] -> the LP/BP/HP morph (:1845-1853). Braids works in raw
     // parameter counts, and the crossover is at 16384 of 32767 -- so COLOR at
     // noon is very nearly pure band-pass, not a three-way blend.
@@ -344,6 +365,19 @@ void NoiseBankEngine::Render(
 
     for (size_t i = 0; i < size; ++i) {
       const float drive = drive_modulation.Next();
+      float f = base_f;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+      if (parameters.frequency_offset) {
+        float modulated_note = note + note_offset[i];
+        CONSTRAIN(modulated_note, 0.0f, kNoiseBankMaxNote);
+        const int modulated_integral = static_cast<int>(modulated_note);
+        f = Lerp(
+            SvfCutoffAt(modulated_integral),
+            SvfCutoffAt(modulated_integral + 1),
+            modulated_note - static_cast<float>(modulated_integral));
+      }
+#endif
+      const float gain_correction = f > scale ? scale / f : 1.0f;
       for (int s = 0; s < 2; ++s) {
         const float in = static_cast<float>(NoiseSample()) *
             (1.0f / 32768.0f);
@@ -407,24 +441,44 @@ void NoiseBankEngine::Render(
     // The pole coefficients, folded into q exactly as `c1 = c1 * q >> 16`
     // (:1901) does. See ResonatorCoefficient for why they are not corrected
     // onto Plaits' sample rate.
-    const int32_t c1 = static_cast<int32_t>(
+    const int32_t base_c1 = static_cast<int32_t>(
         ResonatorCoefficient(note) * q >> 16);
-    const int32_t c2 = static_cast<int32_t>(
+    const int32_t base_c2 = static_cast<int32_t>(
         ResonatorCoefficient(note_2) * q >> 16);
 
     // The excitation gain is an integer applied as `sample * s >> 16` (:1910).
     // Below MIDI 32 the table value is 4 or less and the shift floors every
     // sample to zero, so TWNQ is digitally SILENT there -- verified against
     // the module at MIDI 24, where both sides render exact zeros.
-    const int32_t s1 = static_cast<int32_t>(
+    const int32_t base_s1 = static_cast<int32_t>(
         ReadNoteTable(kResonatorScale, note));
-    const int32_t s2 = static_cast<int32_t>(
+    const int32_t base_s2 = static_cast<int32_t>(
         ReadNoteTable(kResonatorScale, note_2));
 
     ParameterInterpolator drive_modulation(&drive_, target_drive, size);
 
     for (size_t i = 0; i < size; ++i) {
       const float drive = drive_modulation.Next();
+      int32_t c1 = base_c1;
+      int32_t c2 = base_c2;
+      int32_t s1 = base_s1;
+      int32_t s2 = base_s2;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+      if (parameters.frequency_offset) {
+        float modulated_note = note + note_offset[i];
+        CONSTRAIN(modulated_note, 0.0f, 127.999f);
+        float modulated_note_2 = note_2 + note_offset[i];
+        CONSTRAIN(modulated_note_2, 0.0f, 127.999f);
+        c1 = static_cast<int32_t>(
+            ResonatorCoefficient(modulated_note) * q >> 16);
+        c2 = static_cast<int32_t>(
+            ResonatorCoefficient(modulated_note_2) * q >> 16);
+        s1 = static_cast<int32_t>(
+            ReadNoteTable(kResonatorScale, modulated_note));
+        s2 = static_cast<int32_t>(
+            ReadNoteTable(kResonatorScale, modulated_note_2));
+      }
+#endif
 
       // RenderTwinPeaksNoise ends in `size -= 2` and writes each sample
       // twice: a 48 kHz algorithm held across two 96 kHz samples. The port
@@ -472,11 +526,11 @@ void NoiseBankEngine::Render(
     // stall outright at the long loop lengths below.
     float increment = NoteToFrequency(note) * 0.5f;
     CONSTRAIN(increment, 0.0f, 0.4999f);
-    uint32_t phase_increment = static_cast<uint32_t>(
+    uint32_t base_phase_increment = static_cast<uint32_t>(
         increment * 4294967296.0f);
     for (int i = 0; i < kNoiseBankClockShifts; ++i) {
-      if (phase_increment < (1UL << 31)) {
-        phase_increment <<= 1;
+      if (base_phase_increment < (1UL << 31)) {
+        base_phase_increment <<= 1;
       }
     }
 
@@ -502,6 +556,21 @@ void NoiseBankEngine::Render(
 
     for (size_t i = 0; i < size; ++i) {
       const float drive = drive_modulation.Next();
+      uint32_t phase_increment = base_phase_increment;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+      if (parameters.frequency_offset) {
+        float modulated_increment =
+            (base_frequency + parameters.frequency_offset[i]) * 0.5f;
+        CONSTRAIN(modulated_increment, 0.0f, 0.4999f);
+        phase_increment = static_cast<uint32_t>(
+            modulated_increment * 4294967296.0f);
+        for (int shift = 0; shift < kNoiseBankClockShifts; ++shift) {
+          if (phase_increment < (1UL << 31)) {
+            phase_increment <<= 1;
+          }
+        }
+      }
+#endif
       for (int s = 0; s < 2; ++s) {
         clock_phase_ += phase_increment;
         if (clock_phase_ < phase_increment) {

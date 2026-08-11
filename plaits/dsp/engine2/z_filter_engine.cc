@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "plaits/build_config.h"
 #include "stmlib/stmlib.h"
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/dsp/parameter_interpolator.h"
@@ -138,7 +139,7 @@ void ZFilterEngine::Render(
 
   // The internal rate is 2x the output rate, matching RenderDigitalFilter's
   // native 96 kHz. Omitting the halving renders an octave high.
-  const float f0 = NoteToFrequency(parameters.note) * 0.5f;
+  const float base_f0 = NoteToFrequency(parameters.note) * 0.5f;
 
   // TIMBRE is Braids' (parameter_[0] - 2048) >> 1 in 1/128-semitone units:
   // eight semitones below the note to ten octaves above it. Braids clamps the
@@ -149,6 +150,7 @@ void ZFilterEngine::Render(
     shifted_pitch = kZFilterMaxPitch;
   }
   const float target_mod_increment = NoteToFrequency(shifted_pitch) * 0.5f;
+  const float modulator_ratio = target_mod_increment / max(base_f0, 1e-7f);
 
   const int filter_type = model_quantizer_.Process(parameters.harmonics);
   // AUX runs the complementary model: LP<->HP, PK<->BP.
@@ -183,10 +185,24 @@ void ZFilterEngine::Render(
       &mod_increment_, target_mod_increment, size * 2);
 
   for (size_t i = 0; i < size; ++i) {
+    float f0 = base_f0;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      f0 += parameters.frequency_offset[i] * 0.5f;
+      CONSTRAIN(f0, 0.0f, 0.249f);
+    }
+#endif
     float out_sub[2];
     float aux_sub[2];
     for (int s = 0; s < 2; ++s) {
-      const float mod_increment = mod_increment_modulation.Next();
+      float mod_increment = mod_increment_modulation.Next();
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+      if (parameters.frequency_offset) {
+        mod_increment +=
+            parameters.frequency_offset[i] * 0.5f * modulator_ratio;
+        CONSTRAIN(mod_increment, 0.0f, 0.499f);
+      }
+#endif
 
       phase_ += f0;
       if (phase_ >= 1.0f) {

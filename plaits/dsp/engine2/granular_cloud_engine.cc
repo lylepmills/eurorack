@@ -9,6 +9,7 @@
 
 #include <algorithm>
 
+#include "plaits/build_config.h"
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/dsp/parameter_interpolator.h"
 #include "stmlib/dsp/units.h"
@@ -205,7 +206,16 @@ void GranularCloudEngine::Render(
 
   const float inverse_end = 1.0f / static_cast<float>(kGranularCloudEnvelopeEnd);
 
+  size_t sample_index = 0;
   while (size--) {
+    float pitch_ratio = 1.0f;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      const float instantaneous_increment = max(
+          0.0f, base_increment + parameters.frequency_offset[sample_index]);
+      pitch_ratio = instantaneous_increment / max(base_increment, 1e-7f);
+    }
+#endif
     if (scheduler_countdown_ <= 0) {
       ScheduleGrains(timbre_code, color_code, spawn_threshold, base_increment);
       scheduler_countdown_ = kGranularCloudSchedulerPeriod;
@@ -221,7 +231,7 @@ void GranularCloudEngine::Render(
 
     for (int i = 0; i < kGranularCloudNumGrains; ++i) {
       Grain* g = &grain_[i];
-      g->phase += g->phase_increment;
+      g->phase += g->phase_increment * pitch_ratio;
       if (g->phase >= 1.0f) {
         g->phase -= 1.0f;
       }
@@ -245,7 +255,7 @@ void GranularCloudEngine::Render(
     // module's ceiling rather than a limiter doing work.
     CONSTRAIN(mono, -1.0f, 1.0f);
 
-    aux_phase_ += base_increment;
+    aux_phase_ += base_increment * pitch_ratio;
     if (aux_phase_ >= 1.0f) {
       aux_phase_ -= 1.0f;
     }
@@ -261,6 +271,7 @@ void GranularCloudEngine::Render(
       // grain rhythm with the scatter removed.
       *aux++ = BraidsSine(aux_phase_) * envelope_sum;
     }
+    ++sample_index;
   }
 }
 

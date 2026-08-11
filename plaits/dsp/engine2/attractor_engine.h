@@ -33,6 +33,7 @@ class AttractorEngine : public Engine {
   // The two coordinate taps are inherently decorrelated (see header comment):
   // stereo mode just relabels the existing OUT/AUX pair as left/right.
   virtual bool stereo_capable() const { return true; }
+  virtual bool fast_fm_capable() const { return true; }
 
  private:
   void Seed(float accent);
