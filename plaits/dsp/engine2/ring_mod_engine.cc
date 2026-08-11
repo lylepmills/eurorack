@@ -35,7 +35,7 @@ namespace {
 // forbids as an OUTPUT bound; here it is the in-loop saturation the model is
 // built on, and the result is bounded by construction because the input is
 // clamped to +-1 before it arrives.
-inline float Overdrive(float x) {
+inline float RingModOverdrive(float x) {
   CONSTRAIN(x, -1.0f, 1.0f);
   return kRingModShaperNorm * SoftLimit(2.0f * x);
 }
@@ -186,10 +186,10 @@ void RingModEngine::Render(
 
       history_position_ = (history_position_ + 1) & 15;
       history_[history_position_] = \
-          Overdrive(kRingModPreShaperScale * drive * ring);
+          RingModOverdrive(kRingModPreShaperScale * drive * ring);
       if (stereo) {
         history_aux_[history_position_] = \
-            Overdrive(kRingModPreShaperScale * drive * ring_aux);
+            RingModOverdrive(kRingModPreShaperScale * drive * ring_aux);
       }
     }
 

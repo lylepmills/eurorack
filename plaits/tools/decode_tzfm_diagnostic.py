@@ -39,6 +39,11 @@ MODEL_NAMES = {
         "Undertow", "Reed Pipe", "Z Filter", "Granular Cloud",
         "Noise Bank", "Particle Burst", "Plucked", "Blown",
     ],
+    11: [
+        "Modal Resonator", "Inharmonic String", "Filtered Noise",
+        "Particle Noise", "Analog Bass Drum", "Analog Snare",
+        "Analog Hi-Hat", "String Machine",
+    ],
 }
 
 FIELD_NAMES = [
