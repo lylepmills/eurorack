@@ -164,4 +164,55 @@ void ScaleVoiceBank::RenderWavetable(
   }
 }
 
+void ScaleVoiceBank::RenderWavetableFrequencyOffset(
+    const float* notes,
+    int num_voices,
+    float scan,
+    float detune_cents,
+    const float* root_frequency_offset,
+    float* out,
+    float* aux,
+    size_t size) {
+  CONSTRAIN(num_voices, 1, kScaleVoicesMaxVoices);
+
+  const float root_frequency = NoteToFrequency(notes[0]);
+  float frequency[kScaleVoicesMaxVoices];
+  float frequency_ratio[kScaleVoicesMaxVoices];
+  for (int v = 0; v < num_voices; ++v) {
+    const float sign = (v & 1) ? 1.0f : -1.0f;
+    const float detune = v == 0 ? 0.0f : sign * detune_cents * 0.01f;
+    frequency[v] = NoteToFrequency(notes[v] + detune);
+    frequency_ratio[v] = frequency[v] / root_frequency;
+  }
+
+  WaveTap wave_tap;
+  ResolveWaveTap(scan, &wave_tap);
+  const float mix = 1.0f / static_cast<float>(max(num_voices, 1));
+  for (size_t i = 0; i < size; ++i) {
+    float mixed = 0.0f;
+    float root = 0.0f;
+    for (int v = 0; v < num_voices; ++v) {
+      float f = frequency[v] +
+          root_frequency_offset[i] * frequency_ratio[v];
+      if (f > kScaleVoicesMaxVoiceFrequency) {
+        continue;
+      }
+      if (f < 1.0e-7f) {
+        f = 1.0e-7f;
+      }
+      phase_[v] += f;
+      if (phase_[v] >= 1.0f) {
+        phase_[v] -= 1.0f;
+      }
+      const float sample = ReadWave(wave_tap, phase_[v]);
+      mixed += sample * mix;
+      if (v == 0) {
+        root = sample;
+      }
+    }
+    out[i] = mixed;
+    aux[i] = root;
+  }
+}
+
 }  // namespace plaits

@@ -11,6 +11,8 @@
 
 #include "stmlib/dsp/dsp.h"
 
+#include "plaits/build_config.h"
+
 namespace plaits {
 
 using namespace std;
@@ -56,6 +58,14 @@ void ScaleStackEngine::Render(
   const float waveform = parameters.morph;
   const float detune = parameters.timbre * kScaleVoicesMaxDetuneCents;
   const float fold = parameters.timbre;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  if (parameters.frequency_offset) {
+    voices_.RenderFrequencyOffset(
+        notes, kScaleStackNumVoices, waveform, detune, fold,
+        parameters.frequency_offset, out, aux, size);
+    return;
+  }
+#endif
   voices_.Render(
       notes, kScaleStackNumVoices, waveform, detune, fold, out, aux, size);
 }

@@ -53,6 +53,11 @@ MODEL_NAMES = {
         "LPC Words", "6-Op FM Bank A", "6-Op FM Bank B",
         "6-Op FM Bank C", "Chiptune",
     ],
+    14: [
+        "Saw Comb", "Diatonic Chord", "Scale Stack",
+        "Wavetable Diatonic Chord", "Wavetable Scale Stack", "Shakers",
+        "Brass", "Helix", "Clap",
+    ],
 }
 
 FIELD_NAMES = [

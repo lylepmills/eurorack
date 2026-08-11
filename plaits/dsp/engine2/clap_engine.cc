@@ -6,6 +6,8 @@
 #include "stmlib/dsp/parameter_interpolator.h"
 #include "stmlib/dsp/units.h"
 
+#include "plaits/build_config.h"
+
 namespace plaits {
 
 using namespace stmlib;
@@ -201,6 +203,96 @@ void ClapEngine::Render(
   const float bandwidth = spread - inv_spread;
   const float makeup = kClapMakeup *
       Sqrt(kClapBandReference / (center * bandwidth));
+
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  if (parameters.frequency_offset) {
+    const float base_root_frequency = NoteToFrequency(parameters.note);
+    float last_makeup = makeup;
+    float last_makeup_aux = makeup;
+    if (PLAITS_STEREO_CLAP && parameters.stereo) {
+      for (size_t i = 0; i < size; ++i) {
+        float root_frequency = base_root_frequency +
+            parameters.frequency_offset[i];
+        if (root_frequency < 1.0e-7f) {
+          root_frequency = 1.0e-7f;
+        }
+        const float sample_center =
+            root_frequency * 4.0f * kClapBandCenterRatio;
+        float sample_highpass = sample_center * inv_spread;
+        CONSTRAIN(sample_highpass, 0.001f, 0.40f);
+        highpass_[0].set_f_q<FREQUENCY_FAST>(
+            sample_highpass, kClapHighpassQ1);
+        highpass_[1].set_f_q<FREQUENCY_FAST>(
+            sample_highpass, kClapHighpassQ2);
+        highpass_aux_[0].set(highpass_[0]);
+        highpass_aux_[1].set(highpass_[1]);
+        float sample_lowpass = sample_center * spread;
+        CONSTRAIN(sample_lowpass, 0.002f, 0.45f);
+        lowpass_.set_f_q<FREQUENCY_FAST>(sample_lowpass, kClapLowpassQ);
+        lowpass_aux_.set_f_q<FREQUENCY_FAST>(
+            sample_lowpass, kClapLowpassQ);
+        last_makeup = kClapMakeup *
+            Sqrt(kClapBandReference / (sample_center * bandwidth));
+
+        Tick();
+        const float noise_left = 2.0f * Random::GetFloat() - 1.0f;
+        const float noise_right = 2.0f * Random::GetFloat() - 1.0f;
+        const float room = tail_env_ * kClapTailPan;
+        out[i] = SoftClip(
+            Band(noise_left * (slap_env_ * slap_gain_l_ + room)) *
+            last_makeup);
+        aux[i] = SoftClip(
+            BandAux(noise_right * (slap_env_ * slap_gain_r_ + room)) *
+            last_makeup);
+      }
+      prev_makeup_ = last_makeup;
+      prev_makeup_aux_ = last_makeup;
+      return;
+    }
+
+    const float bandwidth_aux =
+        kClapLowpassOctavesAux * spread - inv_spread;
+    for (size_t i = 0; i < size; ++i) {
+      float root_frequency = base_root_frequency +
+          parameters.frequency_offset[i];
+      if (root_frequency < 1.0e-7f) {
+        root_frequency = 1.0e-7f;
+      }
+      const float sample_center =
+          root_frequency * 4.0f * kClapBandCenterRatio;
+      float sample_highpass = sample_center * inv_spread;
+      CONSTRAIN(sample_highpass, 0.001f, 0.40f);
+      highpass_[0].set_f_q<FREQUENCY_FAST>(
+          sample_highpass, kClapHighpassQ1);
+      highpass_[1].set_f_q<FREQUENCY_FAST>(
+          sample_highpass, kClapHighpassQ2);
+      highpass_aux_[0].set(highpass_[0]);
+      highpass_aux_[1].set(highpass_[1]);
+      float sample_lowpass = sample_center * spread;
+      CONSTRAIN(sample_lowpass, 0.002f, 0.45f);
+      lowpass_.set_f_q<FREQUENCY_FAST>(sample_lowpass, kClapLowpassQ);
+      float sample_lowpass_aux =
+          sample_lowpass * kClapLowpassOctavesAux;
+      CONSTRAIN(sample_lowpass_aux, 0.002f, 0.45f);
+      lowpass_aux_.set_f_q<FREQUENCY_FAST>(
+          sample_lowpass_aux, kClapLowpassQ);
+      last_makeup = kClapMakeup *
+          Sqrt(kClapBandReference / (sample_center * bandwidth));
+      last_makeup_aux = kClapMakeup *
+          Sqrt(kClapBandReference / (sample_center * bandwidth_aux));
+
+      Tick();
+      const float noise = 2.0f * Random::GetFloat() - 1.0f;
+      const float hands_only = noise * slap_env_;
+      out[i] = SoftClip(
+          Band(hands_only + noise * tail_env_) * last_makeup);
+      aux[i] = SoftClip(BandAux(hands_only) * last_makeup_aux);
+    }
+    prev_makeup_ = last_makeup;
+    prev_makeup_aux_ = last_makeup_aux;
+    return;
+  }
+#endif
 
   if (PLAITS_STEREO_CLAP && parameters.stereo) {
     highpass_aux_[0].set(highpass_[0]);

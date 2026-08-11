@@ -3,6 +3,8 @@
 
 #include "plaits/dsp/engine2/helix_engine.h"
 
+#include "plaits/build_config.h"
+
 #include <algorithm>
 #include <cmath>
 #include <stdint.h>   // not <cstdint>: the firmware is C++98, and <cstdint> needs C++11
@@ -91,6 +93,22 @@ void HelixEngine::Reset() {
 
 void HelixEngine::Render(const EngineParameters& parameters, float* out,
     float* aux, size_t size, bool* already_enveloped) {
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  if (parameters.frequency_offset) {
+    EngineParameters sample_parameters = parameters;
+    sample_parameters.frequency_offset = NULL;
+    const float base_frequency = NoteToFrequency(parameters.note);
+    for (size_t i = 0; i < size; ++i) {
+      sample_parameters.note = NoteWithFrequencyOffset(
+          parameters.note, base_frequency, parameters.frequency_offset[i]);
+      sample_parameters.trigger = i == 0
+          ? parameters.trigger
+          : parameters.trigger & ~TRIGGER_RISING_EDGE;
+      Render(sample_parameters, out + i, aux + i, 1, already_enveloped);
+    }
+    return;
+  }
+#endif
   // HARMONICS selects the chord — its shape is what rises forever.
   chords_.set_chord(parameters.harmonics, parameters.chord_set_option);
   chords_.Sort();  // fold each chord note into one octave -> sorted_ratio()

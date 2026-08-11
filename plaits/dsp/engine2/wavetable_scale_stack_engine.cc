@@ -12,6 +12,7 @@
 
 #include "stmlib/dsp/dsp.h"
 
+#include "plaits/build_config.h"
 #include "plaits/dsp/engine2/scale_stack_engine.h"
 
 namespace plaits {
@@ -55,14 +56,22 @@ void WavetableScaleStackEngine::Render(
   }
 
   const float detune = parameters.timbre * kScaleVoicesMaxDetuneCents;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  if (parameters.frequency_offset) {
+    voices_.RenderWavetableFrequencyOffset(
+        notes,
+        kScaleStackNumVoices,
+        parameters.morph,
+        detune,
+        parameters.frequency_offset,
+        out,
+        aux,
+        size);
+    return;
+  }
+#endif
   voices_.RenderWavetable(
-      notes,
-      kScaleStackNumVoices,
-      parameters.morph,
-      detune,
-      out,
-      aux,
-      size);
+      notes, kScaleStackNumVoices, parameters.morph, detune, out, aux, size);
 }
 
 }  // namespace plaits
