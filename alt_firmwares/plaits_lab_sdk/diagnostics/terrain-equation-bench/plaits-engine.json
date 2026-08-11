@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "community",
+  "id": "rubato-audio/terrain-equation-bench",
+  "catalogId": "terrain-equation-bench",
+  "version": "0.1.0",
+  "name": "Terrain Equation Bench",
+  "author": "Rubato Audio",
+  "origin": "Community",
+  "license": "MIT",
+  "description": "Diagnostic Wave Terrain engine comparing live equations with the 4 KB sampled lookup. Not a musical model.",
+  "family": "Experimental",
+  "tags": [
+    "community",
+    "experimental",
+    "terrain"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Equation",
+      "description": "Selects one benchmark equation or the sampled-grid baseline."
+    },
+    {
+      "id": "timbre",
+      "label": "Path radius",
+      "description": "Matches Wave Terrain's scan radius."
+    },
+    {
+      "id": "morph",
+      "label": "Path offset",
+      "description": "Matches Wave Terrain's horizontal scan offset."
+    },
+    {
+      "id": "macro",
+      "label": "Y offset",
+      "description": "Matches Wave Terrain's vertical scan offset."
+    }
+  ],
+  "outputs": {
+    "main": "Selected live equation scanned along the Wave Terrain path",
+    "aux": "Alternate Sine(y + z) projection, unless the CPU probe tone is enabled"
+  },
+  "source": {
+    "root": "src",
+    "header": "terrain_equation_bench_engine.h",
+    "files": [
+      "terrain_equation_bench_engine.cc"
+    ],
+    "className": "TerrainEquationBenchEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": 0.7,
+    "auxGain": 0.7
+  },
+  "scenarios": "tests/scenarios.json"
+}

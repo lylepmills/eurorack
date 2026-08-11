@@ -117,12 +117,34 @@ SIX_OP_PROGRAM_POSITIONS = tuple(
     for program in range(32)
 )
 
+TERRAIN_EQUATION_CASE_NAMES = (
+    "original-terrain-1", "sampled-grid-4kb", "soft-rings", "lone-island",
+    "tilted-terraces", "river-bend", "rippled-saddle", "four-chambers",
+    "spiral-current", "twin-pulses", "log-crater", "pinched-diamond",
+    "saturated-saddle", "warped-fault", "four-sine-stress",
+    "eight-sine-stress", "terraces-log-crater", "spiral-twin-pulses",
+    "theta-mu-field",
+)
+
+TERRAIN_EQUATION_POSITIONS = tuple(
+    (
+        f"case-{case:02d}-{name}",
+        (case + 0.5) / len(TERRAIN_EQUATION_CASE_NAMES),
+        0.5,
+        0.5,
+        0.5,
+        48.0,
+    )
+    for case, name in enumerate(TERRAIN_EQUATION_CASE_NAMES)
+)
+
 ENGINE_SWEEP_POSITIONS = {
     "wavetable-chord": (("harm-six", 0.34, 0.5, 0.5, 0.5, 48.0),),
     "wavetable-scale-stack": (("harm-six", 0.34, 0.5, 0.5, 0.5, 48.0),),
     "dx7-bank-a": SIX_OP_PROGRAM_POSITIONS,
     "dx7-bank-b": SIX_OP_PROGRAM_POSITIONS,
     "dx7-bank-c": SIX_OP_PROGRAM_POSITIONS,
+    "terrain-equation-bench": TERRAIN_EQUATION_POSITIONS,
 }
 
 
@@ -295,7 +317,8 @@ def main() -> int:
     from cost_model import CostModel
     model = CostModel()
 
-    positions = sweep_positions(args.sweep, args.builtin) if args.sweep else (
+    engine_id = args.builtin or package["manifest"].get("catalogId")
+    positions = sweep_positions(args.sweep, engine_id) if args.sweep else (
         ("as-given", args.harmonics, args.timbre, args.morph, args.macro, args.note),
     )
     trigger_modes = ("unpatched", "periodic") if args.trigger == "both" else (args.trigger,)

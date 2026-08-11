@@ -138,7 +138,9 @@ inline float WaveTerrainEngine::FactoryTerrain(
     float x, float y, int terrain_type) {
   // The Sine function only works for a positive argument.
   // Thus, all calls to Sine include a positive offset of the argument!
+#if PLAITS_WAVE_TERRAIN_FACTORY_MASK & 0x1f
   const float k = 4.0f;
+#endif
   switch (terrain_type) {
 #if PLAITS_WAVE_TERRAIN_FACTORY_MASK & 0x01
     case 0:
