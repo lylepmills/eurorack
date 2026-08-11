@@ -7,6 +7,8 @@
 
 #include <algorithm>
 
+#include "plaits/build_config.h"
+
 namespace plaits {
 
 using namespace std;
@@ -130,11 +132,18 @@ void RulefieldEngine::Render(
     evolution_phase_ = 0.0f;
   }
 
-  const float frequency = min(0.24f, NoteToFrequency(parameters.note));
+  const float base_frequency = min(0.24f, NoteToFrequency(parameters.note));
   const float evolution_rate = 0.125f + 7.875f * \
       parameters.morph * parameters.morph;
 
   for (size_t i = 0; i < size; ++i) {
+    float frequency = base_frequency;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      frequency += parameters.frequency_offset[i];
+      CONSTRAIN(frequency, 0.0f, 0.24f);
+    }
+#endif
     phase_ += frequency;
     if (phase_ >= 1.0f) {
       phase_ -= 1.0f;

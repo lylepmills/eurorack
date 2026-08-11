@@ -7,6 +7,7 @@
 
 #include <algorithm>
 
+#include "plaits/build_config.h"
 #include "plaits/dsp/oscillator/sine_oscillator.h"
 #include "stmlib/dsp/units.h"
 #include "stmlib/utils/random.h"
@@ -137,7 +138,14 @@ void GlissonEngine::Render(
         const float ratio = g->start_ratio + \
             (g->end_ratio - g->start_ratio) * t;
 
-        g->phase += LimitFrequency(f0 * ratio);
+        float fundamental = f0;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+        if (parameters.frequency_offset) {
+          fundamental += parameters.frequency_offset[j];
+          fundamental = max(0.0f, fundamental);
+        }
+#endif
+        g->phase += LimitFrequency(fundamental * ratio);
         g->phase -= static_cast<int>(g->phase);
 
         const float envelope = 4.0f * g->envelope_phase * \
@@ -173,9 +181,16 @@ void GlissonEngine::Render(
         const float reverse_ratio = g->end_ratio + \
             (g->start_ratio - g->end_ratio) * t;
 
-        g->phase += LimitFrequency(f0 * ratio);
+        float fundamental = f0;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+        if (parameters.frequency_offset) {
+          fundamental += parameters.frequency_offset[j];
+          fundamental = max(0.0f, fundamental);
+        }
+#endif
+        g->phase += LimitFrequency(fundamental * ratio);
         g->phase -= static_cast<int>(g->phase);
-        g->aux_phase += LimitFrequency(f0 * reverse_ratio);
+        g->aux_phase += LimitFrequency(fundamental * reverse_ratio);
         g->aux_phase -= static_cast<int>(g->aux_phase);
 
         // A parabolic grain window avoids a third interpolated sine lookup

@@ -33,6 +33,7 @@ class GendyEngine : public Engine {
       size_t size,
       bool* already_enveloped);
   virtual bool stereo_capable() const { return PLAITS_STEREO_GENDY; }
+  virtual bool fast_fm_capable() const { return true; }
 
  private:
   void Randomize(int num_breakpoints);

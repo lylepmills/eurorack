@@ -5,6 +5,7 @@
 
 #include <algorithm>
 
+#include "plaits/build_config.h"
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/dsp/parameter_interpolator.h"
 #include "stmlib/dsp/polyblep.h"
@@ -127,15 +128,28 @@ void FreshetsFormantEngine::Render(
 
   float lp_ratio = std::min(smoothness * 2.0f, 1.0f);
   lp_ratio *= lp_ratio * lp_ratio;
-  float lp_coefficient = f0 * 0.5f;
-  lp_coefficient += (1.0f - lp_coefficient) * lp_ratio;
+  float base_lp_coefficient = f0 * 0.5f;
+  base_lp_coefficient += (1.0f - base_lp_coefficient) * lp_ratio;
 
   for (size_t i = 0; i < size; ++i) {
-    const float f0 = f0_mod.Next();
+    float f0 = f0_mod.Next();
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      f0 += parameters.frequency_offset[i];
+      CONSTRAIN(f0, 0.0f, 0.25f);
+    }
+#endif
     const float ratio = ratio_mod.Next();
     const float pw = pw_mod.Next();
     const float shape = shape_mod.Next();
     const float formant_freq = f0 * ratio;
+    float lp_coefficient = base_lp_coefficient;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      lp_coefficient = f0 * 0.5f;
+      lp_coefficient += (1.0f - lp_coefficient) * lp_ratio;
+    }
+#endif
 
     // Driver oscillator. Its wrap is the only thing that fires the envelope.
     const bool prev_sub = sub_state_;

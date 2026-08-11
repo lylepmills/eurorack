@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "plaits/build_config.h"
 #include "plaits/dsp/oscillator/sine_oscillator.h"
 #include "stmlib/dsp/units.h"
 
@@ -84,12 +85,13 @@ void LockstepEngine::Render(
 
   // Preserve the selected ratio at the top of the keyboard rather than
   // letting only the follower hit Nyquist and slip continuously.
-  const float reference_frequency = min(
-      NoteToFrequency(parameters.note), 0.22f / max(1.0f, ratio));
-  const float target_frequency = reference_frequency * ratio;
+  const float reference_ceiling = 0.22f / max(1.0f, ratio);
+  const float base_reference_frequency = min(
+      NoteToFrequency(parameters.note), reference_ceiling);
+  const float base_target_frequency = base_reference_frequency * ratio;
 
   if (reset_pending_) {
-    follower_frequency_ = target_frequency * 0.82f;
+    follower_frequency_ = base_target_frequency * 0.82f;
     reset_pending_ = false;
   }
   if (parameters.trigger & TRIGGER_RISING_EDGE) {
@@ -112,10 +114,8 @@ void LockstepEngine::Render(
   // high values pull decisively across almost two octaves.
   const float feedthrough_index = kLockstepFeedthrough * parameters.macro;
   const float capture_octaves = 0.10f + 1.85f * parameters.macro;
-  const float capture_min = target_frequency * SemitonesToRatio(
-      -12.0f * capture_octaves);
-  const float capture_max = target_frequency * SemitonesToRatio(
-      12.0f * capture_octaves);
+  const float capture_min_ratio = SemitonesToRatio(-12.0f * capture_octaves);
+  const float capture_max_ratio = SemitonesToRatio(12.0f * capture_octaves);
   const float detector_smoothing = 0.002f + \
       0.075f * parameters.timbre * parameters.timbre;
 
@@ -130,6 +130,16 @@ void LockstepEngine::Render(
   StereoPanGains(0.7f, &reference_left, &reference_right);
 
   for (size_t i = 0; i < size; ++i) {
+    float reference_frequency = base_reference_frequency;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      reference_frequency += parameters.frequency_offset[i];
+      CONSTRAIN(reference_frequency, 0.0f, reference_ceiling);
+    }
+#endif
+    const float target_frequency = reference_frequency * ratio;
+    const float capture_min = target_frequency * capture_min_ratio;
+    const float capture_max = target_frequency * capture_max_ratio;
     reference_phase_ = Wrap(reference_phase_ + reference_frequency);
 
     // A sinusoidal detector has a soft, ambiguous capture region; a wrapped

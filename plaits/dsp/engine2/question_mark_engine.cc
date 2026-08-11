@@ -7,6 +7,7 @@
 
 #include "plaits/dsp/engine2/question_mark_engine.h"
 
+#include "plaits/build_config.h"
 #include "stmlib/dsp/dsp.h"
 
 namespace plaits {
@@ -275,8 +276,10 @@ void QuestionMarkEngine::Render(
     note = kQuestionMarkHighestNote;
   }
   const float increment_per_substep = NoteToFrequency(note) * 0.5f;
-  const uint32_t increment = static_cast<uint32_t>(
-      increment_per_substep * 4294967296.0f);
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  const float maximum_increment_per_substep =
+      NoteToFrequency(kQuestionMarkHighestNote) * 0.5f;
+#endif
 
   // Braids' two knobs, in Braids' own integer domain.
   const int32_t timbre = ToBraidsParameter(parameters.timbre);
@@ -302,7 +305,17 @@ void QuestionMarkEngine::Render(
   uint32_t rng_state = rng_state_;
   uint32_t rng_state_aux = rng_state_aux_;
 
-  while (size--) {
+  for (size_t i = 0; i < size; ++i) {
+    float modulated_increment = increment_per_substep;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      modulated_increment += parameters.frequency_offset[i] * 0.5f;
+      CONSTRAIN(
+          modulated_increment, 0.0f, maximum_increment_per_substep);
+    }
+#endif
+    const uint32_t increment = static_cast<uint32_t>(
+        modulated_increment * 4294967296.0f);
     int32_t accumulator = 0;
     int32_t accumulator_aux = 0;
 

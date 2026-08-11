@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "plaits/build_config.h"
 #include "plaits/dsp/oscillator/sine_oscillator.h"
 
 namespace plaits {
@@ -96,12 +97,8 @@ void AttractorEngine::Render(
   // controls integration distance rather than an unrelated readout oscillator.
   // Very high notes compress gracefully where a coarse explicit solver would
   // otherwise turn the intended attractor into numerical instability.
-  const float base_rate = min(
-      0.62f, NoteToFrequency(parameters.note) * 6.283185307f);
+  const float base_frequency = NoteToFrequency(parameters.note);
   const float skew = (parameters.macro - 0.5f) * 0.78f;
-  const float rate_x = base_rate * (1.0f + skew);
-  const float rate_y = base_rate;
-  const float rate_z = base_rate * (1.0f - skew);
 
   // TIMBRE moves from a damped limit cycle into broad chaotic excursions.
   const float damping = 0.355f - 0.185f * parameters.timbre;
@@ -110,6 +107,17 @@ void AttractorEngine::Render(
       0.92f * parameters.harmonics * parameters.harmonics;
 
   for (size_t i = 0; i < size; ++i) {
+    float frequency = base_frequency;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      frequency += parameters.frequency_offset[i];
+      frequency = max(0.0f, frequency);
+    }
+#endif
+    const float base_rate = min(0.62f, frequency * 6.283185307f);
+    const float rate_x = base_rate * (1.0f + skew);
+    const float rate_y = base_rate;
+    const float rate_z = base_rate * (1.0f - skew);
     Step(rate_x, rate_y, rate_z, damping, argument_scale);
 
     float coordinate[3];
