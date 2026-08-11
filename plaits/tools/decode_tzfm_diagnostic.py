@@ -31,6 +31,10 @@ MODEL_NAMES = {
         "CSaw", "Dual Sync", "Morph", "Saw Square",
         "Vowel", "Sub Oscillator", "GENDY", "Bytebeat",
     ],
+    9: [
+        "Glisson", "Scanned", "Lockstep", "Tapfield",
+        "Attractor", "Rulefield", "Question Mark", "Freshets Formant",
+    ],
 }
 
 FIELD_NAMES = [
@@ -278,7 +282,7 @@ def verdict(result: dict[str, int]) -> str:
 
 
 def print_report(group: int, results: list[dict[str, int]]) -> None:
-    label = "Fast exponential FM" if group == 8 else "TZFM"
+    label = "Fast exponential FM" if group >= 8 else "TZFM"
     print(f"{label} diagnostic group {group}")
     print("| # | Model | Slow peak | Fast peak | Slow >90 | Fast >90 | "
           "Slow miss | Fast miss | O/R | R/S | U/F | Lag | Verdict |")

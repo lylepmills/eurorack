@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "plaits/build_config.h"
 #include "plaits/dsp/oscillator/sine_oscillator.h"
 #include "stmlib/dsp/units.h"
 #include "stmlib/utils/random.h"
@@ -168,7 +169,7 @@ void ScannedEngine::Render(
     reset_pending_ = false;
   }
 
-  const float frequency = min(0.24f, NoteToFrequency(parameters.note));
+  const float base_frequency = min(0.24f, NoteToFrequency(parameters.note));
   const float physics_rate = 20.0f * SemitonesToRatio(parameters.macro * 72.0f) / \
       kCorrectedSampleRate;
   const float damping = 0.99985f - 0.065f * parameters.morph * \
@@ -194,6 +195,13 @@ void ScannedEngine::Render(
           drive_index);
     }
 
+    float frequency = base_frequency;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      frequency += parameters.frequency_offset[i];
+      CONSTRAIN(frequency, 0.0f, 0.24f);
+    }
+#endif
     scan_phase_ += frequency;
     scan_phase_ -= static_cast<int>(scan_phase_);
     // Phase distortion of the scan path makes TIMBRE audible even between

@@ -434,7 +434,11 @@ void ValidateLinearTzfmEngineCoverage() {
 
 template<typename T>
 void ValidateFastExponentialFmEngine(const char* name) {
-  const size_t kBlocks = 16;
+  // Scanned's lowest useful physics rate needs just over 400 samples before
+  // the initial velocity impulse reaches its position readout. Keep enough
+  // runway here to validate slow-initializing engines rather than mistaking
+  // their intentional startup silence for an ignored offset path.
+  const size_t kBlocks = 64;
   const size_t kSamples = kBlocks * kAudioBlockSize;
   static T engine;
   float reference_out[kSamples];
@@ -535,6 +539,15 @@ void ValidateFastExponentialFmEngineCoverage() {
   ValidateFastExponentialFmEngine<SubOscillatorEngine>("Sub Oscillator");
   ValidateFastExponentialFmEngine<GendyEngine>("GENDY");
   ValidateFastExponentialFmEngine<BytebeatEngine>("Bytebeat");
+  ValidateFastExponentialFmEngine<GlissonEngine>("Glisson");
+  ValidateFastExponentialFmEngine<ScannedEngine>("Scanned");
+  ValidateFastExponentialFmEngine<LockstepEngine>("Lockstep");
+  ValidateFastExponentialFmEngine<TapfieldEngine>("Tapfield");
+  ValidateFastExponentialFmEngine<AttractorEngine>("Attractor");
+  ValidateFastExponentialFmEngine<RulefieldEngine>("Rulefield");
+  ValidateFastExponentialFmEngine<QuestionMarkEngine>("Question Mark");
+  ValidateFastExponentialFmEngine<FreshetsFormantEngine>(
+      "Freshets Formant");
 }
 
 void TestVariableShapeOscillator() {
@@ -4204,10 +4217,11 @@ void ValidateFmCapabilityPolicy() {
     fprintf(stderr, "A non-oscillator engine was mislabeled as TZFM\n");
     abort();
   }
-  // The 21 engines that completed the slow TZFM stress matrix remain available
-  // in the explicitly Experimental fast mode. The eight that missed deadlines
-  // even with block-rate conversion retain TZFM implementations for future
-  // optimization but decline fast acquisition in product firmware.
+  // The 21 engines that completed the slow TZFM stress matrix, plus the three
+  // exponential-only engines qualified by the first dedicated hardware batch,
+  // remain available in the explicitly Experimental fast mode. The eight that
+  // missed TZFM deadlines even with block-rate conversion retain their
+  // implementations for future optimization but decline fast acquisition.
   Engine* fast_engines[] = {
     &waveshaping,
     &two_op_fm,
@@ -4230,6 +4244,9 @@ void ValidateFmCapabilityPolicy() {
     &spectral_spiral,
     &buzz,
     &vosim,
+    &csaw,
+    &sub_oscillator,
+    &gendy,
   };
   for (size_t i = 0; i < sizeof(fast_engines) / sizeof(fast_engines[0]);
        ++i) {
@@ -4259,13 +4276,10 @@ void ValidateFmCapabilityPolicy() {
   // hardware benchmark passes. They must not acquire product capability merely
   // because their diagnostic renderer exists.
   Engine* pending_exponential_engines[] = {
-    &csaw,
     &dual_sync,
     &morph,
     &saw_square,
     &vowel,
-    &sub_oscillator,
-    &gendy,
     &bytebeat,
   };
   for (size_t i = 0;

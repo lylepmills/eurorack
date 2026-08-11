@@ -119,6 +119,7 @@ class CSawEngine : public Engine {
   // Pattern B: mono AUX is a pulse off the same transitions; the stereo branch
   // replaces it with the mirrored-notch waveform so L/R stay a matched pair.
   virtual bool stereo_capable() const { return PLAITS_STEREO_CSAW; }
+  virtual bool fast_fm_capable() const { return true; }
 
  private:
   float phase_;

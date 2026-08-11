@@ -7,6 +7,8 @@
 
 #include <algorithm>
 
+#include "plaits/build_config.h"
+
 namespace plaits {
 
 using namespace std;
@@ -150,13 +152,20 @@ void TapfieldEngine::Render(
     }
   }
 
-  const float clock_frequency = min(
-      0.45f, 4.0f * NoteToFrequency(parameters.note));
+  const float base_frequency = NoteToFrequency(parameters.note);
   const float one_minus_slew = 1.0f - parameters.macro;
   const float slew = 0.0025f + 0.9975f * one_minus_slew * \
       one_minus_slew * one_minus_slew;
 
   for (size_t i = 0; i < size; ++i) {
+    float frequency = base_frequency;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      frequency += parameters.frequency_offset[i];
+      frequency = max(0.0f, frequency);
+    }
+#endif
+    const float clock_frequency = min(0.45f, 4.0f * frequency);
     clock_phase_ += clock_frequency;
     if (clock_phase_ >= 1.0f) {
       clock_phase_ -= 1.0f;
