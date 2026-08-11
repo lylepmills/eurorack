@@ -11,6 +11,8 @@
 
 #include "stmlib/dsp/dsp.h"
 
+#include "plaits/build_config.h"
+
 namespace plaits {
 
 using namespace std;
@@ -108,8 +110,15 @@ void DiatonicChordEngine::Render(
   const float waveform = parameters.morph;
   const float detune = parameters.timbre * kScaleVoicesMaxDetuneCents;
   const float fold = parameters.timbre;
-  voices_.Render(
-      notes, num_voices, waveform, detune, fold, out, aux, size);
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  if (parameters.frequency_offset) {
+    voices_.RenderFrequencyOffset(
+        notes, num_voices, waveform, detune, fold,
+        parameters.frequency_offset, out, aux, size);
+    return;
+  }
+#endif
+  voices_.Render(notes, num_voices, waveform, detune, fold, out, aux, size);
 }
 
 }  // namespace plaits

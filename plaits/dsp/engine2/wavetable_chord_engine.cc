@@ -12,6 +12,7 @@
 
 #include "stmlib/dsp/dsp.h"
 
+#include "plaits/build_config.h"
 #include "plaits/dsp/engine2/diatonic_chord_engine.h"
 
 namespace plaits {
@@ -81,6 +82,14 @@ void WavetableChordEngine::Render(
   }
 
   const float detune = parameters.timbre * kScaleVoicesMaxDetuneCents;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  if (parameters.frequency_offset) {
+    voices_.RenderWavetableFrequencyOffset(
+        notes, num_voices, parameters.morph, detune,
+        parameters.frequency_offset, out, aux, size);
+    return;
+  }
+#endif
   voices_.RenderWavetable(
       notes, num_voices, parameters.morph, detune, out, aux, size);
 }

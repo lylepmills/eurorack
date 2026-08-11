@@ -11,6 +11,8 @@
 
 #include "stmlib/dsp/dsp.h"
 
+#include "plaits/build_config.h"
+
 namespace plaits {
 
 using namespace std;
@@ -189,12 +191,38 @@ void SawCombEngine::Render(
   // VariableShapeOscillator::Render WRITES rather than accumulates, so the
   // exciter needs its own scratch. Sized off kMaxBlockSize.
   float exciter[kMaxBlockSize];
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  if (parameters.frequency_offset) {
+    exciter_.RenderLinearFm(
+        frequency, pw, waveshape, parameters.frequency_offset, exciter, size);
+  } else {
+    exciter_.Render(frequency, pw, waveshape, exciter, size);
+  }
+#else
   exciter_.Render(frequency, pw, waveshape, exciter, size);
+#endif
 
   for (size_t i = 0; i < size; ++i) {
     const float in = exciter[i];
-    const float delayed = ReadLine(line_, write_pointer_, delay);
-    const float delayed_aux = ReadLine(line_, write_pointer_, delay_aux);
+    float sample_delay = delay;
+    float sample_delay_aux = delay_aux;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      float root_frequency = frequency + parameters.frequency_offset[i];
+      if (root_frequency < 1.0e-7f) {
+        root_frequency = 1.0e-7f;
+      }
+      const float inverse_ratio = frequency / root_frequency;
+      sample_delay *= inverse_ratio;
+      sample_delay_aux *= inverse_ratio;
+      CONSTRAIN(sample_delay, 2.0f, static_cast<float>(kSawCombDelaySize));
+      CONSTRAIN(
+          sample_delay_aux, 2.0f, static_cast<float>(kSawCombDelaySize));
+    }
+#endif
+    const float delayed = ReadLine(line_, write_pointer_, sample_delay);
+    const float delayed_aux =
+        ReadLine(line_, write_pointer_, sample_delay_aux);
 
     // In-loop shelf, then Braids' write-back: resonance times the echo plus
     // half the exciter, clipped.

@@ -12,6 +12,7 @@
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/dsp/units.h"
 #include "stmlib/utils/random.h"
+#include "plaits/build_config.h"
 #include "plaits/dsp/oscillator/sine_oscillator.h"
 
 namespace plaits {
@@ -289,6 +290,9 @@ void ShakersEngine::Render(
     a1_[i] = -2.0f * radius_[i] * CosTwoPi(f / kSampleRate);
     a2_[i] = radius_[i] * radius_[i];
   }
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  const float base_note_frequency = NoteToFrequency(parameters.note);
+#endif
 
   // TIMBRE is how hard it is being shaken. Upstream injects energy from a MIDI
   // controller; here the knob injects continuously so the engine drones with
@@ -316,6 +320,24 @@ void ShakersEngine::Render(
 
   for (size_t i = 0; i < size; ++i) {
     float input = 0.0f;
+    float sample_note_ratio = note_ratio_;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      float modulated_frequency =
+          base_note_frequency + parameters.frequency_offset[i];
+      if (modulated_frequency < 1.0e-7f) {
+        modulated_frequency = 1.0e-7f;
+      }
+      sample_note_ratio *= modulated_frequency / base_note_frequency;
+      for (int k = 0; k < p.num_resonances; ++k) {
+        const float centre = p.mechanism == SHAKER_MECHANISM_WATER &&
+            gain_[k] > 0.0f ? water_frequency_[k] : frequency_[k];
+        float f = centre * sample_note_ratio;
+        CONSTRAIN(f, 1.0f, 0.49f * kSampleRate);
+        a1_[k] = -2.0f * radius_[k] * CosTwoPi(f / kSampleRate);
+      }
+    }
+#endif
 
     if (p.mechanism == SHAKER_MECHANISM_RATCHET) {
       // A ratchet ramps its energy down per tooth and resets, which is the
@@ -366,7 +388,7 @@ void ShakersEngine::Render(
           gain_[k] *= radius_[k];
           if (gain_[k] > 0.001f) {
             water_frequency_[k] *= kShakersWaterFreqSweep;
-            float f = water_frequency_[k] * note_ratio_;
+            float f = water_frequency_[k] * sample_note_ratio;
             CONSTRAIN(f, 1.0f, 0.49f * kSampleRate);
             a1_[k] = -2.0f * radius_[k] *
                 CosTwoPi(f / kSampleRate);
@@ -384,7 +406,7 @@ void ShakersEngine::Render(
         if (p.vary_factor > 0.0f) {
           for (int k = 0; k < p.num_resonances; ++k) {
             if (p.vary_mask & (1 << k)) {
-              float f = frequency_[k] * note_ratio_ *
+              float f = frequency_[k] * sample_note_ratio *
                   (1.0f + p.vary_factor * Noise());
               CONSTRAIN(f, 1.0f, 0.49f * kSampleRate);
               a1_[k] = -2.0f * radius_[k] *

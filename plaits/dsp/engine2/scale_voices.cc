@@ -207,4 +207,66 @@ void ScaleVoiceBank::Render(
   }
 }
 
+void ScaleVoiceBank::RenderFrequencyOffset(
+    const float* notes,
+    int num_voices,
+    float waveform,
+    float detune_cents,
+    float fold,
+    const float* root_frequency_offset,
+    float* out,
+    float* aux,
+    size_t size) {
+  CONSTRAIN(num_voices, 1, kScaleVoicesMaxVoices);
+
+  const float root_frequency = NoteToFrequency(notes[0]);
+  float frequency[kScaleVoicesMaxVoices];
+  float frequency_ratio[kScaleVoicesMaxVoices];
+  for (int v = 0; v < num_voices; ++v) {
+    const float sign = (v & 1) ? 1.0f : -1.0f;
+    const float detune = v == 0 ? 0.0f : sign * detune_cents * 0.01f;
+    frequency[v] = NoteToFrequency(notes[v] + detune);
+    frequency_ratio[v] = frequency[v] / root_frequency;
+  }
+
+  const float mix = 1.0f / static_cast<float>(max(num_voices, 1));
+  const float fold_drive = 1.0f + fold * (kScaleVoicesMaxFoldDrive - 1.0f);
+  const float fold_amount = max(1.0f - waveform * 3.0f, 0.0f);
+
+  for (size_t i = 0; i < size; ++i) {
+    float mixed = 0.0f;
+    float root = 0.0f;
+    for (int v = 0; v < num_voices; ++v) {
+      float f = frequency[v] +
+          root_frequency_offset[i] * frequency_ratio[v];
+      if (f > kScaleVoicesMaxVoiceFrequency) {
+        continue;
+      }
+      if (f < 1.0e-7f) {
+        f = 1.0e-7f;
+      }
+      phase_[v] += f;
+      if (phase_[v] >= 1.0f) {
+        phase_[v] -= 1.0f;
+      }
+      float sample = Waveform(phase_[v], f, waveform);
+      if (fold_amount > 0.0f) {
+        const float folded = Sine(1.0f + sample * fold_drive * 0.25f);
+        sample += (folded - sample) * fold_amount;
+      }
+      mixed += sample * mix;
+      if (v == 0) {
+        root = sample;
+      }
+    }
+
+    dc_out_ = mixed - dc_in_ + 0.999f * dc_out_;
+    dc_in_ = mixed;
+    out[i] = dc_out_;
+    dc_aux_out_ = root - dc_aux_in_ + 0.999f * dc_aux_out_;
+    dc_aux_in_ = root;
+    aux[i] = dc_aux_out_;
+  }
+}
+
 }  // namespace plaits

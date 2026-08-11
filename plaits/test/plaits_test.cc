@@ -582,6 +582,17 @@ void ValidateFastExponentialFmEngineCoverage() {
   ValidateFastExponentialFmEngine<LPCSpeechEngine>("LPC Words");
   ValidateFastExponentialFmEngine<SixOpEngine>("6-Op FM", syx_bank_0);
   ValidateFastExponentialFmEngine<ChiptuneEngine>("Chiptune");
+  ValidateFastExponentialFmEngine<SawCombEngine>("Saw Comb");
+  ValidateFastExponentialFmEngine<DiatonicChordEngine>("Diatonic Chord");
+  ValidateFastExponentialFmEngine<ScaleStackEngine>("Scale Stack");
+  ValidateFastExponentialFmEngine<WavetableChordEngine>(
+      "Wavetable Diatonic Chord");
+  ValidateFastExponentialFmEngine<WavetableScaleStackEngine>(
+      "Wavetable Scale Stack");
+  ValidateFastExponentialFmEngine<ShakersEngine>("Shakers");
+  ValidateFastExponentialFmEngine<BrassEngine>("Brass");
+  ValidateFastExponentialFmEngine<HelixEngine>("Helix");
+  ValidateFastExponentialFmEngine<ClapEngine>("Clap");
 }
 
 void TestVariableShapeOscillator() {
@@ -4232,6 +4243,15 @@ void ValidateFmCapabilityPolicy() {
   LPCSpeechEngine lpc_speech;
   SixOpEngine six_op;
   ChiptuneEngine chiptune;
+  SawCombEngine saw_comb;
+  DiatonicChordEngine diatonic_chord;
+  ScaleStackEngine scale_stack;
+  WavetableChordEngine wavetable_chord;
+  WavetableScaleStackEngine wavetable_scale_stack;
+  ShakersEngine shakers;
+  BrassEngine brass;
+  HelixEngine helix;
+  ClapEngine clap;
   Engine* linear_engines[] = {
     &waveshaping,
     &two_op_fm,
@@ -4399,6 +4419,15 @@ void ValidateFmCapabilityPolicy() {
     &lpc_speech,
     &six_op,
     &chiptune,
+    &saw_comb,
+    &diatonic_chord,
+    &scale_stack,
+    &wavetable_chord,
+    &wavetable_scale_stack,
+    &shakers,
+    &brass,
+    &helix,
+    &clap,
   };
   for (size_t i = 0;
        i < sizeof(pending_exponential_engines) /

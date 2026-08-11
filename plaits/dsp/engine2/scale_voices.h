@@ -114,6 +114,20 @@ class ScaleVoiceBank {
       float* aux,
       size_t size);
 
+  // Positive-frequency, per-sample transposition of the whole scale-derived
+  // voicing. The offset is expressed at the played root; every upper voice
+  // follows by its existing frequency ratio.
+  void RenderFrequencyOffset(
+      const float* notes,
+      int num_voices,
+      float waveform,
+      float detune_cents,
+      float fold,
+      const float* root_frequency_offset,
+      float* out,
+      float* aux,
+      size_t size);
+
   // The dedicated WTCH/WTx6 path. MORPH supplies `scan`; TIMBRE remains an
   // independent spread control through `detune_cents`.
   void RenderWavetable(
@@ -121,6 +135,16 @@ class ScaleVoiceBank {
       int num_voices,
       float scan,
       float detune_cents,
+      float* out,
+      float* aux,
+      size_t size);
+
+  void RenderWavetableFrequencyOffset(
+      const float* notes,
+      int num_voices,
+      float scan,
+      float detune_cents,
+      const float* root_frequency_offset,
       float* out,
       float* aux,
       size_t size);
