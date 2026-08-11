@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "plaits/build_config.h"
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/utils/random.h"
 
@@ -258,10 +259,18 @@ void StruckDrumEngine::Render(
   // FOURTH MACRO in the header.
   const float spread_scale = parameters.morph * 2.0f;
   float increment[kNumStruckDrumPartials];
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  float increment_ratio[kNumStruckDrumPartials];
+  const float root_frequency = max(
+      1e-7f, NoteToFrequency(parameters.note));
+#endif
   for (size_t i = 0; i < kNumStruckDrumPartials; ++i) {
     const float ratio_semitones =
         (kDrumPartials[i] / 128.0f) * spread_scale;
     increment[i] = NoteToFrequency(parameters.note + ratio_semitones);
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    increment_ratio[i] = increment[i] / root_frequency;
+#endif
   }
 
   const int num_channels = stereo ? 2 : 1;
@@ -286,7 +295,15 @@ void StruckDrumEngine::Render(
     float partial[kNumStruckDrumPartials];
     float harmonics_sum = 0.0f;
     for (size_t i = 0; i < kNumStruckDrumPartials; ++i) {
-      phase_[i] += increment[i];
+      float sample_increment = increment[i];
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+      if (parameters.frequency_offset) {
+        const float instantaneous_root = max(
+            1e-7f, root_frequency + parameters.frequency_offset[s]);
+        sample_increment = instantaneous_root * increment_ratio[i];
+      }
+#endif
+      phase_[i] += sample_increment;
       if (phase_[i] >= 1.0f) {
         phase_[i] -= 1.0f;
       }

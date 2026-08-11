@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "plaits/build_config.h"
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/dsp/parameter_interpolator.h"
 #include "stmlib/utils/random.h"
@@ -192,6 +193,11 @@ void WaveParaphonicEngine::Render(
 
   WaveTap tap[kWaveParaphonicNumVoices];
   float target_frequency[kWaveParaphonicNumVoices];
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  float frequency_offset_ratio[kWaveParaphonicNumVoices];
+  const float root_frequency = max(
+      1e-7f, NoteToFrequency(parameters.note));
+#endif
   float pan_left[kWaveParaphonicNumVoices];
   float pan_right[kWaveParaphonicNumVoices];
 
@@ -212,6 +218,9 @@ void WaveParaphonicEngine::Render(
     const float interval = 12.0f * FastLog2(chords_.ratio(i));
     const float note = parameters.note + interval * spread;
     target_frequency[i] = NoteToFrequency(note);
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    frequency_offset_ratio[i] = target_frequency[i] / root_frequency;
+#endif
   }
 
   // :1759-1764. Four words, drawn here rather than in Reset() so the count
@@ -232,6 +241,9 @@ void WaveParaphonicEngine::Render(
     &fm_0, &fm_1, &fm_2, &fm_3
   };
 
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  size_t frequency_sample = 0;
+#endif
   while (size--) {
     float sum = 0.0f;
     float left = 0.0f;
@@ -239,7 +251,15 @@ void WaveParaphonicEngine::Render(
     float first_voice = 0.0f;
 
     for (int i = 0; i < kWaveParaphonicNumVoices; ++i) {
-      float phase = phase_[i] + fm[i]->Next();
+      float increment = fm[i]->Next();
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+      if (parameters.frequency_offset) {
+        increment = max(
+            0.0f, increment + parameters.frequency_offset[frequency_sample] *
+                frequency_offset_ratio[i]);
+      }
+#endif
+      float phase = phase_[i] + increment;
       if (phase >= 1.0f) {
         phase -= 1.0f;
       }
@@ -280,6 +300,9 @@ void WaveParaphonicEngine::Render(
 
     *out++ = main;
     *aux++ = second;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    ++frequency_sample;
+#endif
   }
 }
 

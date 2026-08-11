@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "plaits/build_config.h"
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/dsp/parameter_interpolator.h"
 
@@ -218,6 +219,43 @@ inline int BodyCoefficient(float note) {
   return static_cast<int>(kFluteBodyFilter[index]);
 }
 
+inline void ResolveFlutedDelays(
+    float frequency,
+    int color_code,
+    uint32_t* bore_delay_integral,
+    uint32_t* bore_delay_fractional,
+    uint32_t* jet_delay_integral,
+    uint32_t* jet_delay_fractional,
+    uint32_t* pickup_integral,
+    uint32_t* pickup_fractional) {
+  const uint32_t delay_fixed = static_cast<uint32_t>(
+      min(2.0f / max(1e-6f, frequency), 16383.0f) * 65536.0f);
+  uint32_t bore_delay = (delay_fixed << 1) - (2u << 16);
+  uint32_t jet_delay = (bore_delay >> 8) *
+      static_cast<uint32_t>(48 + (color_code >> 10));
+  bore_delay -= jet_delay;
+  int guard = 0;
+  while (guard < 24 &&
+         (bore_delay > ((kFlutedBoreLength - 1) << 16) ||
+          jet_delay > ((kFlutedJetLength - 1) << 16))) {
+    bore_delay >>= 1;
+    jet_delay >>= 1;
+    ++guard;
+  }
+  *bore_delay_integral = bore_delay >> 16;
+  *bore_delay_fractional = bore_delay & 0xffff;
+  *jet_delay_integral = jet_delay >> 16;
+  *jet_delay_fractional = jet_delay & 0xffff;
+
+  uint32_t pickup = static_cast<uint32_t>(
+      static_cast<float>(bore_delay) * kFlutedAuxPickup);
+  if (pickup < (2u << 16)) {
+    pickup = 2u << 16;
+  }
+  *pickup_integral = pickup >> 16;
+  *pickup_fractional = pickup & 0xffff;
+}
+
 }  // namespace
 
 void FlutedEngine::Init(BufferAllocator* allocator) {
@@ -313,37 +351,18 @@ void FlutedEngine::Render(
   float delay_note = parameters.note;
   CONSTRAIN(delay_note, 0.0f, 128.0f);
   const float frequency = max(1e-6f, NoteToFrequency(delay_note));
-  const uint32_t delay_fixed = static_cast<uint32_t>(
-      min(2.0f / frequency, 16383.0f) * 65536.0f);
-
-  // Lines 1390-1397, integer for integer: one loop length, split by COLOR,
-  // then folded up an octave at a time until both halves fit their lines.
-  uint32_t bore_delay = (delay_fixed << 1) - (2u << 16);
   const int color_code = static_cast<int>(parameters.harmonics * 32767.0f);
-  uint32_t jet_delay = (bore_delay >> 8) *
-      static_cast<uint32_t>(48 + (color_code >> 10));
-  bore_delay -= jet_delay;
-  int guard = 0;
-  while (guard < 24 &&
-         (bore_delay > ((kFlutedBoreLength - 1) << 16) ||
-          jet_delay > ((kFlutedJetLength - 1) << 16))) {
-    bore_delay >>= 1;
-    jet_delay >>= 1;
-    ++guard;
-  }
-  const uint32_t bore_delay_integral = bore_delay >> 16;
-  const uint32_t bore_delay_fractional = bore_delay & 0xffff;
-  const uint32_t jet_delay_integral = jet_delay >> 16;
-  const uint32_t jet_delay_fractional = jet_delay & 0xffff;
-
-  // The second bore tap AUX is read from, mono and stereo alike.
-  uint32_t pickup = static_cast<uint32_t>(
-      static_cast<float>(bore_delay) * kFlutedAuxPickup);
-  if (pickup < (2u << 16)) {
-    pickup = 2u << 16;
-  }
-  const uint32_t pickup_integral = pickup >> 16;
-  const uint32_t pickup_fractional = pickup & 0xffff;
+  uint32_t bore_delay_integral;
+  uint32_t bore_delay_fractional;
+  uint32_t jet_delay_integral;
+  uint32_t jet_delay_fractional;
+  uint32_t pickup_integral;
+  uint32_t pickup_fractional;
+  ResolveFlutedDelays(
+      frequency, color_code,
+      &bore_delay_integral, &bore_delay_fractional,
+      &jet_delay_integral, &jet_delay_fractional,
+      &pickup_integral, &pickup_fractional);
 
   // Line 1403: breath_intensity = 2100 - (TIMBRE >> 4), applied at 1421 as a
   // fraction of 4096.
@@ -376,7 +395,23 @@ void FlutedEngine::Render(
   // on both 96 kHz steps (and forever after the pointer reaches its plateau).
   int blowing_envelope = blowing_envelope_;
 
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  size_t frequency_sample = 0;
+#endif
   while (size--) {
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      const float instantaneous_frequency = max(
+          1e-6f, frequency +
+              parameters.frequency_offset[frequency_sample]);
+      ResolveFlutedDelays(
+          instantaneous_frequency, color_code,
+          &bore_delay_integral, &bore_delay_fractional,
+          &jet_delay_integral, &jet_delay_fractional,
+          &pickup_integral, &pickup_fractional);
+    }
+    ++frequency_sample;
+#endif
     // ROUND, do not truncate. Braids' `breath_intensity` is an exact integer
     // (2100 - (TIMBRE >> 4)); a ParameterInterpolator only ever approaches its
     // target -- `value_ += increment_` with no snap (parameter_interpolator.h:

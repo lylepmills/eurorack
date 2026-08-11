@@ -8,8 +8,10 @@
 
 #include "plaits/dsp/engine2/cymbal_engine.h"
 
+#include <algorithm>
 #include <cmath>
 
+#include "plaits/build_config.h"
 #include "stmlib/dsp/parameter_interpolator.h"
 #include "stmlib/dsp/units.h"
 
@@ -118,6 +120,20 @@ void CymbalEngine::Render(
   // digital_oscillator.cc:2477: the raw-noise clock fires 24x per root cycle.
   const float noise_clock_increment = frequency0 * kCymbalNoiseClockMultiplier;
 
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  const float played_root = std::max(
+      1e-7f, NoteToFrequency(parameters.note));
+  float increment_offset_scale[6];
+  for (int p = 0; p < 6; ++p) {
+    // The model tracks half the played pitch. This derivative preserves that
+    // relationship around the current note without requiring a per-sample
+    // logarithm to reconstruct semitone CV from frequency_offset.
+    increment_offset_scale[p] = 0.5f * increment[p] / played_root;
+  }
+  const float noise_clock_offset_scale =
+      0.5f * noise_clock_increment / played_root;
+#endif
+
   // TIMBRE: cutoff, shared by both filters (digital_oscillator.cc:2480-2481).
   // The SVF runs 2x oversampled (below) at Braids' OWN 96 kHz operating
   // rate, so the coefficient is computed directly against that rate with
@@ -175,7 +191,15 @@ void CymbalEngine::Render(
       // The six comparator phases, shared by both channels (cymbal_engine.h's
       // stereo note explains why the metallic side is never duplicated).
       for (int p = 0; p < 6; ++p) {
-        partial_phase[p] += increment[p] * 0.5f;
+        float sample_increment = increment[p];
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+        if (parameters.frequency_offset) {
+          sample_increment = std::max(
+              0.0f, increment[p] + parameters.frequency_offset[i] *
+                  increment_offset_scale[p]);
+        }
+#endif
+        partial_phase[p] += sample_increment * 0.5f;
         if (partial_phase[p] >= 1.0f) {
           partial_phase[p] -= 1.0f;
         }
@@ -205,7 +229,15 @@ void CymbalEngine::Render(
         // digital_oscillator.cc:2484-2487: the clock wraps (possibly more
         // than once at very high root notes, hence `while` rather than
         // `if`) and each wrap draws a fresh LCG word.
-        noise_clock[channel] += noise_clock_increment * 0.5f;
+        float sample_noise_clock_increment = noise_clock_increment;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+        if (parameters.frequency_offset) {
+          sample_noise_clock_increment = std::max(
+              0.0f, noise_clock_increment + parameters.frequency_offset[i] *
+                  noise_clock_offset_scale);
+        }
+#endif
+        noise_clock[channel] += sample_noise_clock_increment * 0.5f;
         while (noise_clock[channel] >= 1.0f) {
           noise_clock[channel] -= 1.0f;
           rng_state[channel] = rng_state[channel] * 1664525u + 1013904223u;
