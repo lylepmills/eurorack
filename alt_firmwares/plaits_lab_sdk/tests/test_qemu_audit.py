@@ -51,6 +51,16 @@ class AuditCatalogTest(unittest.TestCase):
         self.assertEqual(cases[-1][0], "case-18-theta-mu-field")
         self.assertAlmostEqual(cases[9][1], 0.5)
 
+    def test_wavetable_equation_sweep_covers_every_diagnostic_case(self):
+        positions = estimate.sweep_positions(
+            "extreme", "wavetable-equation-bench")
+        cases = [position for position in positions
+                 if position[0].startswith("case-")]
+        self.assertEqual(len(cases), 17)
+        self.assertEqual(cases[0][0], "case-00-sampled-bank-4kb")
+        self.assertEqual(cases[-1][0], "case-16-eight-sine-stress")
+        self.assertAlmostEqual(cases[8][1], 0.5)
+
     def test_every_current_catalog_model_advertises_stereo(self):
         ids = audit_catalog.stereo_catalog_ids()
         self.assertEqual(len(ids), 88)

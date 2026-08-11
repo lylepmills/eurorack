@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "community",
+  "id": "rubato-audio/wavetable-equation-bench",
+  "catalogId": "wavetable-equation-bench",
+  "version": "0.1.0",
+  "name": "Wavetable Equation Bench",
+  "author": "Rubato Audio",
+  "origin": "Community",
+  "license": "MIT",
+  "description": "Diagnostic Wavetable engine comparing live equations with Mutable Instruments' 4 KB sampled bank. Not a musical model.",
+  "family": "Experimental",
+  "tags": ["community", "experimental", "wavetable"],
+  "controls": [
+    {"id": "harmonics", "label": "Equation", "description": "Selects one benchmark equation or the sampled-bank baseline."},
+    {"id": "timbre", "label": "Column", "description": "Moves across the wavetable bank's eight columns."},
+    {"id": "morph", "label": "Row", "description": "Moves across the wavetable bank's eight rows."},
+    {"id": "macro", "label": "Phase warp", "description": "Matches Wavetable's phase-warp control."}
+  ],
+  "outputs": {
+    "main": "Selected live equation or sampled-bank control",
+    "aux": "5-bit version of MAIN, unless the CPU probe tone is enabled"
+  },
+  "source": {
+    "root": "src",
+    "header": "wavetable_equation_bench_engine.h",
+    "files": ["wavetable_equation_bench_engine.cc"],
+    "className": "WavetableEquationBenchEngine"
+  },
+  "postProcessing": {"alreadyEnveloped": false, "outGain": 0.6, "auxGain": 0.6},
+  "scenarios": "tests/scenarios.json"
+}

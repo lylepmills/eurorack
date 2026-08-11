@@ -138,6 +138,26 @@ TERRAIN_EQUATION_POSITIONS = tuple(
     for case, name in enumerate(TERRAIN_EQUATION_CASE_NAMES)
 )
 
+WAVETABLE_EQUATION_CASE_NAMES = (
+    "sampled-bank-4kb", "mutable-fm", "glass-fm", "harmonic-grid",
+    "phase-warp", "pulse-matrix", "parity-weave", "glass-upper-partial",
+    "glass-row-motion", "glass-folded", "glass-fm-wrapped",
+    "glass-ring-grid", "glass-terraced", "glass-soft-clipped",
+    "glass-hard-clipped", "three-transform-stack", "eight-sine-stress",
+)
+
+WAVETABLE_EQUATION_POSITIONS = tuple(
+    (
+        f"case-{case:02d}-{name}",
+        (case + 0.5) / len(WAVETABLE_EQUATION_CASE_NAMES),
+        0.5,
+        0.5,
+        0.5,
+        48.0,
+    )
+    for case, name in enumerate(WAVETABLE_EQUATION_CASE_NAMES)
+)
+
 ENGINE_SWEEP_POSITIONS = {
     "wavetable-chord": (("harm-six", 0.34, 0.5, 0.5, 0.5, 48.0),),
     "wavetable-scale-stack": (("harm-six", 0.34, 0.5, 0.5, 0.5, 48.0),),
@@ -145,6 +165,7 @@ ENGINE_SWEEP_POSITIONS = {
     "dx7-bank-b": SIX_OP_PROGRAM_POSITIONS,
     "dx7-bank-c": SIX_OP_PROGRAM_POSITIONS,
     "terrain-equation-bench": TERRAIN_EQUATION_POSITIONS,
+    "wavetable-equation-bench": WAVETABLE_EQUATION_POSITIONS,
 }
 
 
