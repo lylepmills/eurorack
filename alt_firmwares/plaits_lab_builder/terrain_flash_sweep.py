@@ -25,9 +25,7 @@ BASE["slots"] = list(CATALOG["presets"]["stock"])
 # already near the limit. Replace Speech with a duplicate of Virtual Analog in
 # every arm to create link room without changing Wave Terrain or Wavetable's
 # shared resources. Remove the three DX7 slots too: this diagnostic is measuring
-# built-in terrain code, not rewritable user-data regions, and the production
-# post-link checker correctly rejects a locked FM build whose generated region
-# count still describes the resident (but deliberately unaligned) factory banks.
+# built-in terrain code, not the large shared FM core or its factory banks.
 BASE["slots"][BASE["slots"].index("speech")] = "virtual-analog"
 for bank in ("dx7-bank-a", "dx7-bank-b", "dx7-bank-c"):
     BASE["slots"][BASE["slots"].index(bank)] = "virtual-analog"

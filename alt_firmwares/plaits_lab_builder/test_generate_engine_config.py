@@ -204,6 +204,23 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertIn('section(".user_data_models.0"), aligned(2048)', config)
         self.assertIn("#define PLAITS_USER_DATA_REGION_COUNT 2", config)
 
+    def test_locked_fm_banks_do_not_claim_rewritable_regions(self) -> None:
+        recipe = self.custom_model_recipe([
+            self.custom_model_assignment(0, "wavetable"),
+        ])
+        recipe["slots"][3] = "dx7-bank-a"
+        recipe["preferences"] = {
+            "navigationMode": "linear",
+            "calibration": False,
+            "colorBlindMode": False,
+            "replaceableFmBanks": False,
+        }
+        config = render_config(validate_recipe(recipe))
+
+        self.assertNotIn('section(".user_data_banks.0")', config)
+        self.assertIn('section(".user_data_models.0"), aligned(2048)', config)
+        self.assertIn("#define PLAITS_USER_DATA_REGION_COUNT 1", config)
+
     def test_v24_custom_model_data_rejects_wrong_model_or_size(self) -> None:
         wrong_kind = self.custom_model_recipe([
             self.custom_model_assignment(0, "wave-terrain"),

@@ -1902,7 +1902,7 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_HAS_CUSTOM_MODEL_DATA {1 if custom_model_arrays else 0}
 #define PLAITS_HAS_TERRAIN_BANK {1 if recipe.terrain_bank else 0}
 #define PLAITS_WAVE_TERRAIN_FACTORY_MASK 0x{factory_terrain_mask if recipe.terrain_bank else 0xff:02x}
-#define PLAITS_USER_DATA_REGION_COUNT {len(region_banks) + len(custom_model_arrays) + len(terrain_custom_arrays)}
+#define PLAITS_USER_DATA_REGION_COUNT {(len(region_banks) if swappable else 0) + len(custom_model_arrays) + len(terrain_custom_arrays)}
 #define PLAITS_RESONATOR_ENVELOPE_ENGINE_MASK 0x{resonator_envelope_mask:08x}u
 // Every FM bank's baked array doubles as the flash region a TIMBRE transfer
 // erases and reprograms, so any bank can be replaced without a reflash. 0 when
