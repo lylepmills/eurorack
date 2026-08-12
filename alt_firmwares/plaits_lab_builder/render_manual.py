@@ -984,6 +984,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         terrain_table = Table(
             terrain_rows,
             colWidths=[0.7 * inch, 2.65 * inch, 2.95 * inch],
+            rowHeights=[0.26 * inch] + [0.4 * inch] * len(document["terrainBank"]),
             repeatRows=1,
         )
         terrain_table.setStyle(TableStyle([
