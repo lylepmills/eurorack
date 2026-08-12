@@ -20,55 +20,61 @@ release notes, and user documentation become the source of truth.
 
 | Feature | Status | Last reviewed | Resume from |
 | --- | --- | --- | --- |
-| Linear TZFM | Planned | 2026-08-08 | `codex/plaits-tzfm-finish` at `cadf6fa` |
-| Renaissance-style Speech remix | Parked | 2026-08-03 | `codex/renaissance-sam-prototype` at `a815337` |
-| Four independent pitch CVs for chord engines | Parked | 2026-08-03 | `session/plaits-four-voct` at `ebed081` |
+| Experimental Linear TZFM + Fast FM | Planned | 2026-08-11 | eurorack `codex/plaits-tzfm-expanded` at `2b6a556`; website `session/codex-plaits-tzfm-options` at `c7d5e473` |
+| Renaissance-style Speech remix | Parked | 2026-08-11 | `codex/renaissance-sam-prototype` at `a815337` |
+| Four independent pitch CVs for chord engines | Parked | 2026-08-11 | `session/plaits-four-voct` at `ebed081` |
 
 ## Planned
 
-### Linear TZFM
+### Experimental Linear TZFM + Fast FM
 
-**Concept.** Sample the FM jack at audio rate and use the attenuverter as a
-fixed-Hz linear modulation amount, allowing the instantaneous oscillator
-frequency to pass smoothly through zero. Keep ordinary exponential FM as the
-default and compile the audio-rate path only into firmware that explicitly
-selects it.
+**Concept.** Offer two independent, opt-in FM experiments. Linear TZFM changes
+the attenuverter law on qualified models: counter-clockwise is fixed-Hz linear
+through-zero FM, clockwise remains ordinary exponential FM, and the center is
+off. Fast FM continuously digitizes the FM jack at 50 kHz on qualified models;
+because FM and LEVEL share the STM32F373 converter, a Fast-FM build gives up
+LEVEL CV across the whole firmware. Either option can be used alone or together.
 
-**Decision.** Planned after Sync In reached production. The prototype proves the
-hardware path and meaningful DSP behavior, but it predates the current builder
-and Sync In implementation and is not release-ready. Its current engine support
-is deliberately narrow: Waveshaping, Two-op FM, and Vowel FOF opt in; every other
-engine keeps ordinary exponential FM.
+**Decision.** Planned after Sync In reached production, but not deployed. The
+current schema-23 candidate is rebased onto the source-export/safety-gate work,
+composes with Sync In, and replaces the original three-engine experiment with
+explicit catalog policy: 29 models qualify for Linear TZFM and 34 for Fast FM.
+Unsupported models retain their stock bipolar exponential FM behavior. A failed
+periodic-LEVEL experiment and borderline Brass result were deliberately excluded.
 
-**Prototype.** Branch `codex/plaits-tzfm-finish`, through commit `cadf6fa`
-(`Stabilize Plaits audio-rate TZFM`; initial implementation `6fdbd94`). It
-continuously samples the FM jack in the STM32F373 SDADC's 50 kHz fast mode,
-resamples it without clock drift to Plaits' 47.872 kHz synthesis clock, and uses
-a nominal 1 kHz/V modulation slope. Host tests cover oscillator through-zero
-direction, Two-op FM behavior, finite output, and resampler recovery; a focused
-relative benchmark and QEMU flag are included.
+**Candidates.** Firmware and builder work is on eurorack branch
+`codex/plaits-tzfm-expanded` through `2b6a556` (`Add experimental FM badges to
+field guides`). It includes the schema-23 contract and generator, independent
+flags, engine implementations, hardware diagnostic/decoder tooling, capability
+catalogs, post-link-compatible builds, and active-only `TZ` / `50k` field-guide
+badges. The companion Rubato Audio branch
+`session/codex-plaits-tzfm-options` through `c7d5e473` (`Separate experimental
+Plaits options`) adds the editor controls and copy, capability-aware model
+badges, presets, analytics, schema handling, and measured palette-aware flash
+estimator. Both branch tips are pushed; neither is production.
 
 #### Constraints and work required
 
-1. Rebase the prototype onto current `origin/master` and reconcile its ADC/audio
-   callback changes with the shipped Sync In timer and event path. Prove that the
-   two optional features either compose safely or are rejected as a combination.
-2. Decide whether the hardware tradeoff is acceptable: SDADC fast mode can
-   convert only one channel, so a TZFM build dedicates SDADC2 to FM and disables
-   the LEVEL CV input for the whole firmware. Surface that prominently in the
-   editor and generated field guide if the feature ships.
-3. Re-run the full synthesis suite, the focused resampler/TZFM tests, ARM flash
-   builds, and the catalog CPU sweep on the rebased implementation. Pay special
-   attention to stereo and already-heavy models.
-4. Hardware-audition the existing three engines across carrier frequency,
-   modulation rate/depth, negative-frequency crossings, model changes, and
-   prolonged operation. Confirm that ADC recovery diagnostics stay quiet.
-5. Decide the engine policy before exposing it: ship the useful three-engine
-   subset with an explicit compatibility list, or implement and benchmark
-   additional engines individually. Do not imply universal model support.
-6. Add the hosted-builder schema/contract option, compile-time generator flag,
-   measured flash estimator, website control/help, analytics, field-guide copy,
-   and staging/production canaries only after the firmware behavior is settled.
+1. Rebase both candidate branches onto their current `origin/master`, resolve
+   any catalog/pin drift as one coupled change, and keep schema 23 undeployed
+   until the exact merged source passes every gate below.
+2. Re-run the full synthesis, builder/contract/manual, website, focused
+   resampler/TZFM, ARM flash, and catalog CPU suites on the merged candidates.
+   Verify off-state builds and combinations with Sync In, stereo, replaceable FM
+   banks, Speech resources, and already-heavy models.
+3. Hardware-audition the final product build across both options separately and
+   together: carrier/modulation extremes, negative-frequency crossings, model
+   changes, stereo, prolonged operation, and the qualified model lists. Confirm
+   the recovery diagnostics stay quiet and that unqualified models retain stock
+   behavior.
+4. Make the LEVEL tradeoff impossible to miss in the final editor and field
+   guide: Fast FM disables LEVEL CV throughout the build even while a model that
+   does not consume the fast stream is selected. Linear TZFM alone keeps LEVEL.
+5. Stage the schema-23 builder image and matching website snapshot, verify the
+   generated guide/badges and flash estimates against exact artifacts, then run
+   the physical-module staging gate and production canaries before rollout.
+6. After production settles on the intended immutable image, update the deploy
+   ledger and project memory, then remove this item from the backlog as shipped.
 
 ## Parked
 
@@ -155,7 +161,7 @@ modes the three repurposed jacks must retain their ordinary control behavior.
 calibration/storage half has a working prototype; chord-engine routing and
 hardware tracking tests were intentionally not started.
 
-**Prototype.** Local branch `session/plaits-four-voct`, commit `ebed081`
+**Prototype.** Branch `session/plaits-four-voct`, commit `ebed081`
 (`plaits: prototype four-input pitch calibration`). It is isolated from the
 shipping branch and should be treated as research, not release-ready firmware.
 

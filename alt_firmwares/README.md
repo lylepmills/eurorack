@@ -2,6 +2,9 @@
 
 Plaits Palette is now available at [rubato.audio/plaits-palette](https://rubato.audio/plaits-palette/).
 
+To turn a saved Palette configuration into an editable local firmware build,
+see the focused [`export_recipe_source.py` guide](plaits_palette_source/README.md).
+
 Investigated and deferred Palette features are tracked in the
 [Plaits Palette future-work index](PLAITS_PALETTE_BACKLOG.md).
 

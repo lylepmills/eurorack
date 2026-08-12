@@ -54,11 +54,24 @@ at the firmware's linked application address and deliberately excludes the
 bootloader.
 
 Schema-15/Ro'Ved support passed its hardware checklist on July 30, 2026.
-Schema 21 is available in production with recipe-driven scale banks, automatic
-LEVEL routing, selectable/custom LPC Speech banks, text and recording encoders,
-source/engine audio previews, unpatched-attenuverter modes, and the triggered
-and gated FREQUENCY contours. It also includes schema 20's replaceable FM banks
-and schema 21's experimental Sync In.
+Schema 22 is available in production with recipe-driven scale banks, automatic
+LEVEL routing, selectable/custom LPC Speech banks of up to 32 words, text and
+recording encoders, source/engine audio previews, unpatched-attenuverter modes,
+and the triggered and gated FREQUENCY contours. It also includes schema 20's
+replaceable FM banks and schema 21's experimental Sync In, now controlled by
+schema 22's explicit opt-in preference.
+
+## Editable local source builds
+
+`export_recipe_source.py` turns a saved browser configuration into the generated
+headers, source map, pinned revision, and build script needed to reproduce that
+Palette locally and modify its firmware. The short, user-facing instructions
+live in the dedicated
+[`plaits_palette_source` guide](../plaits_palette_source/README.md).
+
+The generated `build.sh` calls `validate_local_build.py` after linking. That
+applies the hosted builder's flash, RAM, and replaceable-FM page-layout gates,
+but it cannot certify arbitrary DSP or control-code changes as safe.
 
 An August 4 hardware regression exposed two firmware defects in the custom
 Speech path: inconsistent `PLAITS_HAS_CUSTOM_SPEECH_BANKS` values changed the

@@ -90,6 +90,8 @@ class RenderManualTest(unittest.TestCase):
     def test_sync_build_prints_the_warning_and_fifth_model_input_setting(self) -> None:
         recipe = self.calibration_recipe(False)
         recipe["schemaVersion"] = 22
+        # Schema 22 separates the compiled capability from its starting value,
+        # and the preference object is closed rather than partially extensible.
         recipe["preferences"].update({
             "colorBlindMode": False,
             "replaceableFmBanks": False,
