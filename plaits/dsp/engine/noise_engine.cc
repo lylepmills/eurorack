@@ -90,8 +90,10 @@ void NoiseEngine::Render(
   ParameterInterpolator mode_modulation(
       &previous_mode_, ApplyMacro(
           parameters.harmonics, 0.0f, 1.0f, parameters.macro), size);
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
   const float fast_base_f0 = f0;
   const float f1_ratio = f1 / max(f0, 1e-7f);
+#endif
   size_t sample = 0;
 
   const float* in_1 = aux;

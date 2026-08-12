@@ -298,7 +298,9 @@ void NoiseBankEngine::Render(
 
   float note = parameters.note;
   CONSTRAIN(note, 0.0f, kNoiseBankMaxNote);
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
   const float base_frequency = NoteToFrequency(note);
+#endif
   float note_offset[kMaxBlockSize];
   fill(&note_offset[0], &note_offset[size], 0.0f);
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM

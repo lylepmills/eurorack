@@ -150,7 +150,9 @@ void ZFilterEngine::Render(
     shifted_pitch = kZFilterMaxPitch;
   }
   const float target_mod_increment = NoteToFrequency(shifted_pitch) * 0.5f;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
   const float modulator_ratio = target_mod_increment / max(base_f0, 1e-7f);
+#endif
 
   const int filter_type = model_quantizer_.Process(parameters.harmonics);
   // AUX runs the complementary model: LP<->HP, PK<->BP.
