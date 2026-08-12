@@ -341,26 +341,11 @@ separate cache entries while sharing their field-guide PDF.
 
 ## Exporting an editable local build
 
-The browser's **Save configuration** download is accepted directly. Export its
-recipe-specific source layer from this repository checkout with:
-
-```sh
-python3 alt_firmwares/plaits_lab_builder/export_recipe_source.py \
-  my-palette.plaits-palette.json \
-  build/my-palette-source
-```
-
-The output contains the generated engine and Speech configuration headers, the
-optional linker overlay required by replaceable FM banks, a map of the selected
-models' source files, source/toolchain/build metadata, and a `build.sh` wrapper
-with the same recipe flags as the hosted compiler. Its generated `README.md`
-walks through checking out the pinned source revision, using the repository's
-GCC 4.8.3 development container, rebuilding WAV or HEX firmware, and choosing
-where to make code changes.
-
-The exporter refuses to overwrite a non-empty directory so a second run cannot
-silently destroy edits made to a previous export. Use a new output directory
-when regenerating it.
+User-facing setup and build instructions live in
+[`alt_firmwares/plaits_palette_source/README.md`](../plaits_palette_source/README.md).
+The exporter accepts the browser's **Save configuration** download directly and
+refuses to overwrite a non-empty directory. Its implementation and tests stay
+here beside the generator and hosted build path they reuse.
 
 ## Local validation
 
