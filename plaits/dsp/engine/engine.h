@@ -45,6 +45,19 @@
 // engines a recipe leaves in mono.
 #include "plaits/dsp/engine/stereo_config.h"
 
+#ifndef PLAITS_BUILD_LINEAR_TZFM
+#define PLAITS_BUILD_LINEAR_TZFM 0
+#endif
+
+#ifndef PLAITS_BUILD_FAST_FM
+#define PLAITS_BUILD_FAST_FM 0
+#endif
+
+#ifndef PLAITS_BUILD_FREQUENCY_OFFSET_FM
+#define PLAITS_BUILD_FREQUENCY_OFFSET_FM \
+    (PLAITS_BUILD_LINEAR_TZFM || PLAITS_BUILD_FAST_FM)
+#endif
+
 #ifndef PLAITS_FM_DIAGNOSTIC_FORCE_FAST_FM
 #define PLAITS_FM_DIAGNOSTIC_FORCE_FAST_FM 0
 #endif
@@ -144,8 +157,36 @@ struct EngineParameters {
 
   // Optional per-sample absolute frequency offsets, in cycles per sample.
   // Signed values implement linear TZFM; the same path carries audio-rate
-  // exponential FM after Voice evaluates its pitch law.
-  const float* frequency_offset;
+  // exponential FM after Voice evaluates its pitch law. When neither
+  // experimental FM option is compiled, this wrapper is a compile-time null
+  // pointer. That lets every engine's optional branch disappear under -Os
+  // instead of charging ordinary palettes for unreachable audio-rate code.
+  class FrequencyOffset {
+   public:
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    FrequencyOffset(const float* data = NULL) : data_(data) { }
+    inline FrequencyOffset& operator=(const float* data) {
+      data_ = data;
+      return *this;
+    }
+    inline operator const float*() const { return data_; }
+    inline float operator[](size_t index) const { return data_[index]; }
+
+   private:
+    const float* data_;
+#else
+    FrequencyOffset(const float* data = NULL) { (void) data; }
+    inline FrequencyOffset& operator=(const float* data) {
+      (void) data;
+      return *this;
+    }
+    inline operator const float*() const { return NULL; }
+    inline float operator[](size_t index) const {
+      (void) index;
+      return 0.0f;
+    }
+#endif
+  } frequency_offset;
   // alt firmware: when true, the voice requests a true stereo render — OUT
   // becomes the left channel and AUX the right channel. The voice only sets
   // this for engines reporting stereo_capable(); an engine that ignores the
@@ -249,6 +290,7 @@ class Engine {
   // audio-rate sync source is connected. Trigger-aware engines leave this as a
   // no-op and receive a synthetic rising edge instead.
   virtual void HardSync() { }
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
   // Engines returning true consume EngineParameters::frequency_offset as signed,
   // audio-rate frequency offsets and must preserve negative increments.
   virtual bool linear_tzfm_capable() const { return false; }
@@ -265,6 +307,7 @@ class Engine {
     return false;
 #endif
   }
+#endif
   PostProcessingSettings post_processing_settings;
 };
 

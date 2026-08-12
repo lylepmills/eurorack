@@ -234,6 +234,7 @@ class Voice {
       Frame* frames,
       size_t size);
   inline int active_engine() const { return previous_engine_index_; }
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
   inline bool active_engine_supports_linear_tzfm() {
     return previous_engine_index_ >= 0 &&
         engines_.get(previous_engine_index_)->linear_tzfm_capable();
@@ -242,6 +243,7 @@ class Voice {
     return previous_engine_index_ >= 0 &&
         engines_.get(previous_engine_index_)->fast_fm_capable();
   }
+#endif
     
  private:
   void ComputeDecayParameters(const Patch& settings);

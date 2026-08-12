@@ -186,8 +186,10 @@
 // Engines receive either modulation law as an absolute per-sample frequency
 // displacement. Keep this internal umbrella separate from both user-facing
 // preferences so all four combinations compile cleanly.
+#ifndef PLAITS_BUILD_FREQUENCY_OFFSET_FM
 #define PLAITS_BUILD_FREQUENCY_OFFSET_FM \
     (PLAITS_BUILD_LINEAR_TZFM || PLAITS_BUILD_FAST_FM)
+#endif
 
 // Qualification builds can distinguish the three latched audio-input fault
 // sources on separate LED positions. Ordinary builds do not replace the model

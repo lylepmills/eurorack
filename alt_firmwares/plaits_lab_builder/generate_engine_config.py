@@ -1221,6 +1221,11 @@ def render_config(recipe: BuildRecipe) -> str:
 #ifndef PLAITS_DSP_ENGINE_CONFIG_H_
 #define PLAITS_DSP_ENGINE_CONFIG_H_
 
+// These feature gates must precede the engine includes: engine.h uses them to
+// erase the optional frequency-offset interface from ordinary builds.
+#define PLAITS_BUILD_LINEAR_TZFM {recipe.linear_tzfm}
+#define PLAITS_BUILD_FAST_FM {recipe.fast_fm}
+
 {includes}
 #include "plaits/resources.h"
 #include "plaits/user_data_region.h"
@@ -1260,8 +1265,6 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE {1 if recipe.locked_frequency_pot_option >= 4 else 0}
 #define PLAITS_BUILD_MODEL_CV_OPTION {recipe.model_cv_option}
 #define PLAITS_BUILD_ENABLE_SYNC_INPUT {sync_input_enabled}
-#define PLAITS_BUILD_LINEAR_TZFM {recipe.linear_tzfm}
-#define PLAITS_BUILD_FAST_FM {recipe.fast_fm}
 #define PLAITS_BUILD_LEVEL_CV_OPTION {recipe.level_cv_option}
 #define PLAITS_BUILD_AUX_OUTPUT_OPTION {recipe.aux_output_option}
 #define PLAITS_BUILD_AUX_SUBOSC_OPTION {recipe.aux_subosc_option}

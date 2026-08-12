@@ -772,6 +772,9 @@ class GenerateEngineConfigTest(unittest.TestCase):
                     f"#define PLAITS_BUILD_FAST_FM {int(fast_fm)}",
                     config,
                 )
+                first_engine_include = config.index('#include "plaits/dsp/engine')
+                self.assertLess(config.index("#define PLAITS_BUILD_LINEAR_TZFM"), first_engine_include)
+                self.assertLess(config.index("#define PLAITS_BUILD_FAST_FM"), first_engine_include)
 
     def test_experimental_fm_preferences_require_v23_booleans(self) -> None:
         slots = ["waveshaping"] * 24
