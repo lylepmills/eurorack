@@ -552,7 +552,7 @@ both its firmware WAV and generated field guide were ready and returned HTTP
 
 The August 12 Z Filter metadata follow-up shipped at `rev-bf3c078fdf07`.
 MORPH is now correctly documented as the shape gesture inherited from Braids:
-saw through square at noon to triangle. Staging build
+saw through square at noon to triangle. Staging and production build
 `a7bfd687e3aad7984319f589388ee0d41fbcb62d90ef996795f3f6d6ea213553`
 compiled the exact recipe and LPC frames from production build
 `c44bc0e2d62f1c4bb92e6d0e3f381312fc6ea42595f4cfedcfbfd25547606087`.
