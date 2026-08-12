@@ -165,6 +165,19 @@ def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]
     slots = build.public_slots
     catalog = load_catalog()
     by_id = {engine["id"]: engine for engine in catalog["engines"]}
+    fm_capabilities = catalog.get("fmCapabilities", {})
+    linear_tzfm_engines = set(fm_capabilities.get("linearTzfm", ()))
+    fast_fm_engines = set(fm_capabilities.get("fastFm", ()))
+
+    def active_fm_capabilities(engine_id: str) -> dict[str, bool]:
+        # Match the editor: capability badges describe what THIS firmware does,
+        # so an otherwise-qualified model stays unbadged while its corresponding
+        # experimental build option is off.
+        return {
+            "linearTzfm": build.linear_tzfm == 1 and engine_id in linear_tzfm_engines,
+            "fastFm": build.fast_fm == 1 and engine_id in fast_fm_engines,
+        }
+
     credits = custom_bank_credits(recipe, slots, by_id)
     models: list[dict[str, Any]] = []
     seen: set[tuple[str, str | None]] = set()
@@ -187,7 +200,12 @@ def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]
             for index, value in enumerate(slots)
             if value == engine_id and (credits.get(index) or None) == credit
         ]
-        models.append({**engine, "locations": locations, "customBank": credit})
+        models.append({
+            **engine,
+            "locations": locations,
+            "customBank": credit,
+            "fmCapabilities": active_fm_capabilities(engine_id),
+        })
     return {
         "buildKey": build_key,
         "target": recipe.get("target"),
@@ -378,6 +396,49 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         leading=9.2,
         textColor=ink,
     )
+    fm_badge_style = ParagraphStyle(
+        "FmBadge",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=6.1,
+        leading=7.2,
+        alignment=TA_CENTER,
+    )
+
+    def fm_badges(capabilities: dict[str, bool] | None) -> Any:
+        """Render the same active-only TZ / 50k tokens used by the editor."""
+        specs = []
+        if capabilities and capabilities.get("linearTzfm"):
+            specs.append(("TZ", "#6546A8", "#EEE9FA", 0.26 * inch))
+        if capabilities and capabilities.get("fastFm"):
+            specs.append(("50k", "#116C65", "#E4F4F1", 0.33 * inch))
+        if not specs:
+            return ""
+        cells: list[Any] = []
+        widths: list[float] = []
+        badge_columns: list[int] = []
+        for index, (label, foreground, _background, width) in enumerate(specs):
+            if index:
+                cells.append("")
+                widths.append(0.04 * inch)
+            badge_columns.append(len(cells))
+            cells.append(Paragraph(f'<font color="{foreground}">{label}</font>', fm_badge_style))
+            widths.append(width)
+        badge_table = Table([cells], colWidths=widths, rowHeights=[0.17 * inch], hAlign="LEFT")
+        badge_style = [
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ("TOPPADDING", (0, 0), (-1, -1), 0),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+        ]
+        for column, (_label, foreground, background, _width) in zip(badge_columns, specs):
+            badge_style.extend([
+                ("BACKGROUND", (column, 0), (column, 0), colors.HexColor(background)),
+                ("BOX", (column, 0), (column, 0), 0.45, colors.HexColor(foreground)),
+            ])
+        badge_table.setStyle(TableStyle(badge_style))
+        return badge_table
 
     def footer(canvas: Canvas, doc: SimpleDocTemplate) -> None:
         canvas.saveState()
@@ -629,19 +690,19 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
     fast_fm = bool(document.get("fastFm"))
     if linear_tzfm and fast_fm:
         experimental_fm_note = (
-            "This build enables both experimental FM options. Models marked TZ in the Plaits Palette editor use linear through-zero FM counter-clockwise and regular exponential FM clockwise; the center is off. "
-            "Models marked 50k digitize FM continuously at 50 kHz. A model with both marks gets audio-rate TZFM counter-clockwise and audio-rate exponential FM clockwise; a TZ-only model keeps both laws at the normal control rate; a 50k-only model gets audio-rate exponential FM in both directions. "
-            "Unmarked models retain normal control-rate exponential FM. Fast FM dedicates the shared converter to FM, so LEVEL CV is unavailable throughout this firmware, including on models without a 50k mark."
+            "Models carrying both badges combine 50 kHz linear through-zero FM counter-clockwise with 50 kHz exponential FM clockwise. "
+            "A TZ-only model uses both laws at the normal 4 kHz control rate; a 50k-only model uses 50 kHz exponential FM in both directions. "
+            "Untagged models retain normal 4 kHz exponential FM. Fast FM dedicates the shared converter to FM, so LEVEL CV is unavailable throughout this firmware, including on models without a 50k badge."
         )
     elif linear_tzfm:
         experimental_fm_note = (
-            "This build enables experimental linear TZFM. Models marked TZ in the Plaits Palette editor use linear through-zero FM counter-clockwise and regular exponential FM clockwise; the center is off. "
-            "Unmarked models retain normal control-rate exponential FM. Both laws use the normal control-rate input, and LEVEL CV remains available."
+            "Models carrying TZ use linear through-zero FM counter-clockwise and regular exponential FM clockwise; the center is off. "
+            "Untagged models retain normal 4 kHz exponential FM. LEVEL CV remains available."
         )
     elif fast_fm:
         experimental_fm_note = (
-            "This build enables experimental Fast FM. Models marked 50k in the Plaits Palette editor digitize exponential FM continuously at 50 kHz and keep the normal bipolar attenuverter response. "
-            "Unmarked models retain normal control-rate exponential FM. Fast FM dedicates the shared converter to FM, so LEVEL CV is unavailable throughout this firmware, including on models without a 50k mark."
+            "Models carrying 50k digitize exponential FM continuously at 50 kHz and keep the normal bipolar attenuverter response. "
+            "Untagged models retain normal 4 kHz exponential FM. Fast FM dedicates the shared converter to FM, so LEVEL CV is unavailable throughout this firmware, including on models without a 50k badge."
         )
     else:
         experimental_fm_note = ""
@@ -694,12 +755,31 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         ),
     ])
     if experimental_fm_note:
+        fm_legend_rows = []
+        if linear_tzfm:
+            fm_legend_rows.append([
+                fm_badges({"linearTzfm": True, "fastFm": False}),
+                Paragraph("<b>Linear TZFM</b> — counter-clockwise through-zero FM; clockwise exponential FM.", small_style),
+            ])
+        if fast_fm:
+            fm_legend_rows.append([
+                fm_badges({"linearTzfm": False, "fastFm": True}),
+                Paragraph("<b>Fast FM</b> — FM sampled at 50 kHz instead of the normal 4 kHz.", small_style),
+            ])
+        fm_legend = Table(fm_legend_rows, colWidths=[0.72 * inch, 4.35 * inch])
+        fm_legend.setStyle(TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ("TOPPADDING", (0, 0), (-1, -1), 1),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ]))
         story.extend([
             Spacer(1, 0.12 * inch),
             Table(
                 [[
                     Paragraph("EXPERIMENTAL FM", table_header_style),
-                    Paragraph(experimental_fm_note, small_style),
+                    [fm_legend, Spacer(1, 0.04 * inch), Paragraph(experimental_fm_note, small_style)],
                 ]],
                 colWidths=[1.1 * inch, 5.2 * inch],
                 style=TableStyle([
@@ -877,12 +957,26 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         if model_index and model_index % 3 == 0:
             story.append(PageBreak())
         locations = "  /  ".join(f"{item['bankName']} {item['number']}" for item in model["locations"])
+        model_name_and_badges = Table(
+            [[
+                Paragraph(_escape(display_name(model["name"], model.get("customBank"))), model_style),
+                fm_badges(model.get("fmCapabilities")),
+            ]],
+            colWidths=[2.68 * inch, 0.66 * inch],
+            style=TableStyle([
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ]),
+        )
         title = Table(
             [[
                 # Titled the same way the bank map lists it, so a reader can
                 # look a customized slot up by the name the map gave it; the
                 # bank's own name/author/patch count follow in the credit row.
-                Paragraph(_escape(display_name(model["name"], model.get("customBank"))), model_style),
+                model_name_and_badges,
                 Paragraph(_escape(locations), location_style),
             ]],
             colWidths=[3.4 * inch, 2.9 * inch],

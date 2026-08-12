@@ -43,7 +43,7 @@ REJECTED, because emitting it would compile a four-entry MODEL menu while
 starting the module at index four — past the end of its own menu. Independently of the flag, a
 transferred bank now records how many patches it holds, so a short bank sizes
 the HARMONICS quantizer to its real count instead of repeating to fill 32. A
-schema-23 candidate adds two independent Advanced experiments. `linearTzfm`
+schema-23 candidate adds two independent Experimental options. `linearTzfm`
 changes the FM law on 29 qualified models: counter-clockwise is linear
 through-zero FM, clockwise remains regular exponential FM, and the center is
 off. Models without a meaningful signed oscillator direction keep their stock
@@ -54,7 +54,9 @@ passed the hardware headroom and transport tests consume the fast stream;
 every other model retains its normal control-rate exponential FM, sampled from
 the same converter. Either option can be selected alone or together. The
 catalog's `fmCapabilities` lists are the public product policy used to explain
-those per-model differences in the editor. The failed periodic-LEVEL
+those per-model differences in the editor and generated field guide. Guides
+show the same active-only `TZ` and `50k` badges beside model references, with a
+legend on the bank-map page. The failed periodic-LEVEL
 experiment and borderline Brass result are not part of schema 23. This
 candidate is not deployed.
 one-shot marker in the application image is restored by every WAV or HEX flash, so first boot applies

@@ -103,15 +103,42 @@ class RenderManualTest(unittest.TestCase):
         document = manual_document(recipe)
         self.assertIs(document["linearTzfm"], True)
         self.assertIs(document["fastFm"], True)
+        models = {model["id"]: model for model in document["models"]}
+        self.assertEqual(
+            models["virtual-analog"]["fmCapabilities"],
+            {"linearTzfm": True, "fastFm": True},
+        )
+        self.assertEqual(
+            models["harmonic"]["fmCapabilities"],
+            {"linearTzfm": True, "fastFm": False},
+        )
+        self.assertEqual(
+            models["gendy"]["fmCapabilities"],
+            {"linearTzfm": False, "fastFm": True},
+        )
+        self.assertEqual(
+            models["granular-formant"]["fmCapabilities"],
+            {"linearTzfm": False, "fastFm": False},
+        )
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "experimental-fm.pdf"
             render_pdf(document, output)
             printed = pdf_strings(output).replace(")(", " ")
             self.assertIn("EXPERIMENTAL FM", printed)
-            self.assertIn("linear through-zero FM counter-clockwise", printed)
-            self.assertIn("A model with both marks gets audio-rate TZFM", printed)
-            self.assertIn("including on models without a 50k mark", printed)
+            self.assertIn("TZ", printed)
+            self.assertIn("50k", printed)
+            self.assertIn("Linear TZFM", printed)
+            self.assertIn("Fast FM", printed)
+            self.assertIn("both badges combine 50 kHz linear through-zero FM", printed)
+            self.assertIn("including on models without a 50k badge", printed)
             self.assertIn("LEVEL CV is unavailable", printed)
+
+    def test_fm_badges_are_absent_when_the_experimental_options_are_off(self) -> None:
+        document = manual_document(self.calibration_recipe(False))
+        self.assertTrue(all(
+            model["fmCapabilities"] == {"linearTzfm": False, "fastFm": False}
+            for model in document["models"]
+        ))
 
     @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
     def test_sync_build_prints_the_warning_and_fifth_model_input_setting(self) -> None:
