@@ -40,9 +40,10 @@
     }
   ],
   "outputs": {
-    "main": "The scanned readout.",
-    "aux": "Its complement: the adjacent wave, the opposite corner of the map cell, or the other end of the crush."
+    "main": "Mono: the scanned readout. Stereo: the same scan with a small leftward crossfade offset.",
+    "aux": "Mono: the adjacent wave, opposite map corner or other crush endpoint. Stereo: the scan with a small rightward offset."
   },
+  "trigger": "The engine itself ignores TRIG and its wavetable phase keeps running; Plaits' shared envelope still shapes a patched note.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/wave_scan_engine.h",

@@ -21,7 +21,7 @@
     {
       "id": "harmonics",
       "label": "Frame",
-      "description": "Shortens the packet frame from a long header to a rapid burst."
+      "description": "Lengthens the packet from a rapid 32-symbol burst to Braids' full 1,088-symbol frame."
     },
     {
       "id": "timbre",
@@ -40,9 +40,10 @@
     }
   ],
   "outputs": {
-    "main": "Modulated carrier.",
-    "aux": "Symbol staircase."
+    "main": "Mono: the complete in-phase plus quadrature carrier. Stereo: the in-phase component on the left.",
+    "aux": "Mono: the DC-blocked symbol staircase. Stereo: the quadrature carrier component on the right."
   },
+  "trigger": "Restarts the packet from its preamble without resetting the carrier or the byte already in flight.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/digital_modulation_engine.h",

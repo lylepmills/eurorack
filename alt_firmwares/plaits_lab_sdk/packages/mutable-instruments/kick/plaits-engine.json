@@ -40,9 +40,10 @@
     }
   ],
   "outputs": {
-    "main": "The self-enveloped kick.",
-    "aux": "The raw excitation pulses, before the resonator, soft-clipped."
+    "main": "Mono: the self-enveloped kick. Stereo: the kick body plus a small excitation side signal on the left.",
+    "aux": "Mono: the raw excitation pulses before the resonator. Stereo: the kick body minus that side signal on the right."
   },
+  "trigger": "Strikes or re-strikes the self-enveloped kick.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/kick_engine.h",

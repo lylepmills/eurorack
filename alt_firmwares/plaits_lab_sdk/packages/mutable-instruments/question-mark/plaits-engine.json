@@ -44,6 +44,7 @@
     "main": "The transmission, the module's own signal.",
     "aux": "Mono: the keyed carrier alone, before the bed and the distortion. Stereo: a second full transmission whose noise draws come from an independent generator, so the tone stays centred and the bed opens out."
   },
+  "trigger": "Restarts the Morse transmission from its first symbol.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/question_mark_engine.h",

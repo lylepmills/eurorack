@@ -18,7 +18,8 @@ which matters because engines land in waves.
     python3 register_engines.py --list          what is unregistered
     python3 register_engines.py <id> [<id>...]  register these
     python3 register_engines.py --all           register everything unregistered
-    python3 register_engines.py --check         non-zero if anything is missing
+    python3 register_engines.py --sync-metadata project Braids package metadata
+    python3 register_engines.py --check         non-zero if missing or out of sync
 """
 
 import argparse
@@ -40,6 +41,79 @@ def load_manifest(engine_id: str) -> dict:
     if not path.exists():
         raise SystemExit(f"no package for {engine_id!r} at {path}")
     return json.loads(path.read_text())
+
+
+def is_braids_manifest(manifest: dict) -> bool:
+    return "braids" in manifest.get("tags", [])
+
+
+def projected_metadata(manifest: dict) -> tuple[dict, dict]:
+    """Return the catalog fields mechanically owned by a package manifest."""
+    if is_braids_manifest(manifest) and "trigger" not in manifest:
+        raise SystemExit(
+            f'{manifest["id"]}: Braids reference packages must declare trigger metadata')
+    engine = {
+        "description": manifest["description"],
+        "tags": manifest["tags"],
+        "controls": [control["label"] for control in manifest["controls"]],
+        "outputs": [manifest["outputs"]["main"], manifest["outputs"]["aux"]],
+    }
+    manual = {
+        "controls": {
+            control["id"]: control["description"]
+            for control in manifest["controls"]
+        },
+        "trigger": manifest.get("trigger", "Restarts the engine."),
+    }
+    return engine, manual
+
+
+def metadata_drift(manifests: list[dict]) -> list[str]:
+    catalog = json.loads(CATALOG.read_text())
+    engines = {engine["packageId"]: engine for engine in catalog["engines"]}
+    differences = []
+    for manifest in manifests:
+        if not is_braids_manifest(manifest):
+            continue
+        engine_expected, manual_expected = projected_metadata(manifest)
+        engine = engines.get(manifest["id"])
+        if engine is None:
+            continue
+        for field, expected in engine_expected.items():
+            if engine.get(field) != expected:
+                differences.append(f'{manifest["catalogId"]}: engine.{field}')
+        if catalog["manuals"].get(manifest["catalogId"]) != manual_expected:
+            differences.append(f'{manifest["catalogId"]}: manual')
+    return differences
+
+
+def sync_metadata(manifests: list[dict]) -> int:
+    catalog = json.loads(CATALOG.read_text())
+    engines = {engine["packageId"]: engine for engine in catalog["engines"]}
+    updated = []
+    for manifest in manifests:
+        if not is_braids_manifest(manifest):
+            continue
+        engine = engines.get(manifest["id"])
+        if engine is None:
+            raise SystemExit(f'{manifest["id"]}: package is not registered')
+        engine_expected, manual_expected = projected_metadata(manifest)
+        changed = False
+        for field, expected in engine_expected.items():
+            if engine.get(field) != expected:
+                engine[field] = expected
+                changed = True
+        if catalog["manuals"].get(manifest["catalogId"]) != manual_expected:
+            catalog["manuals"][manifest["catalogId"]] = manual_expected
+            changed = True
+        if changed:
+            updated.append(manifest["catalogId"])
+    if updated:
+        CATALOG.write_text(json.dumps(catalog, indent=2) + "\n")
+        print("metadata synchronized: " + ", ".join(updated))
+    else:
+        print("Braids metadata already synchronized")
+    return 0
 
 
 def source_stem(manifest: dict) -> str:
@@ -170,16 +244,37 @@ def main() -> int:
     parser.add_argument("--all", action="store_true")
     parser.add_argument("--list", action="store_true")
     parser.add_argument("--check", action="store_true")
+    parser.add_argument("--sync-metadata", action="store_true")
     arguments = parser.parse_args()
 
     unregistered = [i for i in discover() if not is_registered(i)]
+    manifests = [load_manifest(engine_id) for engine_id in discover()]
+
+    if arguments.sync_metadata:
+        selected = manifests
+        if arguments.ids:
+            selected_ids = set(arguments.ids)
+            selected = [
+                manifest for manifest in manifests
+                if manifest["catalogId"] in selected_ids
+                or manifest["id"] in selected_ids
+                or manifest["id"].split("/", 1)[-1] in selected_ids
+            ]
+            if len(selected) != len(selected_ids):
+                raise SystemExit("one or more requested package IDs were not found")
+        return sync_metadata(selected)
 
     if arguments.list or arguments.check:
+        drift = metadata_drift(manifests) if arguments.check else []
         if unregistered:
             print("unregistered: " + ", ".join(unregistered))
         else:
             print("every package is registered")
-        return 1 if (arguments.check and unregistered) else 0
+        if drift:
+            print("metadata drift:\n  " + "\n  ".join(drift))
+        elif arguments.check:
+            print("Braids package metadata matches the catalog")
+        return 1 if (arguments.check and (unregistered or drift)) else 0
 
     targets = unregistered if arguments.all else arguments.ids
     if not targets:

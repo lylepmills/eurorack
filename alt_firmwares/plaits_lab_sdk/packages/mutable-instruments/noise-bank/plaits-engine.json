@@ -41,8 +41,9 @@
   ],
   "outputs": {
     "main": "The selected model.",
-    "aux": "Its complement: the notch, the difference of the two peaks, or a second independent sequence."
+    "aux": "Its fixed complement: the notch, the peak difference, or a second sequence. The stereo toggle does not change this pair."
   },
+  "trigger": "Reseeds and restarts only the Clocked model's looping sequence; Filtered and Twin Peaks keep running.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/noise_bank_engine.h",

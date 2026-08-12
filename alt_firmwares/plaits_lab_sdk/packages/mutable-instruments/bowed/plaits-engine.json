@@ -19,9 +19,10 @@
     { "id": "macro", "label": "Body", "description": "Tilts the instrument body darker or brighter around the stock resonance." }
   ],
   "outputs": {
-    "main": "The bridge pickup through the instrument body.",
-    "aux": "The neck pickup through the same body filter."
+    "main": "Mono: the bridge pickup through the instrument body. Stereo: the same bridge pickup on the left.",
+    "aux": "Mono: the bow exciter before the string and body. Stereo: the neck pickup through the body on the right."
   },
+  "trigger": "Restarts the bow stroke and clears both string delay lines.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/bowed_engine.h",

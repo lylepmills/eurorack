@@ -20,8 +20,9 @@
   ],
   "outputs": {
     "main": "The filter model HARMONICS selects.",
-    "aux": "Its complement, so LP pairs with HP and PK with BP."
+    "aux": "Its complement, so LP pairs with HP and PK with BP. The stereo toggle does not change this fixed model pair."
   },
+  "trigger": "Restarts the excitation phases and integral without clearing the resonator state.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/z_filter_engine.h",

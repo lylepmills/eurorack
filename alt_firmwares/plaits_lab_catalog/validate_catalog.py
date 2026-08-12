@@ -15,6 +15,10 @@ CATALOG_DIR = Path(__file__).resolve().parent
 REPO_ROOT = CATALOG_DIR.parents[1]
 CATALOG_PATH = CATALOG_DIR / "catalog.json"
 SHARED_MODULES_PATH = CATALOG_DIR / "shared_modules.json"
+REFERENCE_PACKAGES_PATH = (
+    REPO_ROOT / "alt_firmwares" / "plaits_lab_sdk" / "packages" /
+    "mutable-instruments"
+)
 ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 PACKAGE_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*$")
 CONTROL_IDS = ("harmonics", "timbre", "morph", "macro")
@@ -40,7 +44,56 @@ AUDITED_STOCK_CONTROLS = {
     "wave-terrain": ["Terrain", "Path radius", "Path offset", "Y offset"],
     "string-machine": ["Chord", "Filter and chorus", "Waveform and registration", "Ensemble amount"],
     "chiptune": ["Chord", "Arpeggio or inversion", "Pulse width and sync", "Register preset"],
+}
+
+# All 34 Braids-derived catalog entries, audited in panel order against their
+# Render() implementations and the corresponding Braids source. Several entries
+# merge related Braids shapes, so this covers the 48 panel models plus the hidden
+# Question Mark model.
+AUDITED_BRAIDS_CONTROLS = {
+    "blown": ["Body", "Focus", "Blow", "Reed"],
+    "bowed": ["Bow position", "Bow pressure", "Nut damping", "Body"],
+    "buzz": ["Detune", "Buzz", "Spread", "Reach"],
+    "csaw": ["Depth", "Width", "Bend", "Tilt"],
+    "cymbal": ["Color", "Tone", "Spread", "Resonance"],
+    "digital-modulation": ["Frame", "Symbol rate", "Shaping", "Payload"],
+    "dual-sync": ["Balance", "Interval", "Shape", "Reset"],
+    "fluted": ["Embouchure", "Air", "Blow", "Body"],
+    "fold": ["Blend", "Fold", "Symmetry", "Drive"],
+    "granular-cloud": ["Scatter", "Grain", "Shape", "Density"],
+    "harmonics": ["Colour", "Peak", "Spread", "Width"],
+    "kick": ["Tone", "Decay", "Balance", "Punch"],
+    "morph": ["Fuzz", "Shape", "Tone", "Drive"],
+    "noise-bank": ["Model", "Colour", "Shape", "Drive"],
+    "particle-burst": ["Scatter", "Density", "Chord width", "Decay"],
+    "plucked": ["Pluck", "Damping", "Spread", "Stretch"],
+    "question-mark": ["Static", "Speed", "Bed", "Grit"],
+    "raw-fm": ["Ratio", "Index", "Character", "Depth"],
+    "ring-mod": ["Detune 1", "Detune 2", "Depth", "Drive"],
+    "saw-comb": ["Resonance", "Comb pitch", "Exciter", "Loop tilt"],
+    "saw-square": ["Blend", "Shape", "Phase", "Square Level"],
+    "saw-swarm": ["Color", "Detune", "Filter", "Resonance"],
+    "snare": ["Snap", "Tone", "Snap balance", "Spread"],
+    "struck-bell": ["Detune", "Decay", "Brightness", "Decay spread"],
+    "struck-drum": ["Color", "Decay", "Spread", "Decay spread"],
+    "sub-oscillator": ["Shape", "Width", "Sub level", "Sub width"],
+    "toy": ["Mangle", "Crush", "Clock", "Fold"],
+    "triple": ["Spread", "Interval", "Waveform", "Shape"],
+    "vosim": ["Formant 2", "Formant 1", "Window", "Balance"],
+    "vowel": ["Spread", "Shift", "Vowel", "Grain"],
+    "vowel-fof": ["Brightness", "Vowel", "Register", "Formant tilt"],
+    "wave-paraphonic": ["Chord", "Wave", "Fan", "Spread"],
+    "wave-scan": ["Model", "Scan", "Shape", "Snap"],
     "z-filter": ["Model", "Cutoff", "Shape", "Bend"],
+}
+
+# These engines always render one fixed MAIN/AUX pair. They do not branch on
+# EngineParameters::stereo, so the editor's stereo selection cannot change the
+# pair. Every other Braids port has a mode-dependent stereo path and must say so
+# in its output documentation.
+BRAIDS_FIXED_PAIR_ENGINES = {
+    "fluted", "noise-bank", "raw-fm", "saw-comb", "sub-oscillator",
+    "triple", "z-filter",
 }
 
 AUDITED_STOCK_OUTPUTS = {
@@ -121,6 +174,23 @@ def load_shared_modules() -> dict[str, Any]:
     return modules
 
 
+def load_braids_manifests() -> dict[str, dict[str, Any]]:
+    manifests = {}
+    for path in sorted(REFERENCE_PACKAGES_PATH.glob("*/plaits-engine.json")):
+        value = json.loads(path.read_text(encoding="utf-8"))
+        if "braids" not in value.get("tags", []):
+            continue
+        catalog_id = value.get("catalogId")
+        if not isinstance(catalog_id, str) or catalog_id in manifests:
+            raise ValueError(f"invalid or duplicate Braids catalogId in {path}")
+        if not isinstance(value.get("trigger"), str):
+            raise ValueError(f"{catalog_id} Braids manifest must declare trigger metadata")
+        manifests[catalog_id] = value
+    if set(manifests) != set(AUDITED_BRAIDS_CONTROLS):
+        raise ValueError("audited Braids controls must cover every Braids manifest")
+    return manifests
+
+
 def validate_catalog(catalog: dict[str, Any]) -> None:
     engines = catalog.get("engines")
     if not isinstance(engines, list) or not engines:
@@ -170,6 +240,12 @@ def validate_catalog(catalog: dict[str, Any]) -> None:
             raise ValueError(
                 f"{engine_id} controls no longer match the audited "
                 "HARMONICS/TIMBRE/MORPH/Macro order")
+    for engine_id, expected in AUDITED_BRAIDS_CONTROLS.items():
+        actual = engines_by_id.get(engine_id, {}).get("controls")
+        if actual != expected:
+            raise ValueError(
+                f"{engine_id} controls no longer match the audited "
+                "Braids HARMONICS/TIMBRE/MORPH/Macro order")
     for engine_id, expected in AUDITED_STOCK_OUTPUTS.items():
         actual = engines_by_id.get(engine_id, {}).get("outputs")
         if actual != expected:
@@ -208,6 +284,39 @@ def validate_catalog(catalog: dict[str, Any]) -> None:
         expected_trigger = AUDITED_STOCK_TRIGGERS.get(engine_id)
         if expected_trigger is not None and trigger != expected_trigger:
             raise ValueError(f"{engine_id} trigger no longer matches the audited behavior")
+
+    braids_manifests = load_braids_manifests()
+    for engine_id, manifest in braids_manifests.items():
+        engine = engines_by_id[engine_id]
+        expected_engine_fields = {
+            "description": manifest["description"],
+            "tags": manifest["tags"],
+            "controls": [control["label"] for control in manifest["controls"]],
+            "outputs": [manifest["outputs"]["main"], manifest["outputs"]["aux"]],
+        }
+        for field, expected in expected_engine_fields.items():
+            if engine.get(field) != expected:
+                raise ValueError(
+                    f"{engine_id} catalog {field} has drifted from its package manifest")
+        expected_manual = {
+            "controls": {
+                control["id"]: control["description"]
+                for control in manifest["controls"]
+            },
+            "trigger": manifest["trigger"],
+        }
+        if manuals[engine_id] != expected_manual:
+            raise ValueError(
+                f"{engine_id} catalog manual has drifted from its package manifest")
+
+        output_copy = " ".join(expected_engine_fields["outputs"]).lower()
+        if engine_id in BRAIDS_FIXED_PAIR_ENGINES:
+            if "stereo toggle does not change" not in output_copy:
+                raise ValueError(
+                    f"{engine_id} fixed-pair output docs must explain the stereo toggle")
+        elif "stereo" not in output_copy:
+            raise ValueError(
+                f"{engine_id} mode-dependent output docs must explain stereo behavior")
 
 
 def web_catalog(catalog: dict[str, Any]) -> dict[str, Any]:

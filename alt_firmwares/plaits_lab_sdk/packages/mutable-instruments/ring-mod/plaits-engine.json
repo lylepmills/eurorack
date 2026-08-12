@@ -19,9 +19,10 @@
     { "id": "macro", "label": "Drive", "description": "Drives the output shaper, from clean multiplication to hard saturation." }
   ],
   "outputs": {
-    "main": "The full three-way ring product.",
-    "aux": "Carrier times the first modulator only."
+    "main": "Mono: the full three-way ring product. Stereo: the same product on the left.",
+    "aux": "Mono: the first modulator alone. Stereo: the carrier times the first modulator on the right."
   },
+  "trigger": "Realigns the carrier and both modulator phases so each triggered note starts alike.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/ring_mod_engine.h",

@@ -40,9 +40,10 @@
     }
   ],
   "outputs": {
-    "main": "The master and slave crossfaded at Balance.",
-    "aux": "The complementary crossfade, always favouring the side MAIN does not."
+    "main": "Mono: the master and slave crossfaded at Balance. Stereo: the same sound with a small leftward balance offset.",
+    "aux": "Mono: the complementary master/slave crossfade. Stereo: the same sound with a small rightward balance offset."
   },
+  "trigger": "Realigns the master and slave oscillator phases so each triggered note starts alike.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/dual_sync_engine.h",

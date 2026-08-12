@@ -43,6 +43,7 @@
     "main": "Formant bank.",
     "aux": "Glottal source, level-matched to the main output only near mid register; upper-formant weighting in stereo."
   },
+  "trigger": "Re-initializes the filter bank; the model has no internal envelope and otherwise ignores TRIG.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/vowel_fof_engine.h",

@@ -44,6 +44,7 @@
     "main": "All three round-robin voices, summed.",
     "aux": "Mono: the raw noise excitation only, silent between strikes. Stereo: dropped in favour of panning each voice to a fixed round-robin position."
   },
+  "trigger": "Plucks the next voice in the three-string round robin.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/plucked_engine.h",

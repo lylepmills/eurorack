@@ -40,9 +40,10 @@
     }
   ],
   "outputs": {
-    "main": "The shaped formant stack.",
-    "aux": "The same stack ahead of the overdrive."
+    "main": "Mono: the shaped formant stack. Stereo: the shaped stack with a small downward formant shift on the left.",
+    "aux": "Mono: the clean stack ahead of the overdrive. Stereo: the shaped stack with a small upward formant shift on the right."
   },
+  "trigger": "Selects and articulates a new consonant without resetting the oscillator or formant phases.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/vowel_engine.h",

@@ -40,9 +40,10 @@
     }
   ],
   "outputs": {
-    "main": "The filtered and fuzzed voice.",
-    "aux": "The same morph oscillator dry, with neither the filter nor the fuzz on it."
+    "main": "Mono: the filtered and fuzzed voice. Stereo: the processed voice at the lower Fuzz offset on the left.",
+    "aux": "Mono: the dry morph oscillator. Stereo: the processed voice at the higher Fuzz offset on the right."
   },
+  "trigger": "Restarts the morph oscillator phase so each triggered note begins alike.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/morph_engine.h",

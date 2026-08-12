@@ -402,7 +402,7 @@ def load_package(package_arg: str, autodeclare: bool = False) -> dict[str, Any]:
         "name", "author", "origin", "license", "description", "family", "tags",
         "controls", "outputs", "source", "postProcessing", "scenarios",
     }
-    optional = {"upstream", "forkedFrom", "sharedModules", "artwork"}
+    optional = {"upstream", "forkedFrom", "sharedModules", "artwork", "trigger"}
     require(required <= set(manifest), f"manifest is missing {sorted(required - set(manifest))}")
     require(set(manifest) <= required | optional,
             f"manifest has unsupported fields {sorted(set(manifest) - required - optional)}")
@@ -452,6 +452,10 @@ def load_package(package_arg: str, autodeclare: bool = False) -> dict[str, Any]:
     if "upstream" in manifest:
         require(isinstance(manifest["upstream"], str) and len(manifest["upstream"]) <= 240,
                 "upstream must contain at most 240 characters")
+    if "trigger" in manifest:
+        require(isinstance(manifest["trigger"], str)
+                and 12 <= len(manifest["trigger"]) <= 180,
+                "trigger must contain 12-180 characters")
     if "forkedFrom" in manifest:
         require(isinstance(manifest["forkedFrom"], str)
                 and CATALOG_ID_PATTERN.fullmatch(manifest["forkedFrom"]) is not None,

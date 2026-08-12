@@ -19,9 +19,10 @@
     { "id": "macro", "label": "Tilt", "description": "Tilts the notched segment, flattening the step at one extreme and doubling it at the other." }
   ],
   "outputs": {
-    "main": "The notched sawtooth.",
-    "aux": "The same waveform with the notch depth mirrored."
+    "main": "Mono: the notched sawtooth. Stereo: the notched sawtooth on the left.",
+    "aux": "Mono: a variable-width pulse. Stereo: a second notched saw on the right, with mirrored depth and an offset bend."
   },
+  "trigger": "Restarts the oscillator phase so each triggered note begins at the same point.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/csaw_engine.h",

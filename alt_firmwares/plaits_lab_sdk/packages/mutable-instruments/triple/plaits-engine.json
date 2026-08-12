@@ -41,8 +41,9 @@
   ],
   "outputs": {
     "main": "Three-voice mix.",
-    "aux": "Undetuned root voice."
+    "aux": "Undetuned root voice. The stereo toggle does not change this fixed mix/root pair."
   },
+  "trigger": "Realigns all three oscillator phases so each triggered note starts alike.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/triple_engine.h",
