@@ -14,7 +14,7 @@ import {
 } from "./contract";
 import { deadLetterAction } from "./dead_letter";
 import { corsHeaders } from "./cors";
-import { buildQueueMessage, recipeArtifactKey, type BuildMessage } from "./build_queue";
+import { buildQueueMessage, queuedRecipe, recipeArtifactKey, type BuildMessage } from "./build_queue";
 
 type JobStatus = "queued" | "building" | "succeeded" | "failed";
 
@@ -101,11 +101,11 @@ async function storeQueuedRecipe(env: Env, buildId: string, recipe: NormalizedRe
 
 async function loadQueuedRecipe(message: BuildMessage, env: Env): Promise<NormalizedRecipe> {
   // Drain jobs produced by the prior deployment without invalidating them.
-  if (message.recipe !== undefined) return normalizeRecipe(message.recipe);
+  if (message.recipe !== undefined) return queuedRecipe(message.recipe);
 
   const stored = await env.ARTIFACTS.get(recipeArtifactKey(message.buildId));
   if (!stored) throw new Error("The queued firmware recipe is missing.");
-  return normalizeRecipe(await stored.json<unknown>());
+  return queuedRecipe(await stored.json<unknown>());
 }
 
 // The name is the Durable Object identity, not just a label. Bump it when the

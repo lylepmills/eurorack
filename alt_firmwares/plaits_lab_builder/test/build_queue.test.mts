@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildQueueMessage, recipeArtifactKey } from "../src/build_queue.ts";
+import { buildQueueMessage, queuedRecipe, recipeArtifactKey } from "../src/build_queue.ts";
 
 test("new firmware jobs queue a small recipe reference", () => {
   const buildId = "a".repeat(64);
@@ -17,4 +17,17 @@ test("manual backfills use the same reference-only handoff", () => {
 
   assert.deepEqual(buildQueueMessage(buildId, true), { buildId, manualOnly: true });
   assert.equal(recipeArtifactKey(buildId), `recipes/${buildId}.json`);
+});
+
+test("the consumer keeps the already-normalized internal recipe shape", () => {
+  const normalized = {
+    schemaVersion: 12,
+    slots: ["dx7-bank-a", "dx7-bank-b", null],
+    output: "audio-wav",
+  };
+
+  assert.equal(queuedRecipe(normalized), normalized);
+  assert.deepEqual(queuedRecipe(normalized).slots, ["dx7-bank-a", "dx7-bank-b", null]);
+  assert.throws(() => queuedRecipe(null), /invalid/);
+  assert.throws(() => queuedRecipe([]), /invalid/);
 });
