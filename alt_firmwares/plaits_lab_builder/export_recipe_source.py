@@ -146,9 +146,13 @@ esac
 build_root=${{PLAITS_BUILD_ROOT:-$export_dir/build/}}
 jobs=${{PLAITS_JOBS:-4}}
 
-exec make -C "$repo" -f plaits/makefile \\
+make -C "$repo" -f plaits/makefile \\
   {joined} \\
   "-j$jobs" "$target"
+
+python3 "$repo/alt_firmwares/plaits_lab_builder/validate_local_build.py" \\
+  "$export_dir/engine_config.h" \\
+  "${{build_root%/}}/plaits/plaits.elf"
 """
 
 
@@ -176,6 +180,11 @@ def _readme(
 firmware and model source stays in the eurorack repository; this overlay pins the
 exact starting commit and contains all generated configuration and custom data.
 
+> **Hack at your own risk.** Once you alter any code, you are responsible for
+> the result. Modified firmware can brick your module or require a hardware
+> programmer to recover it. Rubato Audio is not responsible for damage, data
+> loss, or an unbootable module caused by modified firmware.
+
 Source: {REPOSITORY_URL}/tree/{revision}
 
 Commit: `{revision}`
@@ -187,7 +196,7 @@ Commit: `{revision}`
 - `speech_config.h` — selected and custom LPC Speech-bank data
 {linker_note}- `selected-models.md` — the model-specific source files to start hacking
 - `build-metadata.json` — source, toolchain, contract, and recipe identity
-- `build.sh` — the same recipe flags used by the hosted compiler
+- `build.sh` — the hosted compiler's recipe flags and post-link safety gates
 
 ## 1. Check out the pinned source
 
@@ -238,7 +247,12 @@ generated headers only when you deliberately want to change this recipe's baked
 layout or data; regenerating the export will replace those changes.
 
 `build.sh` uses the generated headers and the recipe's exact stereo, Speech, and
-linker settings. It does not contact Rubato Audio and it does not upload source.
+linker settings. After linking, it rejects firmware that exceeds Plaits' flash
+or RAM limits, or gives replaceable FM banks an unsafe flash layout. These gates
+catch known structural hazards; they cannot prove that altered DSP or control
+code is safe. Running `make` directly bypasses them.
+
+The script does not contact Rubato Audio and it does not upload source.
 
 The hosted artifact can still differ if this export was made from a different
 source commit or with local changes. For byte comparison, use the commit and

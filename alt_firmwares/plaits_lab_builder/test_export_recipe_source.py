@@ -48,7 +48,14 @@ class ExportRecipeSourceTest(unittest.TestCase):
             self.assertIn('"ENGINE_CONFIG=$export_dir/engine_config.h"', build)
             self.assertIn('"SPEECH_BANKS_ENABLED=0"', build)
             self.assertIn("PLAITS_STEREO_VIRTUAL_ANALOG=0", build)
+            self.assertIn("validate_local_build.py", build)
+            self.assertNotIn("exec make", build)
             self.assertNotIn("plaits_user_banks.ld", build)
+
+            readme = (output / "README.md").read_text()
+            self.assertIn("Hack at your own risk", readme)
+            self.assertIn("Rubato Audio is not responsible", readme)
+            self.assertIn("Running `make` directly bypasses them", readme)
 
             sources = (output / "selected-models.md").read_text()
             self.assertIn("Virtual Analog", sources)

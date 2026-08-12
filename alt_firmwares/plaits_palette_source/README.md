@@ -3,6 +3,11 @@
 Turn a saved Plaits Palette configuration into a local firmware source build
 you can compile, edit, and keep hacking on.
 
+> **Hack at your own risk.** Once you alter any code, you are responsible for
+> the result. Modified firmware can brick your module or require a hardware
+> programmer to recover it. Rubato Audio is not responsible for damage, data
+> loss, or an unbootable module caused by modified firmware.
+
 ## 1. Save your configuration
 
 In [Plaits Palette](https://rubato.audio/plaits-palette), choose
@@ -29,7 +34,7 @@ The new `build/my-palette-source/` folder contains:
 - your generated configuration headers and custom data;
 - the exact source revision and build settings;
 - a list of the source files used by your selected models;
-- a build script for WAV or HEX firmware; and
+- a build script for WAV or HEX firmware with post-link safety checks; and
 - its own README with the build commands and notes about where to make changes.
 
 ## 3. Start hacking
@@ -59,6 +64,11 @@ Your firmware will be at:
 ```text
 build/my-palette-source/build/plaits/plaits.wav
 ```
+
+Before the script finishes successfully, it applies the hosted builder's
+post-link checks: flash and RAM limits, plus safe page placement for replaceable
+FM banks. These checks catch known structural hazards; they cannot prove that
+altered DSP or control code is safe. Running `make` directly bypasses them.
 
 Use `hex` instead of `wav` in the last command if you need an application-only
 Intel HEX file for a hardware programmer.

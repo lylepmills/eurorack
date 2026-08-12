@@ -89,7 +89,12 @@ class RenderManualTest(unittest.TestCase):
     @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
     def test_sync_build_prints_the_warning_and_fifth_model_input_setting(self) -> None:
         recipe = self.calibration_recipe(False)
-        recipe["schemaVersion"] = 21
+        recipe["schemaVersion"] = 22
+        recipe["preferences"].update({
+            "colorBlindMode": False,
+            "replaceableFmBanks": False,
+            "syncInput": True,
+        })
         recipe["initialOptions"]["modelInput"] = "sync-in"
         recipe["initialOptions"]["attenuverterMode"] = "stock"
         with tempfile.TemporaryDirectory() as temp_dir:

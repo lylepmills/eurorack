@@ -84,6 +84,14 @@ def _compiler(binary: str) -> str:
     return f"{_CCACHE} {path}" if _CCACHE else path
 
 
+def _arm_tool(binary: str) -> str:
+    """Resolve a pinned container tool or the same binary from local PATH."""
+    configured = Path(TOOLCHAIN_BIN) / binary
+    if configured.is_file():
+        return str(configured)
+    return shutil.which(binary) or str(configured)
+
+
 class BuildError(Exception):
     def __init__(self, code: str, message: str, detail: str = "") -> None:
         super().__init__(message)
@@ -412,7 +420,7 @@ def stock_preview(bank: int, mode: str) -> Path:
 
 def parse_size(elf_path: Path) -> tuple[int, int, int]:
     result = subprocess.run(
-        ["/usr/local/arm-4.8.3/bin/arm-none-eabi-size", str(elf_path)],
+        [_arm_tool("arm-none-eabi-size"), str(elf_path)],
         check=True,
         capture_output=True,
         text=True,
@@ -447,7 +455,7 @@ def _linked_flash_span(elf_path: Path, data_bytes: int) -> int:
     past the end of the chip at startup.
     """
     result = subprocess.run(
-        ["/usr/local/arm-4.8.3/bin/arm-none-eabi-nm", str(elf_path)],
+        [_arm_tool("arm-none-eabi-nm"), str(elf_path)],
         check=True, capture_output=True, text=True, timeout=30)
     for line in result.stdout.splitlines():
         fields = line.split()
@@ -463,6 +471,63 @@ def _linked_flash_span(elf_path: Path, data_bytes: int) -> int:
 FLASH_BUDGET_BYTES = 224 * 1024
 RAM_BUDGET_BYTES = 32 * 1024
 RAM_STACK_RESERVE_BYTES = 1024
+
+
+def validate_linked_firmware(elf_path: Path, config_text: str) -> dict[str, int]:
+    """Apply the hosted builder's post-link memory and flash-layout gates."""
+    if not elf_path.is_file():
+        raise BuildError(
+            "invalid_artifact",
+            "The compiler did not produce the linked Plaits firmware.",
+        )
+
+    region_count = _declared_region_count(config_text)
+    if region_count:
+        try:
+            check_elf(
+                elf_path,
+                region_count,
+                objdump=_arm_tool("arm-none-eabi-objdump"),
+                nm=_arm_tool("arm-none-eabi-nm"),
+            )
+        except ValueError as error:
+            raise BuildError(
+                "unsafe_flash_layout",
+                "The linked firmware has an unsafe replaceable-FM flash layout "
+                "and must not be installed.",
+                str(error),
+            ) from error
+
+    text_bytes, data_bytes, bss_bytes = parse_size(elf_path)
+    # `size` omits linker-inserted alignment padding. The linked span includes
+    # that padding, while .data initializers consume flash as well as RAM.
+    flash_bytes = max(
+        text_bytes + data_bytes,
+        _linked_flash_span(elf_path, data_bytes),
+    )
+    if flash_bytes > FLASH_BUDGET_BYTES:
+        over = flash_bytes - FLASH_BUDGET_BYTES
+        raise BuildError(
+            "flash_budget_exceeded",
+            f"This palette is too large for Plaits' flash memory by {over} bytes. "
+            "Remove an engine, disable per-engine stereo, or drop a chord table, "
+            "then build again.",
+        )
+    if bss_bytes + RAM_STACK_RESERVE_BYTES > RAM_BUDGET_BYTES:
+        over = bss_bytes + RAM_STACK_RESERVE_BYTES - RAM_BUDGET_BYTES
+        raise BuildError(
+            "ram_budget_exceeded",
+            f"This palette needs more RAM than Plaits has by {over} bytes. "
+            "Remove a memory-heavy engine, then build again.",
+        )
+
+    return {
+        "textBytes": text_bytes,
+        "dataBytes": data_bytes,
+        "bssBytes": bss_bytes,
+        "flashBytes": flash_bytes,
+        "replaceableFmBankRegions": region_count,
+    }
 
 # GNU ld reports an over-budget link as a region overflow. The overflow line
 # ("region `FLASH' overflowed by N bytes") carries the exact overage; the
@@ -721,45 +786,22 @@ def build_firmware(payload: Any) -> tuple[Path, FirmwareOutput, dict[str, str]]:
     if not artifact_path.is_file() or not bin_path.is_file() or not elf_path.is_file():
         raise BuildError("invalid_artifact", "The compiler did not produce every required firmware artifact.", log)
 
-    # THE correctness gate for swappable FM banks. UserData::Save erases 2 KB
-    # flash pages, so a bank region that shares a page with .text or .rodata
-    # would erase firmware the first time a user sends that slot a bank — a
-    # bricked module, not a degraded feature. Only the linked ELF can prove the
-    # placement held, so the build fails here rather than shipping the image.
-    if region_count:
-        try:
-            check_elf(elf_path, region_count)
-        except ValueError as error:
+    try:
+        safety = validate_linked_firmware(elf_path, config_text)
+    except BuildError as error:
+        if error.code == "unsafe_flash_layout":
             raise BuildError(
                 "internal_error",
                 "The firmware build produced an unsafe flash layout. This is a "
                 "fault on our end rather than your palette — please report it.",
-                f"{log}\nuser-data region check: {error}",
+                f"{log}\nuser-data region check: {error.detail}",
             ) from error
+        error.detail = f"{log}\n{error.detail}".rstrip()
+        raise
 
-    text_bytes, data_bytes, bss_bytes = parse_size(elf_path)
-    # Measure the image the way flash actually holds it. `size` sums SECTION
-    # sizes, which excludes the padding the linker inserts to page-align the
-    # bank regions — real bytes that are present in plaits.bin. Using the span
-    # from the application base to _etext counts them.
-    flash_bytes = max(text_bytes + data_bytes, _linked_flash_span(elf_path, data_bytes))
-    if flash_bytes > FLASH_BUDGET_BYTES:
-        over = flash_bytes - FLASH_BUDGET_BYTES
-        raise BuildError(
-            "flash_budget_exceeded",
-            f"This palette is too large for Plaits' flash memory by {over} bytes. "
-            "Remove an engine, disable per-engine stereo, or drop a chord table, "
-            "then build again.",
-            log,
-        )
-    if bss_bytes + RAM_STACK_RESERVE_BYTES > RAM_BUDGET_BYTES:
-        over = bss_bytes + RAM_STACK_RESERVE_BYTES - RAM_BUDGET_BYTES
-        raise BuildError(
-            "ram_budget_exceeded",
-            f"This palette needs more RAM than Plaits has by {over} bytes. "
-            "Remove a memory-heavy engine, then build again.",
-            log,
-        )
+    text_bytes = safety["textBytes"]
+    data_bytes = safety["dataBytes"]
+    bss_bytes = safety["bssBytes"]
 
     metadata = {
         "X-Plaits-Binary-Sha256": sha256_file(bin_path),

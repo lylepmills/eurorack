@@ -7,10 +7,15 @@ import tempfile
 import unittest
 import wave
 from pathlib import Path
+from unittest.mock import patch
 
 from container_server import (
     ALL_STEREO_MACROS,
+    BuildError,
+    FLASH_BUDGET_BYTES,
     MAX_REQUEST_BYTES,
+    RAM_BUDGET_BYTES,
+    RAM_STACK_RESERVE_BYTES,
     _build_targets,
     _concatenate_pcm_wavs,
     _validate_saved_bank_preview_request,
@@ -20,6 +25,7 @@ from container_server import (
     _stereo_disable_flags,
     classify_link_failure,
     request_size_is_valid,
+    validate_linked_firmware,
 )
 from generate_engine_config import (
     DEFAULT_CHORD_TABLES,
@@ -67,6 +73,56 @@ class ClassifyLinkFailureTest(unittest.TestCase):
             "make: *** [voice.o] Error 1\n"
         )
         self.assertIsNone(classify_link_failure(log))
+
+
+class LinkedFirmwareSafetyTest(unittest.TestCase):
+    def elf(self, directory: str) -> Path:
+        path = Path(directory) / "plaits.elf"
+        path.write_bytes(b"ELF")
+        return path
+
+    @patch("container_server._linked_flash_span", return_value=1200)
+    @patch("container_server.parse_size", return_value=(1000, 100, 200))
+    @patch("container_server.check_elf")
+    def test_safe_build_checks_replaceable_fm_layout(
+        self, check, _size, _span
+    ) -> None:
+        config = "static const int kNumUserDataRegions = 2;\n"
+        with tempfile.TemporaryDirectory() as directory:
+            result = validate_linked_firmware(self.elf(directory), config)
+        check.assert_called_once()
+        self.assertEqual(result["flashBytes"], 1200)
+        self.assertEqual(result["replaceableFmBankRegions"], 2)
+
+    @patch("container_server._linked_flash_span", return_value=0)
+    @patch("container_server.parse_size")
+    def test_flash_overflow_fails_closed(self, size, _span) -> None:
+        size.return_value = (FLASH_BUDGET_BYTES + 1, 0, 0)
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(BuildError) as raised:
+                validate_linked_firmware(self.elf(directory), "")
+        self.assertEqual(raised.exception.code, "flash_budget_exceeded")
+
+    @patch("container_server._linked_flash_span", return_value=1000)
+    @patch("container_server.parse_size")
+    def test_ram_overflow_includes_the_stack_reserve(self, size, _span) -> None:
+        size.return_value = (
+            1000,
+            0,
+            RAM_BUDGET_BYTES - RAM_STACK_RESERVE_BYTES + 1,
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(BuildError) as raised:
+                validate_linked_firmware(self.elf(directory), "")
+        self.assertEqual(raised.exception.code, "ram_budget_exceeded")
+
+    @patch("container_server.check_elf", side_effect=ValueError("shared page"))
+    def test_unsafe_replaceable_fm_layout_fails_closed(self, _check) -> None:
+        config = "static const int kNumUserDataRegions = 1;\n"
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(BuildError) as raised:
+                validate_linked_firmware(self.elf(directory), config)
+        self.assertEqual(raised.exception.code, "unsafe_flash_layout")
 
 
 class RequestSizeBudgetTest(unittest.TestCase):
