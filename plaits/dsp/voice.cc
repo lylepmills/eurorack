@@ -74,6 +74,7 @@ void Voice::Init(BufferAllocator* allocator) {
   sine_oscillator_.Init();
   
   engine_quantizer_.Init(engines_.size(), 0.05f, true);
+  previous_panel_engine_ = -1;
   previous_engine_index_ = -1;
   reload_user_data_ = false;
   engine_cv_ = 0.0f;
@@ -133,6 +134,18 @@ void Voice::Render(
   // with LEVEL. Model CV is sampled on the same edge, so the routing decision
   // follows the engine that will actually sound, not merely the panel setting.
   bool previous_trigger_state = trigger_state_;
+  // MODEL CV is sampled and held while TRIG is patched, preserving Plaits'
+  // trigger-synchronous engine selection. A button press is an explicit new
+  // panel selection, though: do not keep applying a stale sampled offset to
+  // it indefinitely. Reacquire the live MODEL voltage whenever the panel base
+  // engine changes; with MODEL unplugged this restores the model the player
+  // just selected, while a patched MODEL input still applies its current CV.
+  const bool panel_engine_changed = previous_panel_engine_ >= 0 &&
+      patch.engine != previous_panel_engine_;
+  previous_panel_engine_ = patch.engine;
+  if (panel_engine_changed) {
+    engine_cv_ = modulations.engine;
+  }
   if (!previous_trigger_state) {
     if (trigger_high) {
       trigger_state_ = true;

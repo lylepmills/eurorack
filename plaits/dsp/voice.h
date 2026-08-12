@@ -276,6 +276,7 @@ class Voice {
   stmlib::HysteresisQuantizer2 engine_quantizer_;
   
   bool reload_user_data_;
+  int previous_panel_engine_;
   int previous_engine_index_;
   float engine_cv_;
   

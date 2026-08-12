@@ -2854,6 +2854,66 @@ void ValidateAutoLevelDecayRouting() {
   }
 }
 
+void ValidateManualModelSelectionClearsHeldModelCv() {
+  BufferAllocator allocator(ram_block, sizeof(ram_block));
+  Voice voice;
+  voice.Init(&allocator);
+
+  Patch patch;
+  memset(&patch, 0, sizeof(patch));
+  patch.engine = 8;
+  patch.note = 48.0f;
+  patch.harmonics = 0.4f;
+  patch.timbre = 0.5f;
+  patch.morph = 0.5f;
+  patch.decay = 0.5f;
+  patch.lpg_colour = 0.5f;
+  patch.model_cv_option = 0;
+
+  Modulations modulations;
+  memset(&modulations, 0, sizeof(modulations));
+  Voice::Frame frames[kAudioBlockSize];
+
+  // Acquire a large MODEL offset while the input is continuously tracked.
+  modulations.engine = 1.0f;
+  voice.Render(patch, modulations, frames, kAudioBlockSize);
+  const int held_engine = voice.active_engine();
+  if (held_engine == patch.engine) {
+    fprintf(stderr, "MODEL CV setup did not select a different engine\n");
+    abort();
+  }
+
+  // A patched, idle TRIG input holds the last sampled MODEL value even after
+  // MODEL returns to zero. Preserve this musical sample-and-hold behavior
+  // between trigger edges.
+  modulations.trigger_patched = true;
+  modulations.engine = 0.0f;
+  voice.Render(patch, modulations, frames, kAudioBlockSize);
+  if (voice.active_engine() != held_engine) {
+    fprintf(stderr, "Idle TRIG stopped holding MODEL CV\n");
+    abort();
+  }
+
+  // Moving to a model with the panel buttons changes patch.engine. That
+  // explicit selection must reacquire the live (now zero) MODEL voltage rather
+  // than keeping the stale offset and pinning the active-model LED elsewhere.
+  ++patch.engine;
+  voice.Render(patch, modulations, frames, kAudioBlockSize);
+  if (voice.active_engine() != patch.engine) {
+    fprintf(stderr, "Manual model selection kept stale held MODEL CV\n");
+    abort();
+  }
+
+  // Reacquiring once must not turn trigger-synchronous sampling into continuous
+  // tracking. A later MODEL change still waits for the next trigger edge.
+  modulations.engine = 1.0f;
+  voice.Render(patch, modulations, frames, kAudioBlockSize);
+  if (voice.active_engine() != patch.engine) {
+    fprintf(stderr, "Manual MODEL reset disabled the trigger hold\n");
+    abort();
+  }
+}
+
 template<typename E>
 void RenderSpeechEquivalenceSequence(
     E* engine,
@@ -3632,6 +3692,9 @@ void TestExperimentalEngines() {
   fflush(stdout);
   ValidateClockedChiptuneLevelVca();
   ValidateAutoLevelDecayRouting();
+  printf("Validating manual MODEL selection against held CV...\n");
+  fflush(stdout);
+  ValidateManualModelSelectionClearsHeldModelCv();
   printf("Validating one-knob envelope...\n");
   fflush(stdout);
   ValidateOneKnobEnvelope();
