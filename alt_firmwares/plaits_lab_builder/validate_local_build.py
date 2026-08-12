@@ -35,7 +35,7 @@ def main() -> int:
         "Safety checks passed: "
         f"flash {result['flashBytes']} bytes, "
         f"RAM {result['bssBytes']} bytes + 1024-byte stack reserve, "
-        f"replaceable FM regions {result['replaceableFmBankRegions']}."
+        f"rewritable user-data regions {result['userDataRegions']}."
     )
     return 0
 

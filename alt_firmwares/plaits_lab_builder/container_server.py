@@ -493,7 +493,7 @@ def validate_linked_firmware(elf_path: Path, config_text: str) -> dict[str, int]
         except ValueError as error:
             raise BuildError(
                 "unsafe_flash_layout",
-                "The linked firmware has an unsafe replaceable-FM flash layout "
+                "The linked firmware has an unsafe rewritable user-data layout "
                 "and must not be installed.",
                 str(error),
             ) from error
@@ -526,6 +526,9 @@ def validate_linked_firmware(elf_path: Path, config_text: str) -> dict[str, int]
         "dataBytes": data_bytes,
         "bssBytes": bss_bytes,
         "flashBytes": flash_bytes,
+        "userDataRegions": region_count,
+        # Preserve the pre-schema-24 key for local tooling that has not yet
+        # learned that these regions can also hold Terrain/Wavetable data.
         "replaceableFmBankRegions": region_count,
     }
 
@@ -689,7 +692,7 @@ def build_firmware(payload: Any) -> tuple[Path, FirmwareOutput, dict[str, str]]:
         render_speech_config(validated_recipe.speech_banks), encoding="utf-8")
     recipe_path.write_text(json.dumps(recipe, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
 
-    # Rewritable FM banks and custom Terrain/Wavetable slots need their own
+    # Rewritable FM banks and custom Terrain/Wavetable resources need their own
     # page-aligned output section, which means a linker script this build owns.
     # stmlib is an UPSTREAM submodule
     # (pichenettes/stmlib) and is never edited: the stock script is read, the

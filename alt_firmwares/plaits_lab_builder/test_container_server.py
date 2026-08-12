@@ -85,15 +85,15 @@ class LinkedFirmwareSafetyTest(unittest.TestCase):
     @patch("container_server._linked_flash_span", return_value=1200)
     @patch("container_server.parse_size", return_value=(1000, 100, 200))
     @patch("container_server.check_elf")
-    def test_safe_build_checks_replaceable_fm_layout(
+    def test_safe_build_checks_user_data_layout(
         self, check, _size, _span
     ) -> None:
-        config = "static const int kNumUserDataRegions = 2;\n"
+        config = "#define PLAITS_USER_DATA_REGION_COUNT 2\n"
         with tempfile.TemporaryDirectory() as directory:
             result = validate_linked_firmware(self.elf(directory), config)
         check.assert_called_once()
         self.assertEqual(result["flashBytes"], 1200)
-        self.assertEqual(result["replaceableFmBankRegions"], 2)
+        self.assertEqual(result["userDataRegions"], 2)
 
     @patch("container_server._linked_flash_span", return_value=0)
     @patch("container_server.parse_size")
@@ -118,8 +118,8 @@ class LinkedFirmwareSafetyTest(unittest.TestCase):
         self.assertEqual(raised.exception.code, "ram_budget_exceeded")
 
     @patch("container_server.check_elf", side_effect=ValueError("shared page"))
-    def test_unsafe_replaceable_fm_layout_fails_closed(self, _check) -> None:
-        config = "static const int kNumUserDataRegions = 1;\n"
+    def test_unsafe_user_data_layout_fails_closed(self, _check) -> None:
+        config = "#define PLAITS_USER_DATA_REGION_COUNT 1\n"
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaises(BuildError) as raised:
                 validate_linked_firmware(self.elf(directory), config)
