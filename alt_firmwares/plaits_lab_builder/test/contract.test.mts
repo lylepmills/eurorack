@@ -1209,6 +1209,16 @@ test("manual keys derive from documentation identity, not build identity", async
   displayChanged.preferences = { ...displayChanged.preferences, colorBlindMode: true };
   assert.notEqual(first, await computeManualKey(displayChanged, "1"));
 
+  // Active experimental-FM badges and their legend are printed too.
+  const experimentalFmChanged = structuredClone(recipe);
+  experimentalFmChanged.schemaVersion = 23;
+  experimentalFmChanged.preferences = {
+    ...experimentalFmChanged.preferences,
+    linearTzfm: true,
+    fastFm: true,
+  };
+  assert.notEqual(first, await computeManualKey(experimentalFmChanged, "1"));
+
   // The options-menu page lists LIGHT 1's chord tables by name, so a table swap
   // is a different guide. (It shared a key until 2026-07, which served the wrong
   // LIGHT 1 row from cache.)

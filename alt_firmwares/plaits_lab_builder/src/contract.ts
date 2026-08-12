@@ -1025,6 +1025,18 @@ export async function computeManualKey(
       if (!engine) throw new ContractError("unapproved_engine", "The recipe contains an engine that is not approved for builds.");
       return [engineId, engine.documentationDigest];
     });
+  // The field guide prints active TZ / 50k badges beside each selected model.
+  // Fold the selected engines' current capability policy into the cache key so
+  // changing that policy cannot serve a stale, differently badged PDF even
+  // when the engine documentation itself did not change.
+  const selectedEngineIds = documentation.map(([engineId]) => engineId);
+  const linearTzfmEngineIds = new Set(catalog.fmCapabilities.linearTzfm);
+  const fastFmEngineIds = new Set(catalog.fmCapabilities.fastFm);
+  const fmBadges = selectedEngineIds.map((engineId) => [
+    engineId,
+    recipe.preferences.linearTzfm && linearTzfmEngineIds.has(engineId),
+    recipe.preferences.fastFm && fastFmEngineIds.has(engineId),
+  ]);
   // Both bank shapes carry their key (v6 `index`, v12/v13 `slot`) into the fold,
   // so a bank that moves between slots — or from one factory bank to another —
   // is a different guide even when its credit is unchanged.
@@ -1041,6 +1053,7 @@ export async function computeManualKey(
     manualContract,
     slots: recipe.slots,
     documentation,
+    fmBadges,
     chordTables: recipe.resources.chordTables.map((table) => table.name),
     scaleBank: recipe.resources.scaleBank?.map((scale) => scale.name) ?? [],
     customBanks,
