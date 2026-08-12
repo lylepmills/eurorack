@@ -9,19 +9,20 @@
   "author": "Emilie Gillet",
   "origin": "Mutable Instruments",
   "license": "MIT",
-  "description": "Emilie Gillet's original virtual-analog variant 1: a detuned pair crossfading through dry tone into hard sync.",
+  "description": "One of Emilie Gillet's alternate virtual-analog designs preserved in the Plaits source: a waveform pair crossfading from detune through dry tone to hard sync.",
   "family": "Subtractive",
   "tags": ["analog", "oscillator", "sync", "variant"],
   "controls": [
-    { "id": "harmonics", "label": "Detune", "description": "Detunes the secondary oscillator through musical intervals." },
-    { "id": "timbre", "label": "Detune to sync", "description": "Moves from the detuned pair through the dry primary to hard synchronization." },
-    { "id": "morph", "label": "Common waveform", "description": "Changes all oscillator paths through the same variable waveform range." },
-    { "id": "macro", "label": "Detune range", "description": "Scales interval detuning around the original range at its midpoint." }
+    { "id": "harmonics", "label": "Detune", "description": "Detunes the secondary oscillator through closely spaced and musical intervals." },
+    { "id": "timbre", "label": "Detune to sync", "description": "Moves the main output from a detuned pair through the dry primary to progressively harder synchronization." },
+    { "id": "morph", "label": "Common waveform", "description": "Changes the common oscillator waveform continuously from saw through square and pulse shapes." },
+    { "id": "macro", "label": "Detune range", "description": "Scales interval detuning from unison to twice the original range; the midpoint is Emilie's original spread." }
   ],
   "outputs": {
-    "main": "Crossfade from the detuned pair through the dry primary to its synchronized form.",
-    "aux": "The detuned secondary oscillator."
+    "main": "Mono: detuned-pair to dry-primary to hard-sync path. Stereo: a nearby left point on that crossfade.",
+    "aux": "Mono: detuned secondary oscillator. Stereo: a nearby right point on the detune-to-sync crossfade."
   },
+  "trigger": "The oscillator phases free-run; patched TRIG restarts Plaits' shared decay and low-pass-gate envelope.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine/virtual_analog_crossfade_engine.h",

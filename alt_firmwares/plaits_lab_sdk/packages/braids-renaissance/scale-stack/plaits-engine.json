@@ -28,7 +28,7 @@
     {
       "id": "timbre",
       "label": "Spread",
-      "description": "Detunes the voices against each other and folds them near sine."
+      "description": "Detunes the voices against each other and folds them where the waveform is still near sine."
     },
     {
       "id": "morph",
@@ -42,9 +42,10 @@
     }
   ],
   "outputs": {
-    "main": "The stack.",
-    "aux": "The root voice alone, as a pitch reference."
+    "main": "Five-voice scale stack; the stereo toggle does not change this fixed MAIN/AUX pair.",
+    "aux": "Root voice; the stereo toggle does not change this fixed MAIN/AUX pair."
   },
+  "trigger": "Realigns every voice so a struck stack starts the same way each time.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/scale_stack_engine.h",

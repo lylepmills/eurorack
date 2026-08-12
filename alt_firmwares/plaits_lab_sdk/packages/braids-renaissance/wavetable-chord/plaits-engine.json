@@ -24,12 +24,12 @@
     {
       "id": "harmonics",
       "label": "Chord",
-      "description": "Steps through sixteen chord shapes, from triads up through elevenths and the suspended set."
+      "description": "Steps through the same sixteen scale-degree chord shapes as Diatonic Chord."
     },
     {
       "id": "timbre",
       "label": "Spread",
-      "description": "Detunes the voices symmetrically without moving the chord's centre pitch."
+      "description": "Spreads the voices symmetrically, independent of the selected table position."
     },
     {
       "id": "morph",
@@ -43,9 +43,10 @@
     }
   ],
   "outputs": {
-    "main": "The wavetable chord.",
-    "aux": "The root voice alone, as a pitch reference."
+    "main": "Wavetable chord; the stereo toggle does not change this fixed MAIN/AUX pair.",
+    "aux": "Root voice; the stereo toggle does not change this fixed MAIN/AUX pair."
   },
+  "trigger": "Realigns every voice so a struck chord starts the same way each time.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/wavetable_chord_engine.h",

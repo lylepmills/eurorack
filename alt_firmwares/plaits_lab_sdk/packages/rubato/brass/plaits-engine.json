@@ -23,28 +23,29 @@
     {
       "id": "harmonics",
       "label": "Lip",
-      "description": "Lip tension. Climbs the bore's partials, and bends each one sharp as it rises."
+      "description": "Lip tension. Climbs the bore's partials -- unison, fifth, octave, tenth, twelfth -- and bends each one sharp as it rises."
     },
     {
       "id": "timbre",
       "label": "Breath",
-      "description": "Breath pressure. Below the threshold the instrument does not speak, as a real one does not."
+      "description": "Raises breath pressure from gentle to strong while staying above the model's oscillation threshold across the full range."
     },
     {
       "id": "morph",
       "label": "Bell",
-      "description": "Bell size, from a stopped horn that barely sustains to an open one that overblows easily."
+      "description": "Bell size, from a stopped horn that barely sustains to an open one that rings and overblows easily."
     },
     {
       "id": "macro",
       "label": "Buzz",
-      "description": "How far the lips swing into closure each cycle -- a soft flutter against a real mouthpiece buzz."
+      "description": "Buzz. How far the lips swing into closure each cycle -- a soft flutter at the bottom, a real mouthpiece buzz at the top."
     }
   ],
   "outputs": {
-    "main": "The pressure inside the mouthpiece.",
-    "aux": "The valve flow -- the buzz that drives it."
+    "main": "Pressure inside the mouthpiece; the stereo toggle does not change this fixed MAIN/AUX pair.",
+    "aux": "Valve flow that drives the bore; the stereo toggle does not change this fixed MAIN/AUX pair."
   },
+  "trigger": "Empties the bore and resets the lips so each note starts the same way.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/brass_engine.h",

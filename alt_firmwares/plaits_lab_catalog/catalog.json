@@ -135,8 +135,8 @@
         "Detune range"
       ],
       "outputs": [
-        "Mixed variable oscillators",
-        "Primary and synchronized secondary"
+        "Mono: equal primary/detuned-secondary mix. Stereo: left-weighted primary/detuned-secondary mix.",
+        "Mono: equal primary/hard-sync-secondary mix. Stereo: right-weighted primary/detuned-secondary mix."
       ],
       "artwork": {
         "icon": "/model-icons/virtual-analog.png",
@@ -177,8 +177,8 @@
         "Detune range"
       ],
       "outputs": [
-        "Detune-to-sync crossfade",
-        "Detuned secondary oscillator"
+        "Mono: detuned-pair to dry-primary to hard-sync path. Stereo: a nearby left point on that crossfade.",
+        "Mono: detuned secondary oscillator. Stereo: a nearby right point on the detune-to-sync crossfade."
       ],
       "artwork": {
         "icon": "/model-icons/virtual-analog.png",
@@ -525,8 +525,8 @@
         "Spectral emphasis"
       ],
       "outputs": [
-        "Speech sounds voice",
-        "Raw excitation or widened voice"
+        "Mono: excitation-to-voice-to-sharpened-voice path. Stereo: left blend of the voice and secondary signal.",
+        "Mono: raw excitation or secondary signal. Stereo: right blend of the voice and secondary signal."
       ],
       "artwork": {
         "icon": "/model-icons/speech-sounds.png",
@@ -574,8 +574,8 @@
         "Speed"
       ],
       "outputs": [
-        "LPC speech voice",
-        "Raw excitation or widened voice"
+        "Mono: LPC speech voice. Stereo: left blend of the voice and raw excitation.",
+        "Mono: raw LPC excitation. Stereo: right blend of the voice and raw excitation."
       ],
       "artwork": {
         "icon": "/model-icons/lpc-words.png",
@@ -1326,8 +1326,8 @@
         "Trajectory"
       ],
       "outputs": [
-        "Selected chirp direction",
-        "Counter-moving chirps"
+        "Mono: selected chirp direction. Stereo: selected chirps moving through the left channel.",
+        "Mono: counter-moving chirps. Stereo: selected chirps moving through the right channel."
       ],
       "source": {
         "header": "plaits/dsp/engine2/glisson_engine.h",
@@ -1364,8 +1364,8 @@
         "Interpolation"
       ],
       "outputs": [
-        "Interpolated stochastic waveform",
-        "Raw stepped waveform"
+        "Mono: selected interpolation of the stochastic waveform. Stereo: its primary phase readout.",
+        "Mono: raw stepped waveform. Stereo: an antipodal readout of the same evolving breakpoints."
       ],
       "source": {
         "header": "plaits/dsp/engine2/gendy_engine.h",
@@ -1402,8 +1402,8 @@
         "Evolution speed"
       ],
       "outputs": [
-        "Mass-position scan",
-        "Spatial derivative"
+        "Mono: mass-position scan. Stereo: first pickup on the shared virtual system.",
+        "Mono: spatial derivative. Stereo: a second pickup one quarter of the scan span away."
       ],
       "source": {
         "header": "plaits/dsp/engine2/scanned_engine.h",
@@ -1441,8 +1441,8 @@
         "Skew"
       ],
       "outputs": [
-        "Primary pulse train",
-        "Complementary phase-offset train"
+        "Primary pulse train; the stereo toggle does not change this fixed MAIN/AUX pair.",
+        "Complementary phase-offset train; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "source": {
         "header": "plaits/dsp/engine2/pulsar_engine.h",
@@ -1479,8 +1479,8 @@
         "Feedback symmetry"
       ],
       "outputs": [
-        "Feedback-AM voice",
-        "Isolated sidebands"
+        "Mono: feedback-AM body. Stereo: left blend of the body and recursive sidebands.",
+        "Mono: isolated recursive sidebands. Stereo: right blend of the body and recursive sidebands."
       ],
       "source": {
         "header": "plaits/dsp/engine2/loopback_engine.h",
@@ -1517,8 +1517,8 @@
         "Capture and damping"
       ],
       "outputs": [
-        "PLL follower",
-        "Acquisition and phase error"
+        "Mono: PLL follower. Stereo: left blend of the follower and reference oscillators.",
+        "Mono: acquisition charge-pump and phase error. Stereo: right blend of the follower and reference oscillators."
       ],
       "source": {
         "header": "plaits/dsp/engine2/lockstep_engine.h",
@@ -1555,8 +1555,8 @@
         "Slew"
       ],
       "outputs": [
-        "Decoded register field",
-        "Raw carry stream"
+        "Mono: decoded register field. Stereo: forward-order decode of the shared register.",
+        "Mono: raw carry stream. Stereo: reversed-order decode of the shared register."
       ],
       "source": {
         "header": "plaits/dsp/engine2/tapfield_engine.h",
@@ -1593,8 +1593,8 @@
         "Rotation and drive"
       ],
       "outputs": [
-        "Weighted cancellation field",
-        "Orthogonal pair differences"
+        "Mono: weighted cancellation field. Stereo: left spread of the four harmonic voices.",
+        "Mono: orthogonal pair differences. Stereo: right spread of the four harmonic voices."
       ],
       "source": {
         "header": "plaits/dsp/engine2/phase_weave_engine.h",
@@ -1631,8 +1631,8 @@
         "Upper/lower bias"
       ],
       "outputs": [
-        "Upper sideband bank",
-        "Lower sideband bank"
+        "Mono: upper sideband bank. Stereo: full spectrum biased 85/15 toward the upper bank.",
+        "Mono: lower sideband bank. Stereo: full spectrum biased 85/15 toward the lower bank."
       ],
       "source": {
         "header": "plaits/dsp/engine2/sideband_engine.h",
@@ -1669,8 +1669,8 @@
         "Rate skew"
       ],
       "outputs": [
-        "Selected attractor coordinate",
-        "Lagging attractor coordinate"
+        "Selected attractor coordinate; the stereo toggle does not change this fixed MAIN/AUX pair.",
+        "Coordinate one step behind in the cyclic flow; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "source": {
         "header": "plaits/dsp/engine2/attractor_engine.h",
@@ -1707,8 +1707,8 @@
         "Lattice stretch"
       ],
       "outputs": [
-        "Registered undertone mixture",
-        "Hollow alternating lattice"
+        "Mono: registered undertone mixture. Stereo: left spread of that same registered mixture.",
+        "Mono: hollow alternating lattice without the anchor. Stereo: right spread of the registered mixture."
       ],
       "source": {
         "header": "plaits/dsp/engine2/undertow_engine.h",
@@ -1745,8 +1745,8 @@
         "Bore reflection"
       ],
       "outputs": [
-        "Bore pressure",
-        "Reed flow"
+        "Mono: pressure at the movable bore pickup. Stereo: left bore pickup.",
+        "Mono: reed flow. Stereo: right bore pickup a fixed third of the bore away."
       ],
       "source": {
         "header": "plaits/dsp/engine2/reed_pipe_engine.h",
@@ -1783,8 +1783,8 @@
         "Phase lag"
       ],
       "outputs": [
-        "First circular moment",
-        "Second circular moment"
+        "Mono: first circular moment. Stereo: left spread of the seven oscillators.",
+        "Mono: second circular moment. Stereo: right spread of the seven oscillators."
       ],
       "source": {
         "header": "plaits/dsp/engine2/phase_flock_engine.h",
@@ -1821,8 +1821,8 @@
         "Interpolation"
       ],
       "outputs": [
-        "Cell and edge wavecycle",
-        "Inter-generation activity"
+        "Mono: cell-to-edge wavecycle blend. Stereo: first spatial read of that blend.",
+        "Mono: inter-generation activity. Stereo: antipodal spatial read of the cell-to-edge blend."
       ],
       "source": {
         "header": "plaits/dsp/engine2/rulefield_engine.h",
@@ -1859,8 +1859,8 @@
         "Shift direction"
       ],
       "outputs": [
-        "Forward spectral spiral",
-        "Counter-shift projection"
+        "Forward spectral spiral; the stereo toggle does not change this fixed MAIN/AUX pair.",
+        "Quadrature counter-shift projection; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "source": {
         "header": "plaits/dsp/engine2/spectral_spiral_engine.h",
@@ -3207,8 +3207,8 @@
         "Mask width"
       ],
       "outputs": [
-        "Bytebeat stream",
-        "Same stream a sub-octave down"
+        "Bytebeat stream; the stereo toggle does not change this fixed MAIN/AUX pair.",
+        "Same expression at half the tick rate; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "source": {
         "header": "plaits/dsp/engine2/bytebeat_engine.h",
@@ -3247,8 +3247,8 @@
         "Scale"
       ],
       "outputs": [
-        "Chord",
-        "Root voice"
+        "Diatonic chord; the stereo toggle does not change this fixed MAIN/AUX pair.",
+        "Root voice; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "source": {
         "header": "plaits/dsp/engine2/diatonic_chord_engine.h",
@@ -3288,8 +3288,8 @@
         "Scale"
       ],
       "outputs": [
-        "Stack",
-        "Root voice"
+        "Five-voice scale stack; the stereo toggle does not change this fixed MAIN/AUX pair.",
+        "Root voice; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "source": {
         "header": "plaits/dsp/engine2/scale_stack_engine.h",
@@ -3330,8 +3330,8 @@
         "Scale"
       ],
       "outputs": [
-        "Wavetable chord",
-        "Root voice"
+        "Wavetable chord; the stereo toggle does not change this fixed MAIN/AUX pair.",
+        "Root voice; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "source": {
         "header": "plaits/dsp/engine2/wavetable_chord_engine.h",
@@ -3373,8 +3373,8 @@
         "Scale"
       ],
       "outputs": [
-        "Wavetable stack",
-        "Root voice"
+        "Five-voice wavetable stack; the stereo toggle does not change this fixed MAIN/AUX pair.",
+        "Root voice; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "source": {
         "header": "plaits/dsp/engine2/wavetable_scale_stack_engine.h",
@@ -3415,8 +3415,8 @@
         "Objects"
       ],
       "outputs": [
-        "The instrument",
-        "Bare collisions"
+        "Resonant instrument model; the stereo toggle does not change this fixed MAIN/AUX pair.",
+        "Bare collision train before resonance; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "source": {
         "header": "plaits/dsp/engine2/shakers_engine.h",
@@ -3455,8 +3455,8 @@
         "Buzz"
       ],
       "outputs": [
-        "Mouthpiece",
-        "Valve buzz"
+        "Pressure inside the mouthpiece; the stereo toggle does not change this fixed MAIN/AUX pair.",
+        "Valve flow that drives the bore; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "source": {
         "header": "plaits/dsp/engine2/brass_engine.h",
@@ -3493,8 +3493,8 @@
         "Spread"
       ],
       "outputs": [
-        "Folded voices (left in stereo)",
-        "Unfolded voices (right in stereo)"
+        "Mono: folded chord. Stereo: folded left channel of the Shepard helix.",
+        "Mono: unfolded chord. Stereo: folded right channel of the Shepard helix."
       ],
       "source": {
         "header": "plaits/dsp/engine2/helix_engine.h",
@@ -3540,8 +3540,8 @@
         "Spacing"
       ],
       "outputs": [
-        "The whole clap, hands and room",
-        "The dry hands alone, their top an octave up, or in stereo the right channel: the same clap from an independent noise source, with each hand landing in its own place"
+        "Mono: hands and room. Stereo: left clap with independently placed hands and noise.",
+        "Mono: dry hands through a higher band. Stereo: right clap with independently placed hands and noise."
       ],
       "source": {
         "header": "plaits/dsp/engine2/clap_engine.h",
@@ -3583,8 +3583,8 @@
         "Shape"
       ],
       "outputs": [
-        "Formant waveform",
-        "Hollow three-state logic pulse with optional sub-octave, or in stereo the right channel: the same formant from an envelope slightly detuned"
+        "Mono: formant waveform. Stereo: left formant voice.",
+        "Mono: hollow logic pulse with optional sub-octave. Stereo: right formant voice from a slightly detuned envelope."
       ],
       "source": {
         "header": "plaits/dsp/engine2/freshets_formant_engine.h",
@@ -3617,12 +3617,12 @@
     },
     "virtual-analog-dual": {
       "controls": {
-        "harmonics": "Detunes the secondary oscillator through musical intervals and sets the synchronized AUX ratio.",
+        "harmonics": "Detunes the secondary oscillator through musical intervals and sets the mono hard-sync AUX ratio.",
         "timbre": "Changes the primary oscillator continuously from saw through square and pulse shapes.",
         "morph": "Changes the secondary oscillator independently through the same variable waveform range.",
         "macro": "Scales interval detuning from unison to twice the original range; the midpoint is Emilie's original spread."
       },
-      "trigger": "Restarts the internal envelope when TRIG is patched."
+      "trigger": "The oscillator phases free-run; patched TRIG restarts Plaits' shared decay and low-pass-gate envelope."
     },
     "virtual-analog-crossfade": {
       "controls": {
@@ -3631,7 +3631,7 @@
         "morph": "Changes the common oscillator waveform continuously from saw through square and pulse shapes.",
         "macro": "Scales interval detuning from unison to twice the original range; the midpoint is Emilie's original spread."
       },
-      "trigger": "Restarts the internal envelope when TRIG is patched."
+      "trigger": "The oscillator phases free-run; patched TRIG restarts Plaits' shared decay and low-pass-gate envelope."
     },
     "waveshaping": {
       "controls": {
@@ -3692,7 +3692,7 @@
         "harmonics": "Crossfades the speech models, then selects LPC word banks.",
         "timbre": "Changes voice species by shifting formants or changing the emulated speech-chip clock.",
         "morph": "Selects the vowel, phoneme, word, or word segment for the active speech model.",
-        "macro": "Moves from raw excitation through the stock voice to sharper spectral emphasis."
+        "macro": "In mono, moves from raw excitation through the stock voice to sharper emphasis; stereo replaces this axis with a fixed voice/excitation spread."
       },
       "trigger": "Advances or restarts speech material according to the selected model."
     },
@@ -3874,7 +3874,7 @@
         "morph": "Changes the depth of the segment-duration random walk.",
         "macro": "Moves interpolation from stepped through linear to smooth."
       },
-      "trigger": "Creates a new deterministic stochastic waveform."
+      "trigger": "Creates a new stochastic breakpoint waveform and restarts its cycle."
     },
     "scanned": {
       "controls": {
@@ -4347,7 +4347,7 @@
     "shakers": {
       "controls": {
         "harmonics": "Steps through sixteen instruments, from a maraca through bells and gravel to a guiro.",
-        "timbre": "How hard it is being shaken. It shakes while TRIG is unpatched or a patched gate is high, so it drones on its own.",
+        "timbre": "Sets the ongoing collision rate while TRIG is unpatched or a patched gate is high; a rising trigger still injects a full one-shot strike.",
         "morph": "How long the instrument keeps ringing after each collision, around its measured decay.",
         "macro": "How many objects are inside, from a couple of large ones to a dense hiss of small ones."
       },
@@ -4356,7 +4356,7 @@
     "brass": {
       "controls": {
         "harmonics": "Lip tension. Climbs the bore's partials -- unison, fifth, octave, tenth, twelfth -- and bends each one sharp as it rises.",
-        "timbre": "Breath pressure. Below the threshold the instrument does not speak, exactly as a real one does not.",
+        "timbre": "Raises breath pressure from gentle to strong while staying above the model's oscillation threshold across the full range.",
         "morph": "Bell size, from a stopped horn that barely sustains to an open one that rings and overblows easily.",
         "macro": "Buzz. How far the lips swing into closure each cycle -- a soft flutter at the bottom, a real mouthpiece buzz at the top."
       },

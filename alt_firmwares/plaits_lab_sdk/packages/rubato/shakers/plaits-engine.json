@@ -14,14 +14,15 @@
   "tags": ["stk", "phisem", "percussion", "shaker", "stochastic", "physical"],
   "controls": [
     { "id": "harmonics", "label": "Instrument", "description": "Steps through sixteen instruments, from a maraca through bells and gravel to a guiro." },
-    { "id": "timbre", "label": "Shake", "description": "How hard it is being shaken. Energy is injected continuously, so it plays without a trigger." },
+    { "id": "timbre", "label": "Shake", "description": "Sets the ongoing collision rate while TRIG is unpatched or a patched gate is high; a rising trigger still injects a full one-shot strike." },
     { "id": "morph", "label": "Decay", "description": "How long the instrument keeps ringing after each collision, around its measured decay." },
     { "id": "macro", "label": "Objects", "description": "How many objects are inside, from a couple of large ones to a dense hiss of small ones." }
   ],
   "outputs": {
-    "main": "The instrument.",
-    "aux": "The bare collision train, before any resonance."
+    "main": "Resonant instrument model; the stereo toggle does not change this fixed MAIN/AUX pair.",
+    "aux": "Bare collision train before resonance; the stereo toggle does not change this fixed MAIN/AUX pair."
   },
+  "trigger": "Strikes it once and lets it ring out, or one pass of the stick for the guiro and wrench. Hold the gate to keep shaking.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/shakers_engine.h",

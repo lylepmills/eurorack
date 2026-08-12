@@ -29,7 +29,7 @@
     {
       "id": "timbre",
       "label": "Spread",
-      "description": "Detunes the voices symmetrically without moving the stack's centre pitch."
+      "description": "Spreads the voices symmetrically, independent of the selected table position."
     },
     {
       "id": "morph",
@@ -43,9 +43,10 @@
     }
   ],
   "outputs": {
-    "main": "The wavetable stack.",
-    "aux": "The root voice alone, as a pitch reference."
+    "main": "Five-voice wavetable stack; the stereo toggle does not change this fixed MAIN/AUX pair.",
+    "aux": "Root voice; the stereo toggle does not change this fixed MAIN/AUX pair."
   },
+  "trigger": "Realigns every voice so a struck stack starts the same way each time.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/wavetable_scale_stack_engine.h",

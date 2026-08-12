@@ -22,7 +22,7 @@
     {
       "id": "harmonics",
       "label": "Term A",
-      "description": "Sets the first coefficient inside the expression, which mostly governs harmonic density."
+      "description": "Sets the first coefficient inside the expression, which mostly governs its harmonic density."
     },
     {
       "id": "timbre",
@@ -41,9 +41,10 @@
     }
   ],
   "outputs": {
-    "main": "The bytebeat stream.",
-    "aux": "The same expression at half the tick rate, a locked sub-octave."
+    "main": "Bytebeat stream; the stereo toggle does not change this fixed MAIN/AUX pair.",
+    "aux": "Same expression at half the tick rate; the stereo toggle does not change this fixed MAIN/AUX pair."
   },
+  "trigger": "Restarts the stream past the silent opening of the expressions.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/bytebeat_engine.h",

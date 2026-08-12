@@ -9,19 +9,20 @@
   "author": "Lyle Mills",
   "origin": "Rubato Lab",
   "license": "MIT",
-  "description": "Windowed tone bursts move from sparse impulses to clustered formant rhythms with independently shaped outputs.",
+  "description": "Windowed tone bursts move from sparse impulses to clustered formant rhythms.",
   "family": "Microsound",
   "tags": ["experimental", "pulsar", "microsound", "formant", "burst"],
   "controls": [
-    { "id": "harmonics", "label": "Formant", "description": "Raises the carrier ratio while respecting the audio-rate ceiling." },
+    { "id": "harmonics", "label": "Formant", "description": "Raises the carrier formant from the fundamental into tightly packed upper partials." },
     { "id": "timbre", "label": "Pulse width", "description": "Changes each pulsar window from a short impulse to a broad burst." },
-    { "id": "morph", "label": "Clusters", "description": "Increases the number of windows within each fundamental cycle." },
-    { "id": "macro", "label": "Skew", "description": "Moves the MAIN and AUX window peaks in opposite directions." }
+    { "id": "morph", "label": "Clusters", "description": "Increases the number of interleaved pulse clusters within each cycle." },
+    { "id": "macro", "label": "Skew", "description": "Moves MAIN and AUX pulse peaks in opposite directions from early pluck to late swell." }
   ],
   "outputs": {
-    "main": "Clustered sinusoidal pulsars with the declared forward skew.",
-    "aux": "Offset pulsars with inverse skew and a related formant."
+    "main": "Primary pulse train; the stereo toggle does not change this fixed MAIN/AUX pair.",
+    "aux": "Complementary phase-offset train; the stereo toggle does not change this fixed MAIN/AUX pair."
   },
+  "trigger": "Restarts the pulsar cycle.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/pulsar_engine.h",

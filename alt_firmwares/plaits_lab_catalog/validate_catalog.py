@@ -19,6 +19,7 @@ REFERENCE_PACKAGES_PATH = (
     REPO_ROOT / "alt_firmwares" / "plaits_lab_sdk" / "packages" /
     "mutable-instruments"
 )
+PACKAGES_PATH = REPO_ROOT / "alt_firmwares" / "plaits_lab_sdk" / "packages"
 ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 PACKAGE_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*$")
 CONTROL_IDS = ("harmonics", "timbre", "morph", "macro")
@@ -96,6 +97,50 @@ BRAIDS_FIXED_PAIR_ENGINES = {
     "triple", "z-filter",
 }
 
+# These are the 29 engines outside the previously audited stock and Braids
+# sets. Each digest locks every user-facing identity and documentation field:
+# name, credit, origin, family, description, tags, control labels, output
+# behavior, and the complete panel manual. A prose edit therefore requires an
+# explicit implementation-level re-audit rather than silently weakening the
+# coverage back to schema validation.
+AUDITED_REMAINING_METADATA_DIGESTS = {
+    "virtual-analog-dual": "sha256:3cf2c0e87174b5379ed9ab943a1b2dc7d9c995453bc103b17ab13f4d175799f9",
+    "virtual-analog-crossfade": "sha256:e262651501514c05a20e8a9f633472d3ded280e664f3144c54e57421884a7c2a",
+    "formant-speech": "sha256:5d8a76de71896ce2e58927317e2f65015a10c03f7f7d55637e0b57cdc24ced21",
+    "lpc-speech": "sha256:f671ab3b21119cbaa99103a5ba2d15b363891149be21917dbbc4156fe62fe862",
+    "glisson": "sha256:939633e80e2942e22599767bfdeef3b1b422fb06df32224fa2072198be5ee6c3",
+    "gendy": "sha256:045f7174602a8bb3e6beeb8cb8021d1eacfc19b11fc36f7edcedcafb7928a1ca",
+    "scanned": "sha256:c9dd679aca7e01a9ec7ca5edc15bf4c743e727c7859ebe6276c31fe417fb744e",
+    "pulsar": "sha256:a0315377a7a47b4baaf0d39f6364dcc16a03ee17c515652f1ed298b62db00821",
+    "loopback": "sha256:8a911176af0bfe0e293039804e3ca05e2bb1631616edb0fa454c481aeeecbaa0",
+    "lockstep": "sha256:00cb95b7c04fd4301fb24d63365f6f1e9856d1a37818edbe3af5a326fcc24a78",
+    "tapfield": "sha256:6578f7d5917bb2ec47614f15bb6e9eb2cffb4134e1a7762079cc10f794cc66c3",
+    "phase-weave": "sha256:4d3c9735a774a99ec4083f1f4a771b36b85ee478411c7f5bc3d30a9d8af781e6",
+    "sideband-bank": "sha256:8e7e18b53e53f0a4c691b96c8442dac9325fe88a00d8b8d69f5cc3bf91d1d8b8",
+    "attractor": "sha256:8876de4803dacb7ffd801b56e4cffcbd9ee27d5ece2d14b84f8b0ec2faecd6c0",
+    "undertow": "sha256:355e1efde585a8822ff8c8aaa1f53b25798e32b4878d24233d872f425f3a80a6",
+    "reed-pipe": "sha256:08eb4b2000fff1efcd710089749689b251ed74e8d682f7ab325c01563e5d9476",
+    "phase-flock": "sha256:881288d0c617006b8718438b5f1f917716b872bb9ee7f7b08838eab759a6ee1c",
+    "rulefield": "sha256:1463741d326d01c87240f534c4a955986f7252bcb0907ef70a5b07ff8b43c9b0",
+    "spectral-spiral": "sha256:16ccf227fdceea2257d2bb262ef4deeeb1ef50313ec6dba150fad36dce72d86c",
+    "bytebeat": "sha256:cdd0f83830b959013dc0b5cebf635def32475b97d3ad36d5ff682db008df4ebf",
+    "diatonic-chord": "sha256:a371bf948b5dec7234ae430b96e7995f913b1f5881e4a829c23ff75135fca3b2",
+    "scale-stack": "sha256:c480bab7debf258bd43fefea77d2cbc4e174284de48374c4769d2d8d49764682",
+    "wavetable-chord": "sha256:cf8f1483af74d2d6fdf76fbc02c2a514ea1cf5a9a59cf18e7186cfe0329c1d6f",
+    "wavetable-scale-stack": "sha256:df642cdb8d7eba16ed2befd57b5735a45ab889c69a0288e0f26dacc7a5c2fcfe",
+    "shakers": "sha256:dc3b8a2a7e0daa8ae80e1dd85ff39377e1b1d79fd6efc753d8cb712160481448",
+    "brass": "sha256:bf2dbd2b7a717b28f18e9d4a28e7e61b3ee376da438c2ec2a6cc4f528cfa286d",
+    "helix": "sha256:f15a76e28e45bb7d7ee18d07c62d3367d60b0d463bafaf603ba975af3476836d",
+    "clap": "sha256:42049635c356f8518329a9d9fd5be5285d2ebaef89c29676e0f785f7053be173",
+    "freshets-formant": "sha256:5b17fc800bf990df2a8091a893999d6493974a8f139119eaef188039fd8f7306",
+}
+
+REMAINING_FIXED_PAIR_ENGINES = {
+    "pulsar", "attractor", "spectral-spiral", "bytebeat",
+    "diatonic-chord", "scale-stack", "wavetable-chord",
+    "wavetable-scale-stack", "shakers", "brass",
+}
+
 AUDITED_STOCK_OUTPUTS = {
     "two-op-fm": ["FM voice", "Sub-oscillator"],
     "filtered-noise": [
@@ -156,6 +201,19 @@ def documentation_digest(engine: dict[str, Any], manual: dict[str, Any]) -> str:
     return "sha256:" + hashlib.sha256(payload).hexdigest()
 
 
+def audited_metadata_digest(engine: dict[str, Any], manual: dict[str, Any]) -> str:
+    record = {
+        key: engine[key]
+        for key in (
+            "name", "author", "origin", "family", "description", "tags",
+            "controls", "outputs",
+        )
+    }
+    record["manual"] = manual
+    payload = json.dumps(record, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
+
+
 def load_shared_modules() -> dict[str, Any]:
     value = json.loads(SHARED_MODULES_PATH.read_text(encoding="utf-8"))
     modules = value.get("modules")
@@ -188,6 +246,21 @@ def load_braids_manifests() -> dict[str, dict[str, Any]]:
         manifests[catalog_id] = value
     if set(manifests) != set(AUDITED_BRAIDS_CONTROLS):
         raise ValueError("audited Braids controls must cover every Braids manifest")
+    return manifests
+
+
+def load_audited_remaining_manifests() -> dict[str, dict[str, Any]]:
+    manifests = {}
+    for path in sorted(PACKAGES_PATH.glob("*/*/plaits-engine.json")):
+        value = json.loads(path.read_text(encoding="utf-8"))
+        catalog_id = value.get("catalogId")
+        if catalog_id not in AUDITED_REMAINING_METADATA_DIGESTS:
+            continue
+        if catalog_id in manifests:
+            raise ValueError(f"duplicate audited package manifest for {catalog_id}")
+        if not isinstance(value.get("trigger"), str):
+            raise ValueError(f"{catalog_id} audited package must declare trigger metadata")
+        manifests[catalog_id] = value
     return manifests
 
 
@@ -284,6 +357,52 @@ def validate_catalog(catalog: dict[str, Any]) -> None:
         expected_trigger = AUDITED_STOCK_TRIGGERS.get(engine_id)
         if expected_trigger is not None and trigger != expected_trigger:
             raise ValueError(f"{engine_id} trigger no longer matches the audited behavior")
+
+    stock_ids = set(catalog.get("presets", {}).get("stock", []))
+    audited_sets = stock_ids | set(AUDITED_BRAIDS_CONTROLS) | set(AUDITED_REMAINING_METADATA_DIGESTS)
+    if audited_sets != ids:
+        missing = sorted(ids - audited_sets)
+        extra = sorted(audited_sets - ids)
+        raise ValueError(
+            f"documentation audit must cover every engine; missing={missing}, extra={extra}")
+
+    for engine_id, expected_digest in AUDITED_REMAINING_METADATA_DIGESTS.items():
+        engine = engines_by_id[engine_id]
+        actual_digest = audited_metadata_digest(engine, manuals[engine_id])
+        if actual_digest != expected_digest:
+            raise ValueError(
+                f"{engine_id} user-facing metadata changed after its implementation audit")
+        output_copy = " ".join(engine["outputs"]).lower()
+        if engine_id in REMAINING_FIXED_PAIR_ENGINES:
+            if "stereo toggle does not change" not in output_copy:
+                raise ValueError(
+                    f"{engine_id} fixed-pair output docs must explain the stereo toggle")
+        elif "mono:" not in output_copy or "stereo:" not in output_copy:
+            raise ValueError(
+                f"{engine_id} mode-dependent output docs must explain mono and stereo behavior")
+
+    for engine_id, manifest in load_audited_remaining_manifests().items():
+        engine = engines_by_id[engine_id]
+        expected_engine_fields = {
+            "description": manifest["description"],
+            "tags": manifest["tags"],
+            "controls": [control["label"] for control in manifest["controls"]],
+            "outputs": [manifest["outputs"]["main"], manifest["outputs"]["aux"]],
+        }
+        for field, expected in expected_engine_fields.items():
+            if engine.get(field) != expected:
+                raise ValueError(
+                    f"{engine_id} catalog {field} has drifted from its package manifest")
+        expected_manual = {
+            "controls": {
+                control["id"]: control["description"]
+                for control in manifest["controls"]
+            },
+            "trigger": manifest["trigger"],
+        }
+        if manuals[engine_id] != expected_manual:
+            raise ValueError(
+                f"{engine_id} catalog manual has drifted from its package manifest")
 
     braids_manifests = load_braids_manifests()
     for engine_id, manifest in braids_manifests.items():

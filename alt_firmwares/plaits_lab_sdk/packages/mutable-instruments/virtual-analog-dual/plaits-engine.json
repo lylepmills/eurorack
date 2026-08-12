@@ -9,19 +9,20 @@
   "author": "Emilie Gillet",
   "origin": "Mutable Instruments",
   "license": "MIT",
-  "description": "Emilie Gillet's original virtual-analog variant 0: independently shaped oscillators, interval detuning, and sync.",
+  "description": "One of Emilie Gillet's alternate virtual-analog designs preserved in the Plaits source: independent waveforms, interval detuning, and a synchronized alternate output.",
   "family": "Subtractive",
   "tags": ["analog", "oscillator", "sync", "variant"],
   "controls": [
-    { "id": "harmonics", "label": "Detune and sync", "description": "Detunes the secondary oscillator and sweeps the synchronized alternate-output ratio." },
-    { "id": "timbre", "label": "Primary waveform", "description": "Changes the primary oscillator from saw through square and pulse shapes." },
-    { "id": "morph", "label": "Secondary waveform", "description": "Independently changes the secondary oscillator across the same waveform range." },
-    { "id": "macro", "label": "Detune range", "description": "Scales interval detuning around the original range at its midpoint." }
+    { "id": "harmonics", "label": "Detune and sync", "description": "Detunes the secondary oscillator through musical intervals and sets the mono hard-sync AUX ratio." },
+    { "id": "timbre", "label": "Primary waveform", "description": "Changes the primary oscillator continuously from saw through square and pulse shapes." },
+    { "id": "morph", "label": "Secondary waveform", "description": "Changes the secondary oscillator independently through the same variable waveform range." },
+    { "id": "macro", "label": "Detune range", "description": "Scales interval detuning from unison to twice the original range; the midpoint is Emilie's original spread." }
   ],
   "outputs": {
-    "main": "Equal mixture of the primary and detuned secondary oscillators.",
-    "aux": "Equal mixture of the primary and hard-synchronized secondary oscillators."
+    "main": "Mono: equal primary/detuned-secondary mix. Stereo: left-weighted primary/detuned-secondary mix.",
+    "aux": "Mono: equal primary/hard-sync-secondary mix. Stereo: right-weighted primary/detuned-secondary mix."
   },
+  "trigger": "The oscillator phases free-run; patched TRIG restarts Plaits' shared decay and low-pass-gate envelope.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine/virtual_analog_dual_engine.h",
