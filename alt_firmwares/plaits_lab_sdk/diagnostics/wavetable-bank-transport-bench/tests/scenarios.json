@@ -1,0 +1,15 @@
+[
+  {
+    "id": "transport",
+    "name": "All transport configurations",
+    "durationSeconds": 8,
+    "note": 48,
+    "triggerHz": 0,
+    "controls": {
+      "harmonics": [0.0, 1.0],
+      "timbre": [0.5, 0.5],
+      "morph": [0.5, 0.5],
+      "macro": [0.0, 1.0]
+    }
+  }
+]

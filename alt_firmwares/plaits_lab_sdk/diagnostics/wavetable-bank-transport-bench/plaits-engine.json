@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "community",
+  "id": "rubato-audio/wavetable-bank-transport-bench",
+  "catalogId": "wavetable-bank-transport-bench",
+  "version": "0.1.0",
+  "name": "Wavetable Bank Transport Bench",
+  "author": "Rubato Audio",
+  "origin": "Community",
+  "license": "MIT",
+  "description": "Diagnostic variable-bank Wavetable transport. Not a musical model.",
+  "family": "Experimental",
+  "tags": ["community", "experimental", "wavetable"],
+  "controls": [
+    {"id": "harmonics", "label": "Bank transport", "description": "Sweeps the current mirrored or one-way bank path."},
+    {"id": "timbre", "label": "Column", "description": "Moves across the wavetable bank's columns."},
+    {"id": "morph", "label": "Row", "description": "Moves across the wavetable bank's rows."},
+    {"id": "macro", "label": "Configuration", "description": "Selects 1, 2, 3, or 8 mirrored banks, then 8 or 16 one-way banks."}
+  ],
+  "outputs": {
+    "main": "Crossfade through identifiable equation-generated banks",
+    "aux": "Quantized MAIN, unless the CPU probe tone is enabled"
+  },
+  "source": {
+    "root": "src",
+    "header": "wavetable_bank_transport_bench_engine.h",
+    "files": ["wavetable_bank_transport_bench_engine.cc"],
+    "className": "WavetableBankTransportBenchEngine"
+  },
+  "postProcessing": {"alreadyEnveloped": false, "outGain": 0.55, "auxGain": 0.55},
+  "scenarios": "tests/scenarios.json"
+}
