@@ -41,9 +41,10 @@
     }
   ],
   "outputs": {
-    "main": "The four grains summed, as the module sums them.",
-    "aux": "The cloud's amplitude on one steady tone at the played pitch: the grain rhythm without the scatter."
+    "main": "Mono: all four grains summed. Stereo: the left side of the fixed four-grain pan spread.",
+    "aux": "Mono: the cloud's amplitude on one steady tone at the played pitch. Stereo: the right side of the four-grain pan spread."
   },
+  "trigger": "The engine itself ignores TRIG and its grains keep running; Plaits' shared envelope still shapes a patched note.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/granular_cloud_engine.h",

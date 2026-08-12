@@ -44,6 +44,7 @@
     "main": "The three resonant filters, summed.",
     "aux": "Mono: the raw decaying-noise burst before filtering. Stereo: a second, fully independent filter bank and RNG stream, for genuinely decorrelated left and right bursts."
   },
+  "trigger": "The engine itself ignores TRIG and its random bursts keep running; Plaits' shared envelope still shapes a patched note.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/particle_burst_engine.h",

@@ -19,9 +19,10 @@
     { "id": "macro", "label": "Fold", "description": "Biases the fold operand, shifting which harmonics the mangler keeps." }
   ],
   "outputs": {
-    "main": "The decimated and reconstruction-filtered stream.",
-    "aux": "The same mangler with no reconstruction filter, aliasing intact."
+    "main": "Mono: the reconstruction-filtered mangled stream. Stereo: the filtered left stream.",
+    "aux": "Mono: the unfiltered aliased stream. Stereo: a filtered right stream whose hold clock runs slightly fast."
   },
+  "trigger": "Restarts the phase ramp and both sample-and-hold clocks without replacing the held samples.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/toy_engine.h",

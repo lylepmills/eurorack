@@ -40,9 +40,10 @@
     }
   ],
   "outputs": {
-    "main": "The twelve partials under both bumps.",
-    "aux": "The same stack with Peak reflected, so it holds the end of the series MAIN does not."
+    "main": "Mono: the twelve-partial stack at Peak. Stereo: the same stack with a small leftward Peak offset.",
+    "aux": "Mono: the stack with Peak reflected. Stereo: the same stack with a small rightward Peak offset."
   },
+  "trigger": "Realigns the shared partial phase so each triggered note starts alike.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/harmonics_engine.h",

@@ -41,8 +41,9 @@
   ],
   "outputs": {
     "main": "Comb output.",
-    "aux": "Second comb tap a fifth below the main one."
+    "aux": "Second comb tap a fifth below the main one. The stereo toggle does not change this fixed two-tap pair."
   },
+  "trigger": "The engine itself ignores TRIG and the comb keeps ringing; Plaits' shared envelope still shapes a patched note.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/saw_comb_engine.h",

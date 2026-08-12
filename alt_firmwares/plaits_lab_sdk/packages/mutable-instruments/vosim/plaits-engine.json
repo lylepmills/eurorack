@@ -40,9 +40,10 @@
     }
   ],
   "outputs": {
-    "main": "The grain train at the set balance.",
-    "aux": "The same grain train with the balance mirrored, favouring the formant MAIN does not."
+    "main": "Mono: the grain train at Balance. Stereo: the same voice with a small leftward balance offset.",
+    "aux": "Mono: the grain train with Balance mirrored. Stereo: the same voice with a small rightward balance offset."
   },
+  "trigger": "Restarts the carrier and both formant phases so each triggered grain train begins alike.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/vosim_engine.h",

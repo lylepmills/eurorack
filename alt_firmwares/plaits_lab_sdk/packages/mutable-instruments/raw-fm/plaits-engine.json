@@ -41,8 +41,9 @@
   ],
   "outputs": {
     "main": "Carrier.",
-    "aux": "Modulator."
+    "aux": "Modulator. The stereo toggle does not change this fixed carrier/modulator pair."
   },
+  "trigger": "Realigns the carrier and modulator phases and clears the feedback memory.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/raw_fm_engine.h",

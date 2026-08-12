@@ -44,6 +44,7 @@
     "main": "The filtered swarm at the dialed-in Filter position.",
     "aux": "Mono: the mirrored filter position. Stereo: a magnitude-matched phase-rotated copy of the filtered swarm."
   },
+  "trigger": "Randomizes the phases of all seven saw oscillators.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/saw_swarm_engine.h",

@@ -45,6 +45,7 @@
     "main": "The six-partial mix. Tracks the module's own output closely; tests/ab.json carries the measured figures.",
     "aux": "Mono: the two noise-ring-modulated partials alone, without the direct tone or the harmonics sum. Stereo: a second, independently-filtered noise realization for the right channel, sharing the same tonal partials as the left."
   },
+  "trigger": "Strikes or re-strikes the six-partial drum.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/struck_drum_engine.h",

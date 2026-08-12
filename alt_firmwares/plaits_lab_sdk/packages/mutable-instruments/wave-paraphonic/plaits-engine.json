@@ -40,9 +40,10 @@
     }
   ],
   "outputs": {
-    "main": "The four voices summed, as the module has them.",
-    "aux": "The chord table's first voice on its own."
+    "main": "Mono: all four chord voices summed. Stereo: the left side of the fixed four-voice pan spread.",
+    "aux": "Mono: the chord table's first voice alone. Stereo: the right side of the four-voice pan spread."
   },
+  "trigger": "Randomizes all four wavetable phases and snaps their frequencies to the current chord.",
   "sharedModules": [
     "chord-bank"
   ],

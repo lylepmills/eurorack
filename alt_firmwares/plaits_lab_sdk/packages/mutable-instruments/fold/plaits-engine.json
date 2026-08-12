@@ -40,9 +40,10 @@
     }
   ],
   "outputs": {
-    "main": "The crossfaded pair.",
-    "aux": "The complementary crossfade, always favouring the folder MAIN does not."
+    "main": "Mono: the two folders crossfaded at Blend. Stereo: the same sound with a small leftward blend offset.",
+    "aux": "Mono: the complementary folder crossfade. Stereo: the same sound with a small rightward blend offset."
   },
+  "trigger": "Restarts the oscillator phase so each triggered note folds from the same point.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/fold_engine.h",

@@ -110,6 +110,25 @@ class PackageTests(unittest.TestCase):
                 self.assertEqual(len(loaded["manifest"]["controls"]), 4)
                 self.assertTrue(loaded["source_files"])
 
+    def test_braids_reference_packages_declare_trigger_metadata(self) -> None:
+        packages = []
+        for package in sorted((SDK_DIR / "packages" / "mutable-instruments").iterdir()):
+            manifest_path = package / "plaits-engine.json"
+            if not manifest_path.is_file():
+                continue
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if "braids" in manifest.get("tags", []):
+                packages.append(package)
+
+        self.assertEqual(len(packages), 34)
+        for package in packages:
+            with self.subTest(package=package):
+                loaded = plaits_lab.load_package(str(package))
+                trigger = loaded["manifest"].get("trigger")
+                self.assertIsInstance(trigger, str)
+                self.assertGreaterEqual(len(trigger), 12)
+                self.assertLessEqual(len(trigger), 180)
+
     def test_scenario_rejects_out_of_range_controls(self) -> None:
         scenario = {
             "id": "bad",

@@ -1896,12 +1896,12 @@
         "Bend"
       ],
       "outputs": [
-        "Selected filter model",
-        "Complementary model"
+        "The filter model HARMONICS selects.",
+        "Its complement, so LP pairs with HP and PK with BP. The stereo toggle does not change this fixed model pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:15119809757a45bdd88ae7a82d27da54c1d13a6d3492bfd2b4bc105e844ec060",
-      "documentationDigest": "sha256:9d1fa05a54fe794a2f439c70a17871b7249d349c0503fa0aef0af905eca9a1fb",
+      "digest": "sha256:d70190882a2fd892dab74f46244e251b1e1dfee37af6cfd9bfe064271e7e5576",
+      "documentationDigest": "sha256:217bb62e7fa836d32f95a46cabdf554c245439a244e35ff0de011aa148ce6040",
       "manual": {
         "controls": {
           "harmonics": "Selects the lowpass, peaking, bandpass and highpass filter models.",
@@ -1909,7 +1909,7 @@
           "morph": "Morphs the filter excitation from saw through square at noon to triangle.",
           "macro": "Bends the burst envelope from the flat stock ramp toward a sharp percussive attack."
         },
-        "trigger": "Restarts the internal envelope when TRIG is patched."
+        "trigger": "Restarts the excitation phases and integral without clearing the resonator state."
       },
       "implementation": {
         "className": "ZFilterEngine"
@@ -1936,12 +1936,12 @@
         "Fold"
       ],
       "outputs": [
-        "Decimated stream",
-        "Unfiltered, aliased stream"
+        "Mono: the reconstruction-filtered mangled stream. Stereo: the filtered left stream.",
+        "Mono: the unfiltered aliased stream. Stereo: a filtered right stream whose hold clock runs slightly fast."
       ],
       "version": "1.0.0",
-      "digest": "sha256:2b07d6f4ad4ffb123f4e7b0f781fe530ea7f40ec1ce7157a580da32a3495ea05",
-      "documentationDigest": "sha256:3ba83a255c7d095fb5b32860f436d8d9b0e195151b37bcb62ee2b6274d89362a",
+      "digest": "sha256:80aa51e3eb87103846fabffc617eb5eccb8903cf39aa17568696b8e750aa6bca",
+      "documentationDigest": "sha256:6f2c21233167f527c21ab54c6e5ff083e0628c2691a616d691f11940662d10f8",
       "manual": {
         "controls": {
           "harmonics": "Sweeps the bit-mangling operand from clean tone to shattered noise.",
@@ -1949,7 +1949,7 @@
           "morph": "Moves the sample-hold clock from free-running to locked to the played note.",
           "macro": "Biases the fold operand, shifting which harmonics the mangler keeps."
         },
-        "trigger": "Restarts the sample-hold clock and the mangler state."
+        "trigger": "Restarts the phase ramp and both sample-and-hold clocks without replacing the held samples."
       },
       "implementation": {
         "className": "ToyEngine"
@@ -1976,12 +1976,12 @@
         "Tilt"
       ],
       "outputs": [
-        "Notched sawtooth",
-        "Mirrored notch depth"
+        "Mono: the notched sawtooth. Stereo: the notched sawtooth on the left.",
+        "Mono: a variable-width pulse. Stereo: a second notched saw on the right, with mirrored depth and an offset bend."
       ],
       "version": "1.0.0",
-      "digest": "sha256:28f15fb04230d44cdb094a71852aff585daedb7e882075a320e1ccdca285b1c2",
-      "documentationDigest": "sha256:94e3aec1ce82bb8e0fc6857124dac5eacbf343bdd83fb17aae2edfe102db28a8",
+      "digest": "sha256:3c1e8e6733747c2be6051397f7632dfe242ea0cab8a19f9017759145113d92c7",
+      "documentationDigest": "sha256:c5ad8bdaec9c60d9489b825b0350d9fcc073ba231a19bc65495f05957db7833f",
       "manual": {
         "controls": {
           "harmonics": "Deepens the notch cut into each sawtooth cycle.",
@@ -1989,7 +1989,7 @@
           "morph": "Bends the sawtooth ramp from concave through straight to convex.",
           "macro": "Tilts the notched segment, flattening the step at one extreme and doubling it at the other."
         },
-        "trigger": "Restarts the internal envelope when TRIG is patched."
+        "trigger": "Restarts the oscillator phase so each triggered note begins at the same point."
       },
       "implementation": {
         "className": "CSawEngine"
@@ -2016,12 +2016,12 @@
         "Drive"
       ],
       "outputs": [
-        "Three-way ring product",
-        "Carrier and first modulator"
+        "Mono: the full three-way ring product. Stereo: the same product on the left.",
+        "Mono: the first modulator alone. Stereo: the carrier times the first modulator on the right."
       ],
       "version": "1.0.0",
-      "digest": "sha256:0d229b1ba7b7a99fba5dc0f6c6cea44893ff6ce42090b34de545481a71bc14af",
-      "documentationDigest": "sha256:34eb5e33ad1392c007d88317ded14aab73de07e66e9102e8253ebfc20d0ae612",
+      "digest": "sha256:5c08736a031131e15f4a92e9b1087508b73a022fbfd18a353af2ef831c42494c",
+      "documentationDigest": "sha256:fc41b60bc017d08556bc9a66309c0094fad4b11298d171c2e5385a4063f7ce3e",
       "manual": {
         "controls": {
           "harmonics": "Detunes the first modulator through harmonic and clangorous intervals.",
@@ -2029,7 +2029,7 @@
           "morph": "Fades from a bare carrier to full three-way ring modulation.",
           "macro": "Drives the output shaper, from clean multiplication to hard saturation."
         },
-        "trigger": "Realigns the three oscillator phases so each note starts alike."
+        "trigger": "Realigns the carrier and both modulator phases so each triggered note starts alike."
       },
       "implementation": {
         "className": "RingModEngine"
@@ -2056,12 +2056,12 @@
         "Drive"
       ],
       "outputs": [
-        "Crossfaded pair",
-        "Complementary crossfade"
+        "Mono: the two folders crossfaded at Blend. Stereo: the same sound with a small leftward blend offset.",
+        "Mono: the complementary folder crossfade. Stereo: the same sound with a small rightward blend offset."
       ],
       "version": "1.0.0",
-      "digest": "sha256:57f10125ac999975d22ae9aeedb980bf4b984bb87a7253812d383c00fe0fad4e",
-      "documentationDigest": "sha256:c2133bab9a950fcf69a1ac5650f92c9ed53d4b52e055e710dbb3f7f28f503b92",
+      "digest": "sha256:0ee4e482af6ae1f33d39460906f9b6ec2c77e508946750bd1066c9a39ab487b6",
+      "documentationDigest": "sha256:22817555801dfa9e0386f14306eee17621331b7a45b6048c2e8e9554053a1fab",
       "manual": {
         "controls": {
           "harmonics": "Crossfades from the sine folder, which saturates, to the triangle folder, which keeps folding.",
@@ -2069,7 +2069,7 @@
           "morph": "Offsets the wave into one half of the folder, adding the even harmonics a symmetric source cannot make.",
           "macro": "Pushes the folders past the depth the module stops at, or holds them back below it."
         },
-        "trigger": "Restarts the oscillator phase so each note folds from the same point."
+        "trigger": "Restarts the oscillator phase so each triggered note folds from the same point."
       },
       "implementation": {
         "className": "FoldEngine"
@@ -2102,7 +2102,7 @@
       ],
       "version": "1.0.0",
       "digest": "sha256:b087e91c82adc261ef2586b3fa8d680f633c145b012459ab1ec9b1da8d6ad595",
-      "documentationDigest": "sha256:affbeb15eb6b61fc63522c218c83250634b40c90ea90cd0e3a68ef79d307c89d",
+      "documentationDigest": "sha256:9ac7de1ab424a80b6d428fc2cda164f40b60b095d1e3f54da0b38b676f3a5e92",
       "manual": {
         "controls": {
           "harmonics": "Detunes the second voice from unison, within whatever reach MACRO sets.",
@@ -2110,7 +2110,7 @@
           "morph": "Offsets the second voice's harmonic content away from the first, zero at noon.",
           "macro": "Widens the detune past the module's own sub-semitone ceiling, up to an octave apart."
         },
-        "trigger": "Restarts the engine."
+        "trigger": "Realigns the two oscillator phases so each triggered note starts alike."
       },
       "implementation": {
         "className": "BuzzEngine"
@@ -2137,12 +2137,12 @@
         "Reset"
       ],
       "outputs": [
-        "The master and slave crossfaded at Balance.",
-        "The complementary crossfade, always favouring the side MAIN does not."
+        "Mono: the master and slave crossfaded at Balance. Stereo: the same sound with a small leftward balance offset.",
+        "Mono: the complementary master/slave crossfade. Stereo: the same sound with a small rightward balance offset."
       ],
       "version": "1.0.0",
-      "digest": "sha256:69b717b6b5777826654fe936f43caf0fb010b7d1f029a233ab4e52588d32caa5",
-      "documentationDigest": "sha256:ff57bbcd5399d2697df84b71ad86ee7256371cad2a34a04259b4ce1f92abcd21",
+      "digest": "sha256:c53fec4239b32da5169d67561e099b547b8978f378b5ca7726c0453ad3d5230a",
+      "documentationDigest": "sha256:b761b66503c30342d73c89a06fe6f32d9b344c7cee2d02d91e7fcef464d1b8ab",
       "manual": {
         "controls": {
           "harmonics": "Crossfades from the master oscillator alone to the synced slave alone.",
@@ -2150,7 +2150,7 @@
           "morph": "Runs from the module's sync square to its sync saw, and through the blend between them that the module has no path to.",
           "macro": "Moves where in its own cycle the slave restarts on each sync pulse; the module always restarts it at the beginning."
         },
-        "trigger": "Restarts the engine."
+        "trigger": "Realigns the master and slave oscillator phases so each triggered note starts alike."
       },
       "implementation": {
         "className": "DualSyncEngine"
@@ -2178,12 +2178,12 @@
         "Density"
       ],
       "outputs": [
-        "The four grains summed, as the module sums them.",
-        "The cloud's amplitude on one steady tone at the played pitch: the grain rhythm without the scatter."
+        "Mono: all four grains summed. Stereo: the left side of the fixed four-grain pan spread.",
+        "Mono: the cloud's amplitude on one steady tone at the played pitch. Stereo: the right side of the four-grain pan spread."
       ],
       "version": "1.0.0",
-      "digest": "sha256:7f1eeb94a445ba81cba537981fff74bfd224fb6491a649171c932ba723ed9bb6",
-      "documentationDigest": "sha256:7bf5a8be6b46a035294ea971bc01265b98236a83dca905687e18934221a164e7",
+      "digest": "sha256:0d41a08af3ff56070452cf3f6ee1751992b2292e0812dbbee928f70fd1e0f7cd",
+      "documentationDigest": "sha256:8fdc9e172a6428d072d3598d2f9d22913abce10e8faa1b25c7fb228a785b4b0d",
       "manual": {
         "controls": {
           "harmonics": "Widens the random pitch each grain takes when it respawns, from unison to a cloud with no pitch left.",
@@ -2191,7 +2191,7 @@
           "morph": "Slides where the grain window peaks, from a reversed swell through the module's symmetric window to a struck grain.",
           "macro": "Sets how readily a finished grain respawns, from a sputtering cloud full of gaps up to four voices that never leave one."
         },
-        "trigger": "Restarts the engine."
+        "trigger": "The engine itself ignores TRIG and its grains keep running; Plaits' shared envelope still shapes a patched note."
       },
       "implementation": {
         "className": "GranularCloudEngine"
@@ -2218,12 +2218,12 @@
         "Drive"
       ],
       "outputs": [
-        "The filtered and fuzzed voice.",
-        "The same morph oscillator dry, with neither the filter nor the fuzz on it."
+        "Mono: the filtered and fuzzed voice. Stereo: the processed voice at the lower Fuzz offset on the left.",
+        "Mono: the dry morph oscillator. Stereo: the processed voice at the higher Fuzz offset on the right."
       ],
       "version": "1.0.0",
-      "digest": "sha256:cef12f88a6a34ef5ae85ca70a26922d8ad79fe52dc4b169d4056a00fc3a68750",
-      "documentationDigest": "sha256:e8eb735e777d020a53fd5844c0a68850549404ba9e3b3b10d7b3778754130b4c",
+      "digest": "sha256:7bc92f5f9fc614550f32e964a05be13619d48f44f520db2da0c6baac392dc7f4",
+      "documentationDigest": "sha256:3a58278f3d34211a0274d70718f8128461c473887155d67ee938b3215320926c",
       "manual": {
         "controls": {
           "harmonics": "Closes the low-pass onto the note while raising the fuzz from dry to wet, welded as the module welds them.",
@@ -2231,7 +2231,7 @@
           "morph": "Offsets the low-pass five octaves either side of where Fuzz put it -- the coupling the module cannot undo.",
           "macro": "Gain into the overdrive, from a soft saturation up to a hard clip. The module welds it at unity."
         },
-        "trigger": "Restarts the engine."
+        "trigger": "Restarts the morph oscillator phase so each triggered note begins alike."
       },
       "implementation": {
         "className": "MorphEngine"
@@ -2259,11 +2259,11 @@
       ],
       "outputs": [
         "The selected model.",
-        "Its complement: the notch, the difference of the two peaks, or a second independent sequence."
+        "Its fixed complement: the notch, the peak difference, or a second sequence. The stereo toggle does not change this pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:178b628fda1d155a7d5510f6ccbf64c33c92c74c74d883ec6cf2ec90b6945181",
-      "documentationDigest": "sha256:e381a1a03446586b64c0fc846f28a24b1047a8997f2b62d24113dc9b3d5baf4c",
+      "digest": "sha256:3ea27b6e586658365a19f9cbdaeb49c74b02ee964eedfeb61a7559dff55a389f",
+      "documentationDigest": "sha256:869ffc3d18fb27b34eedb1466aa99b03f20a5114ab0ccce994026a6017c2b53c",
       "manual": {
         "controls": {
           "harmonics": "Selects filtered noise, twin peaks, or clocked noise.",
@@ -2271,7 +2271,7 @@
           "morph": "Lowpass to bandpass to highpass, the second peak's interval, or the number of sample-and-hold levels.",
           "macro": "Pushes the output through the module's overdrive shaper, or backs it out into the clean part of the curve."
         },
-        "trigger": "Restarts the engine."
+        "trigger": "Reseeds and restarts only the Clocked model's looping sequence; Filtered and Twin Peaks keep running."
       },
       "implementation": {
         "className": "NoiseBankEngine"
@@ -2304,7 +2304,7 @@
       ],
       "version": "1.0.0",
       "digest": "sha256:d1a5b08861702fbbea56acfed21728eecd3e0cc85f7fe5b46a817d007fd8491f",
-      "documentationDigest": "sha256:7a13ae09951c3ffb850354b0438dc247c45af48426ff4eb5a0b3515d82629e62",
+      "documentationDigest": "sha256:14bf37134411092fc0c485a707fb83ae40c657fdadb64a458ab32e8406de5935",
       "manual": {
         "controls": {
           "harmonics": "Jitters each filter around its own fixed interval; the lowest one jitters about three quarters as far as the other two.",
@@ -2312,7 +2312,7 @@
           "morph": "Scales the three filters' fixed intervals from unison, through the module's own voicing, to double the spread.",
           "macro": "Reshapes the burst envelope from a short tick, through the module's fixed length, to a long bloom."
         },
-        "trigger": "Restarts the engine."
+        "trigger": "The engine itself ignores TRIG and its random bursts keep running; Plaits' shared envelope still shapes a patched note."
       },
       "implementation": {
         "className": "ParticleBurstEngine"
@@ -2339,12 +2339,12 @@
         "Square Level"
       ],
       "outputs": [
-        "The crossfaded pair.",
-        "The complementary crossfade, always favouring the waveform MAIN does not."
+        "Mono: the saw/square crossfade at Blend. Stereo: the same pair with a small leftward blend offset.",
+        "Mono: the complementary saw/square crossfade. Stereo: the same pair with a small rightward blend offset."
       ],
       "version": "1.0.0",
-      "digest": "sha256:20c4a4e5783a22cf10dc5c7d4d890874a9ac2ede9d50ca28035eff2a39f12f55",
-      "documentationDigest": "sha256:965a60847ca5f3e25c16441e918b93212d0c7fa653a3d3dc4e72defd05f77c5f",
+      "digest": "sha256:ad04ba72220871d223b2ea3e2a1df96f426598ecd350b2fafc6374ac00fb042d",
+      "documentationDigest": "sha256:c52343dd408dc368463e37ff9e4ba8c9886b5abdb8fedb3c0cc7fe7e705583d3",
       "manual": {
         "controls": {
           "harmonics": "Crossfades from the saw to the attenuated square.",
@@ -2352,7 +2352,7 @@
           "morph": "Offsets the square's phase against the saw's -- the module's two oscillators are always locked together.",
           "macro": "Braids fixes the square at 58% of full level; this sweeps that attenuation from silent to unattenuated."
         },
-        "trigger": "Restarts the engine."
+        "trigger": "Realigns the saw and square phases at the selected Phase offset."
       },
       "implementation": {
         "className": "SawSquareEngine"
@@ -2385,7 +2385,7 @@
       ],
       "version": "1.0.0",
       "digest": "sha256:82eabeacdc7e81ceae28cb64d7c62b4340a2cae227f8a81681e1f8485b3b8666",
-      "documentationDigest": "sha256:c806efae971a8b6d17fa98c851d8025efba78e7519f1bf10216e842316525874",
+      "documentationDigest": "sha256:5cd838de658f84bc1847413131ef41dac550f8c392f88ad989133d020ed223f1",
       "manual": {
         "controls": {
           "harmonics": "The filter's cutoff: on the note a third of the way up, closing below that twice as fast as it opens above.",
@@ -2393,7 +2393,7 @@
           "morph": "Sweeps the same filter's response from lowpass, through the module's own highpass at center, to bandpass.",
           "macro": "The filter's resonance, fixed in the module -- calmer below center, a controlled peak above it."
         },
-        "trigger": "Restarts the engine."
+        "trigger": "Randomizes the phases of all seven saw oscillators."
       },
       "implementation": {
         "className": "SawSwarmEngine"
@@ -2420,12 +2420,12 @@
         "Grain"
       ],
       "outputs": [
-        "The shaped formant stack.",
-        "The same stack ahead of the overdrive."
+        "Mono: the shaped formant stack. Stereo: the shaped stack with a small downward formant shift on the left.",
+        "Mono: the clean stack ahead of the overdrive. Stereo: the shaped stack with a small upward formant shift on the right."
       ],
       "version": "1.0.0",
-      "digest": "sha256:403dd38fa35e82eafc4b6c992a4777a200f83601166a8ddc6ce00d8377b0876d",
-      "documentationDigest": "sha256:0c3d7d92ff89da388bc80e2c7ed56276abb97884d078c6f8d1fe044dfe7d8fe1",
+      "digest": "sha256:2d7867ec5070b9bb4fb7e35448d42e3b33cb4b7b33e4cd84bfecd6a605f42beb",
+      "documentationDigest": "sha256:293fec1fef5d303e49e7fb671c39b61e35f5d89818734642d0ec4e782e5d109f",
       "manual": {
         "controls": {
           "harmonics": "Pulls the upper two formants toward the first or pushes them apart, past the vowels in the module's list.",
@@ -2433,7 +2433,7 @@
           "morph": "Walks the nine phoneme frames, crossfading between neighbours.",
           "macro": "Shortens or stretches the burst inside each pitch period, from a tight grain to a ramp still open at the reset."
         },
-        "trigger": "Restarts the engine."
+        "trigger": "Selects and articulates a new consonant without resetting the oscillator or formant phases."
       },
       "implementation": {
         "className": "VowelEngine"
@@ -2460,12 +2460,12 @@
         "Width"
       ],
       "outputs": [
-        "The twelve partials under both bumps.",
-        "The same stack with Peak reflected, so it holds the end of the series MAIN does not."
+        "Mono: the twelve-partial stack at Peak. Stereo: the same stack with a small leftward Peak offset.",
+        "Mono: the stack with Peak reflected. Stereo: the same stack with a small rightward Peak offset."
       ],
       "version": "1.0.0",
-      "digest": "sha256:970e431676b9b246e00ccf1f9de65f14a8e7bb950ba15869ca7bc5b2e3ef0f89",
-      "documentationDigest": "sha256:df5305a57231f4ae30a23acd8a2fb6555961efbddc2699aacba2d89584c396e2",
+      "digest": "sha256:1c529b463c89cc9f55b75310e173317a7a6b888c253f757e431c85d3a6a645d8",
+      "documentationDigest": "sha256:b203f8acb03792dd0607102a8177335ce9d45013867d5b42976634eca52099b9",
       "manual": {
         "controls": {
           "harmonics": "Braids' COLOR, welded as the module has it: the bumps narrow toward both ends while the second one grows.",
@@ -2473,7 +2473,7 @@
           "morph": "Moves the second bump off the module's fixed relation, six partials either way. Centre is Braids.",
           "macro": "Scales the bump width around whatever Colour chose, so the two stop sharing a knob. Noon is Braids."
         },
-        "trigger": "Restarts the engine."
+        "trigger": "Realigns the shared partial phase so each triggered note starts alike."
       },
       "implementation": {
         "className": "HarmonicsEngine"
@@ -2500,12 +2500,12 @@
         "Balance"
       ],
       "outputs": [
-        "The grain train at the set balance.",
-        "The same grain train with the balance mirrored, favouring the formant MAIN does not."
+        "Mono: the grain train at Balance. Stereo: the same voice with a small leftward balance offset.",
+        "Mono: the grain train with Balance mirrored. Stereo: the same voice with a small rightward balance offset."
       ],
       "version": "1.0.0",
-      "digest": "sha256:07722228962189d9116297e477c2ddbd7e7010b7b2bb979ad10cf63c1d738f5f",
-      "documentationDigest": "sha256:6914d83d436606a99116135b96f7fa028d0f3da3a2e0ddfceb3c1d195e13163d",
+      "digest": "sha256:7a9c853fdca044debf5879f48693b46843460ada536f9a11148b0e52fec54cea",
+      "documentationDigest": "sha256:7d582f522fc9b15ad7ff6231eb02657c3c0df6e115f97373ad185fec3bf06713",
       "manual": {
         "controls": {
           "harmonics": "The second formant's pitch, also absolute and set independently of the first.",
@@ -2513,7 +2513,7 @@
           "morph": "Sets how much of each cycle the bell spends opening: a narrow spike, the module's one sixteenth, or half.",
           "macro": "Shifts weight between the two formants, from formant 2 alone to formant 1 alone. The detent is the module's fixed 2:1."
         },
-        "trigger": "Restarts the engine."
+        "trigger": "Restarts the carrier and both formant phases so each triggered grain train begins alike."
       },
       "implementation": {
         "className": "VosimEngine"
@@ -2546,7 +2546,7 @@
       ],
       "version": "1.0.0",
       "digest": "sha256:abca9a0dcfdaf88c1aba34379fba4d376c9787986c35d4a6c3761ee32086debc",
-      "documentationDigest": "sha256:8401c69e8c31e0950fc66dbc3d9a2092533286a044ccc2bfe62a0ad2988f53f7",
+      "documentationDigest": "sha256:1458901ce54556c9af8e1b01922d1e20c474a86004bb5c71dc82de1480f28624",
       "manual": {
         "controls": {
           "harmonics": "How much of one string period gets struck with noise, from a narrow flick to most of the cycle.",
@@ -2554,7 +2554,7 @@
           "morph": "Offsets each round-robin voice by a fixed interval, building a small chord. Unison, the module, at noon.",
           "macro": "How far Damping's random detuning reaches: off at the bottom, the module's ceiling at noon, past it above."
         },
-        "trigger": "Restarts the engine."
+        "trigger": "Plucks the next voice in the three-string round robin."
       },
       "implementation": {
         "className": "PluckedEngine"
@@ -2586,7 +2586,7 @@
       ],
       "version": "1.0.0",
       "digest": "sha256:0fca1d36645b34f248854b2b6fd07b0eed89702fc6da26e9076e21a066e2224c",
-      "documentationDigest": "sha256:03a18ea8128659fbe824b076e0383426ca854baa7b840407f6c706d14cb5738d",
+      "documentationDigest": "sha256:124c2643ea956bb884f1f5392f70c7cdc5beb503e96bf968acb1cda8b79b1ccb",
       "manual": {
         "controls": {
           "harmonics": "Braids' COLOR: the corner of the body filter the bore is heard through. Its live travel narrows with the note.",
@@ -2594,7 +2594,7 @@
           "morph": "Mouth pressure, which Braids welds at 0.8. Down for an under-blown pipe, up to drive the reed into its clip.",
           "macro": "The reed's rest offset, which Braids welds at 0.7. Down for a loose reed, up for one pinned open most of the cycle."
         },
-        "trigger": "Restarts the engine."
+        "trigger": "Flushes the bore pressure while leaving the breath, filter state and delay position running."
       },
       "implementation": {
         "className": "BlownEngine"
@@ -2628,7 +2628,7 @@
       ],
       "version": "1.0.0",
       "digest": "sha256:ed0b6de98d1bcc9c93785ba6825de97700178942bc08a40458feb86caf2bebc2",
-      "documentationDigest": "sha256:5851d07835ede3f8764569362bbb8b11467699af61dc07af91bf92f0e20f626d",
+      "documentationDigest": "sha256:e174f254db576ecd84898f5f585ab88649b6b4ef3ce73816175053a7b8fc7bb8",
       "manual": {
         "controls": {
           "harmonics": "Spreads alternate partials apart around the module's own fixed ratios: every other one up, the rest down.",
@@ -2636,7 +2636,7 @@
           "morph": "Tilts each partial's strike amplitude by position: soft mallet toward 0, the module's amplitudes at noon, hard toward 1.",
           "macro": "Sets how much faster high partials decay than low: uniform toward 0, the module's spread at noon, exaggerated toward 1."
         },
-        "trigger": "Restarts the engine."
+        "trigger": "Strikes or re-strikes the eleven-partial bell."
       },
       "implementation": {
         "className": "StruckBellEngine"
@@ -2670,7 +2670,7 @@
       ],
       "version": "1.0.0",
       "digest": "sha256:add11226de6e7419c64dfcff70ae9f7b9384e34820f5d826284529bc4b6deddd",
-      "documentationDigest": "sha256:65aab70f996077b94b1aa30db54d38ffa46b367e023cbfcf31ffffd4770f9a87",
+      "documentationDigest": "sha256:1d1ea976de884af38e7d669ded322e28ad00af047b8b51212dd1261cfc9789dc",
       "manual": {
         "controls": {
           "harmonics": "The noise's cutoff, the six-partial harmonics level, and a two-voice noise crossfade, coupled as the module does.",
@@ -2678,7 +2678,7 @@
           "morph": "Scales the six fixed partial ratios together, from unison at 0 through the module's own voicing at noon to double at 1.",
           "macro": "How much faster high partials decay than low: uniform toward 0, the module's own spread at noon, exaggerated toward 1."
         },
-        "trigger": "Restarts the engine."
+        "trigger": "Strikes or re-strikes the six-partial drum."
       },
       "implementation": {
         "className": "StruckDrumEngine"
@@ -2705,12 +2705,12 @@
         "Punch"
       ],
       "outputs": [
-        "The self-enveloped kick.",
-        "The raw excitation pulses, before the resonator, soft-clipped."
+        "Mono: the self-enveloped kick. Stereo: the kick body plus a small excitation side signal on the left.",
+        "Mono: the raw excitation pulses before the resonator. Stereo: the kick body minus that side signal on the right."
       ],
       "version": "1.0.0",
-      "digest": "sha256:7801740fe33600bdc6e35a3413ca47fcd2e4dd189e9b14714664aa3994ca9c2c",
-      "documentationDigest": "sha256:54d87d810fb12519140ca3a85f20fb60a96d71730d6e638894310de75b8aaed8",
+      "digest": "sha256:54fde050307488d8c28f2598b7067288009746b441b448de8d5206743344d709",
+      "documentationDigest": "sha256:582759fdf7dfdcaee9fa9923bd17c9f54f1b665e8be27696f69f40b8b327a749",
       "manual": {
         "controls": {
           "harmonics": "The output filter's brightness -- Braids' COLOR, applied after the resonator.",
@@ -2718,7 +2718,7 @@
           "morph": "Crossfades the two excitation pulses. Centred is native level; the ends fade one out to just click or just thump.",
           "macro": "Scales the self-brightening dynamic filter modulation around the module's one fixed amount, from off to 4x."
         },
-        "trigger": "Restarts the engine."
+        "trigger": "Strikes or re-strikes the self-enveloped kick."
       },
       "implementation": {
         "className": "KickEngine"
@@ -2746,12 +2746,12 @@
         "Spread"
       ],
       "outputs": [
-        "The full self-enveloping mix.",
-        "The snap resonator alone, soft-clipped."
+        "Mono: the full self-enveloping snare. Stereo: the snare plus a small snap side signal on the left.",
+        "Mono: the snap resonator alone. Stereo: the snare minus that side signal on the right."
       ],
       "version": "1.0.0",
-      "digest": "sha256:82095971ed20da7432031db2ab1bc5746fb4738e933ab26f3b1d553020e27d40",
-      "documentationDigest": "sha256:dea4844f0033ccb898d64d472f5b41b1376ccc7f1de51cad707b894b8800998e",
+      "digest": "sha256:18eea9422e4854d4c4d07a949c53bf64eb38bec5715291dd2a9abad5089be003",
+      "documentationDigest": "sha256:a01021e82f7b1c41b9f67f9264270975688af7b1d0bf278900a5a52ec8d6ed92",
       "manual": {
         "controls": {
           "harmonics": "The noise burst's peak level, and past noon, how long both the snap and the tone ring.",
@@ -2759,7 +2759,7 @@
           "morph": "Crossfades the tonal sum against the snap resonator. Centred is the module's own unweighted sum.",
           "macro": "Widens the interval between the two tonal resonators: unison at 0, the module's octave at noon, two at 1."
         },
-        "trigger": "Restarts the engine."
+        "trigger": "Strikes or re-strikes the self-enveloped snare."
       },
       "implementation": {
         "className": "SnareEngine"
@@ -2792,7 +2792,7 @@
       ],
       "version": "1.0.0",
       "digest": "sha256:4bbdb83f42f5c207e8a8b591d1b4933107314bdfd8b005a49fb67f372fc87c8d",
-      "documentationDigest": "sha256:78c459781c274768478fd338172d4203b775589e2ba2070882f239c535508bf6",
+      "documentationDigest": "sha256:ca50b0fae4fbc233efd18a4ca67ddc686d86177214217ae23d64a46e578a7921",
       "manual": {
         "controls": {
           "harmonics": "Crossfades from the resonant metallic noise to the resonant raw noise, the module's own COLOR.",
@@ -2800,7 +2800,7 @@
           "morph": "Scales the five detuned partials' distance from the root, from unison to double the module's own spread.",
           "macro": "Scales both filters' resonance around the module's fixed setting, from damped and dull to near-ringing."
         },
-        "trigger": "Restarts the engine."
+        "trigger": "The engine itself ignores TRIG and keeps running; Plaits' shared envelope still shapes a patched note."
       },
       "implementation": {
         "className": "CymbalEngine"
@@ -2827,12 +2827,12 @@
         "Snap"
       ],
       "outputs": [
-        "The scanned readout.",
-        "Its complement: the adjacent wave, the opposite corner of the map cell, or the other end of the crush."
+        "Mono: the scanned readout. Stereo: the same scan with a small leftward crossfade offset.",
+        "Mono: the adjacent wave, opposite map corner or other crush endpoint. Stereo: the scan with a small rightward offset."
       ],
       "version": "1.0.0",
-      "digest": "sha256:f85344e2e156eb47f1a9a2d48d419d93ea372f733b8fdc3e9b3f336e462b25c8",
-      "documentationDigest": "sha256:314a59aceba9ffe8883b1dffa46836639befa04b6c4dbb83bc41474e9fe36451",
+      "digest": "sha256:9b7a1a5f6c35938235d76b4309aab5e733a93be4f6774fd6e79d33c99c46a0fb",
+      "documentationDigest": "sha256:0a48a5f31e136926122ff75d9f3b20fcea271f1c1ddb5c25049b9cf0b9210851",
       "manual": {
         "controls": {
           "harmonics": "Selects the banks, the 16x16 map, or the curated line.",
@@ -2840,7 +2840,7 @@
           "morph": "Which of the 20 banks, the map's Y axis, or the line's four-zone crush.",
           "macro": "Steps the scan between whole waves above noon, blurs it into their sum below; Braids exactly at the detent."
         },
-        "trigger": "Restarts the engine."
+        "trigger": "The engine itself ignores TRIG and its wavetable phase keeps running; Plaits' shared envelope still shapes a patched note."
       },
       "implementation": {
         "className": "WaveScanEngine"
@@ -2867,15 +2867,15 @@
         "Spread"
       ],
       "outputs": [
-        "The four voices summed, as the module has them.",
-        "The chord table's first voice on its own."
+        "Mono: all four chord voices summed. Stereo: the left side of the fixed four-voice pan spread.",
+        "Mono: the chord table's first voice alone. Stereo: the right side of the four-voice pan spread."
       ],
       "sharedModules": [
         "chord-bank"
       ],
       "version": "1.0.0",
-      "digest": "sha256:7f99ffc13512ed86cc18c523e97067b89e3126dec249c71058c1fc6a582363ff",
-      "documentationDigest": "sha256:37aafa0fa071076b236307e769968df1e2183e1d8fddd9bdd2928444b58b3b34",
+      "digest": "sha256:4efe20387d4a4220b7854066d501f70ede3a97e5f6c4725fd753d3682f69172c",
+      "documentationDigest": "sha256:f53e50e8f1398223576cf7f65144b51b27f58f3953f9b09938513005fe1882b4",
       "manual": {
         "controls": {
           "harmonics": "Selects a position in the active chord table.",
@@ -2883,7 +2883,7 @@
           "morph": "Offsets each voice further along the scan line, so the four read different waves.",
           "macro": "Scales every table interval, from a unison at zero through the table verbatim at noon to double width."
         },
-        "trigger": "Restarts the engine."
+        "trigger": "Randomizes all four wavetable phases and snaps their frequencies to the current chord."
       },
       "implementation": {
         "className": "WaveParaphonicEngine"
@@ -2911,11 +2911,11 @@
       ],
       "outputs": [
         "The bore pressure at the far end, which is what the module emits.",
-        "A second tap halfway along the same bore \u2014 level-matched to the main output but decorrelated from it, so in stereo the two channels are one standing wave heard at two points."
+        "A second tap halfway along the same bore, level-matched but decorrelated. The stereo toggle does not change this fixed two-pickup pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:e28612893759dbe4a7b9a3c75c84a8e1f18bb8d5acdc9fdc07882105eb86834c",
-      "documentationDigest": "sha256:6f9bc2094881c16acb669fdf324d840d9ecb64808a1574546a237fc3fc8e9389",
+      "digest": "sha256:14ac86856c853277a540f318d7835e6a7ea9a7f2d71899396f292a35e961f1af",
+      "documentationDigest": "sha256:3cb957545ca827d0802872cb726ec649a7d6089dbb38a1df2897f991ba89e46a",
       "manual": {
         "controls": {
           "harmonics": "Braids' COLOR: splits one fixed loop length between jet and bore. Moves the embouchure without moving the pitch.",
@@ -2923,7 +2923,7 @@
           "morph": "Breath pressure, welded at twice the envelope in Braids. Under- or over-blow the pipe until it changes register.",
           "macro": "The bore's damping, which Braids ties rigidly to the note and gives no knob. Down for a dark pipe, up for a bright one."
         },
-        "trigger": "Restarts the engine."
+        "trigger": "Restarts the excitation envelope, flushes both delay lines and clears the reflection filter."
       },
       "implementation": {
         "className": "FlutedEngine"
@@ -2956,7 +2956,7 @@
       ],
       "version": "1.0.0",
       "digest": "sha256:d0c6c15d6eb242fd91303a7b4e580a5aafa493c223796e93d6565510e06c91aa",
-      "documentationDigest": "sha256:60a4cf087d19ba07e3676d36ab3a8c63f7d3d7bd6f38cd8f2c450212ea58ea36",
+      "documentationDigest": "sha256:6da704f381581ccc9b1c074a9bfa604e7e50c8d1bf3e2854731d4994a796d638",
       "manual": {
         "controls": {
           "harmonics": "The module's own COLOR: the noise bed's floor and the distortion depth together, as one knob.",
@@ -2964,7 +2964,7 @@
           "morph": "The noise level on its own, from a bare keyed tone to well past the module's loudest bed.",
           "macro": "The squared distortion on its own, from a clean sum to twice the module's depth."
         },
-        "trigger": "Restarts the engine."
+        "trigger": "Restarts the Morse transmission from its first symbol."
       },
       "implementation": {
         "className": "QuestionMarkEngine"
@@ -2991,12 +2991,12 @@
         "Body"
       ],
       "outputs": [
-        "Bridge pickup",
-        "Neck pickup"
+        "Mono: the bridge pickup through the instrument body. Stereo: the same bridge pickup on the left.",
+        "Mono: the bow exciter before the string and body. Stereo: the neck pickup through the body on the right."
       ],
       "version": "1.0.0",
-      "digest": "sha256:37696bc1967a6e092ffb04e8528cbc811c64a6cb36077d6d90788df2fdaff9df",
-      "documentationDigest": "sha256:b913cb9025a1b2ed2dee10c5c3c5f6e724a61c84404be673ed659bcdc981b08b",
+      "digest": "sha256:a4e5c2d6a224021e194b036789d17ce4bf39603a99013ed3176f4d1ac813d8c5",
+      "documentationDigest": "sha256:4d0a19fabc6a0a96b96c36e8ce88b6684871126fd03a30b54713eb86a67dbb7b",
       "manual": {
         "controls": {
           "harmonics": "Moves the bow from near the bridge to well up the neck.",
@@ -3004,7 +3004,7 @@
           "morph": "Opens the nut damping from tight and choked to loose and ringing.",
           "macro": "Tilts the instrument body darker or brighter around the stock resonance."
         },
-        "trigger": "Restarts the bow stroke and clears the string."
+        "trigger": "Restarts the bow stroke and clears both string delay lines."
       },
       "implementation": {
         "className": "BowedEngine"
@@ -3031,20 +3031,20 @@
         "Sub width"
       ],
       "outputs": [
-        "Main and sub mix",
-        "Sub only"
+        "The main oscillator blended with the sub.",
+        "The sub oscillator alone, at full level. The stereo toggle does not change this fixed main/sub pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:2d549c54e8939275fdadd667835ad0119f9b82f2e39d10300bfbc0c3eec35b55",
-      "documentationDigest": "sha256:45012e3dfe937d6f147a1a3d1fbbe118e1931f9f87b664c4163d8613dff75c61",
+      "digest": "sha256:76e541492a743833d44891b3e5d35477124a201c65b4f1565394b510a638151d",
+      "documentationDigest": "sha256:75951823f94aaddc58084a2e9e8f102d973a8a766a0f678eef72f983f0ec3a34",
       "manual": {
         "controls": {
-          "harmonics": "Morphs the main oscillator from a square to a variable saw.",
-          "timbre": "Sets pulse width, from symmetric down to a thin sliver.",
+          "harmonics": "Crossfades the main oscillator between a square and a variable saw, off one shared phase.",
+          "timbre": "Closes the square's pulse and, at the saw end, drives its two ramps apart into an octave-up double ramp.",
           "morph": "Adds the sub two octaves down below noon and one octave down above it, with none at noon.",
           "macro": "Narrows the sub oscillator's pulse below noon, leaving it square above."
         },
-        "trigger": "Restarts the internal envelope when TRIG is patched."
+        "trigger": "The engine itself ignores TRIG and its oscillators free-run; Plaits' shared envelope still shapes a patched note."
       },
       "implementation": {
         "className": "SubOscillatorEngine"
@@ -3071,20 +3071,20 @@
         "Payload"
       ],
       "outputs": [
-        "Modulated carrier",
-        "Symbol staircase"
+        "Mono: the complete in-phase plus quadrature carrier. Stereo: the in-phase component on the left.",
+        "Mono: the DC-blocked symbol staircase. Stereo: the quadrature carrier component on the right."
       ],
       "version": "1.0.0",
-      "digest": "sha256:63e530bd184044173f0362c811b7ca223909c0a973fec2af8a83fd09e6ab7a03",
-      "documentationDigest": "sha256:76ff0cca3dbaa7eccc97f7cce7f5569d5f9bf5d16c0ce7e668238f7435a63fdd",
+      "digest": "sha256:24cb670df10eef7188874dd9cb8d00329c4fdf8559545dfcfc98899dabf3d4cd",
+      "documentationDigest": "sha256:616cf134bcf9e2e11761a64253cd8874b59f38c1956e17b7da3d71e33bd2bfbd",
       "manual": {
         "controls": {
-          "harmonics": "Shortens the packet frame from a long header to a rapid burst.",
+          "harmonics": "Lengthens the packet from a rapid 32-symbol burst to Braids' full 1,088-symbol frame.",
           "timbre": "Raises the symbol rate from a slow stutter to a buzzing carrier.",
           "morph": "Shapes the symbol transitions from hard steps to smooth glides.",
           "macro": "Sweeps the payload byte around the stock packet contents."
         },
-        "trigger": "Restarts the packet from its preamble."
+        "trigger": "Restarts the packet from its preamble without resetting the carrier or the byte already in flight."
       },
       "implementation": {
         "className": "DigitalModulationEngine"
@@ -3111,20 +3111,20 @@
         "Loop tilt"
       ],
       "outputs": [
-        "Comb output",
-        "Second comb tap a fifth below"
+        "Comb output.",
+        "Second comb tap a fifth below the main one. The stereo toggle does not change this fixed two-tap pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:2c145bf3edc599bcb21cddc35d7b2afe6e630e9ef601d515dee0662e04de2bac",
-      "documentationDigest": "sha256:e93de6736c53c3233de9f1a9f85e41ae557cd9a77504267e9511039df85b2a53",
+      "digest": "sha256:cb477abc4030655116a6a805a8011d5488d6a85e8e7bd08cecb99cce4c8772af",
+      "documentationDigest": "sha256:0906814a14531cc504adb93d90c6e7ff31088f86ce3eb85a9d6d80eececa5c04",
       "manual": {
         "controls": {
-          "harmonics": "Sweeps comb feedback from inverted through a single echo to ringing resonance.",
-          "timbre": "Detunes the comb up to five octaves either side of the played note.",
+          "harmonics": "Sweeps comb feedback from inverted through a single echo to a ringing resonance that still decays.",
+          "timbre": "Detunes the comb up to 64 semitones either side of the note; the upward end stops at MIDI 128.",
           "morph": "Morphs the exciter from a bright saw to a narrow pulse.",
           "macro": "Damps the feedback loop below noon and brightens it above."
         },
-        "trigger": "Clears the comb line and restarts the exciter."
+        "trigger": "The engine itself ignores TRIG and the comb keeps ringing; Plaits' shared envelope still shapes a patched note."
       },
       "implementation": {
         "className": "SawCombEngine"
@@ -3137,7 +3137,7 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Vocal",
-      "description": "Five very narrow filters sweeping five vowels across five vocal registers, with the formant balance the stock model leaves flat.",
+      "description": "Five very narrow filters sweeping five vowels across five vocal registers, with the formant balance Braids leaves flat. The ancestor of Speech's naive mode, on the same vowel and register grid, carried here at finer resolution.",
       "tags": [
         "braids",
         "formant",
@@ -3151,20 +3151,20 @@
         "Formant tilt"
       ],
       "outputs": [
-        "Formant bank",
-        "Glottal source; upper-formant weighting in stereo"
+        "Formant bank.",
+        "Glottal source, level-matched to the main output only near mid register; upper-formant weighting in stereo."
       ],
       "version": "1.0.0",
-      "digest": "sha256:45b6a1c91ddb1f8e7a2e890fef93e9428f01495fa65c8e36aff24e1c7eb79305",
-      "documentationDigest": "sha256:8c96f04379f022837b8697a96378e1f7c7285f21dea00c48a250aadba8e43770",
+      "digest": "sha256:a3d8a8f5b3be2272e4b091406988ee86b33397067fcf5b77289a118914135665",
+      "documentationDigest": "sha256:98b37cac4282f62c48686bdd112c711e44c8fb500100d5336f1b01362ad57bf1",
       "manual": {
         "controls": {
           "harmonics": "Tilts the excitation from a dark buzz to a bright breathy hiss.",
-          "timbre": "Sweeps the vowel through the five phonemes.",
-          "morph": "Steps the vocal register from bass through tenor to soprano.",
+          "timbre": "Sweeps the vowel through the five phonemes: /a/, /e/, /i/, /o/, /u/.",
+          "morph": "Steps the vocal register from bass through tenor, countertenor and alto to soprano.",
           "macro": "Restores the formant amplitude balance the stock model leaves flat. Centred is flat, exactly as hardware."
         },
-        "trigger": "Re-inits the filter bank when TRIG is patched. There is no internal envelope; the model itself ignores TRIG on this shape."
+        "trigger": "Re-initializes the filter bank; the model has no internal envelope and otherwise ignores TRIG."
       },
       "implementation": {
         "className": "VowelFofEngine"
@@ -3177,7 +3177,7 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "FM",
-      "description": "Braids' three FM models on one axis: self-feedback, plain two-operator FM, and chaotic frequency feedback, unfiltered and unoversampled.",
+      "description": "Braids' three FM models on one axis: self-feedback, plain two-operator FM, and chaotic frequency feedback. The ancestor of Two-op FM, sharing its ratio quantizer and feedback axis, run raw: unfiltered feedback, no oversampling.",
       "tags": [
         "braids",
         "fm",
@@ -3191,20 +3191,20 @@
         "Depth"
       ],
       "outputs": [
-        "Carrier",
-        "Modulator"
+        "Carrier.",
+        "Modulator. The stereo toggle does not change this fixed carrier/modulator pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:d93168df9276b40450108eac461a084b05b6fdb06027b99c16d40495b469fd83",
-      "documentationDigest": "sha256:9a85bb18834f4d7ba13311c07e67d1dc493f786d5b78622330827c9032d728a4",
+      "digest": "sha256:7dd010532e0b4da787a969359b6917bc997cf2cf78b23d33a29983baf1b1bff1",
+      "documentationDigest": "sha256:4ca2ce0932dde7e7ed3ad1fea176a230fc9e79ca92ae9d25350e18a396d6be87",
       "manual": {
         "controls": {
-          "harmonics": "Steps the modulator ratio through the tuned intervals.",
-          "timbre": "Raises the modulation index linearly to a full cycle of deviation.",
+          "harmonics": "Steps the modulator ratio through the tuned intervals. The modulator saturates once note plus ratio hits 116.",
+          "timbre": "Raises the modulation index linearly to a full cycle. Below noon pitch tames it, -1.5625% per semitone over 72.",
           "morph": "Moves from self-feedback through plain FM into chaotic wavetable feedback, which drops the modulator an octave.",
           "macro": "Sets how deeply the feedback path drives itself around the stock amount."
         },
-        "trigger": "Realigns the carrier and modulator so each note starts alike."
+        "trigger": "Realigns the carrier and modulator phases and clears the feedback memory."
       },
       "implementation": {
         "className": "RawFmEngine"
@@ -3217,7 +3217,7 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Polyphonic",
-      "description": "Three oscillators with two continuously swept interval knobs, morphing together through square, saw, triangle and sine.",
+      "description": "Three oscillators with two continuously swept interval knobs, morphing together through square, saw, triangle and sine. It overlaps Chords and Swarm in territory, not lineage: intervals you sweep rather than a table you author.",
       "tags": [
         "braids",
         "detune",
@@ -3231,12 +3231,12 @@
         "Shape"
       ],
       "outputs": [
-        "Three-voice mix",
-        "Undetuned root voice"
+        "Three-voice mix.",
+        "Undetuned root voice. The stereo toggle does not change this fixed mix/root pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:6b7ec0d02d21009617a58f353ce4d73553508876c10a815991da98e47ba3a440",
-      "documentationDigest": "sha256:aa32b300d63abf627ac7324a7dfb7aeca8da416a6b7c752cdba1d713536e4f71",
+      "digest": "sha256:abdc8064b720b7841cd439934d1f18be69bdd76c711632e026f94609a5950107",
+      "documentationDigest": "sha256:2baea99e9508918fe183a5b3b63da6a256228e63d1da1a7ed352f718d2fc3348",
       "manual": {
         "controls": {
           "harmonics": "Spreads the second voice through closely spaced and musical intervals.",
@@ -3244,7 +3244,7 @@
           "morph": "Morphs all three voices from square through saw and triangle to sine.",
           "macro": "Narrows the pulse and slope of all three voices below the stock symmetry."
         },
-        "trigger": "Realigns all three oscillator phases."
+        "trigger": "Realigns all three oscillator phases so each triggered note starts alike."
       },
       "implementation": {
         "className": "TripleEngine"

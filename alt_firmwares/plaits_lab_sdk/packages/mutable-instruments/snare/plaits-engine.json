@@ -41,9 +41,10 @@
     }
   ],
   "outputs": {
-    "main": "The full self-enveloping mix.",
-    "aux": "The snap resonator alone, soft-clipped."
+    "main": "Mono: the full self-enveloping snare. Stereo: the snare plus a small snap side signal on the left.",
+    "aux": "Mono: the snap resonator alone. Stereo: the snare minus that side signal on the right."
   },
+  "trigger": "Strikes or re-strikes the self-enveloped snare.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/snare_engine.h",

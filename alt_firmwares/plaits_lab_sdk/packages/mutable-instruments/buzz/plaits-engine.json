@@ -44,6 +44,7 @@
     "main": "The two voices summed, or the first voice alone in stereo.",
     "aux": "The two voices' difference, or the second voice alone in stereo."
   },
+  "trigger": "Realigns the two oscillator phases so each triggered note starts alike.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/buzz_engine.h",

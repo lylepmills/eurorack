@@ -40,9 +40,10 @@
     }
   ],
   "outputs": {
-    "main": "The crossfaded pair.",
-    "aux": "The complementary crossfade, always favouring the waveform MAIN does not."
+    "main": "Mono: the saw/square crossfade at Blend. Stereo: the same pair with a small leftward blend offset.",
+    "aux": "Mono: the complementary saw/square crossfade. Stereo: the same pair with a small rightward blend offset."
   },
+  "trigger": "Realigns the saw and square phases at the selected Phase offset.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/saw_square_engine.h",

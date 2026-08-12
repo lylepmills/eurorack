@@ -43,6 +43,7 @@
     "main": "The bore heard through the body filter, which is what the module emits.",
     "aux": "Mono: the raw bore pressure, before the body filter. Stereo: a second pickup 0.62 of the way down the same bore, through its own copy of the body filter, so the two channels are one standing wave heard at two points."
   },
+  "trigger": "Flushes the bore pressure while leaving the breath, filter state and delay position running.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/blown_engine.h",
