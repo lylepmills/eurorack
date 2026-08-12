@@ -612,7 +612,7 @@
         "tone": "red"
       },
       "version": "1.0.0",
-      "digest": "sha256:7f2491ae95ad3783f78ef23dc0c7517c0605a29506eafb541b29e14c24e4c17c",
+      "digest": "sha256:5a823b519b5c454f0156b8aa0ae860473a2cb08b317dc94062e7e65913275e3f",
       "documentationDigest": "sha256:b5304993a5196b5a198bf8c6b646281217ec227971e867beb8a4bb334c50d6d3",
       "manual": {
         "controls": {
@@ -1900,7 +1900,7 @@
         "Complementary model"
       ],
       "version": "1.0.0",
-      "digest": "sha256:6dfcf600dcc95f25002e2b09724b6873cc04c818efa8c964a9a0807865a24be0",
+      "digest": "sha256:17e47b828cd6e2c96d15e9f0e031ba3c4d24e07ba373b3e52c0135b7c3b3ea75",
       "documentationDigest": "sha256:7f0724de6d8ed5ed3320a067bf1c454b98daa0b92ecfbd340959c0386f7999dd",
       "manual": {
         "controls": {
@@ -2262,7 +2262,7 @@
         "Its complement: the notch, the difference of the two peaks, or a second independent sequence."
       ],
       "version": "1.0.0",
-      "digest": "sha256:ffabdc9feac4fd9021185108ca9d71a0039f2c34e241c3e3b57ec6f8b662205d",
+      "digest": "sha256:178b628fda1d155a7d5510f6ccbf64c33c92c74c74d883ec6cf2ec90b6945181",
       "documentationDigest": "sha256:e381a1a03446586b64c0fc846f28a24b1047a8997f2b62d24113dc9b3d5baf4c",
       "manual": {
         "controls": {
