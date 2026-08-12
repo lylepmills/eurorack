@@ -4354,6 +4354,8 @@ void ValidateFmCapabilityPolicy() {
     &freshets_formant,
     &reed_pipe,
     &particle_burst,
+    &saw_comb,
+    &shakers,
   };
   for (size_t i = 0; i < sizeof(fast_engines) / sizeof(fast_engines[0]);
        ++i) {
@@ -4419,12 +4421,10 @@ void ValidateFmCapabilityPolicy() {
     &lpc_speech,
     &six_op,
     &chiptune,
-    &saw_comb,
     &diatonic_chord,
     &scale_stack,
     &wavetable_chord,
     &wavetable_scale_stack,
-    &shakers,
     &brass,
     &helix,
     &clap,

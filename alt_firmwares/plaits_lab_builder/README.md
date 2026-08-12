@@ -44,15 +44,19 @@ starting the module at index four — past the end of its own menu. Independentl
 transferred bank now records how many patches it holds, so a short bank sizes
 the HARMONICS quantizer to its real count instead of repeating to fill 32. A
 schema-23 candidate adds two independent Advanced experiments. `linearTzfm`
-changes the FM law on Waveshaping, Two-op FM, and Vowel FOF: counter-clockwise
-is linear through-zero FM, clockwise remains regular exponential FM, and the
-center is off. `fastFm` dedicates the shared fast converter to a continuous
-50 kHz FM stream; that makes LEVEL CV unavailable throughout the build.
-Waveshaping and Vowel FOF use the fast stream, while Two-op FM deliberately
-falls back to normal control-rate conversion after hardware tests found that its
-oversampled renderer could not meet the fast-mode deadline reliably. Either
-option can be selected alone or together. The failed periodic-LEVEL experiment
-is not part of schema 23. This candidate is not deployed.
+changes the FM law on 29 qualified models: counter-clockwise is linear
+through-zero FM, clockwise remains regular exponential FM, and the center is
+off. Models without a meaningful signed oscillator direction keep their stock
+bipolar exponential FM law. `fastFm` dedicates the shared fast converter to a
+continuous 50 kHz FM stream; that makes LEVEL CV unavailable throughout the
+build, including while a non-qualified model is selected. The 34 models that
+passed the hardware headroom and transport tests consume the fast stream;
+every other model retains its normal control-rate exponential FM, sampled from
+the same converter. Either option can be selected alone or together. The
+catalog's `fmCapabilities` lists are the public product policy used to explain
+those per-model differences in the editor. The failed periodic-LEVEL
+experiment and borderline Brass result are not part of schema 23. This
+candidate is not deployed.
 one-shot marker in the application image is restored by every WAV or HEX flash, so first boot applies
 all embedded Starting Options even when reinstalling the exact same build;
 ordinary power cycles still preserve later runtime changes. It generates a compile-time

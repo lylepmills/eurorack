@@ -126,6 +126,7 @@ class ShakersEngine : public Engine {
       bool* already_enveloped);
   // Pattern A: the resonated instrument against the bare collisions.
   virtual bool stereo_capable() const { return true; }
+  virtual bool fast_fm_capable() const { return true; }
 
  private:
   void SetInstrument(int instrument);
