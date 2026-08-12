@@ -68,24 +68,24 @@
         "Detune range"
       ],
       "outputs": [
-        "Mixed variable oscillators",
-        "Primary and synchronized secondary"
+        "Mono: equal primary/detuned-secondary mix. Stereo: left-weighted primary/detuned-secondary mix.",
+        "Mono: equal primary/hard-sync-secondary mix. Stereo: right-weighted primary/detuned-secondary mix."
       ],
       "artwork": {
         "icon": "/model-icons/virtual-analog.png",
         "kind": "official"
       },
       "version": "1.0.0",
-      "digest": "sha256:cfdfc5b8ab633eda561ff2468f091a931e660a957729cbd8caeec2b0f4e74e65",
-      "documentationDigest": "sha256:a099a2890a1f9ed7b982f89d04fa448c34d4cff52f8aed63df6394b815d52d44",
+      "digest": "sha256:757dd5f6307434c3f48bb46c4ac55ccff77f40745a64818da99fae4bb82c9c07",
+      "documentationDigest": "sha256:ebfc77e3979ef9d9b814efce4c8f878de5b2e94a942aa6f08d8bc81ada266560",
       "manual": {
         "controls": {
-          "harmonics": "Detunes the secondary oscillator through musical intervals and sets the synchronized AUX ratio.",
+          "harmonics": "Detunes the secondary oscillator through musical intervals and sets the mono hard-sync AUX ratio.",
           "timbre": "Changes the primary oscillator continuously from saw through square and pulse shapes.",
           "morph": "Changes the secondary oscillator independently through the same variable waveform range.",
           "macro": "Scales interval detuning from unison to twice the original range; the midpoint is Emilie's original spread."
         },
-        "trigger": "Restarts the internal envelope when TRIG is patched."
+        "trigger": "The oscillator phases free-run; patched TRIG restarts Plaits' shared decay and low-pass-gate envelope."
       },
       "implementation": {
         "className": "VirtualAnalogDualEngine"
@@ -112,16 +112,16 @@
         "Detune range"
       ],
       "outputs": [
-        "Detune-to-sync crossfade",
-        "Detuned secondary oscillator"
+        "Mono: detuned-pair to dry-primary to hard-sync path. Stereo: a nearby left point on that crossfade.",
+        "Mono: detuned secondary oscillator. Stereo: a nearby right point on the detune-to-sync crossfade."
       ],
       "artwork": {
         "icon": "/model-icons/virtual-analog.png",
         "kind": "official"
       },
       "version": "1.0.0",
-      "digest": "sha256:e0467f599bac18ffb7d6854593da5e28e02d8ca0e37832d97697575ccef81d78",
-      "documentationDigest": "sha256:01153868150bde76f8f0d24c1e7a8bf4ceda557685591be30e30ab57f9e84d94",
+      "digest": "sha256:ea2885242485abe3b7f98ab245e37310fac5a53c3dce5325f35907b3b34f360b",
+      "documentationDigest": "sha256:5073937553f4a4e3b50d98c62cfb0fd605dd92a0de33c0a48d5be1e8450a4661",
       "manual": {
         "controls": {
           "harmonics": "Detunes the secondary oscillator through closely spaced and musical intervals.",
@@ -129,7 +129,7 @@
           "morph": "Changes the common oscillator waveform continuously from saw through square and pulse shapes.",
           "macro": "Scales interval detuning from unison to twice the original range; the midpoint is Emilie's original spread."
         },
-        "trigger": "Restarts the internal envelope when TRIG is patched."
+        "trigger": "The oscillator phases free-run; patched TRIG restarts Plaits' shared decay and low-pass-gate envelope."
       },
       "implementation": {
         "className": "VirtualAnalogCrossfadeEngine"
@@ -432,13 +432,13 @@
       },
       "version": "1.0.0",
       "digest": "sha256:70ccf071f6b33e17adf1f7a2a967dfa76ccac4f1c00eb11bdca8b52abbd2fc40",
-      "documentationDigest": "sha256:f078efcc10babcd476d02a48261f6b76c2cf4dfb0b56692e72e4ebb6c44fabd2",
+      "documentationDigest": "sha256:c6fca2e8acaae4f711cc1505a395e20cccb1a08635407e4d14a8dacf7d265b0c",
       "manual": {
         "controls": {
           "harmonics": "Crossfades the speech models, then selects LPC word banks.",
           "timbre": "Changes voice species by shifting formants or changing the emulated speech-chip clock.",
           "morph": "Selects the vowel, phoneme, word, or word segment for the active speech model.",
-          "macro": "Moves from raw excitation through the stock voice to sharper spectral emphasis."
+          "macro": "In mono, moves from raw excitation through the stock voice to sharper emphasis; stereo replaces this axis with a fixed voice/excitation spread."
         },
         "trigger": "Advances or restarts speech material according to the selected model."
       },
@@ -469,8 +469,8 @@
         "Spectral emphasis"
       ],
       "outputs": [
-        "Speech sounds voice",
-        "Raw excitation or widened voice"
+        "Mono: excitation-to-voice-to-sharpened-voice path. Stereo: left blend of the voice and secondary signal.",
+        "Mono: raw excitation or secondary signal. Stereo: right blend of the voice and secondary signal."
       ],
       "artwork": {
         "icon": "/model-icons/speech-sounds.png",
@@ -478,8 +478,8 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:ab9425974fd77cdfdae5204b06f17b5d21dd14f72b82d6c5af445d8ca8fbfeff",
-      "documentationDigest": "sha256:3d68b2c92890135afab9b886a201d895c59cb2ab25750afb395bd8ef9105eac5",
+      "digest": "sha256:a4daafe9978d7b341ecae0ec32430d1ddb3da31274addd9534c77540b685ed6b",
+      "documentationDigest": "sha256:1e167ec409d6a66d944e01debc46740c619dfcd708403718930116903f1a4854",
       "manual": {
         "controls": {
           "harmonics": "Moves continuously from the five-formant naive voice through SAM to interpolated LPC phonemes.",
@@ -515,8 +515,8 @@
         "Speed"
       ],
       "outputs": [
-        "LPC speech voice",
-        "Raw excitation or widened voice"
+        "Mono: LPC speech voice. Stereo: left blend of the voice and raw excitation.",
+        "Mono: raw LPC excitation. Stereo: right blend of the voice and raw excitation."
       ],
       "artwork": {
         "icon": "/model-icons/lpc-words.png",
@@ -524,8 +524,8 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:f727098d13f6899b777fea95e814003ca41c98d59874fc74ddca84d86221f52f",
-      "documentationDigest": "sha256:b56f91f03baa3b73380c34dfc688db1307019afb57e9745319a04c3b2ebe116f",
+      "digest": "sha256:6ec1959c3804743d5d876ff5ee96b423efd28ddca587c6ca4e6533bac3be86b1",
+      "documentationDigest": "sha256:25a13ab99dee33cb4d5d750bafaeb6f98bff8c7ef74e61dcf2a9cc2b63b888ea",
       "manual": {
         "controls": {
           "harmonics": "Selects one of the active stock or custom LPC word banks across the full dial.",
@@ -1295,12 +1295,12 @@
         "Trajectory"
       ],
       "outputs": [
-        "Selected chirp direction",
-        "Counter-moving chirps"
+        "Mono: selected chirp direction. Stereo: selected chirps moving through the left channel.",
+        "Mono: counter-moving chirps. Stereo: selected chirps moving through the right channel."
       ],
       "version": "1.0.0",
-      "digest": "sha256:b72ff826b1c91ba8648ecb94c17508c6911e6f709d0d7006a7ceac4e5e6ef093",
-      "documentationDigest": "sha256:0c458ea6dd843aa392e72271bc84c9b4163a4eb4ef951f93b2cab4c3e97dedd6",
+      "digest": "sha256:ae46263a973fadf6541e8865815897effdea6cb6920f88eec8f6bdff47241c8b",
+      "documentationDigest": "sha256:eff93fc32651914a7167ddf03a8dfb2efdf505f22df38d51e06974bc0f88ff96",
       "manual": {
         "controls": {
           "harmonics": "Spreads grain starting pitches around the played note.",
@@ -1335,12 +1335,12 @@
         "Interpolation"
       ],
       "outputs": [
-        "Interpolated stochastic waveform",
-        "Raw stepped waveform"
+        "Mono: selected interpolation of the stochastic waveform. Stereo: its primary phase readout.",
+        "Mono: raw stepped waveform. Stereo: an antipodal readout of the same evolving breakpoints."
       ],
       "version": "1.0.0",
-      "digest": "sha256:38bdb9930a7d0cb36afc0be2c0375610d44330eff61eb202c4f33c8e31265f87",
-      "documentationDigest": "sha256:7f9d1d9285f64d8bb88c7ba17561da612362cfdd52de3ed0cca6cf91c11693f2",
+      "digest": "sha256:de23e76aff5cd1198312e66cd814ec071d4cce4004832fe228c8fd94bc5d671b",
+      "documentationDigest": "sha256:adfa2678afdc3ba7fe1e2af911b94619a1e99c39269ea70e834fded3f1517ba7",
       "manual": {
         "controls": {
           "harmonics": "Changes the stochastic waveform from three to nine breakpoints.",
@@ -1348,7 +1348,7 @@
           "morph": "Changes the depth of the segment-duration random walk.",
           "macro": "Moves interpolation from stepped through linear to smooth."
         },
-        "trigger": "Creates a new deterministic stochastic waveform."
+        "trigger": "Creates a new stochastic breakpoint waveform and restarts its cycle."
       },
       "implementation": {
         "className": "GendyEngine"
@@ -1375,12 +1375,12 @@
         "Evolution speed"
       ],
       "outputs": [
-        "Mass-position scan",
-        "Spatial derivative"
+        "Mono: mass-position scan. Stereo: first pickup on the shared virtual system.",
+        "Mono: spatial derivative. Stereo: a second pickup one quarter of the scan span away."
       ],
       "version": "1.0.0",
-      "digest": "sha256:2332e68bf6760623b4db1a6ba920d5fe4be250687241d4b73c6a46f9037971c7",
-      "documentationDigest": "sha256:ec5308ad7b2412c5130787a343a238b3acabb2e9f3f7c3cae5b4a5da3ead26fd",
+      "digest": "sha256:776ac4f04eee9cdd39c9ce48d45d9eaba66e761ff15a26d3299149ff78a2aa36",
+      "documentationDigest": "sha256:fd47cf061a3eacb30644ca0f2993dc5f4e208bf56ab84188615bfd0060a201c6",
       "manual": {
         "controls": {
           "harmonics": "Changes excitation width, stiffness, and alternating-mass inharmonicity.",
@@ -1416,12 +1416,12 @@
         "Skew"
       ],
       "outputs": [
-        "Primary pulse train",
-        "Complementary phase-offset train"
+        "Primary pulse train; the stereo toggle does not change this fixed MAIN/AUX pair.",
+        "Complementary phase-offset train; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:08c1c1b9c43658687e1bf3a6f74c74328d97160535e64a1e7235715e40ade0d4",
-      "documentationDigest": "sha256:8f8190040b44d3a87802426490925f7ebf81e1c99c3239aa51eab7ebf4c7707c",
+      "digest": "sha256:e8b60d58e0fe52a25f718faa6eb12fa846d3f53fb756c05fcf7249c7a3be14c5",
+      "documentationDigest": "sha256:257586c48e3f75f491a1ebacbceb906bb86e669cac8e3445d25d8e7b5b53df65",
       "manual": {
         "controls": {
           "harmonics": "Raises the carrier formant from the fundamental into tightly packed upper partials.",
@@ -1456,12 +1456,12 @@
         "Feedback symmetry"
       ],
       "outputs": [
-        "Feedback-AM voice",
-        "Isolated sidebands"
+        "Mono: feedback-AM body. Stereo: left blend of the body and recursive sidebands.",
+        "Mono: isolated recursive sidebands. Stereo: right blend of the body and recursive sidebands."
       ],
       "version": "1.0.0",
-      "digest": "sha256:187e040edfe255192c379991ecb694222f8167aa8e8870c88726d1b476017ee6",
-      "documentationDigest": "sha256:6617480462a58381787496d9e23b998678168abd5ffb3481ab0181ea0843592c",
+      "digest": "sha256:e5fd21a16e92fe52a1e05d3cf2524441f664b6352a702103036d8153f6edad7d",
+      "documentationDigest": "sha256:3458f7f0bdc06b341ea729674c137ecbcc163b9039c411cc102a28e77b0a4827",
       "manual": {
         "controls": {
           "harmonics": "Selects the feedback modulation ratio.",
@@ -1496,12 +1496,12 @@
         "Capture and damping"
       ],
       "outputs": [
-        "PLL follower",
-        "Acquisition and phase error"
+        "Mono: PLL follower. Stereo: left blend of the follower and reference oscillators.",
+        "Mono: acquisition charge-pump and phase error. Stereo: right blend of the follower and reference oscillators."
       ],
       "version": "1.0.0",
-      "digest": "sha256:438d55a1985e7965bf293e376c8e838fe0ed7c1a855e831ca2c8808fc2c739b2",
-      "documentationDigest": "sha256:7483de973d5ad4ff5ff444b6cfff6ba2eea6ed75ab1e2300e3920c71e7153c1b",
+      "digest": "sha256:1dbb0a3da4cde1f19bd007261a5d56eda691935e1c80cf3bce90c99c3b7832b1",
+      "documentationDigest": "sha256:2733940a7ad58fe6af698c30213ceeda8900d2aeb1fd5a8a7db713e28c061f5d",
       "manual": {
         "controls": {
           "harmonics": "Selects the stepped ratio pursued by the internal phase-locked loop.",
@@ -1536,12 +1536,12 @@
         "Slew"
       ],
       "outputs": [
-        "Decoded register field",
-        "Raw carry stream"
+        "Mono: decoded register field. Stereo: forward-order decode of the shared register.",
+        "Mono: raw carry stream. Stereo: reversed-order decode of the shared register."
       ],
       "version": "1.0.0",
-      "digest": "sha256:0dcbe5bbf689856675e7310cafbf43e6da62a9e800f16abf0c3db3dd02057e0f",
-      "documentationDigest": "sha256:9cbea7d54a74375951edb31254d55d62f2368e185c7d40ae839333ca0f24103b",
+      "digest": "sha256:68577415e9fe721a65efb65678420073617aef3e140612f9c7ddf2b34a5cda77",
+      "documentationDigest": "sha256:e05ea69bb317a4661f97412390374d7b55d6c77c584a0ff3da362fe9d0d2efe7",
       "manual": {
         "controls": {
           "harmonics": "Selects a pitch-clocked feedback-register topology from 9 to 24 bits.",
@@ -1576,12 +1576,12 @@
         "Rotation and drive"
       ],
       "outputs": [
-        "Weighted cancellation field",
-        "Orthogonal pair differences"
+        "Mono: weighted cancellation field. Stereo: left spread of the four harmonic voices.",
+        "Mono: orthogonal pair differences. Stereo: right spread of the four harmonic voices."
       ],
       "version": "1.0.0",
-      "digest": "sha256:14b2698776c4b7e91ae4754a1f18a466881f7f3d131510081f6d59aa54a7912c",
-      "documentationDigest": "sha256:27d0dec0a5dffa157145b198992e969ece56f5e0d55e045e0c249637ce6a8a42",
+      "digest": "sha256:329161ba7012c050b038830ce85a3a3280797ce75c8ad535545ffda779b8cf2d",
+      "documentationDigest": "sha256:5f492bf51980be3696ef0beec78e251ebc6f201a9d300b12381ca29e5fbdb650",
       "manual": {
         "controls": {
           "harmonics": "Changes the asymmetric voice constellation and even/odd balance.",
@@ -1616,12 +1616,12 @@
         "Upper/lower bias"
       ],
       "outputs": [
-        "Upper sideband bank",
-        "Lower sideband bank"
+        "Mono: upper sideband bank. Stereo: full spectrum biased 85/15 toward the upper bank.",
+        "Mono: lower sideband bank. Stereo: full spectrum biased 85/15 toward the lower bank."
       ],
       "version": "1.0.0",
-      "digest": "sha256:f0a8abfd953c5bfbeaf305e708ae3deab16c3457d56d6675efeb44752f755922",
-      "documentationDigest": "sha256:6804393ea21f471687028f7409dae445e007c7bc92d1fc12d75538c5853ff4f0",
+      "digest": "sha256:16b5e79e5f514eacb1d0555b7c27e6f237ff6f82d8f4d2e5f03a5d7510b0b092",
+      "documentationDigest": "sha256:2765eabe89e6ec77bcdb036a2185b9ee1bce6f7af55d28e11ec3f84f0b511dc6",
       "manual": {
         "controls": {
           "harmonics": "Changes spacing between the finite sideband partials.",
@@ -1656,12 +1656,12 @@
         "Rate skew"
       ],
       "outputs": [
-        "Selected attractor coordinate",
-        "Lagging attractor coordinate"
+        "Selected attractor coordinate; the stereo toggle does not change this fixed MAIN/AUX pair.",
+        "Coordinate one step behind in the cyclic flow; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:c6168afe24e911022bb9edf0a80fbdb99f418db7ff9438949c6fff22560d397c",
-      "documentationDigest": "sha256:5e623401919a64c7fd8456daca5ba62f39281d6e511ba6d24880d619e7d6ca69",
+      "digest": "sha256:3b3856adfe6463bc0645e1edf332dd112c5df6589b92070af8df962a1b8a9e6a",
+      "documentationDigest": "sha256:c6e83dcc141361a2478548e6e455c41ded685d33f69760e34ebe30662e9f70e0",
       "manual": {
         "controls": {
           "harmonics": "Changes the density and spacing of the attractor lobes.",
@@ -1696,12 +1696,12 @@
         "Lattice stretch"
       ],
       "outputs": [
-        "Registered undertone mixture",
-        "Hollow alternating lattice"
+        "Mono: registered undertone mixture. Stereo: left spread of that same registered mixture.",
+        "Mono: hollow alternating lattice without the anchor. Stereo: right spread of the registered mixture."
       ],
       "version": "1.0.0",
-      "digest": "sha256:3d8d2ed3f2533ae54fc79ef7fb3a37b24c88d721742f993016656b9e599d473c",
-      "documentationDigest": "sha256:3e748cb431557f1ebbc5aa571a96cbfda606309739dad48016ea44ce03fe4686",
+      "digest": "sha256:99a5a29dcedc54a4a1adfa91aa90409b7e63a91f9c0b30b6b79a21539cb2bae1",
+      "documentationDigest": "sha256:ab7c1e2d07ec6db1be9428197603ed5bd255904a5cda9ee0facabaad29f3c6ad",
       "manual": {
         "controls": {
           "harmonics": "Moves through five interpolated undertone registrations.",
@@ -1736,12 +1736,12 @@
         "Bore reflection"
       ],
       "outputs": [
-        "Bore pressure",
-        "Reed flow"
+        "Mono: pressure at the movable bore pickup. Stereo: left bore pickup.",
+        "Mono: reed flow. Stereo: right bore pickup a fixed third of the bore away."
       ],
       "version": "1.0.0",
-      "digest": "sha256:3e4193d662e1a84c4732e252830a09f34dd9601c1ed24aab029b0a46fe1b3b99",
-      "documentationDigest": "sha256:5235345bc520390cc0b3b00a683bf860b3330b3ae873007adcd9a26ec17ecf07",
+      "digest": "sha256:fe02f2b1dd57f8fdef4b6f33d82f73428e180418d6ec8da64ea8ea0814aa24d3",
+      "documentationDigest": "sha256:b2e3ce4c3236bb6cc001d9e4ad3db55327bf4342d6cc05946eda1e384e4fdd2e",
       "manual": {
         "controls": {
           "harmonics": "Moves the pressure pickup through the bore and changes its contribution.",
@@ -1776,12 +1776,12 @@
         "Phase lag"
       ],
       "outputs": [
-        "First circular moment",
-        "Second circular moment"
+        "Mono: first circular moment. Stereo: left spread of the seven oscillators.",
+        "Mono: second circular moment. Stereo: right spread of the seven oscillators."
       ],
       "version": "1.0.0",
-      "digest": "sha256:6496118e64a3818037d6ec2c986b70d65c05a239e65131406adef62952ced4ce",
-      "documentationDigest": "sha256:387d248ab03674076425e1a9c8b3ff143dcd17a74d47b0377d40773774d8cc4b",
+      "digest": "sha256:732a66427f5f6d592f53ea404f7c388e251afbc949443285ac3bffee179f678d",
+      "documentationDigest": "sha256:7a758a2ed344c63a681d0ee3b9780ddd6ee7063fe3c7f7bc2859b8d4cc23b7bf",
       "manual": {
         "controls": {
           "harmonics": "Spreads the seven oscillators' natural frequencies.",
@@ -1816,12 +1816,12 @@
         "Interpolation"
       ],
       "outputs": [
-        "Cell and edge wavecycle",
-        "Inter-generation activity"
+        "Mono: cell-to-edge wavecycle blend. Stereo: first spatial read of that blend.",
+        "Mono: inter-generation activity. Stereo: antipodal spatial read of the cell-to-edge blend."
       ],
       "version": "1.0.0",
-      "digest": "sha256:5b382b03437709047672ea8702310b4a625169151a86990d9fb030c2d3243057",
-      "documentationDigest": "sha256:0b2999a9c49a1955ec42402135b3d7f03c800ec5d6cce2b1cfd2706e5650b013",
+      "digest": "sha256:1d18ffdc7cc31474e83b5b495c6a3a744b361e03553552adc5b53b6babeb2d10",
+      "documentationDigest": "sha256:1f0c993d42b437f65a893f4abab56eba66a11dd10297d8c5b4d2a8c43f93a4cc",
       "manual": {
         "controls": {
           "harmonics": "Selects the elementary cellular-automaton rule.",
@@ -1856,12 +1856,12 @@
         "Shift direction"
       ],
       "outputs": [
-        "Forward spectral spiral",
-        "Counter-shift projection"
+        "Forward spectral spiral; the stereo toggle does not change this fixed MAIN/AUX pair.",
+        "Quadrature counter-shift projection; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:361edbb6fe7833ecc06cb331c78c909b5d0c4ffd0dc74e4075092e09a122d08f",
-      "documentationDigest": "sha256:25dbbc463e5716bb35dadb843c3647a816ccbb8d4be3147ffa6e8e3c3e5159ac",
+      "digest": "sha256:ed04bbd6d29b5c6925d4eefc32a82138b20e9b4bae410209aacaf882bfa7adaf",
+      "documentationDigest": "sha256:ff544970c515865dd74301543a6ed5690b3f3bac532890b3861d1b355d7c4523",
       "manual": {
         "controls": {
           "harmonics": "Changes the richness of the analytic harmonic source.",
@@ -3272,12 +3272,12 @@
         "Mask width"
       ],
       "outputs": [
-        "Bytebeat stream",
-        "Same stream a sub-octave down"
+        "Bytebeat stream; the stereo toggle does not change this fixed MAIN/AUX pair.",
+        "Same expression at half the tick rate; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:a4b3ee99298aec8d3d1af13bdfcfc90a366ce56d81d55817cf32ba38d6943a9f",
-      "documentationDigest": "sha256:ac887d07f6694d81026170d837fa1d5f11e49a4d4e9b6b6c8527429619b939bd",
+      "digest": "sha256:a6efca7aef9a2803ca412f7d164fddef37b10f30d498e989f9fcf5e58ae71514",
+      "documentationDigest": "sha256:bd2fc8f84eac42f95de7db567857146909304557fd235e01420a36c82262d9f0",
       "manual": {
         "controls": {
           "harmonics": "Sets the first coefficient inside the expression, which mostly governs its harmonic density.",
@@ -3314,12 +3314,12 @@
         "Scale"
       ],
       "outputs": [
-        "Chord",
-        "Root voice"
+        "Diatonic chord; the stereo toggle does not change this fixed MAIN/AUX pair.",
+        "Root voice; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:e4b795bd23f32e50f873936e247168710500155e9ba467d2f6b0ad00ba9c6568",
-      "documentationDigest": "sha256:bea3f9bd0c774a07db71bbadb8805ae9b7ac99b21ab8bf0d48034c86b486d26e",
+      "digest": "sha256:189fc8654fa2adcefb14425b4517c0cff17d06b087be02b939bd3842a9a6cebf",
+      "documentationDigest": "sha256:ef45cd9b1b797ccf250bae08e9ecf22b3768aaa9f145af201b564238f1f49d0d",
       "manual": {
         "controls": {
           "harmonics": "Steps through sixteen chord shapes, from triads up through elevenths and the suspended set.",
@@ -3356,12 +3356,12 @@
         "Scale"
       ],
       "outputs": [
-        "Stack",
-        "Root voice"
+        "Five-voice scale stack; the stereo toggle does not change this fixed MAIN/AUX pair.",
+        "Root voice; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:94b485bde7f010dbdd9e4f783ab7b1895a246dfb3de0ba3ce4770698887f0977",
-      "documentationDigest": "sha256:a69ba730792ed6f02fff3d41fb0bd550a658f368d80941386df80e0f032f506a",
+      "digest": "sha256:c8cd50726e53f4808e1598e0d3e1602fbd0a81f592a727d02d6e88e1efdceb3e",
+      "documentationDigest": "sha256:935299edcb526fa672ce59e673b9bcb1764173414bff347a077b5e57e2e3f056",
       "manual": {
         "controls": {
           "harmonics": "Sets the spacing between voices, from one scale degree up to sixteen.",
@@ -3399,12 +3399,12 @@
         "Scale"
       ],
       "outputs": [
-        "Wavetable chord",
-        "Root voice"
+        "Wavetable chord; the stereo toggle does not change this fixed MAIN/AUX pair.",
+        "Root voice; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:97cb0576a942ec4c8deec5c7051a6df2d2819a83d19deb8bb501d7c602dee989",
-      "documentationDigest": "sha256:a0eb6e3f620ad8adb3af556957750e81febffb05e34d3b3b49498937603ab97a",
+      "digest": "sha256:11180c89cb9bfc7dace43ee3a206d4b2ffce56ba3796493337163e63ad1a40c6",
+      "documentationDigest": "sha256:9be03d32a4976fd097b3c211907d3e79ab48ff7786e8bef5cdbc6f8841717459",
       "manual": {
         "controls": {
           "harmonics": "Steps through the same sixteen scale-degree chord shapes as Diatonic Chord.",
@@ -3442,12 +3442,12 @@
         "Scale"
       ],
       "outputs": [
-        "Wavetable stack",
-        "Root voice"
+        "Five-voice wavetable stack; the stereo toggle does not change this fixed MAIN/AUX pair.",
+        "Root voice; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:6f099ab37a12e634221f4ad669c1a9952c6e7781210dab1831f5ab2eb2a0db04",
-      "documentationDigest": "sha256:32d6b87d2357517a08f20d23a4f1721464d86a563492fa852975a2c7784a1cab",
+      "digest": "sha256:a68c528725cd642e008976f65e255e914e7fc2ffe0f84f3c7aa87e579e3afa0b",
+      "documentationDigest": "sha256:41f026c025e849672899349ffbc0f91d5dc20f3f8fdf62e9eb85db330c6b56ca",
       "manual": {
         "controls": {
           "harmonics": "Sets the spacing between voices, from one scale degree up to sixteen.",
@@ -3484,16 +3484,16 @@
         "Objects"
       ],
       "outputs": [
-        "The instrument",
-        "Bare collisions"
+        "Resonant instrument model; the stereo toggle does not change this fixed MAIN/AUX pair.",
+        "Bare collision train before resonance; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:8a61dba617290f12ce2be44686ecee04d42f9dd26aad48bd9c3c6c1885bdf955",
-      "documentationDigest": "sha256:349a4181a3118a092a81b6d4bc347b7ca42bf075253ee6caa7f5a185cc84b468",
+      "digest": "sha256:82c9236a806c50cc856db7648499dd5fdaaaed569b2d3025aabd295ede9eef4f",
+      "documentationDigest": "sha256:a001391622066673b4f064b089a1f42ac6df82056cc9be761888a476e6ab5201",
       "manual": {
         "controls": {
           "harmonics": "Steps through sixteen instruments, from a maraca through bells and gravel to a guiro.",
-          "timbre": "How hard it is being shaken. It shakes while TRIG is unpatched or a patched gate is high, so it drones on its own.",
+          "timbre": "Sets the ongoing collision rate while TRIG is unpatched or a patched gate is high; a rising trigger still injects a full one-shot strike.",
           "morph": "How long the instrument keeps ringing after each collision, around its measured decay.",
           "macro": "How many objects are inside, from a couple of large ones to a dense hiss of small ones."
         },
@@ -3526,16 +3526,16 @@
         "Buzz"
       ],
       "outputs": [
-        "Mouthpiece",
-        "Valve buzz"
+        "Pressure inside the mouthpiece; the stereo toggle does not change this fixed MAIN/AUX pair.",
+        "Valve flow that drives the bore; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:470c296207be063fef68f9ffe2727e973c74fbf331bf77be648cfb7ed3a4eaa6",
-      "documentationDigest": "sha256:052613365b7699d260a674d0c018ad9bfe62adaaf29ce9755e3ad2311da80a38",
+      "digest": "sha256:031476cd7dfaa3981a8969beef220cdd8ae480751c28adc406713d738037bffa",
+      "documentationDigest": "sha256:aa63fdfa7f73653f9a83aa670f77791d9c5d7ae27a517371772014874a67f138",
       "manual": {
         "controls": {
           "harmonics": "Lip tension. Climbs the bore's partials -- unison, fifth, octave, tenth, twelfth -- and bends each one sharp as it rises.",
-          "timbre": "Breath pressure. Below the threshold the instrument does not speak, exactly as a real one does not.",
+          "timbre": "Raises breath pressure from gentle to strong while staying above the model's oscillation threshold across the full range.",
           "morph": "Bell size, from a stopped horn that barely sustains to an open one that rings and overblows easily.",
           "macro": "Buzz. How far the lips swing into closure each cycle -- a soft flutter at the bottom, a real mouthpiece buzz at the top."
         },
@@ -3566,8 +3566,8 @@
         "Spread"
       ],
       "outputs": [
-        "Folded voices (left in stereo)",
-        "Unfolded voices (right in stereo)"
+        "Mono: folded chord. Stereo: folded left channel of the Shepard helix.",
+        "Mono: unfolded chord. Stereo: folded right channel of the Shepard helix."
       ],
       "sharedModules": [
         "chord-bank"
@@ -3576,8 +3576,8 @@
         "color": "#5796E4"
       },
       "version": "1.0.0",
-      "digest": "sha256:d6264cfa04b9927cdf8bd9e03234c12d9e35ee8fea48e4d6d37175e68586d358",
-      "documentationDigest": "sha256:5b3fc620d9bdee21dd3dd37f25fb576d476edd92ba9f430898efaa55e84158cf",
+      "digest": "sha256:70482ec3d92d0a8dc33d1580f0db98095b8a743c50fe8471dd94c867305ed537",
+      "documentationDigest": "sha256:07b7b3f550f8330611c2ac303a59ec8ab19b4b9471282a36519723966150e6e2",
       "manual": {
         "controls": {
           "harmonics": "Selects the chord, voiced at every octave of the helix at once.",
@@ -3615,15 +3615,15 @@
         "Spacing"
       ],
       "outputs": [
-        "The whole clap, hands and room",
-        "The dry hands alone, their top an octave up, or in stereo the right channel: the same clap from an independent noise source, with each hand landing in its own place"
+        "Mono: hands and room. Stereo: left clap with independently placed hands and noise.",
+        "Mono: dry hands through a higher band. Stereo: right clap with independently placed hands and noise."
       ],
       "artwork": {
         "color": "#009a98"
       },
       "version": "1.0.0",
-      "digest": "sha256:d37ea0983eccde6e57ed4d5b8876558f0c03bdc8d31adcba7a9f90813db3ac0a",
-      "documentationDigest": "sha256:854a80e922a2b49bad4084e2f2318789aa07c4e91ebd6e58b509d6030effc392",
+      "digest": "sha256:0dd38c5da96c9eb286bc2c59e165592ba50f11c599d292de6db524cd6909a192",
+      "documentationDigest": "sha256:2091b2ebb0074f863a349276a64497a46b8b728acead550bb98639ed34970dc5",
       "manual": {
         "controls": {
           "harmonics": "Sets the hands in a triggered clap from one through seven. Past noon, their timing and level begin to disagree. With TRIG unpatched, this becomes the audience density instead.",
@@ -3660,15 +3660,15 @@
         "Shape"
       ],
       "outputs": [
-        "Formant waveform",
-        "Hollow three-state logic pulse with optional sub-octave, or in stereo the right channel: the same formant from an envelope slightly detuned"
+        "Mono: formant waveform. Stereo: left formant voice.",
+        "Mono: hollow logic pulse with optional sub-octave. Stereo: right formant voice from a slightly detuned envelope."
       ],
       "artwork": {
         "color": "#009a98"
       },
       "version": "1.0.0",
-      "digest": "sha256:35b8205691d13df772553726f3b9686194e2dec1368ec0ba567fb1b93c544761",
-      "documentationDigest": "sha256:f1e90e41eb374ee3105a11cacd9fedb043a6edf6be18cb2257a1305c07fa76f7",
+      "digest": "sha256:975d1ab2603bacf22a2b94146dbc6eb6865ac972b91147a11bd71a64941cf6d0",
+      "documentationDigest": "sha256:36c585082ea98186b8ba5f4dbd6193cd92e194d513bda50e3820cb7a0d6020e0",
       "manual": {
         "controls": {
           "harmonics": "Sets the formant frequency as a ratio of the driver across plus or minus four octaves, with an exact unison detent at noon.",
