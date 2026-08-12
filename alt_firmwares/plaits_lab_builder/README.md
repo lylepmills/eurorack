@@ -240,7 +240,10 @@ Two rollout notes worth keeping:
 The service is split across two isolation layers:
 
 - A Cloudflare Worker validates and hashes recipes, stores job state in Durable
-  Objects, schedules work through Queues, and caches successful WAV/HEX files in R2.
+  Objects, persists normalized recipes in R2, schedules reference-only build IDs
+  through Queues, and caches successful WAV/HEX files in R2. Keeping recipes out
+  of queue messages lets large custom-FM palettes stay below the 128 KB message
+  limit; consumers still accept embedded recipes while older jobs drain.
 - A non-root Cloudflare Container has no runtime internet access. It owns the
   allowlisted C++ registry generator, compiler, and pinned Kokoro/LPC encoder.
   Kokoro weights, voices, and language dictionaries are baked into the image.

@@ -14,6 +14,7 @@ import {
 } from "./contract";
 import { deadLetterAction } from "./dead_letter";
 import { corsHeaders } from "./cors";
+import { buildQueueMessage, recipeArtifactKey, type BuildMessage } from "./build_queue";
 
 type JobStatus = "queued" | "building" | "succeeded" | "failed";
 
@@ -42,14 +43,6 @@ type JobState = {
   };
   manual?: ManualState;
   error?: { code: string; message: string };
-};
-
-type BuildMessage = {
-  buildId: string;
-  recipe: NormalizedRecipe;
-  // Regenerate only the missing field-guide PDF for an already-cached
-  // firmware artifact; the compiler is never invoked for these messages.
-  manualOnly?: boolean;
 };
 
 export class FirmwareBuilder extends Container<Env> {
@@ -98,6 +91,21 @@ function artifactKey(buildId: string, output: FirmwareOutput): string {
 // share one immutable PDF.
 function manualArtifactKey(manualKey: string): string {
   return `manuals/${manualKey}.pdf`;
+}
+
+async function storeQueuedRecipe(env: Env, buildId: string, recipe: NormalizedRecipe): Promise<void> {
+  await env.ARTIFACTS.put(recipeArtifactKey(buildId), JSON.stringify(recipe), {
+    httpMetadata: { contentType: "application/json" },
+  });
+}
+
+async function loadQueuedRecipe(message: BuildMessage, env: Env): Promise<NormalizedRecipe> {
+  // Drain jobs produced by the prior deployment without invalidating them.
+  if (message.recipe !== undefined) return normalizeRecipe(message.recipe);
+
+  const stored = await env.ARTIFACTS.get(recipeArtifactKey(message.buildId));
+  if (!stored) throw new Error("The queued firmware recipe is missing.");
+  return normalizeRecipe(await stored.json<unknown>());
 }
 
 // The name is the Durable Object identity, not just a label. Bump it when the
@@ -262,7 +270,8 @@ async function createBuild(request: Request, env: Env): Promise<Response> {
         // Cached firmware predating the field guide: backfill only the PDF.
         manual = { status: "pending", manualKey };
         try {
-          await env.BUILD_QUEUE.send({ buildId, recipe, manualOnly: true }, { contentType: "json" });
+          await storeQueuedRecipe(env, buildId, recipe);
+          await env.BUILD_QUEUE.send(buildQueueMessage(buildId, true), { contentType: "json" });
         } catch (error) {
           console.error(JSON.stringify({ message: "manual backfill queue send failed", buildId, error: String(error) }));
           manual = { status: "unavailable", manualKey };
@@ -311,7 +320,11 @@ async function createBuild(request: Request, env: Env): Promise<Response> {
     };
     await job.setState(state);
     try {
-      await env.BUILD_QUEUE.send({ buildId, recipe }, { contentType: "json" });
+      // Custom FM banks can make a valid recipe hundreds of kilobytes large.
+      // Persist it before publishing the small queue reference so the consumer
+      // can never observe a message whose recipe is not available yet.
+      await storeQueuedRecipe(env, buildId, recipe);
+      await env.BUILD_QUEUE.send(buildQueueMessage(buildId), { contentType: "json" });
     } catch (error) {
       await job.setState({
         ...state,
@@ -437,10 +450,35 @@ async function completeManual(
 }
 
 async function processBuild(message: Message<BuildMessage>, env: Env): Promise<void> {
-  const { buildId, recipe } = message.body;
+  const { buildId } = message.body;
   const job = env.BUILD_JOBS.getByName(buildId);
   const prior = await job.getState();
   const now = new Date().toISOString();
+  let recipe: NormalizedRecipe;
+  try {
+    recipe = await loadQueuedRecipe(message.body, env);
+  } catch (error) {
+    console.error(JSON.stringify({ message: "queued firmware recipe unavailable", buildId, error: String(error) }));
+    if (message.body.manualOnly && prior?.status === "succeeded" && prior.manual) {
+      await job.setState({
+        ...prior,
+        updatedAt: now,
+        manual: { ...prior.manual, status: "unavailable" },
+      });
+    } else {
+      await job.setState({
+        buildId,
+        status: "failed",
+        createdAt: prior?.createdAt ?? now,
+        updatedAt: now,
+        cacheHit: prior?.cacheHit ?? false,
+        output: prior?.output,
+        error: { code: "recipe_unavailable", message: "The queued firmware recipe is no longer available. Please submit it again." },
+      });
+    }
+    message.ack();
+    return;
+  }
   const baseState = {
     buildId,
     createdAt: prior?.createdAt ?? now,
