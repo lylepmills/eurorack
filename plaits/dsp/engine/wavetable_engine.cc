@@ -158,7 +158,11 @@ void WavetableEngine::RenderInternal(
     float* aux,
     size_t size,
     bool* already_enveloped) {
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
   uint32_t hard_sync = process_hard_sync ? parameters.hard_sync : 0;
+#else
+  uint32_t hard_sync = 0;
+#endif
   const float f0 = NoteToFrequency(parameters.note);
   
   ONE_POLE(x_pre_lp_, parameters.timbre * 6.9999f, 0.2f);

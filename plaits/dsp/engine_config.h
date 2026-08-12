@@ -3,6 +3,12 @@
 #ifndef PLAITS_DSP_ENGINE_CONFIG_H_
 #define PLAITS_DSP_ENGINE_CONFIG_H_
 
+#define PLAITS_HAS_TERRAIN_BANK 0
+#define PLAITS_WAVE_TERRAIN_FACTORY_MASK 0xff
+#ifndef PLAITS_BUILD_ENABLE_SYNC_INPUT
+#define PLAITS_BUILD_ENABLE_SYNC_INPUT 0
+#endif
+
 #include "plaits/dsp/engine2/virtual_analog_vcf_engine.h"
 #include "plaits/dsp/engine2/phase_distortion_engine.h"
 #include "plaits/dsp/engine2/glisson_engine.h"
@@ -34,8 +40,6 @@
 #define PLAITS_HAS_USER_DATA_BANK 0
 #define PLAITS_HAS_USER_DATA_BANK_OVERRIDE 0
 #define PLAITS_HAS_CUSTOM_MODEL_DATA 0
-#define PLAITS_HAS_TERRAIN_BANK 0
-#define PLAITS_WAVE_TERRAIN_FACTORY_MASK 0xff
 
 #define PLAITS_ENGINE_MEMBERS \
   VirtualAnalogVCFEngine virtual_analog_vcf_engine_; \

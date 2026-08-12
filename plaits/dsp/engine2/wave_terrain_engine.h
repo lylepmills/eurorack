@@ -41,16 +41,18 @@
 #ifndef PLAITS_DSP_ENGINE_WAVE_TERRAIN_ENGINE_H_
 #define PLAITS_DSP_ENGINE_WAVE_TERRAIN_ENGINE_H_
 
-#include <cmath>
-#include <stdint.h>
-
 #include "plaits/dsp/engine/engine.h"
 #include "plaits/dsp/oscillator/sine_oscillator.h"
+#if PLAITS_HAS_TERRAIN_BANK
+#include <cmath>
+#include <stdint.h>
 #include "stmlib/dsp/atan.h"
 #include "stmlib/dsp/rsqrt.h"
+#endif
 
 namespace plaits {
 
+#if PLAITS_HAS_TERRAIN_BANK
 enum WaveTerrainType {
   WAVE_TERRAIN_FACTORY_0,
   WAVE_TERRAIN_FACTORY_1,
@@ -136,6 +138,7 @@ struct WaveTerrainBank {
   const WaveTerrainFunction* functions;
   size_t size;
 };
+#endif  // PLAITS_HAS_TERRAIN_BANK
   
 class WaveTerrainEngine : public Engine {
  public:
@@ -145,9 +148,12 @@ class WaveTerrainEngine : public Engine {
   virtual void Init(stmlib::BufferAllocator* allocator);
   virtual void Reset();
   virtual void LoadUserData(const uint8_t* user_data) {
+#if PLAITS_HAS_TERRAIN_BANK
     terrain_bank_ = NULL;
+#endif
     user_terrain_ = (const int8_t*)(user_data);
   }
+#if PLAITS_HAS_TERRAIN_BANK
   virtual void LoadUserData(const uint8_t* user_data, size_t length) {
     if (user_data && length == 0) {
       terrain_bank_ = reinterpret_cast<const WaveTerrainBank*>(user_data);
@@ -156,17 +162,22 @@ class WaveTerrainEngine : public Engine {
       LoadUserData(user_data);
     }
   }
+#endif
   virtual void Render(const EngineParameters& parameters,
       float* out,
       float* aux,
       size_t size,
       bool* already_enveloped);
   virtual bool stereo_capable() const { return PLAITS_STEREO_WAVE_TERRAIN; }
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
   virtual bool hard_sync_capable() const { return true; }
+#endif
   virtual bool linear_tzfm_capable() const { return true; }
 
  private:
+#if PLAITS_HAS_TERRAIN_BANK
   float FactoryTerrain(float x, float y, int terrain_type);
+#endif
   float Terrain(float x, float y, int terrain_index);
   
   FastSineOscillator path_;
@@ -175,7 +186,9 @@ class WaveTerrainEngine : public Engine {
   float terrain_;
   
   float* temp_buffer_;
+#if PLAITS_HAS_TERRAIN_BANK
   const WaveTerrainBank* terrain_bank_;
+#endif
   const int8_t* user_terrain_;
   
   DISALLOW_COPY_AND_ASSIGN(WaveTerrainEngine);

@@ -282,7 +282,9 @@ class WaveScanEngine : public Engine {
       bool* already_enveloped);
   virtual bool linear_tzfm_capable() const { return true; }
   virtual bool stereo_capable() const { return PLAITS_STEREO_WAVE_SCAN; }
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
   virtual void HardSync() { phase_ = 0.0f; }
+#endif
 
  private:
   inline void Push(float main, float side) {

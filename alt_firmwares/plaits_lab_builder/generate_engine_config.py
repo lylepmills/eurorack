@@ -1885,6 +1885,9 @@ def render_config(recipe: BuildRecipe) -> str:
 // erase the optional frequency-offset interface from ordinary builds.
 #define PLAITS_BUILD_LINEAR_TZFM {recipe.linear_tzfm}
 #define PLAITS_BUILD_FAST_FM {recipe.fast_fm}
+#define PLAITS_BUILD_ENABLE_SYNC_INPUT {sync_input_enabled}
+#define PLAITS_HAS_TERRAIN_BANK {1 if recipe.terrain_bank else 0}
+#define PLAITS_WAVE_TERRAIN_FACTORY_MASK 0x{factory_terrain_mask if recipe.terrain_bank else 0xff:02x}
 
 {includes}
 #include "plaits/resources.h"
@@ -1900,8 +1903,6 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_HAS_USER_DATA_BANK_OVERRIDE {1 if override_arrays_all else 0}
 #define PLAITS_HAS_RESOLVED_USER_DATA_BANK {1 if has_user_data_bank else 0}
 #define PLAITS_HAS_CUSTOM_MODEL_DATA {1 if custom_model_arrays else 0}
-#define PLAITS_HAS_TERRAIN_BANK {1 if recipe.terrain_bank else 0}
-#define PLAITS_WAVE_TERRAIN_FACTORY_MASK 0x{factory_terrain_mask if recipe.terrain_bank else 0xff:02x}
 #define PLAITS_USER_DATA_REGION_COUNT {(len(region_banks) if swappable else 0) + len(custom_model_arrays) + len(terrain_custom_arrays)}
 #define PLAITS_RESONATOR_ENVELOPE_ENGINE_MASK 0x{resonator_envelope_mask:08x}u
 // Every FM bank's baked array doubles as the flash region a TIMBRE transfer
@@ -1928,7 +1929,6 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_BUILD_LOCKED_FREQUENCY_POT_OPTION {recipe.locked_frequency_pot_option}
 #define PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE {1 if recipe.locked_frequency_pot_option >= 4 else 0}
 #define PLAITS_BUILD_MODEL_CV_OPTION {recipe.model_cv_option}
-#define PLAITS_BUILD_ENABLE_SYNC_INPUT {sync_input_enabled}
 #define PLAITS_BUILD_SIMPLIFIED_PITCH_RANGES {recipe.simplified_pitch_ranges}
 #define PLAITS_BUILD_LEVEL_CV_OPTION {recipe.level_cv_option}
 #define PLAITS_BUILD_AUX_OUTPUT_OPTION {recipe.aux_output_option}

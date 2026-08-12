@@ -57,7 +57,9 @@ class VirtualAnalogDualEngine : public Engine {
   virtual bool stereo_capable() const {
     return PLAITS_STEREO_VIRTUAL_ANALOG_DUAL;
   }
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
   virtual bool hard_sync_capable() const { return true; }
+#endif
   virtual bool linear_tzfm_capable() const { return true; }
   virtual bool fast_fm_capable() const { return true; }
 

@@ -125,7 +125,9 @@ struct EngineParameters {
   EngineParameters()
       : articulation_envelope(0.0f),
         articulation_envelope_active(false),
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
         hard_sync(0),
+#endif
         frequency_offset(NULL),
         stereo(false) { }
 
@@ -149,11 +151,13 @@ struct EngineParameters {
   // alt firmware
   uint8_t chord_set_option;
 
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
   // Per-sample rising edges from the optional audio-rate sync input. Bit n
   // requests a phase reset immediately before sample n is rendered. Engines
   // reporting hard_sync_capable() consume the complete mask themselves. The
   // voice adapts every other engine through the bounded fallback below.
   uint32_t hard_sync;
+#endif
 
   // Optional per-sample absolute frequency offsets, in cycles per sample.
   // Signed values implement linear TZFM; the same path carries audio-rate
@@ -281,15 +285,19 @@ class Engine {
   // that the voice post-processes both channels symmetrically. Engines that
   // keep the default also keep their regular aux in stereo mode.
   virtual bool stereo_capable() const { return false; }
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
   // Engines opt in only after their oscillator state has an explicit,
   // sample-accurate path for every edge in the mask. Other engines use the
   // bounded first-edge fallback below.
   virtual bool hard_sync_capable() const { return false; }
+#endif
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
   // Bounded fallback hook for engines that do not inspect sync edges directly.
   // It must be cheap: the voice can call it once per audio callback while an
   // audio-rate sync source is connected. Trigger-aware engines leave this as a
   // no-op and receive a synthetic rising edge instead.
   virtual void HardSync() { }
+#endif
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
   // Engines returning true consume EngineParameters::frequency_offset as signed,
   // audio-rate frequency offsets and must preserve negative increments.
@@ -327,6 +335,7 @@ inline void RenderEngineWithHardSync(
     float* aux,
     size_t size,
     bool* already_enveloped) {
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
   if (!parameters.hard_sync || engine->hard_sync_capable()) {
     engine->Render(parameters, out, aux, size, already_enveloped);
     return;
@@ -357,6 +366,9 @@ inline void RenderEngineWithHardSync(
       aux + edge,
       size - edge,
       already_enveloped);
+#else
+  engine->Render(parameters, out, aux, size, already_enveloped);
+#endif  // PLAITS_BUILD_ENABLE_SYNC_INPUT
 }
 
 template<int max_size>

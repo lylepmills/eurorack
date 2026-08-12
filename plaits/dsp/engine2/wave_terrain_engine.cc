@@ -51,7 +51,9 @@ void WaveTerrainEngine::Init(BufferAllocator* allocator) {
   y_offset_ = 0.0f;
   terrain_ = 0.0f;
   temp_buffer_ = allocator->Allocate<float>(kMaxBlockSize * 4);
+#if PLAITS_HAS_TERRAIN_BANK
   terrain_bank_ = NULL;
+#endif
   user_terrain_ = NULL;
 }
 
@@ -134,6 +136,7 @@ inline float Squash(float x, float a) {
   return x / (1.0f + fabsf(x));
 }
 
+#if PLAITS_HAS_TERRAIN_BANK
 inline float WaveTerrainEngine::FactoryTerrain(
     float x, float y, int terrain_type) {
   // The Sine function only works for a positive argument.
@@ -221,6 +224,44 @@ inline float WaveTerrainEngine::Terrain(float x, float y, int terrain_index) {
   }
   return FactoryTerrain(x, y, terrain_index);
 }
+#else
+inline float WaveTerrainEngine::Terrain(float x, float y, int terrain_index) {
+  // The Sine function only works for a positive argument.
+  // Thus, all calls to Sine include a positive offset of the argument!
+  const float k = 4.0f;
+  switch (terrain_index) {
+    case 0:
+      return (Squash(Sine(k + x * 1.273f), 2.0f) -
+          Sine(k + y * (x + 1.571f) * 0.637f)) * 0.57f;
+    case 1: {
+      const float xy = x * y;
+      return Sine(k + Sine(k + (x + y) * 0.637f) /
+          (0.2f + xy * xy) * 0.159f);
+    }
+    case 2: {
+      const float xy = x * y;
+      return Sine(k + Sine(k + 2.387f * xy) /
+          (0.350f + xy * xy) * 0.159f);
+    }
+    case 3: {
+      const float xy = x * y;
+      const float xys = (x - 0.25f) * (y + 0.25f);
+      return Sine(k + xy / (2.0f + fabsf(5.0f * xys)) * 6.366f);
+    }
+    case 4:
+      return Sine(
+          0.159f / (0.170f + fabsf(y - 0.25f)) +
+          0.477f / (0.350f + fabsf((x + 0.5f) * (y + 1.5f))) + k);
+    case 5:
+    case 6:
+    case 7:
+      return TerrainLookupWT(x, y, 2 - (terrain_index - 5));
+    case 8:
+      return TerrainLookup(x, y, user_terrain_);
+  }
+  return 0.0f;
+}
+#endif  // PLAITS_HAS_TERRAIN_BANK
 
 void WaveTerrainEngine::Render(
     const EngineParameters& parameters,
@@ -276,6 +317,7 @@ void WaveTerrainEngine::Render(
   ParameterInterpolator offset(&offset_, 1.9f * parameters.morph - 1.0f, size);
   ParameterInterpolator y_offset(
       &y_offset_, 1.9f * parameters.macro - 0.95f, size);
+#if PLAITS_HAS_TERRAIN_BANK
   int num_terrains = terrain_bank_
       ? int(terrain_bank_->size)
       : (user_terrain_ ? 9 : 8);
@@ -290,17 +332,30 @@ void WaveTerrainEngine::Render(
       &terrain_,
       terrain_target,
       size);
+#else
+  int num_terrains = user_terrain_ ? 9 : 8;
+  ParameterInterpolator terrain(
+      &terrain_,
+      min(parameters.harmonics * 1.05f, 1.0f) *
+          float(num_terrains - 1.0001f),
+      size);
+#endif
   
   size_t ij = 0;
   for (size_t i = 0; i < size; ++i) {
     const float x_offset = offset.Next();
     const float current_y_offset = y_offset.Next();
     
+#if PLAITS_HAS_TERRAIN_BANK
     float z = terrain.Next();
     CONSTRAIN(z, 0.0f, float(num_terrains - 1));
     MAKE_INTEGRAL_FRACTIONAL(z);
     const int z_next = z_integral + 1 < num_terrains
         ? z_integral + 1 : z_integral;
+#else
+    const float z = terrain.Next();
+    MAKE_INTEGRAL_FRACTIONAL(z);
+#endif
 
     float out_s = 0.0f;
     float aux_s = 0.0f;
@@ -311,7 +366,11 @@ void WaveTerrainEngine::Render(
           current_y_offset;
 
       const float z0 = Terrain(x, y, z_integral);
+#if PLAITS_HAS_TERRAIN_BANK
       const float z1 = Terrain(x, y, z_next);
+#else
+      const float z1 = Terrain(x, y, z_integral + 1);
+#endif
       const float z = (z0 + (z1 - z0) * z_fractional);
       out_s += z;
       aux_s += y + z;

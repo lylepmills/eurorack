@@ -139,18 +139,22 @@ class UserData {
     return SIZE;
   }
 
-  inline bool Save(uint8_t* rx_buffer, int slot, float harmonics = 0.0f) {
+#if defined(PLAITS_HAS_TERRAIN_BANK) && PLAITS_HAS_TERRAIN_BANK
+  inline bool Save(uint8_t* rx_buffer, int slot, float harmonics) {
+#else
+  inline bool Save(uint8_t* rx_buffer, int slot) {
+#endif
     if (slot < rx_buffer[SIZE - 2] || slot > rx_buffer[SIZE - 1]) {
       return false;
     }
 
+#if defined(PLAITS_HAS_TERRAIN_BANK) && PLAITS_HAS_TERRAIN_BANK
     // A shared custom-terrain entry, dedicated custom-model slot, or replaceable
     // FM bank writes its own region; every other slot retains the module's
     // historical single legacy region. If a generated mapping explicitly
     // refuses a slot, nothing is erased.
     const uint8_t* destination = NULL;
     int tag = tag_of(slot);
-#if defined(PLAITS_HAS_TERRAIN_BANK) && PLAITS_HAS_TERRAIN_BANK
     if ((kWaveTerrainEngineMask & (1u << slot)) != 0) {
       float position = harmonics * 1.05f;
       if (position < 0.0f) position = 0.0f;
@@ -168,18 +172,26 @@ class UserData {
       }
       destination = reinterpret_cast<const uint8_t*>(kTerrainBank.data[terrain]);
       tag = 32 + terrain;
-    } else
-#endif  // PLAITS_HAS_TERRAIN_BANK
-    {
+    } else {
       destination = region(slot);
     }
+#else
+    // A slot with no region of its own cannot be written — a non-FM engine, or
+    // any slot at all in a build with FM bank swapping locked off. The module
+    // shows the existing transfer-error state, and nothing is erased.
+    const uint8_t* destination = region(slot);
+#endif
     if (!destination) {
       return false;
     }
 
     // Tag the data to identify which bank it should be associated to.
     rx_buffer[SIZE - 2] = 'U';
+#if defined(PLAITS_HAS_TERRAIN_BANK) && PLAITS_HAS_TERRAIN_BANK
     rx_buffer[SIZE - 1] = ' ' + tag;
+#else
+    rx_buffer[SIZE - 1] = ' ' + tag_of(slot);
+#endif
 
     // Write to FLASH. uintptr_t rather than uint32_t so the host test can build:
     // on the target the two are the same type, but a 64-bit host pointer does

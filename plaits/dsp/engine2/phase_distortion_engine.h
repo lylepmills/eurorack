@@ -59,10 +59,12 @@ class PhaseDistortionEngine : public Engine {
   // header comment): stereo mode just relabels the OUT/AUX pair as left/right.
   virtual bool stereo_capable() const { return true; }
   virtual bool linear_tzfm_capable() const { return true; }
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
   virtual void HardSync() {
     shaper_.Init();
     modulator_.Init();
   }
+#endif
 
  private:
   VariableShapeOscillator shaper_;

@@ -307,6 +307,7 @@ void Voice::Render(
       parameter_randomizer_.Trigger();
     }
     UserData user_data;
+#if PLAITS_HAS_TERRAIN_BANK || PLAITS_HAS_CUSTOM_MODEL_DATA
     const uint8_t* data = NULL;
     size_t data_length = 0;
 #if PLAITS_HAS_TERRAIN_BANK
@@ -363,6 +364,30 @@ void Voice::Render(
     }
 #endif  // PLAITS_HAS_USER_DATA_BANK
     }
+#else
+    const uint8_t* data = user_data.ptr(engine_index);
+    // Number of valid packed patch bytes behind `data`. Every built-in factory
+    // bank is a full 32-patch bank; a recipe-baked custom bank may be shorter,
+    // in which case its length comes from the generated size table, and a
+    // TIMBRE-transferred bank declares its own count (below). LoadUserData sizes
+    // the engine's Harmonics quantizer to length / SYX_SIZE, so a short bank
+    // sweeps only its own patches.
+    // A transferred bank declares its own patch count (UserData::bank_length),
+    // so a short pick list sent over TIMBRE gives that many HARMONICS steps
+    // rather than repeating to fill 32.
+    size_t data_length = UserData::bank_length(data);
+#if PLAITS_HAS_USER_DATA_BANK
+    if (!data && kEngineUserDataBank[engine_index] >= 0) {
+      const int bank = kEngineUserDataBank[engine_index];
+#if PLAITS_HAS_RESOLVED_USER_DATA_BANK
+      data = kResolvedUserDataBank[bank];
+      data_length = kResolvedUserDataBankSize[bank];
+#else
+      data = fm_patches_table[bank];
+#endif  // PLAITS_HAS_RESOLVED_USER_DATA_BANK
+    }
+#endif  // PLAITS_HAS_USER_DATA_BANK
+#endif  // PLAITS_HAS_TERRAIN_BANK || PLAITS_HAS_CUSTOM_MODEL_DATA
     e->LoadUserData(data, data_length);
     e->Reset();
 
@@ -376,8 +401,6 @@ void Voice::Render(
   p.chord_set_option = patch.chord_set_option;
 #if PLAITS_BUILD_ENABLE_SYNC_INPUT
   p.hard_sync = patch.model_cv_option == 4 ? modulations.hard_sync : 0;
-#else
-  p.hard_sync = 0;
 #endif
   // The stereo aux mode requests a true stereo render (OUT = left, AUX = right)
   // from engines that support it; the others fall back to their regular aux

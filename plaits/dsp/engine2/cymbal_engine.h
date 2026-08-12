@@ -399,12 +399,14 @@ class CymbalEngine : public Engine {
       size_t size,
       bool* already_enveloped);
   virtual bool stereo_capable() const { return PLAITS_STEREO_CYMBAL; }
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
   virtual void HardSync() {
     for (int p = 0; p < 6; ++p) {
       partial_phase_[p] = 0.0f;
     }
     noise_clock_[0] = noise_clock_[1] = 0.0f;
   }
+#endif
 
  private:
   // The six comparator phases (root + five detuned partials), shared by both
