@@ -1892,7 +1892,7 @@
       "controls": [
         "Model",
         "Cutoff",
-        "Resonance",
+        "Shape",
         "Bend"
       ],
       "outputs": [
@@ -1900,13 +1900,13 @@
         "Complementary model"
       ],
       "version": "1.0.0",
-      "digest": "sha256:17e47b828cd6e2c96d15e9f0e031ba3c4d24e07ba373b3e52c0135b7c3b3ea75",
-      "documentationDigest": "sha256:7f0724de6d8ed5ed3320a067bf1c454b98daa0b92ecfbd340959c0386f7999dd",
+      "digest": "sha256:15119809757a45bdd88ae7a82d27da54c1d13a6d3492bfd2b4bc105e844ec060",
+      "documentationDigest": "sha256:9d1fa05a54fe794a2f439c70a17871b7249d349c0503fa0aef0af905eca9a1fb",
       "manual": {
         "controls": {
           "harmonics": "Selects the lowpass, peaking, bandpass and highpass filter models.",
           "timbre": "Sweeps the filter cutoff from below the note to ten octaves above it.",
-          "morph": "Balances the raw pulse against the resonant ring, peaking at noon.",
+          "morph": "Morphs the filter excitation from saw through square at noon to triangle.",
           "macro": "Bends the burst envelope from the flat stock ramp toward a sharp percussive attack."
         },
         "trigger": "Restarts the internal envelope when TRIG is patched."

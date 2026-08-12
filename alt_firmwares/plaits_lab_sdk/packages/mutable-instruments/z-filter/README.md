@@ -1,9 +1,9 @@
 # Z Filter
 
 A port of Braids' four "digital filter" models — ZLPF, ZPKF, ZBPF and ZHPF —
-into a single Plaits engine, where HARMONICS selects the model and the fourth
-macro bends the burst envelope Braids welded to a straight ramp — a descending
-saw below the middle of COLOR, a triangle above it.
+into a single Plaits engine, where HARMONICS selects the model, MORPH preserves
+Braids' COLOR gesture from saw through square at noon to triangle, and the
+fourth macro bends the burst envelope Braids welded to a straight ramp.
 
 The DSP is Emilie Gillet's `DigitalOscillator::RenderDigitalFilter`. That
 function carries no `size -= 2`, so it is a native 96 kHz algorithm; this port
