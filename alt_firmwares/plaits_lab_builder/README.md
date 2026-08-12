@@ -561,6 +561,19 @@ Both produced the same 4,803,692-byte WAV with SHA-256
 confirming the rollout changes catalog identity and documentation without
 changing compiled firmware bytes.
 
+The complete Braids metadata audit shipped later on August 12 at
+`rev-29e3dba36351`. It corrected controls, trigger behavior, and mono/stereo
+output descriptions across all 34 ports and added manifest-to-catalog drift
+checks. Staging build
+`b96589cf244b5300f759ac387c6434cc5a1a15e43ded5a0c82bbb6483bf7804a`
+and production build
+`98b5b374aa6a625472863e458031a855f42a55aae1f35b0d0e2fc5eb1c5c8942`
+both passed the full compiler canary. The production WAV remained 4,803,692
+bytes with SHA-256
+`5b2268c4e4bcf76ce81c0be46de47ced5986e2c20bda838d6c2a02efcfdbce3c`,
+confirming again that the audit changed catalog identity and documentation,
+not firmware audio behavior.
+
 Cloudflare's rate-limit binding allows five new compilation requests per source
 IP per minute. Cache hits and repeated polls for an already queued build bypass
 that limit. This is a lightweight abuse guard rather than an account or billing
@@ -568,7 +581,7 @@ system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-bf3c078fdf07` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-29e3dba36351` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a new
 image, use `wrangler containers info <application-id>` and wait until
@@ -588,7 +601,7 @@ and Step unpatched-attenuverter modes; schema 17's selectable stock LPC banks,
 custom text/recording-derived Speech banks, source/engine previews; and the
 earlier recipe-driven scale banks and automatic LEVEL routing. The generalized
 schema-inheritance hardening from `5b2b077` is also live: current production
-source `bf3c078fdf07` descends from that commit, so future supported schemas
+source `29e3dba36351` descends from that commit, so future supported schemas
 inherit older feature shapes without another version-list edit.
 
 ### Rolling back
@@ -662,6 +675,7 @@ target.
 | August 10, 2026 (32-word custom Speech banks) | `44453427c187` | `rev-44453427c187` |
 | August 12, 2026 (schema 23 Linear TZFM + Fast FM; FM Heaven) | `de96c9d9f22b` | `rev-de96c9d9f22b` |
 | August 12, 2026 (correct Z Filter MORPH shape metadata) | `bf3c078fdf07` | `rev-bf3c078fdf07` |
+| August 12, 2026 (complete Braids control, trigger, and stereo metadata audit) | `29e3dba36351` | `rev-29e3dba36351` |
 
 Three consequences a rollback has that a forward deploy does not:
 
