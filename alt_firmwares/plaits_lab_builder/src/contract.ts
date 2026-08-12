@@ -63,11 +63,11 @@ export const levelAutoMinSchemaVersion = 16; // engine-aware LEVEL routing
 const speechBanksMinSchemaVersion = 17;      // selectable/custom Speech LPC banks
 const attenuverterModeMinSchemaVersion = 18; // recipe-driven LIGHT 8 starting mode
 const oneKnobEnvelopeMinSchemaVersion = 19;  // triggered/gated FREQUENCY contours
-const customModelDataMinSchemaVersion = 21;  // per-slot Wave Terrain/Wavetable data
-const terrainBankMinSchemaVersion = 23;       // shared ordered Wave Terrain bank
+const customModelDataMinSchemaVersion = 24;  // per-slot Wavetable data
+const terrainBankMinSchemaVersion = 24;       // shared ordered Wave Terrain bank
 const nativeTerrainMinSchemaVersion = 24;      // compiled custom equations
 const customModelDataBytes = 4096;
-export const maxTerrainBankSize = 56;
+export const maxTerrainBankSize = 16;
 const factoryTerrainIds = [
   "factory-1", "factory-2", "factory-3", "factory-4",
   "factory-5", "factory-6", "factory-7", "factory-8",
@@ -1055,8 +1055,8 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
   let userDataBanks: NormalizedUserDataBank[] | undefined;   // v6 index-keyed
   let slotBanks: NormalizedSlotBank[] | undefined;           // v12 slot-keyed
   let speechBanks: NormalizedSpeechBanks | undefined;        // v17
-  let customModelData: NormalizedCustomModelData[] | undefined; // v21
-  let terrainBank: NormalizedTerrainBankEntry[] | undefined; // v23
+  let customModelData: NormalizedCustomModelData[] | undefined; // v24
+  let terrainBank: NormalizedTerrainBankEntry[] | undefined; // v24
   if (schemaVersion >= resourcesMinSchemaVersion) {
     const resources = candidate.resources;
     // v6 always carries index-keyed banks; v12 always carries per-slot banks (its
@@ -1121,7 +1121,7 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
           && customModelData.some((entry) => entry.model.kind === "wave-terrain")) {
         throw new ContractError(
           "invalid_custom_model_data",
-          "Schema 23 terrain data belongs in the shared terrain bank, not on a palette slot.",
+          "Schema 24 terrain data belongs in the shared terrain bank, not on a palette slot.",
         );
       }
     }
@@ -1289,7 +1289,7 @@ export async function computeManualKey(
     ]) ?? [],
     terrainBank: recipe.resources.terrainBank?.map((entry) => entry.kind === "factory"
       ? [entry.kind, entry.id]
-      : [entry.kind, entry.model.name]) ?? [],
+      : [entry.kind, entry.model.name, entry.model.representation ?? "prebaked"]) ?? [],
     // The control instructions differ completely: Plaits has two buttons;
     // Ro'Ved has four clickable knobs. Never share a cached guide between them.
     target: recipe.target,

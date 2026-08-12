@@ -57,24 +57,24 @@ catalog's `fmCapabilities` lists are the public product policy used to explain
 those per-model differences in the editor and generated field guide. Guides
 show the same active-only `TZ` and `50k` badges beside model references, with a
 legend on the bank-map page. The failed periodic-LEVEL
-experiment and borderline Brass result are not part of schema 23. The
-schema-21 `customModelData` resource can additionally attach one sampled,
-Mutable-compatible 4 KB block to each Wave Terrain or Wavetable slot. The
-browser stores the source equation for editing, but the trusted build boundary
-accepts only bounded sampled bytes. Each assignment is an opt-in independently
-rewritable flash region: the recipe data seeds it, and a later TIMBRE audio
-transfer while that slot is active erases and replaces those same pages. Even
-identical seeds remain separate because their slots must be able to diverge. A
-schema-23 recipe replaces per-slot Wave Terrain data with one ordered terrain
-bank shared by every Wave Terrain slot. The eight Mutable factory terrains are
+experiment and borderline Brass result are not part of schema 23. Schema 24
+adds custom Wave Terrain and Wavetable resources. A `customModelData`
+assignment can attach one sampled, Mutable-compatible 4 KB block to a Wavetable
+slot. The browser stores its source equation for editing, but the trusted build
+boundary accepts only bounded sampled bytes. Each assignment is an opt-in,
+independently rewritable flash region: the recipe data seeds it, and a later
+TIMBRE audio transfer while that slot is active erases and replaces those same
+pages. Even identical seeds remain separate because their slots must be able to
+diverge. Wave Terrain instead uses one ordered terrain bank shared by every Wave
+Terrain slot. The eight Mutable factory terrains are
 first-class entries that may be reordered or omitted; the generator compiles
 only the retained factory equations. Each custom entry carries one bounded
 sampled 4 KB terrain and owns its own independently rewritable flash region.
 HARMONICS sweeps and interpolates across exactly the ordered bank, and also
 selects which custom entry a TIMBRE audio transfer overwrites. A selected
 factory entry refuses the transfer. The default eight-factory bank remains
-implicit, so an untouched recipe stays on its older schema and stock layout.
-Schema 24 lets a custom terrain request the compiled `native` representation.
+implicit, so an untouched recipe stays on its older schema and stock layout. A
+custom terrain can request the compiled `native` representation.
 The Worker preserves the bounded 4 KB grid for browser preview and backwards
 compatibility, while the trusted generator independently parses the equation,
 accepts only the reviewed variable/function/operator vocabulary, reruns the
@@ -84,7 +84,7 @@ Each native equation is normalized into the sampled terrain's output range and
 linked as a function pointer in the ordered bank. It therefore costs only its
 linker-pruned code and owns no erase-safe TIMBRE region; complex equations,
 mesh imports, and sampled blends remain independently rewritable 4 KB entries.
-one-shot marker in the application image is restored by every WAV or HEX flash, so first boot applies
+The one-shot marker in the application image is restored by every WAV or HEX flash, so first boot applies
 all embedded Starting Options even when reinstalling the exact same build;
 ordinary power cycles still preserve later runtime changes. It generates a compile-time
 configuration, builds with the pinned Mutable
@@ -354,7 +354,8 @@ firmware build), stores it in R2 under `manuals/<manualKey>.pdf`, reports
 firmware via `manualOnly` queue messages. `computeManualKey` hashes everything
 the PDF PRINTS — the slot layout, each engine's DOCUMENTATION digest, the chord
 tables the options-menu page lists, the scale order when a scale-aware engine is
-present, each custom FM bank's credit, and
+present, each custom FM bank's credit, the shared Wave Terrain order and each
+custom terrain's compiled/prebaked storage behavior, and
 `PLAITS_MANUAL_CONTRACT` — deliberately not the firmware source revision or
 toolchain, so prose-only edits never invalidate firmware and firmware rollouts
 keep reusing cached manuals. It is likewise NOT the packed patch bytes: the
@@ -375,6 +376,12 @@ but the Worker remains on contract 13 until the next builder-image rollout: that
 rollout must bump `PLAITS_MANUAL_CONTRACT` to 14 together with the immutable
 source revision and image tag. Never deploy the contract bump by itself, because
 the current production container cannot render the new guide.
+
+Contract 19 adds the Wave Terrain bank page. It lists the exact HARMONICS order,
+distinguishes stock, compiled-equation, and prebaked entries, and explains that
+TIMBRE audio transfers replace only selected prebaked custom entries. The
+terrain representation is part of `computeManualKey`, so changing a custom
+terrain between native and prebaked cannot reuse a stale guide.
 
 The contract is the Worker's alone, and in source (`a0c0791`) it rides in the
 `POST /manual` body as `manualContract` for the container to echo on

@@ -25,6 +25,16 @@ ACCESSIBLE_BANK_LEVELS = ("100%", "50%", "25%", "12.5%")
 ACCESSIBLE_BANK_COLOR = "#687069"
 CONTROL_IDS = ("harmonics", "timbre", "morph", "macro")
 PANEL_LABELS = ("HARMONICS", "TIMBRE", "MORPH", "MACRO")
+FACTORY_TERRAIN_NAMES = (
+    "Asymmetric Saddle",
+    "Pinched Crossing",
+    "Resonant Cross",
+    "Offset Folds",
+    "Twin Wells",
+    "Wavetable Terrain: Bank 3",
+    "Wavetable Terrain: Bank 2",
+    "Wavetable Terrain: Bank 1",
+)
 
 # The options menu is eight "lights", ordered so the ones a player reaches for
 # most sit nearest the start of the walk. Each light cycles through an ordered
@@ -160,7 +170,7 @@ def custom_bank_credits(recipe: Any, slots: list[str | None], by_id: dict[str, A
 
 
 def custom_model_credits(recipe: Any, slots: list[str | None]) -> dict[int, dict[str, str]]:
-    """Printable identity for schema-21 terrain/wavetable slot data."""
+    """Printable identity for schema-24 terrain/wavetable slot data."""
     resources = recipe.get("resources") if isinstance(recipe, dict) else None
     entries = resources.get("customModelData") if isinstance(resources, dict) else None
     if not isinstance(entries, list):
@@ -178,6 +188,39 @@ def custom_model_credits(recipe: Any, slots: list[str | None]) -> dict[int, dict
                 "name": str(model.get("name", ""))[:80].strip(),
             }
     return credits
+
+
+def terrain_bank_entries(recipe: Any) -> list[dict[str, str]]:
+    """The player-facing order and storage behavior of a shared terrain bank.
+
+    validate_recipe() has already rejected malformed entries before this helper
+    runs, so the remaining work is deliberately presentational: retain names and
+    representation without carrying the 4 KB sample grids into the document.
+    """
+    resources = recipe.get("resources") if isinstance(recipe, dict) else None
+    entries = resources.get("terrainBank") if isinstance(resources, dict) else None
+    if not isinstance(entries, list):
+        return []
+    result: list[dict[str, str]] = []
+    for entry in entries:
+        if entry["kind"] == "factory":
+            index = int(str(entry["id"]).split("-")[-1]) - 1
+            result.append({
+                "name": f"{FACTORY_TERRAIN_NAMES[index]} (stock bank {index + 1})",
+                "storage": "Stock terrain · fixed in firmware",
+            })
+        else:
+            model = entry["model"]
+            native = model.get("representation") == "native"
+            result.append({
+                "name": str(model["name"])[:80].strip(),
+                "storage": (
+                    "Compiled equation · fixed in firmware"
+                    if native else
+                    "Prebaked samples · replaceable over TIMBRE"
+                ),
+            })
+    return result
 
 
 def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]:
@@ -259,6 +302,7 @@ def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]
             ) for engine_id in slots)
             else []
         ),
+        "terrainBank": terrain_bank_entries(recipe),
         # Only a build that compiled the procedure in answers the power-up
         # gesture, so only that build's guide documents it.
         "calibration": build.enable_calibration == 1,
@@ -923,6 +967,44 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
                 intro_style,
             ),
             scale_table,
+        ])
+
+    if document["terrainBank"]:
+        terrain_rows: list[list[Any]] = [[
+            Paragraph("HARMONICS", table_header_style),
+            Paragraph("TERRAIN", table_header_style),
+            Paragraph("STORAGE", table_header_style),
+        ]]
+        for index, entry in enumerate(document["terrainBank"], start=1):
+            terrain_rows.append([
+                Paragraph(str(index), small_muted_style),
+                Paragraph(_escape(entry["name"]), small_style),
+                Paragraph(_escape(entry["storage"]), small_muted_style),
+            ])
+        terrain_table = Table(
+            terrain_rows,
+            colWidths=[0.7 * inch, 2.65 * inch, 2.95 * inch],
+            repeatRows=1,
+        )
+        terrain_table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#EFECE3")),
+            ("GRID", (0, 0), (-1, -1), 0.35, line),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 5),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ]))
+        story.extend([
+            PageBreak(),
+            Paragraph("Wave Terrain bank", section_style),
+            Paragraph(
+                "HARMONICS sweeps this list from top to bottom and interpolates between adjacent entries. "
+                "A TIMBRE audio transfer replaces the selected prebaked custom entry. Stock and compiled "
+                "equation entries refuse transfers without erasing anything.",
+                intro_style,
+            ),
+            terrain_table,
         ])
 
     # Calibration, for the builds that asked for it. Most firmwares leave the

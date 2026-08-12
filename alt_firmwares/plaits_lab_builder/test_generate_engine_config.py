@@ -129,9 +129,9 @@ class GenerateEngineConfigTest(unittest.TestCase):
         # copy. A conditional check here would silently never run.
     def custom_model_recipe(self, assignments: list[dict]) -> dict:
         recipe = self.load("default_recipe.json")
-        recipe["schemaVersion"] = 21
-        recipe["slots"][0] = "wave-terrain"
-        recipe["slots"][1] = "wave-terrain"
+        recipe["schemaVersion"] = 24
+        recipe["slots"][0] = "wavetable"
+        recipe["slots"][1] = "wavetable"
         recipe["slots"][2] = "wavetable"
         recipe["preferences"] = {"navigationMode": "linear"}
         recipe["initialOptions"] = {
@@ -156,10 +156,10 @@ class GenerateEngineConfigTest(unittest.TestCase):
             },
         }
 
-    def test_v21_custom_model_data_maps_to_independently_rewritable_slots(self) -> None:
+    def test_v24_custom_model_data_maps_to_independently_rewritable_slots(self) -> None:
         recipe = self.custom_model_recipe([
-            self.custom_model_assignment(0, "wave-terrain", 17),
-            self.custom_model_assignment(1, "wave-terrain", 17),
+            self.custom_model_assignment(0, "wavetable", 17),
+            self.custom_model_assignment(1, "wavetable", 17),
             self.custom_model_assignment(2, "wavetable", 29),
         ])
         build = validate_recipe(recipe)
@@ -186,9 +186,9 @@ class GenerateEngineConfigTest(unittest.TestCase):
             "kCustomModelData_0", "kCustomModelData_1", "kCustomModelData_2",
         ])
 
-    def test_v21_counts_fm_banks_and_custom_models_in_one_region_section(self) -> None:
+    def test_v24_counts_fm_banks_and_custom_models_in_one_region_section(self) -> None:
         recipe = self.custom_model_recipe([
-            self.custom_model_assignment(0, "wave-terrain"),
+            self.custom_model_assignment(0, "wavetable"),
         ])
         recipe["slots"][3] = "dx7-bank-a"
         recipe["preferences"] = {
@@ -204,21 +204,21 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertIn('section(".user_data_models.0"), aligned(2048)', config)
         self.assertIn("#define PLAITS_USER_DATA_REGION_COUNT 2", config)
 
-    def test_v21_custom_model_data_rejects_wrong_model_or_size(self) -> None:
+    def test_v24_custom_model_data_rejects_wrong_model_or_size(self) -> None:
         wrong_kind = self.custom_model_recipe([
-            self.custom_model_assignment(0, "wavetable"),
+            self.custom_model_assignment(0, "wave-terrain"),
         ])
         with self.assertRaisesRegex(ValueError, "must match"):
             validate_recipe(wrong_kind)
 
-        wrong_size = self.custom_model_assignment(0, "wave-terrain")
+        wrong_size = self.custom_model_assignment(0, "wavetable")
         wrong_size["model"]["data"] = base64.b64encode(bytes(4095)).decode("ascii")
         with self.assertRaisesRegex(ValueError, "exactly 4096"):
             validate_recipe(self.custom_model_recipe([wrong_size]))
 
     def terrain_bank_recipe(self, entries: list[dict]) -> dict:
         recipe = self.load("default_recipe.json")
-        recipe["schemaVersion"] = 23
+        recipe["schemaVersion"] = 24
         recipe["slots"][0] = "wave-terrain"
         recipe["preferences"] = {
             "navigationMode": "linear",
@@ -237,7 +237,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
         }
         return recipe
 
-    def test_v23_terrain_bank_exposes_factory_entries_and_private_custom_regions(self) -> None:
+    def test_v24_terrain_bank_exposes_factory_entries_and_private_custom_regions(self) -> None:
         custom = self.custom_model_assignment(0, "wave-terrain", 33)["model"]
         recipe = self.terrain_bank_recipe([
             {"kind": "factory", "id": "factory-8"},
@@ -297,7 +297,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
             with self.assertRaises(ValueError, msg=equation):
                 validate_recipe(unsafe)
 
-    def test_v23_terrain_bank_rejects_duplicate_factories_and_slot_terrain_data(self) -> None:
+    def test_v24_terrain_bank_rejects_duplicate_factories_and_slot_terrain_data(self) -> None:
         duplicate = self.terrain_bank_recipe([
             {"kind": "factory", "id": "factory-1"},
             {"kind": "factory", "id": "factory-1"},
@@ -312,6 +312,16 @@ class GenerateEngineConfigTest(unittest.TestCase):
             self.custom_model_assignment(0, "wave-terrain")]
         with self.assertRaisesRegex(ValueError, "shared terrain bank"):
             validate_recipe(legacy_slot)
+
+    def test_v24_terrain_bank_accepts_sixteen_entries_and_rejects_seventeen(self) -> None:
+        custom = self.custom_model_assignment(0, "wave-terrain")["model"]
+        entries = [
+            {"kind": "custom", "model": {**custom, "name": f"Terrain {index}"}}
+            for index in range(16)
+        ]
+        self.assertEqual(len(validate_recipe(self.terrain_bank_recipe(entries)).terrain_bank), 16)
+        with self.assertRaisesRegex(ValueError, "between one and 16"):
+            validate_recipe(self.terrain_bank_recipe(entries + [entries[0]]))
 
     def test_output_format_accepts_wav_and_intel_hex_only(self) -> None:
         recipe = self.load("default_recipe.json")

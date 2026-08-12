@@ -78,11 +78,11 @@ SPEECH_BANKS_MIN_SCHEMA_VERSION = 17
 ATTENUVERTER_MODE_MIN_SCHEMA_VERSION = 18
 ONE_KNOB_ENVELOPE_MIN_SCHEMA_VERSION = 19
 SWAPPABLE_FM_BANKS_MIN_SCHEMA_VERSION = 20
-CUSTOM_MODEL_DATA_MIN_SCHEMA_VERSION = 21
+CUSTOM_MODEL_DATA_MIN_SCHEMA_VERSION = 24
 CUSTOM_MODEL_DATA_SIZE = 4096
-TERRAIN_BANK_MIN_SCHEMA_VERSION = 23
+TERRAIN_BANK_MIN_SCHEMA_VERSION = 24
 NATIVE_TERRAIN_MIN_SCHEMA_VERSION = 24
-MAX_TERRAIN_BANK_SIZE = 56
+MAX_TERRAIN_BANK_SIZE = 16
 FACTORY_TERRAIN_IDS = tuple(f"factory-{index}" for index in range(1, 9))
 SYNC_INPUT_MIN_SCHEMA_VERSION = 21
 # v22 moves Sync In's COMPILE-TIME switch off the starting value and onto its own
@@ -192,7 +192,7 @@ class BuildRecipe:
     stereo_engines: tuple[str, ...] | None = None
     # v17: selected stock LPC banks followed by custom decoded-frame banks.
     speech_banks: dict[str, Any] | None = None
-    # v21: public slot, engine kind, and the sampled Mutable-compatible 4 KB
+    # v24: public slot, Wavetable kind, and the sampled Mutable-compatible 4 KB
     # user-data block. The equation and display name stay in the public recipe;
     # firmware needs only these bounded bytes.
     custom_model_data: tuple[tuple[int, str, bytes], ...] = ()
@@ -865,7 +865,7 @@ def _render_terrain_expression(node: ast.AST) -> str:
 
 def validate_terrain_bank(
         value: Any, schema_version: int) -> list[tuple[int, bytes | None, str | None, float, float]]:
-    """Validate v23's shared, ordered Wave Terrain bank."""
+    """Validate v24's shared, ordered Wave Terrain bank."""
     if (not isinstance(value, list)
             or not 1 <= len(value) <= MAX_TERRAIN_BANK_SIZE):
         raise ValueError(
@@ -1102,7 +1102,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
                     and any(kind == "wave-terrain"
                             for _slot, kind, _data in custom_model_data)):
                 raise ValueError(
-                    "schema 23 terrain data belongs in the shared terrain bank")
+                    "schema 24 terrain data belongs in the shared terrain bank")
         if carries_terrain_bank:
             if "wave-terrain" not in public_slots:
                 raise ValueError(

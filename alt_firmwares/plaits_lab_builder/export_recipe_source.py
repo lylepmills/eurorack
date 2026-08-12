@@ -169,7 +169,7 @@ def _readme(
         if dirty else ""
     )
     linker_note = (
-        "- `plaits_user_banks.ld` — recipe-specific flash placement for replaceable FM banks\n"
+        "- `plaits_user_banks.ld` — recipe-specific flash placement for replaceable FM banks and prebaked terrains\n"
         if has_linker_script else ""
     )
     safe_name = " ".join(recipe_name.split()).replace("`", "'") if recipe_name else ""

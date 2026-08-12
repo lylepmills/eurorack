@@ -43,7 +43,7 @@ test("the Worker and compiler catalogs contain the same approved IDs", async () 
   assert.equal(approvedEngineIds.length, 88);
 });
 
-test("schema 21 carries distinct per-slot Wave Terrain and Wavetable data", async () => {
+test("schema 24 carries distinct per-slot Wavetable data", async () => {
   const publicCatalog = JSON.parse(await readFile(
     new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),
     "utf8",
@@ -56,8 +56,8 @@ test("schema 21 carries distinct per-slot Wave Terrain and Wavetable data", asyn
     publicCatalog.engines.map((engine: any) => [engine.id, engine]),
   );
   const recipe = structuredClone(fixture) as any;
-  recipe.schemaVersion = 21;
-  recipe.slots[0] = "wave-terrain";
+  recipe.schemaVersion = 24;
+  recipe.slots[0] = "wavetable";
   recipe.slots[1] = "wavetable";
   recipe.slots = recipe.slots.map((engineId: string) => {
     const engine = engines.get(engineId) as any;
@@ -79,22 +79,22 @@ test("schema 21 carries distinct per-slot Wave Terrain and Wavetable data", asyn
     holdOnTrigger: false,
     attenuverterMode: "stock",
   };
-  const terrainData = Buffer.alloc(4096, 17).toString("base64");
+  const wavetableDataA = Buffer.alloc(4096, 17).toString("base64");
   const wavetableData = Buffer.alloc(4096, 29).toString("base64");
   recipe.resources = {
     chordTables: chordCatalog.tables,
     customModelData: [
-      { slot: 0, model: { kind: "wave-terrain", name: "Terrain A", equation: "x + y", data: terrainData } },
+      { slot: 0, model: { kind: "wavetable", name: "Table A", equation: "sin(phi)", data: wavetableDataA } },
       { slot: 1, model: { kind: "wavetable", name: "Table B", equation: "sin(phi)", data: wavetableData } },
     ],
   };
 
   const normalized = normalizeRecipe(recipe);
-  assert.equal(normalized.schemaVersion, 21);
+  assert.equal(normalized.schemaVersion, 24);
   assert.deepEqual(normalized.resources.customModelData, recipe.resources.customModelData);
 
   const wrongKind = structuredClone(recipe);
-  wrongKind.resources.customModelData[0].model.kind = "wavetable";
+  wrongKind.resources.customModelData[0].model.kind = "wave-terrain";
   assert.throws(() => normalizeRecipe(wrongKind), /match a Wave Terrain or Wavetable slot/);
 
   const shortData = structuredClone(recipe);
@@ -106,7 +106,7 @@ test("schema 21 carries distinct per-slot Wave Terrain and Wavetable data", asyn
   assert.throws(() => normalizeRecipe(wrongSlot), /match a Wave Terrain or Wavetable slot/);
 });
 
-test("schema 23 carries one ordered shared terrain bank", async () => {
+test("schema 24 carries one ordered shared terrain bank", async () => {
   const publicCatalog = JSON.parse(await readFile(
     new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),
     "utf8",
@@ -117,7 +117,7 @@ test("schema 23 carries one ordered shared terrain bank", async () => {
   ));
   const engines = new Map(publicCatalog.engines.map((engine: any) => [engine.id, engine]));
   const recipe = structuredClone(fixture) as any;
-  recipe.schemaVersion = 23;
+  recipe.schemaVersion = 24;
   recipe.slots[0] = "wave-terrain";
   recipe.slots = recipe.slots.map((engineId: string) => {
     const engine = engines.get(engineId) as any;
@@ -146,7 +146,7 @@ test("schema 23 carries one ordered shared terrain bank", async () => {
   };
 
   const normalized = normalizeRecipe(recipe);
-  assert.equal(normalized.schemaVersion, 23);
+  assert.equal(normalized.schemaVersion, 24);
   assert.deepEqual(normalized.resources.terrainBank, recipe.resources.terrainBank);
 
   const native = structuredClone(recipe);
@@ -156,14 +156,26 @@ test("schema 23 carries one ordered shared terrain bank", async () => {
   assert.equal(normalizedNative.schemaVersion, 24);
   assert.equal(normalizedNative.resources.terrainBank?.[1].kind, "custom");
   assert.equal((normalizedNative.resources.terrainBank?.[1] as any).model.representation, "native");
+  assert.notEqual(
+    await computeManualKey(normalized, "19"),
+    await computeManualKey(normalizedNative, "19"),
+  );
 
   const nativeOnV23 = structuredClone(native);
   nativeOnV23.schemaVersion = 23;
-  assert.throws(() => normalizeRecipe(nativeOnV23), /require recipe schema 24/);
+  assert.throws(() => normalizeRecipe(nativeOnV23), /supported firmware resources/);
 
   const duplicate = structuredClone(recipe);
   duplicate.resources.terrainBank.push({ kind: "factory", id: "factory-8" });
   assert.throws(() => normalizeRecipe(duplicate), /at most once/);
+
+  const sixteen = structuredClone(recipe);
+  sixteen.resources.terrainBank = Array.from({ length: 16 }, (_, index) => ({
+    kind: "custom", model: { ...model, name: `Terrain ${index + 1}` },
+  }));
+  assert.equal(normalizeRecipe(sixteen).resources.terrainBank?.length, 16);
+  sixteen.resources.terrainBank.push({ kind: "custom", model });
+  assert.throws(() => normalizeRecipe(sixteen), /between one and 16/);
 
   const wrongPalette = structuredClone(recipe);
   wrongPalette.slots[0] = wrongPalette.slots[1];

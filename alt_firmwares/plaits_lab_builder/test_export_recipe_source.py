@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import tempfile
 import unittest
@@ -120,6 +121,59 @@ class ExportRecipeSourceTest(unittest.TestCase):
             (FIXTURES.parent / "plaits_lab_chord_tables/catalog.json").read_text()
         )
         return catalog["tables"]
+
+    def terrain_recipe(self, native: bool) -> dict:
+        recipe = self.load()
+        recipe["schemaVersion"] = 24
+        recipe["slots"][0] = "wave-terrain"
+        recipe["preferences"] = {
+            "navigationMode": "linear", "calibration": False,
+            "colorBlindMode": False, "replaceableFmBanks": False,
+            "syncInput": False,
+        }
+        recipe["initialOptions"] = {
+            **DEFAULT_CONFIGURATION["initialOptions"],
+            "attenuverterMode": "stock",
+        }
+        model = {
+            "kind": "wave-terrain", "name": "Soft rings",
+            "equation": "sin(5 * (x * x + y * y))",
+            "data": base64.b64encode(bytes([41]) * 4096).decode("ascii"),
+        }
+        if native:
+            model["representation"] = "native"
+        recipe["resources"] = {
+            "chordTables": self._default_chord_tables(),
+            "terrainBank": [{"kind": "custom", "model": model}],
+        }
+        return recipe
+
+    def test_prebaked_terrain_exports_the_linker_overlay(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            temporary_path = Path(temporary)
+            stock_linker = temporary_path / "stock.ld"
+            stock_linker.write_text(
+                "SECTIONS\n{\n  .text :\n  {\n"
+                "    . = ALIGN(16);\n"
+                "     _etext = .;\n"
+                "     _sidata = _etext;\n"
+                "  } >FLASH\n}\n"
+            )
+            output = temporary_path / "source"
+            with patch("export_recipe_source.STOCK_LINKER_SCRIPT", stock_linker):
+                files = self.export(self.terrain_recipe(False), output)
+            self.assertIn("plaits_user_banks.ld", files)
+            self.assertIn(".user_data_terrains.0", (output / "engine_config.h").read_text())
+            self.assertIn('"LINKER_SCRIPT=$export_dir/plaits_user_banks.ld"',
+                          (output / "build.sh").read_text())
+
+    def test_native_terrain_export_needs_no_linker_overlay(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary) / "source"
+            files = self.export(self.terrain_recipe(True), output)
+            self.assertNotIn("plaits_user_banks.ld", files)
+            self.assertIn("TerrainEquation_0", (output / "engine_config.h").read_text())
+            self.assertNotIn("LINKER_SCRIPT", (output / "build.sh").read_text())
 
     def test_refuses_to_overwrite_a_nonempty_directory(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

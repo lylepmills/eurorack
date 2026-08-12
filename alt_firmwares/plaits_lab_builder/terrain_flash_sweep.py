@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Measure each factory Wave Terrain's marginal flash cost.
+"""Measure factory and custom Wave Terrain marginal flash costs.
 
 Run inside the plaits-lab-builder container. The control is the stock-24
 palette with all eight factory terrains made explicit. Each measurement removes
@@ -8,6 +8,7 @@ the result matches the per-entry estimate the browser should show.
 """
 
 import hashlib
+import base64
 import json
 import sys
 
@@ -20,7 +21,7 @@ from generate_engine_config import DEFAULT_CHORD_TABLES, DEFAULT_CONFIGURATION
 BASE = json.load(open("/work/alt_firmwares/plaits_lab_builder/default_recipe.json"))
 CATALOG = json.load(open("/work/alt_firmwares/plaits_lab_catalog/catalog.json"))
 BASE["slots"] = list(CATALOG["presets"]["stock"])
-# The explicit v23 bank adds a little dispatch code to a stock palette that is
+# The explicit v24 bank adds a little dispatch code to a stock palette that is
 # already near the limit. Replace Speech with a duplicate of Virtual Analog in
 # every arm to create link room without changing Wave Terrain or Wavetable's
 # shared resources. Remove the three DX7 slots too: this diagnostic is measuring
@@ -35,7 +36,7 @@ FACTORIES = [f"factory-{number}" for number in range(1, 9)]
 
 def terrain_recipe(factory_ids):
     recipe = json.loads(json.dumps(BASE))
-    recipe["schemaVersion"] = 23
+    recipe["schemaVersion"] = 24
     recipe["preferences"] = {
         "navigationMode": "linear",
         "calibration": False,
@@ -54,6 +55,20 @@ def terrain_recipe(factory_ids):
             for factory_id in factory_ids
         ],
     }
+    return recipe
+
+
+def with_custom(factory_ids, equation, *, native):
+    recipe = terrain_recipe(factory_ids)
+    model = {
+        "kind": "wave-terrain",
+        "name": "Flash diagnostic",
+        "equation": equation,
+        "data": base64.b64encode(bytes(4096)).decode("ascii"),
+    }
+    if native:
+        model["representation"] = "native"
+    recipe["resources"]["terrainBank"].append({"kind": "custom", "model": model})
     return recipe
 
 
@@ -83,7 +98,22 @@ def main():
         without = [candidate for candidate in FACTORIES if candidate != factory_id]
         total = build_size(f"without-{factory_id}", terrain_recipe(without))
         results[factory_id] = full - total
-    print(json.dumps(results, indent=2), flush=True)
+    custom = {
+        "prebaked": build_size(
+            "plus-prebaked", with_custom(FACTORIES, "x + y", native=False)
+        ) - full,
+    }
+    native_equations = {
+        "linear": "x + y",
+        "soft-rings": "sin(10 * r)",
+        "four-chambers": "sign(x * y) * (1 - 0.55 * r) + 0.2 * x",
+        "lone-island": "max(0, 1 - 2.2 * sqrt((x + 0.25)^2 + (y - 0.15)^2))",
+    }
+    for name, equation in native_equations.items():
+        custom[f"native-{name}"] = build_size(
+            f"native-{name}", with_custom(FACTORIES, equation, native=True)
+        ) - full
+    print(json.dumps({"factory": results, "custom": custom}, indent=2), flush=True)
 
 
 if __name__ == "__main__":
