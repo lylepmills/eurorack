@@ -43,7 +43,7 @@ REJECTED, because emitting it would compile a four-entry MODEL menu while
 starting the module at index four — past the end of its own menu. Independently of the flag, a
 transferred bank now records how many patches it holds, so a short bank sizes
 the HARMONICS quantizer to its real count instead of repeating to fill 32. A
-schema-23 candidate adds two independent Experimental options. `linearTzfm`
+schema 23 adds two independent Experimental options. `linearTzfm`
 changes the FM law on 29 qualified models: counter-clockwise is linear
 through-zero FM, clockwise remains regular exponential FM, and the center is
 off. Models without a meaningful signed oscillator direction keep their stock
@@ -57,8 +57,7 @@ catalog's `fmCapabilities` lists are the public product policy used to explain
 those per-model differences in the editor and generated field guide. Guides
 show the same active-only `TZ` and `50k` badges beside model references, with a
 legend on the bank-map page. The failed periodic-LEVEL
-experiment and borderline Brass result are not part of schema 23. This
-candidate is not deployed.
+experiment and borderline Brass result are not part of schema 23. The
 one-shot marker in the application image is restored by every WAV or HEX flash, so first boot applies
 all embedded Starting Options even when reinstalling the exact same build;
 ordinary power cycles still preserve later runtime changes. It generates a compile-time
@@ -70,13 +69,13 @@ at the firmware's linked application address and deliberately excludes the
 bootloader.
 
 Schema-15/Ro'Ved support passed its hardware checklist on July 30, 2026.
-Schema 22 is available in production with recipe-driven scale banks, automatic
+Schema 23 is available in production with recipe-driven scale banks, automatic
 LEVEL routing, selectable/custom LPC Speech banks of up to 32 words, text and
 recording encoders, source/engine audio previews, unpatched-attenuverter modes,
 and the triggered and gated FREQUENCY contours. It also includes schema 20's
 replaceable FM banks and schema 21's experimental Sync In, now controlled by
-schema 22's explicit opt-in preference. Schema 23 remains an undeployed
-development candidate.
+schema 22's explicit opt-in preference, plus schema 23's independent Linear
+TZFM and Fast FM options.
 
 ## Editable local source builds
 
@@ -539,6 +538,17 @@ bytes of BSS. Production Worker version
 `8bcd8530-7184-49b9-8975-0965900d75f6` passed the full compiler canary before
 the public editor was enabled; `rev-44453427c187` remains the immediate
 rollback image.
+
+Later on August 12, Worker commit `414d473529a7` moved normalized recipes into
+R2 and reduced queue messages to reference-only build IDs, avoiding
+Cloudflare Queues' 128 KB per-message limit for large custom-FM palettes.
+Commit `7e3f51b5cc9f` corrected the consumer to load that already-normalized
+internal representation without parsing it again as an external manifest.
+Production Worker version `d4280dc1-2d1b-46ad-92b8-583f0a99cb96` then built
+the exact live Ocean Drive '83 recipe
+`19481c6a2b743db4452b5a63de16a33f6f427a789fa7bb3018f994be46e97a1e`;
+both its firmware WAV and generated field guide were ready and returned HTTP
+200.
 
 Cloudflare's rate-limit binding allows five new compilation requests per source
 IP per minute. Cache hits and repeated polls for an already queued build bypass
