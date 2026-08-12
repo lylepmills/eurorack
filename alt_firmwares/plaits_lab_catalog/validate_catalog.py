@@ -174,6 +174,17 @@ def validate_catalog(catalog: dict[str, Any]) -> None:
         if actual != expected:
             raise ValueError(f"{engine_id} outputs no longer match the audited behavior")
 
+    fm_capabilities = catalog.get("fmCapabilities")
+    if not isinstance(fm_capabilities, dict) or set(fm_capabilities) != {
+            "linearTzfm", "fastFm"}:
+        raise ValueError("fmCapabilities must declare linearTzfm and fastFm")
+    for capability, engine_ids in fm_capabilities.items():
+        if (not isinstance(engine_ids, list)
+                or len(engine_ids) != len(set(engine_ids))
+                or any(engine_id not in ids for engine_id in engine_ids)):
+            raise ValueError(
+                f"fmCapabilities.{capability} must list unique approved engine IDs")
+
     for name, slots in catalog.get("presets", {}).items():
         if len(slots) not in (24, 32) or any(engine_id not in ids for engine_id in slots):
             raise ValueError(f"preset {name} must contain 24 or 32 approved engine IDs")
@@ -217,6 +228,7 @@ def web_catalog(catalog: dict[str, Any]) -> dict[str, Any]:
             }
             for engine in catalog["engines"]
         ],
+        "fmCapabilities": catalog["fmCapabilities"],
         "presets": catalog["presets"],
     }
 
