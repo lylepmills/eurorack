@@ -20,61 +20,8 @@ release notes, and user documentation become the source of truth.
 
 | Feature | Status | Last reviewed | Resume from |
 | --- | --- | --- | --- |
-| Experimental Linear TZFM + Fast FM | Planned | 2026-08-11 | eurorack `codex/plaits-tzfm-expanded` at `2b6a556`; website `session/codex-plaits-tzfm-options` at `c7d5e473` |
 | Renaissance-style Speech remix | Parked | 2026-08-11 | `codex/renaissance-sam-prototype` at `a815337` |
 | Four independent pitch CVs for chord engines | Parked | 2026-08-11 | `session/plaits-four-voct` at `ebed081` |
-
-## Planned
-
-### Experimental Linear TZFM + Fast FM
-
-**Concept.** Offer two independent, opt-in FM experiments. Linear TZFM changes
-the attenuverter law on qualified models: counter-clockwise is fixed-Hz linear
-through-zero FM, clockwise remains ordinary exponential FM, and the center is
-off. Fast FM continuously digitizes the FM jack at 50 kHz on qualified models;
-because FM and LEVEL share the STM32F373 converter, a Fast-FM build gives up
-LEVEL CV across the whole firmware. Either option can be used alone or together.
-
-**Decision.** Planned after Sync In reached production, but not deployed. The
-current schema-23 candidate is rebased onto the source-export/safety-gate work,
-composes with Sync In, and replaces the original three-engine experiment with
-explicit catalog policy: 29 models qualify for Linear TZFM and 34 for Fast FM.
-Unsupported models retain their stock bipolar exponential FM behavior. A failed
-periodic-LEVEL experiment and borderline Brass result were deliberately excluded.
-
-**Candidates.** Firmware and builder work is on eurorack branch
-`codex/plaits-tzfm-expanded` through `2b6a556` (`Add experimental FM badges to
-field guides`). It includes the schema-23 contract and generator, independent
-flags, engine implementations, hardware diagnostic/decoder tooling, capability
-catalogs, post-link-compatible builds, and active-only `TZ` / `50k` field-guide
-badges. The companion Rubato Audio branch
-`session/codex-plaits-tzfm-options` through `c7d5e473` (`Separate experimental
-Plaits options`) adds the editor controls and copy, capability-aware model
-badges, presets, analytics, schema handling, and measured palette-aware flash
-estimator. Both branch tips are pushed; neither is production.
-
-#### Constraints and work required
-
-1. Rebase both candidate branches onto their current `origin/master`, resolve
-   any catalog/pin drift as one coupled change, and keep schema 23 undeployed
-   until the exact merged source passes every gate below.
-2. Re-run the full synthesis, builder/contract/manual, website, focused
-   resampler/TZFM, ARM flash, and catalog CPU suites on the merged candidates.
-   Verify off-state builds and combinations with Sync In, stereo, replaceable FM
-   banks, Speech resources, and already-heavy models.
-3. Hardware-audition the final product build across both options separately and
-   together: carrier/modulation extremes, negative-frequency crossings, model
-   changes, stereo, prolonged operation, and the qualified model lists. Confirm
-   the recovery diagnostics stay quiet and that unqualified models retain stock
-   behavior.
-4. Make the LEVEL tradeoff impossible to miss in the final editor and field
-   guide: Fast FM disables LEVEL CV throughout the build even while a model that
-   does not consume the fast stream is selected. Linear TZFM alone keeps LEVEL.
-5. Stage the schema-23 builder image and matching website snapshot, verify the
-   generated guide/badges and flash estimates against exact artifacts, then run
-   the physical-module staging gate and production canaries before rollout.
-6. After production settles on the intended immutable image, update the deploy
-   ledger and project memory, then remove this item from the backlog as shipped.
 
 ## Parked
 

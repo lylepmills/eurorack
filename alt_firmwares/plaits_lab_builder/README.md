@@ -519,6 +519,24 @@ custom bank. The later production canary covered all three Speech engines. Its
 SHA-256 is
 `0845885d1cc89d2b66bddef6ea583dabc3f9b43865ec420023ec26069633b1c9`.
 
+Schema 23 shipped on August 12 at `rev-de96c9d9f22b`, adding independent,
+opt-in Linear TZFM and Fast FM preferences plus the FM Heaven preset. Catalog
+qualification enables Linear TZFM for 29 models and Fast FM for 34; unsupported
+models retain their ordinary control-rate exponential FM. Fast FM dedicates the
+shared converter to a continuous 50 kHz FM stream, so LEVEL CV is unavailable
+throughout a Fast-FM build. The final FM Heaven firmware passed the physical
+module audition before rollout. Staging and production both rebuilt exact recipe
+`9fb002c6e38b62823ceffbe1250f76ce56584a505d51248c9c5db4b8d7548634`;
+its 15,859,244-byte WAV has SHA-256
+`f28605521b8a5528f8db205ff517d394cda5358975efad57ef6fe7daf65138af`,
+and its application binary has SHA-256
+`98a1f63de43caf6351fcc990592d0c13199020e63f6c8061ef16178966a5aa46`.
+The linked firmware uses 204,612 bytes of text, 48 bytes of data, and 23,116
+bytes of BSS. Production Worker version
+`8bcd8530-7184-49b9-8975-0965900d75f6` passed the full compiler canary before
+the public editor was enabled; `rev-44453427c187` remains the immediate
+rollback image.
+
 Cloudflare's rate-limit binding allows five new compilation requests per source
 IP per minute. Cache hits and repeated polls for an already queued build bypass
 that limit. This is a lightweight abuse guard rather than an account or billing
@@ -526,7 +544,7 @@ system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-44453427c187` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-de96c9d9f22b` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a new
 image, use `wrangler containers info <application-id>` and wait until
@@ -536,16 +554,17 @@ gradual rollout. A first-time staging application can temporarily return "no
 Container instance available" while its image is starting; the bounded staging
 smoke retries that response.
 
-Schema 22 is live, with Sync In as an opt-in Advanced preference and custom
-Speech banks accepting up to 32 words inside the 1,024-frame ceiling. It
-inherits schema 21's experimental MODEL-input assignment, schema 20's
+Schema 23 is live, with independent experimental Linear TZFM and Fast FM
+preferences, Sync In as an opt-in preference, and custom Speech banks accepting
+up to 32 words inside the 1,024-frame ceiling. It inherits schema 22's explicit
+Sync capability, schema 21's experimental MODEL-input assignment, schema 20's
 replaceable FM-bank preference, schema 19's
 triggered and gated FREQUENCY contours, and schema 18's Stock, Drift,
 and Step unpatched-attenuverter modes; schema 17's selectable stock LPC banks,
 custom text/recording-derived Speech banks, source/engine previews; and the
 earlier recipe-driven scale banks and automatic LEVEL routing. The generalized
 schema-inheritance hardening from `5b2b077` is also live: current production
-source `44453427c187` descends from that commit, so future supported schemas
+source `de96c9d9f22b` descends from that commit, so future supported schemas
 inherit older feature shapes without another version-list edit.
 
 ### Rolling back
@@ -617,6 +636,7 @@ target.
 | August 8, 2026 (schema 21 experimental Sync In, manual contract 16) | `fc594b275f0d` | `rev-fc594b275f0d` |
 | August 8, 2026 (schema 22 Sync In as an opt-in Advanced preference) | `c6684dea562b` | `rev-c6684dea562b` |
 | August 10, 2026 (32-word custom Speech banks) | `44453427c187` | `rev-44453427c187` |
+| August 12, 2026 (schema 23 Linear TZFM + Fast FM; FM Heaven) | `de96c9d9f22b` | `rev-de96c9d9f22b` |
 
 Three consequences a rollback has that a forward deploy does not:
 
