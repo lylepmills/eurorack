@@ -40,6 +40,7 @@ AUDITED_STOCK_CONTROLS = {
     "wave-terrain": ["Terrain", "Path radius", "Path offset", "Y offset"],
     "string-machine": ["Chord", "Filter and chorus", "Waveform and registration", "Ensemble amount"],
     "chiptune": ["Chord", "Arpeggio or inversion", "Pulse width and sync", "Register preset"],
+    "z-filter": ["Model", "Cutoff", "Shape", "Bend"],
 }
 
 AUDITED_STOCK_OUTPUTS = {
