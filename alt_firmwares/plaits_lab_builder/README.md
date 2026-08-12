@@ -550,6 +550,17 @@ the exact live Ocean Drive '83 recipe
 both its firmware WAV and generated field guide were ready and returned HTTP
 200.
 
+The August 12 Z Filter metadata follow-up shipped at `rev-bf3c078fdf07`.
+MORPH is now correctly documented as the shape gesture inherited from Braids:
+saw through square at noon to triangle. Staging build
+`a7bfd687e3aad7984319f589388ee0d41fbcb62d90ef996795f3f6d6ea213553`
+compiled the exact recipe and LPC frames from production build
+`c44bc0e2d62f1c4bb92e6d0e3f381312fc6ea42595f4cfedcfbfd25547606087`.
+Both produced the same 4,803,692-byte WAV with SHA-256
+`5b2268c4e4bcf76ce81c0be46de47ced5986e2c20bda838d6c2a02efcfdbce3c`,
+confirming the rollout changes catalog identity and documentation without
+changing compiled firmware bytes.
+
 Cloudflare's rate-limit binding allows five new compilation requests per source
 IP per minute. Cache hits and repeated polls for an already queued build bypass
 that limit. This is a lightweight abuse guard rather than an account or billing
@@ -557,7 +568,7 @@ system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-de96c9d9f22b` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-bf3c078fdf07` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a new
 image, use `wrangler containers info <application-id>` and wait until
@@ -577,7 +588,7 @@ and Step unpatched-attenuverter modes; schema 17's selectable stock LPC banks,
 custom text/recording-derived Speech banks, source/engine previews; and the
 earlier recipe-driven scale banks and automatic LEVEL routing. The generalized
 schema-inheritance hardening from `5b2b077` is also live: current production
-source `de96c9d9f22b` descends from that commit, so future supported schemas
+source `bf3c078fdf07` descends from that commit, so future supported schemas
 inherit older feature shapes without another version-list edit.
 
 ### Rolling back
@@ -650,6 +661,7 @@ target.
 | August 8, 2026 (schema 22 Sync In as an opt-in Advanced preference) | `c6684dea562b` | `rev-c6684dea562b` |
 | August 10, 2026 (32-word custom Speech banks) | `44453427c187` | `rev-44453427c187` |
 | August 12, 2026 (schema 23 Linear TZFM + Fast FM; FM Heaven) | `de96c9d9f22b` | `rev-de96c9d9f22b` |
+| August 12, 2026 (correct Z Filter MORPH shape metadata) | `bf3c078fdf07` | `rev-bf3c078fdf07` |
 
 Three consequences a rollback has that a forward deploy does not:
 
