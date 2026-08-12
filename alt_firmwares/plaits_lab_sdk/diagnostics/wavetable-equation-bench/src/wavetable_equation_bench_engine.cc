@@ -36,6 +36,17 @@ const float kInvTwoPi = 0.15915494309189535f;
 #define PLAITS_WAVETABLE_BENCH_AUTOSWEEP 0
 #endif
 
+#ifndef PLAITS_WAVETABLE_BENCH_STRESS_AUTOSWEEP
+#define PLAITS_WAVETABLE_BENCH_STRESS_AUTOSWEEP 0
+#endif
+
+#if PLAITS_WAVETABLE_BENCH_STRESS_AUTOSWEEP
+const int kWavetableEquationAutosweepTests =
+    kWavetableEquationBenchCases * 2;
+#else
+const int kWavetableEquationAutosweepTests = kWavetableEquationBenchCases;
+#endif
+
 // 105.5 seconds: 6 s leader, 17 x (1.5 s gap + 4 s case), 6 s trailer.
 // Adjacent trailer/leader gaps form a unique 12-second boundary marker.
 const uint32_t kAutosweepLeaderSamples = 6u * 48000u;
@@ -45,7 +56,7 @@ const uint32_t kAutosweepSlotSamples =
     kAutosweepGapSamples + kAutosweepCaseSamples;
 const uint32_t kAutosweepTrailerSamples = 6u * 48000u;
 const uint32_t kAutosweepCycleSamples = kAutosweepLeaderSamples +
-    kWavetableEquationBenchCases * kAutosweepSlotSamples +
+    kWavetableEquationAutosweepTests * kAutosweepSlotSamples +
     kAutosweepTrailerSamples;
 
 // These two objects deliberately occupy the exact meaningful portion of an MI
@@ -222,10 +233,40 @@ void WavetableEquationBenchEngine::Render(
     size_t size,
     bool* already_enveloped) {
 #if PLAITS_WAVETABLE_BENCH_AUTOSWEEP
+  int autosweep_case = -1;
+  int autosweep_profile = 0;
+  uint32_t position = sequence_samples_;
+  if (position >= kAutosweepLeaderSamples) {
+    position -= kAutosweepLeaderSamples;
+    const uint32_t case_region =
+        kWavetableEquationAutosweepTests * kAutosweepSlotSamples;
+    if (position < case_region) {
+      const int slot = static_cast<int>(position / kAutosweepSlotSamples);
+      const uint32_t within_slot = position % kAutosweepSlotSamples;
+      if (within_slot >= kAutosweepGapSamples) {
+        autosweep_case = slot % kWavetableEquationBenchCases;
+        autosweep_profile = slot / kWavetableEquationBenchCases;
+      }
+    }
+  }
+  sequence_samples_ += static_cast<uint32_t>(size);
+  if (sequence_samples_ >= kAutosweepCycleSamples) {
+    sequence_samples_ -= kAutosweepCycleSamples;
+  }
+#if PLAITS_WAVETABLE_BENCH_STRESS_AUTOSWEEP
+  const float note = autosweep_profile ? 84.0f : 48.0f;
+  const float timbre = autosweep_profile
+      ? ((autosweep_case & 1) ? 1.0f : 0.0f) : 0.5f;
+  const float morph = autosweep_profile
+      ? ((autosweep_case & 1) ? 0.0f : 1.0f) : 0.5f;
+  const float macro = autosweep_profile
+      ? static_cast<float>((autosweep_case + 1) % 3) * 0.5f : 0.5f;
+#else
   const float note = 48.0f;
   const float timbre = 0.5f;
   const float morph = 0.5f;
   const float macro = 0.5f;
+#endif
 #else
   const float note = parameters.note;
   const float timbre = parameters.timbre;
@@ -244,22 +285,7 @@ void WavetableEquationBenchEngine::Render(
 #if PLAITS_WAVETABLE_BENCH_FIXED_CASE >= 0
   int wavetable_case = PLAITS_WAVETABLE_BENCH_FIXED_CASE;
 #elif PLAITS_WAVETABLE_BENCH_AUTOSWEEP
-  int wavetable_case = -1;
-  uint32_t position = sequence_samples_;
-  if (position >= kAutosweepLeaderSamples) {
-    position -= kAutosweepLeaderSamples;
-    const uint32_t case_region =
-        kWavetableEquationBenchCases * kAutosweepSlotSamples;
-    if (position < case_region) {
-      const int slot = static_cast<int>(position / kAutosweepSlotSamples);
-      const uint32_t within_slot = position % kAutosweepSlotSamples;
-      if (within_slot >= kAutosweepGapSamples) wavetable_case = slot;
-    }
-  }
-  sequence_samples_ += static_cast<uint32_t>(size);
-  if (sequence_samples_ >= kAutosweepCycleSamples) {
-    sequence_samples_ -= kAutosweepCycleSamples;
-  }
+  int wavetable_case = autosweep_case;
 #else
   int wavetable_case = min(
       int(parameters.harmonics * float(kWavetableEquationBenchCases)),

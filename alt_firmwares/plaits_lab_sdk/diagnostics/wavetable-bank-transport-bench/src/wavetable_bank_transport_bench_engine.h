@@ -4,6 +4,8 @@
 #ifndef PLAITS_LAB_WAVETABLE_BANK_TRANSPORT_BENCH_ENGINE_H_
 #define PLAITS_LAB_WAVETABLE_BANK_TRANSPORT_BENCH_ENGINE_H_
 
+#include <stdint.h>
+
 #include "plaits/dsp/engine/engine.h"
 
 namespace plaits {
@@ -25,6 +27,7 @@ class WavetableBankTransportBenchEngine : public Engine {
   float previous_harmonics_;
   float previous_timbre_;
   float previous_morph_;
+  uint32_t sequence_samples_;
 
   DISALLOW_COPY_AND_ASSIGN(WavetableBankTransportBenchEngine);
 };

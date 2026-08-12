@@ -22,6 +22,21 @@ const float kTransportPi = 3.14159265358979323846f;
 const float kTransportTwoPi = 6.28318530717958647692f;
 const float kTransportInvTwoPi = 0.15915494309189535f;
 
+#ifndef PLAITS_WAVETABLE_TRANSPORT_AUTOSWEEP
+#define PLAITS_WAVETABLE_TRANSPORT_AUTOSWEEP 0
+#endif
+
+const int kTransportAutosweepTests = 12;
+const uint32_t kTransportLeaderSamples = 6u * 48000u;
+const uint32_t kTransportGapSamples = 3u * 24000u;
+const uint32_t kTransportCaseSamples = 4u * 48000u;
+const uint32_t kTransportSlotSamples =
+    kTransportGapSamples + kTransportCaseSamples;
+const uint32_t kTransportTrailerSamples = 6u * 48000u;
+const uint32_t kTransportCycleSamples = kTransportLeaderSamples +
+    kTransportAutosweepTests * kTransportSlotSamples +
+    kTransportTrailerSamples;
+
 struct TransportConfiguration {
   int banks;
   bool mirror;
@@ -107,10 +122,12 @@ void WavetableBankTransportBenchEngine::Init(BufferAllocator* allocator) {
   previous_harmonics_ = 0.0f;
   previous_timbre_ = 0.5f;
   previous_morph_ = 0.5f;
+  sequence_samples_ = 0;
 }
 
 void WavetableBankTransportBenchEngine::Reset() {
   phase_ = 0.0f;
+  sequence_samples_ = 0;
 }
 
 void WavetableBankTransportBenchEngine::Render(
@@ -120,22 +137,65 @@ void WavetableBankTransportBenchEngine::Render(
     size_t size,
     bool* already_enveloped) {
   (void) already_enveloped;
+#if PLAITS_WAVETABLE_TRANSPORT_AUTOSWEEP
+  int test = -1;
+  uint32_t within_case = 0;
+  uint32_t position = sequence_samples_;
+  if (position >= kTransportLeaderSamples) {
+    position -= kTransportLeaderSamples;
+    const uint32_t test_region =
+        kTransportAutosweepTests * kTransportSlotSamples;
+    if (position < test_region) {
+      const int slot = static_cast<int>(position / kTransportSlotSamples);
+      const uint32_t within_slot = position % kTransportSlotSamples;
+      if (within_slot >= kTransportGapSamples) {
+        test = slot;
+        within_case = within_slot - kTransportGapSamples;
+      }
+    }
+  }
+  sequence_samples_ += static_cast<uint32_t>(size);
+  if (sequence_samples_ >= kTransportCycleSamples) {
+    sequence_samples_ -= kTransportCycleSamples;
+  }
+  if (test < 0) {
+    while (size--) {
+      *out++ = 0.0f;
+      *aux++ = 0.0f;
+    }
+    return;
+  }
+  const int mode = test % 6;
+  const bool high_profile = test >= 6;
+  const float note = high_profile ? 84.0f : 48.0f;
+  const float timbre = high_profile ? ((mode & 1) ? 1.0f : 0.0f) : 0.5f;
+  const float morph = high_profile ? ((mode & 1) ? 0.0f : 1.0f) : 0.5f;
+  const float harmonics = min(
+      static_cast<float>(within_case) /
+          static_cast<float>(kTransportCaseSamples - 1),
+      1.0f);
+#else
   int mode = static_cast<int>(parameters.macro * 6.0f);
   if (mode < 0) mode = 0;
   if (mode > 5) mode = 5;
+  const float note = parameters.note;
+  const float timbre = parameters.timbre;
+  const float morph = parameters.morph;
+  const float harmonics = parameters.harmonics;
+#endif
   const TransportConfiguration configuration = kConfigurations[mode];
   const int path_size = configuration.mirror
       ? configuration.banks * 2 : configuration.banks;
   const float path_max = static_cast<float>(path_size - 1);
 
   ParameterInterpolator f0_modulation(
-      &previous_f0_, NoteToFrequency(parameters.note), size);
+      &previous_f0_, NoteToFrequency(note), size);
   ParameterInterpolator bank_modulation(
-      &previous_harmonics_, parameters.harmonics * path_max, size);
+      &previous_harmonics_, harmonics * path_max, size);
   ParameterInterpolator x_modulation(
-      &previous_timbre_, parameters.timbre, size);
+      &previous_timbre_, timbre, size);
   ParameterInterpolator y_modulation(
-      &previous_morph_, parameters.morph, size);
+      &previous_morph_, morph, size);
 
   while (size--) {
     phase_ += f0_modulation.Next();
