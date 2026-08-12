@@ -66,6 +66,44 @@ six editor starters it is also materially cheaper at render time than the full
 eight-corner sampled-bank read. Harmonic grid and the transform stack need
 physical confirmation; eight-sine stress is already a sampled-fallback case.
 
+## Physical-module results (2026-08-12)
+
+The autonomous image was captured from AUX through an ES-8 at 48 kHz. The table
+uses the higher usable reading across the complete aligned pass and its repeat
+coverage, matching the conservative Wave Terrain policy.
+
+| case | measured budget |
+|---|---:|
+| 4 KB sampled bank | 71.12% |
+| Mutable FM | 56.05% |
+| Glass FM | 50.64% |
+| Harmonic grid | 73.40% |
+| Phase warp | 51.40% |
+| Pulse matrix | 64.49% |
+| Odd / even weave | 61.26% |
+| Glass + upper partial | 65.53% |
+| Glass + row motion | 57.37% |
+| Glass folded | 56.42% |
+| Glass FM-wrapped | 56.05% |
+| Glass ring grid | 62.02% |
+| Glass terraced | 62.02% |
+| Glass soft-clipped | 60.03% |
+| Glass hard-clipped | 53.20% |
+| Three-transform stack | 73.40% |
+| Eight-sine stress | 96.06% |
+
+This confirms the calibrated pre-flight result. Every editor starter and normal
+transform case remains below the 75% native-code gate, although Harmonic grid
+and the three-transform stack have little margin. Eight-sine stress must use the
+sampled fallback. The sampled control itself costs 71.12%, so native equations
+are usually cheaper in both flash and CPU.
+
+Capture note: this ES-8/Core Audio path occasionally dropped raw input buffers.
+The decoder recovered the cycle's time scale and the complete pass remained
+coherent. Do not repair such a capture with FFmpeg `aresample=async`: that
+preserves wall-clock duration by stretching or inserting audio and corrupts the
+probe frequency. Reopen the ES-8 and capture raw samples instead.
+
 Two linker-pruned ARM builds pin the flash range:
 
 | fixed case | total flash | difference from sampled |
