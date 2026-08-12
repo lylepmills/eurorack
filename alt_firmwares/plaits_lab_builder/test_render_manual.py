@@ -108,8 +108,9 @@ class RenderManualTest(unittest.TestCase):
             render_pdf(document, output)
             printed = pdf_strings(output).replace(")(", " ")
             self.assertIn("EXPERIMENTAL FM", printed)
-            self.assertIn("counter-clockwise for linear through-zero FM", printed)
-            self.assertIn("Two-op FM keeps both laws at the normal control rate", printed)
+            self.assertIn("linear through-zero FM counter-clockwise", printed)
+            self.assertIn("A model with both marks gets audio-rate TZFM", printed)
+            self.assertIn("including on models without a 50k mark", printed)
             self.assertIn("LEVEL CV is unavailable", printed)
 
     @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")

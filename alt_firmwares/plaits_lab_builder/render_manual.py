@@ -629,19 +629,19 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
     fast_fm = bool(document.get("fastFm"))
     if linear_tzfm and fast_fm:
         experimental_fm_note = (
-            "This build enables both experimental FM options. On Waveshaping, Two-op FM, and Vowel FOF, turn the FM attenuverter counter-clockwise for linear through-zero FM or clockwise for regular exponential FM; the center is off. "
-            "FM is digitized continuously at audio rate on Waveshaping and Vowel FOF. Two-op FM keeps both laws at the normal control rate because its oversampled renderer does not have safe fast-mode headroom. "
-            "Fast FM dedicates the shared converter to FM, so LEVEL CV is unavailable throughout this firmware."
+            "This build enables both experimental FM options. Models marked TZ in the Plaits Palette editor use linear through-zero FM counter-clockwise and regular exponential FM clockwise; the center is off. "
+            "Models marked 50k digitize FM continuously at 50 kHz. A model with both marks gets audio-rate TZFM counter-clockwise and audio-rate exponential FM clockwise; a TZ-only model keeps both laws at the normal control rate; a 50k-only model gets audio-rate exponential FM in both directions. "
+            "Unmarked models retain normal control-rate exponential FM. Fast FM dedicates the shared converter to FM, so LEVEL CV is unavailable throughout this firmware, including on models without a 50k mark."
         )
     elif linear_tzfm:
         experimental_fm_note = (
-            "This build enables experimental linear TZFM. On Waveshaping, Two-op FM, and Vowel FOF, turn the FM attenuverter counter-clockwise for linear through-zero FM or clockwise for regular exponential FM; the center is off. "
-            "Both laws use the normal control-rate input, and LEVEL CV remains available."
+            "This build enables experimental linear TZFM. Models marked TZ in the Plaits Palette editor use linear through-zero FM counter-clockwise and regular exponential FM clockwise; the center is off. "
+            "Unmarked models retain normal control-rate exponential FM. Both laws use the normal control-rate input, and LEVEL CV remains available."
         )
     elif fast_fm:
         experimental_fm_note = (
-            "This build enables experimental Fast FM. Exponential FM keeps its normal bipolar attenuverter response and is digitized continuously at audio rate on Waveshaping and Vowel FOF. "
-            "Models without safe fast-mode headroom, including Two-op FM, automatically retain normal control-rate FM. Fast FM dedicates the shared converter to FM, so LEVEL CV is unavailable throughout this firmware."
+            "This build enables experimental Fast FM. Models marked 50k in the Plaits Palette editor digitize exponential FM continuously at 50 kHz and keep the normal bipolar attenuverter response. "
+            "Unmarked models retain normal control-rate exponential FM. Fast FM dedicates the shared converter to FM, so LEVEL CV is unavailable throughout this firmware, including on models without a 50k mark."
         )
     else:
         experimental_fm_note = ""

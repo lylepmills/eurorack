@@ -48,10 +48,10 @@ namespace plaits {
 
 const int kNumSwarmVoices = 8;
 
-class GrainEnvelope {
+class SwarmGrainEnvelope {
  public:
-  GrainEnvelope() { }
-  ~GrainEnvelope() { }
+  SwarmGrainEnvelope() { }
+  ~SwarmGrainEnvelope() { }
   
   void Init() {
     from_ = 0.0f;
@@ -128,7 +128,7 @@ class GrainEnvelope {
   float previous_size_ratio_;
   float filter_coefficient_;
   
-  DISALLOW_COPY_AND_ASSIGN(GrainEnvelope);
+  DISALLOW_COPY_AND_ASSIGN(SwarmGrainEnvelope);
 };
 
 class AdditiveSawOscillator {
@@ -351,7 +351,7 @@ class SwarmVoice {
 
   float rank_;
 
-  GrainEnvelope envelope_;
+  SwarmGrainEnvelope envelope_;
   AdditiveSawOscillator saw_;
   FastSineOscillator sine_;
 };
