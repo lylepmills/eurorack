@@ -65,6 +65,7 @@ const attenuverterModeMinSchemaVersion = 18; // recipe-driven LIGHT 8 starting m
 const oneKnobEnvelopeMinSchemaVersion = 19;  // triggered/gated FREQUENCY contours
 const customModelDataMinSchemaVersion = 21;  // per-slot Wave Terrain/Wavetable data
 const terrainBankMinSchemaVersion = 23;       // shared ordered Wave Terrain bank
+const nativeTerrainMinSchemaVersion = 24;      // compiled custom equations
 const customModelDataBytes = 4096;
 export const maxTerrainBankSize = 56;
 const factoryTerrainIds = [
@@ -150,6 +151,7 @@ export type NormalizedCustomModelData = {
     name: string;
     equation: string;
     data: string;
+    representation?: "native";
   };
 };
 
@@ -604,7 +606,7 @@ function normalizeCustomModelData(
   });
 }
 
-function normalizeTerrainBank(value: unknown): NormalizedTerrainBankEntry[] {
+function normalizeTerrainBank(value: unknown, schemaVersion: number): NormalizedTerrainBankEntry[] {
   if (!Array.isArray(value) || value.length < 1 || value.length > maxTerrainBankSize) {
     throw new ContractError(
       "invalid_terrain_bank",
@@ -634,13 +636,22 @@ function normalizeTerrainBank(value: unknown): NormalizedTerrainBankEntry[] {
       throw new ContractError("invalid_terrain_bank", "A terrain-bank entry is invalid.");
     }
     const model = entry.model as Record<string, unknown>;
-    if (!hasExactKeys(model, ["kind", "name", "equation", "data"])
+    const sampledKeys = hasExactKeys(model, ["kind", "name", "equation", "data"]);
+    const nativeKeys = hasExactKeys(model, ["kind", "name", "equation", "data", "representation"]);
+    if ((!sampledKeys && !nativeKeys)
         || model.kind !== "wave-terrain" || !shortText(model.name, 80)
         || !shortText(model.equation, 500) || typeof model.data !== "string"
         || !canonicalBase64Pattern.test(model.data)) {
       throw new ContractError(
         "invalid_terrain_bank",
         "A custom terrain must contain a name, equation, and canonical 4 KB sample grid.",
+      );
+    }
+    if (nativeKeys && (model.representation !== "native"
+        || schemaVersion < nativeTerrainMinSchemaVersion)) {
+      throw new ContractError(
+        "invalid_terrain_bank",
+        `Native terrain equations require recipe schema ${nativeTerrainMinSchemaVersion}.`,
       );
     }
     let decoded: string;
@@ -662,6 +673,7 @@ function normalizeTerrainBank(value: unknown): NormalizedTerrainBankEntry[] {
         name: String(model.name).trim(),
         equation: String(model.equation).trim(),
         data: model.data,
+        ...(model.representation === "native" ? { representation: "native" as const } : {}),
       },
     };
   });
@@ -1120,7 +1132,7 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
           "A terrain bank requires Wave Terrain in the palette.",
         );
       }
-      terrainBank = normalizeTerrainBank(resourceValues.terrainBank);
+      terrainBank = normalizeTerrainBank(resourceValues.terrainBank, schemaVersion);
     }
     if (carriesUserDataBanks) {
       const rawBanks = resourceValues.userDataBanks;
@@ -1173,12 +1185,12 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     // (v8); a short-bank recipe (a trailing empty slot) stays v7; a candidate that
     // carried v6 resources (even an empty custom-bank list, e.g. a 32-slot recipe)
     // stays v6; else v5.
-    schemaVersion: configuration.preferences.simplifiedPitchRanges ? 24
-      : terrainBank !== undefined
-        || configuration.preferences.linearTzfm
+    schemaVersion: configuration.preferences.simplifiedPitchRanges
+      || terrainBank !== undefined
+      || customModelData !== undefined ? 24
+      : configuration.preferences.linearTzfm
       || configuration.preferences.fastFm ? 23
       : configuration.preferences.syncInput ? 22
-      : customModelData !== undefined ? 21
       : configuration.preferences.replaceableFmBanks ? 20
       : configuration.initialOptions.lockedFrequencyKnob === "triggered-envelope"
       || configuration.initialOptions.lockedFrequencyKnob === "gated-envelope" ? 19

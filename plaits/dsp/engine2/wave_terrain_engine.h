@@ -41,8 +41,13 @@
 #ifndef PLAITS_DSP_ENGINE_WAVE_TERRAIN_ENGINE_H_
 #define PLAITS_DSP_ENGINE_WAVE_TERRAIN_ENGINE_H_
 
+#include <cmath>
+#include <stdint.h>
+
 #include "plaits/dsp/engine/engine.h"
 #include "plaits/dsp/oscillator/sine_oscillator.h"
+#include "stmlib/dsp/atan.h"
+#include "stmlib/dsp/rsqrt.h"
 
 namespace plaits {
 
@@ -55,8 +60,72 @@ enum WaveTerrainType {
   WAVE_TERRAIN_FACTORY_5,
   WAVE_TERRAIN_FACTORY_6,
   WAVE_TERRAIN_FACTORY_7,
-  WAVE_TERRAIN_CUSTOM
+  WAVE_TERRAIN_CUSTOM,
+  WAVE_TERRAIN_NATIVE
 };
+
+typedef float (*WaveTerrainFunction)(float x, float y);
+
+// Bounded, errno-free primitives targeted by the trusted equation compiler.
+// They mirror the hardware-probed diagnostic implementations and are inline so
+// the linker retains only the operations used by the selected equations.
+inline float TerrainEquationSin(float value) {
+  return Sine(8.0f + value * 0.15915494309189535f);
+}
+inline float TerrainEquationCos(float value) {
+  return Sine(8.25f + value * 0.15915494309189535f);
+}
+inline float TerrainEquationLog2(float x) {
+  union { float f; uint32_t i; } u = { x };
+  const float exponent = static_cast<float>((u.i >> 23) & 0xffu) - 127.0f;
+  u.i = (u.i & 0x007fffffu) | 0x3f800000u;
+  const float mantissa = u.f;
+  return exponent + (-1.7417939f + (2.8212026f + (-1.4699568f +
+      (0.44717955f - 0.056570851f * mantissa) * mantissa) * mantissa) *
+      mantissa);
+}
+inline float TerrainEquationExp2(float x) {
+  const float rounded = (x + 12582912.0f) - 12582912.0f;
+  const float fraction = x - rounded;
+  const float polynomial = 1.0f + fraction * (0.6931472f + fraction *
+      (0.2402265f + fraction * (0.0555041f + fraction * 0.0096181f)));
+  union { float f; int32_t i; } power;
+  power.i = (static_cast<int32_t>(rounded) + 127) << 23;
+  return polynomial * power.f;
+}
+inline float TerrainEquationExp(float x) {
+  return TerrainEquationExp2(x * 1.4426950408889634f);
+}
+inline float TerrainEquationLog(float x) {
+  return TerrainEquationLog2(x) * 0.6931471805599453f;
+}
+inline float TerrainEquationPower(float x, float exponent) {
+  return TerrainEquationExp2(exponent * TerrainEquationLog2(x));
+}
+inline float TerrainEquationSqrt(float x) {
+  return x > 0.0f ? x * stmlib::fast_rsqrt_accurate(x) : 0.0f;
+}
+inline float TerrainEquationAtan2(float y, float x) {
+  return static_cast<float>(static_cast<int16_t>(stmlib::fast_atan2(y, x))) *
+      (3.14159265358979323846f / 32768.0f);
+}
+inline float TerrainEquationAtan(float value) {
+  return TerrainEquationAtan2(value, 1.0f);
+}
+inline float TerrainEquationSign(float value) {
+  return value > 0.0f ? 1.0f : value < 0.0f ? -1.0f : 0.0f;
+}
+inline float TerrainEquationMin(float a, float b) { return a < b ? a : b; }
+inline float TerrainEquationMax(float a, float b) { return a > b ? a : b; }
+inline float TerrainEquationRound(float value) {
+  return floorf(value + 0.5f);
+}
+inline float TerrainEquationBall(
+    float x, float y, float xm, float ym, float width) {
+  const float dx = x - xm;
+  const float dy = y - ym;
+  return TerrainEquationExp(-(dx * dx + dy * dy) / (width * width));
+}
 
 // A recipe-defined HARMONICS bank. Factory entries carry one of the eight
 // factory type values and a NULL data pointer; custom entries carry
@@ -64,6 +133,7 @@ enum WaveTerrainType {
 struct WaveTerrainBank {
   const uint8_t* types;
   const int8_t* const* data;
+  const WaveTerrainFunction* functions;
   size_t size;
 };
   

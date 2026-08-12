@@ -210,6 +210,10 @@ inline float WaveTerrainEngine::Terrain(float x, float y, int terrain_index) {
       const int8_t* data = terrain_bank_->data[terrain_index];
       return data ? TerrainLookup(x, y, data) : 0.0f;
     }
+    if (type == WAVE_TERRAIN_NATIVE) {
+      const WaveTerrainFunction function = terrain_bank_->functions[terrain_index];
+      return function ? function(x, y) : 0.0f;
+    }
     return FactoryTerrain(x, y, type);
   }
   if (terrain_index == 8) {

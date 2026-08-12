@@ -149,6 +149,18 @@ test("schema 23 carries one ordered shared terrain bank", async () => {
   assert.equal(normalized.schemaVersion, 23);
   assert.deepEqual(normalized.resources.terrainBank, recipe.resources.terrainBank);
 
+  const native = structuredClone(recipe);
+  native.schemaVersion = 24;
+  native.resources.terrainBank[1].model.representation = "native";
+  const normalizedNative = normalizeRecipe(native);
+  assert.equal(normalizedNative.schemaVersion, 24);
+  assert.equal(normalizedNative.resources.terrainBank?.[1].kind, "custom");
+  assert.equal((normalizedNative.resources.terrainBank?.[1] as any).model.representation, "native");
+
+  const nativeOnV23 = structuredClone(native);
+  nativeOnV23.schemaVersion = 23;
+  assert.throws(() => normalizeRecipe(nativeOnV23), /require recipe schema 24/);
+
   const duplicate = structuredClone(recipe);
   duplicate.resources.terrainBank.push({ kind: "factory", id: "factory-8" });
   assert.throws(() => normalizeRecipe(duplicate), /at most once/);

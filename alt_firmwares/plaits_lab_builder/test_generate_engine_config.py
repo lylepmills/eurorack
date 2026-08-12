@@ -257,6 +257,46 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertEqual(config.count("extern const uint8_t kCustomTerrainData_0[4096] ="), 1)
         self.assertEqual(config.count("extern const uint8_t kCustomTerrainData_1[4096] ="), 1)
 
+    def test_v24_native_terrain_emits_code_without_a_user_data_region(self) -> None:
+        custom = self.custom_model_assignment(0, "wave-terrain", 33)["model"]
+        custom["equation"] = "sin(5 * (y + theta))"
+        custom["representation"] = "native"
+        recipe = self.terrain_bank_recipe([
+            {"kind": "factory", "id": "factory-1"},
+            {"kind": "custom", "model": custom},
+        ])
+        recipe["schemaVersion"] = 24
+        build = validate_recipe(recipe)
+        self.assertEqual([entry[0] for entry in build.terrain_bank], [0, 9])
+        config = render_config(build)
+        self.assertIn("static inline float TerrainEquation_0", config)
+        self.assertIn("static const uint8_t kTerrainBankTypes[2] = { 0, 9 };", config)
+        self.assertIn("kTerrainBankFunctions", config)
+        self.assertNotIn("kCustomTerrainData_", config)
+        self.assertIn("#define PLAITS_USER_DATA_REGION_COUNT 0", config)
+
+        unsafe = self.terrain_bank_recipe([{"kind": "custom", "model": {
+            **custom, "equation": "1 / x",
+        }}])
+        unsafe["schemaVersion"] = 24
+        with self.assertRaisesRegex(ValueError, "denominator"):
+            validate_recipe(unsafe)
+
+        for equation in ("1 / (2 + x)", "sqrt(x * x + y * y)", "pow(x, 2)"):
+            safe = self.terrain_bank_recipe([{"kind": "custom", "model": {
+                **custom, "equation": equation,
+            }}])
+            safe["schemaVersion"] = 24
+            validate_recipe(safe)
+
+        for equation in ("1 / (x - 0.001)", "sqrt(x)", "tan(2 * x)"):
+            unsafe = self.terrain_bank_recipe([{"kind": "custom", "model": {
+                **custom, "equation": equation,
+            }}])
+            unsafe["schemaVersion"] = 24
+            with self.assertRaises(ValueError, msg=equation):
+                validate_recipe(unsafe)
+
     def test_v23_terrain_bank_rejects_duplicate_factories_and_slot_terrain_data(self) -> None:
         duplicate = self.terrain_bank_recipe([
             {"kind": "factory", "id": "factory-1"},

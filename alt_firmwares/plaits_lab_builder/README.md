@@ -74,6 +74,16 @@ HARMONICS sweeps and interpolates across exactly the ordered bank, and also
 selects which custom entry a TIMBRE audio transfer overwrites. A selected
 factory entry refuses the transfer. The default eight-factory bank remains
 implicit, so an untouched recipe stays on its older schema and stock layout.
+Schema 24 lets a custom terrain request the compiled `native` representation.
+The Worker preserves the bounded 4 KB grid for browser preview and backwards
+compatibility, while the trusted generator independently parses the equation,
+accepts only the reviewed variable/function/operator vocabulary, reruns the
+calibrated CPU gate, verifies finite output over a dense grid, and emits calls
+to the same errno-free fast-math primitives used by the hardware benchmark.
+Each native equation is normalized into the sampled terrain's output range and
+linked as a function pointer in the ordered bank. It therefore costs only its
+linker-pruned code and owns no erase-safe TIMBRE region; complex equations,
+mesh imports, and sampled blends remain independently rewritable 4 KB entries.
 one-shot marker in the application image is restored by every WAV or HEX flash, so first boot applies
 all embedded Starting Options even when reinstalling the exact same build;
 ordinary power cycles still preserve later runtime changes. It generates a compile-time

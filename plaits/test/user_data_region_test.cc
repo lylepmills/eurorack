@@ -32,10 +32,12 @@ namespace plaits {
 
 enum { kRegionSize = 0x1000 };
 enum { WAVE_TERRAIN_FACTORY_0 = 0, WAVE_TERRAIN_FACTORY_2 = 2, WAVE_TERRAIN_CUSTOM = 8 };
+typedef float (*WaveTerrainFunction)(float x, float y);
 
 struct WaveTerrainBank {
   const uint8_t* types;
   const int8_t* const* data;
+  const WaveTerrainFunction* functions;
   size_t size;
 };
 
@@ -59,7 +61,7 @@ static const int8_t* const kTerrainBankData[3] = {
   NULL, terrain_bank_custom, NULL,
 };
 static const WaveTerrainBank kTerrainBank = {
-  kTerrainBankTypes, kTerrainBankData, 3,
+  kTerrainBankTypes, kTerrainBankData, NULL, 3,
 };
 static const uint32_t kWaveTerrainEngineMask = 1u << 5;
 static const UserDataRegion kUserDataRegions[2] = { { bank_0, 0 }, { bank_1, 1 } };
