@@ -224,11 +224,11 @@ Two rollout notes worth keeping:
   not landed until something asserts the version it NORMALIZES to.
 - **`wrangler containers info` reporting `healthy >= 1` does NOT mean the new
   image is serving.** Production rolls gradually, so during a rollout the healthy
-  instance is the OLD one; the first production canary failed with the previous
-  image's `schemaVersion must be 2 through 19`. Gate on
-  `configuration.image` matching the new tag with `starting == 0`, not on the
-  health count. A build that fails against a stale instance is not cached
-  permanently — the same recipe recompiles and succeeds once the rollout lands.
+  instance can be the old one while another slot is still scheduling. Gate on
+  `configuration.image` matching the new tag, `healthy` matching the configured
+  instance count, and both `scheduling == 0` and `starting == 0`. A build that
+  fails against a stale instance is not cached permanently — the same recipe
+  recompiles and succeeds once the rollout lands.
 - The named Speech encoder Container can outlive a gradual image rollout. Do
   not exercise a freshly bumped identity while `configuration.image` still
   names the old image: it can attach to that image and keep serving it after the
