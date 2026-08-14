@@ -574,6 +574,22 @@ bytes with SHA-256
 confirming again that the audit changed catalog identity and documentation,
 not firmware audio behavior.
 
+The remaining-engine metadata audit shipped on August 14 at
+`rev-19666470542c`, completing implementation-level documentation coverage for
+all 87 catalog engines. Staging build
+`7bf8c5d91ba65cdd33a80e17f63b5fa4d632a83ce0e3957a9dcb4c3c0a4fff46`
+passed the full release smoke. The first gradual production promotion was
+rolled back after its canary was submitted while one pool slot was still being
+scheduled and exhausted the compiler retry budget. A clean promotion waited
+for both configured instances to report healthy with no scheduling or starting
+instances; production build
+`8ca35d64565f028abec84017d657fc43a9ad08ec2c64f9e5cd57fdda2412a913`
+then passed on its first attempt. Its 4,803,692-byte WAV has SHA-256
+`6876b0f4106e7429b5adb7e4e7f673093303d6fc8d1d463f58839f97624406e1`;
+the generated field guide was ready and downloaded as a 9,997-byte PDF with
+SHA-256
+`c966faf0b738570efbd2714fd39db32f5f2782a5e88d1d1a8ba82259eb6d86d0`.
+
 Cloudflare's rate-limit binding allows five new compilation requests per source
 IP per minute. Cache hits and repeated polls for an already queued build bypass
 that limit. This is a lightweight abuse guard rather than an account or billing
@@ -581,15 +597,16 @@ system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-29e3dba36351` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-19666470542c` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a new
 image, use `wrangler containers info <application-id>` and wait until
-`configuration.image` matches the intended immutable tag and `starting == 0`;
-`healthy >= 1` alone can still mean the previous image is serving during a
-gradual rollout. A first-time staging application can temporarily return "no
-Container instance available" while its image is starting; the bounded staging
-smoke retries that response.
+`configuration.image` matches the intended immutable tag, `healthy` equals the
+configured instance count, and both `scheduling == 0` and `starting == 0` before
+submitting the production canary. `healthy >= 1` alone can still mean the
+previous image is serving or another pool slot is not ready. A first-time
+staging application can temporarily return "no Container instance available"
+while its image is starting; the bounded staging smoke retries that response.
 
 Schema 23 is live, with independent experimental Linear TZFM and Fast FM
 preferences, Sync In as an opt-in preference, and custom Speech banks accepting
@@ -601,7 +618,7 @@ and Step unpatched-attenuverter modes; schema 17's selectable stock LPC banks,
 custom text/recording-derived Speech banks, source/engine previews; and the
 earlier recipe-driven scale banks and automatic LEVEL routing. The generalized
 schema-inheritance hardening from `5b2b077` is also live: current production
-source `29e3dba36351` descends from that commit, so future supported schemas
+source `19666470542c` descends from that commit, so future supported schemas
 inherit older feature shapes without another version-list edit.
 
 ### Rolling back
@@ -676,6 +693,7 @@ target.
 | August 12, 2026 (schema 23 Linear TZFM + Fast FM; FM Heaven) | `de96c9d9f22b` | `rev-de96c9d9f22b` |
 | August 12, 2026 (correct Z Filter MORPH shape metadata) | `bf3c078fdf07` | `rev-bf3c078fdf07` |
 | August 12, 2026 (complete Braids control, trigger, and stereo metadata audit) | `29e3dba36351` | `rev-29e3dba36351` |
+| August 14, 2026 (complete remaining-engine metadata audit; all 87 engines covered) | `19666470542c` | `rev-19666470542c` |
 
 Three consequences a rollback has that a forward deploy does not:
 
