@@ -89,13 +89,13 @@
     {
       "id": "braids-wave-paraphonic",
       "packageId": "mutable-instruments/braids-wave-paraphonic-chords",
-      "version": "1.0.0",
-      "digest": "sha256:51a461c107888d5cfc101baa7fe31cfa219d7e884280152f3068166eedb2d76a",
+      "version": "1.0.1",
+      "digest": "sha256:e5531e94b9597e4ac3a71e1c82cda694bf82d5bfa1495bdcadc97b58397619ff",
       "name": "Braids Wave Paraphonic",
       "author": "Mutable Instruments",
       "license": "MIT",
       "origin": "Mutable Instruments",
-      "description": "Braids' original seventeen Wave Paraphonic positions, rounded from 1/128-semitone units to the shared table's integer cents.",
+      "description": "Braids' sixteen distinct Wave Paraphonic voicings, rounded from 1/128-semitone units to the shared table's integer cents.",
       "chords": [
         { "id": "fine-unison", "name": "Fine unison", "voices": [0, 2, 3, 5], "arpLength": 4 },
         { "id": "wide-unison", "name": "Wide unison", "voices": [0, 13, 25, 38], "arpLength": 4 },
@@ -112,8 +112,7 @@
         { "id": "major-seven", "name": "Major 7th", "voices": [0, 400, 700, 1100], "arpLength": 4 },
         { "id": "sus-four", "name": "Sus 4", "voices": [0, 500, 700, 1200], "arpLength": 4 },
         { "id": "fifth-chorus", "name": "Fifth chorus", "voices": [0, 3, 700, 1200], "arpLength": 4 },
-        { "id": "octave-cluster", "name": "Octave cluster", "voices": [0, 3, 1203, 1200], "arpLength": 4 },
-        { "id": "octave-cluster-end", "name": "Octave cluster end", "voices": [0, 3, 1203, 1200], "arpLength": 4 }
+        { "id": "octave-cluster", "name": "Octave cluster", "voices": [0, 3, 1203, 1200], "arpLength": 4 }
       ]
     }
   ]

@@ -25,10 +25,12 @@ And two controls the module has no knob for:
   zero through the table verbatim at noon to double width at maximum. Chords
   can transpose a voice by an octave; it cannot widen a fifth into a ninth.
 
-The original Braids 17-row list remains available as the **Braids Wave
-Paraphonic** chord table. Its 1/128-semitone offsets are rounded to the nearest
-cent because that is the shared table format; the two near-unison rows become
-`[0, 2, 3, 5]` and `[0, 13, 25, 38]`.
+The original Braids voicings remain available as the **Braids Wave
+Paraphonic** chord table. Braids stores 17 rows so its renderer can interpolate
+across 16 regions, but the last row only repeats the preceding endpoint. The
+shared table therefore exposes the 16 distinct voicings. Their
+1/128-semitone offsets are rounded to the nearest cent; the two near-unison
+rows become `[0, 2, 3, 5]` and `[0, 13, 25, 38]`.
 
 ## The controls
 
