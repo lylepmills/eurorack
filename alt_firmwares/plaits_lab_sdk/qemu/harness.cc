@@ -122,7 +122,7 @@ int main() {
     0.0181f,  0.0104f,  0.0000f, -0.0104f,
    -0.0181f, -0.0209f, -0.0181f, -0.0104f,
   };
-  p.linear_fm = PLAITS_QEMU_LINEAR_TZFM ? linear_fm : NULL;
+  p.frequency_offset = PLAITS_QEMU_LINEAR_TZFM ? linear_fm : NULL;
 
   float out[kBlockSize];
   float aux[kBlockSize];
