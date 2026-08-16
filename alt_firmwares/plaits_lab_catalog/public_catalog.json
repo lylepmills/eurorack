@@ -3638,6 +3638,55 @@
       }
     },
     {
+      "id": "analog-percussion",
+      "packageId": "community/analog-percussion",
+      "name": "Analog Percussion",
+      "author": "Dylan Bolink",
+      "origin": "Community",
+      "family": "Drums",
+      "description": "The 808's tuned percussion: toms, congas, rimshot, claves and cowbell are points in one plane of pitch, ring length and material rather than separate instruments.",
+      "tags": [
+        "community",
+        "drum",
+        "808",
+        "tom",
+        "conga",
+        "rimshot",
+        "clave",
+        "cowbell",
+        "percussion",
+        "resonator"
+      ],
+      "controls": [
+        "Click",
+        "Material",
+        "Decay",
+        "Ratio"
+      ],
+      "outputs": [
+        "Mono: both modes and the click, through a high-pass band as Material moves clockwise. Stereo: left percussion voice.",
+        "Mono: an enveloped octave-down strike or drone. Stereo: right percussion voice."
+      ],
+      "artwork": {
+        "color": "#009a98"
+      },
+      "version": "1.0.0",
+      "digest": "sha256:37101310af9eda5a731b176d1b6224f05de66f96f123d55596ca091ac4ffe378",
+      "documentationDigest": "sha256:01abe5fadd8624b3f0d145f80953c36f62d5d2d66447a7e9c5dcd7a3ceb4bb98",
+      "manual": {
+        "controls": {
+          "harmonics": "Sets the noise crack at the strike. With TRIG unpatched, it sets the drone's tone-to-noise balance instead.",
+          "timbre": "Fades in a second oscillator at the Ratio interval, then shapes both modes towards square waves through a high-pass band. Cowbell sounds live clockwise.",
+          "morph": "Sets the ring length. With TRIG unpatched, it becomes the drone level, matching the stock analog drum models.",
+          "macro": "Moves the second mode's ratio away from the value selected by Material. Noon keeps the default ratio."
+        },
+        "trigger": "With TRIG patched, each rising edge strikes the two tuned modes, click and octave-down AUX voice. Unpatched, the engine becomes a continuous percussion drone."
+      },
+      "implementation": {
+        "className": "AnalogPercussionEngine"
+      }
+    },
+    {
       "id": "freshets-formant",
       "packageId": "community/freshets-formant",
       "name": "Freshets Formant",
