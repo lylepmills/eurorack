@@ -597,7 +597,7 @@ system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-19666470542c` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-0eec23f182a1` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a new
 image, use `wrangler containers info <application-id>` and wait until
@@ -618,7 +618,7 @@ and Step unpatched-attenuverter modes; schema 17's selectable stock LPC banks,
 custom text/recording-derived Speech banks, source/engine previews; and the
 earlier recipe-driven scale banks and automatic LEVEL routing. The generalized
 schema-inheritance hardening from `5b2b077` is also live: current production
-source `19666470542c` descends from that commit, so future supported schemas
+source `0eec23f182a1` descends from that commit, so future supported schemas
 inherit older feature shapes without another version-list edit.
 
 ### Rolling back
@@ -694,6 +694,17 @@ target.
 | August 12, 2026 (correct Z Filter MORPH shape metadata) | `bf3c078fdf07` | `rev-bf3c078fdf07` |
 | August 12, 2026 (complete Braids control, trigger, and stereo metadata audit) | `29e3dba36351` | `rev-29e3dba36351` |
 | August 14, 2026 (complete remaining-engine metadata audit; all 87 engines covered) | `19666470542c` | `rev-19666470542c` |
+| August 16, 2026 (Analog Percussion community engine; all 88 engines covered) | `0eec23f182a1` | `rev-0eec23f182a1` |
+
+The August 16 production canary used the same exact 24-slot recipe as staging:
+build `6cb08754024d2a7abf43ae0c6390eb23b11a051dbc04c4984a32212040a6e865`
+compiled fresh in both environments to 203,924 B text, 48 B data, and 24,748 B
+BSS. Its binary SHA-256 was
+`0a88e0324c0f7c8efef17b9688cae0c53ed91fb0579a6e172a56bc6740b74b17`,
+and the 15,859,244-byte updater WAV SHA-256 was
+`a5a7bbeb2a2fbe05ee8d36e1bd1c7628163c55194ce672d1eb4cb0afde1e10c5`.
+Contributor Dylan Bolink also auditioned the revised engine on physical Plaits
+hardware and confirmed its sound and CPU behavior before publication.
 
 Three consequences a rollback has that a forward deploy does not:
 
