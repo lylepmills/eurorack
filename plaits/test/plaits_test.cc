@@ -111,6 +111,7 @@
 #include "plaits/dsp/engine2/shakers_engine.h"
 #include "plaits/dsp/engine2/brass_engine.h"
 #include "plaits/dsp/engine2/clap_engine.h"
+#include "plaits/dsp/engine2/analog_percussion_engine.h"
 #include "plaits/dsp/engine2/freshets_formant_engine.h"
 #include "plaits/dsp/engine2/z_filter_engine.h"
 #include "plaits/dsp/engine2/string_machine_engine.h"
@@ -593,6 +594,8 @@ void ValidateFastExponentialFmEngineCoverage() {
   ValidateFastExponentialFmEngine<BrassEngine>("Brass");
   ValidateFastExponentialFmEngine<HelixEngine>("Helix");
   ValidateFastExponentialFmEngine<ClapEngine>("Clap");
+  ValidateFastExponentialFmEngine<AnalogPercussionEngine>(
+      "Analog Percussion");
 }
 
 void TestVariableShapeOscillator() {
@@ -3782,6 +3785,7 @@ void TestExperimentalEngines() {
   RenderAuditionEngine<ShakersEngine>("26-shakers.wav");
   RenderAuditionEngine<BrassEngine>("28-brass.wav");
   RenderAuditionEngine<ClapEngine>("54-clap.wav");
+  RenderAuditionEngine<AnalogPercussionEngine>("56-analog-percussion.wav");
   RenderAuditionEngine<FreshetsFormantEngine>("55-freshets-formant.wav");
   RenderAuditionEngine<RawFmEngine>("21-raw-fm.wav");
   RenderAuditionEngine<VowelFofEngine>("20-vowel-fof.wav");
@@ -3856,6 +3860,7 @@ void TestExperimentalEngines() {
   ValidateExperimentalEngineExtremes<ShakersEngine>();
   ValidateExperimentalEngineExtremes<BrassEngine>();
   ValidateExperimentalEngineExtremes<ClapEngine>();
+  ValidateExperimentalEngineExtremes<AnalogPercussionEngine>();
   ValidateExperimentalEngineExtremes<FreshetsFormantEngine>();
   ValidateExperimentalEngineExtremes<ZFilterEngine>();
   ValidateExperimentalEngineExtremes<ToyEngine>();
@@ -3917,6 +3922,8 @@ void TestExperimentalEngines() {
   ValidateExperimentalControlResponse<ShakersEngine>("Shakers");
   ValidateExperimentalControlResponse<BrassEngine>("Brass");
   ValidateExperimentalControlResponse<ClapEngine>("Clap");
+  ValidateExperimentalControlResponse<AnalogPercussionEngine>(
+      "Analog Percussion");
   ValidateExperimentalControlResponse<FreshetsFormantEngine>("Freshets Formant");
   ValidateExperimentalControlResponse<ZFilterEngine>("Z Filter");
   ValidateExperimentalControlResponse<ToyEngine>("Toy");

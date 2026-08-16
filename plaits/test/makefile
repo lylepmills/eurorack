@@ -17,6 +17,7 @@ HOST_LINK_FLAGS = -no-pie
 endif
 CC_FILES       = algorithms.cc \
 		additive_engine.cc \
+		analog_percussion_engine.cc \
 		attractor_engine.cc \
 		bass_drum_engine.cc \
 		chiptune_engine.cc \

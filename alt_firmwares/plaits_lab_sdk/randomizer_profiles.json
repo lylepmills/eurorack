@@ -564,6 +564,11 @@
       "timbre": "broad-texture",
       "morph": "patient-structure"
     },
+    "analog-percussion": {
+      "status": "seeded",
+      "timbre": "broad-texture",
+      "morph": "patient-structure"
+    },
     "freshets-formant": {
       "status": "seeded",
       "timbre": "centered",

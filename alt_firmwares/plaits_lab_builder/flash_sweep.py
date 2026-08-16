@@ -93,7 +93,8 @@ NEW = ARGV or [
 # gap, re-read that file before believing the engine you actually came to
 # measure.
 STEREO_DEFAULT = ['toy', 'bowed', 'csaw', 'ring-mod', 'vowel-fof',
-                  'digital-modulation', 'clap', 'freshets-formant',
+                  'digital-modulation', 'clap', 'analog-percussion',
+                  'freshets-formant',
                   'harmonic', 'glisson']
 STEREO_CONTROLS = {'harmonic': 2_512, 'glisson': 432}
 

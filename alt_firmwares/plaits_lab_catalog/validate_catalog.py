@@ -97,7 +97,7 @@ BRAIDS_FIXED_PAIR_ENGINES = {
     "triple", "z-filter",
 }
 
-# These are the 29 engines outside the previously audited stock and Braids
+# These are the 30 engines outside the previously audited stock and Braids
 # sets. Each digest locks every user-facing identity and documentation field:
 # name, credit, origin, family, description, tags, control labels, output
 # behavior, and the complete panel manual. A prose edit therefore requires an
@@ -132,6 +132,7 @@ AUDITED_REMAINING_METADATA_DIGESTS = {
     "brass": "sha256:bf2dbd2b7a717b28f18e9d4a28e7e61b3ee376da438c2ec2a6cc4f528cfa286d",
     "helix": "sha256:f15a76e28e45bb7d7ee18d07c62d3367d60b0d463bafaf603ba975af3476836d",
     "clap": "sha256:42049635c356f8518329a9d9fd5be5285d2ebaef89c29676e0f785f7053be173",
+    "analog-percussion": "sha256:edc5a2223b0862c75f310357717ef162927c29eddfd2ec6da1ac308aa8346cd1",
     "freshets-formant": "sha256:5b17fc800bf990df2a8091a893999d6493974a8f139119eaef188039fd8f7306",
 }
 

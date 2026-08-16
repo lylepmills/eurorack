@@ -98,6 +98,7 @@
 #include "plaits/dsp/engine2/shakers_engine.h"
 #include "plaits/dsp/engine2/brass_engine.h"
 #include "plaits/dsp/engine2/clap_engine.h"
+#include "plaits/dsp/engine2/analog_percussion_engine.h"
 #include "plaits/dsp/engine2/freshets_formant_engine.h"
 #include "plaits/dsp/engine2/z_filter_engine.h"
 #include "plaits/dsp/engine2/string_machine_engine.h"
@@ -235,6 +236,7 @@ int main() {
   bench<ShakersEngine>("shakers");
   bench<BrassEngine>("brass");
   bench<ClapEngine>("clap");
+  bench<AnalogPercussionEngine>("analog-percussion");
   bench<FreshetsFormantEngine>("freshets-formant");
   bench<ZFilterEngine>("z-filter");
   bench<LoopbackEngine>("loopback");
