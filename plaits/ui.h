@@ -190,6 +190,9 @@ class Ui {
   int previous_pitch_range_;
   EndpointCatchUp precision_catch_up_;
   EndpointCatchUp octave_catch_up_;
+  // Holds the manual pitch from before a range-selector gesture, so that
+  // octave switching is rooted the same way whichever side it is reached from.
+  OctaveRootSnapshot octave_root_snapshot_;
   DeferredValueSave precision_root_save_;
   Patch* patch_;
   Modulations* modulations_;
