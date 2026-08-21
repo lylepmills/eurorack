@@ -227,6 +227,51 @@ int main() {
     CHECK(Near(down.tuned_root, sounding_high));
   }
 
+  // Starting from the LFO range is the one case where the sounding pitch is no
+  // use: it is sub-audio, so it would root every octave position at or below
+  // the bottom of hearing. Leaving the LFO range for octave switching lands on
+  // the default root instead, from either side of the selector.
+  // The default root is middle C, and encodes to the same byte pair the
+  // factory defaults have always written.
+  CHECK(Near(kDefaultTunedRootNote, 60.0f));
+  CHECK(EncodeTunedRoot(kDefaultTunedRootNote) == 60 * 256);
+
+  RangeSim from_lfo;
+  from_lfo.Init(0.0f, 84.0f, SelectorFor(PITCH_RANGE_LOW));
+  CHECK(from_lfo.note < 0.0f);
+  from_lfo.Sweep(PITCH_RANGE_LOW, PITCH_RANGE_OCTAVES);
+  CHECK(Near(from_lfo.tuned_root, kDefaultTunedRootNote));
+  CHECK(Near(from_lfo.note, kDefaultTunedRootNote));
+
+  // It holds wherever in the LFO range the FREQUENCY knob was left, and for a
+  // gesture that reaches octave switching the long way round.
+  for (int i = 0; i < 5; ++i) {
+    RangeSim lfo;
+    lfo.Init(-1.0f + 0.5f * static_cast<float>(i), 84.0f,
+        SelectorFor(PITCH_RANGE_LOW));
+    lfo.Sweep(PITCH_RANGE_LOW, PITCH_RANGE_HIGH);
+    lfo.Sweep(PITCH_RANGE_HIGH, PITCH_RANGE_OCTAVES);
+    CHECK(Near(lfo.tuned_root, kDefaultTunedRootNote));
+  }
+
+  // The default applies to the LFO range only, not to the ordinary ranges near
+  // it, and only for as long as the gesture that began there lasts: stopping
+  // in a range and reaching for the selector again roots on the pitch that
+  // range is now sounding.
+  RangeSim lowest_wide;
+  lowest_wide.Init(0.0f, 84.0f, SelectorFor(PITCH_RANGE_FIRST_WIDE));
+  CHECK(Near(lowest_wide.note, 12.0f));
+  lowest_wide.Sweep(PITCH_RANGE_FIRST_WIDE, PITCH_RANGE_OCTAVES);
+  CHECK(Near(lowest_wide.tuned_root, 12.0f));
+
+  RangeSim left_lfo;
+  left_lfo.Init(0.0f, 84.0f, SelectorFor(PITCH_RANGE_LOW));
+  left_lfo.Sweep(PITCH_RANGE_LOW, kWideRangeMiddleC);
+  left_lfo.ReleaseSelector();
+  CHECK(Near(left_lfo.note, 60.0f));
+  left_lfo.Sweep(kWideRangeMiddleC, PITCH_RANGE_OCTAVES);
+  CHECK(Near(left_lfo.tuned_root, 60.0f));
+
   // A long sweep passing THROUGH octave switching on its way somewhere else
   // leaves the same root behind as one that stops there, so the direction of
   // travel never decides the tuning.
@@ -286,6 +331,9 @@ int main() {
   CHECK(Near(snapshot.Root(96.0f), 96.0f));
   snapshot.Track(true, PITCH_RANGE_OCTAVES, 84.0f, 60.0f);
   CHECK(Near(snapshot.Root(96.0f), 60.0f));
+  snapshot.Track(false, PITCH_RANGE_LOW, -20.0f, 48.0f);
+  snapshot.Track(true, PITCH_RANGE_LOW, -20.0f, 48.0f);
+  CHECK(Near(snapshot.Root(96.0f), kDefaultTunedRootNote));
   snapshot.Reset();
   CHECK(!snapshot.editing());
 

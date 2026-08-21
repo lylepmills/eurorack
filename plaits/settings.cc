@@ -36,6 +36,7 @@
 
 #include "stmlib/system/storage.h"
 #include "plaits/build_config.h"
+#include "plaits/pitch_range.h"
 
 namespace plaits {
 
@@ -190,7 +191,7 @@ void Settings::InitState() {
     state_.bank_last_row[i] = 0;
   }
 
-  state_.tuned_root_q8 = 60 * 256;
+  state_.tuned_root_q8 = EncodeTunedRoot(kDefaultTunedRootNote);
   state_.tuned_root_valid = 0;
 }
 

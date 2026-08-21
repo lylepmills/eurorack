@@ -23,6 +23,10 @@ enum PitchRange {
   PITCH_RANGE_COUNT = 12
 };
 
+// The root octave switching falls back to: middle C, which is also the tuned
+// root a module ships with and the one it returns to after a factory reset.
+const float kDefaultTunedRootNote = 60.0f;
+
 inline int PitchRangeFromControl(float value) {
   int range = static_cast<int>(value * static_cast<float>(PITCH_RANGE_COUNT));
   if (range < PITCH_RANGE_LOW) range = PITCH_RANGE_LOW;
@@ -71,10 +75,21 @@ class OctaveRootSnapshot {
   // stored root as they stood at the end of the previous tick.
   inline void Track(bool editing, int range, float note, float tuned_root) {
     if (editing && !editing_) {
-      // Starting from octave switching itself, the sounding pitch already
-      // carries the selected octave. Keeping the root instead is what stops
-      // leaving and returning from walking the tuning up or down.
-      note_ = range == PITCH_RANGE_OCTAVES ? tuned_root : note;
+      if (range == PITCH_RANGE_OCTAVES) {
+        // Starting from octave switching itself, the sounding pitch already
+        // carries the selected octave. Keeping the root instead is what stops
+        // leaving and returning from walking the tuning up or down.
+        note_ = tuned_root;
+      } else if (range == PITCH_RANGE_LOW) {
+        // The LFO range's pitch is sub-audio by design, so rooting there would
+        // put all nine octave positions at or below the bottom of hearing --
+        // the same trap as arriving three octaves sharp, pointing the other
+        // way. Someone leaving the LFO range for octave switching is asking
+        // for pitches, so hand them the default root rather than a rate.
+        note_ = kDefaultTunedRootNote;
+      } else {
+        note_ = note;
+      }
     }
     editing_ = editing;
   }

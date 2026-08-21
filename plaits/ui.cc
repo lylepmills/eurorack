@@ -260,7 +260,7 @@ void Ui::LoadState() {
   locked_octave_ = state.locked_octave;
   tuned_root_note_ = state.tuned_root_valid == 1
       ? DecodeTunedRoot(state.tuned_root_q8)
-      : 60.0f;
+      : kDefaultTunedRootNote;
 
   for (int i = 0; i < 4; ++i) {
     bank_last_row_[i] = state.bank_last_row[i];
