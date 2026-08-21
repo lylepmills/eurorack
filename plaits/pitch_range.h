@@ -23,6 +23,10 @@ enum PitchRange {
   PITCH_RANGE_COUNT = 12
 };
 
+// The root octave switching falls back to: middle C, which is also the tuned
+// root a module ships with and the one it returns to after a factory reset.
+const float kDefaultTunedRootNote = 60.0f;
+
 inline int PitchRangeFromControl(float value) {
   int range = static_cast<int>(value * static_cast<float>(PITCH_RANGE_COUNT));
   if (range < PITCH_RANGE_LOW) range = PITCH_RANGE_LOW;
@@ -38,6 +42,73 @@ inline float PrecisionRangeNote(float anchor_note, float transposition) {
   // transposition is a caught-up fine control in [-1, +1].
   return anchor_note + transposition;
 }
+
+// Chooses the manual pitch that becomes the octave-switching root.
+//
+// The range selector is a hidden parameter on HARMONICS, so it sweeps: to
+// reach octave switching the selection is dragged across every range in
+// between, and each one rewrites the sounding note on the way past. The pitch
+// present when the selection LANDS on octave switching is therefore not the
+// pitch the player was hearing when they reached for the selector. Approaching
+// from below crosses the eight ordinary ranges and arrives carrying the last
+// of them (note 96, C7), rooting the mode three octaves above where the player
+// left off and putting five of its nine positions at or above C7; approaching
+// from above, down through Fine tuning, arrives carrying the player's own
+// pitch. Nothing on the panel distinguishes the two, and the wrong root is
+// saved, so it survives a power cycle and outlives the ranges that caused it.
+//
+// Snapshotting the manual pitch when the gesture BEGINS, and holding that
+// snapshot for as long as it lasts, roots the mode at the pitch the player
+// left behind whichever way they turn the selector.
+class OctaveRootSnapshot {
+ public:
+  OctaveRootSnapshot() : editing_(false), note_(0.0f) { }
+
+  inline void Reset() {
+    editing_ = false;
+    note_ = 0.0f;
+  }
+
+  // Call once per control tick, BEFORE this tick's range change is handled.
+  // |editing| is true while the range selector is being turned; |range|,
+  // |note| and |tuned_root| are the range, the sounding manual pitch and the
+  // stored root as they stood at the end of the previous tick.
+  inline void Track(bool editing, int range, float note, float tuned_root) {
+    if (editing && !editing_) {
+      if (range == PITCH_RANGE_OCTAVES) {
+        // Starting from octave switching itself, the sounding pitch already
+        // carries the selected octave. Keeping the root instead is what stops
+        // leaving and returning from walking the tuning up or down.
+        note_ = tuned_root;
+      } else if (range == PITCH_RANGE_LOW) {
+        // The LFO range's pitch is sub-audio by design, so rooting there would
+        // put all nine octave positions at or below the bottom of hearing --
+        // the same trap as arriving three octaves sharp, pointing the other
+        // way. Someone leaving the LFO range for octave switching is asking
+        // for pitches, so hand them the default root rather than a rate.
+        note_ = kDefaultTunedRootNote;
+      } else {
+        note_ = note;
+      }
+    }
+    editing_ = editing;
+  }
+
+  // The root for a change into octave switching happening this tick. The
+  // selector cannot move outside a gesture, so the sounding pitch is only a
+  // fallback for a caller that changes the range some other way.
+  inline float Root(float note) const {
+    return editing_ ? note_ : note;
+  }
+
+  inline bool editing() const {
+    return editing_;
+  }
+
+ private:
+  bool editing_;
+  float note_;
+};
 
 // The endpoint-weighted catch-up used by Plaits' ordinary hidden parameters,
 // packaged for controls whose meaning changes when the pitch range changes.

@@ -182,6 +182,7 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
   precision_anchor_note_ = tuned_root_note_;
   precision_catch_up_.Reset();
   octave_catch_up_.Reset();
+  octave_root_snapshot_.Reset();
   precision_root_save_.Init(
       EncodeTunedRoot(tuned_root_note_), kPrecisionSaveDelay);
 
@@ -259,7 +260,7 @@ void Ui::LoadState() {
   locked_octave_ = state.locked_octave;
   tuned_root_note_ = state.tuned_root_valid == 1
       ? DecodeTunedRoot(state.tuned_root_q8)
-      : 60.0f;
+      : kDefaultTunedRootNote;
 
   for (int i = 0; i < 4; ++i) {
     bank_last_row_[i] = state.bank_last_row[i];
@@ -1183,17 +1184,32 @@ void Ui::Poll() {
 
   const int pitch_range = PitchRangeFromControl(octave_);
 
+  // Selecting a range sweeps across the ranges in between, and each of them
+  // rewrites patch_->note on the way past, so the pitch present when the
+  // selection lands on octave switching is not the pitch the player was
+  // hearing when they reached for the selector. Take the snapshot before this
+  // tick's range change is handled, while patch_->note still holds the value
+  // the previous tick left there.
+  octave_root_snapshot_.Track(
+      pots_[POTS_ADC_CHANNEL_HARMONICS_POT].editing_hidden_parameter(),
+      previous_pitch_range_,
+      patch_->note,
+      tuned_root_note_);
+
   // Range transitions capture the MANUAL pitch only; V/OCT and FM live in the
   // modulation structure and are never baked into the tuned root. Each new
   // FREQUENCY role starts from its neutral value, then catches the physical
   // knob with the same endpoint-weighted response as Plaits' hidden params.
   if (pitch_range != previous_pitch_range_) {
     if (pitch_range == PITCH_RANGE_PRECISION) {
+      // Fine tuning anchors on the SOUNDING pitch rather than the snapshot:
+      // arriving from octave switching, that pitch includes the octave the
+      // player selected, and moving the anchor off it would jump the tuning.
       precision_anchor_note_ = patch_->note;
       precision_catch_up_.Init(
           0.5f, 0.5f * transposition_ + 0.5f);
     } else if (pitch_range == PITCH_RANGE_OCTAVES) {
-      tuned_root_note_ = patch_->note;
+      tuned_root_note_ = octave_root_snapshot_.Root(patch_->note);
       precision_anchor_note_ = tuned_root_note_;
       locked_octave_ = 4;
       octave_catch_up_.Init(
