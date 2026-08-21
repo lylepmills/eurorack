@@ -590,6 +590,50 @@ the generated field guide was ready and downloaded as a 9,997-byte PDF with
 SHA-256
 `c966faf0b738570efbd2714fd39db32f5f2782a5e88d1d1a8ba82259eb6d86d0`.
 
+The August 21 octave-switching root fix shipped at `rev-ccf67eac9661`. Reaching
+octave switching from below rooted the mode at note 96 (C7) because the hidden
+HARMONICS range selector sweeps and each range crossed rewrites the sounding
+note; the wrong root was then saved. No engine digest moved -- `catalog:check`
+reported the allowlist already current at the new revision and the website
+snapshot matched it, so this was a builder-only rollout with no catalog re-sync
+and no site deploy. Production canary build
+`154ad71af5fd697e3b51b75cdb0d9f8de76da99087d517ea75345f8820fffaf6`
+rebuilt the gate recipe: 4,803,692-byte WAV with SHA-256
+`dcae8300a81f0d35612f3ade3779113848fe512c62829758ebfce74dd708d872`,
+application binary
+`200dcef8ed81f4c5442c43456098244af6d7c2d15b6fbd0983d295b7a16b1a2c`,
+203,700/48/28,188 text/data/BSS for the mixed fixture and 58,148/48/20,668 for
+the gate recipe. `rev-0eec23f182a1` remains the immediate rollback image.
+
+**This rollout exposed a defect in the staging gate: `computeBuildKey` hashes
+the Worker's `PLAITS_SOURCE_REVISION` var, not the revision the container
+actually stamps.** The two disagree for the length of a Container rollout. Here
+`deploy:staging` returned and `/v1/catalog` reported `ccf67eac9661` immediately
+-- that is the Worker var -- while the staging Container was still serving
+`rev-0eec23f182a1`, so the smoke's build compiled on the OLD image and
+`smoke:staging` passed anyway, because its
+`PLAITS_EXPECTED_SOURCE_REVISION` check reads the catalog var rather than the
+artifact's `X-Plaits-Source-Revision`. Proven by compiling the identical recipe
+against both images locally: the old image reproduces the staged artifact
+exactly (58,084/20,652, WAV `f758e695...`) and the new image reproduces the
+production artifact exactly (58,148/20,668, WAV `dcae8300...`). Two consequences:
+
+- **A staging gate can validate the previous firmware and still report green.**
+  Before trusting `smoke:staging`, wait for the staging Container the same way
+  the production canary already requires -- `configuration.image` on the new tag
+  with `starting == 0` -- or assert the artifact's own `X-Plaits-Source-Revision`.
+  The artifact header is authoritative; the catalog var is not.
+- **The staging R2 cache now holds a mis-keyed artifact**: the pre-fix firmware
+  stored under a key that claims `ccf67eac9661`. A re-run of the gate at this
+  exact revision will serve it from cache rather than recompiling. It is
+  staging-only and any future revision keys differently, but that entry should
+  be purged before this revision is gated again.
+
+Because of the above, the hardware audition for this rollout must use the
+PRODUCTION artifact (`dcae8300...`), not the staged one. It was deferred:
+the fix shipped on a listening-only basis with the module unavailable, and the
+flash-and-play confirmation is outstanding.
+
 Cloudflare's rate-limit binding allows five new compilation requests per source
 IP per minute. Cache hits and repeated polls for an already queued build bypass
 that limit. This is a lightweight abuse guard rather than an account or billing
@@ -597,7 +641,7 @@ system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-0eec23f182a1` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-ccf67eac9661` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a new
 image, use `wrangler containers info <application-id>` and wait until
@@ -618,7 +662,7 @@ and Step unpatched-attenuverter modes; schema 17's selectable stock LPC banks,
 custom text/recording-derived Speech banks, source/engine previews; and the
 earlier recipe-driven scale banks and automatic LEVEL routing. The generalized
 schema-inheritance hardening from `5b2b077` is also live: current production
-source `0eec23f182a1` descends from that commit, so future supported schemas
+source `ccf67eac9661` descends from that commit, so future supported schemas
 inherit older feature shapes without another version-list edit.
 
 ### Rolling back
@@ -695,6 +739,7 @@ target.
 | August 12, 2026 (complete Braids control, trigger, and stereo metadata audit) | `29e3dba36351` | `rev-29e3dba36351` |
 | August 14, 2026 (complete remaining-engine metadata audit; all 87 engines covered) | `19666470542c` | `rev-19666470542c` |
 | August 16, 2026 (Analog Percussion community engine; all 88 engines covered) | `0eec23f182a1` | `rev-0eec23f182a1` |
+| August 21, 2026 (octave-switching root fix) | `ccf67eac9661` | `rev-ccf67eac9661` |
 
 The August 16 production canary used the same exact 24-slot recipe as staging:
 build `6cb08754024d2a7abf43ae0c6390eb23b11a051dbc04c4984a32212040a6e865`
