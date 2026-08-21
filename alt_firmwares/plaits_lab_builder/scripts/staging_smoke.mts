@@ -70,7 +70,11 @@ const catalog = await json(catalogResponse, "catalog");
 assert.equal(catalogResponse.headers.get("access-control-allow-origin"), origin, "CORS origin");
 assert.equal(catalog.deploymentEnvironment, deploymentEnvironment);
 assert.ok(catalog.recipeSchemaVersion >= 22, "builder must support the Sync In preference");
-if (expectedRevision) assert.equal(catalog.sourceRevision, expectedRevision);
+// The catalog reports the WORKER's var. It proves the Worker deployed; it does
+// NOT prove the Container serving compiles is the matching image, because the
+// two disagree for the length of a Container rollout. The authoritative check is
+// against the artifact's own stamped revision, below.
+if (expectedRevision) assert.equal(catalog.sourceRevision, expectedRevision, "Worker catalog revision");
 
 await getBinary("/v1/speech/voice-preview/en-US/af_heart.wav", /audio\/wav/, "voice preview");
 await getBinary("/v1/speech/stock/bank-1-natural.wav", /audio\/wav/, "stock-bank preview");
@@ -196,6 +200,24 @@ while (build.status === "queued" || build.status === "building") {
 }
 assert.equal(build.status, "succeeded", JSON.stringify(build.error ?? build));
 
+// THE gate this script exists for: the revision the compiler stamped into these
+// exact bytes. Checking the catalog var instead let the 2026-08-21 octave-fix
+// rollout pass while the staging Container was still serving the previous image,
+// so the gate validated -- and saved for the hardware audition -- pre-fix
+// firmware. A cache hit is also covered: the stored artifact reports the
+// revision that built it, not the current var.
+if (expectedRevision) {
+  assert.equal(
+    build.artifact?.sourceRevision,
+    expectedRevision,
+    `compiler stamped ${build.artifact?.sourceRevision || "(nothing)"} but this gate expects `
+    + `${expectedRevision}. If these differ, the Container is still rolling: wait until `
+    + "`wrangler containers info <app-id>` shows configuration.image on the intended tag "
+    + "with starting == 0, then re-run. NOTE the artifact just built is cached under a key "
+    + "claiming the wrong revision, so purge it before re-gating this revision.",
+  );
+}
+
 const firmware = await getBinary(build.downloadUrl, /audio\/wav/, "firmware download");
 assert.equal(Buffer.from(firmware.subarray(0, 4)).toString("ascii"), "RIFF");
 let manual: Uint8Array | undefined;
@@ -214,7 +236,9 @@ if (artifactDir) {
 }
 
 console.log(
-  `${deploymentEnvironment} smoke passed for ${catalog.sourceRevision}; `
+  `${deploymentEnvironment} smoke passed for `
+  + `${build.artifact?.sourceRevision || catalog.sourceRevision} `
+  + `(compiler-stamped${build.artifact?.sourceRevision ? "" : " unavailable, showing Worker var"}); `
   + `build ${build.buildId}${build.cacheHit ? " (cache hit)" : ""}`,
 );
 console.log(`  firmware WAV ${firmware.byteLength} bytes`);

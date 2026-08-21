@@ -47,3 +47,26 @@ test("the hardware smoke carries all three Speech engines", () => {
     /slots:\s*\[\s*reference\(originalSpeech\),\s*reference\(speechSounds\),\s*reference\(lpcWords\),/s,
   );
 });
+
+// The 2026-08-21 octave-fix rollout passed this gate against the PREVIOUS
+// firmware. The build key is derived from the Worker's PLAITS_SOURCE_REVISION
+// var, and the var updates the instant `deploy:staging` returns, while the
+// Container serving compiles keeps running the old image until its rollout
+// finishes. So the smoke asserted a revision the Worker merely advertised and
+// saved a pre-fix WAV as the artifact for the hardware audition.
+test("the release gate checks the revision the compiler stamped, not the Worker's var", () => {
+  // The catalog var alone must never be the only revision assertion.
+  assert.match(smoke, /build\.artifact\?\.sourceRevision/);
+  assert.match(
+    smoke,
+    /assert\.equal\(\s*build\.artifact\?\.sourceRevision,\s*expectedRevision/s,
+    "the smoke must assert the artifact's stamped revision against the expected one",
+  );
+});
+
+test("a stale-image gate failure explains that the Container is still rolling", () => {
+  // The failure is indistinguishable from a bad build unless the message says
+  // so, and it also leaves a mis-keyed artifact behind that must be purged.
+  assert.match(smoke, /still rolling/);
+  assert.match(smoke, /purge/i);
+});

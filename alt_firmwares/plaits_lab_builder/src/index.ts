@@ -40,6 +40,13 @@ type JobState = {
     textBytes: number;
     dataBytes: number;
     bssBytes: number;
+    // The revision the COMPILER stamped, which is the only trustworthy record of
+    // what actually built these bytes. It is not the Worker's
+    // PLAITS_SOURCE_REVISION var: the two disagree for the length of a Container
+    // rollout, and the build key is derived from the var, so during that window
+    // an artifact is keyed as the new revision while the old image compiles it.
+    // Empty for artifacts stored before this field existed.
+    sourceRevision: string;
   };
   manual?: ManualState;
   error?: { code: string; message: string };
@@ -210,6 +217,7 @@ function artifactSummary(artifact: R2Object): NonNullable<JobState["artifact"]> 
     textBytes: Number(artifact.customMetadata?.textBytes ?? 0),
     dataBytes: Number(artifact.customMetadata?.dataBytes ?? 0),
     bssBytes: Number(artifact.customMetadata?.bssBytes ?? 0),
+    sourceRevision: artifact.customMetadata?.sourceRevision ?? "",
   };
 }
 
@@ -639,6 +647,7 @@ async function processBuild(message: Message<BuildMessage>, env: Env): Promise<v
         textBytes: Number(metadata.textBytes),
         dataBytes: Number(metadata.dataBytes),
         bssBytes: Number(metadata.bssBytes),
+        sourceRevision: metadata.sourceRevision,
       },
       manual,
     });

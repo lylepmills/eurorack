@@ -618,16 +618,26 @@ against both images locally: the old image reproduces the staged artifact
 exactly (58,084/20,652, WAV `f758e695...`) and the new image reproduces the
 production artifact exactly (58,148/20,668, WAV `dcae8300...`). Two consequences:
 
-- **A staging gate can validate the previous firmware and still report green.**
-  Before trusting `smoke:staging`, wait for the staging Container the same way
-  the production canary already requires -- `configuration.image` on the new tag
-  with `starting == 0` -- or assert the artifact's own `X-Plaits-Source-Revision`.
-  The artifact header is authoritative; the catalog var is not.
+- **A staging gate could validate the previous firmware and still report green.**
+  FIXED the same day: the Worker now surfaces the compiler-stamped revision as
+  `artifact.sourceRevision` on `/v1/builds/:key` (it was already captured into R2
+  `customMetadata`, just never read back), and `smoke:staging` asserts THAT
+  against `PLAITS_EXPECTED_SOURCE_REVISION` rather than the catalog var. The
+  catalog check is kept, but only proves the Worker deployed. Verified against
+  the poisoned staging entry below: the gate now fails with
+  `compiler stamped 0eec23f182a1 but this gate expects ccf67eac9661`, and passes
+  clean as a production canary. `test/deployment.test.mts` locks both the
+  assertion and its remediation message, and both tests fail against the old
+  script. **The artifact-stamped revision is authoritative; the catalog var is
+  not.** Still wait for the Container pool anyway -- a gate that fails late costs
+  a full compile.
 - **The staging R2 cache now holds a mis-keyed artifact**: the pre-fix firmware
   stored under a key that claims `ccf67eac9661`. A re-run of the gate at this
   exact revision will serve it from cache rather than recompiling. It is
-  staging-only and any future revision keys differently, but that entry should
-  be purged before this revision is gated again.
+  staging-only and any future revision keys differently, but that entry must be
+  purged before this revision is gated again -- until then the (correct) gate
+  refuses to pass on staging at `ccf67eac9661`, since a cache hit truthfully
+  reports it was built by `0eec23f182a1`.
 
 Because of the above, the hardware audition for this rollout must use the
 PRODUCTION artifact (`dcae8300...`), not the staged one. It was deferred:
