@@ -634,15 +634,25 @@ production artifact exactly (58,148/20,668, WAV `dcae8300...`). Two consequences
 - **The staging R2 cache now holds a mis-keyed artifact**: the pre-fix firmware
   stored under a key that claims `ccf67eac9661`. A re-run of the gate at this
   exact revision will serve it from cache rather than recompiling. It is
-  staging-only and any future revision keys differently, but that entry must be
-  purged before this revision is gated again -- until then the (correct) gate
-  refuses to pass on staging at `ccf67eac9661`, since a cache hit truthfully
-  reports it was built by `0eec23f182a1`.
+  staging-only and any future revision keys differently, but that entry had to be
+  purged before this revision could be gated again, because the corrected gate
+  refuses to pass on it -- a cache hit truthfully reports it was built by
+  `0eec23f182a1`. PURGED 2026-08-22 (`wrangler r2 object delete
+  plaits-lab-firmwares-preview/firmware/<buildKey>.wav --remote`, staging bucket
+  only; production lives in a different bucket). Deleting the firmware object is
+  enough -- the cache branch keys off the R2 `head`, so the rebuild path then
+  overwrites the stale job state and the misleading `manifests/<buildKey>.json`.
+  Staging re-gated GREEN afterwards, recompiling to
+  `dcae8300a81f0d35612f3ade3779113848fe512c62829758ebfce74dd708d872` -- byte-identical
+  to production, at 58,148/20,668 text/BSS.
 
-Because of the above, the hardware audition for this rollout must use the
-PRODUCTION artifact (`dcae8300...`), not the staged one. It was deferred:
-the fix shipped on a listening-only basis with the module unavailable, and the
-flash-and-play confirmation is outstanding.
+The hardware audition for this rollout was deferred: the fix shipped on a
+listening-only basis with the module unavailable, and the flash-and-play
+confirmation is outstanding. Flash
+`dcae8300a81f0d35612f3ade3779113848fe512c62829758ebfce74dd708d872` -- after the
+purge and re-gate, the staging and production artifacts are the same bytes, so
+either copy is the right one. (Before the purge only the production copy was,
+which is why the saved gate artifact had to be replaced.)
 
 Cloudflare's rate-limit binding allows five new compilation requests per source
 IP per minute. Cache hits and repeated polls for an already queued build bypass
