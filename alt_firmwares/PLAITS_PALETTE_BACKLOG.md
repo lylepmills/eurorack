@@ -22,6 +22,83 @@ release notes, and user documentation become the source of truth.
 | --- | --- | --- | --- |
 | Renaissance-style Speech remix | Parked | 2026-08-11 | `codex/renaissance-sam-prototype` at `a815337` |
 | Four independent pitch CVs for chord engines | Parked | 2026-08-11 | `session/plaits-four-voct` at `ebed081` |
+| Simplified three-position frequency-range selector | Planned | 2026-08-22 | this entry; no prototype yet |
+
+## Planned
+
+### Simplified three-position frequency-range selector
+
+**Concept.** An advanced firmware option that reduces the FREQUENCY range
+selector from twelve positions to the three most clockwise ones: octave
+switching, fine tuning, and the full-range coarse sweep. Lyle's workflow --
+and, we suspect, the common one -- is set a coarse tune, fine tune it, lock it
+in. The nine positions counter-clockwise of octave switching (the eight
++/-7-semitone ranges and the LFO range) are never entered.
+
+**Naming correction to carry into any implementation.** `PITCH_RANGE_HIGH`
+(index 11) is not a high-frequency range: it is `60 + transposition * 48`, so it
+sweeps 12..108 -- the full musical range on one knob. It is the position players
+reach for as COARSE, and it is the far-clockwise one. The current name misleads;
+prefer "coarse" in user-facing copy, and consider renaming in code.
+
+#### Why the dropped ranges are redundant here
+
+`transposition_` is [-1, +1] and a wide range is `transposition * 7 + range * 12`,
+so a single wide range already spans 14 semitones -- wider than an octave. The
+eight of them are centred an octave apart (12..96), which is another way of
+choosing an octave. Octave switching does the same job over root +/-4 octaves
+(nine positions, `12 * (octave - 4)`), covering 12..108 from the default root --
+the same ground -- and does it better for this workflow, because it is saved,
+lockable, and quantised.
+
+Two further gains beyond decluttering:
+
+- **Selection gets ~4x less fiddly.** The selector is a hidden parameter spread
+  across the HARMONICS sweep, so each range holds 1/12 of the travel today and
+  would hold 1/3.
+- **It removes the trigger for a whole bug class.** The 2026-08-21 octave-root
+  bug existed because reaching octave switching dragged the selection across
+  eight ranges that each rewrote the sounding note. With three positions that
+  sweep barely exists. (The `OctaveRootSnapshot` fix is still required for full
+  builds and must not be reverted.)
+
+#### What is actually lost
+
+- **The middle resolution tier.** Coarse spans 96 semitones and fine spans +/-1
+  (`anchor + transposition`), with the +/-7-semitone ranges previously bridging
+  them. Landing coarse within a semitone means hitting ~1% of knob travel. This
+  is already how Lyle works, so it is proven in practice; if it bites, widen fine
+  tuning in simplified builds rather than restoring the ranges.
+- **The LFO range** (-48..+12), a genuinely separate use of the module rather
+  than part of the tuning workflow. Anyone using Plaits as an LFO should not
+  build with this option.
+- **One-gesture octave jumps** become two steps: enter octave switching, set it.
+
+#### Work required to resume
+
+1. Gate it as a recipe preference in the `syncInput` mould (schema 24, catalog
+   qualification, website control, docs), not a hardcoded build variant.
+2. **Remap the selector; do NOT renumber `PitchRange`.** Keep the enum values
+   and map the three knob thirds onto `PITCH_RANGE_OCTAVES`, `_PRECISION`, and
+   `_HIGH`. Renumbering would silently break two things that use range indices as
+   a vocabulary rather than as positions: the `UI_MODE_DISPLAY_OCTAVE` LED
+   patterns, and the octave shortcut's `locked_octave_ == 8 ? PITCH_RANGE_HIGH`
+   sentinel. Confining the change to `PitchRangeFromControl` also leaves the
+   saved `tuned_root_q8` / `locked_octave` state and the octave-root snapshot
+   untouched.
+3. Check the LED feedback reads sensibly with only three modes. Each survivor
+   already has its own pattern (octaves alternating, coarse all-yellow), so this
+   is likely a no-op, but confirm on hardware.
+4. Extend `pitch_range_test.cc` to cover the simplified mapping in both build
+   configurations, including that a saved root survives a reflash between them.
+5. Full rollout: image, staging gate, hardware audition.
+
+#### Constraints worth preserving
+
+- Saved settings must survive moving between a full and a simplified build in
+  both directions; both configurations have a tuned root and octave switching,
+  so only the selector mapping differs.
+- The option is additive. The default build keeps all twelve positions.
 
 ## Parked
 
