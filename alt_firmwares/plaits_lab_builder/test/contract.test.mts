@@ -394,17 +394,33 @@ test("the simplified pitch-range preference requires and normalizes to v24", asy
     (error: { code?: string }) => error.code === "invalid_preferences",
   );
 
-  // It is independent of the other preferences: enabling it must not disturb
-  // Sync In or the FM experiments, which share the same v24 key set.
-  const composed = structuredClone(base);
-  composed.preferences = {
-    ...preferences(true), syncInput: true, linearTzfm: true, fastFm: true,
+  // Every preference must survive normalization at the newest key set. The
+  // derivations use the same exact-key-set matching as the schema floors, so a
+  // future preference that adds its own set without extending these ORs makes
+  // every OLDER one derive to false -- a recipe's calibration or Sync In quietly
+  // becoming absent from the firmware it builds. That is not hypothetical: the
+  // website copy of this logic shipped exactly that bug for `calibration` when
+  // v24 landed, caught only by adding this assertion.
+  const allOn = structuredClone(base);
+  allOn.preferences = {
+    ...preferences(true),
+    calibration: true,
+    colorBlindMode: true,
+    replaceableFmBanks: true,
+    syncInput: true,
+    linearTzfm: true,
+    fastFm: true,
   };
-  const normalizedComposed = normalizeRecipe(composed);
-  assert.equal(normalizedComposed.preferences.simplifiedPitchRanges, true);
-  assert.equal(normalizedComposed.preferences.syncInput, true);
-  assert.equal(normalizedComposed.preferences.linearTzfm, true);
-  assert.equal(normalizedComposed.preferences.fastFm, true);
+  const normalizedAllOn = normalizeRecipe(allOn);
+  for (const key of [
+    "calibration", "colorBlindMode", "replaceableFmBanks", "syncInput",
+    "linearTzfm", "fastFm", "simplifiedPitchRanges",
+  ] as const) {
+    assert.equal(
+      normalizedAllOn.preferences[key], true,
+      `preference ${key} did not survive normalization`,
+    );
+  }
 });
 
 test("automatic LEVEL routing is carried only by schema 16", async () => {
