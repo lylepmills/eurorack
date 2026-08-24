@@ -87,6 +87,22 @@ SYNC_INPUT_PREFERENCE_MIN_SCHEMA_VERSION = 22
 # in PitchRangeFromControl -- so a module moves between the two layouts without
 # losing its tuned root or locked octave.
 SIMPLIFIED_PITCH_RANGES_MIN_SCHEMA_VERSION = 24
+
+# The preference tiers, in the order they were introduced. Every recipe shape
+# this container accepts is the union of some prefix of these. A missing key
+# means the preference is off. Mirrored by preferenceTiers in the Worker's
+# src/contract.ts and the editor's manifest.ts -- all three must agree, since a
+# key admitted by one and rejected by another strands recipes between them (the
+# Worker/container contract split that failed the rev-4749aec727af canary).
+PREFERENCE_TIERS = (
+    ("navigationMode",),
+    ("calibration",),
+    ("colorBlindMode",),
+    ("replaceableFmBanks",),
+    ("syncInput",),
+    ("linearTzfm", "fastFm"),
+    ("simplifiedPitchRanges",),
+)
 # v23 adds two independent experimental FM preferences. Linear TZFM changes
 # the attenuverter law on supporting engines; Fast FM changes SDADC2 acquisition
 # and therefore makes LEVEL CV unavailable. Keeping them separate allows all
@@ -641,18 +657,18 @@ def validate_recipe(value: Any) -> BuildRecipe:
     }
     current_option_keys = legacy_option_keys | {"attenuverterMode"}
     carries_attenuverter_mode = set(options) == current_option_keys
-    if set(preferences) not in (
-        {"navigationMode"},
-        {"navigationMode", "calibration"},
-        {"navigationMode", "calibration", "colorBlindMode"},
-        {"navigationMode", "calibration", "colorBlindMode", "replaceableFmBanks"},
-        {"navigationMode", "calibration", "colorBlindMode", "replaceableFmBanks",
-         "syncInput"},
-        {"navigationMode", "calibration", "colorBlindMode", "replaceableFmBanks",
-         "syncInput", "linearTzfm", "fastFm"},
-        {"navigationMode", "calibration", "colorBlindMode", "replaceableFmBanks",
-         "syncInput", "linearTzfm", "fastFm", "simplifiedPitchRanges"},
-    ) or (set(options) != legacy_option_keys and not carries_attenuverter_mode):
+    # Preferences arrived incrementally, and every accepted shape is a
+    # cumulative PREFIX of PREFERENCE_TIERS: pre-v14 carries navigationMode
+    # alone, v14 adds calibration, and so on. Adding a preference is one row
+    # there rather than another literal set here. Keep it in step with the
+    # Worker's copy in src/contract.ts and the editor's in manifest.ts.
+    accepted_preference_shapes = []
+    cumulative: set[str] = set()
+    for tier in PREFERENCE_TIERS:
+        cumulative = cumulative | set(tier)
+        accepted_preference_shapes.append(set(cumulative))
+    if set(preferences) not in accepted_preference_shapes or (
+            set(options) != legacy_option_keys and not carries_attenuverter_mode):
         raise ValueError("recipe contains an unsupported firmware option")
     # The Worker stores a fully normalized option profile and therefore adds
     # the legacy-equivalent `stock` value before handing a pre-v18 recipe to

@@ -13,6 +13,7 @@ from generate_engine_config import (
     DEFAULT_CONFIGURATION,
     DEFAULT_SCALE_BANK,
     MAX_RECIPE_SCHEMA_VERSION,
+    PREFERENCE_TIERS,
     MIN_RECIPE_SCHEMA_VERSION,
     render_config,
     validate_recipe,
@@ -99,6 +100,32 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertIsNotNone(maximum)
         self.assertEqual(int(minimum.group(1)), MIN_RECIPE_SCHEMA_VERSION)
         self.assertEqual(int(maximum.group(1)), MAX_RECIPE_SCHEMA_VERSION)
+
+    def test_preference_tiers_stay_in_sync_across_all_three_copies(self) -> None:
+        # The same preference tiers are declared three times: here, in the
+        # public Worker, and in the editor. The Worker validates first and hands
+        # its normalized recipe to this container, so a key admitted by one and
+        # rejected by another strands recipes between them -- the Worker/
+        # container contract split that failed the rev-4749aec727af canary.
+        # Compare the ORDER too, not just membership: the shapes accepted are
+        # cumulative prefixes, so a reordering changes which sets are legal.
+        def tiers_from(source: str, pattern: str) -> list[list[str]]:
+            block = re.search(pattern, source, re.S)
+            self.assertIsNotNone(block, "expected a preference tier table")
+            rows = re.findall(r"\[([^\]]*)\]", block.group(1))
+            return [re.findall(r'"([a-zA-Z0-9]+)"', row) for row in rows]
+
+        worker = tiers_from(
+            (FIXTURES / "src" / "contract.ts").read_text(encoding="utf-8"),
+            r"const preferenceTiers: readonly \(readonly string\[\]\)\[\] = \[(.*?)\];",
+        )
+        ours = [list(tier) for tier in PREFERENCE_TIERS]
+        self.assertEqual(worker, ours, "Worker and container preference tiers differ")
+
+        # The editor keeps a third copy, in the rubato-audio repo, which this
+        # container cannot see. It is held in step by its own guard (its tier
+        # list must match defaultFirmwareConfiguration) plus the comment on each
+        # copy. A conditional check here would silently never run.
 
     def test_output_format_accepts_wav_and_intel_hex_only(self) -> None:
         recipe = self.load("default_recipe.json")

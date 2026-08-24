@@ -318,6 +318,133 @@ test("schema 23 carries independent experimental TZFM and Fast FM preferences", 
   );
 });
 
+test("every historical preference shape still loads, and nothing else does", async () => {
+  // The tier list is only safe if its cumulative prefixes are exactly the shapes
+  // released editors have ever written. Walk them all. The schema version is
+  // held fixed on purpose: the key set is validated independently of it (the
+  // per-preference floors fire only on a `true` value, and every flag here is
+  // false), so this isolates the shape from the version.
+  const publicCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url), "utf8",
+  ));
+  const chordCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_chord_tables/catalog.json", import.meta.url), "utf8",
+  ));
+  const fixture = JSON.parse(await readFile(
+    new URL("../default_recipe.json", import.meta.url), "utf8",
+  ));
+  const engines = new Map<string, unknown>(
+    publicCatalog.engines.map((engine: { id: string }) => [engine.id, engine]),
+  );
+  const base = structuredClone(fixture) as any;
+  base.schemaVersion = 24;
+  base.slots = fixture.slots.map((engineId: string) => {
+    const engine = engines.get(engineId) as {
+      packageId: string; version: string; digest: string;
+    };
+    return {
+      engine: engineId,
+      package: engine.packageId,
+      version: engine.version,
+      digest: engine.digest,
+    };
+  });
+  base.initialOptions = {
+    lockedFrequencyKnob: "octaves",
+    modelInput: "model",
+    levelInput: "level",
+    auxOutput: "alternate-model",
+    suboscillatorOctave: 0,
+    chordTable: "original",
+    holdOnTrigger: false,
+    attenuverterMode: "stock",
+  };
+  base.resources = { chordTables: chordCatalog.tables };
+
+  // Must mirror the tier order in src/contract.ts.
+  const tiers = [
+    ["navigationMode"],
+    ["calibration"],
+    ["colorBlindMode"],
+    ["replaceableFmBanks"],
+    ["syncInput"],
+    ["linearTzfm", "fastFm"],
+    ["simplifiedPitchRanges"],
+  ];
+
+  const cumulative: string[] = [];
+  for (const tier of tiers) {
+    cumulative.push(...tier);
+    const recipe = structuredClone(base);
+    recipe.preferences = Object.fromEntries(cumulative.map((key) => [
+      key, key === "navigationMode" ? "linear" : false,
+    ]));
+    const normalized = normalizeRecipe(recipe);
+    // Present flags read false; absent ones must not invent a value either.
+    for (const key of ["calibration", "colorBlindMode", "replaceableFmBanks",
+      "syncInput", "linearTzfm", "fastFm", "simplifiedPitchRanges"]) {
+      assert.equal(
+        normalized.preferences[key as "calibration"], false,
+        `${key} should be false for the {${cumulative.join(",")}} shape`,
+      );
+    }
+  }
+
+  // A gap in the middle of the prefix is not a shape any editor produced.
+  const gapped = structuredClone(base);
+  gapped.preferences = {
+    navigationMode: "linear", calibration: false, syncInput: false,
+  };
+  assert.throws(
+    () => normalizeRecipe(gapped),
+    (error: { code?: string }) => error.code === "invalid_preferences",
+  );
+
+  // Neither is an unknown key riding along with a valid prefix.
+  const extra = structuredClone(base);
+  extra.preferences = {
+    navigationMode: "linear", calibration: false, colorBlindMode: false,
+    replaceableFmBanks: false, syncInput: false, somethingElse: false,
+  };
+  assert.throws(
+    () => normalizeRecipe(extra),
+    (error: { code?: string }) => error.code === "invalid_preferences",
+  );
+});
+
+test("every declared preference is registered in the tier list", async () => {
+  // The structural guarantee: a preference added to the type but not to
+  // preferenceTiers would be silently rejected by the closed key-set check, and
+  // one added to the tiers but never derived would silently read false. Parse
+  // both out of the source and require they agree.
+  const source = await readFile(new URL("../src/contract.ts", import.meta.url), "utf8");
+  const tierBlock = source.match(
+    /const preferenceTiers: readonly \(readonly string\[\]\)\[\] = \[([\s\S]*?)\];/,
+  );
+  assert.ok(tierBlock, "expected a preferenceTiers table in contract.ts");
+  const tierKeys = [...tierBlock[1].matchAll(/"([a-zA-Z0-9]+)"/g)].map((match) => match[1]);
+
+  const typeBlock = source.match(/preferences: \{([\s\S]*?)\n  \};/);
+  assert.ok(typeBlock, "expected a preferences type on the recipe");
+  const typeKeys = [...typeBlock[1].matchAll(/^\s{4}([a-zA-Z0-9]+)\??:/gm)]
+    .map((match) => match[1]);
+
+  assert.deepEqual(
+    [...tierKeys].sort(), [...typeKeys].sort(),
+    "preferenceTiers and the preferences type must declare the same keys",
+  );
+
+  // And each one must actually be derived, or it normalizes to false forever.
+  for (const key of tierKeys) {
+    if (key === "navigationMode") continue;
+    assert.match(
+      source,
+      new RegExp(`const ${key} = preferenceValues\\.${key} === true;`),
+      `${key} is registered but never derived`,
+    );
+  }
+});
+
 test("the simplified pitch-range preference requires and normalizes to v24", async () => {
   const publicCatalog = JSON.parse(await readFile(
     new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),

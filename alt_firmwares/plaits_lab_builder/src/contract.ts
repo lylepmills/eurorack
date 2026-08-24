@@ -524,6 +524,26 @@ function isOneOf<T extends string | number>(value: unknown, choices: readonly T[
   return choices.includes(value as T);
 }
 
+// Matches a preference object against the cumulative prefixes of an ordered
+// tier list, returning the matched tier index or -1. Exact match per prefix, so
+// an unknown or partial key set is still rejected outright.
+function matchPreferenceTier(
+  value: Record<string, unknown>,
+  tiers: readonly (readonly string[])[],
+): number {
+  const present = Object.keys(value).sort();
+  const cumulative: string[] = [];
+  for (let tier = 0; tier < tiers.length; tier += 1) {
+    cumulative.push(...tiers[tier]);
+    const expected = [...cumulative].sort();
+    if (expected.length === present.length
+        && expected.every((key, index) => key === present[index])) {
+      return tier;
+    }
+  }
+  return -1;
+}
+
 function hasExactKeys(value: Record<string, unknown>, keys: string[]): boolean {
   const actual = Object.keys(value).sort();
   const expected = [...keys].sort();
@@ -575,42 +595,39 @@ function normalizeConfiguration(
   }
   const preferenceValues = preferences as Record<string, unknown>;
   const optionValues = initialOptions as Record<string, unknown>;
-  // Compile-time preferences arrived incrementally: pre-v14 recipes carry only
-  // navigationMode; v14 adds calibration; v15 adds colorBlindMode. Missing keys
-  // mean false, while every other shape remains closed and rejected.
-  const legacyPreferences = hasExactKeys(preferenceValues, ["navigationMode"]);
-  const carriesCalibration = hasExactKeys(preferenceValues, ["calibration", "navigationMode"]);
-  const carriesColorBlindMode = hasExactKeys(
-    preferenceValues,
-    ["calibration", "colorBlindMode", "navigationMode"],
-  );
-  // v20 adds replaceableFmBanks. The preference set is CLOSED, so a new key has
-  // to be admitted here as well as version-gated below — bumping
-  // maxRecipeSchemaVersion alone leaves the Worker rejecting the field before
-  // the container ever sees it, which is the Worker/container contract split
-  // that failed the rev-4749aec727af canary.
-  const carriesReplaceableFmBanks = hasExactKeys(
-    preferenceValues,
-    ["calibration", "colorBlindMode", "navigationMode", "replaceableFmBanks"],
-  );
-  const carriesSyncInput = hasExactKeys(
-    preferenceValues,
-    ["calibration", "colorBlindMode", "navigationMode", "replaceableFmBanks", "syncInput"],
-  );
-  const carriesExperimentalFm = hasExactKeys(
-    preferenceValues,
-    [
-      "calibration", "colorBlindMode", "fastFm", "linearTzfm",
-      "navigationMode", "replaceableFmBanks", "syncInput",
-    ],
-  );
-  const carriesSimplifiedPitchRanges = hasExactKeys(
-    preferenceValues,
-    [
-      "calibration", "colorBlindMode", "fastFm", "linearTzfm",
-      "navigationMode", "replaceableFmBanks", "simplifiedPitchRanges", "syncInput",
-    ],
-  );
+  // Compile-time preferences arrived incrementally, and every shape accepted
+  // here is a cumulative PREFIX of the tiers below: a pre-v14 recipe carries
+  // navigationMode alone, v14 adds calibration, v15 colorBlindMode, and so on.
+  // Adding a preference is one row -- presence, type-checking and the derived
+  // value all follow from it.
+  //
+  // This replaced one hasExactKeys boolean per tier plus a hand-maintained OR of
+  // every LATER tier inside each type-check and each derivation. That shape was
+  // quadratic to maintain and, worse, failed SILENTLY: a missed OR made an older
+  // preference derive to false, so a saved recipe's calibration or Sync In
+  // simply vanished from the firmware it built, with nothing reporting a
+  // problem. It shipped exactly once, for calibration, when v24 landed.
+  //
+  // The preference set stays CLOSED, so a new key must be added here as well as
+  // version-gated below -- bumping maxRecipeSchemaVersion alone leaves the
+  // Worker rejecting the field before the container sees it, the Worker/
+  // container contract split that failed the rev-4749aec727af canary.
+  const preferenceTiers: readonly (readonly string[])[] = [
+    ["navigationMode"],
+    ["calibration"],
+    ["colorBlindMode"],
+    ["replaceableFmBanks"],
+    ["syncInput"],
+    ["linearTzfm", "fastFm"],
+    ["simplifiedPitchRanges"],
+  ];
+  // The index of the cumulative prefix the recipe's keys match exactly, or -1
+  // for a shape no released editor ever produced.
+  const preferenceTier = matchPreferenceTier(preferenceValues, preferenceTiers);
+  // Every preference but navigationMode is a boolean flag.
+  const booleanPreferenceKeys = preferenceTiers
+    .slice(1, preferenceTier + 1)
+    .flatMap((keys) => keys);
   const legacyInitialOptions = hasExactKeys(optionValues, [
     "auxOutput", "chordTable", "holdOnTrigger", "levelInput",
     "lockedFrequencyKnob", "modelInput", "suboscillatorOctave",
@@ -619,25 +636,8 @@ function normalizeConfiguration(
     "attenuverterMode", "auxOutput", "chordTable", "holdOnTrigger", "levelInput",
     "lockedFrequencyKnob", "modelInput", "suboscillatorOctave",
   ]);
-  if ((!legacyPreferences && !carriesCalibration && !carriesColorBlindMode
-        && !carriesReplaceableFmBanks && !carriesSyncInput && !carriesExperimentalFm
-        && !carriesSimplifiedPitchRanges)
-      || ((carriesCalibration || carriesColorBlindMode || carriesReplaceableFmBanks
-          || carriesSyncInput || carriesExperimentalFm || carriesSimplifiedPitchRanges)
-        && typeof preferenceValues.calibration !== "boolean")
-      || ((carriesColorBlindMode || carriesReplaceableFmBanks || carriesSyncInput
-          || carriesExperimentalFm || carriesSimplifiedPitchRanges)
-        && typeof preferenceValues.colorBlindMode !== "boolean")
-      || ((carriesReplaceableFmBanks || carriesSyncInput || carriesExperimentalFm
-          || carriesSimplifiedPitchRanges)
-        && typeof preferenceValues.replaceableFmBanks !== "boolean")
-      || ((carriesSyncInput || carriesExperimentalFm || carriesSimplifiedPitchRanges)
-        && typeof preferenceValues.syncInput !== "boolean")
-      || ((carriesExperimentalFm || carriesSimplifiedPitchRanges)
-        && (typeof preferenceValues.linearTzfm !== "boolean"
-          || typeof preferenceValues.fastFm !== "boolean"))
-      || (carriesSimplifiedPitchRanges
-        && typeof preferenceValues.simplifiedPitchRanges !== "boolean")
+  if (preferenceTier < 0
+      || booleanPreferenceKeys.some((key) => typeof preferenceValues[key] !== "boolean")
       || (!legacyInitialOptions && !carriesAttenuverterMode)
       || !isOneOf(preferenceValues.navigationMode, ["linear", "banked"] as const)
       || !isOneOf(optionValues.lockedFrequencyKnob, [
@@ -661,24 +661,15 @@ function normalizeConfiguration(
       `Unpatched attenuverter starting mode requires recipe schema version ${attenuverterModeMinSchemaVersion}.`,
     );
   }
-  const calibration = (carriesCalibration || carriesColorBlindMode || carriesReplaceableFmBanks
-    || carriesSyncInput || carriesExperimentalFm || carriesSimplifiedPitchRanges)
-    && preferenceValues.calibration === true;
-  const colorBlindMode = (carriesColorBlindMode || carriesReplaceableFmBanks
-    || carriesSyncInput || carriesExperimentalFm || carriesSimplifiedPitchRanges)
-    && preferenceValues.colorBlindMode === true;
-  const replaceableFmBanks = (carriesReplaceableFmBanks || carriesSyncInput
-    || carriesExperimentalFm || carriesSimplifiedPitchRanges)
-    && preferenceValues.replaceableFmBanks === true;
-  const syncInput = (carriesSyncInput || carriesExperimentalFm
-    || carriesSimplifiedPitchRanges)
-    && preferenceValues.syncInput === true;
-  const linearTzfm = (carriesExperimentalFm || carriesSimplifiedPitchRanges)
-    && preferenceValues.linearTzfm === true;
-  const fastFm = (carriesExperimentalFm || carriesSimplifiedPitchRanges)
-    && preferenceValues.fastFm === true;
-  const simplifiedPitchRanges = carriesSimplifiedPitchRanges
-    && preferenceValues.simplifiedPitchRanges === true;
+  // Absent keys are undefined and so never `true`, which is what makes the OR
+  // chains unnecessary -- and their omission impossible.
+  const calibration = preferenceValues.calibration === true;
+  const colorBlindMode = preferenceValues.colorBlindMode === true;
+  const replaceableFmBanks = preferenceValues.replaceableFmBanks === true;
+  const syncInput = preferenceValues.syncInput === true;
+  const linearTzfm = preferenceValues.linearTzfm === true;
+  const fastFm = preferenceValues.fastFm === true;
+  const simplifiedPitchRanges = preferenceValues.simplifiedPitchRanges === true;
   if (simplifiedPitchRanges
       && Number(candidate.schemaVersion) < simplifiedPitchRangesMinSchemaVersion) {
     throw new ContractError(
