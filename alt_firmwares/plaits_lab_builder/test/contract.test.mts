@@ -318,6 +318,95 @@ test("schema 23 carries independent experimental TZFM and Fast FM preferences", 
   );
 });
 
+test("the simplified pitch-range preference requires and normalizes to v24", async () => {
+  const publicCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const chordCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_chord_tables/catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const fixture = JSON.parse(await readFile(
+    new URL("../default_recipe.json", import.meta.url), "utf8",
+  ));
+  const engines = new Map<string, unknown>(
+    publicCatalog.engines.map((engine: { id: string }) => [engine.id, engine]),
+  );
+  const base = structuredClone(fixture) as any;
+  base.schemaVersion = 24;
+  base.slots = fixture.slots.map((engineId: string) => {
+    const engine = engines.get(engineId) as {
+      packageId: string;
+      version: string;
+      digest: string;
+    };
+    return {
+      engine: engineId,
+      package: engine.packageId,
+      version: engine.version,
+      digest: engine.digest,
+    };
+  });
+  base.initialOptions = {
+    lockedFrequencyKnob: "octaves",
+    modelInput: "model",
+    levelInput: "level",
+    auxOutput: "alternate-model",
+    suboscillatorOctave: 0,
+    chordTable: "original",
+    holdOnTrigger: false,
+    attenuverterMode: "stock",
+  };
+  base.resources = { chordTables: chordCatalog.tables };
+
+  const preferences = (simplifiedPitchRanges: unknown) => ({
+    navigationMode: "linear",
+    calibration: false,
+    colorBlindMode: false,
+    replaceableFmBanks: false,
+    syncInput: false,
+    linearTzfm: false,
+    fastFm: false,
+    simplifiedPitchRanges,
+  });
+
+  for (const simplifiedPitchRanges of [false, true]) {
+    const recipe = structuredClone(base);
+    recipe.preferences = preferences(simplifiedPitchRanges);
+    const normalized = normalizeRecipe(recipe);
+    assert.equal(
+      normalized.preferences.simplifiedPitchRanges, simplifiedPitchRanges);
+    // attenuverterMode already floors this at v18; opting in raises it to v24.
+    assert.equal(normalized.schemaVersion, simplifiedPitchRanges ? 24 : 18);
+  }
+
+  // A recipe that predates v24 must not carry it.
+  const tooOld = structuredClone(base);
+  tooOld.schemaVersion = 23;
+  tooOld.preferences = preferences(true);
+  assert.throws(() => normalizeRecipe(tooOld), /schema version 24/);
+
+  const nonBoolean = structuredClone(base);
+  nonBoolean.preferences = preferences("yes");
+  assert.throws(
+    () => normalizeRecipe(nonBoolean),
+    (error: { code?: string }) => error.code === "invalid_preferences",
+  );
+
+  // It is independent of the other preferences: enabling it must not disturb
+  // Sync In or the FM experiments, which share the same v24 key set.
+  const composed = structuredClone(base);
+  composed.preferences = {
+    ...preferences(true), syncInput: true, linearTzfm: true, fastFm: true,
+  };
+  const normalizedComposed = normalizeRecipe(composed);
+  assert.equal(normalizedComposed.preferences.simplifiedPitchRanges, true);
+  assert.equal(normalizedComposed.preferences.syncInput, true);
+  assert.equal(normalizedComposed.preferences.linearTzfm, true);
+  assert.equal(normalizedComposed.preferences.fastFm, true);
+});
+
 test("automatic LEVEL routing is carried only by schema 16", async () => {
   const publicCatalog = JSON.parse(await readFile(
     new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),

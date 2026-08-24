@@ -21,6 +21,20 @@ static bool Near(float actual, float expected, float tolerance = 1e-5f) {
   return fabsf(actual - expected) <= tolerance;
 }
 
+// The selector value that sits in the middle of a range. Config-aware, so the
+// simulator below replays a sweep correctly under either selector layout: the
+// simplified one gives each of its three ranges a third of the travel, so the
+// same range sits at a different knob position than it does in a full build.
+static float SelectorFor(int range) {
+#if PLAITS_BUILD_SIMPLIFIED_PITCH_RANGES
+  return (static_cast<float>(range - kSimplifiedFirstRange) + 0.5f)
+      / static_cast<float>(kSimplifiedRangeCount);
+#else
+  return (static_cast<float>(range) + 0.5f)
+      / static_cast<float>(PITCH_RANGE_COUNT);
+#endif
+}
+
 // Mirrors the range-transition bookkeeping at the tail of Ui::Poll, so that a
 // selector sweep can be replayed without hardware. Only the octave offset is
 // abbreviated: the module derives it from a hysteresis quantizer over the
@@ -89,10 +103,8 @@ struct RangeSim {
   // Turns the selector from one range to another the way a knob does, at the
   // control rate, with the gesture held throughout.
   void Sweep(int from_range, int to_range) {
-    const float from = (static_cast<float>(from_range) + 0.5f)
-        / static_cast<float>(PITCH_RANGE_COUNT);
-    const float to = (static_cast<float>(to_range) + 0.5f)
-        / static_cast<float>(PITCH_RANGE_COUNT);
+    const float from = SelectorFor(from_range);
+    const float to = SelectorFor(to_range);
     const int steps = 500;
     for (int i = 1; i <= steps; ++i) {
       Tick(from + (to - from) * static_cast<float>(i)
@@ -101,32 +113,55 @@ struct RangeSim {
   }
 
   void ReleaseSelector() {
-    Tick((static_cast<float>(previous_range) + 0.5f)
-        / static_cast<float>(PITCH_RANGE_COUNT), false);
+    Tick(SelectorFor(previous_range), false);
   }
 };
 
 static const int kWideRangeMiddleC = 5;   // WideRangeNote(5, 0) == 60.
 
-// The selector value that sits in the middle of a range.
-static float SelectorFor(int range) {
-  return (static_cast<float>(range) + 0.5f)
-      / static_cast<float>(PITCH_RANGE_COUNT);
-}
-
 int main() {
-  // The new special positions are adjacent and the old eight wide ranges keep
-  // their integer identities.
+  // The special positions are adjacent and the eight wide ranges keep their
+  // integer identities. Both layouts depend on that contiguity, so it is
+  // asserted in both.
+  CHECK(PITCH_RANGE_LAST_WIDE + 1 == PITCH_RANGE_OCTAVES);
+  CHECK(PITCH_RANGE_OCTAVES + 1 == PITCH_RANGE_PRECISION);
+  CHECK(PITCH_RANGE_PRECISION + 1 == PITCH_RANGE_HIGH);
+
+#if PLAITS_BUILD_SIMPLIFIED_PITCH_RANGES
+  // Three equal thirds, landing on octave switching, fine tuning and coarse.
+  for (int index = 0; index < kSimplifiedRangeCount; ++index) {
+    const float centre = (static_cast<float>(index) + 0.5f)
+        / static_cast<float>(kSimplifiedRangeCount);
+    CHECK(PitchRangeFromControl(centre) == kSimplifiedFirstRange + index);
+  }
+  CHECK(PitchRangeFromControl(0.0f) == PITCH_RANGE_OCTAVES);
+  CHECK(PitchRangeFromControl(-0.1f) == PITCH_RANGE_OCTAVES);
+  CHECK(PitchRangeFromControl(1.0f) == PITCH_RANGE_HIGH);
+  CHECK(PitchRangeFromControl(1.5f) == PITCH_RANGE_HIGH);
+
+  // The point of the option: no knob position anywhere reaches a wide range or
+  // the LFO range. Sweeping the whole travel must only ever produce the three.
+  for (int i = 0; i <= 2000; ++i) {
+    const int range = PitchRangeFromControl(
+        static_cast<float>(i) / 2000.0f);
+    CHECK(range >= PITCH_RANGE_OCTAVES && range <= PITCH_RANGE_HIGH);
+  }
+
+  // A module ships with state.octave == 255, which must still land on coarse
+  // rather than stranding a fresh build in fine tuning or octave switching.
+  CHECK(PitchRangeFromControl(255.0f / 256.0f) == PITCH_RANGE_HIGH);
+#else
   for (int range = 0; range < PITCH_RANGE_COUNT; ++range) {
     const float centre = (static_cast<float>(range) + 0.5f)
         / static_cast<float>(PITCH_RANGE_COUNT);
     CHECK(PitchRangeFromControl(centre) == range);
   }
-  CHECK(PITCH_RANGE_LAST_WIDE + 1 == PITCH_RANGE_OCTAVES);
-  CHECK(PITCH_RANGE_OCTAVES + 1 == PITCH_RANGE_PRECISION);
-  CHECK(PITCH_RANGE_PRECISION + 1 == PITCH_RANGE_HIGH);
   CHECK(PitchRangeFromControl(-0.1f) == PITCH_RANGE_LOW);
   CHECK(PitchRangeFromControl(1.0f) == PITCH_RANGE_HIGH);
+
+  // The same factory default lands on coarse in a full build too.
+  CHECK(PitchRangeFromControl(255.0f / 256.0f) == PITCH_RANGE_HIGH);
+#endif
 
   CHECK(Near(WideRangeNote(5, 0.0f), 60.0f));
   CHECK(Near(WideRangeNote(5, -1.0f), 53.0f));
@@ -190,6 +225,16 @@ int main() {
   deferred_save.MarkSaved(104);
   CHECK(!deferred_save.Process(104));
 
+  // The default root is middle C, and encodes to the same byte pair the factory
+  // defaults have always written. True of both layouts.
+  CHECK(Near(kDefaultTunedRootNote, 60.0f));
+  CHECK(EncodeTunedRoot(kDefaultTunedRootNote) == 60 * 256);
+
+#if !PLAITS_BUILD_SIMPLIFIED_PITCH_RANGES
+  // Everything below replays sweeps that cross the wide and LFO ranges, so it
+  // describes the full twelve-position selector only. The simplified layout's
+  // equivalents follow in the #else branch.
+
   // The octave-switching root is the pitch that was sounding when the selector
   // gesture began, not whatever the ranges crossed on the way there left
   // behind. Reaching the mode from below used to cross wide range 8 and root
@@ -231,11 +276,6 @@ int main() {
   // use: it is sub-audio, so it would root every octave position at or below
   // the bottom of hearing. Leaving the LFO range for octave switching lands on
   // the default root instead, from either side of the selector.
-  // The default root is middle C, and encodes to the same byte pair the
-  // factory defaults have always written.
-  CHECK(Near(kDefaultTunedRootNote, 60.0f));
-  CHECK(EncodeTunedRoot(kDefaultTunedRootNote) == 60 * 256);
-
   RangeSim from_lfo;
   from_lfo.Init(0.0f, 84.0f, SelectorFor(PITCH_RANGE_LOW));
   CHECK(from_lfo.note < 0.0f);
@@ -315,6 +355,63 @@ int main() {
   fine_from_octaves.Sweep(PITCH_RANGE_OCTAVES, PITCH_RANGE_PRECISION);
   CHECK(Near(fine_from_octaves.precision_anchor, 24.0f));
   CHECK(Near(fine_from_octaves.note, 24.0f));
+
+#else
+  // The same invariants, reachable only through coarse, fine and octave
+  // switching. The workflow the option exists for is coarse, then fine, then
+  // lock it in, so that is what these replay.
+
+  // Coarse straight into octave switching roots at the pitch left sounding.
+  for (int i = 0; i < 5; ++i) {
+    const float transposition = -1.0f + 0.5f * static_cast<float>(i);
+    RangeSim coarse;
+    coarse.Init(transposition, 60.0f, SelectorFor(PITCH_RANGE_HIGH));
+    const float sounding = coarse.note;
+    CHECK(Near(sounding, 60.0f + transposition * 48.0f));
+    coarse.Sweep(PITCH_RANGE_HIGH, PITCH_RANGE_OCTAVES);
+    CHECK(coarse.previous_range == PITCH_RANGE_OCTAVES);
+    CHECK(Near(coarse.tuned_root, sounding));
+  }
+
+  // The whole workflow: coarse, fine tune it, then lock it in. Fine tuning
+  // anchors on the coarse pitch, and the root that octave switching keeps is
+  // the fine-tuned one, not the coarse one it started from.
+  RangeSim workflow;
+  workflow.Init(0.0f, 60.0f, SelectorFor(PITCH_RANGE_HIGH));
+  CHECK(Near(workflow.note, 60.0f));
+  workflow.Sweep(PITCH_RANGE_HIGH, PITCH_RANGE_PRECISION);
+  CHECK(Near(workflow.precision_anchor, 60.0f));
+  workflow.ReleaseSelector();
+  workflow.transposition = 1.0f;               // Fine tune a semitone sharp.
+  workflow.Tick(SelectorFor(PITCH_RANGE_PRECISION), false);
+  const float fine_tuned = workflow.note;
+  CHECK(Near(fine_tuned, 61.0f));
+  workflow.Sweep(PITCH_RANGE_PRECISION, PITCH_RANGE_OCTAVES);
+  CHECK(Near(workflow.tuned_root, fine_tuned));
+
+  // Leaving octave switching and coming back does not fold the selected octave
+  // into the root -- the guard the 2026-08-21 fix added, still holding when the
+  // only way out and back is through fine tuning or coarse.
+  RangeSim returning;
+  returning.Init(0.0f, 60.0f, SelectorFor(PITCH_RANGE_OCTAVES));
+  returning.octave_offset = 2;
+  returning.ReleaseSelector();
+  CHECK(Near(returning.note, 84.0f));
+  returning.Sweep(PITCH_RANGE_OCTAVES, PITCH_RANGE_HIGH);
+  returning.Sweep(PITCH_RANGE_HIGH, PITCH_RANGE_OCTAVES);
+  CHECK(Near(returning.tuned_root, 60.0f));
+  CHECK(returning.octave_offset == 0);
+
+  // Fine tuning still anchors on the sounding pitch, octave and all.
+  RangeSim fine_from_octaves;
+  fine_from_octaves.Init(0.0f, 60.0f, SelectorFor(PITCH_RANGE_OCTAVES));
+  fine_from_octaves.octave_offset = -3;
+  fine_from_octaves.ReleaseSelector();
+  CHECK(Near(fine_from_octaves.note, 24.0f));
+  fine_from_octaves.Sweep(PITCH_RANGE_OCTAVES, PITCH_RANGE_PRECISION);
+  CHECK(Near(fine_from_octaves.precision_anchor, 24.0f));
+  CHECK(Near(fine_from_octaves.note, 24.0f));
+#endif
 
   // The snapshot itself: held for the length of a gesture however far the
   // sounding pitch wanders, transparent outside one, and rooted on the stored

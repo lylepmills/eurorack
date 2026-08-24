@@ -36,7 +36,7 @@ export type NormalizedChordTable = {
 // feature gates below use minimums so a newly supported schema cannot get
 // stranded behind an old "10, 11, 12..." whitelist.
 export const minRecipeSchemaVersion = 2;
-export const maxRecipeSchemaVersion = 23;
+export const maxRecipeSchemaVersion = 24;
 const configurationMinSchemaVersion = 4;
 const resourcesMinSchemaVersion = 5;
 const fourBankMinSchemaVersion = 6;       // 32 slots
@@ -54,6 +54,10 @@ const syncInputMinSchemaVersion = 21; // audio-rate hard sync on MODEL
 // can reach the mode at runtime without its owner having pre-selected it.
 const syncInputPreferenceMinSchemaVersion = 22;
 const experimentalFmMinSchemaVersion = 23; // independent TZFM law / fast ADC
+// v24 reduces the FREQUENCY range selector to its three most clockwise
+// positions. Compile-time only, and it changes no stored state, so a module
+// moves between the two layouts keeping its tuned root and locked octave.
+const simplifiedPitchRangesMinSchemaVersion = 24;
 const scaleBankMinSchemaVersion = 16;      // recipe-driven scale bank
 export const levelAutoMinSchemaVersion = 16; // engine-aware LEVEL routing
 const speechBanksMinSchemaVersion = 17;      // selectable/custom Speech LPC banks
@@ -131,7 +135,7 @@ export type NormalizedSpeechBanks = {
 };
 
 export type NormalizedRecipe = {
-  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23;
+  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24;
   target: "mutable-instruments-plaits" | "plum-audio-roved";
   firmware: "rubato-plaits";
   // A null entry is an empty slot (v7 short banks); filled slots are engine ids.
@@ -161,6 +165,12 @@ export type NormalizedRecipe = {
     // Experimental (v23): digitize FM continuously at audio rate. FM and LEVEL
     // share a converter, so this makes LEVEL CV unavailable in the whole build.
     fastFm?: boolean;
+    // Keep only the three most clockwise FREQUENCY ranges -- octave switching,
+    // fine tuning and coarse (v24). Drops the eight +/-7-semitone ranges and the
+    // sub-audio LFO range, which are redundant for a coarse-then-fine-then-lock
+    // workflow, and gives each surviving mode a third of the selector travel.
+    // Leave it off to use Plaits as an LFO or to jump octaves in one gesture.
+    simplifiedPitchRanges?: boolean;
   };
   initialOptions: {
     lockedFrequencyKnob: "octaves" | "decay" | "aux-crossfade" | "macro-4"
@@ -594,6 +604,13 @@ function normalizeConfiguration(
       "navigationMode", "replaceableFmBanks", "syncInput",
     ],
   );
+  const carriesSimplifiedPitchRanges = hasExactKeys(
+    preferenceValues,
+    [
+      "calibration", "colorBlindMode", "fastFm", "linearTzfm",
+      "navigationMode", "replaceableFmBanks", "simplifiedPitchRanges", "syncInput",
+    ],
+  );
   const legacyInitialOptions = hasExactKeys(optionValues, [
     "auxOutput", "chordTable", "holdOnTrigger", "levelInput",
     "lockedFrequencyKnob", "modelInput", "suboscillatorOctave",
@@ -603,20 +620,24 @@ function normalizeConfiguration(
     "lockedFrequencyKnob", "modelInput", "suboscillatorOctave",
   ]);
   if ((!legacyPreferences && !carriesCalibration && !carriesColorBlindMode
-        && !carriesReplaceableFmBanks && !carriesSyncInput && !carriesExperimentalFm)
+        && !carriesReplaceableFmBanks && !carriesSyncInput && !carriesExperimentalFm
+        && !carriesSimplifiedPitchRanges)
       || ((carriesCalibration || carriesColorBlindMode || carriesReplaceableFmBanks
-          || carriesSyncInput || carriesExperimentalFm)
+          || carriesSyncInput || carriesExperimentalFm || carriesSimplifiedPitchRanges)
         && typeof preferenceValues.calibration !== "boolean")
       || ((carriesColorBlindMode || carriesReplaceableFmBanks || carriesSyncInput
-          || carriesExperimentalFm)
+          || carriesExperimentalFm || carriesSimplifiedPitchRanges)
         && typeof preferenceValues.colorBlindMode !== "boolean")
-      || ((carriesReplaceableFmBanks || carriesSyncInput || carriesExperimentalFm)
+      || ((carriesReplaceableFmBanks || carriesSyncInput || carriesExperimentalFm
+          || carriesSimplifiedPitchRanges)
         && typeof preferenceValues.replaceableFmBanks !== "boolean")
-      || ((carriesSyncInput || carriesExperimentalFm)
+      || ((carriesSyncInput || carriesExperimentalFm || carriesSimplifiedPitchRanges)
         && typeof preferenceValues.syncInput !== "boolean")
-      || (carriesExperimentalFm
+      || ((carriesExperimentalFm || carriesSimplifiedPitchRanges)
         && (typeof preferenceValues.linearTzfm !== "boolean"
           || typeof preferenceValues.fastFm !== "boolean"))
+      || (carriesSimplifiedPitchRanges
+        && typeof preferenceValues.simplifiedPitchRanges !== "boolean")
       || (!legacyInitialOptions && !carriesAttenuverterMode)
       || !isOneOf(preferenceValues.navigationMode, ["linear", "banked"] as const)
       || !isOneOf(optionValues.lockedFrequencyKnob, [
@@ -641,18 +662,30 @@ function normalizeConfiguration(
     );
   }
   const calibration = (carriesCalibration || carriesColorBlindMode || carriesReplaceableFmBanks
-    || carriesSyncInput || carriesExperimentalFm)
+    || carriesSyncInput || carriesExperimentalFm || carriesSimplifiedPitchRanges)
     && preferenceValues.calibration === true;
   const colorBlindMode = (carriesColorBlindMode || carriesReplaceableFmBanks
-    || carriesSyncInput || carriesExperimentalFm)
+    || carriesSyncInput || carriesExperimentalFm || carriesSimplifiedPitchRanges)
     && preferenceValues.colorBlindMode === true;
   const replaceableFmBanks = (carriesReplaceableFmBanks || carriesSyncInput
-    || carriesExperimentalFm)
+    || carriesExperimentalFm || carriesSimplifiedPitchRanges)
     && preferenceValues.replaceableFmBanks === true;
-  const syncInput = (carriesSyncInput || carriesExperimentalFm)
+  const syncInput = (carriesSyncInput || carriesExperimentalFm
+    || carriesSimplifiedPitchRanges)
     && preferenceValues.syncInput === true;
-  const linearTzfm = carriesExperimentalFm && preferenceValues.linearTzfm === true;
-  const fastFm = carriesExperimentalFm && preferenceValues.fastFm === true;
+  const linearTzfm = (carriesExperimentalFm || carriesSimplifiedPitchRanges)
+    && preferenceValues.linearTzfm === true;
+  const fastFm = (carriesExperimentalFm || carriesSimplifiedPitchRanges)
+    && preferenceValues.fastFm === true;
+  const simplifiedPitchRanges = carriesSimplifiedPitchRanges
+    && preferenceValues.simplifiedPitchRanges === true;
+  if (simplifiedPitchRanges
+      && Number(candidate.schemaVersion) < simplifiedPitchRangesMinSchemaVersion) {
+    throw new ContractError(
+      "unsupported_schema",
+      `The simplified pitch-range preference requires recipe schema version ${simplifiedPitchRangesMinSchemaVersion}.`,
+    );
+  }
   if ((linearTzfm || fastFm)
       && Number(candidate.schemaVersion) < experimentalFmMinSchemaVersion) {
     throw new ContractError(
@@ -731,6 +764,7 @@ function normalizeConfiguration(
       syncInput,
       linearTzfm,
       fastFm,
+      simplifiedPitchRanges,
     },
     initialOptions: {
       lockedFrequencyKnob: optionValues.lockedFrequencyKnob,
@@ -965,7 +999,8 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     // (v8); a short-bank recipe (a trailing empty slot) stays v7; a candidate that
     // carried v6 resources (even an empty custom-bank list, e.g. a 32-slot recipe)
     // stays v6; else v5.
-    schemaVersion: configuration.preferences.linearTzfm
+    schemaVersion: configuration.preferences.simplifiedPitchRanges ? 24
+      : configuration.preferences.linearTzfm
       || configuration.preferences.fastFm ? 23
       : configuration.preferences.syncInput ? 22
       : configuration.preferences.replaceableFmBanks ? 20

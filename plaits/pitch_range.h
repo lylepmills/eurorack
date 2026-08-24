@@ -10,6 +10,7 @@
 #include <cmath>
 
 #include "stmlib/stmlib.h"
+#include "plaits/build_config.h"
 
 namespace plaits {
 
@@ -27,11 +28,37 @@ enum PitchRange {
 // root a module ships with and the one it returns to after a factory reset.
 const float kDefaultTunedRootNote = 60.0f;
 
+// The simplified selector keeps the three most clockwise positions -- octave
+// switching, fine tuning, coarse -- and relies on their being a contiguous run
+// at the top of the enum, so a third of the knob maps onto each. The enum values
+// themselves never change between the two layouts: only the selector mapping
+// does. That is deliberate, because range indices are used elsewhere as a
+// vocabulary rather than as positions (the UI_MODE_DISPLAY_OCTAVE LED patterns,
+// and the octave shortcut's locked_octave_ == 8 ? PITCH_RANGE_HIGH sentinel),
+// and because it leaves the saved tuned root, the locked octave, and the
+// octave-root snapshot identical across both builds.
+// STATIC_ASSERT, not static_assert: the ARM firmware builds as C++98.
+STATIC_ASSERT(
+    PITCH_RANGE_PRECISION == PITCH_RANGE_OCTAVES + 1
+        && PITCH_RANGE_HIGH == PITCH_RANGE_OCTAVES + 2,
+    octave_precision_and_coarse_must_stay_contiguous_in_that_order);
+
+const int kSimplifiedFirstRange = PITCH_RANGE_OCTAVES;
+const int kSimplifiedRangeCount = 3;
+
 inline int PitchRangeFromControl(float value) {
+#if PLAITS_BUILD_SIMPLIFIED_PITCH_RANGES
+  int index = static_cast<int>(
+      value * static_cast<float>(kSimplifiedRangeCount));
+  if (index < 0) index = 0;
+  if (index >= kSimplifiedRangeCount) index = kSimplifiedRangeCount - 1;
+  return kSimplifiedFirstRange + index;
+#else
   int range = static_cast<int>(value * static_cast<float>(PITCH_RANGE_COUNT));
   if (range < PITCH_RANGE_LOW) range = PITCH_RANGE_LOW;
   if (range >= PITCH_RANGE_COUNT) range = PITCH_RANGE_COUNT - 1;
   return range;
+#endif
 }
 
 inline float WideRangeNote(int range, float transposition) {

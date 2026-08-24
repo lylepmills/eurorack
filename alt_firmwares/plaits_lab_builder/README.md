@@ -1,7 +1,7 @@
 # Plaits Palette firmware build service
 
 This directory contains the approved-engine backend for Plaits Palette. It accepts
-legacy recipes and manifests through schema 23 containing 24 or 32 versioned
+legacy recipes and manifests through schema 24 containing 24 or 32 versioned
 engine references, firmware preferences and starting options, and bounded
 chord-table/custom-FM/scale-bank/Speech-bank resources. Schema 15 can target either Mutable
 Instruments Plaits or Plum Audio Ro'Ved and adds the color-blind bank display.
@@ -69,13 +69,27 @@ at the firmware's linked application address and deliberately excludes the
 bootloader.
 
 Schema-15/Ro'Ved support passed its hardware checklist on July 30, 2026.
+Schema 24 adds `simplifiedPitchRanges`, an Advanced option that reduces the
+FREQUENCY range selector from twelve positions to its three most clockwise ones:
+octave switching, fine tuning, and the full-range coarse sweep. It drops the
+eight +/-7-semitone ranges and the sub-audio LFO range, which are redundant for a
+coarse-then-fine-then-lock workflow -- one +/-7-semitone range already spans 14
+semitones, wider than an octave, and octave switching covers the same 12..108
+ground while being saved and quantised. Each surviving mode then gets a third of
+the selector travel rather than a twelfth. It is compile-time only, costs no
+flash (both layouts assemble to the same size), and changes no stored state, so a
+module keeps its tuned root and locked octave when moved between the two layouts
+in either direction. Leave it off for LFO use or one-gesture octave jumps.
+Note the option is NOT experimental and is not in the Experimental section: it
+changes which selector positions exist, not what any of them do.
+
 Schema 23 is available in production with recipe-driven scale banks, automatic
 LEVEL routing, selectable/custom LPC Speech banks of up to 32 words, text and
 recording encoders, source/engine audio previews, unpatched-attenuverter modes,
 and the triggered and gated FREQUENCY contours. It also includes schema 20's
 replaceable FM banks and schema 21's experimental Sync In, now controlled by
 schema 22's explicit opt-in preference, plus schema 23's independent Linear
-TZFM and Fast FM options.
+TZFM and Fast FM options and schema 24's simplified FREQUENCY range selector.
 
 ## Editable local source builds
 

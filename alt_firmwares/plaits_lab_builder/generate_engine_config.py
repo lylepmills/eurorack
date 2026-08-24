@@ -56,7 +56,7 @@ assert PACKED_BANK_SIZE % FLASH_PAGE_SIZE == 0
 # versions so adding a schema at the ceiling does not require extending a trail
 # of "10, 11, 12..." whitelists in the build container.
 MIN_RECIPE_SCHEMA_VERSION = 2
-MAX_RECIPE_SCHEMA_VERSION = 23
+MAX_RECIPE_SCHEMA_VERSION = 24
 CONFIGURATION_MIN_SCHEMA_VERSION = 4
 RESOURCES_MIN_SCHEMA_VERSION = 5
 FOUR_BANK_MIN_SCHEMA_VERSION = 6
@@ -82,6 +82,11 @@ SYNC_INPUT_MIN_SCHEMA_VERSION = 21
 # happened to pick it at build time — change your mind later and it is not in
 # the menu (ui.cc sizes that menu as 4 + PLAITS_BUILD_ENABLE_SYNC_INPUT).
 SYNC_INPUT_PREFERENCE_MIN_SCHEMA_VERSION = 22
+# v24: reduce the FREQUENCY range selector to octave switching, fine tuning and
+# coarse. Compile-time only, and it changes no stored state -- only the mapping
+# in PitchRangeFromControl -- so a module moves between the two layouts without
+# losing its tuned root or locked octave.
+SIMPLIFIED_PITCH_RANGES_MIN_SCHEMA_VERSION = 24
 # v23 adds two independent experimental FM preferences. Linear TZFM changes
 # the attenuverter law on supporting engines; Fast FM changes SDADC2 acquisition
 # and therefore makes LEVEL CV unavailable. Keeping them separate allows all
@@ -165,6 +170,10 @@ class BuildRecipe:
     # RUNTIME. Before v22 this was derived from the starting value, which meant a
     # user who did not choose Sync In at build time could never reach it.
     sync_input: int = 0
+    # v24: 1 keeps only the three most clockwise FREQUENCY ranges. Like
+    # calibration and the panel choice, it is a firmware shape rather than a
+    # stored setting, so it stays out of the options profile-id fold.
+    simplified_pitch_ranges: int = 0
     # v23: independent experimental FM capabilities. Neither is a saved runtime
     # option, so neither belongs in the options profile-id fold.
     linear_tzfm: int = 0
@@ -641,6 +650,8 @@ def validate_recipe(value: Any) -> BuildRecipe:
          "syncInput"},
         {"navigationMode", "calibration", "colorBlindMode", "replaceableFmBanks",
          "syncInput", "linearTzfm", "fastFm"},
+        {"navigationMode", "calibration", "colorBlindMode", "replaceableFmBanks",
+         "syncInput", "linearTzfm", "fastFm", "simplifiedPitchRanges"},
     ) or (set(options) != legacy_option_keys and not carries_attenuverter_mode):
         raise ValueError("recipe contains an unsupported firmware option")
     # The Worker stores a fully normalized option profile and therefore adds
@@ -827,6 +838,17 @@ def validate_recipe(value: Any) -> BuildRecipe:
         raise ValueError(
             "starting in Sync In requires the syncInput preference")
 
+    # Simplified pitch ranges (v24). Compile-time only, and independent of every
+    # option: it changes which selector positions exist, not what any of them do.
+    simplified_pitch_ranges = bool(preferences.get("simplifiedPitchRanges", False))
+    if not isinstance(preferences.get("simplifiedPitchRanges", False), bool):
+        raise ValueError("recipe contains an unsupported firmware option")
+    if (simplified_pitch_ranges
+            and schema_version < SIMPLIFIED_PITCH_RANGES_MIN_SCHEMA_VERSION):
+        raise ValueError(
+            f"the simplified pitch-range preference requires schemaVersion "
+            f"{SIMPLIFIED_PITCH_RANGES_MIN_SCHEMA_VERSION}")
+
     # Experimental FM (v23). Linear TZFM chooses the modulation law; Fast FM
     # chooses the converter mode. They are intentionally independent. Fast FM
     # disables LEVEL CV for the entire firmware because FM and LEVEL share
@@ -866,6 +888,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
         color_blind_mode=1 if color_blind_mode else 0,
         swappable_fm_banks=1 if swappable_fm_banks else 0,
         sync_input=1 if sync_input else 0,
+        simplified_pitch_ranges=1 if simplified_pitch_ranges else 0,
         linear_tzfm=1 if linear_tzfm else 0,
         fast_fm=1 if fast_fm else 0,
         user_data_bank_overrides=tuple(user_data_banks),
@@ -1265,6 +1288,7 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE {1 if recipe.locked_frequency_pot_option >= 4 else 0}
 #define PLAITS_BUILD_MODEL_CV_OPTION {recipe.model_cv_option}
 #define PLAITS_BUILD_ENABLE_SYNC_INPUT {sync_input_enabled}
+#define PLAITS_BUILD_SIMPLIFIED_PITCH_RANGES {recipe.simplified_pitch_ranges}
 #define PLAITS_BUILD_LEVEL_CV_OPTION {recipe.level_cv_option}
 #define PLAITS_BUILD_AUX_OUTPUT_OPTION {recipe.aux_output_option}
 #define PLAITS_BUILD_AUX_SUBOSC_OPTION {recipe.aux_subosc_option}

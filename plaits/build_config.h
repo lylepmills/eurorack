@@ -93,6 +93,19 @@
 #define PLAITS_BUILD_ENABLE_SYNC_INPUT 0
 #endif
 
+// Reduce the FREQUENCY range selector from twelve positions to its three most
+// clockwise ones: octave switching, fine tuning, and the full-range coarse
+// sweep. The nine it drops are the eight +/-7-semitone ranges and the sub-audio
+// LFO range. For the common coarse-then-fine-then-lock workflow they are
+// redundant -- one +/-7-semitone range already spans 14 semitones, wider than an
+// octave, and octave switching covers the same 12..108 ground while being saved
+// and quantised -- and dropping them gives each surviving mode a third of the
+// selector travel instead of a twelfth. Builds that use Plaits as an LFO, or
+// that want one-gesture octave jumps, must leave this off.
+#ifndef PLAITS_BUILD_SIMPLIFIED_PITCH_RANGES
+#define PLAITS_BUILD_SIMPLIFIED_PITCH_RANGES 0
+#endif
+
 #ifndef PLAITS_BUILD_LEVEL_CV_OPTION
 #define PLAITS_BUILD_LEVEL_CV_OPTION 0
 #endif

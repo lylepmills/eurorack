@@ -751,6 +751,88 @@ class GenerateEngineConfigTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "schemaVersion 22"):
             validate_recipe(recipe)
 
+    def simplified_ranges_recipe(self, slots: list) -> dict:
+        """A v24 recipe carrying the full preference set through to v24."""
+        recipe = self.replaceable_recipe(slots, [])
+        recipe["schemaVersion"] = 24
+        recipe["preferences"].update({
+            "replaceableFmBanks": False,
+            "syncInput": False,
+            "linearTzfm": False,
+            "fastFm": False,
+            "simplifiedPitchRanges": True,
+        })
+        return recipe
+
+    def test_simplified_pitch_ranges_is_off_by_default(self) -> None:
+        # Every recipe predating v24 must keep the twelve-position selector, so
+        # the default build is unchanged.
+        slots = ["virtual-analog"] * 24
+        config = render_config(validate_recipe(self.v12_recipe(slots, [])))
+        self.assertIn("#define PLAITS_BUILD_SIMPLIFIED_PITCH_RANGES 0", config)
+
+    def test_simplified_pitch_ranges_preference_compiles_it(self) -> None:
+        slots = ["virtual-analog"] * 24
+        config = render_config(validate_recipe(self.simplified_ranges_recipe(slots)))
+        self.assertIn("#define PLAITS_BUILD_SIMPLIFIED_PITCH_RANGES 1", config)
+
+    def test_simplified_pitch_ranges_requires_v24(self) -> None:
+        slots = ["virtual-analog"] * 24
+        recipe = self.simplified_ranges_recipe(slots)
+        recipe["schemaVersion"] = 23
+        with self.assertRaisesRegex(ValueError, "schemaVersion 24"):
+            validate_recipe(recipe)
+
+    def test_simplified_pitch_ranges_rejects_a_non_boolean(self) -> None:
+        slots = ["virtual-analog"] * 24
+        recipe = self.simplified_ranges_recipe(slots)
+        recipe["preferences"]["simplifiedPitchRanges"] = "yes"
+        with self.assertRaisesRegex(ValueError, "unsupported firmware option"):
+            validate_recipe(recipe)
+
+    def test_simplified_pitch_ranges_does_not_disturb_the_options_profile(self) -> None:
+        # It is a firmware shape, not a stored setting, so it must stay out of
+        # the profile-id fold: turning it on must not renumber a module's saved
+        # options or force a defaults re-apply.
+        slots = ["virtual-analog"] * 24
+        off = self.simplified_ranges_recipe(slots)
+        off["preferences"]["simplifiedPitchRanges"] = False
+        on = self.simplified_ranges_recipe(slots)
+        self.assertEqual(
+            validate_recipe(off).options_profile_id,
+            validate_recipe(on).options_profile_id,
+        )
+
+    def test_simplified_pitch_ranges_is_independent_of_every_other_preference(
+            self) -> None:
+        # It changes which selector positions exist, not what any of them do, so
+        # it must compose with the experimental FM flags and Sync In freely.
+        slots = ["waveshaping", "two-op-fm"] + ["virtual-analog"] * 22
+        for sync_input, linear_tzfm, simplified in product((False, True), repeat=3):
+            with self.subTest(
+                    sync_input=sync_input,
+                    linear_tzfm=linear_tzfm,
+                    simplified=simplified):
+                recipe = self.simplified_ranges_recipe(slots)
+                recipe["preferences"].update({
+                    "syncInput": sync_input,
+                    "linearTzfm": linear_tzfm,
+                    "simplifiedPitchRanges": simplified,
+                })
+                config = render_config(validate_recipe(recipe))
+                self.assertIn(
+                    f"#define PLAITS_BUILD_SIMPLIFIED_PITCH_RANGES {int(simplified)}",
+                    config,
+                )
+                self.assertIn(
+                    f"#define PLAITS_BUILD_ENABLE_SYNC_INPUT {int(sync_input)}",
+                    config,
+                )
+                self.assertIn(
+                    f"#define PLAITS_BUILD_LINEAR_TZFM {int(linear_tzfm)}",
+                    config,
+                )
+
     def test_experimental_fm_preferences_are_independent_v23_flags(self) -> None:
         slots = ["waveshaping", "two-op-fm", "vowel-fof"] + ["virtual-analog"] * 21
         for linear_tzfm, fast_fm in product((False, True), repeat=2):
