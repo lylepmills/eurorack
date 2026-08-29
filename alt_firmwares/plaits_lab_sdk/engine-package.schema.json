@@ -220,6 +220,21 @@
         "type": "string",
         "pattern": "^[a-z0-9][a-z0-9-]*$"
       }
+    },
+    "artwork": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "color": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        }
+      }
+    },
+    "trigger": {
+      "type": "string",
+      "minLength": 12,
+      "maxLength": 180
     }
   },
   "$defs": {

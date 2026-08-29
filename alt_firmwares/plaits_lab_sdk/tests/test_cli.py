@@ -531,6 +531,29 @@ class PackageTests(unittest.TestCase):
                     loaded = plaits_lab.load_package(str(output))
                     self.assertEqual(loaded["manifest"]["forkedFrom"], engine_id)
 
+    @unittest.skipUnless(shutil.which("c++") or shutil.which("g++"), "host C++ compiler required")
+    def test_forked_engine_with_config_gated_code_compiles(self) -> None:
+        # `check` compiles build_config.h's DEFAULTS, so an engine's
+        # recipe-gated code is unreachable in this build — blown leaves a loop
+        # index set-but-unused, noise-bank leaves a log2 helper uncalled. The
+        # firmware's own host tests never see it (plaits/test/makefile forces
+        # those options on), so nothing else in the repo pins these two
+        # warnings down and -Werror would reject correct source.
+        for engine_id in ("blown", "noise-bank"):
+            with self.subTest(engine=engine_id):
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    output = Path(temp_dir) / f"{engine_id}-fork"
+                    with redirect_stdout(io.StringIO()):
+                        plaits_lab.init_command(SimpleNamespace(
+                            output=str(output), from_engine=engine_id,
+                            author="Test Author", package_id=f"test-author/{engine_id}-fork",
+                            slug=f"{engine_id}-fork", name=None,
+                        ))
+                    package = plaits_lab.load_package(str(output), autodeclare=True)
+                    binary = plaits_lab.host_binary(Path(temp_dir), "render-model")
+                    plaits_lab.compile_renderer(package, binary, None)
+                    self.assertTrue(Path(binary).is_file())
+
     def test_source_policy_ignores_comments_but_not_code(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             source = Path(temp_dir) / "comments.cc"
@@ -571,6 +594,60 @@ class PackageTests(unittest.TestCase):
                 self.assertEqual(submission["state"], "draft")
                 self.assertEqual(set(submission["audioAnalysis"]), {"hero", "triggered"})
                 self.assertIn("package/src/bright-wave_engine.cc", archive.namelist())
+
+    def test_build_config_include_is_allowed_but_the_boundary_holds(self) -> None:
+        # Forking a stock engine vendors its `#include "plaits/build_config.h"`,
+        # and 87 of the 88 catalog models read a recipe option through it. The
+        # header is macros only, so it adds nothing to the shared image — but the
+        # widening is specific to it, not to plaits/ at large.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source = Path(temp_dir) / "probe.cc"
+            source.write_text(
+                '#include "plaits/build_config.h"\n'
+                "#if PLAITS_BUILD_FREQUENCY_OFFSET_FM\n#endif\nvoid Render() {}\n",
+                encoding="utf-8",
+            )
+            plaits_lab.validate_community_source([source])
+            source.write_text('#include "plaits/settings.h"\nvoid Render() {}\n', encoding="utf-8")
+            with self.assertRaises(plaits_lab.PackageError) as context:
+                plaits_lab.validate_community_source([source])
+            self.assertIn("non-SDK include", str(context.exception))
+
+    def test_package_may_not_shadow_a_build_config_macro(self) -> None:
+        # Every macro in build_config.h is #ifndef-guarded, so a package that
+        # defines one first wins for its own translation unit while the rest of
+        # the firmware keeps the recipe's value — an inconsistency the linker
+        # cannot see. The per-engine PLAITS_STEREO_<NAME> flag every stock engine
+        # header carries is not one of those names and stays legal.
+        self.assertIn("PLAITS_ENGINE_COUNT", plaits_lab.build_config_macros())
+        self.assertNotIn("PLAITS_STEREO_MY_ENGINE", plaits_lab.build_config_macros())
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source = Path(temp_dir) / "probe.cc"
+            source.write_text(
+                "#define PLAITS_ENGINE_COUNT 32\n"
+                '#include "plaits/build_config.h"\nvoid Render() {}\n',
+                encoding="utf-8",
+            )
+            with self.assertRaises(plaits_lab.PackageError) as context:
+                plaits_lab.validate_community_source([source])
+            self.assertIn("PLAITS_ENGINE_COUNT", str(context.exception))
+            source.write_text(
+                "#ifndef PLAITS_STEREO_MY_ENGINE\n#define PLAITS_STEREO_MY_ENGINE 1\n#endif\n"
+                "void Render() {}\n",
+                encoding="utf-8",
+            )
+            plaits_lab.validate_community_source([source])
+
+    def test_schema_and_validator_agree_on_manifest_fields(self) -> None:
+        # Two gates read every manifest: this JSON Schema (published, and what a
+        # contributor's editor validates against) and load_package's hand-written
+        # require() chain. A field added to one and not the other is accepted by
+        # one gate and rejected by the other, so they are pinned to each other.
+        schema = json.loads((SDK_DIR / "engine-package.schema.json").read_text(encoding="utf-8"))
+        self.assertFalse(schema["additionalProperties"])
+        required, optional = plaits_lab.manifest_field_names()
+        self.assertEqual(set(schema["properties"]), required | optional)
+        self.assertEqual(set(schema["required"]), required)
 
     def test_shared_module_include_requires_declaration(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

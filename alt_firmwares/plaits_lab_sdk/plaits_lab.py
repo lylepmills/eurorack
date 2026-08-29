@@ -59,6 +59,30 @@ CLASS_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 ALLOWED_COMMUNITY_SYSTEM_HEADERS = {
     "algorithm", "cmath", "cstddef", "limits", "stdint.h",
 }
+BUILD_CONFIG_HEADER = "plaits/build_config.h"
+# Quoted plaits/ headers a package may include OUTSIDE the blanket plaits/dsp/
+# prefix. Both are leaves that carry no code of their own — resources.h is
+# lookup-table data, build_config.h is nothing but #ifndef-guarded macros — so
+# neither adds a symbol to the shared firmware image or a link-order obligation.
+# build_config.h is here because it is the ONE include a fork of a stock engine
+# cannot satisfy: 87 of the 88 catalog models read a recipe option through it
+# (PLAITS_BUILD_FREQUENCY_OFFSET_FM in nearly all of them), so without it
+# `init --from <catalog id>` scaffolds a package that its own `check` rejects.
+# It is also not a boundary the old rule actually held: plaits/dsp/ is
+# allowlisted wholesale and plaits/dsp/voice.h includes build_config.h, so every
+# one of these macros was already reachable — the direct include was merely the
+# legible way to reach them. What the header DOES carry is the recipe coupling
+# that the builder's check_config_scope.py guards: a translation unit reading
+# these macros must be force-included with the generated engine_config.h, or it
+# compiles with the header's own defaults instead of the recipe's values. That
+# guard runs over plaits/ sources — where an accepted package's source lands on
+# promotion — so the coupling is caught at the point it reaches the firmware.
+# Inside the SDK there is no force-include at all: `check` compiles the defaults,
+# which the README says plainly rather than papering over.
+ALLOWED_COMMUNITY_PLAITS_HEADERS = {
+    "plaits/resources.h",
+    BUILD_CONFIG_HEADER,
+}
 # The firmware builds as C++98 (arm-none-eabi 4.8), so <cstdint> — the C++11
 # header — doesn't compile there even though the host check (C++11) accepts it.
 # Point contributors at the C++98-safe C header rather than a bare "non-SDK
@@ -321,13 +345,49 @@ def validate_scenario(value: Any, index: int) -> None:
                 f"scenarios[{index}].controls.{control_id} values must be between 0 and 1")
 
 
+BUILD_CONFIG_DEFINE_RE = re.compile(r"^\s*#\s*define\s+(PLAITS_[A-Z0-9_]+)", re.MULTILINE)
+SOURCE_DEFINE_RE = re.compile(r"^\s*#\s*define\s+([A-Za-z_][A-Za-z0-9_]*)", re.MULTILINE)
+
+
+def build_config_macros() -> frozenset[str]:
+    """The macro names plaits/build_config.h owns, read from the header itself so
+    this set can never drift from it. A missing header is an error rather than an
+    empty set: silently reserving nothing would turn the guard below into a no-op
+    that still reports success."""
+    path = REPO_ROOT / BUILD_CONFIG_HEADER
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as error:
+        raise PackageError(f"cannot read {BUILD_CONFIG_HEADER} from the SDK checkout") from error
+    macros = frozenset(BUILD_CONFIG_DEFINE_RE.findall(text))
+    require(bool(macros), f"{BUILD_CONFIG_HEADER} defines no PLAITS_ macros")
+    return macros
+
+
 def validate_community_source(
     paths: list[Path], declared_modules: frozenset[str] = frozenset(),
 ) -> None:
     module_owners = shared_module_header_owners()
+    # Every macro in build_config.h is #ifndef-guarded, so a package that
+    # defines one first WINS — and silently, for its translation unit only,
+    # while the rest of the firmware keeps the recipe's value. For the sizing
+    # macros (PLAITS_ENGINE_COUNT, PLAITS_BANK_SIZES, PLAITS_SCALE_BANK…) that
+    # is a one-definition-rule violation the compiler cannot see: two objects
+    # disagree about an array's extent and the linked image is quietly wrong.
+    # Package-local feature flags — the per-engine PLAITS_STEREO_<NAME> pattern
+    # every stock engine header uses — are untouched; only the names
+    # build_config.h itself owns are reserved.
+    reserved = build_config_macros()
     for path in paths:
         source = path.read_text(encoding="utf-8")
         policy_source = strip_cpp_comments(source)
+        for name in SOURCE_DEFINE_RE.findall(policy_source):
+            require(name not in reserved,
+                    f"{path.name} defines {name}, which plaits/build_config.h owns — "
+                    f"the firmware-wide value would differ from this file's and the "
+                    f"linked image would be inconsistent. To READ the recipe's value, "
+                    f'#include "plaits/build_config.h"; to carry your own flag, name it '
+                    f"something build_config.h does not define.")
         for description, pattern in FORBIDDEN_SOURCE_PATTERNS.items():
             match = pattern.search(policy_source)
             if match is not None:
@@ -358,7 +418,7 @@ def validate_community_source(
                         f"{path.name} uses non-SDK system header <{include}>")
             else:
                 allowed = include.startswith(("plaits/dsp/", "stmlib/")) \
-                    or include == "plaits/resources.h" or "/" not in include
+                    or include in ALLOWED_COMMUNITY_PLAITS_HEADERS or "/" not in include
                 require(allowed, f"{path.name} uses non-SDK include \"{include}\"")
                 # A header backed by a shared module carries out-of-line symbols
                 # that only link when its module is declared; catch it here with
@@ -390,6 +450,26 @@ def autodeclare_shared_modules(paths: list[Path], declared: list[str]) -> list[s
 
 HEX_COLOR_PATTERN = re.compile(r"#[0-9a-fA-F]{6}")
 
+# The manifest's field set. Two gates read it — this module's require() chain and
+# the published engine-package.schema.json, which a contributor's editor
+# validates against — so a field added to one and missed in the other is accepted
+# by one and rejected by the other. Naming the sets once here lets the test suite
+# pin the schema to them instead of the two drifting apart in silence (which is
+# how `artwork` and `trigger` came to be accepted here and rejected there).
+REQUIRED_MANIFEST_FIELDS = frozenset({
+    "schemaVersion", "sdk", "packageType", "id", "catalogId", "version",
+    "name", "author", "origin", "license", "description", "family", "tags",
+    "controls", "outputs", "source", "postProcessing", "scenarios",
+})
+OPTIONAL_MANIFEST_FIELDS = frozenset({
+    "upstream", "forkedFrom", "sharedModules", "artwork", "trigger",
+})
+
+
+def manifest_field_names() -> tuple[frozenset[str], frozenset[str]]:
+    """The manifest's required and optional field names, as (required, optional)."""
+    return REQUIRED_MANIFEST_FIELDS, OPTIONAL_MANIFEST_FIELDS
+
 
 def load_package(package_arg: str, autodeclare: bool = False) -> dict[str, Any]:
     package_dir = Path(package_arg).resolve()
@@ -397,12 +477,7 @@ def load_package(package_arg: str, autodeclare: bool = False) -> dict[str, Any]:
     manifest = read_json(manifest_path)
     require(isinstance(manifest, dict), "plaits-engine.json must contain an object")
 
-    required = {
-        "schemaVersion", "sdk", "packageType", "id", "catalogId", "version",
-        "name", "author", "origin", "license", "description", "family", "tags",
-        "controls", "outputs", "source", "postProcessing", "scenarios",
-    }
-    optional = {"upstream", "forkedFrom", "sharedModules", "artwork", "trigger"}
+    required, optional = manifest_field_names()
     require(required <= set(manifest), f"manifest is missing {sorted(required - set(manifest))}")
     require(set(manifest) <= required | optional,
             f"manifest has unsupported fields {sorted(set(manifest) - required - optional)}")
@@ -958,6 +1033,19 @@ def compile_renderer(
         "-std=c++11", MATH_CONSTANTS_DEFINE, "-DTEST", "-O2", "-Wall", "-Werror",
         "-Wno-unused-variable", "-Wno-unused-parameter",
         "-Wno-unused-local-typedefs", "-Wno-deprecated-declarations",
+        # Same reason as -Wno-unused-variable above, for the two warnings that
+        # are not covered by it. This build compiles plaits/build_config.h's
+        # DEFAULTS, so anything an engine uses only behind a recipe option —
+        # PLAITS_BUILD_FREQUENCY_OFFSET_FM's per-sample index, a log2 helper
+        # called only from a gated branch — is genuinely unreachable here and
+        # -Werror would reject source that is correct. The firmware's own host
+        # test build sidesteps this by forcing those options ON
+        # (plaits/test/makefile passes -DPLAITS_BUILD_FAST_FM=1 and friends);
+        # `check` deliberately compiles a default build instead, so it has to
+        # tolerate the dead code that choice creates. Without these, forks of
+        # blown, filtered-noise, granular-cloud, noise-bank and particle-burst
+        # cannot compile at all.
+        "-Wno-unused-but-set-variable", "-Wno-unused-function",
         f'-DPLAITS_LAB_ENGINE_HEADER="{engine_header_define(package)}"',
         f'-DPLAITS_LAB_ENGINE_CLASS=plaits::{manifest["source"]["className"]}',
         f'-DPLAITS_LAB_USER_DATA_BANK={package.get("user_data_bank", -1)}',

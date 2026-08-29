@@ -174,6 +174,33 @@ say nothing about an engine regardless, since the source policy rejects
 `malloc`/`calloc`/`new`/`delete` before a package ever compiles. ASan and UBSan,
 which are what this gate is for, stay fully on.
 
+### What a package may include
+
+Your engine compiles into one firmware image beside every other engine, so its
+source is held to a boundary. Quoted includes may name anything under
+`plaits/dsp/` or `stmlib/`, plus `plaits/resources.h` and
+`plaits/build_config.h`, plus your own package-local files. Angle-bracket
+includes are limited to `<algorithm>`, `<cmath>`, `<cstddef>`, `<limits>`, and
+`<stdint.h>` — the firmware is C++98, so `<cstdint>` is rejected in favour of
+`<stdint.h>`. `check` also rejects inline assembly, `malloc`/`new`/`delete`,
+anything touching hardware registers, and the libm transcendentals the
+bare-metal build cannot link (`std::sin`, `std::pow`, …) — each with the shared
+replacement to use instead.
+
+`plaits/build_config.h` is the recipe's compile-time options
+(`PLAITS_BUILD_FREQUENCY_OFFSET_FM`, `PLAITS_BUILD_ENABLE_SYNC_INPUT`, and the
+rest). Read them freely — a fork of a stock engine arrives already doing so.
+You may **not** `#define` a macro that header owns: every one of them is
+`#ifndef`-guarded, so defining it first would silently give your file a
+different value from the rest of the firmware. Package-local flags are fine as
+long as the name is your own — the per-engine `PLAITS_STEREO_<NAME>` pattern
+every stock engine header uses is untouched.
+
+One caveat worth knowing: `check` compiles your engine with that header's
+*default* options, not a particular recipe's, so a branch behind one of those
+macros is not exercised by the check. Audition the configuration you care about
+before publishing.
+
 `check` compiles with your **host** compiler, which is more permissive than the
 pinned hardware toolchain (e.g. it has `std::log2`/`std::exp2`; the ARM newlib
 does not). Add `--arm` to also compile your engine against the real ARM 4.8.3
