@@ -126,8 +126,22 @@ live in the dedicated
 [`plaits_palette_source` guide](../plaits_palette_source/README.md).
 
 The generated `build.sh` calls `validate_local_build.py` after linking. That
-applies the hosted builder's flash, RAM, and replaceable-FM page-layout gates,
-but it cannot certify arbitrary DSP or control-code changes as safe.
+applies the hosted builder's flash, RAM, rewritable-resource page-layout, and
+audio scratch-buffer alignment gates, but it cannot certify arbitrary DSP or
+control-code changes as safe. The 16 KB `shared_buffer` must be 8-byte aligned
+and entirely in SRAM: `BufferAllocator` does not align the typed pointers it
+returns. A terrain canary linked this byte array at `0x20000c99`; the real
+Virtual Analog renderer reproduced an alignment fault on an emulated Cortex-M4
+with a one-byte-offset arena, while an aligned control rendered successfully.
+The post-link check now rejects that layout regardless of the recipe's engines
+or custom resources. The aligned, release-shaped v6 terrain canary then passed
+on physical Plaits hardware: saved Wave Terrain selection and the fourth-control
+MACRO assignment survived repeated power cycles; all 16 factory, native, and
+prebaked terrains swept without frozen/repeated audio buffers; TIMBRE, MORPH,
+HARMONICS, and MACRO remained responsive; and navigation into and out of Wave
+Terrain continued to produce audio. Near-silent positions during the MACRO
+sweep occurred symmetrically with the terrain geometry and recovered normally,
+not as CPU stalls.
 
 An August 4 hardware regression exposed two firmware defects in the custom
 Speech path: inconsistent `PLAITS_HAS_CUSTOM_SPEECH_BANKS` values changed the

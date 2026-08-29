@@ -69,7 +69,10 @@ Voice voice;
 TzfmDiagnostic tzfm_diagnostic;
 #endif
 
-char shared_buffer[16384];
+// BufferAllocator returns typed pointers without adjusting their alignment.
+// A char array can otherwise follow the one-byte UserData object at an odd
+// address, faulting on Cortex-M4 floating-point loads/stores before audio starts.
+char shared_buffer[16384] __attribute__((aligned(8)));
 uint32_t test_ramp;
 
 // Default interrupt handlers.

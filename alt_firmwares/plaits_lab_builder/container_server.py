@@ -473,6 +473,38 @@ RAM_BUDGET_BYTES = 32 * 1024
 RAM_STACK_RESERVE_BYTES = 1024
 
 
+def _validate_shared_buffer_layout(nm_output: str) -> int:
+    """Reject a scratch arena that would fault on Cortex-M4 typed accesses."""
+    symbols = re.findall(
+        r"^([0-9a-fA-F]+)\s+([0-9a-fA-F]+)\s+[Bb]\s+shared_buffer$",
+        nm_output, re.MULTILINE,
+    )
+    if len(symbols) != 1:
+        raise BuildError(
+            "unsafe_ram_layout", "The linked firmware's audio scratch buffer "
+            "could not be verified and must not be installed.",
+        )
+    address, size = (int(value, 16) for value in symbols[0])
+    if (address % 8 != 0 or size != 16384
+            or address < 0x20000000
+            or address + size > 0x20000000 + RAM_BUDGET_BYTES):
+        raise BuildError(
+            "unsafe_ram_layout", "The linked firmware has an unsafe audio "
+            "scratch-buffer layout and must not be installed.",
+            f"shared_buffer at 0x{address:08x}, size {size}; expected an "
+            "8-byte-aligned 16384-byte arena entirely within SRAM.",
+        )
+    return address
+
+
+def _check_shared_buffer_alignment(elf_path: Path) -> int:
+    result = subprocess.run(
+        [_arm_tool("arm-none-eabi-nm"), "-S", "--defined-only", str(elf_path)],
+        check=True, capture_output=True, text=True, timeout=30,
+    )
+    return _validate_shared_buffer_layout(result.stdout)
+
+
 def validate_linked_firmware(elf_path: Path, config_text: str) -> dict[str, int]:
     """Apply the hosted builder's post-link memory and flash-layout gates."""
     if not elf_path.is_file():
@@ -521,12 +553,14 @@ def validate_linked_firmware(elf_path: Path, config_text: str) -> dict[str, int]
             "Remove a memory-heavy engine, then build again.",
         )
 
+    shared_buffer_address = _check_shared_buffer_alignment(elf_path)
     return {
         "textBytes": text_bytes,
         "dataBytes": data_bytes,
         "bssBytes": bss_bytes,
         "flashBytes": flash_bytes,
         "userDataRegions": region_count,
+        "sharedBufferAddress": shared_buffer_address,
         # Preserve the pre-schema-24 key for local tooling that has not yet
         # learned that these regions can also hold Terrain/Wavetable data.
         "replaceableFmBankRegions": region_count,
