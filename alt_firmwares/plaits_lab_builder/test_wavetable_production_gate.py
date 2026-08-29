@@ -38,7 +38,9 @@ class WavetableProductionGateTest(unittest.TestCase):
         cls.recipes = cls.gate.recipes()
 
     def test_mirrored_image_exercises_every_runtime_representation_at_limit(self):
-        bank = self.recipes["mirrored-mixed-8"]["resources"]["wavetableBank"]
+        recipe = self.recipes["mirrored-mixed-8"]
+        bank = recipe["resources"]["wavetableBank"]
+        self.assertEqual(set(recipe["slots"]), {"wavetable"})
         self.assertTrue(bank["mirrored"])
         self.assertEqual(len(bank["entries"]), 8)
         self.assertEqual(

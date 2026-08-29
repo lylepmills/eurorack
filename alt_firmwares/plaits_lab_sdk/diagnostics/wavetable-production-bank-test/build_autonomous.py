@@ -76,8 +76,11 @@ def custom(harmonic: int, representation: str) -> dict:
 
 
 def recipe(entries: list[dict], mirrored: bool) -> dict:
-    slots = ["virtual-analog"] * 24
-    slots[0] = "wavetable"
+    # Settings restore the previously selected physical slot across flashes.
+    # Put Wavetable in every slot so no persisted model position can bypass the
+    # instrumented production engine. The registry still shares one engine
+    # implementation and one recipe-defined bank across all placements.
+    slots = ["wavetable"] * 24
     return {
         "schemaVersion": 25,
         "target": "mutable-instruments-plaits",
@@ -150,7 +153,6 @@ def build(slug: str, payload: dict, output_dir: Path) -> None:
             "BUILD_ROOT=/out/build/",
             "ENGINE_CONFIG=/out/build/engine_config.h",
             "DEPS=", "PLAITS_STEREO_WAVETABLE=0",
-            "PLAITS_STEREO_VIRTUAL_ANALOG=0",
             "-j4", "wav",
         ], check=True)
 
