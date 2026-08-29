@@ -1,4 +1,24 @@
-"""Reusable content-addressed Kokoro source artifacts for the local speech lab."""
+"""Reusable content-addressed TTS source artifacts for the speech lab.
+
+Two engines sit behind one interface. Kokoro produces the nine languages the
+builder has always offered; Piper adds thirteen more and broadens the roster
+inside several existing ones. Callers do not choose — the voice id decides,
+because a voice belongs to exactly one engine and nothing upstream should have
+to know which.
+
+The cache key is deliberately UNCHANGED. It is still
+{revision, language, voice, text, trimTokenEdges} with the same revision
+string, so every Kokoro artifact already warmed on the website stays valid.
+Piper voice ids are disjoint from Kokoro's, so they simply key to new entries.
+Adding an "engine" field here would look tidier and would silently invalidate
+the entire warmed cache.
+
+Engines are imported lazily and never share a process in production: the server
+runs encode_word_bank.py via subprocess, one request and therefore one voice at
+a time. That matters more than it sounds. On macOS, loading piper and kokoro
+into one interpreter makes them fight over which espeak-ng binding wins, and
+the loser aborts the process with no traceback.
+"""
 
 from __future__ import annotations
 
@@ -11,9 +31,6 @@ from pathlib import Path
 
 import numpy as np
 import soundfile as sf
-import torch
-from huggingface_hub import hf_hub_download
-from kokoro import KPipeline
 
 
 KOKORO_RATE = 24000
@@ -21,6 +38,13 @@ KOKORO_REPOSITORY = "hexgrad/Kokoro-82M"
 PUBLISHED_MODEL_SHA256 = "496dba118d1a58f5f3db2efc88dbdc216e0483fc89fe6e47ee1f2c53f18ad1e4"
 TTS_ARTIFACT_REVISION = "kokoro-0.9.4-source-v2-token-edges"
 TOKEN_EDGE_PADDING_SECONDS = 0.025
+# Where the image bakes the Piper ONNX voices. Overridable so the same code
+# runs against a local checkout outside the container.
+PIPER_VOICE_ROOT = Path(os.environ.get("PIPER_VOICE_ROOT", "/opt/piper-voices"))
+# A speaker inside a multi-speaker model, as "<voice>__<speaker>". Only
+# no_NO-nvcc-medium uses this today; it holds ten speakers in one file.
+PIPER_SPEAKER_SEPARATOR = "__"
+
 LANGUAGE_CODES = {
     "en-US": "a",
     "en-GB": "b",
@@ -32,6 +56,17 @@ LANGUAGE_CODES = {
     "ja": "j",
     "zh": "z",
 }
+
+
+def is_piper_voice(voice: str) -> bool:
+    """Which engine owns this voice id?
+
+    Kokoro ids are two letters, an underscore and a lowercase name — af_heart,
+    bf_emma, zm_yunyang — and never contain a hyphen. Piper ids always do:
+    en_US-joe-medium, no_NO-nvcc-medium__KMN. The sets cannot collide, which is
+    why the id alone is enough to route without a registry to keep in sync.
+    """
+    return "-" in voice
 
 
 def content_key(value: object) -> str:
@@ -53,20 +88,35 @@ def write_json_atomic(path: Path, value: object) -> None:
     os.replace(temporary, path)
 
 
-class TtsArtifactSession:
-    def __init__(self, cache_root: Path, language: str, voice: str):
+class _KokoroEngine:
+    """The original path, behaviour-for-behaviour. Nine languages."""
+
+    rate = KOKORO_RATE
+
+    def __init__(self, language: str, voice: str):
         if language not in LANGUAGE_CODES:
-            raise ValueError(f"unsupported language: {language}")
-        self.cache_root = cache_root
+            raise ValueError(f"unsupported language for Kokoro: {language}")
         self.language = language
         self.language_code = LANGUAGE_CODES[language]
         self.voice = voice
-        self.pipeline: KPipeline | None = None
+        self.pipeline = None
         self.voice_sha256: str | None = None
+
+    def provenance(self) -> dict[str, object]:
+        return {
+            "engine": "kokoro",
+            "repository": KOKORO_REPOSITORY,
+            "publishedModelSha256": PUBLISHED_MODEL_SHA256,
+            "publishedVoiceSha256": self.voice_sha256,
+        }
 
     def initialize(self) -> None:
         if self.pipeline is not None:
             return
+        import torch
+        from huggingface_hub import hf_hub_download
+        from kokoro import KPipeline
+
         random.seed(0)
         np.random.seed(0)
         torch.manual_seed(0)
@@ -116,6 +166,99 @@ class TtsArtifactSession:
             joined.append(chunk)
         return np.concatenate(joined)
 
+class _PiperEngine:
+    """Piper ONNX voices, driven through piper-tts' own API.
+
+    No espeak shim here. The wheel's bundled espeak-ng is broken only on macOS
+    arm64, where it ignores the data directory it is handed; on the Linux image
+    it initialises correctly and is also the exact version these voices were
+    trained against, which matters — Homebrew's espeak renders the Swedish
+    sj-sound as "sx" where the bundled one gives the "ɧ" the model expects.
+
+    trim_token_edges is accepted and ignored. It is Kokoro's token-timestamp
+    trim; Piper exposes no equivalent without an alignment-patched model, and
+    the LPC encoder's own silence trim covers the ordinary case. The manifest
+    records that it was not applied rather than implying it was.
+    """
+
+    def __init__(self, language: str, voice: str):
+        self.language = language
+        self.voice = voice
+        model, _, speaker = voice.partition(PIPER_SPEAKER_SEPARATOR)
+        self.model_name = model
+        self.speaker = speaker or None
+        self.model_path = PIPER_VOICE_ROOT / f"{model}.onnx"
+        self.config_path = PIPER_VOICE_ROOT / f"{model}.onnx.json"
+        self._voice = None
+        self.rate = 22050
+        self.model_sha256: str | None = None
+
+    def provenance(self) -> dict[str, object]:
+        return {
+            "engine": "piper",
+            "model": self.model_name,
+            "speaker": self.speaker,
+            "publishedModelSha256": self.model_sha256,
+            "trimTokenEdgesApplied": False,
+        }
+
+    def initialize(self) -> None:
+        if self._voice is not None:
+            return
+        from piper import PiperVoice
+
+        if not self.model_path.is_file():
+            raise ValueError(
+                f"Piper voice {self.model_name!r} is not baked into this image "
+                f"(looked in {PIPER_VOICE_ROOT})")
+        self.model_sha256 = hashlib.sha256(self.model_path.read_bytes()).hexdigest()
+        self._voice = PiperVoice.load(self.model_path, config_path=self.config_path)
+        self.rate = int(self._voice.config.sample_rate)
+
+    def synthesize(self, text: str, trim_token_edges: bool) -> np.ndarray:
+        del trim_token_edges  # Kokoro-only; see the class docstring.
+        self.initialize()
+        # Piper's voices are VITS models trained on sentences, and several of
+        # them treat a bare word as an unfinished utterance and keep generating.
+        # A terminator settles them without changing the word.
+        if text.strip()[-1:] not in ".?!":
+            text = text.rstrip() + "."
+        config = None
+        if self.speaker is not None:
+            from piper import SynthesisConfig
+
+            speaker_id = self._voice.config.speaker_id_map.get(self.speaker)
+            if speaker_id is None:
+                raise ValueError(
+                    f"unknown speaker {self.speaker!r} in {self.model_name!r}")
+            config = SynthesisConfig(speaker_id=int(speaker_id))
+        chunks = [np.frombuffer(chunk.audio_int16_bytes, dtype="<i2")
+                  for chunk in self._voice.synthesize(text, syn_config=config)]
+        if not chunks:
+            raise ValueError(f"Piper produced no audio for {text!r}")
+        return (np.concatenate(chunks).astype(np.float32) / 32768.0)
+
+
+def _engine_for(language: str, voice: str):
+    return (_PiperEngine(language, voice) if is_piper_voice(voice)
+            else _KokoroEngine(language, voice))
+
+
+class TtsArtifactSession:
+    """Content-addressed source audio, whichever engine owns the voice."""
+
+    def __init__(self, cache_root: Path, language: str, voice: str):
+        self.cache_root = cache_root
+        self.language = language
+        self.voice = voice
+        self.engine = _engine_for(language, voice)
+
+    @property
+    def voice_sha256(self) -> str | None:
+        # Kept for callers that read it off the session after a render.
+        return getattr(self.engine, "voice_sha256", None) or \
+            getattr(self.engine, "model_sha256", None)
+
     def source_artifact(
         self,
         text: str,
@@ -135,19 +278,17 @@ class TtsArtifactSession:
             return source_path, json.loads(manifest_path.read_text(encoding="utf-8")), True
 
         artifact_dir.mkdir(parents=True, exist_ok=True)
-        audio = self.synthesize(text, trim_token_edges)
-        sf.write(source_path, audio, KOKORO_RATE, subtype="PCM_16")
+        audio = self.engine.synthesize(text, trim_token_edges)
+        sf.write(source_path, audio, self.engine.rate, subtype="PCM_16")
         manifest = {
             "key": key,
             "language": self.language,
             "voice": self.voice,
             "text": text,
             "trimTokenEdges": trim_token_edges,
-            "sampleRate": KOKORO_RATE,
+            "sampleRate": self.engine.rate,
             "samples": len(audio),
-            "repository": KOKORO_REPOSITORY,
-            "publishedModelSha256": PUBLISHED_MODEL_SHA256,
-            "publishedVoiceSha256": self.voice_sha256,
+            **self.engine.provenance(),
         }
         write_json_atomic(manifest_path, manifest)
         return source_path, manifest, False

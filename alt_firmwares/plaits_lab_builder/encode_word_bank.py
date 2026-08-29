@@ -14,8 +14,6 @@ import numpy as np
 import soundfile as sf
 
 from preview_artifacts import (
-    KOKORO_REPOSITORY,
-    PUBLISHED_MODEL_SHA256,
     TtsArtifactSession,
     content_key,
     link_or_copy,
@@ -135,7 +133,7 @@ def main() -> int:
     bank_audio: dict[str, list[np.ndarray]] = {"natural": [], "flat": []}
     source_cache_hits = 0
     lpc_cache_hits = 0
-    voice_sha256 = ""
+    synthesis_provenance: dict[str, object] = {}
     for index, entry in enumerate(request["entries"]):
         word = entry["word"]
         spoken_as = entry.get("spokenAs", "")
@@ -148,13 +146,24 @@ def main() -> int:
 
         tts_source, tts_manifest, source_hit = tts_session.source_artifact(
             speech_text,
+            # Kokoro-only: it is a trim driven by token timestamps, which Piper
+            # does not expose. Piper voices ignore the flag and say so in their
+            # manifest rather than leaving the caller to assume it was applied.
             trim_token_edges=language in {"en-US", "en-GB"},
         )
         artifact_dir, lpc_manifest, lpc_hit = lpc_artifact(
             args.artifact_cache, tts_source, continuous, gate2, renderer)
         source_cache_hits += int(source_hit)
         lpc_cache_hits += int(lpc_hit)
-        voice_sha256 = str(tts_manifest["publishedVoiceSha256"])
+        # Carry whatever provenance the engine recorded rather than reaching for
+        # Kokoro's field names — a Piper voice has a model hash and no voice
+        # hash, and reading the wrong key raises rather than degrading.
+        synthesis_provenance = {
+            k: v for k, v in tts_manifest.items()
+            if k in ("engine", "repository", "model", "speaker",
+                     "publishedModelSha256", "publishedVoiceSha256",
+                     "trimTokenEdgesApplied")
+        }
         link_or_copy(artifact_dir / "source.wav", source_output)
         link_or_copy(artifact_dir / "natural.wav", natural_output)
         link_or_copy(artifact_dir / "flat.wav", flat_output)
@@ -192,9 +201,7 @@ def main() -> int:
         "synthesis": {
             "language": language,
             "voice": voice,
-            "repository": KOKORO_REPOSITORY,
-            "publishedModelSha256": PUBLISHED_MODEL_SHA256,
-            "publishedVoiceSha256": voice_sha256,
+            **synthesis_provenance,
             "referencePitchHz": 100,
             "sampleRate": 48000,
         },
