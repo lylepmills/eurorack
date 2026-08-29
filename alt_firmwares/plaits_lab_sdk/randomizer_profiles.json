@@ -150,6 +150,11 @@
       "timbre": "centered",
       "morph": "stepped-identity"
     },
+    "natural-speech": {
+      "status": "seeded",
+      "timbre": "centered",
+      "morph": "stepped-identity"
+    },
     "swarm": {
       "status": "seeded",
       "timbre": "broad-texture",
