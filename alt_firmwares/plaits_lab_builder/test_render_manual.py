@@ -243,6 +243,36 @@ class RenderManualTest(unittest.TestCase):
         }
         return recipe
 
+    def wavetable_bank_recipe(self) -> dict:
+        recipe = self.load("default_recipe.json")
+        recipe["schemaVersion"] = 25
+        recipe["slots"][0] = "wavetable"
+        recipe["preferences"] = {"navigationMode": "linear"}
+        recipe["initialOptions"] = {
+            **DEFAULT_CONFIGURATION["initialOptions"],
+            "attenuverterMode": "stock",
+        }
+        sampled = base64.b64encode(bytes([31]) * 8192).decode("ascii")
+        recipe["resources"] = {
+            "chordTables": DEFAULT_CHORD_TABLES,
+            "wavetableBank": {
+                "mirrored": False,
+                "entries": [
+                    {"kind": "factory", "id": "mutable-2"},
+                    {"kind": "custom", "model": {
+                        "kind": "wavetable", "name": "Imported sweep",
+                        "equation": "wavetable-import:Imported sweep", "data": sampled,
+                    }},
+                    {"kind": "custom", "model": {
+                        "kind": "wavetable", "name": "Native FM",
+                        "equation": "sin(phi + x * sin((1 + y) * phi))", "data": sampled,
+                        "representation": "native",
+                    }},
+                ],
+            },
+        }
+        return recipe
+
     def test_terrain_bank_order_and_storage_are_printable(self) -> None:
         entries = manual_document(self.terrain_bank_recipe())["terrainBank"]
         self.assertEqual(
@@ -270,6 +300,29 @@ class RenderManualTest(unittest.TestCase):
             self.assertIn("refuse transfers without erasing anything", printed)
             self.assertIn("Folded basin", printed)
             self.assertIn("Compiled equation", printed)
+
+    def test_wavetable_bank_order_transport_and_storage_are_printable(self) -> None:
+        bank = manual_document(self.wavetable_bank_recipe())["wavetableBank"]
+        self.assertFalse(bank["mirrored"])
+        self.assertEqual(
+            bank["entries"],
+            [
+                {"name": "Pulse & Sync", "storage": "Stock bank · shared factory pool"},
+                {"name": "Imported sweep", "storage": "Prebaked 64 × 128 samples · fixed in firmware"},
+                {"name": "Native FM", "storage": "Compiled equation · fixed in firmware"},
+            ],
+        )
+
+    @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
+    def test_wavetable_bank_pdf_explains_controls_and_one_way_transport(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "wavetable-bank.pdf"
+            render_pdf(manual_document(self.wavetable_bank_recipe()), output)
+            printed = pdf_strings(output).replace(")(", " ")
+            self.assertIn("Wavetable bank", printed)
+            self.assertIn("sweeps once from the first bank to the last", printed)
+            self.assertIn("TIMBRE and MORPH move through each bank", printed)
+            self.assertIn("Imported sweep", printed)
 
     def test_scale_bank_order_is_printable_only_for_scale_engines(self) -> None:
         for engine_id in (

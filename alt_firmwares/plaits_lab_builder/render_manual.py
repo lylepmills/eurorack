@@ -35,6 +35,11 @@ FACTORY_TERRAIN_NAMES = (
     "Wavetable Terrain: Bank 2",
     "Wavetable Terrain: Bank 1",
 )
+FACTORY_WAVETABLE_NAMES = {
+    "mutable-1": "Harmonic Ladder",
+    "mutable-2": "Pulse & Sync",
+    "mutable-3": "Shape Mosaic",
+}
 
 # The options menu is eight "lights", ordered so the ones a player reaches for
 # most sit nearest the start of the walk. Each light cycles through an ordered
@@ -223,6 +228,33 @@ def terrain_bank_entries(recipe: Any) -> list[dict[str, str]]:
     return result
 
 
+def wavetable_bank_document(recipe: Any) -> dict[str, Any]:
+    """Player-facing order, transport, and storage for schema-25 Wavetable banks."""
+    resources = recipe.get("resources") if isinstance(recipe, dict) else None
+    bank = resources.get("wavetableBank") if isinstance(resources, dict) else None
+    if not isinstance(bank, dict) or not isinstance(bank.get("entries"), list):
+        return {"mirrored": True, "entries": []}
+    entries: list[dict[str, str]] = []
+    for entry in bank["entries"]:
+        if entry["kind"] == "factory":
+            factory_id = str(entry["id"])
+            entries.append({
+                "name": FACTORY_WAVETABLE_NAMES.get(factory_id, factory_id),
+                "storage": "Stock bank · shared factory pool",
+            })
+        else:
+            model = entry["model"]
+            entries.append({
+                "name": str(model["name"])[:80].strip(),
+                "storage": (
+                    "Compiled equation · fixed in firmware"
+                    if model.get("representation") == "native" else
+                    "Prebaked 64 × 128 samples · fixed in firmware"
+                ),
+            })
+    return {"mirrored": bool(bank["mirrored"]), "entries": entries}
+
+
 def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]:
     build = validate_recipe(recipe)
     color_blind_mode = build.color_blind_mode == 1
@@ -303,6 +335,7 @@ def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]
             else []
         ),
         "terrainBank": terrain_bank_entries(recipe),
+        "wavetableBank": wavetable_bank_document(recipe),
         # Only a build that compiled the procedure in answers the power-up
         # gesture, so only that build's guide documents it.
         "calibration": build.enable_calibration == 1,
@@ -1006,6 +1039,50 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
                 intro_style,
             ),
             terrain_table,
+        ])
+
+    wavetable_bank = document["wavetableBank"]
+    if wavetable_bank["entries"]:
+        wavetable_rows: list[list[Any]] = [[
+            Paragraph("HARMONICS", table_header_style),
+            Paragraph("WAVETABLE", table_header_style),
+            Paragraph("STORAGE", table_header_style),
+        ]]
+        for index, entry in enumerate(wavetable_bank["entries"], start=1):
+            wavetable_rows.append([
+                Paragraph(str(index), small_muted_style),
+                Paragraph(_escape(entry["name"]), small_style),
+                Paragraph(_escape(entry["storage"]), small_muted_style),
+            ])
+        wavetable_table = Table(
+            wavetable_rows,
+            colWidths=[0.7 * inch, 2.65 * inch, 2.95 * inch],
+            rowHeights=[0.26 * inch] + [0.4 * inch] * len(wavetable_bank["entries"]),
+            repeatRows=1,
+        )
+        wavetable_table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#EFECE3")),
+            ("GRID", (0, 0), (-1, -1), 0.35, line),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 5),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ]))
+        transport = (
+            "sweeps from top to bottom, then mirrors the same banks back to the start"
+            if wavetable_bank["mirrored"] else
+            "sweeps once from the first bank to the last"
+        )
+        story.extend([
+            PageBreak(),
+            Paragraph("Wavetable bank", section_style),
+            Paragraph(
+                f"HARMONICS {transport}, interpolating between adjacent banks. "
+                "TIMBRE and MORPH move through each bank's 8 × 8 wave field; MACRO phase-warps the result.",
+                intro_style,
+            ),
+            wavetable_table,
         ])
 
     # Calibration, for the builds that asked for it. Most firmwares leave the

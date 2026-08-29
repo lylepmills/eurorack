@@ -186,6 +186,91 @@ test("schema 24 carries one ordered shared terrain bank", async () => {
   assert.throws(() => normalizeRecipe(legacySlotShape), /shared terrain bank/);
 });
 
+test("schema 25 carries one ordered shared wavetable bank", async () => {
+  const publicCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const chordCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_chord_tables/catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const engines = new Map(publicCatalog.engines.map((engine: any) => [engine.id, engine]));
+  const recipe = structuredClone(fixture) as any;
+  recipe.schemaVersion = 25;
+  recipe.slots[0] = "wavetable";
+  recipe.slots = recipe.slots.map((engineId: string) => {
+    const engine = engines.get(engineId) as any;
+    return { engine: engineId, package: engine.packageId, version: engine.version, digest: engine.digest };
+  });
+  recipe.preferences = { navigationMode: "linear" };
+  recipe.initialOptions = {
+    lockedFrequencyKnob: "octaves", modelInput: "model", levelInput: "level",
+    auxOutput: "alternate-model", suboscillatorOctave: 0, chordTable: "original",
+    holdOnTrigger: false, attenuverterMode: "stock",
+  };
+  const sampled = Buffer.alloc(8192, 31).toString("base64");
+  recipe.resources = {
+    chordTables: chordCatalog.tables,
+    wavetableBank: {
+      mirrored: false,
+      entries: [
+        { kind: "factory", id: "mutable-2" },
+        {
+          kind: "custom",
+          model: {
+            kind: "wavetable", name: "Sampled", equation: "wavetable-import:Sampled",
+            data: sampled,
+          },
+        },
+        {
+          kind: "custom",
+          model: {
+            kind: "wavetable", name: "Native FM",
+            equation: "sin(phi + 3 * (x + 0.125) * sin((1 + floor(4 * y)) * phi))",
+            data: sampled, representation: "native",
+          },
+        },
+      ],
+    },
+  };
+
+  const normalized = normalizeRecipe(recipe);
+  assert.equal(normalized.schemaVersion, 25);
+  assert.deepEqual(normalized.resources.wavetableBank, recipe.resources.wavetableBank);
+  assert.notEqual(
+    await computeBuildKey(normalized, { sourceRevision: "source", toolchain: "toolchain", contract: "25" }),
+    await computeBuildKey(normalizeRecipe({
+      ...structuredClone(recipe),
+      resources: {
+        ...structuredClone(recipe.resources),
+        wavetableBank: { ...structuredClone(recipe.resources.wavetableBank), mirrored: true },
+      },
+    }), { sourceRevision: "source", toolchain: "toolchain", contract: "25" }),
+  );
+
+  const shortData = structuredClone(recipe);
+  shortData.resources.wavetableBank.entries[1].model.data = Buffer.alloc(8191).toString("base64");
+  assert.throws(() => normalizeRecipe(shortData), /exactly 8192 bytes/);
+
+  const tooManyMirrored = structuredClone(recipe);
+  tooManyMirrored.resources.wavetableBank.mirrored = true;
+  tooManyMirrored.resources.wavetableBank.entries = Array.from({ length: 9 }, (_, index) => ({
+    kind: "custom", model: {
+      kind: "wavetable", name: `Bank ${index + 1}`, equation: `wavetable-import:Bank ${index + 1}`,
+      data: sampled,
+    },
+  }));
+  assert.throws(() => normalizeRecipe(tooManyMirrored), /between one and 8/);
+
+  const withoutConsumer = structuredClone(recipe);
+  const replacement = withoutConsumer.slots.find((slot: any) => slot.engine !== "wavetable");
+  withoutConsumer.slots = withoutConsumer.slots.map((slot: any) => (
+    slot.engine === "wavetable" ? replacement : slot
+  ));
+  assert.throws(() => normalizeRecipe(withoutConsumer), /requires Wavetable/);
+});
+
 test("normalization removes nondeterministic manifest fields", () => {
   const normalized = normalizeRecipe({ ...fixture, createdAt: "2099-01-01T00:00:00Z" });
   assert.equal("createdAt" in normalized, false);
