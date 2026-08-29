@@ -23,7 +23,7 @@ from typing import Any, Literal
 
 from generate_engine_config import render_config, validate_recipe
 from render_manual import manual_document, render_pdf
-from natural_voice_banks import render_natural_voice_config
+from natural_speech_banks import render_natural_speech_config
 from speech_banks import (
     MAX_FRAMES,
     MAX_WORDS,
@@ -664,7 +664,7 @@ STEREO_MACROS = {
     "clap": "CLAP",
     "analog-percussion": "ANALOG_PERCUSSION",
     "freshets-formant": "FRESHETS_FORMANT",
-    "natural-voice": "NATURAL_VOICE",
+    "natural-speech": "NATURAL_SPEECH",
 }
 ALL_STEREO_MACROS = frozenset(STEREO_MACROS.values())
 
@@ -701,8 +701,8 @@ def _build_targets(output: FirmwareOutput) -> list[str]:
     return ["wav"] if output == "audio-wav" else ["bin", "hex"]
 
 
-def _natural_voice_object() -> str:
-    """Object file the Natural Voice engine compiles to.
+def _natural_speech_object() -> str:
+    """Object file the Natural Speech engine compiles to.
 
     The name follows the registered package's source filename, so it is read
     from the catalog rather than assumed -- and a recipe cannot carry banks
@@ -710,10 +710,10 @@ def _natural_voice_object() -> str:
     """
     from generate_engine_config import CATALOG
 
-    entry = CATALOG.get("natural-voice")
+    entry = CATALOG.get("natural-speech")
     if entry is None:
         raise ValueError(
-            "naturalVoiceBanks requires the natural-voice engine to be "
+            "naturalSpeechBanks requires the natural-speech engine to be "
             "registered in the catalog")
     return entry.member.rstrip("_") + ".o"
 
@@ -738,14 +738,14 @@ def build_firmware(payload: Any) -> tuple[Path, FirmwareOutput, dict[str, str]]:
     build_dir.mkdir(parents=True, exist_ok=False)
     config_path = build_dir / "engine_config.h"
     speech_config_path = build_dir / "speech_config.h"
-    natural_voice_config_path = build_dir / "natural_voice_config.h"
+    natural_speech_config_path = build_dir / "natural_speech_config.h"
     recipe_path = build_dir / "recipe.json"
     config_text = render_config(validated_recipe)
     config_path.write_text(config_text, encoding="utf-8")
     speech_config_path.write_text(
         render_speech_config(validated_recipe.speech_banks), encoding="utf-8")
-    natural_voice_config_path.write_text(
-        render_natural_voice_config(validated_recipe.natural_voice_banks),
+    natural_speech_config_path.write_text(
+        render_natural_speech_config(validated_recipe.natural_speech_banks),
         encoding="utf-8")
     recipe_path.write_text(json.dumps(recipe, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
 
@@ -774,10 +774,10 @@ def build_firmware(payload: Any) -> tuple[Path, FirmwareOutput, dict[str, str]]:
         f"SPEECH_BANKS_ENABLED={1 if validated_recipe.speech_banks is not None else 0}",
         *(
             [
-                f"NATURAL_VOICE_CONFIG={natural_voice_config_path}",
-                f"NATURAL_VOICE_OBJ={_natural_voice_object()}",
+                f"NATURAL_SPEECH_CONFIG={natural_speech_config_path}",
+                f"NATURAL_SPEECH_OBJ={_natural_speech_object()}",
             ]
-            if validated_recipe.natural_voice_banks is not None
+            if validated_recipe.natural_speech_banks is not None
             else []
         ),
         f"CC={_compiler('arm-none-eabi-gcc')}",

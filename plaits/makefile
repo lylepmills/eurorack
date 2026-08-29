@@ -135,13 +135,13 @@ ifneq ($(SPEECH_BANKS_ENABLED),)
 $(patsubst %,$(BUILD_DIR)%,$(SPEECH_LAYOUT_OBJS)): CPPFLAGS += -DPLAITS_HAS_CUSTOM_SPEECH_BANKS=$(SPEECH_BANKS_ENABLED)
 endif
 
-# Natural Voice word banks. Unlike the Speech macro this one changes no class
+# Natural Speech word banks. Unlike the Speech macro this one changes no class
 # layout -- it only selects which arrays the engine reads -- so it applies to
 # the engine's own object alone. The object name comes from the registered
 # package's source filename, so the builder passes it rather than the makefile
 # guessing it.
-ifneq ($(NATURAL_VOICE_CONFIG),)
-$(BUILD_DIR)$(NATURAL_VOICE_OBJ): CPPFLAGS += -include $(NATURAL_VOICE_CONFIG) -DPLAITS_HAS_CUSTOM_NATURAL_VOICE_BANKS=1
+ifneq ($(NATURAL_SPEECH_CONFIG),)
+$(BUILD_DIR)$(NATURAL_SPEECH_OBJ): CPPFLAGS += -include $(NATURAL_SPEECH_CONFIG) -DPLAITS_HAS_CUSTOM_NATURAL_SPEECH_BANKS=1
 endif
 
 # Per-engine stereo (OUT/AUX as an L/R pair) is gated at compile time by
@@ -173,7 +173,7 @@ PLAITS_STEREO_MODELS = \
   DIGITAL_MODULATION:digital_modulation_engine CLAP:clap_engine \
   ANALOG_PERCUSSION:analog_percussion_engine \
   FRESHETS_FORMANT:freshets_formant_engine \
-  NATURAL_VOICE:natural_voice_engine
+  NATURAL_SPEECH:natural_speech_engine
 define _plaits_stereo_rule
 $(BUILD_DIR)$(word 2,$(subst :, ,$(1))).o: CPPFLAGS += $$(if $$(filter 0,$$(PLAITS_STEREO_$(word 1,$(subst :, ,$(1))))),-DPLAITS_STEREO_$(word 1,$(subst :, ,$(1)))=0)
 endef

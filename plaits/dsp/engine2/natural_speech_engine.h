@@ -1,7 +1,7 @@
 // Copyright 2026 Lyle Mills.
 // SPDX-License-Identifier: MIT
 //
-// Natural Voice: WORLD-analyzed speech resynthesis (the "hd" format from
+// Natural Speech: WORLD-analyzed speech resynthesis (the "hd" format from
 // research/natural_speech). Words are stored as 23-byte frames at 40 Hz -
 // residual gain, F0 contour, five voicing bands, and eighteen 8-bit
 // log-area-ratios - decoded through an order-18 lattice at a 16 kHz
@@ -9,18 +9,18 @@
 // 7 B/frame existed; the 2026-08-17 out-of-distribution listening test
 // retired it - male and non-English voices snap audibly to the codebook.)
 
-#ifndef PLAITS_DSP_ENGINE2_NATURAL_VOICE_ENGINE_H_
-#define PLAITS_DSP_ENGINE2_NATURAL_VOICE_ENGINE_H_
+#ifndef PLAITS_DSP_ENGINE2_NATURAL_SPEECH_ENGINE_H_
+#define PLAITS_DSP_ENGINE2_NATURAL_SPEECH_ENGINE_H_
 
 #include "plaits/dsp/engine/engine.h"
 #include "stmlib/dsp/hysteresis_quantizer.h"
 
 namespace plaits {
 
-class NaturalVoiceEngine : public Engine {
+class NaturalSpeechEngine : public Engine {
  public:
-  NaturalVoiceEngine() { }
-  ~NaturalVoiceEngine() { }
+  NaturalSpeechEngine() { }
+  ~NaturalSpeechEngine() { }
   void Init(stmlib::BufferAllocator* allocator);
   void Reset();
 
@@ -42,7 +42,7 @@ class NaturalVoiceEngine : public Engine {
   // OUT/AUX become a true L/R pair when the build enables it. Both paths
   // appear in both channels (see Render), so this widens the voice rather
   // than splitting it, and a mono sum does not cancel.
-  virtual bool stereo_capable() const { return PLAITS_STEREO_NATURAL_VOICE; }
+  virtual bool stereo_capable() const { return PLAITS_STEREO_NATURAL_SPEECH; }
 
  private:
   enum { kOrder = 18, kBands = 5 };
@@ -125,9 +125,9 @@ class NaturalVoiceEngine : public Engine {
   float sample_[2];
   float next_sample_[2];
 
-  DISALLOW_COPY_AND_ASSIGN(NaturalVoiceEngine);
+  DISALLOW_COPY_AND_ASSIGN(NaturalSpeechEngine);
 };
 
 }  // namespace plaits
 
-#endif  // PLAITS_DSP_ENGINE2_NATURAL_VOICE_ENGINE_H_
+#endif  // PLAITS_DSP_ENGINE2_NATURAL_SPEECH_ENGINE_H_

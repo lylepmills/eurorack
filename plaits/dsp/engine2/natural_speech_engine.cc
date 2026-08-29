@@ -13,35 +13,35 @@
 // MORPH -> playback speed. See set_prosody_amount / set_speed.
 //
 // No libm: 2^x via stmlib::SemitonesToRatio, sin via the plaits Sine LUT,
-// tanh via the baked LUT in natural_voice_data.h, sqrt via stmlib::Sqrt.
+// tanh via the baked LUT in natural_speech_data.h, sqrt via stmlib::Sqrt.
 
-#include "plaits/dsp/engine2/natural_voice_engine.h"
+#include "plaits/dsp/engine2/natural_speech_engine.h"
 
 #include "plaits/dsp/oscillator/sine_oscillator.h"
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/dsp/units.h"
 #include "stmlib/utils/random.h"
 
-#include "plaits/dsp/engine2/natural_voice_data.h"
+#include "plaits/dsp/engine2/natural_speech_data.h"
 
 namespace plaits {
 
 using namespace stmlib;
 
 // Engine constants and shared tables always come from the baked header.
-namespace data = ::natural_voice_data;
+namespace data = ::natural_speech_data;
 
 // Bank CONTENT comes from the recipe when a build carries one. The firmware
 // force-includes the generated config through a make variable, the way it
 // already does for Speech (SPEECH_CONFIG), so there is nothing to #include
 // here -- only a flag that defaults to off for stock and SDK builds.
-#ifndef PLAITS_HAS_CUSTOM_NATURAL_VOICE_BANKS
-#define PLAITS_HAS_CUSTOM_NATURAL_VOICE_BANKS 0
+#ifndef PLAITS_HAS_CUSTOM_NATURAL_SPEECH_BANKS
+#define PLAITS_HAS_CUSTOM_NATURAL_SPEECH_BANKS 0
 #endif
-#if PLAITS_HAS_CUSTOM_NATURAL_VOICE_BANKS
-namespace bank = natural_voice_recipe;
+#if PLAITS_HAS_CUSTOM_NATURAL_SPEECH_BANKS
+namespace bank = natural_speech_recipe;
 #else
-namespace bank = ::natural_voice_data;
+namespace bank = ::natural_speech_data;
 #endif
 
 namespace {
@@ -114,14 +114,14 @@ inline float Gauss() {
 
 }  // namespace
 
-void NaturalVoiceEngine::Init(stmlib::BufferAllocator* allocator) {
+void NaturalSpeechEngine::Init(stmlib::BufferAllocator* allocator) {
   bank_quantizer_.Init(bank::kNumBanks, 0.1f, false);
   words_in_bank_ = bank::kBankFirstWord[1] - bank::kBankFirstWord[0];
   word_quantizer_.Init(words_in_bank_, 0.1f, false);
   Reset();
 }
 
-void NaturalVoiceEngine::Reset() {
+void NaturalSpeechEngine::Reset() {
   for (int i = 0; i < kOrder; ++i) k_target_[i] = k_[i] = 0.0f;
   for (int b = 0; b < kBands; ++b) v_target_[b] = v_[b] = 0.0f;
   for (int i = 0; i <= kOrder; ++i) {
@@ -162,7 +162,7 @@ void NaturalVoiceEngine::Reset() {
   next_sample_[0] = next_sample_[1] = 0.0f;
 }
 
-void NaturalVoiceEngine::DesignBands() {
+void NaturalSpeechEngine::DesignBands() {
   // A COMPLEMENTARY crossover: four lowpasses at 500/1k/2k/4k, with the five
   // bands taken as their successive differences (and the top band as
   // x - lp3), so the bands sum to EXACTLY the input.
@@ -196,14 +196,14 @@ void NaturalVoiceEngine::DesignBands() {
   }
 }
 
-void NaturalVoiceEngine::UpdateBandWeights(int band) {
+void NaturalSpeechEngine::UpdateBandWeights(int band) {
   float v = v_[band];
   CONSTRAIN(v, 0.0f, 1.0f);
   wp_comp_[band] = 1.0f - Sqrt(v);
   wn_cal_[band] = Sqrt(1.0f - v) * noise_cal_[band];
 }
 
-void NaturalVoiceEngine::DecodeFrame(int frame_index, float gamma) {
+void NaturalSpeechEngine::DecodeFrame(int frame_index, float gamma) {
   const uint8_t* f = &bank::kBankFrames[frame_index * data::kBytesPerFrame];
   gain_target_ = f[0] == 0 ? 0.0f : DbToAmp(0.5f * f[0] - 96.0f);
   f0_st_target_ = 0.25f * static_cast<int8_t>(f[1]);
@@ -258,7 +258,7 @@ void NaturalVoiceEngine::DecodeFrame(int frame_index, float gamma) {
   gain_target_ *= comp;
 }
 
-float NaturalVoiceEngine::InternalTick(float f0_phase_inc, float* whisper) {
+float NaturalSpeechEngine::InternalTick(float f0_phase_inc, float* whisper) {
   // Parameter smoothing, decimated (see kSmoothDecimation). The band
   // crossfade weights are cached here too: they are pure functions of v_,
   // so recomputing their square roots every tick was the single most
@@ -367,7 +367,7 @@ float NaturalVoiceEngine::InternalTick(float f0_phase_inc, float* whisper) {
   return f;
 }
 
-void NaturalVoiceEngine::Render(
+void NaturalSpeechEngine::Render(
     const EngineParameters& parameters,
     float* out,
     float* aux,
@@ -503,7 +503,7 @@ void NaturalVoiceEngine::Render(
     aux[n] = sample_[1] + (next_sample_[1] - sample_[1]) * clock_phase_;
   }
 
-  if (PLAITS_STEREO_NATURAL_VOICE && parameters.stereo) {
+  if (PLAITS_STEREO_NATURAL_SPEECH && parameters.stereo) {
     // Same shape both stock Speech engines use: OUT/AUX become L/R by gently
     // panning the two existing paths rather than hard-splitting them. The
     // voice leans slightly left and the whisper slightly right, but BOTH

@@ -3652,9 +3652,9 @@
       }
     },
     {
-      "id": "natural-voice",
-      "packageId": "rubato/natural-voice",
-      "name": "Natural Voice",
+      "id": "natural-speech",
+      "packageId": "rubato/natural-speech",
+      "name": "Natural Speech",
       "author": "Lyle Mills",
       "origin": "Rubato Lab",
       "family": "Vocal",
@@ -3676,13 +3676,13 @@
         "Mono: a whisper, the same tract driven by noise alone. Stereo: the right channel of the widened pair."
       ],
       "source": {
-        "header": "plaits/dsp/engine2/natural_voice_engine.h",
-        "className": "NaturalVoiceEngine",
-        "member": "natural_voice_engine_",
+        "header": "plaits/dsp/engine2/natural_speech_engine.h",
+        "className": "NaturalSpeechEngine",
+        "member": "natural_speech_engine_",
         "files": [
-          "plaits/dsp/engine2/natural_voice_engine.cc"
+          "plaits/dsp/engine2/natural_speech_engine.cc"
         ],
-        "behavior": "natural-voice"
+        "behavior": "natural-speech"
       },
       "postProcessing": {
         "alreadyEnveloped": false,
@@ -4484,7 +4484,7 @@
       },
       "trigger": "Realigns the driver oscillator and retriggers any envelope that is no longer in its attack stage."
     },
-    "natural-voice": {
+    "natural-speech": {
       "controls": {
         "harmonics": "Selects which bank of words the module speaks from.",
         "timbre": "Resizes the vocal tract, from a larger head to a smaller one, without changing the pitch.",

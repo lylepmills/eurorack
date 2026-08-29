@@ -171,7 +171,7 @@
             "speech",
             "lpc-words",
             "chiptune",
-            "natural-voice"
+            "natural-speech"
           ],
           "description": "Optional. Requests one of the firmware's known special parameter routings (for example the unpatched-attenuverter gestures the speech engines use). Maintainer-curated: the enum is closed, and each value has a matching block in plaits/dsp/voice.cc."
         }

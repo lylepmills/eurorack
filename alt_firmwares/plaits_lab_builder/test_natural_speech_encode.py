@@ -1,4 +1,4 @@
-"""Tests for the Natural Voice bank encoder.
+"""Tests for the Natural Speech bank encoder.
 
 The load-bearing one is test_matches_the_research_encoder: this module is a
 deliberate second copy of the lab original in the rubato-audio repo (the
@@ -55,7 +55,7 @@ class EncoderTests(unittest.TestCase):
         _skip_without_world()
 
     def test_frames_are_the_declared_size(self):
-        import natural_voice_encode as nve
+        import natural_speech_encode as nve
 
         with TemporaryDirectory() as tmp:
             source = _tone_wav(Path(tmp) / "tone.wav")
@@ -65,13 +65,13 @@ class EncoderTests(unittest.TestCase):
 
     def test_bank_output_satisfies_the_recipe_contract(self):
         """The encoder's output shape and the validator cannot drift."""
-        import natural_voice_encode as nve
-        from natural_voice_banks import validate_natural_voice_banks
+        import natural_speech_encode as nve
+        from natural_speech_banks import validate_natural_speech_banks
 
         with TemporaryDirectory() as tmp:
             source = _tone_wav(Path(tmp) / "tone.wav")
             bank = nve.encode_bank([("one", source), ("two", source)])
-        result = validate_natural_voice_banks({"customBanks": [bank]})
+        result = validate_natural_speech_banks({"customBanks": [bank]})
         self.assertEqual(result["customBanks"][0]["words"], ["one", "two"])
         self.assertEqual(len(result["customBanks"][0]["meanLar"]),
                          nve.LPC_ORDER)
@@ -79,13 +79,13 @@ class EncoderTests(unittest.TestCase):
     def test_rejects_a_hop_that_is_not_whole_world_frames(self):
         """Rounding desynchronises frames from the advertised rate and the
         word plays stretched."""
-        import natural_voice_encode as nve
+        import natural_speech_encode as nve
 
         with self.assertRaises(ValueError):
             nve.analyze(np.zeros(nve.ANALYSIS_FS // 2), hop_ms=12.5)
 
     def test_voicing_gate_only_reduces_and_is_monotonic(self):
-        import natural_voice_encode as nve
+        import natural_speech_encode as nve
 
         gate = nve.voicing_gate(np.linspace(0.0, 1.0, 40))
         self.assertTrue(np.all(gate >= 0.0) and np.all(gate <= 1.0))
@@ -96,7 +96,7 @@ class EncoderTests(unittest.TestCase):
     def test_matches_the_research_encoder(self):
         """This module and research/natural_speech/analyze_world.py are two
         copies of one algorithm; they must agree byte for byte."""
-        import natural_voice_encode as nve
+        import natural_speech_encode as nve
 
         research = next((p for p in (RESEARCH_WORKTREE, RESEARCH)
                          if (p / "analyze_world.py").exists()), None)

@@ -1,8 +1,8 @@
-"""WORLD-vocoder encoder for Natural Voice word banks.
+"""WORLD-vocoder encoder for Natural Speech word banks.
 
 The production counterpart of `render_lpc_continuous.py`: that one turns
 source audio into the classic 14-byte LPC10 frames, this one turns it into
-the 23-byte NVH1 frames the Natural Voice engine plays. Source audio comes
+the 23-byte NSH1 frames the Natural Speech engine plays. Source audio comes
 from the same `TtsArtifactSession` the Speech pipeline uses, so text banks,
 every Kokoro and Piper voice, and uploaded recordings all arrive here the
 same way.
@@ -60,7 +60,7 @@ def _require_world():
         import pyworld
     except ModuleNotFoundError as error:  # pragma: no cover - image config
         raise RuntimeError(
-            "Natural Voice bank encoding needs the pyworld package in the "
+            "Natural Speech bank encoding needs the pyworld package in the "
             "builder image") from error
     return pyworld
 
@@ -228,7 +228,7 @@ def f0_contour(frames: dict[str, Any]):
 
 
 def encode_word(path, hop_ms: float = HOP_MS) -> bytes:
-    """One utterance's audio as packed NVH1 frames."""
+    """One utterance's audio as packed NSH1 frames."""
     x = load_source(path)
     frames = analyze(x, hop_ms=hop_ms)
     ks, excitation_db, power_db = all_pole_fit(frames)
@@ -262,7 +262,7 @@ def encode_word(path, hop_ms: float = HOP_MS) -> bytes:
 def encode_bank(sources) -> dict[str, Any]:
     """A recipe bank from (word, source path) pairs.
 
-    Returns the shape `natural_voice_banks.validate_natural_voice_banks`
+    Returns the shape `natural_speech_banks.validate_natural_speech_banks`
     accepts, so the encoder's output and the recipe contract cannot drift.
     """
     words: list[str] = []
