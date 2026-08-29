@@ -135,6 +135,15 @@ ifneq ($(SPEECH_BANKS_ENABLED),)
 $(patsubst %,$(BUILD_DIR)%,$(SPEECH_LAYOUT_OBJS)): CPPFLAGS += -DPLAITS_HAS_CUSTOM_SPEECH_BANKS=$(SPEECH_BANKS_ENABLED)
 endif
 
+# Natural Voice word banks. Unlike the Speech macro this one changes no class
+# layout -- it only selects which arrays the engine reads -- so it applies to
+# the engine's own object alone. The object name comes from the registered
+# package's source filename, so the builder passes it rather than the makefile
+# guessing it.
+ifneq ($(NATURAL_VOICE_CONFIG),)
+$(BUILD_DIR)$(NATURAL_VOICE_OBJ): CPPFLAGS += -include $(NATURAL_VOICE_CONFIG) -DPLAITS_HAS_CUSTOM_NATURAL_VOICE_BANKS=1
+endif
+
 # Per-engine stereo (OUT/AUX as an L/R pair) is gated at compile time by
 # PLAITS_STEREO_<X> (default 1 in stereo_config.h). To disable an engine's
 # stereo the hosted builder passes PLAITS_STEREO_<X>=0, and the rule below adds

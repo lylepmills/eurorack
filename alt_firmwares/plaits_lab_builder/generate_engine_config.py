@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from natural_voice_banks import validate_natural_voice_banks
 from speech_banks import validate_speech_banks
 
 
@@ -192,6 +193,9 @@ class BuildRecipe:
     stereo_engines: tuple[str, ...] | None = None
     # v17: selected stock LPC banks followed by custom decoded-frame banks.
     speech_banks: dict[str, Any] | None = None
+    # Natural Voice word banks: NVH1 frames, validated by
+    # natural_voice_banks.validate_natural_voice_banks.
+    natural_voice_banks: dict[str, Any] | None = None
     # v24: public slot, Wavetable kind, and the sampled Mutable-compatible 4 KB
     # user-data block. The equation and display name stay in the public recipe;
     # firmware needs only these bounded bytes.
@@ -1023,6 +1027,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
     user_data_banks: list[tuple[int, bytes]] = []   # v6 index-keyed
     slot_banks: list[tuple[int, bytes]] = []        # v12 slot-keyed
     speech_banks: dict[str, Any] | None = None
+    natural_voice_banks: dict[str, Any] | None = None
     custom_model_data: list[tuple[int, str, bytes]] = []  # v21 slot-keyed
     terrain_bank: list[tuple[int, bytes | None, str | None, float, float]] = []
     scale_bank = validate_scale_bank(DEFAULT_SCALE_BANK)
@@ -1095,6 +1100,12 @@ def validate_recipe(value: Any) -> BuildRecipe:
                 raise ValueError(
                     "speechBanks requires Speech or LPC Words in the palette")
             speech_banks = validate_speech_banks(resources.get("speechBanks"))
+        if resources.get("naturalVoiceBanks") is not None:
+            if "natural-voice" not in public_slots:
+                raise ValueError(
+                    "naturalVoiceBanks requires Natural Voice in the palette")
+            natural_voice_banks = validate_natural_voice_banks(
+                resources.get("naturalVoiceBanks"))
         if carries_custom_model_data:
             custom_model_data = validate_custom_model_data(
                 resources.get("customModelData"), public_slots)
@@ -1393,6 +1404,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
         slot_bank_overrides=tuple(slot_banks),
         stereo_engines=stereo_engines,
         speech_banks=speech_banks,
+        natural_voice_banks=natural_voice_banks,
         custom_model_data=tuple(custom_model_data),
         terrain_bank=tuple(terrain_bank),
         **normalized_options,
