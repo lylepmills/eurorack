@@ -402,6 +402,65 @@ class GenerateEngineConfigTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "between one and 16"):
             validate_recipe(self.terrain_bank_recipe(entries + [entries[0]]))
 
+    def wavetable_bank_recipe(self, entries: list[dict], mirrored: bool = True) -> dict:
+        recipe = self.terrain_bank_recipe([])
+        recipe["schemaVersion"] = 25
+        recipe["slots"][0] = "wavetable"
+        recipe["resources"] = {
+            "chordTables": DEFAULT_CHORD_TABLES,
+            "wavetableBank": {"mirrored": mirrored, "entries": entries},
+        }
+        return recipe
+
+    def wavetable_model(self, equation: str = "sin(phi)", fill: int = 17) -> dict:
+        return {
+            "kind": "wavetable",
+            "name": "Custom table",
+            "equation": equation,
+            "data": base64.b64encode(bytes([fill]) * (64 * 128)).decode("ascii"),
+        }
+
+    def test_v25_wavetable_bank_emits_factory_sampled_and_native_entries(self) -> None:
+        sampled = self.wavetable_model(fill=29)
+        native = {**self.wavetable_model(
+            "sin(phi) + 0.65 * x * sin(2 * phi) + 0.55 * y * sin(3 * phi)"),
+            "representation": "native"}
+        build = validate_recipe(self.wavetable_bank_recipe([
+            {"kind": "factory", "id": "mutable-2"},
+            {"kind": "custom", "model": sampled},
+            {"kind": "custom", "model": native},
+        ]))
+        self.assertEqual([entry[0] for entry in build.wavetable_bank], [1, 3, 4])
+        self.assertEqual(build.wavetable_bank_mirrored, 1)
+        config = render_config(build)
+        self.assertIn("#define PLAITS_HAS_WAVETABLE_BANK 1", config)
+        self.assertIn("#define PLAITS_WAVETABLE_FACTORY_MASK 0x02", config)
+        self.assertIn("static const uint8_t kWavetableBankTypes[3] = { 1, 3, 4 };", config)
+        self.assertIn("extern const uint8_t kCustomWavetableData_0[8192] =", config)
+        self.assertIn("static inline float WavetableEquation_0", config)
+        self.assertIn("kWavetableBankFunctions", config)
+        self.assertIn("kWavetableBankFunctions, 3, true", config)
+        self.assertNotIn("user_data_wavetables", config)
+
+    def test_v25_wavetable_bank_enforces_mirror_specific_limits(self) -> None:
+        entry = {"kind": "custom", "model": self.wavetable_model()}
+        validate_recipe(self.wavetable_bank_recipe([entry] * 8, mirrored=True))
+        with self.assertRaisesRegex(ValueError, "between one and 8"):
+            validate_recipe(self.wavetable_bank_recipe([entry] * 9, mirrored=True))
+        validate_recipe(self.wavetable_bank_recipe([entry] * 16, mirrored=False))
+        with self.assertRaisesRegex(ValueError, "between one and 16"):
+            validate_recipe(self.wavetable_bank_recipe([entry] * 17, mirrored=False))
+
+    def test_v25_native_wavetable_rejects_uncalibrated_variables_and_cpu(self) -> None:
+        for equation, message in (("sin(phi + row)", "unsupported name"),
+                                  (" + ".join(f"sin({n} * phi)" for n in range(1, 9)),
+                                   "CPU gate")):
+            model = {**self.wavetable_model(equation), "representation": "native"}
+            with self.assertRaisesRegex(ValueError, message):
+                validate_recipe(self.wavetable_bank_recipe([
+                    {"kind": "custom", "model": model},
+                ]))
+
     def test_output_format_accepts_wav_and_intel_hex_only(self) -> None:
         recipe = self.load("default_recipe.json")
         validate_recipe(recipe)

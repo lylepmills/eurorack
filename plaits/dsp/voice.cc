@@ -307,7 +307,7 @@ void Voice::Render(
       parameter_randomizer_.Trigger();
     }
     UserData user_data;
-#if PLAITS_HAS_TERRAIN_BANK || PLAITS_HAS_CUSTOM_MODEL_DATA
+#if PLAITS_HAS_TERRAIN_BANK || PLAITS_HAS_WAVETABLE_BANK || PLAITS_HAS_CUSTOM_MODEL_DATA
     const uint8_t* data = NULL;
     size_t data_length = 0;
 #if PLAITS_HAS_TERRAIN_BANK
@@ -320,6 +320,14 @@ void Voice::Render(
       data = reinterpret_cast<const uint8_t*>(&kTerrainBank);
     } else
 #endif  // PLAITS_HAS_TERRAIN_BANK
+#if PLAITS_HAS_WAVETABLE_BANK
+    if ((kWavetableEngineMask & (1u << engine_index)) != 0) {
+      // Every Wavetable placement reads the same ordered HARMONICS bank. As
+      // with Wave Terrain, zero length marks this as a generated descriptor,
+      // not a legacy 4 KB TIMBRE-transfer payload.
+      data = reinterpret_cast<const uint8_t*>(&kWavetableBank);
+    } else
+#endif  // PLAITS_HAS_WAVETABLE_BANK
     {
       data = user_data.ptr(engine_index);
       // Number of valid packed patch bytes behind `data`. Every built-in factory
@@ -393,7 +401,7 @@ void Voice::Render(
 #endif  // PLAITS_HAS_RESOLVED_USER_DATA_BANK
     }
 #endif  // PLAITS_HAS_USER_DATA_BANK
-#endif  // PLAITS_HAS_TERRAIN_BANK || PLAITS_HAS_CUSTOM_MODEL_DATA
+#endif  // PLAITS_HAS_TERRAIN_BANK || PLAITS_HAS_WAVETABLE_BANK || PLAITS_HAS_CUSTOM_MODEL_DATA
     e->LoadUserData(data, data_length);
     e->Reset();
     out_post_processor_.Reset();

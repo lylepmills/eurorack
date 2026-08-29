@@ -70,13 +70,20 @@ const terrainBankMinSchemaVersion = 24;       // shared ordered Wave Terrain ban
 // carrying its own replaces them entirely.
 const naturalSpeechBanksMinSchemaVersion = 25;
 const nativeTerrainMinSchemaVersion = 24;      // compiled custom equations
+const wavetableBankMinSchemaVersion = 25;      // shared ordered Wavetable bank
+const nativeWavetableMinSchemaVersion = 25;    // compiled custom equations
 const customModelDataBytes = 4096;
+const wavetableBankDataBytes = 8192;
 export const maxTerrainBankSize = 16;
+export const maxMirroredWavetableBankSize = 8;
+export const maxOneWayWavetableBankSize = 16;
 const factoryTerrainIds = [
   "factory-1", "factory-2", "factory-3", "factory-4",
   "factory-5", "factory-6", "factory-7", "factory-8",
 ] as const;
 const factoryTerrainIdSet = new Set<string>(factoryTerrainIds);
+const factoryWavetableIds = ["mutable-1", "mutable-2", "mutable-3"] as const;
+const factoryWavetableIdSet = new Set<string>(factoryWavetableIds);
 
 export const minScaleBankSize = 1;
 export const maxScaleBankSize = 16;
@@ -171,6 +178,19 @@ export type NormalizedTerrainBankEntry = {
   model: NormalizedCustomModelData["model"] & { kind: "wave-terrain" };
 };
 
+export type NormalizedWavetableBankEntry = {
+  kind: "factory";
+  id: typeof factoryWavetableIds[number];
+} | {
+  kind: "custom";
+  model: NormalizedCustomModelData["model"] & { kind: "wavetable" };
+};
+
+export type NormalizedWavetableBank = {
+  mirrored: boolean;
+  entries: NormalizedWavetableBankEntry[];
+};
+
 export type NormalizedRecipe = {
   schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25;
   target: "mutable-instruments-plaits" | "plum-audio-roved";
@@ -233,6 +253,9 @@ export type NormalizedRecipe = {
     customModelData?: NormalizedCustomModelData[];
     // v23: the shared ordered bank swept by every Wave Terrain slot's HARMONICS.
     terrainBank?: NormalizedTerrainBankEntry[];
+    // v25: shared ordered Wavetable bank, optionally folded back through
+    // HARMONICS. Sampled custom banks retain all 64 128-sample frames.
+    wavetableBank?: NormalizedWavetableBank;
   };
   // Catalog ids of the engines built with the stereo render path (introduced in
   // schema 10). Absent on schema <= 9 (the global-stereo recipes, which the
@@ -744,6 +767,92 @@ function normalizeTerrainBank(value: unknown, schemaVersion: number): Normalized
   });
 }
 
+function normalizeWavetableBank(value: unknown, schemaVersion: number): NormalizedWavetableBank {
+  if (!value || typeof value !== "object") {
+    throw new ContractError("invalid_wavetable_bank", "A wavetable bank is invalid.");
+  }
+  const bank = value as Record<string, unknown>;
+  if (!hasExactKeys(bank, ["mirrored", "entries"]) || typeof bank.mirrored !== "boolean"
+      || !Array.isArray(bank.entries)) {
+    throw new ContractError(
+      "invalid_wavetable_bank",
+      "A wavetable bank must contain a mirror setting and an ordered list of entries.",
+    );
+  }
+  const maximum = bank.mirrored ? maxMirroredWavetableBankSize : maxOneWayWavetableBankSize;
+  if (bank.entries.length < 1 || bank.entries.length > maximum) {
+    throw new ContractError(
+      "invalid_wavetable_bank",
+      `This wavetable path must contain between one and ${maximum} banks.`,
+    );
+  }
+  const seenFactories = new Set<string>();
+  const entries = bank.entries.map((raw): NormalizedWavetableBankEntry => {
+    if (!raw || typeof raw !== "object") {
+      throw new ContractError("invalid_wavetable_bank", "A wavetable-bank entry is invalid.");
+    }
+    const entry = raw as Record<string, unknown>;
+    if (entry.kind === "factory") {
+      if (!hasExactKeys(entry, ["kind", "id"])
+          || typeof entry.id !== "string" || !factoryWavetableIdSet.has(entry.id)
+          || seenFactories.has(entry.id)) {
+        throw new ContractError(
+          "invalid_wavetable_bank",
+          "Each Mutable Instruments factory wavetable may appear at most once.",
+        );
+      }
+      seenFactories.add(entry.id);
+      return { kind: "factory", id: entry.id as typeof factoryWavetableIds[number] };
+    }
+    if (entry.kind !== "custom" || !hasExactKeys(entry, ["kind", "model"])
+        || !entry.model || typeof entry.model !== "object") {
+      throw new ContractError("invalid_wavetable_bank", "A wavetable-bank entry is invalid.");
+    }
+    const model = entry.model as Record<string, unknown>;
+    const sampledKeys = hasExactKeys(model, ["kind", "name", "equation", "data"]);
+    const nativeKeys = hasExactKeys(model, ["kind", "name", "equation", "data", "representation"]);
+    if ((!sampledKeys && !nativeKeys)
+        || model.kind !== "wavetable" || !shortText(model.name, 80)
+        || !shortText(model.equation, 500) || typeof model.data !== "string"
+        || !canonicalBase64Pattern.test(model.data)) {
+      throw new ContractError(
+        "invalid_wavetable_bank",
+        "A custom wavetable must contain a name, equation, and canonical 64-frame sample bank.",
+      );
+    }
+    if (nativeKeys && (model.representation !== "native"
+        || schemaVersion < nativeWavetableMinSchemaVersion)) {
+      throw new ContractError(
+        "invalid_wavetable_bank",
+        `Native wavetable equations require recipe schema ${nativeWavetableMinSchemaVersion}.`,
+      );
+    }
+    let decoded: string;
+    try {
+      decoded = atob(model.data);
+    } catch {
+      throw new ContractError("invalid_wavetable_bank", "Custom wavetable data is not valid base64.");
+    }
+    if (decoded.length !== wavetableBankDataBytes || btoa(decoded) !== model.data) {
+      throw new ContractError(
+        "invalid_wavetable_bank",
+        `Custom wavetable data must contain exactly ${wavetableBankDataBytes} bytes.`,
+      );
+    }
+    return {
+      kind: "custom",
+      model: {
+        kind: "wavetable",
+        name: String(model.name).trim(),
+        equation: String(model.equation).trim(),
+        data: model.data,
+        ...(model.representation === "native" ? { representation: "native" as const } : {}),
+      },
+    };
+  });
+  return { mirrored: bank.mirrored, entries };
+}
+
 export class ContractError extends Error {
   readonly code: string;
 
@@ -1123,6 +1232,7 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
   let naturalSpeechBanks: NormalizedNaturalSpeechBanks | undefined; // v25
   let customModelData: NormalizedCustomModelData[] | undefined; // v24
   let terrainBank: NormalizedTerrainBankEntry[] | undefined; // v24
+  let wavetableBank: NormalizedWavetableBank | undefined; // v25
   if (schemaVersion >= resourcesMinSchemaVersion) {
     const resources = candidate.resources;
     // v6 always carries index-keyed banks; v12 always carries per-slot banks (its
@@ -1155,6 +1265,8 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
       && Object.hasOwn(resourceValues, "terrainBank");
     const carriesNaturalSpeechBanks = schemaVersion >= naturalSpeechBanksMinSchemaVersion
       && Object.hasOwn(resourceValues, "naturalSpeechBanks");
+    const carriesWavetableBank = schemaVersion >= wavetableBankMinSchemaVersion
+      && Object.hasOwn(resourceValues, "wavetableBank");
     const baseKeys = [
       "chordTables",
       ...(carriesScaleBank ? ["scaleBank"] : []),
@@ -1162,6 +1274,7 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
       ...(carriesCustomModelData ? ["customModelData"] : []),
       ...(carriesTerrainBank ? ["terrainBank"] : []),
       ...(carriesNaturalSpeechBanks ? ["naturalSpeechBanks"] : []),
+      ...(carriesWavetableBank ? ["wavetableBank"] : []),
     ];
     const carriesUserDataBanks = expectsUserDataBanks
       || (schemaVersion >= calibrationMinSchemaVersion
@@ -1211,6 +1324,15 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
         );
       }
       terrainBank = normalizeTerrainBank(resourceValues.terrainBank, schemaVersion);
+    }
+    if (carriesWavetableBank) {
+      if (!slots.includes("wavetable")) {
+        throw new ContractError(
+          "invalid_wavetable_bank",
+          "A wavetable bank requires Wavetable in the palette.",
+        );
+      }
+      wavetableBank = normalizeWavetableBank(resourceValues.wavetableBank, schemaVersion);
     }
     if (carriesUserDataBanks) {
       const rawBanks = resourceValues.userDataBanks;
@@ -1263,7 +1385,7 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     // (v8); a short-bank recipe (a trailing empty slot) stays v7; a candidate that
     // carried v6 resources (even an empty custom-bank list, e.g. a 32-slot recipe)
     // stays v6; else v5.
-    schemaVersion: naturalSpeechBanks !== undefined ? 25
+    schemaVersion: naturalSpeechBanks !== undefined || wavetableBank !== undefined ? 25
       : configuration.preferences.simplifiedPitchRanges
       || terrainBank !== undefined
       || customModelData !== undefined ? 24
@@ -1301,6 +1423,7 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
       ...(customModelData !== undefined ? { customModelData } : {}),
       ...(terrainBank !== undefined ? { terrainBank } : {}),
       ...(naturalSpeechBanks !== undefined ? { naturalSpeechBanks } : {}),
+      ...(wavetableBank !== undefined ? { wavetableBank } : {}),
       ...((userDataBanks ?? slotBanks)
         ? { userDataBanks: userDataBanks ?? slotBanks }
         : {}),
@@ -1370,6 +1493,14 @@ export async function computeManualKey(
     terrainBank: recipe.resources.terrainBank?.map((entry) => entry.kind === "factory"
       ? [entry.kind, entry.id]
       : [entry.kind, entry.model.name, entry.model.representation ?? "prebaked"]) ?? [],
+    wavetableBank: recipe.resources.wavetableBank
+      ? {
+        mirrored: recipe.resources.wavetableBank.mirrored,
+        entries: recipe.resources.wavetableBank.entries.map((entry) => entry.kind === "factory"
+          ? [entry.kind, entry.id]
+          : [entry.kind, entry.model.name, entry.model.representation ?? "prebaked"]),
+      }
+      : null,
     // The control instructions differ completely: Plaits has two buttons;
     // Ro'Ved has four clickable knobs. Never share a cached guide between them.
     target: recipe.target,

@@ -85,6 +85,12 @@ TERRAIN_BANK_MIN_SCHEMA_VERSION = 24
 NATIVE_TERRAIN_MIN_SCHEMA_VERSION = 24
 MAX_TERRAIN_BANK_SIZE = 16
 FACTORY_TERRAIN_IDS = tuple(f"factory-{index}" for index in range(1, 9))
+WAVETABLE_BANK_MIN_SCHEMA_VERSION = 25
+NATIVE_WAVETABLE_MIN_SCHEMA_VERSION = 25
+WAVETABLE_BANK_DATA_SIZE = 64 * 128
+MAX_MIRRORED_WAVETABLE_BANK_SIZE = 8
+MAX_ONE_WAY_WAVETABLE_BANK_SIZE = 16
+FACTORY_WAVETABLE_IDS = ("mutable-1", "mutable-2", "mutable-3")
 SYNC_INPUT_MIN_SCHEMA_VERSION = 21
 # v22 moves Sync In's COMPILE-TIME switch off the starting value and onto its own
 # preference. Starting Options are the module's initial RUNTIME values and the
@@ -212,6 +218,10 @@ class BuildRecipe:
     # v23/v24: shared ordered Wave Terrain HARMONICS bank. Entries carry type,
     # optional sampled bytes, optional native equation, and its normalization.
     terrain_bank: tuple[tuple[int, bytes | None, str | None, float, float], ...] = ()
+    # v25: shared Wavetable HARMONICS path. A sampled entry stores all 64
+    # 128-sample frames; a native entry stores compiled equation code instead.
+    wavetable_bank: tuple[tuple[int, bytes | None, str | None, float, float], ...] = ()
+    wavetable_bank_mirrored: int = 1
     # v22: 1 compiles Sync In in, making it selectable as a MODEL-input mode at
     # RUNTIME. Before v22 this was derived from the starting value, which meant a
     # user who did not choose Sync In at build time could never reach it.
@@ -933,6 +943,215 @@ def validate_terrain_bank(
     return result
 
 
+_WAVETABLE_VARIABLES = frozenset({"phi", "x", "y"})
+_WAVETABLE_FUNCTION_ARITIES = {
+    "sin": (1, 1), "floor": (1, 1), "round": (1, 1),
+    "atan": (1, 1), "abs": (1, 1), "sign": (1, 1),
+    "min": (2, 16), "max": (2, 16),
+}
+
+
+def _wavetable_ast(equation: str) -> ast.Expression:
+    try:
+        tree = ast.parse(equation.lower().replace("^", "**"), mode="eval")
+    except SyntaxError as error:
+        raise ValueError("native wavetable equation has invalid syntax") from error
+    allowed = (ast.Expression, ast.Load, ast.Constant, ast.Name, ast.UnaryOp,
+               ast.UAdd, ast.USub, ast.BinOp, ast.Add, ast.Sub, ast.Mult,
+               ast.Div, ast.Pow, ast.Call)
+    for node in ast.walk(tree):
+        if not isinstance(node, allowed):
+            raise ValueError("native wavetable equation uses an unsupported operator")
+        if isinstance(node, ast.Name) and node.id not in (
+                _WAVETABLE_VARIABLES | {"pi"} | set(_WAVETABLE_FUNCTION_ARITIES)):
+            raise ValueError("native wavetable equation uses an unsupported name")
+        if isinstance(node, ast.Call):
+            if not isinstance(node.func, ast.Name) or node.keywords:
+                raise ValueError("native wavetable equation has an unsupported call")
+            arity = _WAVETABLE_FUNCTION_ARITIES.get(node.func.id)
+            if arity is None or not arity[0] <= len(node.args) <= arity[1]:
+                raise ValueError("native wavetable equation has an unsupported call")
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
+            if any(isinstance(item, ast.Name) and item.id in _WAVETABLE_VARIABLES
+                   for item in ast.walk(node.right)):
+                raise ValueError("native wavetable equation has a variable denominator")
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Pow):
+            exponent = _terrain_constant(node.right)
+            if (exponent is None or not float(exponent).is_integer()
+                    or not 0 <= exponent <= 4):
+                raise ValueError("native wavetable powers require a constant exponent from 0 to 4")
+    return tree
+
+
+def _wavetable_call(name: str, args: list[float]) -> float:
+    if name == "sin": return math.sin(args[0])
+    if name == "floor": return math.floor(args[0])
+    if name == "round": return math.floor(args[0] + 0.5)
+    if name == "atan": return math.atan(args[0])
+    if name == "abs": return abs(args[0])
+    if name == "sign": return 1.0 if args[0] > 0 else -1.0 if args[0] < 0 else 0.0
+    if name == "min": return min(args)
+    if name == "max": return max(args)
+    raise ValueError("native wavetable equation calls an unsupported function")
+
+
+def _eval_wavetable_node(node: ast.AST, variables: dict[str, float]) -> float:
+    if isinstance(node, ast.Constant) and type(node.value) in (int, float):
+        return float(node.value)
+    if isinstance(node, ast.Name):
+        if node.id == "pi": return math.pi
+        if node.id in _WAVETABLE_VARIABLES: return variables[node.id]
+    if isinstance(node, ast.UnaryOp):
+        value = _eval_wavetable_node(node.operand, variables)
+        return -value if isinstance(node.op, ast.USub) else value
+    if isinstance(node, ast.BinOp):
+        left = _eval_wavetable_node(node.left, variables)
+        right = _eval_wavetable_node(node.right, variables)
+        if isinstance(node.op, ast.Add): return left + right
+        if isinstance(node.op, ast.Sub): return left - right
+        if isinstance(node.op, ast.Mult): return left * right
+        if isinstance(node.op, ast.Div): return left / right
+        if isinstance(node.op, ast.Pow): return math.pow(left, right)
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+        return _wavetable_call(
+            node.func.id,
+            [_eval_wavetable_node(argument, variables) for argument in node.args],
+        )
+    raise ValueError("native wavetable equation has an unsupported expression")
+
+
+def _wavetable_depth(node: ast.AST) -> int:
+    children = [child for child in ast.iter_child_nodes(node)
+                if isinstance(child, (ast.Expression, ast.Constant, ast.Name,
+                                      ast.UnaryOp, ast.BinOp, ast.Call))]
+    return 1 + (max(_wavetable_depth(child) for child in children) if children else 0)
+
+
+def _validate_native_wavetable(tree: ast.Expression) -> tuple[float, float]:
+    # Count expression-language nodes, matching the browser parser. Python's
+    # AST also exposes Load/Add/Mult marker objects, which are syntax metadata
+    # and must not inflate the calibrated CPU model.
+    nodes = sum(isinstance(node, (ast.Constant, ast.Name, ast.UnaryOp,
+                                  ast.BinOp, ast.Call)) for node in ast.walk(tree))
+    depth = _wavetable_depth(tree)
+    calls = [node.func.id for node in ast.walk(tree)
+             if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)]
+    trig = calls.count("sin")
+    heavy = sum(name in ("floor", "round", "atan") for name in calls)
+    if nodes > 100 or depth > 24 or trig > 8 or heavy > 6:
+        raise ValueError("native wavetable equation exceeds the calibrated complexity envelope")
+    estimated_cpu = (38.5 + trig * 6 + max(0, trig - 4) * 2.5 + heavy * 6
+                     + max(0, nodes - 18) * 0.22 + max(0, depth - 8) * 0.8 + 5.0)
+    if estimated_cpu > 75.0:
+        raise ValueError("native wavetable equation exceeds the calibrated CPU gate")
+    minimum, maximum = math.inf, -math.inf
+    for row in range(9):
+        y = row / 8.0
+        for column in range(9):
+            x = column / 8.0
+            for sample in range(128):
+                phi = 2.0 * math.pi * sample / 128.0
+                try:
+                    value = _eval_wavetable_node(tree.body, {"phi": phi, "x": x, "y": y})
+                except (ArithmeticError, OverflowError, ValueError) as error:
+                    raise ValueError("native wavetable equation is not finite across the bank") from error
+                if not math.isfinite(value):
+                    raise ValueError("native wavetable equation is not finite across the bank")
+                minimum, maximum = min(minimum, value), max(maximum, value)
+    if maximum - minimum < 1.0e-6:
+        raise ValueError("native wavetable equation must vary across the bank")
+    return minimum, maximum
+
+
+def _render_wavetable_expression(node: ast.AST) -> str:
+    if isinstance(node, ast.Constant) and type(node.value) in (int, float):
+        return _float_literal(float(node.value))
+    if isinstance(node, ast.Name):
+        return "3.14159265f" if node.id == "pi" else node.id
+    if isinstance(node, ast.UnaryOp):
+        operand = _render_wavetable_expression(node.operand)
+        return f"(-({operand}))" if isinstance(node.op, ast.USub) else f"({operand})"
+    if isinstance(node, ast.BinOp):
+        left = _render_wavetable_expression(node.left)
+        right = _render_wavetable_expression(node.right)
+        operators = {ast.Add: "+", ast.Sub: "-", ast.Mult: "*", ast.Div: "/"}
+        for operator, symbol in operators.items():
+            if isinstance(node.op, operator): return f"(({left}) {symbol} ({right}))"
+        if isinstance(node.op, ast.Pow):
+            exponent = int(_terrain_constant(node.right) or 0)
+            if exponent == 0: return "1.0f"
+            return "(" + " * ".join(f"({left})" for _ in range(exponent)) + ")"
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+        args = [_render_wavetable_expression(argument) for argument in node.args]
+        unary = {"sin": "WavetableEquationSin", "floor": "floorf",
+                 "round": "WavetableEquationRound", "atan": "WavetableEquationAtan",
+                 "abs": "fabsf", "sign": "WavetableEquationSign"}
+        if node.func.id in unary: return f"{unary[node.func.id]}({args[0]})"
+        if node.func.id in ("min", "max"):
+            function = "WavetableEquationMin" if node.func.id == "min" else "WavetableEquationMax"
+            result = args[0]
+            for argument in args[1:]: result = f"{function}(({result}), ({argument}))"
+            return result
+    raise ValueError("native wavetable equation cannot be rendered")
+
+
+def validate_wavetable_bank(
+        value: Any, schema_version: int,
+        ) -> tuple[list[tuple[int, bytes | None, str | None, float, float]], bool]:
+    if not isinstance(value, dict) or set(value) != {"mirrored", "entries"}:
+        raise ValueError("wavetable bank must contain mirrored and entries")
+    mirrored = value.get("mirrored")
+    entries = value.get("entries")
+    maximum = MAX_MIRRORED_WAVETABLE_BANK_SIZE if mirrored is True else MAX_ONE_WAY_WAVETABLE_BANK_SIZE
+    if (type(mirrored) is not bool or not isinstance(entries, list)
+            or not 1 <= len(entries) <= maximum):
+        raise ValueError(f"wavetable bank must contain between one and {maximum} banks")
+    result: list[tuple[int, bytes | None, str | None, float, float]] = []
+    seen_factories: set[str] = set()
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise ValueError("recipe contains an invalid wavetable-bank entry")
+        if entry.get("kind") == "factory":
+            table_id = entry.get("id")
+            if (set(entry) != {"kind", "id"} or table_id not in FACTORY_WAVETABLE_IDS
+                    or table_id in seen_factories):
+                raise ValueError("each factory wavetable may appear at most once")
+            seen_factories.add(table_id)
+            result.append((FACTORY_WAVETABLE_IDS.index(table_id), None, None, 0.0, 0.0))
+            continue
+        model = entry.get("model")
+        if (set(entry) != {"kind", "model"} or entry.get("kind") != "custom"
+                or not isinstance(model, dict)
+                or set(model) not in ({"kind", "name", "equation", "data"},
+                                      {"kind", "name", "equation", "data", "representation"})
+                or model.get("kind") != "wavetable"
+                or not isinstance(model.get("name"), str) or not model["name"].strip()
+                or len(model["name"]) > 80
+                or not isinstance(model.get("equation"), str) or not model["equation"].strip()
+                or len(model["equation"]) > 500 or not isinstance(model.get("data"), str)):
+            raise ValueError("a custom wavetable must contain a name, equation, and data")
+        try:
+            data = base64.b64decode(model["data"], validate=True)
+        except (binascii.Error, ValueError) as error:
+            raise ValueError("custom wavetable data is not valid base64") from error
+        if (len(data) != WAVETABLE_BANK_DATA_SIZE
+                or base64.b64encode(data).decode("ascii") != model["data"]):
+            raise ValueError(
+                f"custom wavetable data must contain exactly {WAVETABLE_BANK_DATA_SIZE} bytes")
+        if model.get("representation") == "native":
+            if schema_version < NATIVE_WAVETABLE_MIN_SCHEMA_VERSION:
+                raise ValueError(
+                    f"native wavetables require schemaVersion {NATIVE_WAVETABLE_MIN_SCHEMA_VERSION}")
+            tree = _wavetable_ast(model["equation"])
+            minimum, maximum_value = _validate_native_wavetable(tree)
+            result.append((4, None, _render_wavetable_expression(tree.body), minimum, maximum_value))
+        elif "representation" in model:
+            raise ValueError("custom wavetable representation must be native or omitted")
+        else:
+            result.append((3, data, None, 0.0, 0.0))
+    return result, mirrored
+
+
 def normalize_slots(slots: list[Any], schema_version: int) -> list[str | None]:
     if schema_version in (2, 4, 5, 6) and all(isinstance(engine_id, str) for engine_id in slots):
         if any(engine_id not in CATALOG for engine_id in slots):
@@ -1039,6 +1258,8 @@ def validate_recipe(value: Any) -> BuildRecipe:
     natural_speech_banks: dict[str, Any] | None = None
     custom_model_data: list[tuple[int, str, bytes]] = []  # v21 slot-keyed
     terrain_bank: list[tuple[int, bytes | None, str | None, float, float]] = []
+    wavetable_bank: list[tuple[int, bytes | None, str | None, float, float]] = []
+    wavetable_bank_mirrored = True
     scale_bank = validate_scale_bank(DEFAULT_SCALE_BANK)
     if schema_version >= RESOURCES_MIN_SCHEMA_VERSION:
         resources = value.get("resources")
@@ -1085,6 +1306,11 @@ def validate_recipe(value: Any) -> BuildRecipe:
             and isinstance(resources, dict)
             and "naturalSpeechBanks" in resources
         )
+        carries_wavetable_bank = (
+            schema_version >= WAVETABLE_BANK_MIN_SCHEMA_VERSION
+            and isinstance(resources, dict)
+            and "wavetableBank" in resources
+        )
         base_resource_keys = {"chordTables"}
         if carries_scale_bank:
             base_resource_keys.add("scaleBank")
@@ -1096,6 +1322,8 @@ def validate_recipe(value: Any) -> BuildRecipe:
             base_resource_keys.add("terrainBank")
         if carries_natural_speech_banks:
             base_resource_keys.add("naturalSpeechBanks")
+        if carries_wavetable_bank:
+            base_resource_keys.add("wavetableBank")
         carries_user_data_banks = expect_user_data_banks or (
             schema_version >= CALIBRATION_MIN_SCHEMA_VERSION
             and isinstance(resources, dict)
@@ -1136,6 +1364,11 @@ def validate_recipe(value: Any) -> BuildRecipe:
                     "a terrain bank requires Wave Terrain in the palette")
             terrain_bank = validate_terrain_bank(
                 resources.get("terrainBank"), schema_version)
+        if carries_wavetable_bank:
+            if "wavetable" not in public_slots:
+                raise ValueError("a wavetable bank requires Wavetable in the palette")
+            wavetable_bank, wavetable_bank_mirrored = validate_wavetable_bank(
+                resources.get("wavetableBank"), schema_version)
         if carries_user_data_banks:
             if schema_version >= SLOT_BANK_MIN_SCHEMA_VERSION:
                 slot_banks = validate_user_data_banks_v12(resources.get("userDataBanks"), len(slots))
@@ -1423,6 +1656,8 @@ def validate_recipe(value: Any) -> BuildRecipe:
         natural_speech_banks=natural_speech_banks,
         custom_model_data=tuple(custom_model_data),
         terrain_bank=tuple(terrain_bank),
+        wavetable_bank=tuple(wavetable_bank),
+        wavetable_bank_mirrored=1 if wavetable_bank_mirrored else 0,
         **normalized_options,
     )
 
@@ -1540,6 +1775,11 @@ def render_config(recipe: BuildRecipe) -> str:
         1 << index
         for index, engine_id in enumerate(internal_slots)
         if engine_id == "wave-terrain"
+    )
+    wavetable_engine_mask = sum(
+        1 << index
+        for index, engine_id in enumerate(internal_slots)
+        if engine_id == "wavetable"
     )
 
     # Resolve the catalog's semantic archetypes into a compact firmware table.
@@ -1904,6 +2144,75 @@ def render_config(recipe: BuildRecipe) -> str:
         if recipe.terrain_bank else ""
     )
 
+    wavetable_custom_arrays = [
+        data for table_type, data, _equation, _minimum, _maximum in recipe.wavetable_bank
+        if table_type == 3 and data is not None
+    ]
+
+    def _render_wavetable_array(index: int, data: bytes) -> str:
+        body = ", ".join(str(byte) for byte in data)
+        return (
+            f"#ifdef PLAITS_ENGINE_CONFIG_OWNS_USER_DATA_BANKS\n"
+            f"extern const uint8_t kCustomWavetableData_{index}[{len(data)}];\n"
+            f"extern const uint8_t kCustomWavetableData_{index}[{len(data)}]"
+            f" = {{ {body} }};\n"
+            f"#else\n"
+            f"extern const uint8_t kCustomWavetableData_{index}[{len(data)}];\n"
+            f"#endif"
+        )
+
+    wavetable_array_definitions = "\n".join(
+        _render_wavetable_array(index, data)
+        for index, data in enumerate(wavetable_custom_arrays))
+    wavetable_types: list[str] = []
+    wavetable_pointers: list[str] = []
+    wavetable_functions: list[str] = []
+    wavetable_native_definitions: list[str] = []
+    wavetable_custom_index = 0
+    wavetable_native_index = 0
+    factory_wavetable_mask = 0
+    for table_type, data, equation, minimum, maximum in recipe.wavetable_bank:
+        wavetable_types.append(str(table_type))
+        if table_type == 3:
+            wavetable_pointers.append(
+                f"reinterpret_cast<const int8_t*>(kCustomWavetableData_{wavetable_custom_index})")
+            wavetable_custom_index += 1
+            wavetable_functions.append("NULL")
+        elif table_type == 4 and equation is not None:
+            function_name = f"WavetableEquation_{wavetable_native_index}"
+            wavetable_native_index += 1
+            scale = 2.0 / (maximum - minimum)
+            wavetable_native_definitions.append(
+                f"static inline float {function_name}(float phi, float x, float y) {{\n"
+                f"  const float raw = {equation};\n"
+                f"  float value = ((raw - {_float_literal(minimum)}) * "
+                f"{_float_literal(scale)} - 1.0f) * (127.0f / 128.0f);\n"
+                f"  return WavetableEquationMax(-0.9921875f, "
+                f"WavetableEquationMin(0.9921875f, value));\n"
+                f"}}")
+            wavetable_pointers.append("NULL")
+            wavetable_functions.append(function_name)
+        else:
+            wavetable_pointers.append("NULL")
+            wavetable_functions.append("NULL")
+            factory_wavetable_mask |= 1 << table_type
+    wavetable_bank_block = (
+        f"\n#if PLAITS_HAS_WAVETABLE_BANK\n{wavetable_array_definitions}\n"
+        f"{'\n'.join(wavetable_native_definitions)}\n"
+        f"static const uint8_t kWavetableBankTypes[{len(recipe.wavetable_bank)}] = "
+        f"{{ {', '.join(wavetable_types)} }};\n"
+        f"static const int8_t* const kWavetableBankData[{len(recipe.wavetable_bank)}] = "
+        f"{{ {', '.join(wavetable_pointers)} }};\n"
+        f"static const WavetableFunction kWavetableBankFunctions[{len(recipe.wavetable_bank)}] = "
+        f"{{ {', '.join(wavetable_functions)} }};\n"
+        f"static const WavetableBank kWavetableBank = {{ kWavetableBankTypes, "
+        f"kWavetableBankData, kWavetableBankFunctions, {len(recipe.wavetable_bank)}, "
+        f"{cpp_bool(bool(recipe.wavetable_bank_mirrored))} }};\n"
+        f"static const uint32_t kWavetableEngineMask = 0x{wavetable_engine_mask:08x}u;\n"
+        f"#endif\n"
+        if recipe.wavetable_bank else ""
+    )
+
     registry_order = (
         "orange, green, red, amber"
         if len(public_banks) > 3
@@ -1922,6 +2231,8 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_BUILD_ENABLE_SYNC_INPUT {sync_input_enabled}
 #define PLAITS_HAS_TERRAIN_BANK {1 if recipe.terrain_bank else 0}
 #define PLAITS_WAVE_TERRAIN_FACTORY_MASK 0x{factory_terrain_mask if recipe.terrain_bank else 0xff:02x}
+#define PLAITS_HAS_WAVETABLE_BANK {1 if recipe.wavetable_bank else 0}
+#define PLAITS_WAVETABLE_FACTORY_MASK 0x{factory_wavetable_mask if recipe.wavetable_bank else 0x07:02x}
 
 {includes}
 #include "plaits/resources.h"
@@ -1991,6 +2302,7 @@ static const int8_t kEngineUserDataBank[{len(selected)}] = {{ {user_data_banks} 
 {user_data_bank_override_block}
 {custom_model_data_block}
 {terrain_bank_block}
+{wavetable_bank_block}
 #if PLAITS_HAS_SPEECH_ENGINE
 static const uint32_t kSpeechEngineMask = 0x{speech_mask:08x};
 #endif
