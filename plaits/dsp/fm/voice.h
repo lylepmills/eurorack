@@ -35,6 +35,7 @@
 #include "plaits/dsp/fm/dx_units.h"
 #include "plaits/dsp/fm/envelope.h"
 #include "plaits/dsp/fm/patch.h"
+#include "plaits/dsp/fm/carrier_timbre.h"
 
 // When enabled, the amplitude modulation LFO linearly modulates the amplitude
 // of an operator. Otherwise, a more complex formula involving an exponential
@@ -89,7 +90,14 @@ class Voice {
     normalized_velocity_ = 10.0f;
     
     dirty_ = true;
+    carrier_timbre_.Init();
   }
+
+#ifdef TEST
+  void set_carrier_timbre_enabled(bool enabled) {
+    carrier_timbre_.set_enabled(enabled);
+  }
+#endif
   
   inline void SetPatch(const Patch* patch) {
     patch_ = patch;
@@ -124,6 +132,7 @@ class Voice {
       ratios_[i] = sign * FrequencyRatio(op);
     }
     dirty_ = false;
+    carrier_timbre_.SetPatch(*patch_);
     return true;
   }
   
@@ -256,6 +265,7 @@ class Voice {
       const float level_mod = 1.0f - Pow2Fast<2>(6.4f * log_level_mod);
       a[i] = Pow2Fast<2>(-14.0f + level * level_mod);
 #endif  // FAST_LINEAR_AMPLITUDE_MODULATION
+      a[i] = carrier_timbre_.Apply(i, parameters.brightness, a[i]);
     }
     
     for (int i = 0; i < num_operators; ) {
@@ -275,6 +285,7 @@ class Voice {
   }
   
  private:
+  CarrierTimbre carrier_timbre_;
   const Algorithms<num_operators>* algorithms_;
   float sample_rate_;
   float one_hz_;

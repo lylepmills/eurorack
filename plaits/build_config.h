@@ -196,6 +196,12 @@
 #define PLAITS_FM_DIAGNOSTIC_EXPONENTIAL 0
 #endif
 
+// Private autonomous qualification build for the algorithm-32 Carrier Tilt.
+// Hosted recipes never enable this; the release diagnostic exporter does.
+#ifndef PLAITS_FM_CARRIER_DIAGNOSTIC
+#define PLAITS_FM_CARRIER_DIAGNOSTIC 0
+#endif
+
 // Engines receive either modulation law as an absolute per-sample frequency
 // displacement. Keep this internal umbrella separate from both user-facing
 // preferences so all four combinations compile cleanly.

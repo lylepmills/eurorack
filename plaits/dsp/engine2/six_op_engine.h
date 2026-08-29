@@ -54,6 +54,11 @@ class FMVoice {
   void Init(fm::Algorithms<6>* algorithms, float sample_rate);
   void LoadPatch(const fm::Patch* patch);
   void Render(float* buffer, size_t size);
+#ifdef TEST
+  void set_carrier_timbre_enabled(bool enabled) {
+    voice_.set_carrier_timbre_enabled(enabled);
+  }
+#endif
   
   inline void UnloadPatch() {
     patch_ = NULL;
@@ -113,6 +118,13 @@ class SixOpEngine : public Engine {
   virtual bool stereo_capable() const { return PLAITS_STEREO_SIX_OP; }
 
   void LoadBank(int bank);
+#ifdef TEST
+  void set_carrier_timbre_enabled(bool enabled) {
+    for (int i = 0; i < kNumSixOpVoices; ++i) {
+      voice_[i].set_carrier_timbre_enabled(enabled);
+    }
+  }
+#endif
   
  private:
 #if defined(__clang__)

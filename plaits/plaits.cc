@@ -44,6 +44,9 @@
 #if PLAITS_TZFM_DIAGNOSTIC
 #include "plaits/tzfm_diagnostic.h"
 #endif
+#if PLAITS_FM_CARRIER_DIAGNOSTIC
+#include "plaits/fm_carrier_diagnostic.h"
+#endif
 #include "plaits/ui.h"
 #include "plaits/user_data.h"
 #include "plaits/user_data_receiver.h"
@@ -67,6 +70,9 @@ UserDataReceiver user_data_receiver;
 Voice voice;
 #if PLAITS_TZFM_DIAGNOSTIC
 TzfmDiagnostic tzfm_diagnostic;
+#endif
+#if PLAITS_FM_CARRIER_DIAGNOSTIC
+FmCarrierDiagnostic fm_carrier_diagnostic;
 #endif
 
 // BufferAllocator returns typed pointers without adjusting their alignment.
@@ -141,6 +147,9 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
   }
 #endif
   else {
+#if PLAITS_FM_CARRIER_DIAGNOSTIC
+    fm_carrier_diagnostic.Prepare(&patch, &modulations, size);
+#endif
 #if PLAITS_TZFM_DIAGNOSTIC
     tzfm_diagnostic.Prepare(&patch, &modulations, size);
 #endif
@@ -184,6 +193,11 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
     cpu_probe.SectionEnd(0);
 #endif
     PLAITS_CPU_PROBE_END(size)
+#if PLAITS_FM_CARRIER_DIAGNOSTIC
+    fm_carrier_diagnostic.Observe(
+        cpu_probe.last_usage(), (Voice::Frame*)(output), size);
+    fm_carrier_diagnostic.MuteStress((Voice::Frame*)(output), size);
+#endif
 #if PLAITS_TZFM_DIAGNOSTIC
     TzfmDiagnosticCounters counters;
     counters.overruns = ui.audio_rate_fm_overruns();
@@ -196,6 +210,23 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
 #endif
     PLAITS_CPU_PROBE_READOUT((Voice::Frame*)(output), size)
     PLAITS_CPU_PROBE_DISPLAY(ui)
+#if PLAITS_FM_CARRIER_DIAGNOSTIC
+    if (fm_carrier_diagnostic.finished()) {
+      // This must run after the probe's live LED display. Reassert every block
+      // so neither that display nor the normal UI timeout can erase the final
+      // unattended result while the audible audition loop continues.
+      ui.DisplayDiagnosticResultLatched(
+          fm_carrier_diagnostic.passed(),
+          fm_carrier_diagnostic.failure_mask());
+    } else {
+      // Keep at least one green LED lit from the first block, then fill the
+      // panel as the autonomous sweep advances. The CPU limit is still
+      // measured internally; a visible heartbeat is more useful here than a
+      // CPU bar whose lowest range can legitimately look dark.
+      ui.DisplayDataTransferProgress(
+          0.125f + 0.875f * fm_carrier_diagnostic.progress());
+    }
+#endif
     if (active_engine != previous_engine) {
       ui.RealignAudioInputAfterEngineChange();
     }
@@ -238,6 +269,9 @@ void Init() {
   tzfm_diagnostic.Init(
       PLAITS_TZFM_AUDITION_GROUP,
       PLAITS_FM_DIAGNOSTIC_EXPONENTIAL);
+#endif
+#if PLAITS_FM_CARRIER_DIAGNOSTIC
+  fm_carrier_diagnostic.Init();
 #endif
   audio_dac.Init(48000, kBlockSize);
 

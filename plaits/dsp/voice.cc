@@ -366,6 +366,12 @@ void Voice::Render(
     }
 #else
     const uint8_t* data = user_data.ptr(engine_index);
+#if PLAITS_FM_CARRIER_DIAGNOSTIC
+    // The diagnostic must exercise its known baked corpus even if the module
+    // still carries a bank transferred during an earlier session. Do not erase
+    // that data; ordinary production firmware sees it again after reflashing.
+    data = NULL;
+#endif
     // Number of valid packed patch bytes behind `data`. Every built-in factory
     // bank is a full 32-patch bank; a recipe-baked custom bank may be shorter,
     // in which case its length comes from the generated size table, and a
@@ -390,7 +396,6 @@ void Voice::Render(
 #endif  // PLAITS_HAS_TERRAIN_BANK || PLAITS_HAS_CUSTOM_MODEL_DATA
     e->LoadUserData(data, data_length);
     e->Reset();
-
     out_post_processor_.Reset();
     sine_oscillator_.Init();
     square_oscillator_.Init();

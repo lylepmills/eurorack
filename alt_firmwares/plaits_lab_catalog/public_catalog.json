@@ -1003,7 +1003,7 @@
       ],
       "controls": [
         "Patch",
-        "Brightness",
+        "Brightness / carrier tilt",
         "Envelope",
         "Network detune"
       ],
@@ -1020,12 +1020,12 @@
         "fm-core"
       ],
       "version": "1.0.0",
-      "digest": "sha256:8d2977ad077a061b5c14ff0b48ab3d3572c9a3ac162bbf55b3c167504dc56d57",
-      "documentationDigest": "sha256:cee63114350e5f214dcebdaf57f3d794172c774e4b77dc4d1863b63a15b2725d",
+      "digest": "sha256:f689c80767d88ac768e7ad1ee19c216109b09b385c8ba2e3a71505fa951fffbb",
+      "documentationDigest": "sha256:0abdb1691f49cb2fc670afbbfe297d9f03e617f331302c28af4e742d1313fb2b",
       "manual": {
         "controls": {
           "harmonics": "Selects a patch from the first built-in six-operator FM bank.",
-          "timbre": "Changes patch brightness by scaling operator levels.",
+          "timbre": "Changes brightness by scaling modulator levels. On all-carrier algorithm 32 patches, turns from lower-frequency carriers toward higher-frequency carriers.",
           "morph": "Changes envelope timing and articulation across the operator network.",
           "macro": "Detunes the modulator network, darkening below noon and saturating above it."
         },
@@ -1052,7 +1052,7 @@
       ],
       "controls": [
         "Patch",
-        "Brightness",
+        "Brightness / carrier tilt",
         "Envelope",
         "Network detune"
       ],
@@ -1069,12 +1069,12 @@
         "fm-core"
       ],
       "version": "1.0.0",
-      "digest": "sha256:250605fea607f89ecc56e1fababe65ad6c56dd78a859231eed92bbaaa067ed41",
-      "documentationDigest": "sha256:7ad26bdfb686a090d4f8dc74c1a115b4cffb4bb8b7243bf4b86a98e4fb4ff02c",
+      "digest": "sha256:66069c582ab92fecdb08db8690c0e072bf8696ea176dbb20eeb87f606c8bc27c",
+      "documentationDigest": "sha256:81e5c7857243717bf6020fde222b224effa3e31d36dab8e8dcf49edd58e34d41",
       "manual": {
         "controls": {
           "harmonics": "Selects a patch from the second built-in six-operator FM bank.",
-          "timbre": "Changes patch brightness by scaling operator levels.",
+          "timbre": "Changes brightness by scaling modulator levels. On all-carrier algorithm 32 patches, turns from lower-frequency carriers toward higher-frequency carriers.",
           "morph": "Changes envelope timing and articulation across the operator network.",
           "macro": "Detunes the modulator network, darkening below noon and saturating above it."
         },
@@ -1101,7 +1101,7 @@
       ],
       "controls": [
         "Patch",
-        "Brightness",
+        "Brightness / carrier tilt",
         "Envelope",
         "Network detune"
       ],
@@ -1118,12 +1118,12 @@
         "fm-core"
       ],
       "version": "1.0.0",
-      "digest": "sha256:569c2ccc92c8ded360fa1c1024884a8915f34a0ef08fa777688ee3aa617b6336",
-      "documentationDigest": "sha256:8f026ce6ccdd5a01eb1688706c0e21c1a834d1fcdb04fe9383fa44942516430b",
+      "digest": "sha256:d199156086068c7cea01f716ba0a93669e24fa4da38de6269bacc1ec7e1beacf",
+      "documentationDigest": "sha256:9f60db48e9b96db91ee2eae6bea449bace67119a8937bf4fdc3859fbd9a4a41e",
       "manual": {
         "controls": {
           "harmonics": "Selects a patch from the third built-in six-operator FM bank.",
-          "timbre": "Changes patch brightness by scaling operator levels.",
+          "timbre": "Changes brightness by scaling modulator levels. On all-carrier algorithm 32 patches, turns from lower-frequency carriers toward higher-frequency carriers.",
           "morph": "Changes envelope timing and articulation across the operator network.",
           "macro": "Detunes the modulator network, darkening below noon and saturating above it."
         },

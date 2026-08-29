@@ -507,6 +507,18 @@ void Ui::UpdateLEDs() {
             leds_.set(
                 i, i == (triangle >> 1) ? LED_COLOR_OFF : LED_COLOR_GREEN);
           }
+        } else if (data_transfer_progress_ < -1.0f) {
+          const int failure_mask = static_cast<int>(
+              -data_transfer_progress_ - 2.0f) & 0x07;
+          if (pwm_counter < triangle) {
+            static const uint8_t first_led[3] = { 0, 3, 6 };
+            for (int failure = 0; failure < 3; ++failure) {
+              if (failure_mask & (1 << failure)) {
+                leds_.set(first_led[failure], LED_COLOR_RED);
+                leds_.set(first_led[failure] + 1, LED_COLOR_RED);
+              }
+            }
+          }
         } else if (data_transfer_progress_ < 0.0f) {
           for (int i = 0; i < 8; ++i) {
             leds_.set(

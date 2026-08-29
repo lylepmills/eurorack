@@ -120,6 +120,30 @@ class Ui {
     pwm_counter_ = progress == 1.0f || progress < 0.0f ? 1500 : 0;
   }
 
+  // Diagnostics reassert their terminal result indefinitely. Unlike the
+  // transfer API above, do not restart the animation on every audio block:
+  // doing so can pin a failure blink in its dark phase.
+  void DisplayDataTransferResultLatched(bool success) {
+    const float progress = success ? 1.0f : -1.0f;
+    if (mode_ != UI_MODE_DISPLAY_DATA_TRANSFER_PROGRESS ||
+        data_transfer_progress_ != progress) {
+      DisplayDataTransferProgress(progress);
+    }
+  }
+
+  // A failed autonomous diagnostic uses three separated red LED pairs so its
+  // cause is readable without a cable: top = CPU headroom, middle = an actual
+  // missed deadline, bottom = a silent patch. Multiple pairs may blink.
+  void DisplayDiagnosticResultLatched(bool success, uint8_t failure_mask) {
+    const float progress = success
+        ? 1.0f
+        : -2.0f - static_cast<float>(failure_mask & 0x07);
+    if (mode_ != UI_MODE_DISPLAY_DATA_TRANSFER_PROGRESS ||
+        data_transfer_progress_ != progress) {
+      DisplayDataTransferProgress(progress);
+    }
+  }
+
   inline bool test_mode() const {
     return mode_ == UI_MODE_TEST;
   }

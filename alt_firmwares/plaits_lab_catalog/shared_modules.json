@@ -41,6 +41,7 @@
       "license": "MIT",
       "headers": [
         "plaits/dsp/fm/algorithms.h",
+        "plaits/dsp/fm/carrier_timbre.h",
         "plaits/dsp/fm/dx_units.h",
         "plaits/dsp/fm/voice.h",
         "plaits/dsp/fm/patch.h",

@@ -1045,7 +1045,7 @@
       ],
       "controls": [
         "Patch",
-        "Brightness",
+        "Brightness / carrier tilt",
         "Envelope",
         "Network detune"
       ],
@@ -1092,7 +1092,7 @@
       ],
       "controls": [
         "Patch",
-        "Brightness",
+        "Brightness / carrier tilt",
         "Envelope",
         "Network detune"
       ],
@@ -1139,7 +1139,7 @@
       ],
       "controls": [
         "Patch",
-        "Brightness",
+        "Brightness / carrier tilt",
         "Envelope",
         "Network detune"
       ],
@@ -3854,7 +3854,7 @@
     "dx7-bank-a": {
       "controls": {
         "harmonics": "Selects a patch from the first built-in six-operator FM bank.",
-        "timbre": "Changes patch brightness by scaling operator levels.",
+        "timbre": "Changes brightness by scaling modulator levels. On all-carrier algorithm 32 patches, turns from lower-frequency carriers toward higher-frequency carriers.",
         "morph": "Changes envelope timing and articulation across the operator network.",
         "macro": "Detunes the modulator network, darkening below noon and saturating above it."
       },
@@ -3863,7 +3863,7 @@
     "dx7-bank-b": {
       "controls": {
         "harmonics": "Selects a patch from the second built-in six-operator FM bank.",
-        "timbre": "Changes patch brightness by scaling operator levels.",
+        "timbre": "Changes brightness by scaling modulator levels. On all-carrier algorithm 32 patches, turns from lower-frequency carriers toward higher-frequency carriers.",
         "morph": "Changes envelope timing and articulation across the operator network.",
         "macro": "Detunes the modulator network, darkening below noon and saturating above it."
       },
@@ -3872,7 +3872,7 @@
     "dx7-bank-c": {
       "controls": {
         "harmonics": "Selects a patch from the third built-in six-operator FM bank.",
-        "timbre": "Changes patch brightness by scaling operator levels.",
+        "timbre": "Changes brightness by scaling modulator levels. On all-carrier algorithm 32 patches, turns from lower-frequency carriers toward higher-frequency carriers.",
         "morph": "Changes envelope timing and articulation across the operator network.",
         "macro": "Detunes the modulator network, darkening below noon and saturating above it."
       },
