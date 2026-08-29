@@ -234,7 +234,9 @@ void WavetableEquationBenchEngine::Render(
     bool* already_enveloped) {
 #if PLAITS_WAVETABLE_BENCH_AUTOSWEEP
   int autosweep_case = -1;
+#if PLAITS_WAVETABLE_BENCH_STRESS_AUTOSWEEP
   int autosweep_profile = 0;
+#endif
   uint32_t position = sequence_samples_;
   if (position >= kAutosweepLeaderSamples) {
     position -= kAutosweepLeaderSamples;
@@ -245,7 +247,9 @@ void WavetableEquationBenchEngine::Render(
       const uint32_t within_slot = position % kAutosweepSlotSamples;
       if (within_slot >= kAutosweepGapSamples) {
         autosweep_case = slot % kWavetableEquationBenchCases;
+#if PLAITS_WAVETABLE_BENCH_STRESS_AUTOSWEEP
         autosweep_profile = slot / kWavetableEquationBenchCases;
+#endif
       }
     }
   }
