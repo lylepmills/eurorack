@@ -78,7 +78,7 @@ static const uint8_t kEngineRows[] = PLAITS_ENGINE_ROWS;
 // they are named rather than numbered - a silent disagreement between them
 // would be the whole hazard of reordering.
 enum OptionLight {
-  OPTION_LIGHT_CHORD_SET = 0,
+  OPTION_LIGHT_TRIG_RESPONSE = 0,
   OPTION_LIGHT_AUX_OUTPUT,
   OPTION_LIGHT_SUBOSC,
   OPTION_LIGHT_FREQUENCY_POT,
@@ -101,7 +101,8 @@ static const PotsAdcChannel kLockedOctavePot = POTS_ADC_CHANNEL_FREQUENCY_POT;
 static const PotsAdcChannel kLockedOctavePot = POTS_ADC_CHANNEL_MORPH_POT;
 #endif  // PLAITS_ROVED_PANEL
 static const uint8_t kNumLockedFrequencyPotOptions =
-    4 + 2 * PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE;
+    4 + PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE;
+static const uint8_t kNumTrigResponseOptions = 4;
 static const uint8_t kNumModelCVOptions =
     4 + PLAITS_BUILD_ENABLE_SYNC_INPUT;
 static const uint8_t kNumLevelCVOptions = 3;
@@ -110,7 +111,6 @@ static const uint8_t kNumLevelCVOptions = 3;
 // and octave together - square/sine crossed with 0, -1 and -2 octaves.
 static const uint8_t kNumAuxOutputOptions = 3;
 static const uint8_t kNumSuboscOptions = 6;
-static const uint8_t kNumChordSetOptions = PLAITS_CHORD_TABLE_COUNT;
 static const uint8_t kNumHoldOnTriggerOptions = 2;
 static const uint8_t kNumAttenuverterModes = ATTENUVERTER_MODE_LAST;
 
@@ -144,6 +144,7 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
   mode_ = UI_MODE_NORMAL;
 
   octave_quantizer_.Init(9, 0.01f, false);
+  chord_table_quantizer_.Init(PLAITS_CHORD_TABLE_COUNT, 0.01f, false);
 
   LoadState();
 
@@ -182,11 +183,11 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
   pitch_lp_ = 0.0f;
   data_transfer_progress_ = 0.0f;
 
-  // LoadState() restored locked_octave_. Keep its continuous counterpart ready
-  // for the right-button + MORPH shortcut without overwriting the saved octave.
-  locked_octave_control_ = static_cast<float>(locked_octave_) / 8.0f;
-  locked_octave_gesture_armed_ = false;
-  editing_locked_octave_ = false;
+  // LoadState() restored locked_octave_. Keep the shared contextual control
+  // ready for the panel-specific octave and chord-table gestures without
+  // overwriting either saved selection.
+  contextual_control_ = 0.0f;
+  contextual_control_target_ = CONTEXTUAL_CONTROL_NONE;
 
   previous_pitch_range_ = PitchRangeFromControl(octave_);
   precision_anchor_note_ = tuned_root_note_;
@@ -239,7 +240,7 @@ bool Ui::OptionInert(int index) const {
 
 // Step to the next light the player can actually use in either direction. The
 // loop is bounded so that a future second inert option can never spin here;
-// the chord light is never inert, so it always terminates well before the
+// the TRIG-response light is never inert, so it always terminates well before the
 // bound. Stock Plaits only passes +1; Ro'Ved exposes both directions.
 void Ui::StepOptionIndex(int delta) {
   for (int n = 0; n < kNumOptions; ++n) {
@@ -257,10 +258,9 @@ void Ui::LoadState() {
   patch_->lpg_colour = static_cast<float>(state.lpg_colour) / 256.0f;
   patch_->decay = static_cast<float>(state.decay) / 256.0f;
   octave_ = static_cast<float>(state.octave) / 256.0f;
-  fine_tune_ = static_cast<float>(state.fine_tune) / 256.0f;
-
   // alt firmware
   patch_->locked_frequency_pot_option = state.locked_frequency_pot_option;
+  patch_->trig_response_option = state.trig_response_option;
   patch_->model_cv_option = state.model_cv_option;
   patch_->level_cv_option = state.level_cv_option;
   patch_->aux_output_option = state.aux_output_option;
@@ -288,7 +288,7 @@ void Ui::SaveState() {
   state->lpg_colour = static_cast<uint8_t>(patch_->lpg_colour * 256.0f);
   state->decay = static_cast<uint8_t>(patch_->decay * 256.0f);
   state->octave = static_cast<uint8_t>(octave_ * 256.0f);
-  state->fine_tune = static_cast<uint8_t>(fine_tune_ * 256.0f);
+  state->trig_response_option = patch_->trig_response_option;
   // The retired extra-fine-tune byte now extends the Starting Options profile
   // identity, keeping the new three-state attenuverter digit collision-free.
   state->options_profile_id_upper = static_cast<uint8_t>(
@@ -550,29 +550,54 @@ void Ui::UpdateLEDs() {
 
     case UI_MODE_DISPLAY_OCTAVE:
       {
-        // The right-button + MORPH shortcut has nine octave choices but only
-        // eight model lights. The first eight choices climb one light at a
-        // time; all lights indicate the ninth/highest octave. Existing hidden
-        // octave/range editing keeps its original display.
-        const int octave = editing_locked_octave_
-            ? (locked_octave_ == 8 ? PITCH_RANGE_HIGH : locked_octave_ + 1)
-            : PitchRangeFromControl(octave_);
-        for (int i = 0; i < 8; ++i) {
-          LedColor color = LED_COLOR_OFF;
-          if (octave == 0) {
-            color = i == (triangle >> 1) ? LED_COLOR_OFF : LED_COLOR_YELLOW;
-          } else if (octave == PITCH_RANGE_HIGH) {
-            color = LED_COLOR_YELLOW;
-          } else if (octave == PITCH_RANGE_OCTAVES) {
-            color = (i & 1) == ((triangle >> 3) & 1)
-                ? LED_COLOR_OFF
-                : LED_COLOR_YELLOW;
-          } else if (octave == PITCH_RANGE_PRECISION) {
-            color = pwm_counter < triangle ? LED_COLOR_YELLOW : LED_COLOR_OFF;
+        if (contextual_control_target_ == CONTEXTUAL_CONTROL_CHORD_TABLE) {
+          // Tables 1-8 use one lit LED. Tables 9-16 invert the display: the
+          // selected position is the only dark LED.
+          const int position = patch_->chord_set_option & 7;
+#if PLAITS_CHORD_TABLE_COUNT > 8
+          if (patch_->chord_set_option >= 8) {
+            for (int i = 0; i < 8; ++i) {
+              leds_.set(i, LED_COLOR_YELLOW);
+            }
+            leds_.set(
+                OrderedLedIndex(position, PLAITS_ROVED_PANEL != 0),
+                LED_COLOR_OFF);
           } else {
-            color = (octave - 1) == i ? LED_COLOR_YELLOW : LED_COLOR_OFF;
+#endif
+            // UpdateLEDs clears the bank before entering the mode, so bank A
+            // needs only its selected light written.
+            leds_.set(
+                OrderedLedIndex(position, PLAITS_ROVED_PANEL != 0),
+                LED_COLOR_YELLOW);
+#if PLAITS_CHORD_TABLE_COUNT > 8
           }
-          leds_.set(OrderedLedIndex(i, PLAITS_ROVED_PANEL != 0), color);
+#endif
+        } else {
+          // The right-button + MORPH shortcut has nine octave choices but only
+          // eight model lights. The first eight choices climb one light at a
+          // time; all lights indicate the ninth/highest octave. Existing hidden
+          // octave/range editing keeps its original display.
+          const int octave = contextual_control_target_ == CONTEXTUAL_CONTROL_OCTAVE
+              ? (locked_octave_ == 8 ? PITCH_RANGE_HIGH : locked_octave_ + 1)
+              : PitchRangeFromControl(octave_);
+          for (int i = 0; i < 8; ++i) {
+            LedColor color = LED_COLOR_OFF;
+            if (octave == 0) {
+              color = i == (triangle >> 1) ? LED_COLOR_OFF : LED_COLOR_YELLOW;
+            } else if (octave == PITCH_RANGE_HIGH) {
+              color = LED_COLOR_YELLOW;
+            } else if (octave == PITCH_RANGE_OCTAVES) {
+              color = (i & 1) == ((triangle >> 3) & 1)
+                  ? LED_COLOR_OFF
+                  : LED_COLOR_YELLOW;
+            } else if (octave == PITCH_RANGE_PRECISION) {
+              color = pwm_counter < triangle ? LED_COLOR_YELLOW : LED_COLOR_OFF;
+            } else {
+              color = (octave - 1) == i ? LED_COLOR_YELLOW : LED_COLOR_OFF;
+            }
+            leds_.set(
+                OrderedLedIndex(i, PLAITS_ROVED_PANEL != 0), color);
+          }
         }
       }
       break;
@@ -589,8 +614,8 @@ void Ui::UpdateLEDs() {
         }
 
         int option_value = 0;
-        if (i == OPTION_LIGHT_CHORD_SET) {
-          option_value = patch_->chord_set_option;
+        if (i == OPTION_LIGHT_TRIG_RESPONSE) {
+          option_value = patch_->trig_response_option;
         } else if (i == OPTION_LIGHT_AUX_OUTPUT) {
           option_value = patch_->aux_output_option;
         } else if (i == OPTION_LIGHT_SUBOSC) {
@@ -608,10 +633,9 @@ void Ui::UpdateLEDs() {
         }
 
         // Each option value encodes as one of three appearances crossed with a
-        // blink tier: solid (0-2), slow blink (3-5), fast blink (6-8). Normal
+        // blink tier: solid (0-2) or slow blink (3-5). Normal
         // builds use green/red/yellow; accessible builds use brightest/medium/
-        // dim yellow PWM so the setting never depends on hue. Only
-        // chord_set_option ranges past 5.
+        // dim yellow PWM so the setting never depends on hue.
         LedColor color = LED_COLOR_OFF;
 #if PLAITS_BUILD_COLOR_BLIND_MODE
         static const uint8_t kOptionBrightnessDuty[3] = { 16, 8, 4 };
@@ -625,11 +649,8 @@ void Ui::UpdateLEDs() {
           case 2: color = LED_COLOR_YELLOW; break;
         }
 #endif
-        const int blink_tier = option_value / 3;  // 0 solid, 1 slow, 2 fast
-        if (blink_tier == 1 && (pwm_counter_ & 128)) {
+        if (option_value >= 3 && (pwm_counter_ & 128)) {
           color = LED_COLOR_OFF;  // slow blink (values 3-5)
-        } else if (blink_tier == 2 && (pwm_counter_ & 64)) {
-          color = LED_COLOR_OFF;  // fast blink (values 6-8), 2x the slow rate
         }
 
         // Dim the other lights
@@ -668,6 +689,7 @@ void Ui::UpdateLEDs() {
 }
 
 void Ui::Navigate(int button) {
+  contextual_control_target_ = CONTEXTUAL_CONTROL_NONE;
   for (int i = 0; i < SWITCH_LAST; ++i) {
     ignore_release_[i] = true;
   }
@@ -713,6 +735,18 @@ void Ui::Navigate(int button) {
       static_cast<uint8_t>(RowOfEngine(kBankSizes, kNumBanks, patch_->engine));
 
   SaveState();
+}
+
+void Ui::LockHarmonicsPotForContext(bool fall_back_to_octave) {
+  if (PLAITS_CHORD_TABLE_COUNT > 1 &&
+      (PLAITS_CHORD_ENGINE_MASK & (1u << active_engine_))) {
+    contextual_control_ = static_cast<float>(patch_->chord_set_option) /
+        static_cast<float>(PLAITS_CHORD_TABLE_COUNT - 1);
+    pots_[POTS_ADC_CHANNEL_HARMONICS_POT].Lock(&contextual_control_);
+    contextual_control_target_ = CONTEXTUAL_CONTROL_CHORD_TABLE;
+  } else if (fall_back_to_octave) {
+    pots_[POTS_ADC_CHANNEL_HARMONICS_POT].Lock();
+  }
 }
 
 void Ui::ReadSwitches() {
@@ -802,14 +836,14 @@ void Ui::ReadSwitches() {
           pots_[POTS_ADC_CHANNEL_MORPH_POT].Lock();
         }
         if (switches_.just_pressed(Switch(2))) {
-          pots_[POTS_ADC_CHANNEL_HARMONICS_POT].Lock();
+          LockHarmonicsPotForContext(true);
         }
         if (switches_.just_pressed(Switch(3)) &&
             patch_->locked_frequency_pot_option != 0) {
-          locked_octave_control_ =
+          contextual_control_ =
               static_cast<float>(locked_octave_) / 8.0f;
-          pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].Lock(&locked_octave_control_);
-          locked_octave_gesture_armed_ = true;
+          pots_[kLockedOctavePot].Lock(&contextual_control_);
+          contextual_control_target_ = CONTEXTUAL_CONTROL_OCTAVE;
         }
 
         if (pots_[POTS_ADC_CHANNEL_MORPH_POT].editing_hidden_parameter() ||
@@ -818,8 +852,8 @@ void Ui::ReadSwitches() {
         }
 
         if (pots_[POTS_ADC_CHANNEL_HARMONICS_POT].editing_hidden_parameter() ||
-            (pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].editing_hidden_parameter() &&
-             editing_locked_octave_)) {
+            (contextual_control_target_ == CONTEXTUAL_CONTROL_OCTAVE &&
+             pots_[kLockedOctavePot].editing_hidden_parameter())) {
           mode_ = UI_MODE_DISPLAY_OCTAVE;
         }
 
@@ -834,10 +868,6 @@ void Ui::ReadSwitches() {
         }
 
         if (switches_.released(Switch(3)) && !ignore_release_[3]) {
-          // A click that did not turn the knob navigates instead; drop the
-          // armed octave gesture with it, as the stock panel does.
-          locked_octave_gesture_armed_ = false;
-          editing_locked_octave_ = false;
           Navigate(3);
         } else if (switches_.released(Switch(0)) && !ignore_release_[0]) {
           Navigate(0);
@@ -850,6 +880,7 @@ void Ui::ReadSwitches() {
         if (switches_.just_pressed(Switch(0))) {
           pots_[POTS_ADC_CHANNEL_TIMBRE_POT].Lock();
           pots_[POTS_ADC_CHANNEL_MORPH_POT].Lock();
+          LockHarmonicsPotForContext(false);
         }
         if (switches_.just_pressed(Switch(1))) {
           pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].Lock();
@@ -860,22 +891,25 @@ void Ui::ReadSwitches() {
           // dynamic hidden target freezes MORPH itself and restores its normal
           // decay binding on release.
           if (patch_->locked_frequency_pot_option != 0) {
-            locked_octave_control_ =
+            contextual_control_ =
                 static_cast<float>(locked_octave_) / 8.0f;
             pots_[POTS_ADC_CHANNEL_MORPH_POT].Lock(
-                &locked_octave_control_);
-            locked_octave_gesture_armed_ = true;
+                &contextual_control_);
+            contextual_control_target_ = CONTEXTUAL_CONTROL_OCTAVE;
           }
         }
 
         if ((pots_[POTS_ADC_CHANNEL_MORPH_POT].editing_hidden_parameter() &&
-             !editing_locked_octave_) ||
+             contextual_control_target_ != CONTEXTUAL_CONTROL_OCTAVE) ||
             pots_[POTS_ADC_CHANNEL_TIMBRE_POT].editing_hidden_parameter()) {
           mode_ = UI_MODE_DISPLAY_ALTERNATE_PARAMETERS;
         }
 
-        if ((pots_[POTS_ADC_CHANNEL_MORPH_POT].editing_hidden_parameter() &&
-             editing_locked_octave_) ||
+        if (contextual_control_target_ == CONTEXTUAL_CONTROL_CHORD_TABLE &&
+            pots_[POTS_ADC_CHANNEL_HARMONICS_POT].editing_hidden_parameter()) {
+          mode_ = UI_MODE_DISPLAY_OCTAVE;
+        } else if ((pots_[POTS_ADC_CHANNEL_MORPH_POT].editing_hidden_parameter() &&
+             contextual_control_target_ == CONTEXTUAL_CONTROL_OCTAVE) ||
             pots_[POTS_ADC_CHANNEL_HARMONICS_POT].editing_hidden_parameter() ||
             pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].editing_hidden_parameter() ||
             pots_[POTS_ADC_CHANNEL_FM_ATTENUVERTER].editing_hidden_parameter()) {
@@ -896,8 +930,6 @@ void Ui::ReadSwitches() {
         if (switches_.released(Switch(0)) && !ignore_release_[0]) {
           Navigate(0);
         } else if (switches_.released(Switch(1)) && !ignore_release_[1]) {
-          locked_octave_gesture_armed_ = false;
-          editing_locked_octave_ = false;
           Navigate(1);
         }
 #endif  // PLAITS_ROVED_PANEL
@@ -908,17 +940,20 @@ void Ui::ReadSwitches() {
     case UI_MODE_DISPLAY_OCTAVE:
       for (int i = 0; i < SWITCH_LAST; ++i) {
         if (switches_.released(Switch(i))) {
-          const bool save_locked_octave = editing_locked_octave_;
+          const bool save_contextual_control =
+              contextual_control_target_ == CONTEXTUAL_CONTROL_CHORD_TABLE
+                  ? pots_[POTS_ADC_CHANNEL_HARMONICS_POT].editing_hidden_parameter()
+                  : contextual_control_target_ == CONTEXTUAL_CONTROL_OCTAVE &&
+                      pots_[kLockedOctavePot].editing_hidden_parameter();
           pots_[POTS_ADC_CHANNEL_TIMBRE_POT].Unlock();
           pots_[POTS_ADC_CHANNEL_MORPH_POT].Unlock();
           pots_[POTS_ADC_CHANNEL_HARMONICS_POT].Unlock();
           pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].Unlock();
           pots_[POTS_ADC_CHANNEL_FM_ATTENUVERTER].Unlock();
-          locked_octave_gesture_armed_ = false;
-          editing_locked_octave_ = false;
+          contextual_control_target_ = CONTEXTUAL_CONTROL_NONE;
           press_time_[i] = 0;
           mode_ = UI_MODE_NORMAL;
-          if (save_locked_octave) {
+          if (save_contextual_control) {
             SaveState();
           }
         }
@@ -941,6 +976,7 @@ void Ui::ReadSwitches() {
         pots_[POTS_ADC_CHANNEL_HARMONICS_POT].Unlock();
         pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].Unlock();
         pots_[POTS_ADC_CHANNEL_FM_ATTENUVERTER].Unlock();
+        contextual_control_target_ = CONTEXTUAL_CONTROL_NONE;
         mode_ = UI_MODE_CHANGE_OPTIONS;
       }
       break;
@@ -991,9 +1027,9 @@ void Ui::ReadSwitches() {
           uint8_t* value = NULL;
           int num_values = 0;
           switch (option_index_) {
-            case OPTION_LIGHT_CHORD_SET:
-              value = &patch_->chord_set_option;
-              num_values = kNumChordSetOptions;
+            case OPTION_LIGHT_TRIG_RESPONSE:
+              value = &patch_->trig_response_option;
+              num_values = kNumTrigResponseOptions;
               break;
             case OPTION_LIGHT_AUX_OUTPUT:
               value = &patch_->aux_output_option;
@@ -1077,11 +1113,15 @@ void Ui::ProcessPotsHiddenParameters() {
   for (int i = 0; i < POTS_ADC_CHANNEL_LAST; ++i) {
     pots_[i].ProcessUIRate();
   }
-  if (locked_octave_gesture_armed_ &&
+  if (contextual_control_target_ == CONTEXTUAL_CONTROL_OCTAVE &&
       pots_[kLockedOctavePot].editing_hidden_parameter()) {
-    editing_locked_octave_ = true;
     locked_octave_ = static_cast<uint8_t>(
-        octave_quantizer_.Process(locked_octave_control_));
+        octave_quantizer_.Process(contextual_control_));
+  }
+  if (contextual_control_target_ == CONTEXTUAL_CONTROL_CHORD_TABLE &&
+      pots_[POTS_ADC_CHANNEL_HARMONICS_POT].editing_hidden_parameter()) {
+    patch_->chord_set_option = static_cast<uint8_t>(
+        chord_table_quantizer_.Process(contextual_control_));
   }
 }
 

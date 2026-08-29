@@ -43,6 +43,7 @@ class Engine:
     aux_gain: float
     user_data_bank: int = -1
     behavior: str = "standard"
+    uses_chord_tables: bool = False
 
 
 # The module has three built-in six-operator FM banks; a recipe may override any
@@ -61,7 +62,7 @@ assert PACKED_BANK_SIZE % FLASH_PAGE_SIZE == 0
 # versions so adding a schema at the ceiling does not require extending a trail
 # of "10, 11, 12..." whitelists in the build container.
 MIN_RECIPE_SCHEMA_VERSION = 2
-MAX_RECIPE_SCHEMA_VERSION = 26
+MAX_RECIPE_SCHEMA_VERSION = 27
 CONFIGURATION_MIN_SCHEMA_VERSION = 4
 RESOURCES_MIN_SCHEMA_VERSION = 5
 FOUR_BANK_MIN_SCHEMA_VERSION = 6
@@ -104,6 +105,7 @@ SYNC_INPUT_PREFERENCE_MIN_SCHEMA_VERSION = 22
 # in PitchRangeFromControl -- so a module moves between the two layouts without
 # losing its tuned root or locked octave.
 SIMPLIFIED_PITCH_RANGES_MIN_SCHEMA_VERSION = 24
+GATE_ARTICULATION_MIN_SCHEMA_VERSION = 27
 
 # v25: Natural Speech word banks. The engine's demo banks are a compile-time
 # fallback, so a recipe carrying its own REPLACES them wholesale rather than
@@ -128,12 +130,14 @@ PREFERENCE_TIERS = (
     ("syncInput",),
     ("linearTzfm", "fastFm"),
     ("simplifiedPitchRanges",),
+    ("envelopeContour",),
 )
 
 # The starting-option tiers, same scheme and same reasoning as PREFERENCE_TIERS:
 # every option shape this container accepts is the union of some prefix. Every
-# recipe ever written carries the seven original options, and a v18-or-later one
-# adds attenuverterMode; a missing key means the option keeps its legacy value.
+# recipe ever written carries the seven original options, a v18-or-later one
+# adds attenuverterMode, and v27 adds trigResponse; a missing key means the
+# option keeps its legacy value.
 # Mirrored by initialOptionTiers in the Worker's src/contract.ts and the editor's
 # manifest.ts -- all three must agree on content AND order, since the accepted
 # shapes are prefixes, so reordering changes which sets are legal.
@@ -141,6 +145,7 @@ INITIAL_OPTION_TIERS = (
     ("auxOutput", "chordTable", "holdOnTrigger", "levelInput",
      "lockedFrequencyKnob", "modelInput", "suboscillatorOctave"),
     ("attenuverterMode",),
+    ("trigResponse",),
 )
 
 # v23 adds two independent experimental FM preferences. Linear TZFM changes
@@ -178,8 +183,11 @@ SCALE_UNITS_PER_OCTAVE = 12 * SCALE_UNITS_PER_SEMITONE
 # moves the collision-free profile identity into three persisted bytes.
 # Version 5 appends the triggered and gated contours to LIGHT 4 and expands its
 # profile digit from four values to six. Version 6 appends Sync In to LIGHT 5
-# and expands that profile digit from four values to five.
-OPTIONS_LAYOUT_VERSION = 6
+# and expands that profile digit from four values to five. Version 7 replaces
+# the two contour values with one orthogonal Envelope contour option, adds the
+# TRIG-response light, and expands chord-table selection to sixteen. Version 8
+# inserts Velocity trigger before Velocity gate and expands that digit's radix.
+OPTIONS_LAYOUT_VERSION = 8
 
 
 @dataclass(frozen=True)
@@ -189,6 +197,7 @@ class BuildRecipe:
     scale_bank: list[dict[str, Any]]
     navigation_mode: int
     locked_frequency_pot_option: int
+    trig_response_option: int
     model_cv_option: int
     level_cv_option: int
     aux_output_option: int
@@ -240,6 +249,9 @@ class BuildRecipe:
     # RUNTIME. Before v22 this was derived from the starting value, which meant a
     # user who did not choose Sync In at build time could never reach it.
     sync_input: int = 0
+    # v27: compile the optional FREQUENCY envelope contour independently of
+    # its starting assignment.
+    envelope_contour: int = 0
     # v24: 1 keeps only the three most clockwise FREQUENCY ranges. Like
     # calibration and the panel choice, it is a firmware shape rather than a
     # stored setting, so it stays out of the options profile-id fold.
@@ -310,6 +322,7 @@ def load_catalog() -> dict[str, Engine]:
             aux_gain=post["auxGain"],
             user_data_bank=source.get("userDataBank", -1),
             behavior=source.get("behavior", "standard"),
+            uses_chord_tables="chord-bank" in item.get("sharedModules", []),
         )
     return result
 
@@ -382,8 +395,8 @@ def _matching_tier(keys: set[str], tiers: tuple[tuple[str, ...], ...]) -> int:
 
 
 def validate_chord_tables(value: Any) -> list[dict[str, Any]]:
-    if not isinstance(value, list) or not 1 <= len(value) <= 9:
-        raise ValueError("recipe must contain between one and nine chord tables")
+    if not isinstance(value, list) or not 1 <= len(value) <= 16:
+        raise ValueError("recipe must contain between one and sixteen chord tables")
     result: list[dict[str, Any]] = []
     table_ids: set[str] = set()
     for table in value:
@@ -1464,13 +1477,45 @@ def validate_recipe(value: Any) -> BuildRecipe:
     # Worker's copy in src/contract.ts and the editor's in manifest.ts.
     preference_tier = _matching_tier(set(preferences), PREFERENCE_TIERS)
     # Starting options are matched the same way, against INITIAL_OPTION_TIERS:
-    # the seven original options, then attenuverterMode from v18. This replaced
+    # the seven original options, then attenuverterMode from v18, then
+    # trigResponse from v27. This replaced
     # one literal key set per shape, each of which had to be ORed in at every
     # use -- the quadratic, silently-failing shape the preferences shed above.
     option_tier = _matching_tier(set(options), INITIAL_OPTION_TIERS)
     carries_attenuverter_mode = option_tier >= 1
+    carries_gate_articulation = option_tier >= 2
     if preference_tier < 0 or option_tier < 0:
         raise ValueError("recipe contains an unsupported firmware option")
+    if (schema_version >= GATE_ARTICULATION_MIN_SCHEMA_VERSION
+            and not carries_gate_articulation):
+        raise ValueError(
+            f"TRIG response requires schemaVersion "
+            f"{GATE_ARTICULATION_MIN_SCHEMA_VERSION}")
+    legacy_contour_option = options.get("lockedFrequencyKnob") in (
+        "triggered-envelope", "gated-envelope")
+    # The Worker normalizes a v19 contour recipe before handing it to this
+    # private compiler, so it adds the derived trigResponse/envelopeContour
+    # fields while deliberately preserving the legacy locked-FREQUENCY spelling.
+    # That representation remains v19; only the new spelling is a v27 request.
+    carries_new_gate_articulation = (
+        carries_gate_articulation
+        and not legacy_contour_option
+        and (
+            options.get("trigResponse") != "trigger"
+            or options.get("lockedFrequencyKnob") == "envelope-contour"
+            or preferences.get("envelopeContour") is True
+        )
+    )
+    if (carries_new_gate_articulation
+            and schema_version < GATE_ARTICULATION_MIN_SCHEMA_VERSION):
+        raise ValueError(
+            f"TRIG response requires schemaVersion "
+            f"{GATE_ARTICULATION_MIN_SCHEMA_VERSION}")
+    if (len(chord_tables) > 9
+            and schema_version < GATE_ARTICULATION_MIN_SCHEMA_VERSION):
+        raise ValueError(
+            f"more than nine chord tables require schemaVersion "
+            f"{GATE_ARTICULATION_MIN_SCHEMA_VERSION}")
     # The Worker stores a fully normalized option profile and therefore adds
     # the legacy-equivalent `stock` value before handing a pre-v18 recipe to
     # this private container. Accept that no-op representation, but keep Drift
@@ -1498,8 +1543,21 @@ def validate_recipe(value: Any) -> BuildRecipe:
             "aux-crossfade": 2,
             "decay": 3,
             "triggered-envelope": 4,
-            "gated-envelope": 5,
+            "gated-envelope": 4,
+            "envelope-contour": 4,
         }),
+        "trig_response_option": (
+            options.get(
+                "trigResponse",
+                "gate" if options.get("lockedFrequencyKnob") == "gated-envelope"
+                else "trigger"),
+            {
+                "trigger": 0,
+                "gate": 1,
+                "velocity-trigger": 2,
+                "velocity-gate": 3,
+            },
+        ),
         "model_cv_option": (options.get("modelInput"), {
             "model": 0,
             "macro-4": 1,
@@ -1533,6 +1591,14 @@ def validate_recipe(value: Any) -> BuildRecipe:
         if selected not in allowed or (name == "hold_on_trigger_option" and not isinstance(selected, bool)):
             raise ValueError("recipe contains an unsupported firmware option")
         normalized_options[name] = allowed[selected]
+    legacy_gated_contour = options.get("lockedFrequencyKnob") == "gated-envelope"
+    if (schema_version < GATE_ARTICULATION_MIN_SCHEMA_VERSION
+            and normalized_options["trig_response_option"] != 0
+            and not (legacy_gated_contour
+                     and normalized_options["trig_response_option"] == 1)):
+        raise ValueError(
+            f"TRIG response requires schemaVersion "
+            f"{GATE_ARTICULATION_MIN_SCHEMA_VERSION} or newer")
     if options.get("levelInput") == "auto" and schema_version < LEVEL_AUTO_MIN_SCHEMA_VERSION:
         raise ValueError(
             f"automatic LEVEL routing requires schemaVersion "
@@ -1567,19 +1633,20 @@ def validate_recipe(value: Any) -> BuildRecipe:
     # radix from two to three, so every profile id moves without renumbering the
     # two existing stored values.
     profile_code = OPTIONS_LAYOUT_VERSION
-    profile_code = profile_code * 6 + normalized_options["locked_frequency_pot_option"]
+    profile_code = profile_code * 5 + normalized_options["locked_frequency_pot_option"]
     for name, radix in (
+        ("trig_response_option", 4),
         ("model_cv_option", 5),
         ("level_cv_option", 3),
         # Regular aux model, stereo OUT/AUX, suboscillator.
         ("aux_output_option", 3),
         # Square/sine crossed with 0, -1 and -2 octaves.
         ("aux_subosc_option", 6),
-        # Nine, matching validate_chord_tables' cap. A smaller radix here would
-        # let a table at index 6-8 alias into the next digit, so two different
+        # Sixteen, matching validate_chord_tables' cap. A smaller radix here would
+        # let a later table alias into the next digit, so two different
         # recipes could mint one profile id and the second would not apply its
         # starting options.
-        ("chord_set_option", 9),
+        ("chord_set_option", 16),
         ("hold_on_trigger_option", 2),
         ("attenuverter_mode", 3),
     ):
@@ -1655,6 +1722,25 @@ def validate_recipe(value: Any) -> BuildRecipe:
         raise ValueError(
             "starting in Sync In requires the syncInput preference")
 
+    # v27 makes the contour a capability rather than inferring compiled code
+    # from the starting FREQUENCY assignment. Legacy contour recipes retain the
+    # capability during normalization/building.
+    legacy_contour = options.get("lockedFrequencyKnob") in (
+        "triggered-envelope", "gated-envelope")
+    envelope_contour = bool(
+        preferences.get("envelopeContour", legacy_contour))
+    if not isinstance(preferences.get("envelopeContour", legacy_contour), bool):
+        raise ValueError("recipe contains an unsupported firmware option")
+    if (envelope_contour and not legacy_contour
+            and schema_version < GATE_ARTICULATION_MIN_SCHEMA_VERSION):
+        raise ValueError(
+            f"the envelope contour preference requires schemaVersion "
+            f"{GATE_ARTICULATION_MIN_SCHEMA_VERSION}")
+    if (normalized_options["locked_frequency_pot_option"] == 4
+            and not envelope_contour):
+        raise ValueError(
+            "starting with Envelope contour requires the envelopeContour preference")
+
     # Simplified pitch ranges (v24). Compile-time only, and independent of every
     # option: it changes which selector positions exist, not what any of them do.
     simplified_pitch_ranges = bool(preferences.get("simplifiedPitchRanges", False))
@@ -1705,6 +1791,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
         color_blind_mode=1 if color_blind_mode else 0,
         swappable_fm_banks=1 if swappable_fm_banks else 0,
         sync_input=1 if sync_input else 0,
+        envelope_contour=1 if envelope_contour else 0,
         simplified_pitch_ranges=1 if simplified_pitch_ranges else 0,
         linear_tzfm=1 if linear_tzfm else 0,
         fast_fm=1 if fast_fm else 0,
@@ -1825,6 +1912,10 @@ def render_config(recipe: BuildRecipe) -> str:
         (item.member for item in selected
          if item.behavior == "natural-speech"), "")
     chiptune_mask = sum(1 << index for index, item in enumerate(selected) if item.behavior == "chiptune")
+    chord_engine_mask = sum(
+        1 << index for index, item in enumerate(selected)
+        if item.uses_chord_tables
+    )
     resonator_envelope_mask = sum(
         1 << index
         for index, engine_id in enumerate(internal_slots)
@@ -2312,6 +2403,7 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_HAS_CUSTOM_MODEL_DATA {1 if custom_model_arrays else 0}
 #define PLAITS_USER_DATA_REGION_COUNT {(len(region_banks) if swappable else 0) + len(custom_model_arrays) + len(terrain_custom_arrays)}
 #define PLAITS_RESONATOR_ENVELOPE_ENGINE_MASK 0x{resonator_envelope_mask:08x}u
+#define PLAITS_CHORD_ENGINE_MASK 0x{chord_engine_mask:08x}u
 // Every FM bank's baked array doubles as the flash region a TIMBRE transfer
 // erases and reprograms, so any bank can be replaced without a reflash. 0 when
 // the Advanced "lock FM banks" preference is set (or there are no FM banks):
@@ -2334,7 +2426,8 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_BUILD_NAVIGATION_MODE {recipe.navigation_mode}
 #define PLAITS_BUILD_COLOR_BLIND_MODE {recipe.color_blind_mode}
 #define PLAITS_BUILD_LOCKED_FREQUENCY_POT_OPTION {recipe.locked_frequency_pot_option}
-#define PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE {1 if recipe.locked_frequency_pot_option >= 4 else 0}
+#define PLAITS_BUILD_TRIG_RESPONSE_OPTION {recipe.trig_response_option}
+#define PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE {recipe.envelope_contour}
 #define PLAITS_BUILD_MODEL_CV_OPTION {recipe.model_cv_option}
 #define PLAITS_BUILD_SIMPLIFIED_PITCH_RANGES {recipe.simplified_pitch_ranges}
 #define PLAITS_BUILD_LEVEL_CV_OPTION {recipe.level_cv_option}

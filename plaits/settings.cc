@@ -71,6 +71,7 @@ static bool ConsumeInstallMarker() {
 
 static void ApplyBuildOptionDefaults(State* state) {
   state->locked_frequency_pot_option = PLAITS_BUILD_LOCKED_FREQUENCY_POT_OPTION;
+  state->trig_response_option = PLAITS_BUILD_TRIG_RESPONSE_OPTION;
   state->model_cv_option = PLAITS_BUILD_MODEL_CV_OPTION;
   state->level_cv_option = PLAITS_BUILD_LEVEL_CV_OPTION;
   state->aux_output_option = PLAITS_BUILD_AUX_OUTPUT_OPTION;
@@ -116,7 +117,8 @@ bool Settings::Init() {
   CONSTRAIN(
       state_.locked_frequency_pot_option,
       0,
-      3 + 2 * PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE);
+      3 + PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE);
+  CONSTRAIN(state_.trig_response_option, 0, 3);
   CONSTRAIN(
       state_.model_cv_option,
       0,
@@ -176,7 +178,6 @@ void Settings::InitState() {
   state_.lpg_colour = 0;
   state_.decay = 128;
   state_.octave = 255;
-  state_.fine_tune = 128;
   state_.options_profile_id_upper = static_cast<uint8_t>(
       (PLAITS_BUILD_OPTIONS_PROFILE_ID >> 16) & 0xff);
 

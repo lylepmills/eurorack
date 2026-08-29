@@ -1958,13 +1958,27 @@ test("version 8 accepts up to nine chord tables and normalizes to v8", async () 
   assert.equal(normalized.schemaVersion, 8);
   assert.equal(normalized.resources.chordTables.length, 9);
 
-  // A tenth table is rejected.
+  // A tenth table needs the new contextual gesture display (v27).
   recipe.resources.chordTables = [...nineTables, localTable(10)];
-  assert.throws(() => normalizeRecipe(recipe), /between one and 9 chord tables/);
+  assert.throws(() => normalizeRecipe(recipe), /More than 9 chord tables.*version 27/);
+
+  // v27 uses the eight LEDs as two banks and accepts all sixteen tables.
+  recipe.schemaVersion = 27;
+  recipe.resources.chordTables = Array.from({ length: 16 }, (_, i) => localTable(i + 1));
+  recipe.initialOptions = {
+    ...recipe.initialOptions,
+    trigResponse: "velocity-trigger",
+    attenuverterMode: "stock",
+  };
+  const v27 = normalizeRecipe(recipe);
+  assert.equal(v27.resources.chordTables.length, 16);
+  assert.equal(v27.initialOptions.trigResponse, "velocity-trigger");
 
   // Boundary: six tables need no fast-blink tier, so they stay slot-derived (v5).
   recipe.schemaVersion = 5;
   recipe.resources.chordTables = nineTables.slice(0, 6);
+  delete recipe.initialOptions.trigResponse;
+  delete recipe.initialOptions.attenuverterMode;
   assert.equal(normalizeRecipe(recipe).schemaVersion, 5);
 });
 
@@ -2067,7 +2081,11 @@ test("per-engine stereo (stereoEngines) requires and normalizes to v10", async (
       ...recipe,
       schemaVersion: version,
       initialOptions: version >= 18
-        ? { ...(recipe.initialOptions as object), attenuverterMode: "stock" }
+        ? {
+          ...(recipe.initialOptions as object),
+          attenuverterMode: "stock",
+          ...(version >= 25 ? { trigResponse: "trigger" } : {}),
+        }
         : recipe.initialOptions,
       resources: version === 12 || version === 13
         ? { chordTables: [table], userDataBanks: [] }

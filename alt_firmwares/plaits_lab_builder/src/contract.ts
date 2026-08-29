@@ -4,7 +4,8 @@ import chordCatalog from "../../plaits_lab_chord_tables/catalog.json" with { typ
 export const approvedEngineIds: readonly string[] = catalog.engines.map((engine) => engine.id);
 const approvedEngines = new Map(catalog.engines.map((engine) => [engine.id, engine]));
 const approvedEngineIdSet = new Set<string>(approvedEngineIds);
-export const maxChordTables = 9;
+export const maxChordTables = 16;
+const maxPreGestureChordTables = 9;
 // The six states the original LED scheme could show (three colors x
 // solid/blink). Tables 7-9 need the fast-blink LED tier, which only a v8+
 // builder supports — so a recipe with more than this normalizes to schema v8.
@@ -36,7 +37,7 @@ export type NormalizedChordTable = {
 // feature gates below use minimums so a newly supported schema cannot get
 // stranded behind an old "10, 11, 12..." whitelist.
 export const minRecipeSchemaVersion = 2;
-export const maxRecipeSchemaVersion = 26;
+export const maxRecipeSchemaVersion = 27;
 const configurationMinSchemaVersion = 4;
 const resourcesMinSchemaVersion = 5;
 const fourBankMinSchemaVersion = 6;       // 32 slots
@@ -58,6 +59,7 @@ const experimentalFmMinSchemaVersion = 23; // independent TZFM law / fast ADC
 // positions. Compile-time only, and it changes no stored state, so a module
 // moves between the two layouts keeping its tuned root and locked octave.
 const simplifiedPitchRangesMinSchemaVersion = 24;
+const gateArticulationMinSchemaVersion = 27;
 const scaleBankMinSchemaVersion = 16;      // recipe-driven scale bank
 export const levelAutoMinSchemaVersion = 16; // engine-aware LEVEL routing
 const speechBanksMinSchemaVersion = 17;      // selectable/custom Speech LPC banks
@@ -192,7 +194,7 @@ export type NormalizedWavetableBank = {
 };
 
 export type NormalizedRecipe = {
-  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26;
+  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27;
   target: "mutable-instruments-plaits" | "plum-audio-roved";
   firmware: "rubato-plaits";
   // A null entry is an empty slot (v7 short banks); filled slots are engine ids.
@@ -228,10 +230,14 @@ export type NormalizedRecipe = {
     // workflow, and gives each surviving mode a third of the selector travel.
     // Leave it off to use Plaits as an LFO or to jump octaves in one gesture.
     simplifiedPitchRanges?: boolean;
+    // Compile the optional one-knob envelope contour. Its runtime one-shot or
+    // gated behavior is selected independently by trigResponse.
+    envelopeContour?: boolean;
   };
   initialOptions: {
     lockedFrequencyKnob: "octaves" | "decay" | "aux-crossfade" | "macro-4"
-      | "triggered-envelope" | "gated-envelope";
+      | "triggered-envelope" | "gated-envelope" | "envelope-contour";
+    trigResponse?: "trigger" | "gate" | "velocity-trigger" | "velocity-gate";
     modelInput: "model" | "lpg-colour" | "aux-crossfade" | "macro-4" | "sync-in";
     levelInput: "level" | "decay" | "auto";
     auxOutput: "alternate-model" | "square-subosc" | "sine-subosc" | "stereo";
@@ -268,6 +274,7 @@ const defaultConfiguration: Pick<NormalizedRecipe, "preferences" | "initialOptio
   preferences: { navigationMode: "linear", calibration: false, colorBlindMode: false },
   initialOptions: {
     lockedFrequencyKnob: "octaves",
+    trigResponse: "trigger",
     modelInput: "model",
     levelInput: "level",
     auxOutput: "alternate-model",
@@ -963,6 +970,7 @@ function normalizeConfiguration(
     ["syncInput"],
     ["linearTzfm", "fastFm"],
     ["simplifiedPitchRanges"],
+    ["envelopeContour"],
   ];
   // The index of the cumulative prefix the recipe's keys match exactly, or -1
   // for a shape no released editor ever produced.
@@ -992,17 +1000,23 @@ function normalizeConfiguration(
     ["auxOutput", "chordTable", "holdOnTrigger", "levelInput",
       "lockedFrequencyKnob", "modelInput", "suboscillatorOctave"],
     ["attenuverterMode"],
+    ["trigResponse"],
   ];
   const initialOptionTier = matchKeySetTier(optionValues, initialOptionTiers);
   const carriesAttenuverterMode = initialOptionTier >= 1;
+  const carriesGateArticulation = initialOptionTier >= 2;
   if (preferenceTier < 0
       || booleanPreferenceKeys.some((key) => typeof preferenceValues[key] !== "boolean")
       || initialOptionTier < 0
       || !isOneOf(preferenceValues.navigationMode, ["linear", "banked"] as const)
       || !isOneOf(optionValues.lockedFrequencyKnob, [
         "octaves", "decay", "aux-crossfade", "macro-4",
-        "triggered-envelope", "gated-envelope",
+        "triggered-envelope", "gated-envelope", "envelope-contour",
       ] as const)
+      || (carriesGateArticulation
+        && !isOneOf(optionValues.trigResponse, [
+          "trigger", "gate", "velocity-trigger", "velocity-gate",
+        ] as const))
       || !isOneOf(optionValues.modelInput, ["model", "lpg-colour", "aux-crossfade", "macro-4", "sync-in"] as const)
       || !isOneOf(optionValues.levelInput, ["level", "decay", "auto"] as const)
       || !isOneOf(optionValues.auxOutput, ["alternate-model", "square-subosc", "sine-subosc", "stereo"] as const)
@@ -1029,6 +1043,30 @@ function normalizeConfiguration(
   const linearTzfm = preferenceValues.linearTzfm === true;
   const fastFm = preferenceValues.fastFm === true;
   const simplifiedPitchRanges = preferenceValues.simplifiedPitchRanges === true;
+  const legacyContour = optionValues.lockedFrequencyKnob === "triggered-envelope"
+    || optionValues.lockedFrequencyKnob === "gated-envelope";
+  const envelopeContour = preferenceValues.envelopeContour === true;
+  const hasEnvelopeContour = envelopeContour || legacyContour;
+  const trigResponse = carriesGateArticulation
+    ? optionValues.trigResponse as NonNullable<NormalizedRecipe["initialOptions"]["trigResponse"]>
+    : optionValues.lockedFrequencyKnob === "gated-envelope" ? "gate" : "trigger";
+  const usesGateArticulation = carriesGateArticulation
+    || optionValues.lockedFrequencyKnob === "envelope-contour"
+    || envelopeContour;
+  if ((Number(candidate.schemaVersion) >= gateArticulationMinSchemaVersion && !carriesGateArticulation)
+      || (usesGateArticulation
+        && Number(candidate.schemaVersion) < gateArticulationMinSchemaVersion)) {
+    throw new ContractError(
+      "unsupported_schema",
+      `TRIG response requires recipe schema version ${gateArticulationMinSchemaVersion}.`,
+    );
+  }
+  if (optionValues.lockedFrequencyKnob === "envelope-contour" && !hasEnvelopeContour) {
+    throw new ContractError(
+      "invalid_recipe",
+      "Starting with Envelope contour requires the envelopeContour preference.",
+    );
+  }
   if (simplifiedPitchRanges
       && Number(candidate.schemaVersion) < simplifiedPitchRangesMinSchemaVersion) {
     throw new ContractError(
@@ -1115,9 +1153,14 @@ function normalizeConfiguration(
       linearTzfm,
       fastFm,
       simplifiedPitchRanges,
+      envelopeContour: hasEnvelopeContour,
     },
     initialOptions: {
+      // Preserve the two v19 spellings at the private Worker/container boundary.
+      // The generator translates them to the new orthogonal contour + TRIG
+      // settings, while their old schema and cache identity remain valid.
       lockedFrequencyKnob: optionValues.lockedFrequencyKnob,
+      trigResponse,
       modelInput: optionValues.modelInput,
       levelInput: optionValues.levelInput,
       auxOutput: optionValues.auxOutput,
@@ -1377,6 +1420,13 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
   } else {
     chordTables = normalizeChordTables(structuredClone(chordCatalog.tables));
   }
+  if (chordTables.length > maxPreGestureChordTables
+      && schemaVersion < gateArticulationMinSchemaVersion) {
+    throw new ContractError(
+      "unsupported_schema",
+      `More than ${maxPreGestureChordTables} chord tables require recipe schema version ${gateArticulationMinSchemaVersion}.`,
+    );
+  }
   const configuration = schemaVersion >= configurationMinSchemaVersion
     ? normalizeConfiguration(candidate, chordTables)
     : defaultConfiguration;
@@ -1388,6 +1438,8 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     schemaVersion,
     configuration.initialOptions.auxOutput,
   );
+  const legacyContour = configuration.initialOptions.lockedFrequencyKnob === "triggered-envelope"
+    || configuration.initialOptions.lockedFrequencyKnob === "gated-envelope";
   return {
     // Newest first: the Sync In compile switch is a preference of its own as of
     // v22 — a recipe that merely STARTS in Sync In no longer implies it (and is
@@ -1405,7 +1457,13 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     // (v8); a short-bank recipe (a trailing empty slot) stays v7; a candidate that
     // carried v6 resources (even an empty custom-bank list, e.g. a 32-slot recipe)
     // stays v6; else v5.
-    schemaVersion: wavetableBank !== undefined ? 26
+    schemaVersion: chordTables.length > maxPreGestureChordTables
+      || (!legacyContour && (
+        configuration.preferences.envelopeContour
+        || configuration.initialOptions.trigResponse !== "trigger"
+        || configuration.initialOptions.lockedFrequencyKnob === "envelope-contour"
+      )) ? 27
+      : wavetableBank !== undefined ? 26
       : naturalSpeechBanks !== undefined ? 25
       : configuration.preferences.simplifiedPitchRanges
       || terrainBank !== undefined
@@ -1414,8 +1472,7 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
       || configuration.preferences.fastFm ? 23
       : configuration.preferences.syncInput ? 22
       : configuration.preferences.replaceableFmBanks ? 20
-      : configuration.initialOptions.lockedFrequencyKnob === "triggered-envelope"
-      || configuration.initialOptions.lockedFrequencyKnob === "gated-envelope" ? 19
+      : legacyContour ? 19
       : schemaVersion >= attenuverterModeMinSchemaVersion ? 18
       : speechBanks !== undefined ? 17
       : scaleBank !== undefined

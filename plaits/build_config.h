@@ -73,11 +73,14 @@
 #define PLAITS_BUILD_LOCKED_FREQUENCY_POT_OPTION 0
 #endif
 
-// Compile the two Elements-derived one-knob envelopes into builds that select
-// either one as their starting FREQUENCY assignment. Keeping this recipe-scoped
+#ifndef PLAITS_BUILD_TRIG_RESPONSE_OPTION
+#define PLAITS_BUILD_TRIG_RESPONSE_OPTION 0
+#endif
+
+// Compile the Elements-derived one-knob contour into builds that opt into it.
+// TRIG response chooses one-shot or gated behavior at runtime. Keeping this recipe-scoped
 // matters for the fixed 256 KB target: the fullest legacy layouts do not have
-// room for another global feature. An enabled build exposes both the triggered
-// and gated contours in its runtime options menu.
+// room for another global feature.
 #ifndef PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE
 #define PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE 0
 #endif
@@ -124,6 +127,12 @@
 
 #ifndef PLAITS_CHORD_TABLE_COUNT
 #define PLAITS_CHORD_TABLE_COUNT 3
+#endif
+
+// Engine slots whose HARMONICS control selects a chord from the shared chord
+// bank. Generated Palette builds derive this from catalog `sharedModules`.
+#ifndef PLAITS_CHORD_ENGINE_MASK
+#define PLAITS_CHORD_ENGINE_MASK 0x000040c0u
 #endif
 
 // Scale bank shared by the Diatonic Chord and Scale Stack engines. Pitches use
@@ -220,11 +229,11 @@
 // The id a locally built (non-hosted) firmware stamps into saved settings. It
 // must equal what the builder mints for an all-default recipe, or switching
 // between a local build and a hosted default build resets options each way.
-// Currently OPTIONS_LAYOUT_VERSION 4 with every option at value 0; recompute
+// Recompute
 // with generate_engine_config.validate_recipe(default_recipe.json) after any
 // change to the fold.
 #ifndef PLAITS_BUILD_OPTIONS_PROFILE_ID
-#define PLAITS_BUILD_OPTIONS_PROFILE_ID 0x02debeu
+#define PLAITS_BUILD_OPTIONS_PROFILE_ID 0x3fc790u
 #endif
 
 #ifndef PLAITS_BUILD_ATTENUVERTER_MODE

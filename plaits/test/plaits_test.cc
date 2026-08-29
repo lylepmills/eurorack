@@ -2860,6 +2860,116 @@ void ValidateAutoLevelDecayRouting() {
   }
 }
 
+uint64_t MeasureHeldGateEnergy(
+    uint8_t trig_response,
+    float trigger_voltage,
+    int settle_blocks,
+    bool level_patched = false,
+    float level_voltage = 0.0f) {
+  BufferAllocator allocator(ram_block, sizeof(ram_block));
+  Voice voice;
+  voice.Init(&allocator);
+
+  Patch patch;
+  memset(&patch, 0, sizeof(patch));
+  patch.engine = 8;  // Virtual Analog: a continuous outer-LPG engine.
+  patch.note = 48.0f;
+  patch.harmonics = 0.4f;
+  patch.timbre = 0.5f;
+  patch.morph = 0.5f;
+  patch.decay = 0.5f;
+  patch.lpg_colour = 0.0f;
+  patch.trig_response_option = trig_response;
+
+  Modulations modulations;
+  memset(&modulations, 0, sizeof(modulations));
+  modulations.trigger = trigger_voltage;
+  modulations.trigger_patched = true;
+  modulations.level = level_voltage;
+  modulations.level_patched = level_patched;
+
+  Voice::Frame frames[kAudioBlockSize];
+  for (int block = 0; block < settle_blocks; ++block) {
+    voice.Render(patch, modulations, frames, kAudioBlockSize);
+  }
+
+  uint64_t energy = 0;
+  for (int block = 0; block < 64; ++block) {
+    voice.Render(patch, modulations, frames, kAudioBlockSize);
+    for (size_t i = 0; i < kAudioBlockSize; ++i) {
+      energy += abs(static_cast<int>(frames[i].out));
+    }
+  }
+  return energy;
+}
+
+void ValidateGateArticulation() {
+  // Holding a gate must keep an ordinary oscillator open after the stock
+  // trigger ping has decayed. This is the behavior that makes note duration an
+  // independent performance dimension without selecting the optional contour.
+  const uint64_t trigger_energy = MeasureHeldGateEnergy(
+      TRIG_RESPONSE_TRIGGER, 1.0f, 1500);
+  const uint64_t gate_energy = MeasureHeldGateEnergy(
+      TRIG_RESPONSE_GATE, 1.0f, 1500);
+  if (gate_energy < 10000 || gate_energy < trigger_energy * 5) {
+    fprintf(
+        stderr,
+        "Gate response did not hold the outer LPG: trigger=%llu gate=%llu\n",
+        static_cast<unsigned long long>(trigger_energy),
+        static_cast<unsigned long long>(gate_energy));
+    abort();
+  }
+
+  // Velocity Trigger keeps the stock one-shot LPG response, but its peak is
+  // taken from the voltage sampled on the rising edge.
+  const uint64_t soft_trigger_energy = MeasureHeldGateEnergy(
+      TRIG_RESPONSE_VELOCITY_TRIGGER, 0.4f, 0);
+  const uint64_t loud_trigger_energy = MeasureHeldGateEnergy(
+      TRIG_RESPONSE_VELOCITY_TRIGGER, 1.0f, 0);
+  if (soft_trigger_energy >= loud_trigger_energy ||
+      loud_trigger_energy < soft_trigger_energy * 5 / 4) {
+    fprintf(
+        stderr,
+        "Velocity trigger ignored rising-edge voltage: soft=%llu loud=%llu\n",
+        static_cast<unsigned long long>(soft_trigger_energy),
+        static_cast<unsigned long long>(loud_trigger_energy));
+    abort();
+  }
+
+  // A real LEVEL input is still an amplitude CV in this mode. It must multiply
+  // the latched velocity instead of replacing it.
+  const uint64_t soft_trigger_with_level = MeasureHeldGateEnergy(
+      TRIG_RESPONSE_VELOCITY_TRIGGER, 0.4f, 0, true, 0.7f);
+  const uint64_t loud_trigger_with_level = MeasureHeldGateEnergy(
+      TRIG_RESPONSE_VELOCITY_TRIGGER, 1.0f, 0, true, 0.7f);
+  if (soft_trigger_with_level >= loud_trigger_with_level ||
+      loud_trigger_with_level < soft_trigger_with_level * 21 / 20) {
+    fprintf(
+        stderr,
+        "LEVEL replaced velocity-trigger amplitude: soft=%llu loud=%llu\n",
+        static_cast<unsigned long long>(soft_trigger_with_level),
+        static_cast<unsigned long long>(loud_trigger_with_level));
+    abort();
+  }
+
+  // Velocity is sampled from the rising edge, then drives the same articulation
+  // path. Both voltages are valid gates (>0.3), but the larger one must produce
+  // materially more energy once the LPG has settled.
+  const uint64_t soft_gate_energy = MeasureHeldGateEnergy(
+      TRIG_RESPONSE_VELOCITY_GATE, 0.4f, 32);
+  const uint64_t loud_gate_energy = MeasureHeldGateEnergy(
+      TRIG_RESPONSE_VELOCITY_GATE, 1.0f, 32);
+  if (soft_gate_energy >= loud_gate_energy ||
+      loud_gate_energy < soft_gate_energy * 5 / 4) {
+    fprintf(
+        stderr,
+        "Velocity gate ignored rising-edge voltage: soft=%llu loud=%llu\n",
+        static_cast<unsigned long long>(soft_gate_energy),
+        static_cast<unsigned long long>(loud_gate_energy));
+    abort();
+  }
+}
+
 void ValidateManualModelSelectionClearsHeldModelCv() {
   BufferAllocator allocator(ram_block, sizeof(ram_block));
   Voice voice;
@@ -3698,6 +3808,7 @@ void TestExperimentalEngines() {
   fflush(stdout);
   ValidateClockedChiptuneLevelVca();
   ValidateAutoLevelDecayRouting();
+  ValidateGateArticulation();
   printf("Validating manual MODEL selection against held CV...\n");
   fflush(stdout);
   ValidateManualModelSelectionClearsHeldModelCv();

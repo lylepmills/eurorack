@@ -73,12 +73,12 @@ class RenderManualTest(unittest.TestCase):
         self.assertIn("in Drift also the speed", ATTENUVERTER_OPTIONS_NOTE)
         self.assertNotIn("Stock", ATTENUVERTER_OPTIONS_NOTE)
 
-    def test_frequency_menu_places_triggered_and_gated_envelopes_fifth_and_sixth(self) -> None:
+    def test_frequency_menu_has_one_orthogonal_envelope_contour(self) -> None:
         self.assertEqual(
             MENU_LIGHTS[3][1],
             (
                 "Octaves", "MACRO (fourth control)", "Aux crossfade", "LPG decay",
-                "Triggered envelope", "Gated envelope",
+                "Envelope contour",
             ),
         )
 
@@ -163,19 +163,31 @@ class RenderManualTest(unittest.TestCase):
             self.assertIn("disable stereo output", printed)
 
     @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
-    def test_envelope_build_prints_both_contours_and_their_gate_behavior(self) -> None:
+    def test_envelope_build_prints_four_way_trig_behavior(self) -> None:
         recipe = self.calibration_recipe(False)
-        recipe["schemaVersion"] = 19
-        recipe["initialOptions"]["lockedFrequencyKnob"] = "triggered-envelope"
+        recipe["schemaVersion"] = 25
+        recipe["preferences"] = {
+            "navigationMode": "linear",
+            "calibration": False,
+            "colorBlindMode": False,
+            "replaceableFmBanks": False,
+            "syncInput": False,
+            "linearTzfm": False,
+            "fastFm": False,
+            "simplifiedPitchRanges": False,
+            "envelopeContour": True,
+        }
+        recipe["initialOptions"]["lockedFrequencyKnob"] = "envelope-contour"
         recipe["initialOptions"]["attenuverterMode"] = "stock"
+        recipe["initialOptions"]["trigResponse"] = "velocity-trigger"
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "envelopes.pdf"
             render_pdf(manual_document(recipe), output)
             printed = pdf_strings(output).replace(")(", " ")
-            self.assertIn("Triggered envelope", printed)
-            self.assertIn("Gated envelope", printed)
-            self.assertIn("Elements-derived Triggered envelope", printed)
-            self.assertIn("sustains while the gate is high", printed)
+            self.assertIn("Velocity trigger", printed)
+            self.assertIn("Velocity gate", printed)
+            self.assertIn("Elements-derived Envelope contour", printed)
+            self.assertIn("rising-edge voltage", printed)
 
     def short_bank_recipe(self) -> dict:
         # v7 short bank: green full (8), red partly empty (3 + 5 empty), amber

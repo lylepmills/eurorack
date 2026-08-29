@@ -75,7 +75,7 @@ class ChannelPostProcessor {
     limiter_.Init();
   }
   
-  void Process(
+  __attribute__((noinline)) void Process(
       float gain,
       bool bypass_lpg,
       float low_pass_gate_gain,
@@ -113,6 +113,13 @@ class ChannelPostProcessor {
   DISALLOW_COPY_AND_ASSIGN(ChannelPostProcessor);
 };
 
+enum TrigResponse {
+  TRIG_RESPONSE_TRIGGER,
+  TRIG_RESPONSE_GATE,
+  TRIG_RESPONSE_VELOCITY_TRIGGER,
+  TRIG_RESPONSE_VELOCITY_GATE,
+};
+
 struct Patch {
   float note;
   float harmonics;
@@ -139,9 +146,14 @@ struct Patch {
   // 1 - fourth synthesis macro
   // 2 - manual aux crossfade
   // 3 - manual control of decay (without button press)
-  // 4 - triggered one-shot envelope
-  // 5 - gated attack/sustain/release envelope
+  // 4 - envelope contour; TRIG response chooses one-shot or gated behavior
   uint8_t locked_frequency_pot_option;
+  // 0 - trigger: stock edge-triggered ping / one-shot contour
+  // 1 - gate: gate duration holds the note open
+  // 2 - velocity trigger: rising-edge voltage scales the ping / one-shot
+  // 3 - velocity gate: gate duration holds the note open and its rising-edge
+  //     voltage scales accent / the outer LPG
+  uint8_t trig_response_option;
   // 0 - cv control of model (original)
   // 1 - cv control of the fourth synthesis macro
   // 2 - cv control of aux crossfade
@@ -167,7 +179,7 @@ struct Patch {
   // Only has an effect while aux_is_subosc(); the UI darkens its menu light
   // otherwise.
   uint8_t aux_subosc_option;
-  // Index into the chord tables this firmware was built with (up to nine).
+  // Index into the chord tables this firmware was built with (up to sixteen).
   uint8_t chord_set_option;
   // 0 - don't hold params on trigger (original)
   // 1 - hold timbre, morph, harmo, level, v/oct cv modulations on trigger (not fm)
@@ -284,6 +296,7 @@ class Voice {
   
   float previous_note_;
   bool trigger_state_;
+  float trigger_velocity_;
 
   float held_timbre_;
   float held_morph_;

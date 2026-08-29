@@ -57,7 +57,8 @@ struct State {
   uint8_t lpg_colour;
   uint8_t decay;
   uint8_t octave;
-  uint8_t fine_tune;
+  // Retired fine-tune storage, reused for the TRIG response option.
+  uint8_t trig_response_option;
   // Retired fine-tune storage, reused as the high byte of the generated
   // Starting Options profile ID. Older profiles leave it zero, making every
   // current three-byte ID disjoint without growing State or erasing settings.

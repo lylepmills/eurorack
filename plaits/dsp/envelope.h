@@ -52,13 +52,14 @@ class LPGEnvelope {
   
   inline void ProcessPing(
       float attack,
+      float peak,
       float short_decay,
       float decay_tail,
       float hf) {
     if (ramp_up_) {
       vactrol_state_ += attack;
-      if (vactrol_state_ >= 1.0f) {
-        vactrol_state_ = 1.0f;
+      if (vactrol_state_ >= peak) {
+        vactrol_state_ = peak;
         ramp_up_ = false;
       }
     }

@@ -60,6 +60,43 @@ static const float kFmCalibrationUnitsPerVolt = 80.0f / 11.0f;
 static const float kLinearTzfmHzPerVolt = 1000.0f;
 #endif
 
+#if !PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE
+#if defined(__clang__)
+__attribute__((noinline))
+#else
+__attribute__((noinline, optimize("Os")))
+#endif
+static void ApplyGateLevel(
+    bool gate_high,
+    bool velocity_response,
+    float velocity,
+    bool level_patched,
+    float* level) {
+  if (!gate_high) {
+    *level = 0.0f;
+  } else if (velocity_response) {
+    *level = velocity * (level_patched ? *level : 1.0f);
+  } else if (!level_patched) {
+    *level = 1.0f;
+  }
+}
+
+#if defined(__clang__)
+__attribute__((noinline))
+#else
+__attribute__((noinline, optimize("Os")))
+#endif
+static float ApplyVelocityAccent(
+    bool velocity_response,
+    float velocity,
+    bool level_patched,
+    float level) {
+  return velocity_response
+      ? velocity * (level_patched ? level : 1.0f)
+      : (level_patched ? level : 0.8f);
+}
+#endif
+
 void Voice::Init(BufferAllocator* allocator) {
   engines_.Init();
   PLAITS_REGISTER_ENGINES(engines_);
@@ -91,6 +128,7 @@ void Voice::Init(BufferAllocator* allocator) {
 #endif
   
   trigger_state_ = false;
+  trigger_velocity_ = 1.0f;
   previous_note_ = 0.0f;
   parameter_randomizer_.Init();
   previous_attenuverter_mode_ = ATTENUVERTER_MODE_STOCK;
@@ -149,6 +187,13 @@ void Voice::Render(
   if (!previous_trigger_state) {
     if (trigger_high) {
       trigger_state_ = true;
+      // The calibrated TRIG reading is already in the same 0..1 domain used
+      // by EngineParameters::accent. Latch the edge rather than following the
+      // gate so a drooping or shaped gate cannot change velocity mid-note.
+      trigger_velocity_ = trigger_value;
+      if (trigger_velocity_ > 1.0f) {
+        trigger_velocity_ = 1.0f;
+      }
       decay_envelope_.Trigger();
       engine_cv_ = modulations.engine;
     }
@@ -191,8 +236,7 @@ void Voice::Render(
   bool level_patched = modulations.level_patched;
 #if PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE
   const bool one_knob_envelope_mode =
-      patch.locked_frequency_pot_option == 4 ||
-      patch.locked_frequency_pot_option == 5;
+      patch.locked_frequency_pot_option == 4;
   const bool resonator_envelope_mode =
 #if PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE && \
     defined(PLAITS_RESONATOR_ENVELOPE_ENGINE_MASK)
@@ -216,8 +260,33 @@ void Voice::Render(
   }
   CONSTRAIN(patch_decay, 0.0f, 1.0f);
 
+  const bool gate_response =
+      (patch.trig_response_option & 1) &&
+      modulations.trigger_patched;
+  const bool velocity_response =
+      (patch.trig_response_option & 2) &&
+      modulations.trigger_patched;
+  const bool velocity_trigger_response =
+      velocity_response && !gate_response;
+#if !PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE
+  // Without the optional contour, a gate is exactly another LEVEL source.
+  // Feed it through the existing LEVEL/LPG path so that release still uses the
+  // stock decay and COLOUR behavior without carrying a parallel VCA path in
+  // the flash-constrained default build.
+  const bool level_input_controls_articulation = level_patched;
+  if (gate_response) {
+    ApplyGateLevel(
+        trigger_state_,
+        velocity_response,
+        trigger_velocity_,
+        level_patched,
+        &modulations_level);
+    level_patched = true;
+  }
+#endif
+
   const bool rising_edge = trigger_state_ && !previous_trigger_state;
-  if (rising_edge && !level_patched) {
+  if (rising_edge && !level_patched && !gate_response) {
 #if PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE
     // The alternate envelope supplies the LPG's input level directly. Stock
     // mode keeps the original vactrol ping.
@@ -461,9 +530,9 @@ void Voice::Render(
   const bool use_one_knob_envelope =
       one_knob_envelope_mode && modulations.trigger_patched;
   const OneKnobEnvelope::Mode contour_mode =
-      patch.locked_frequency_pot_option == 4
-          ? OneKnobEnvelope::MODE_TRIGGERED
-          : OneKnobEnvelope::MODE_GATED;
+      gate_response
+          ? OneKnobEnvelope::MODE_GATED
+          : OneKnobEnvelope::MODE_TRIGGERED;
   const bool contour_mode_changed =
       one_knob_envelope_active_ && contour_mode != one_knob_envelope_mode_;
   if (contour_mode_changed) {
@@ -492,12 +561,24 @@ void Voice::Render(
 
   float compressed_level = 1.3f * modulations_level / (0.3f + fabsf(modulations_level));
   CONSTRAIN(compressed_level, 0.0f, 1.0f);
-  p.accent = level_patched ? compressed_level : 0.8f;
 #if PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE
-  p.articulation_envelope = articulation_envelope;
+  const float gate_velocity = velocity_response ? trigger_velocity_ : 1.0f;
+  const float level_scale = level_patched ? compressed_level : 1.0f;
+  const float gate_level = trigger_state_ ? gate_velocity * level_scale : 0.0f;
+  const float articulation_scale = gate_velocity * level_scale;
+  p.accent = velocity_response
+      ? articulation_scale
+      : (level_patched ? compressed_level : 0.8f);
+  p.articulation_envelope = articulation_envelope * articulation_scale;
   p.articulation_envelope_active =
       use_one_knob_envelope && resonator_envelope_mode &&
       one_knob_envelope_.active();
+#else
+  p.accent = ApplyVelocityAccent(
+      velocity_response,
+      trigger_velocity_,
+      level_patched,
+      compressed_level);
 #endif
 
   bool use_internal_envelope = modulations.trigger_patched;
@@ -689,11 +770,17 @@ void Voice::Render(
   // second LPG: scale both of the engine's real outputs here. A suboscillator,
   // when selected below, deliberately replaces AUX after this stage and keeps
   // its existing envelope-bypass behavior.
-  if (already_enveloped && level_patched && \
+  if (already_enveloped &&
+#if PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE
+      (level_patched || velocity_response) &&
+#else
+      (level_input_controls_articulation || velocity_response) &&
+#endif
       (kChiptuneEngineMask & (1u << engine_index))) {
+    const float chiptune_level = p.accent;
     for (size_t i = 0; i < size; ++i) {
-      out_buffer_[i] *= compressed_level;
-      aux_buffer_[i] *= compressed_level;
+      out_buffer_[i] *= chiptune_level;
+      aux_buffer_[i] *= chiptune_level;
     }
   }
 #endif
@@ -744,20 +831,44 @@ void Voice::Render(
     const float decay_tail = (20.0f * kBlockSize) / kSampleRate *
         SemitonesToRatio(-72.0f * patch_decay + 12.0f * hf) - short_decay;
     
-    if (level_patched) {
-      lpg_envelope_.ProcessLP(compressed_level, short_decay, decay_tail, hf);
 #if PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE
+    if (gate_response) {
+      if (use_one_knob_envelope) {
+        lpg_envelope_.ProcessLP(
+            articulation_envelope * articulation_scale, 1.0f, 0.0f, hf);
+      } else {
+        lpg_envelope_.ProcessLP(
+            gate_level, short_decay, decay_tail, hf);
+      }
     } else if (use_one_knob_envelope) {
       // The contour already supplies the complete amplitude trajectory. Track
       // it directly instead of adding Plaits' stock vactrol decay afterward;
       // otherwise the advertised millisecond decays remain audibly long. The
       // LPG's level-dependent cutoff and COLOUR response are still retained.
       lpg_envelope_.ProcessLP(
-          articulation_envelope, 1.0f, 0.0f, hf);
+          articulation_envelope * articulation_scale, 1.0f, 0.0f, hf);
+    } else if (level_patched) {
+#else
+    if (level_patched) {
 #endif
+      // In Velocity Trigger mode, LEVEL remains a conventional amplitude CV,
+      // but the latched trigger voltage supplies the note velocity. Combining
+      // them here makes the two controls multiplicative, just like a velocity
+      // source feeding a VCA, while retaining the stock LPG trajectory.
+      lpg_envelope_.ProcessLP(
+          compressed_level *
+              (velocity_trigger_response ? trigger_velocity_ : 1.0f),
+          short_decay,
+          decay_tail,
+          hf);
     } else {
       const float attack = NoteToFrequency(p.note) * float(kBlockSize) * 2.0f;
-      lpg_envelope_.ProcessPing(attack, short_decay, decay_tail, hf);
+      lpg_envelope_.ProcessPing(
+          attack,
+          velocity_trigger_response ? trigger_velocity_ : 1.0f,
+          short_decay,
+          decay_tail,
+          hf);
     }
   } else {
     lpg_envelope_.Init();

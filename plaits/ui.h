@@ -60,6 +60,12 @@ enum UiMode {
   UI_MODE_ERROR
 };
 
+enum ContextualControl {
+  CONTEXTUAL_CONTROL_NONE,
+  CONTEXTUAL_CONTROL_OCTAVE,
+  CONTEXTUAL_CONTROL_CHORD_TABLE,
+};
+
 enum FactoryTestingCommand {
   FACTORY_TESTING_READ_POT,
   FACTORY_TESTING_READ_CV,
@@ -159,6 +165,7 @@ class Ui {
   void UpdateLEDs();
   void ReadSwitches();
   void ProcessPotsHiddenParameters();
+  void LockHarmonicsPotForContext(bool fall_back_to_octave);
   void LoadState();
   void SaveState();
   void DetectNormalization();
@@ -206,7 +213,6 @@ class Ui {
   int option_index_;
 
   float data_transfer_progress_;
-  float fine_tune_;
   float transposition_;
   float octave_;
   float tuned_root_note_;
@@ -259,17 +265,18 @@ class Ui {
   // but using manual aux crossfade, stores the last octave
   // chosen manually with the frequency pot or right-button + MORPH shortcut.
   uint8_t locked_octave_;
-  // MORPH writes here while the right button is held and FREQUENCY has another
-  // assignment. The quantized result is copied into locked_octave_; keeping the
-  // raw control separate gives the nine octave steps normal hysteresis.
-  float locked_octave_control_;
-  bool locked_octave_gesture_armed_;
-  bool editing_locked_octave_;
+  // The panel-specific locked-octave gesture writes here while FREQUENCY has
+  // another assignment. The quantized result is copied into locked_octave_;
+  // keeping the raw control separate gives the nine octave steps normal
+  // hysteresis. The same value also carries contextual chord-table selection.
+  float contextual_control_;
+  ContextualControl contextual_control_target_;
 #if PLAITS_CPU_PROBE
   float cpu_usage_;
 #endif
 
   stmlib::HysteresisQuantizer2 octave_quantizer_;
+  stmlib::HysteresisQuantizer2 chord_table_quantizer_;
 
   static const CvAdcChannel normalized_channels_[kNumNormalizedChannels];
 

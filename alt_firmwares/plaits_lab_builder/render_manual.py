@@ -58,14 +58,12 @@ FACTORY_WAVETABLE_NAMES = {
 # most sit nearest the start of the walk. Each light cycles through an ordered
 # list of settings, and the module shows the current one as an LED color (plaits
 # ui.cc): value 0 green, 1 red, 2 yellow, then 3-5 the SAME colors blinking — so
-# a light can hold more than three settings. Light 1 (the chord table) lists
-# whichever tables THIS build loaded, so that row is recipe-specific and reaches
-# the fast-blink tier; a meanings value of None is filled from the recipe.
+# a light can hold more than three settings.
 # Within a light the settings are likewise ordered by reach, which is why the
 # fourth macro and stereo sit at value 1 (solid red) rather than out in the
 # blinking tier. Both orders mirror plaits/dsp/voice.h — keep them in step.
 MENU_LIGHTS = (
-    ("Chord table", None),
+    ("TRIG response", ("Trigger", "Gate", "Velocity trigger", "Velocity gate")),
     ("Aux output", ("Regular aux model", "Stereo (OUT/AUX = L/R)", "Suboscillator")),
     ("Suboscillator", (
         "Square", "Square, -1 octave", "Square, -2 octaves",
@@ -73,7 +71,7 @@ MENU_LIGHTS = (
     )),
     ("FREQUENCY knob", (
         "Octaves", "MACRO (fourth control)", "Aux crossfade", "LPG decay",
-        "Triggered envelope", "Gated envelope",
+        "Envelope contour",
     )),
     ("MODEL input", (
         "Model select", "MACRO (fourth control)", "Aux crossfade",
@@ -102,7 +100,7 @@ SYNC_INPUT_OPTIONS_NOTE = (
 
 # LED appearance for option values 0..8 (plaits ui.cc): green/red/yellow solid
 # (0-2), the same three blinking (3-5), then the same three blinking fast (6-8).
-# Only LIGHT 6 (chord tables) reaches the fast-blink tier. (label, hex, blink).
+# (label, hex, blink).
 LED_STATES = (
     ("Green", BANKS[0]["color"], None),
     ("Red", BANKS[1]["color"], None),
@@ -356,6 +354,8 @@ def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]
         "linearTzfm": build.linear_tzfm == 1,
         "fastFm": build.fast_fm == 1,
         "lockedFrequencyPotOption": build.locked_frequency_pot_option,
+        "trigResponseOption": build.trig_response_option,
+        "envelopeContour": build.envelope_contour == 1,
         "modelCVOption": build.model_cv_option,
     }
 
@@ -682,10 +682,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         bank_map_style.append(("BOTTOMPADDING", (0, 0), (-1, -2), 8))
     bank_map.setStyle(TableStyle(bank_map_style))
 
-    # Options menu — the eight-light reference. Every light except the chord
-    # table is the same on
-    # every build; light 6 lists this recipe's chord tables, so the page is
-    # partly recipe-specific. Each light's settings are shown in LED order, with
+    # Options menu — the eight-light reference. Each light's settings are shown in LED order, with
     # the color word tinted to the LED and "(blink)"/"(fast blink)" for the
     # blinking values.
     def led_setting(index: int, meaning: str) -> str:
@@ -705,11 +702,8 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         Paragraph("SETTINGS (BY LED)", table_header_style),
     ]]
     for light_index, (assigns, meanings) in enumerate(MENU_LIGHTS):
-        if meanings is None:
-            meanings = document["chordTables"]
-        elif light_index == 3 and document.get("lockedFrequencyPotOption", 0) < 4:
-            # The contour code is recipe-scoped for flash. Selecting either one
-            # as the starting assignment compiles both runtime choices in.
+        if light_index == 3 and not document.get("envelopeContour"):
+            # The contour code is recipe-scoped for flash.
             meanings = meanings[:4]
         elif light_index == 4 and document.get("modelCVOption", 0) < 4:
             # Sync detection and engine reset paths are recipe-scoped for flash.
@@ -750,13 +744,11 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         options_intro = (
             "Click TIMBRE + FREQUENCY together to enter or exit the options menu. All eight lights are the menu: "
             "click FREQUENCY/TIMBRE for the previous/next light, and MORPH/HARMONICS for the previous/next setting. "
-            "The first three settings use brightest, medium, and dim; settings four through six repeat those levels with a slow blink; "
-            "and, on LIGHT 1, settings seven through nine repeat them with a fast blink."
+            "The first three settings use brightest, medium, and dim; settings four through six repeat those levels with a slow blink."
             if roved else
             "Short-press both buttons at once to enter or exit the options menu. All eight lights are the menu: "
             "the left button moves between them, and the right button steps through a light's settings. "
-            "The first three settings use brightest, medium, and dim; settings four through six repeat those levels with a slow blink; "
-            "and, on LIGHT 1, settings seven through nine repeat them with a fast blink."
+            "The first three settings use brightest, medium, and dim; settings four through six repeat those levels with a slow blink."
         )
     else:
         fourth_control = (
@@ -771,27 +763,25 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         options_intro = (
             "Click TIMBRE + FREQUENCY together to enter or exit the options menu. All eight lights are the menu: "
             "click FREQUENCY/TIMBRE for the previous/next light, and MORPH/HARMONICS for the previous/next setting. "
-            "The light's color shows the current setting — green, red, and yellow, then the same three colors blinking for a fourth, fifth, or sixth setting — "
-            "and, on LIGHT 1, blinking fast for a seventh, eighth, or ninth."
+            "The light's color shows the current setting — green, red, and yellow, then the same three colors blinking for a fourth, fifth, or sixth setting."
             if roved else
             "Short-press both buttons at once to enter or exit the options menu. All eight lights are the menu: "
             "the left button moves between them, the right button steps through a light's settings, and the light's color shows the current one — "
-            "green, red, and yellow, then the same three colors blinking for a fourth, fifth, or sixth setting — "
-            "and, on LIGHT 1, blinking fast for a seventh, eighth, or ninth."
+            "green, red, and yellow, then the same three colors blinking for a fourth, fifth, or sixth setting."
         )
     contour_options_note = (
-        "With TRIG patched, LIGHT 4's Elements-derived Triggered envelope plays a complete "
-        "one-shot attack/decay on each trigger; Gated envelope attacks, sustains while the "
-        "gate is high, and releases when it falls. "
-        "Both shape amplitude and the LPG opening, and FREQUENCY controls their timing. "
-        if document.get("lockedFrequencyPotOption", 0) >= 4 else ""
+        "LIGHT 4's Elements-derived Envelope contour uses FREQUENCY for timing. "
+        "LIGHT 1 makes it a one-shot attack/decay in either Trigger mode, or an "
+        "attack/sustain/release shape in either Gate mode; either Velocity "
+        "mode scales the contour from the rising-edge voltage. "
+        if document.get("envelopeContour") else ""
     )
     sync_input_options_note = (
         SYNC_INPUT_OPTIONS_NOTE
         if document.get("modelCVOption", 0) == 4 else ""
     )
     options_note = (
-        "LIGHT 1 applies to chord-capable models and lists the chord tables loaded in this build (up to nine). "
+        "LIGHT 1 chooses Trigger, Gate, Velocity trigger, or Velocity gate response. "
         "LIGHT 3 stays dark, and the light navigation skips it, unless LIGHT 2 is set to a suboscillator — it has nothing to act on otherwise. "
         "LIGHT 4 applies in octave-switching (frequency-locked) mode. Whenever LIGHT 4 is not Octaves, push and hold FREQUENCY and turn it to change octaves. "
         "LIGHT 6's LPG-decay and Auto settings apply only when TRIG is patched. "
@@ -802,7 +792,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         "Outside the menu, click FREQUENCY/TIMBRE for previous/next model and "
         "MORPH/HARMONICS for previous/next bank. Model clicks stay inside the current bank."
         if roved else
-        "LIGHT 1 applies to chord-capable models and lists the chord tables loaded in this build (up to nine). "
+        "LIGHT 1 chooses Trigger, Gate, Velocity trigger, or Velocity gate response. "
         "LIGHT 3 stays dark, and the left button walks past it, unless LIGHT 2 is set to a suboscillator — it has nothing to act on otherwise. "
         "LIGHT 4 applies in octave-switching (frequency-locked) mode. Whenever LIGHT 4 is not Octaves, hold the right button and turn MORPH to change octaves. "
         f"{contour_options_note}"
@@ -811,6 +801,21 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         "Auto sends LEVEL to LPG decay on ordinary oscillator models, but keeps LEVEL as velocity/accent on models with their own envelope. "
         f"{ATTENUVERTER_OPTIONS_NOTE}"
         "Model navigation (linear or banked) is chosen when you build the firmware, not from this menu."
+    )
+    chord_gesture = (
+        "Push and turn HARMONICS while a chord-table model is active."
+        if roved else
+        "Hold the left model button and turn HARMONICS while a chord-table model is active."
+    )
+    chord_table_lines = []
+    for index, name in enumerate(document["chordTables"]):
+        bank = "A · light on" if index < 8 else "B · light off"
+        chord_table_lines.append(
+            f"{index + 1}. {_escape(name)} ({bank} {(index % 8) + 1})")
+    chord_tables_note = (
+        f"{chord_gesture} Tables 1–8 show one yellow light; tables 9–16 show "
+        "seven yellow lights with the selected position dark.<br/>" +
+        "<br/>".join(chord_table_lines)
     )
     fine_tuning = (
         "Press and hold HARMONICS, then turn it to choose the frequency range. Fine tuning is the position after octave switching and before the high-frequency range; all eight model lights pulse together. "
@@ -987,6 +992,23 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         menu_table,
         Spacer(1, 0.1 * inch),
         Paragraph(options_note, small_muted_style),
+        Spacer(1, 0.1 * inch),
+        Table(
+            [[
+                Paragraph("CHORD TABLES", table_header_style),
+                Paragraph(chord_tables_note, small_style),
+            ]],
+            colWidths=[1.1 * inch, 5.2 * inch],
+            style=TableStyle([
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#EFECE3")),
+                ("BOX", (0, 0), (-1, -1), 0.5, line),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 7),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+            ]),
+        ),
     ])
 
     if document["scaleBank"]:

@@ -571,7 +571,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
         # plaits/build_config.h. Its nonzero upper byte makes it disjoint from
         # every legacy 16-bit profile, forcing one correct defaults apply.
         recipe = validate_recipe(self.load("default_recipe.json"))
-        self.assertEqual(recipe.options_profile_id, 0x081276)
+        self.assertEqual(recipe.options_profile_id, 0x3fc790)
         self.assertEqual(recipe.attenuverter_mode, 0)
 
     def test_option_values_match_the_firmware_numbering(self) -> None:
@@ -601,26 +601,48 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertEqual(build.hold_on_trigger_option, 1)
         self.assertEqual(build.attenuverter_mode, 0)
 
-    def test_one_knob_envelopes_are_schema_19_values_four_and_five(self) -> None:
+    def test_legacy_one_knob_envelopes_migrate_to_contour_plus_trig_response(self) -> None:
         recipe = self.load("default_recipe.json")
         recipe["schemaVersion"] = 19
         recipe["preferences"] = {"navigationMode": "linear"}
         recipe["resources"] = {"chordTables": DEFAULT_CHORD_TABLES}
 
-        for name, numeric in (("triggered-envelope", 4), ("gated-envelope", 5)):
+        for name, trig_response in (("triggered-envelope", 0), ("gated-envelope", 1)):
             recipe["initialOptions"] = dict(
                 DEFAULT_CONFIGURATION["initialOptions"],
                 lockedFrequencyKnob=name,
                 attenuverterMode="stock",
             )
             build = validate_recipe(recipe)
-            self.assertEqual(build.locked_frequency_pot_option, numeric)
+            self.assertEqual(build.locked_frequency_pot_option, 4)
+            self.assertEqual(build.trig_response_option, trig_response)
             config = render_config(build)
             self.assertIn(
-                f"#define PLAITS_BUILD_LOCKED_FREQUENCY_POT_OPTION {numeric}",
+                "#define PLAITS_BUILD_LOCKED_FREQUENCY_POT_OPTION 4",
                 config,
             )
             self.assertIn("#define PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE 1", config)
+
+            # The public Worker adds every derived field before this private
+            # compiler sees the recipe. Preserve the v19 cache/schema identity
+            # when the legacy locked-FREQUENCY spelling identifies the source.
+            normalized = json.loads(json.dumps(recipe))
+            normalized["preferences"] = {
+                "navigationMode": "linear",
+                "calibration": False,
+                "colorBlindMode": False,
+                "replaceableFmBanks": False,
+                "syncInput": False,
+                "linearTzfm": False,
+                "fastFm": False,
+                "simplifiedPitchRanges": False,
+                "envelopeContour": True,
+            }
+            normalized["initialOptions"]["trigResponse"] = (
+                "gate" if trig_response else "trigger")
+            normalized_build = validate_recipe(normalized)
+            self.assertEqual(normalized_build.trig_response_option, trig_response)
+            self.assertEqual(normalized_build.envelope_contour, 1)
 
         recipe["schemaVersion"] = 18
         with self.assertRaisesRegex(ValueError, "schemaVersion 19"):
@@ -1901,6 +1923,19 @@ class GenerateEngineConfigTest(unittest.TestCase):
             recipe["initialOptions"]["auxOutput"] = "stereo"
             if version >= ATTENUVERTER_MODE_MIN_SCHEMA_VERSION:
                 recipe["initialOptions"]["attenuverterMode"] = "stock"
+            if version >= 25:
+                recipe["preferences"] = {
+                    "navigationMode": "linear",
+                    "calibration": False,
+                    "colorBlindMode": False,
+                    "replaceableFmBanks": False,
+                    "syncInput": False,
+                    "linearTzfm": False,
+                    "fastFm": False,
+                    "simplifiedPitchRanges": False,
+                    "envelopeContour": False,
+                }
+                recipe["initialOptions"]["trigResponse"] = "trigger"
             recipe["stereoEngines"] = ["virtual-analog"]
             if version in (12, 13):
                 recipe["resources"]["userDataBanks"] = []
@@ -2030,8 +2065,47 @@ class GenerateEngineConfigTest(unittest.TestCase):
         recipe["schemaVersion"] = 8
         recipe["initialOptions"] = {**recipe["initialOptions"], "chordTable": "filler-0"}
         recipe["resources"] = {"chordTables": self._local_chord_tables(10)}
-        with self.assertRaisesRegex(ValueError, "between one and nine"):
+        with self.assertRaisesRegex(ValueError, "more than nine"):
             validate_recipe(recipe)
+
+    def test_v27_accepts_sixteen_chord_tables_and_gate_articulation(self) -> None:
+        recipe = self.v7_recipe(["chords"] * 24)
+        recipe["schemaVersion"] = 27
+        recipe["preferences"] = {
+            "navigationMode": "linear",
+            "calibration": False,
+            "colorBlindMode": False,
+            "replaceableFmBanks": False,
+            "syncInput": False,
+            "linearTzfm": False,
+            "fastFm": False,
+            "simplifiedPitchRanges": False,
+            "envelopeContour": True,
+        }
+        recipe["initialOptions"] = {
+            **recipe["initialOptions"],
+            "attenuverterMode": "stock",
+            "lockedFrequencyKnob": "envelope-contour",
+            "trigResponse": "velocity-gate",
+            "chordTable": "filler-15",
+        }
+        recipe["resources"] = {"chordTables": self._local_chord_tables(16)}
+        build = validate_recipe(recipe)
+        config = render_config(build)
+        self.assertEqual(build.trig_response_option, 3)
+        self.assertEqual(build.chord_set_option, 15)
+        self.assertIn("#define PLAITS_CHORD_TABLE_COUNT 16", config)
+        self.assertIn("#define PLAITS_BUILD_TRIG_RESPONSE_OPTION 3", config)
+        self.assertIn("#define PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE 1", config)
+        self.assertIn("#define PLAITS_CHORD_ENGINE_MASK 0x00ffffffu", config)
+
+        recipe["initialOptions"]["trigResponse"] = "velocity-trigger"
+        velocity_trigger = validate_recipe(recipe)
+        self.assertEqual(velocity_trigger.trig_response_option, 2)
+        self.assertIn(
+            "#define PLAITS_BUILD_TRIG_RESPONSE_OPTION 2",
+            render_config(velocity_trigger),
+        )
 
 
 if __name__ == "__main__":
