@@ -493,8 +493,21 @@ def load_package(package_arg: str, autodeclare: bool = False) -> dict[str, Any]:
             "output descriptions must not be empty")
 
     source = manifest["source"]
-    require(isinstance(source, dict) and set(source) == {"root", "header", "files", "className"},
-            "source must contain exactly root, header, files, and className")
+    # "behavior" is optional and maintainer-curated: it requests one of the
+    # firmware's known special parameter routings, each of which has a
+    # matching block in plaits/dsp/voice.cc. The enum is closed on purpose --
+    # a package cannot invent a routing, only ask for one that exists.
+    known_behaviors = {"standard", "speech", "lpc-words", "chiptune",
+                       "natural-voice"}
+    require(isinstance(source, dict) and
+            set(source) <= {"root", "header", "files", "className",
+                            "behavior"} and
+            {"root", "header", "files", "className"} <= set(source),
+            "source must contain root, header, files and className, "
+            "and may add behavior")
+    require(source.get("behavior", "standard") in known_behaviors,
+            "source.behavior must be one of " +
+            ", ".join(sorted(known_behaviors)))
     require(isinstance(source["className"], str)
             and CLASS_PATTERN.fullmatch(source["className"]) is not None,
             "source.className is invalid")
@@ -2282,6 +2295,10 @@ def render_local_hardware_config(
             "header": package["header"].name,
             "className": source["className"],
             "member": f"community_{manifest['catalogId'].replace('-', '_')}_engine_",
+            # Carry the requested routing through, or the generated config
+            # silently reports the engine as ordinary and voice.cc compiles
+            # its special-parameter block out.
+            "behavior": source.get("behavior", "standard"),
         },
         "postProcessing": post,
     }
@@ -2317,6 +2334,12 @@ def render_local_hardware_config(
     user_data = [item["source"].get("userDataBank", -1) for item in selected]
     speech_mask = sum(1 << index for index, item in enumerate(selected) if item["source"].get("behavior") == "speech")
     chiptune_mask = sum(1 << index for index, item in enumerate(selected) if item["source"].get("behavior") == "chiptune")
+    natural_voice_mask = sum(1 << index for index, item in enumerate(selected) if item["source"].get("behavior") == "natural-voice")
+    # voice.cc reaches a natural-voice engine through this member name, which
+    # differs between a community package and a catalog engine.
+    natural_voice_member = next(
+        (item["source"]["member"] for item in selected
+         if item["source"].get("behavior") == "natural-voice"), "")
     # The firmware sizes its navigation from these — WITHOUT them a 1-engine build
     # keeps the default 24-slot / 3-bank layout (build_config.h) and exposes 23
     # null engines. Keep the 3-bank layout (a <3-bank PLAITS_BANK_SIZES array is
@@ -2337,6 +2360,8 @@ def render_local_hardware_config(
 #define PLAITS_ENGINE_ROWS {{ {", ".join(str(row) for row in engine_rows)} }}
 #define PLAITS_HAS_SPEECH_ENGINE {1 if speech_mask else 0}
 #define PLAITS_HAS_CHIPTUNE_ENGINE {1 if chiptune_mask else 0}
+#define PLAITS_HAS_NATURAL_VOICE_ENGINE {1 if natural_voice_mask else 0}
+{f'#define PLAITS_NATURAL_VOICE_ENGINE_MEMBER {natural_voice_member}' if natural_voice_mask else ''}
 #define PLAITS_HAS_USER_DATA_BANK {1 if any(value >= 0 for value in user_data) else 0}
 #define PLAITS_ENGINE_MEMBERS \\
   {members}
@@ -2353,6 +2378,9 @@ static const uint32_t kSpeechEngineMask = 0x{speech_mask:08x};
 #endif
 #if PLAITS_HAS_CHIPTUNE_ENGINE
 static const uint32_t kChiptuneEngineMask = 0x{chiptune_mask:08x};
+#endif
+#if PLAITS_HAS_NATURAL_VOICE_ENGINE
+static const uint32_t kNaturalVoiceEngineMask = 0x{natural_voice_mask:08x};
 #endif
 }}  // namespace plaits
 

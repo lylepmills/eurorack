@@ -530,6 +530,26 @@ void Voice::Render(
             0.0f : patch.frequency_modulation_amount);
   }
 #endif
+#if PLAITS_HAS_NATURAL_VOICE_ENGINE
+  if (kNaturalVoiceEngineMask & (1u << engine_index)) {
+    // Same two gestures stock Speech uses, for the same reasons: with TRIG
+    // patched and the matching CV jack free, the FM attenuverter sets how
+    // much of the recorded pitch contour is replayed and the MORPH
+    // attenuverter sets playback speed. Suppress the ordinary trigger-driven
+    // pitch envelope so the FM gesture stays single-purpose, exactly as the
+    // LPC Words block does; patched FM still modulates pitch normally.
+    //
+    // The member name comes from the generated config because it differs
+    // between a community package and a catalog engine.
+    internal_envelope_amplitude = 0.0f;
+    PLAITS_NATURAL_VOICE_ENGINE_MEMBER.set_prosody_amount(
+        !modulations.trigger_patched || modulations.frequency_patched ?
+            0.0f : patch.frequency_modulation_amount);
+    PLAITS_NATURAL_VOICE_ENGINE_MEMBER.set_speed(
+        !modulations.trigger_patched || modulations.morph_patched ?
+            0.0f : patch.morph_modulation_amount);
+  }
+#endif
 #if PLAITS_HAS_CHIPTUNE_ENGINE
   if (kChiptuneEngineMask & (1u << engine_index)) {
     if (modulations.trigger_patched && !modulations.timbre_patched) {

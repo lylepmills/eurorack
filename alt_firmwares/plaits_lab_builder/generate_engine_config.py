@@ -1496,6 +1496,12 @@ def render_config(recipe: BuildRecipe) -> str:
     )
     speech_mask = sum(1 << index for index, item in enumerate(selected) if item.behavior == "speech")
     lpc_words_mask = sum(1 << index for index, item in enumerate(selected) if item.behavior == "lpc-words")
+    natural_voice_mask = sum(1 << index for index, item in enumerate(selected) if item.behavior == "natural-voice")
+    # voice.cc reaches the engine through this member name, which differs
+    # between a community package and a catalog engine.
+    natural_voice_member = next(
+        (item.member for item in selected
+         if item.behavior == "natural-voice"), "")
     chiptune_mask = sum(1 << index for index, item in enumerate(selected) if item.behavior == "chiptune")
     resonator_envelope_mask = sum(
         1 << index
@@ -1898,6 +1904,8 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_ENGINE_ROWS {{ {", ".join(str(row) for row in engine_rows)} }}
 #define PLAITS_HAS_SPEECH_ENGINE {1 if any(item.behavior == 'speech' for item in selected) else 0}
 #define PLAITS_HAS_LPC_WORDS_ENGINE {1 if any(item.behavior == 'lpc-words' for item in selected) else 0}
+#define PLAITS_HAS_NATURAL_VOICE_ENGINE {1 if natural_voice_mask else 0}
+{f'#define PLAITS_NATURAL_VOICE_ENGINE_MEMBER {natural_voice_member}' if natural_voice_mask else ''}
 #define PLAITS_HAS_CHIPTUNE_ENGINE {1 if any(item.behavior == 'chiptune' for item in selected) else 0}
 #define PLAITS_HAS_USER_DATA_BANK {1 if has_user_data_bank else 0}
 #define PLAITS_HAS_USER_DATA_BANK_OVERRIDE {1 if override_arrays_all else 0}
@@ -1957,6 +1965,9 @@ static const int8_t kEngineUserDataBank[{len(selected)}] = {{ {user_data_banks} 
 {terrain_bank_block}
 #if PLAITS_HAS_SPEECH_ENGINE
 static const uint32_t kSpeechEngineMask = 0x{speech_mask:08x};
+#endif
+#if PLAITS_HAS_NATURAL_VOICE_ENGINE
+static const uint32_t kNaturalVoiceEngineMask = 0x{natural_voice_mask:08x};
 #endif
 #if PLAITS_HAS_LPC_WORDS_ENGINE
 static const uint32_t kLPCWordsEngineMask = 0x{lpc_words_mask:08x};
