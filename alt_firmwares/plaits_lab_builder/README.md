@@ -735,6 +735,20 @@ purge and re-gate, the staging and production artifacts are the same bytes, so
 either copy is the right one. (Before the purge only the production copy was,
 which is why the saved gate artifact had to be replaced.)
 
+The August 28 algorithm-32 Carrier Tilt rollout shipped at
+`rev-3514880253d9`. Its autonomous 71-patch hardware diagnostic completed the
+CPU, render-deadline, silence, and listening checks on a physical Plaits with
+the animated-green pass verdict. Production Worker version
+`5f940207-04d1-4235-afe3-0601935e8b26` then settled with both configured
+instances healthy on the immutable image and no scheduling or starting
+instances. Production canary build
+`6e670c2b2c883a21accc268f5a12487c9a0f01cec9637750560ecb5753ea191f`
+reported the compiler-stamped source revision `3514880253d9`; its
+11,187,884-byte WAV has SHA-256
+`2814f4d8e8556caa6938a5b3bf3cd1c520c816863183ab9f3dc55264201cccfc`,
+and its generated field guide has SHA-256
+`22a1425e6f7853dc314f96cfdb1a1094f4c66a6fa4eedc581f2d2fb6fd459442`.
+
 Cloudflare's rate-limit binding allows five new compilation requests per source
 IP per minute. Cache hits and repeated polls for an already queued build bypass
 that limit. This is a lightweight abuse guard rather than an account or billing
@@ -742,7 +756,7 @@ system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-ccf67eac9661` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-3514880253d9` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a new
 image, use `wrangler containers info <application-id>` and wait until
@@ -753,8 +767,9 @@ previous image is serving or another pool slot is not ready. A first-time
 staging application can temporarily return "no Container instance available"
 while its image is starting; the bounded staging smoke retries that response.
 
-Schema 23 is live, with independent experimental Linear TZFM and Fast FM
-preferences, Sync In as an opt-in preference, and custom Speech banks accepting
+Schema 24 is live, with shared Wave Terrain banks and native equations,
+independent experimental Linear TZFM and Fast FM preferences, Sync In as an
+opt-in preference, and custom Speech banks accepting
 up to 32 words inside the 1,024-frame ceiling. It inherits schema 22's explicit
 Sync capability, schema 21's experimental MODEL-input assignment, schema 20's
 replaceable FM-bank preference, schema 19's
@@ -842,6 +857,7 @@ target.
 | August 16, 2026 (Analog Percussion community engine; all 88 engines covered) | `0eec23f182a1` | `rev-0eec23f182a1` |
 | August 21, 2026 (octave-switching root fix) | `ccf67eac9661` | `rev-ccf67eac9661` |
 | August 28, 2026 (schema 24 shared Wave Terrain bank and native equations, manual contract 19) | `e81f62517fc4` | `rev-e81f62517fc4` |
+| August 28, 2026 (algorithm-32 Carrier Tilt) | `3514880253d9` | `rev-3514880253d9` |
 
 The August 16 production canary used the same exact 24-slot recipe as staging:
 build `6cb08754024d2a7abf43ae0c6390eb23b11a051dbc04c4984a32212040a6e865`
