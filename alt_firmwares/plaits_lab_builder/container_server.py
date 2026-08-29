@@ -664,6 +664,7 @@ STEREO_MACROS = {
     "clap": "CLAP",
     "analog-percussion": "ANALOG_PERCUSSION",
     "freshets-formant": "FRESHETS_FORMANT",
+    "natural-voice": "NATURAL_VOICE",
 }
 ALL_STEREO_MACROS = frozenset(STEREO_MACROS.values())
 

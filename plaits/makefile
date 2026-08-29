@@ -172,7 +172,8 @@ PLAITS_STEREO_MODELS = \
   RING_MOD:ring_mod_engine VOWEL_FOF:vowel_fof_engine \
   DIGITAL_MODULATION:digital_modulation_engine CLAP:clap_engine \
   ANALOG_PERCUSSION:analog_percussion_engine \
-  FRESHETS_FORMANT:freshets_formant_engine
+  FRESHETS_FORMANT:freshets_formant_engine \
+  NATURAL_VOICE:natural_voice_engine
 define _plaits_stereo_rule
 $(BUILD_DIR)$(word 2,$(subst :, ,$(1))).o: CPPFLAGS += $$(if $$(filter 0,$$(PLAITS_STEREO_$(word 1,$(subst :, ,$(1))))),-DPLAITS_STEREO_$(word 1,$(subst :, ,$(1)))=0)
 endef

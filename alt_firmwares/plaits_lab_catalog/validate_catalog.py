@@ -112,6 +112,9 @@ AUDITED_REMAINING_METADATA_DIGESTS = {
     "formant-speech": "sha256:5d8a76de71896ce2e58927317e2f65015a10c03f7f7d55637e0b57cdc24ced21",
     "lpc-speech": "sha256:f671ab3b21119cbaa99103a5ba2d15b363891149be21917dbbc4156fe62fe862",
     "glisson": "sha256:939633e80e2942e22599767bfdeef3b1b422fb06df32224fa2072198be5ee6c3",
+    # Natural Voice: WORLD-analysed word banks through an order-18 vocal
+    # tract. Metadata audited against the engine 2026-08-29.
+    "natural-voice": "sha256:f513a6525ea505bfe3e636e14eaeebbed19473079eb4111a3d2d0ebabff5d1cf",
     "gendy": "sha256:045f7174602a8bb3e6beeb8cb8021d1eacfc19b11fc36f7edcedcafb7928a1ca",
     "scanned": "sha256:c9dd679aca7e01a9ec7ca5edc15bf4c743e727c7859ebe6276c31fe417fb744e",
     "pulsar": "sha256:a0315377a7a47b4baaf0d39f6364dcc16a03ee17c515652f1ed298b62db00821",
