@@ -215,6 +215,24 @@ class _PiperEngine:
         self._voice = PiperVoice.load(self.model_path, config_path=self.config_path)
         self.rate = int(self._voice.config.sample_rate)
 
+    def phoneme_count(self, text: str) -> int:
+        """Segments in this text, for the length guard.
+
+        Piper phonemizes internally, so the count is available for free. Kokoro
+        exposes no equivalent, which is why the guard runs on Piper voices only
+        — see bake_guard.
+        """
+        self.initialize()
+        from piper import espeakbridge
+        from piper.phonemize_espeak import ESPEAK_DATA_DIR
+
+        espeakbridge.initialize(str(ESPEAK_DATA_DIR))
+        espeakbridge.set_voice(self._voice.config.espeak_voice)
+        phonemes = "".join(p for p, _, _ in espeakbridge.get_phonemes(text + "\n"))
+        from bake_guard import count_phonemes
+
+        return count_phonemes(phonemes)
+
     def synthesize(self, text: str, trim_token_edges: bool) -> np.ndarray:
         del trim_token_edges  # Kokoro-only; see the class docstring.
         self.initialize()
@@ -253,6 +271,10 @@ class TtsArtifactSession:
         self.voice = voice
         self.engine = _engine_for(language, voice)
 
+    def phoneme_count(self, text: str) -> int | None:
+        counter = getattr(self.engine, "phoneme_count", None)
+        return counter(text) if counter else None
+
     @property
     def voice_sha256(self) -> str | None:
         # Kept for callers that read it off the session after a render.
@@ -263,7 +285,16 @@ class TtsArtifactSession:
         self,
         text: str,
         trim_token_edges: bool = False,
+        refresh: bool = False,
     ) -> tuple[Path, dict[str, object], bool]:
+        """Source audio for one utterance, cached by content.
+
+        refresh=True draws again and overwrites, keeping the SAME key. These
+        models are stochastic, so a word that came out badly is usually fine on
+        another draw, and the caller re-rolls rather than failing the build. The
+        key deliberately does not include the attempt: one artifact per
+        utterance, holding the draw that was accepted.
+        """
         key = content_key({
             "revision": TTS_ARTIFACT_REVISION,
             "language": self.language,
@@ -274,7 +305,7 @@ class TtsArtifactSession:
         artifact_dir = self.cache_root / "tts" / key
         source_path = artifact_dir / "source.wav"
         manifest_path = artifact_dir / "manifest.json"
-        if source_path.is_file() and manifest_path.is_file():
+        if not refresh and source_path.is_file() and manifest_path.is_file():
             return source_path, json.loads(manifest_path.read_text(encoding="utf-8")), True
 
         artifact_dir.mkdir(parents=True, exist_ok=True)

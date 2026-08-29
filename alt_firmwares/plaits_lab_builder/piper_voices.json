@@ -1,0 +1,516 @@
+{
+  "note": "Piper voices baked into the builder image. Generated from the rubato-audio research sweep; see plaits_piper_voice_expansion in project memory for how these were chosen and what was rejected. Paths are relative to https://huggingface.co/rhasspy/piper-voices/resolve/main/ .",
+  "voiceRoot": "/opt/piper-voices",
+  "models": {
+    "de_DE-thorsten-medium": {
+      "language": "de",
+      "files": {
+        "de/de_DE/thorsten/medium/de_DE-thorsten-medium.onnx": {
+          "md5": "a129b00fb3078df43c96bab6c94535c0",
+          "bytes": 63201294
+        },
+        "de/de_DE/thorsten/medium/de_DE-thorsten-medium.onnx.json": {
+          "md5": "843a7bd7272724f750534dd5a26d1aad",
+          "bytes": 4819
+        }
+      },
+      "lessacDerived": true,
+      "datasetLicense": "CC0"
+    },
+    "de_DE-thorsten-high": {
+      "language": "de",
+      "files": {
+        "de/de_DE/thorsten/high/de_DE-thorsten-high.onnx": {
+          "md5": "256505fe58fb8b9d6ed78b83f6b8a9d2",
+          "bytes": 113895201
+        },
+        "de/de_DE/thorsten/high/de_DE-thorsten-high.onnx.json": {
+          "md5": "e81686e00a9d825e2488ead660bec6fd",
+          "bytes": 4875
+        }
+      },
+      "lessacDerived": true,
+      "datasetLicense": "CC0"
+    },
+    "nl_BE-nathalie-medium": {
+      "language": "nl",
+      "files": {
+        "nl/nl_BE/nathalie/medium/nl_BE-nathalie-medium.onnx": {
+          "md5": "ab0c38b5f66764b59ad9e3e98b1c2172",
+          "bytes": 63201294
+        },
+        "nl/nl_BE/nathalie/medium/nl_BE-nathalie-medium.onnx.json": {
+          "md5": "13c6e6c9511447e1906c25748a93f0bd",
+          "bytes": 4879
+        }
+      },
+      "lessacDerived": true,
+      "datasetLicense": "CC0"
+    },
+    "nl_NL-pim-medium": {
+      "language": "nl",
+      "files": {
+        "nl/nl_NL/pim/medium/nl_NL-pim-medium.onnx": {
+          "md5": "190b3e6463a931d3c583d2fa7cd0e4a0",
+          "bytes": 63516050
+        },
+        "nl/nl_NL/pim/medium/nl_NL-pim-medium.onnx.json": {
+          "md5": "c4d22097fefa2afe275b9bb6ff4db865",
+          "bytes": 5037
+        }
+      },
+      "lessacDerived": true,
+      "datasetLicense": "CC0"
+    },
+    "nl_NL-alex-medium": {
+      "language": "nl",
+      "files": {
+        "nl/nl_NL/alex/medium/nl_NL-alex-medium.onnx": {
+          "md5": "34c3e80cedc491e5d943091cd1b45192",
+          "bytes": 63531476
+        },
+        "nl/nl_NL/alex/medium/nl_NL-alex-medium.onnx.json": {
+          "md5": "ec40f2446d93f305ca20a729f6de6827",
+          "bytes": 4965
+        }
+      },
+      "lessacDerived": false,
+      "datasetLicense": "CC0"
+    },
+    "pl_PL-mc_speech-medium": {
+      "language": "pl",
+      "files": {
+        "pl/pl_PL/mc_speech/medium/pl_PL-mc_speech-medium.onnx": {
+          "md5": "a927e2f2c882bb40cbc2e5f3356ce19b",
+          "bytes": 63201294
+        },
+        "pl/pl_PL/mc_speech/medium/pl_PL-mc_speech-medium.onnx.json": {
+          "md5": "3f506e68bb9531b11e94e5f5dda5dd21",
+          "bytes": 4961
+        }
+      },
+      "lessacDerived": true,
+      "datasetLicense": "CC0"
+    },
+    "pl_PL-gosia-medium": {
+      "language": "pl",
+      "files": {
+        "pl/pl_PL/gosia/medium/pl_PL-gosia-medium.onnx": {
+          "md5": "ecf817530e575025166e454adde1f382",
+          "bytes": 63201294
+        },
+        "pl/pl_PL/gosia/medium/pl_PL-gosia-medium.onnx.json": {
+          "md5": "e57055b9eec14e570617af2b716bd5c3",
+          "bytes": 4814
+        }
+      },
+      "lessacDerived": true,
+      "datasetLicense": "CC0"
+    },
+    "uk_UA-oleksa-high": {
+      "language": "uk",
+      "files": {
+        "uk/uk_UA/oleksa/high/uk_UA-oleksa-high.onnx": {
+          "md5": "ceb6d2a5db9834a9da85abb613fa0904",
+          "bytes": 114204024
+        },
+        "uk/uk_UA/oleksa/high/uk_UA-oleksa-high.onnx.json": {
+          "md5": "4b00c2134ac78e15def386b16a2a3489",
+          "bytes": 4904
+        }
+      },
+      "lessacDerived": false,
+      "datasetLicense": "Apache 2.0"
+    },
+    "uk_UA-mykyta-high": {
+      "language": "uk",
+      "files": {
+        "uk/uk_UA/mykyta/high/uk_UA-mykyta-high.onnx": {
+          "md5": "a044d3c12c99ed7c4b687900b0545a6a",
+          "bytes": 114204024
+        },
+        "uk/uk_UA/mykyta/high/uk_UA-mykyta-high.onnx.json": {
+          "md5": "4de596951b9faee6842ccc69a17b38a0",
+          "bytes": 4904
+        }
+      },
+      "lessacDerived": false,
+      "datasetLicense": "Apache 2.0"
+    },
+    "uk_UA-tetiana-high": {
+      "language": "uk",
+      "files": {
+        "uk/uk_UA/tetiana/high/uk_UA-tetiana-high.onnx": {
+          "md5": "ca4750154e2d635590a41e781d482f2f",
+          "bytes": 114204024
+        },
+        "uk/uk_UA/tetiana/high/uk_UA-tetiana-high.onnx.json": {
+          "md5": "26a7f64b682b9d0e3eedffbe4b23d812",
+          "bytes": 4905
+        }
+      },
+      "lessacDerived": false,
+      "datasetLicense": "Apache 2.0"
+    },
+    "sv_SE-nst-medium": {
+      "language": "sv",
+      "files": {
+        "sv/sv_SE/nst/medium/sv_SE-nst-medium.onnx": {
+          "md5": "20266cf58e93ca2140444b77398aea04",
+          "bytes": 63104526
+        },
+        "sv/sv_SE/nst/medium/sv_SE-nst-medium.onnx.json": {
+          "md5": "3a95d9b88bb3214bf4d0d7fcf8a1aea9",
+          "bytes": 4157
+        }
+      },
+      "lessacDerived": false,
+      "datasetLicense": "CC0"
+    },
+    "bg_BG-dimitar-medium": {
+      "language": "bg",
+      "files": {
+        "bg/bg_BG/dimitar/medium/bg_BG-dimitar-medium.onnx": {
+          "md5": "fc1ce62a4f04f089e22b8c3a13bde28a",
+          "bytes": 63221984
+        },
+        "bg/bg_BG/dimitar/medium/bg_BG-dimitar-medium.onnx.json": {
+          "md5": "5fb4aa5e5b20d4ed515d40f0b4ce16f0",
+          "bytes": 5123
+        }
+      },
+      "lessacDerived": true,
+      "datasetLicense": "CC0"
+    },
+    "cs_CZ-jirka-medium": {
+      "language": "cs",
+      "files": {
+        "cs/cs_CZ/jirka/medium/cs_CZ-jirka-medium.onnx": {
+          "md5": "da2deb0a3f93226a3f9b6e40d43c46ca",
+          "bytes": 63201294
+        },
+        "cs/cs_CZ/jirka/medium/cs_CZ-jirka-medium.onnx.json": {
+          "md5": "2762e45c5b084694093c683a5da7cf94",
+          "bytes": 5025
+        }
+      },
+      "lessacDerived": true,
+      "datasetLicense": "CC0"
+    },
+    "da_DK-talesyntese-medium": {
+      "language": "da",
+      "files": {
+        "da/da_DK/talesyntese/medium/da_DK-talesyntese-medium.onnx": {
+          "md5": "9c05494a3e0c1136337581e01222395d",
+          "bytes": 63201294
+        },
+        "da/da_DK/talesyntese/medium/da_DK-talesyntese-medium.onnx.json": {
+          "md5": "8a56843f52992e490f062e68c14fa193",
+          "bytes": 4878
+        }
+      },
+      "lessacDerived": true,
+      "datasetLicense": "CC0"
+    },
+    "hu_HU-anna-medium": {
+      "language": "hu",
+      "files": {
+        "hu/hu_HU/anna/medium/hu_HU-anna-medium.onnx": {
+          "md5": "3796f9fa28bd8d390d17828e2e2e952d",
+          "bytes": 63201294
+        },
+        "hu/hu_HU/anna/medium/hu_HU-anna-medium.onnx.json": {
+          "md5": "ae63867e2c2cb6695555a17bdee8b751",
+          "bytes": 5018
+        }
+      },
+      "lessacDerived": true,
+      "datasetLicense": "CC0"
+    },
+    "hu_HU-imre-medium": {
+      "language": "hu",
+      "files": {
+        "hu/hu_HU/imre/medium/hu_HU-imre-medium.onnx": {
+          "md5": "aa0b1d1fdd539881c64ed249097e75ff",
+          "bytes": 63201294
+        },
+        "hu/hu_HU/imre/medium/hu_HU-imre-medium.onnx.json": {
+          "md5": "9b6974c685cd8289619660f5e078de06",
+          "bytes": 5019
+        }
+      },
+      "lessacDerived": true,
+      "datasetLicense": "CC0"
+    },
+    "ro_RO-mihai-medium": {
+      "language": "ro",
+      "files": {
+        "ro/ro_RO/mihai/medium/ro_RO-mihai-medium.onnx": {
+          "md5": "45f4253916c93d3d05ad3fe1b07ea4f3",
+          "bytes": 63201294
+        },
+        "ro/ro_RO/mihai/medium/ro_RO-mihai-medium.onnx.json": {
+          "md5": "f820f8ba65a8646c68792be581b85144",
+          "bytes": 4877
+        }
+      },
+      "lessacDerived": true,
+      "datasetLicense": "CC0"
+    },
+    "ru_RU-denis-medium": {
+      "language": "ru",
+      "files": {
+        "ru/ru_RU/denis/medium/ru_RU-denis-medium.onnx": {
+          "md5": "76c2f14e521fef3ed574f97ad492728e",
+          "bytes": 63201294
+        },
+        "ru/ru_RU/denis/medium/ru_RU-denis-medium.onnx.json": {
+          "md5": "e3df5957c07647cab05cf9910ef3ede0",
+          "bytes": 4823
+        }
+      },
+      "lessacDerived": true,
+      "datasetLicense": "CC0"
+    },
+    "ru_RU-dmitri-medium": {
+      "language": "ru",
+      "files": {
+        "ru/ru_RU/dmitri/medium/ru_RU-dmitri-medium.onnx": {
+          "md5": "589ccc91745a1e2353508ff62c5941b7",
+          "bytes": 63201294
+        },
+        "ru/ru_RU/dmitri/medium/ru_RU-dmitri-medium.onnx.json": {
+          "md5": "4eaf0d090190ecb8d958d40c76fd85e8",
+          "bytes": 4824
+        }
+      },
+      "lessacDerived": true,
+      "datasetLicense": "CC0"
+    },
+    "sk_SK-lili-medium": {
+      "language": "sk",
+      "files": {
+        "sk/sk_SK/lili/medium/sk_SK-lili-medium.onnx": {
+          "md5": "836e078518042448bda8416a8ea52984",
+          "bytes": 63201294
+        },
+        "sk/sk_SK/lili/medium/sk_SK-lili-medium.onnx.json": {
+          "md5": "e49cbd13cb5ce5b8f7e1c1479ec2cc91",
+          "bytes": 4963
+        }
+      },
+      "lessacDerived": true,
+      "datasetLicense": "CC0"
+    },
+    "no_NO-nvcc-medium": {
+      "language": "no",
+      "files": {
+        "no/no_NO/nvcc/medium/no_NO-nvcc-medium.onnx": {
+          "md5": "67e04e52b2f195e6db3ae103b58d1710",
+          "bytes": 76770227
+        },
+        "no/no_NO/nvcc/medium/no_NO-nvcc-medium.onnx.json": {
+          "md5": "eb78dda3e46b97cb184dc6e9b91f64ea",
+          "bytes": 5397
+        }
+      },
+      "lessacDerived": false,
+      "datasetLicense": "CC0"
+    },
+    "en_US-bryce-medium": {
+      "language": "en",
+      "files": {
+        "en/en_US/bryce/medium/en_US-bryce-medium.onnx": {
+          "md5": "a8482817c3bdc3d20121a0e31bfa9809",
+          "bytes": 63531379
+        },
+        "en/en_US/bryce/medium/en_US-bryce-medium.onnx.json": {
+          "md5": "a548d1d4ce8579f5a16926bdec77c7bf",
+          "bytes": 4966
+        }
+      },
+      "lessacDerived": false,
+      "datasetLicense": "public domain"
+    },
+    "en_US-joe-medium": {
+      "language": "en",
+      "files": {
+        "en/en_US/joe/medium/en_US-joe-medium.onnx": {
+          "md5": "74fd6a4dc39e0aa9dce145d7f5acd4f6",
+          "bytes": 63201294
+        },
+        "en/en_US/joe/medium/en_US-joe-medium.onnx.json": {
+          "md5": "811036b9c1451545f9495fdc1baa0754",
+          "bytes": 4794
+        }
+      },
+      "lessacDerived": true,
+      "datasetLicense": "CC0"
+    },
+    "en_US-john-medium": {
+      "language": "en",
+      "files": {
+        "en/en_US/john/medium/en_US-john-medium.onnx": {
+          "md5": "70480857f21f2560f3a232722023b36d",
+          "bytes": 63531379
+        },
+        "en/en_US/john/medium/en_US-john-medium.onnx.json": {
+          "md5": "f2d04611b498e14d394385d1ec8a2d2d",
+          "bytes": 4965
+        }
+      },
+      "lessacDerived": false,
+      "datasetLicense": "public domain"
+    },
+    "en_US-kristin-medium": {
+      "language": "en",
+      "files": {
+        "en/en_US/kristin/medium/en_US-kristin-medium.onnx": {
+          "md5": "5fed42d2296baca042e2bf74785db725",
+          "bytes": 63531379
+        },
+        "en/en_US/kristin/medium/en_US-kristin-medium.onnx.json": {
+          "md5": "70bc97d350c796c64ea5e4d08241afac",
+          "bytes": 4968
+        }
+      },
+      "lessacDerived": false,
+      "datasetLicense": "public domain"
+    },
+    "en_US-ljspeech-medium": {
+      "language": "en",
+      "files": {
+        "en/en_US/ljspeech/medium/en_US-ljspeech-medium.onnx": {
+          "md5": "109d552e9dd78d92d1169a7edd6de38d",
+          "bytes": 63531379
+        },
+        "en/en_US/ljspeech/medium/en_US-ljspeech-medium.onnx.json": {
+          "md5": "0668112b8b3ac5bb4b12c2b1a366776a",
+          "bytes": 4972
+        }
+      },
+      "lessacDerived": false,
+      "datasetLicense": "public domain"
+    },
+    "en_US-mike-medium": {
+      "language": "en",
+      "files": {
+        "en/en_US/mike/medium/en_US-mike-medium.onnx": {
+          "md5": "032952405bbd4eeae409385cde31b8c5",
+          "bytes": 63221984
+        },
+        "en/en_US/mike/medium/en_US-mike-medium.onnx.json": {
+          "md5": "b4426eda10444b2bef8b447baeba84b2",
+          "bytes": 5439
+        }
+      },
+      "lessacDerived": true,
+      "datasetLicense": "CC0"
+    },
+    "en_US-sam-medium": {
+      "language": "en",
+      "files": {
+        "en/en_US/sam/medium/en_US-sam-medium.onnx": {
+          "md5": "57efcb38a3d0510051f9f55c517ccb76",
+          "bytes": 62950044
+        },
+        "en/en_US/sam/medium/en_US-sam-medium.onnx.json": {
+          "md5": "a124497d09ce818f9800d16f24e1a8d1",
+          "bytes": 5040
+        }
+      },
+      "lessacDerived": true,
+      "datasetLicense": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    },
+    "en_GB-cori-medium": {
+      "language": "en",
+      "files": {
+        "en/en_GB/cori/medium/en_GB-cori-medium.onnx": {
+          "md5": "f143307611eccea9d976235d0895f57c",
+          "bytes": 63531379
+        },
+        "en/en_GB/cori/medium/en_GB-cori-medium.onnx.json": {
+          "md5": "12b1dc45d8919f3475cf296d5f16a4c6",
+          "bytes": 4966
+        }
+      },
+      "lessacDerived": false,
+      "datasetLicense": "public domain"
+    },
+    "en_GB-cori-high": {
+      "language": "en",
+      "files": {
+        "en/en_GB/cori/high/en_GB-cori-high.onnx": {
+          "md5": "3474a80133d9a03e6870d2ac42c18806",
+          "bytes": 114219352
+        },
+        "en/en_GB/cori/high/en_GB-cori-high.onnx.json": {
+          "md5": "0f7d42e77a99193006aa34a34442f5e0",
+          "bytes": 4963
+        }
+      },
+      "lessacDerived": false,
+      "datasetLicense": "public domain"
+    },
+    "es_ES-davefx-medium": {
+      "language": "es",
+      "files": {
+        "es/es_ES/davefx/medium/es_ES-davefx-medium.onnx": {
+          "md5": "dc515cd4ecc5f6f72fe14a941188fc9c",
+          "bytes": 63201294
+        },
+        "es/es_ES/davefx/medium/es_ES-davefx-medium.onnx.json": {
+          "md5": "dd157b5eaf6930bf949cf416d9a9307a",
+          "bytes": 4817
+        }
+      },
+      "lessacDerived": true,
+      "datasetLicense": "CC0"
+    },
+    "es_MX-claude-high": {
+      "language": "es",
+      "files": {
+        "es/es_MX/claude/high/es_MX-claude-high.onnx": {
+          "md5": "cb1966e0ff20ca3aa010f6c9a0ce296a",
+          "bytes": 63122309
+        },
+        "es/es_MX/claude/high/es_MX-claude-high.onnx.json": {
+          "md5": "36882201922fabb409f18d284af3eddd",
+          "bytes": 4963
+        }
+      },
+      "lessacDerived": false,
+      "datasetLicense": "apache-2.0"
+    },
+    "pt_BR-cadu-medium": {
+      "language": "pt",
+      "files": {
+        "pt/pt_BR/cadu/medium/pt_BR-cadu-medium.onnx": {
+          "md5": "6f3a6e23694c9088e3696a15191af2cc",
+          "bytes": 62950044
+        },
+        "pt/pt_BR/cadu/medium/pt_BR-cadu-medium.onnx.json": {
+          "md5": "3d35f13df6a2f7dc9b7b7924befbe7bb",
+          "bytes": 5040
+        }
+      },
+      "lessacDerived": true,
+      "datasetLicense": "CC0"
+    },
+    "pt_BR-faber-medium": {
+      "language": "pt",
+      "files": {
+        "pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx": {
+          "md5": "e0724a2f07965f6523d2a1e96b488a4c",
+          "bytes": 63201294
+        },
+        "pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx.json": {
+          "md5": "a1258e1e113c47d9a1486a9bef1daab4",
+          "bytes": 4855
+        }
+      },
+      "lessacDerived": true,
+      "datasetLicense": "CC0"
+    }
+  }
+}

@@ -53,6 +53,7 @@ RUN python3 -m pip install --no-cache-dir "pip==26.1" \
         "misaki[en,ja,zh]==0.9.4" \
         "soundfile==0.14.0" \
         "huggingface_hub==1.26.0" \
+        "piper-tts==1.7.0" \
     && python3 -m unidic download
 
 # Ubuntu's ReportLab package brings in Pillow 9.0, while current Transformers
@@ -78,6 +79,25 @@ zm_yunjian zm_yunxi zm_yunxia zm_yunyang
 for filename in ["config.json", "kokoro-v1_0.pth", *(f"voices/{voice}.pt" for voice in voices)]:
     hf_hub_download(repo_id=repo, filename=filename)
 PY
+
+# Piper's ONNX voices: thirteen languages Kokoro does not cover, plus extra
+# voices inside several it does. Roughly 2.4 GB, so this sits in its own layer
+# and is fetched with md5 verification — a silent truncation here would surface
+# much later as a voice that sounds wrong, with nothing pointing back to the
+# image build. Requests have no network, so anything absent is simply
+# unavailable and preview_artifacts says which path it looked in.
+#
+# The wheel's bundled espeak-ng is used as-is. It is broken only on macOS
+# arm64; here it initialises correctly and is the version these voices were
+# trained against, which is not merely equivalent — Homebrew's espeak renders
+# the Swedish sj-sound as "sx" where this one gives the "ɧ" the model expects.
+ENV PIPER_VOICE_ROOT="/opt/piper-voices"
+
+COPY alt_firmwares/plaits_lab_builder/piper_voices.json \
+     alt_firmwares/plaits_lab_builder/fetch_piper_voices.py \
+     /tmp/piper/
+RUN python3 /tmp/piper/fetch_piper_voices.py --out "${PIPER_VOICE_ROOT}" \
+    && rm -rf /tmp/piper
 
 # Misaki's English G2P asks spaCy to download this model on first use when it
 # is absent. Production containers have no outbound network, so bake the exact

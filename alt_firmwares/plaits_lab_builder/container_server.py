@@ -116,15 +116,43 @@ SPEECH_ROOT = Path("/tmp/plaits-speech")
 SPEECH_SCRIPTS = Path(__file__).resolve().parent
 LPC_FRAME = struct.Struct("<BBhh8b")
 VOICE_CATALOG = {
-    "en-US": ({"af_heart", "af_bella", "af_nicole", "am_fenrir", "am_michael"}, "The singing voice approached rapidly."),
-    "en-GB": ({"bf_emma", "bm_fable", "bm_george"}, "The singing voice approached rapidly."),
-    "es": ({"ef_dora", "em_alex"}, "La voz que cantaba se acercó rápidamente."),
+    # Kokoro voices have no hyphen in their id; Piper voices always do, which
+    # is how preview_artifacts routes a request to an engine. Keep that true
+    # when adding voices — the two id spaces must stay disjoint.
+    #
+    # The thirteen languages below Kokoro cannot speak at all. Every Piper
+    # voice here was chosen by ear against a reference voice; see
+    # plaits_piper_voice_expansion in project memory for what was rejected and
+    # why the obvious automated check (ASR round-tripping) does not work.
+    #
+    # NOTE: the preview sentences for the thirteen new languages are
+    # translations that have NOT been checked by a native speaker. They are
+    # user-facing. Verify before launch.
+
+    "en-US": ({"af_bella", "af_heart", "af_nicole", "am_fenrir", "am_michael", "en_US-bryce-medium", "en_US-joe-medium", "en_US-john-medium", "en_US-kristin-medium", "en_US-ljspeech-medium", "en_US-mike-medium", "en_US-sam-medium"}, "The singing voice approached rapidly."),
+    "en-GB": ({"bf_emma", "bm_fable", "bm_george", "en_GB-cori-high", "en_GB-cori-medium"}, "The singing voice approached rapidly."),
+    "es": ({"ef_dora", "em_alex", "es_ES-davefx-medium", "es_MX-claude-high"}, "La voz que cantaba se acercó rápidamente."),
     "fr-FR": ({"ff_siwis"}, "La voix chantante s'est approchée rapidement."),
     "hi": ({"hf_alpha", "hm_omega"}, "गाने वाली आवाज़ तेज़ी से पास आई।"),
     "it": ({"if_sara", "im_nicola"}, "La voce che cantava si avvicinò rapidamente."),
-    "pt-BR": ({"pf_dora", "pm_alex"}, "A voz que cantava se aproximou rapidamente."),
+    "pt-BR": ({"pf_dora", "pm_alex", "pt_BR-cadu-medium", "pt_BR-faber-medium"}, "A voz que cantava se aproximou rapidamente."),
     "ja": ({"jf_alpha", "jf_gongitsune", "jf_nezumi", "jf_tebukuro", "jm_kumo"}, "歌声が急速に近づいてきました。"),
     "zh": ({"zf_xiaobei", "zf_xiaoni", "zf_xiaoxiao", "zf_xiaoyi", "zm_yunjian", "zm_yunxi", "zm_yunxia", "zm_yunyang"}, "歌声迅速地靠近了。"),
+
+    # Piper only, from here down.
+    "bg": ({"bg_BG-dimitar-medium"}, "Пеещият глас се приближи бързо."),
+    "cs": ({"cs_CZ-jirka-medium"}, "Zpívající hlas se rychle přiblížil."),
+    "da": ({"da_DK-talesyntese-medium"}, "Den syngende stemme nærmede sig hurtigt."),
+    "de": ({"de_DE-thorsten-high", "de_DE-thorsten-medium"}, "Die singende Stimme näherte sich schnell."),
+    "hu": ({"hu_HU-anna-medium", "hu_HU-imre-medium"}, "Az éneklő hang gyorsan közeledett."),
+    "nl": ({"nl_BE-nathalie-medium", "nl_NL-alex-medium", "nl_NL-pim-medium"}, "De zingende stem kwam snel dichterbij."),
+    "no": ({"no_NO-nvcc-medium__KMN", "no_NO-nvcc-medium__KNV", "no_NO-nvcc-medium__MMN", "no_NO-nvcc-medium__MNV"}, "Den syngende stemmen nærmet seg raskt."),
+    "pl": ({"pl_PL-gosia-medium", "pl_PL-mc_speech-medium"}, "Śpiewający głos szybko się zbliżał."),
+    "ro": ({"ro_RO-mihai-medium"}, "Vocea care cânta s-a apropiat rapid."),
+    "ru": ({"ru_RU-denis-medium", "ru_RU-dmitri-medium"}, "Поющий голос быстро приблизился."),
+    "sk": ({"sk_SK-lili-medium"}, "Spievajúci hlas sa rýchlo priblížil."),
+    "sv": ({"sv_SE-nst-medium"}, "Den sjungande rösten närmade sig snabbt."),
+    "uk": ({"uk_UA-mykyta-high", "uk_UA-oleksa-high", "uk_UA-tetiana-high"}, "Співочий голос швидко наближався."),
 }
 
 

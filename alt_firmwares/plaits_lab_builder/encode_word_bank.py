@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import statistics
 import subprocess
 import sys
 from pathlib import Path
@@ -111,6 +112,42 @@ def lpc_artifact(
     return artifact_dir, manifest, False
 
 
+MIN_BANK_FOR_BASELINE = 6
+MAX_REROLLS = 3
+
+
+def _vet_bank(tts_session, entries, language, args, continuous, gate2, renderer) -> None:
+    """Measure every word, then re-draw the ones that came out mis-sized."""
+    import bake_guard
+
+    trim = language in {"en-US", "en-GB"}
+
+    def measure(text, refresh=False):
+        source, _, _ = tts_session.source_artifact(text, trim_token_edges=trim,
+                                                   refresh=refresh)
+        _, manifest, _ = lpc_artifact(args.artifact_cache, source, continuous,
+                                      gate2, renderer)
+        return int(manifest["frames"])
+
+    texts = [entry.get("spokenAs") or entry["word"] for entry in entries]
+    counts = [tts_session.phoneme_count(text) for text in texts]
+    if any(count is None for count in counts):
+        return                      # Kokoro voice: no phoneme count, no guard.
+    if len(texts) < MIN_BANK_FOR_BASELINE:
+        return
+
+    frames = [measure(text) for text in texts]
+    ratios = [f / max(c, 1) for f, c in zip(frames, counts)]
+    baseline = bake_guard.VoiceBaseline(tts_session.voice,
+                                        statistics.median(ratios), len(ratios))
+    for position, (text, count) in enumerate(zip(texts, counts)):
+        for _ in range(MAX_REROLLS):
+            ok, _ = bake_guard.check_word(frames[position], ["x"] * count, baseline)
+            if ok:
+                break
+            frames[position] = measure(text, refresh=True)
+
+
 def main() -> int:
     args = parse_args()
     test_dir = Path(__file__).resolve().parent
@@ -134,6 +171,24 @@ def main() -> int:
     source_cache_hits = 0
     lpc_cache_hits = 0
     synthesis_provenance: dict[str, object] = {}
+    # Re-roll words that came out the wrong length before building the bank.
+    #
+    # Every voice defect found by ear was a length pathology — a voice starting
+    # hundreds of milliseconds late, over-running its word, or truncating it —
+    # and these models are stochastic, so a bad word is usually fine on another
+    # draw. The guard therefore re-rolls rather than failing the build.
+    #
+    # The baseline is the BANK'S OWN median. A per-voice constant would have to
+    # be measured and shipped for every voice and would still not know that this
+    # user's words are unusually long; the median of the bank being encoded
+    # needs nothing and adapts to the material. Below MIN_BANK_FOR_BASELINE the
+    # median is not meaningful, so short banks are left alone.
+    #
+    # Piper only: the guard needs a phoneme count, which Piper gives us for free
+    # and Kokoro does not expose. Kokoro is also the incumbent engine and is not
+    # what this guard was built for.
+    _vet_bank(tts_session, request["entries"], language, args, continuous, gate2, renderer)
+
     for index, entry in enumerate(request["entries"]):
         word = entry["word"]
         spoken_as = entry.get("spokenAs", "")
