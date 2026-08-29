@@ -127,28 +127,120 @@ const chordCatalog = JSON.parse(await readFile(
 const originalSpeech = publicCatalog.engines.find((engine: { id: string }) => engine.id === "speech");
 const speechSounds = publicCatalog.engines.find((engine: { id: string }) => engine.id === "formant-speech");
 const lpcWords = publicCatalog.engines.find((engine: { id: string }) => engine.id === "lpc-speech");
+const waveTerrain = publicCatalog.engines.find((engine: { id: string }) => engine.id === "wave-terrain");
 assert.ok(originalSpeech, "Original Speech is missing from the public catalog");
 assert.ok(speechSounds, "Speech Sounds is missing from the public catalog");
 assert.ok(lpcWords, "LPC Words is missing from the public catalog");
+assert.ok(waveTerrain, "Wave Terrain is missing from the public catalog");
 const reference = (engine: any) => ({
   engine: engine.id,
   package: engine.packageId,
   version: engine.version,
   digest: engine.digest,
 });
+
+function canaryTerrainData(seed: number): string {
+  const bytes = Buffer.alloc(64 * 64);
+  for (let row = 0; row < 64; row += 1) {
+    for (let column = 0; column < 64; column += 1) {
+      const x = column / 31.5 - 1;
+      const y = row / 31.5 - 1;
+      const z = 0.55 * Math.sin((seed + 3) * Math.PI * x)
+        + 0.35 * Math.cos((seed + 5) * Math.PI * y)
+        + 0.1 * x * y;
+      const sample = Math.max(-127, Math.min(127, Math.round(z * 127)));
+      bytes[row * 64 + column] = sample & 0xff;
+    }
+  }
+  return bytes.toString("base64");
+}
+
+function canaryTerrain(
+  name: string,
+  equation: string,
+  seed: number,
+  representation?: "native",
+) {
+  return {
+    kind: "custom",
+    model: {
+      kind: "wave-terrain",
+      name,
+      equation,
+      data: canaryTerrainData(seed),
+      ...(representation ? { representation } : {}),
+    },
+  };
+}
+
+const terrainBank = [
+  { kind: "factory", id: "factory-1" },
+  { kind: "factory", id: "factory-6" },
+  canaryTerrain("Linear field", "x + y", 0, "native"),
+  canaryTerrain("Soft rings", "sin(10 * r)", 1, "native"),
+  canaryTerrain(
+    "Lone island",
+    "max(0, 1 - 2.2 * sqrt((x + 0.25)^2 + (y - 0.15)^2))",
+    2,
+    "native",
+  ),
+  canaryTerrain("Tilted terraces", "round(3 * (x + 0.35 * y)) + 0.4 * y", 3, "native"),
+  canaryTerrain("Four chambers", "sign(x * y) * (1 - 0.55 * r) + 0.2 * x", 4, "native"),
+  canaryTerrain("Spiral current", "sin(10 * r + 3 * atan2(y, x))", 5, "native"),
+  canaryTerrain(
+    "Twin pulses",
+    "ball(-0.38, -0.22, 0.32) - 0.85 * ball(0.38, 0.27, 0.18)",
+    6,
+    "native",
+  ),
+  canaryTerrain(
+    "Eight-sine stress",
+    "sin(12*x)+sin(13*y)+sin(9*(x+y))+cos(11*(x-y))+sin(15*r)+cos(7*r+2*theta)+sin(17*x*y)+cos(5*x-8*y)",
+    7,
+  ),
+  canaryTerrain(
+    "Layered current crater",
+    "sin(10*r)+0.7*sin(10*r+3*atan2(y,x))+0.4*sin(7*log(0.14+r))",
+    8,
+  ),
+  canaryTerrain(
+    "Rippled twin pulses",
+    "ball(-0.38,-0.22,0.32)-0.85*ball(0.38,0.27,0.18)+0.5*sin(10*r)",
+    9,
+  ),
+  canaryTerrain(
+    "Rippled diamond",
+    "pow(abs(x),0.45)+pow(abs(y),0.45)-1+0.4*sin(11*r)",
+    10,
+  ),
+  canaryTerrain(
+    "Terraced log crater",
+    "round(3*(x+0.35*y))+0.4*y+0.5*sin(7*log(0.14+r))",
+    11,
+  ),
+  canaryTerrain(
+    "Folded crater",
+    "max(sin(10*r),0.35*tan(1.1*(x+0.25*sin(4*y))))+0.4*sin(7*log(0.14+r))",
+    12,
+  ),
+  { kind: "factory", id: "factory-8" },
+];
+assert.equal(terrainBank.length, 16, "hardware canary must exercise the full terrain bank");
+
 const recipe = {
-  schemaVersion: 22,
+  schemaVersion: 24,
   target: "mutable-instruments-plaits",
   firmware: "rubato-plaits",
   // Keep Original Speech beside both split engines in this hardware gate. All
   // three paths must boot, navigate, and speak before an image is promoted.
-  // They also exercise the bounded Sync fallback in a compact build that
-  // leaves enough flash headroom for an honest release canary.
+  // Wave Terrain adds the full factory/native/prebaked bank that the same exact
+  // artifact exercises during the physical hardware gate.
   slots: [
+    reference(waveTerrain),
     reference(originalSpeech),
     reference(speechSounds),
     reference(lpcWords),
-    ...Array.from({ length: 21 }, () => null),
+    ...Array.from({ length: 20 }, () => null),
   ],
   output: "audio-wav",
   // Sync In's compile switch moved onto its own preference in v22. The starting
@@ -160,6 +252,9 @@ const recipe = {
     colorBlindMode: false,
     replaceableFmBanks: false,
     syncInput: true,
+    linearTzfm: false,
+    fastFm: false,
+    simplifiedPitchRanges: false,
   },
   initialOptions: {
     lockedFrequencyKnob: "octaves",
@@ -179,6 +274,7 @@ const recipe = {
       stockBankIds: [0, 3],
       customBanks: [{ words, wordBoundaries: encoded.wordBoundaries, frameData: encoded.frameData }],
     },
+    terrainBank,
   },
 };
 
@@ -229,9 +325,9 @@ if (build.manual?.downloadUrl) {
 if (artifactDir) {
   const output = resolve(artifactDir);
   await mkdir(output, { recursive: true });
-  await writeFile(resolve(output, `sync-speech-${deploymentEnvironment}-${build.buildId}.wav`), firmware);
-  await writeFile(resolve(output, `sync-speech-${deploymentEnvironment}-${build.buildId}.recipe.json`), `${JSON.stringify(recipe, null, 2)}\n`);
-  if (manual) await writeFile(resolve(output, `sync-speech-${deploymentEnvironment}-${build.buildId}.pdf`), manual);
+  await writeFile(resolve(output, `wave-terrain-${deploymentEnvironment}-${build.buildId}.wav`), firmware);
+  await writeFile(resolve(output, `wave-terrain-${deploymentEnvironment}-${build.buildId}.recipe.json`), `${JSON.stringify(recipe, null, 2)}\n`);
+  if (manual) await writeFile(resolve(output, `wave-terrain-${deploymentEnvironment}-${build.buildId}.pdf`), manual);
   console.log(`Saved exact ${deploymentEnvironment} artifacts to ${output}`);
 }
 
