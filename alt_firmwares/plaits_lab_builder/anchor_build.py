@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+"""Rebuild the flash meter's ANCHOR palette, run INSIDE the builder container.
+
+flash-budget.ts's base term is only meaningful against the revision production
+actually runs, and it has silently outlived its anchor twice. The anchor is the
+website's stock-24 recipe with the four pre-loaded chord tables; re-measuring it
+at a new revision says whether flashBaseBytes still holds or has to move.
+
+    python3 /work/alt_firmwares/plaits_lab_builder/anchor_build.py
+"""
+import json
+import sys
+
+sys.path.insert(0, '/work/alt_firmwares/plaits_lab_builder')
+from flash_sweep import BASE, build_size  # noqa: E402
+from generate_engine_config import DEFAULT_CHORD_TABLES  # noqa: E402
+
+# Measured at 3514880253d9, the previous anchor.
+PUBLISHED = 229_204
+
+recipe = json.loads(json.dumps(BASE))
+recipe['schemaVersion'] = 10
+recipe['preferences'] = {'navigationMode': 'linear'}
+recipe['initialOptions'] = {
+    'lockedFrequencyKnob': 'octaves',
+    'modelInput': 'model',
+    'levelInput': 'level',
+    'auxOutput': 'alternate-model',
+    'suboscillatorOctave': 0,
+    'chordTable': 'original',
+    'holdOnTrigger': False,
+}
+recipe['resources'] = {'chordTables': DEFAULT_CHORD_TABLES}
+# Required from schema 10 on; empty is the mono anchor.
+recipe['stereoEngines'] = []
+
+total = build_size('anchor stock-24 (4 tables)', recipe)
+if total is None:
+    sys.exit('anchor build failed')
+print('anchor %d  published %d  delta %+d' % (total, PUBLISHED, total - PUBLISHED),
+      flush=True)
