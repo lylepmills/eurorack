@@ -1,0 +1,56 @@
+# The speech half of the builder image, without the ARM firmware toolchain.
+#
+# The full image is amd64-only — it installs i386 packages for the 32-bit ARM
+# toolchain, so it cannot build on an arm64 host without emulation, and emulated
+# it takes hours. That is a poor loop for changes that only touch speech.
+#
+# This builds the same base, the same pinned python layer, the same Piper voice
+# layer and the same LPC renderer, and nothing else. It is enough to serve
+# /speech/voice-preview and to encode a word bank, which is the whole surface
+# the TTS engines touch. Verified against it: 34 voice models baked (2.3 GB),
+# 22 languages and 67 voices in the catalog, HTTP 200 for Kokoro voices, Piper
+# voices and a speaker inside the multi-speaker Norwegian model, and HTTP 400
+# for a voice outside the catalog rather than a synthesis attempt.
+#
+#   docker build --platform linux/amd64 \
+#     -f alt_firmwares/plaits_lab_builder/Dockerfile.speech-check \
+#     -t plaits-speech-check .
+#   docker run --rm -p 8080:8080 --platform linux/amd64 \
+#     -e PLAITS_LPC_RENDERER=/usr/local/bin/plaits-render-lpc-bank \
+#     --entrypoint python3 plaits-speech-check \
+#     /workspace/alt_firmwares/plaits_lab_builder/container_server.py
+#
+# It is a check, not a shipping artifact: no firmware can be built from it.
+FROM mcr.microsoft.com/devcontainers/base:ubuntu-22.04
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      python3 python3-dev python3-pip libsndfile1 ffmpeg g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Identical to the python layer in Dockerfile.plaits-builder. Kept in step by
+# hand; a drift here shows up as this check passing while the real image fails.
+RUN python3 -m pip install --no-cache-dir "pip==26.1" \
+    && python3 -m pip install --no-cache-dir \
+        --index-url https://download.pytorch.org/whl/cpu "torch==2.13.0" \
+    && python3 -m pip install --no-cache-dir \
+        "cmake<4" "cython>=0.29.16" "numpy==2.2.6" "setuptools_scm>=8" \
+    && python3 -m pip install --no-cache-dir --no-build-isolation "pyopenjtalk==0.4.1" \
+    && python3 -m pip install --no-cache-dir \
+        "kokoro==0.9.4" "misaki[en,ja,zh]==0.9.4" "soundfile==0.14.0" \
+        "huggingface_hub==1.26.0" "piper-tts==1.7.0"
+
+ENV PIPER_VOICE_ROOT="/opt/piper-voices" HF_HOME="/opt/huggingface"
+COPY . /workspace
+RUN python3 /workspace/alt_firmwares/plaits_lab_builder/fetch_piper_voices.py \
+      --out "${PIPER_VOICE_ROOT}"
+RUN python3 - <<'PY'
+from huggingface_hub import hf_hub_download
+for name in ["config.json", "kokoro-v1_0.pth", "voices/af_heart.pt"]:
+    hf_hub_download(repo_id="hexgrad/Kokoro-82M", filename=name)
+PY
+RUN c++ -std=c++11 -O2 -w -I /workspace \
+      /workspace/alt_firmwares/plaits_lab_builder/render_lpc_bank.cc \
+      /workspace/plaits/dsp/speech/lpc_speech_synth.cc \
+      /workspace/plaits/resources.cc /workspace/stmlib/utils/random.cc \
+      -o /usr/local/bin/plaits-render-lpc-bank
+ENV HF_HUB_OFFLINE="1"
+WORKDIR /workspace
