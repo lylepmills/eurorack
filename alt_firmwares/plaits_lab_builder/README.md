@@ -155,6 +155,13 @@ samples, no 10 ms window below -50 dBFS, no held run longer than two samples,
 and no consecutive identical render blocks at 16, 24, 32, 48, 64, or 128
 samples. The capture's SHA-256 is
 `2c51443da5c5e85998c0f3c925e94265c2767f9f45b591b70fc48876bef59e2c`.
+After both production instances settled healthy on the same immutable image,
+production build
+`2b0d01f852c5acf0ac4acdd3bf561a004aeac558d47dc55adbcc17463c6ca195`
+compiled fresh and stamped `e81f62517fc4`. Its 11,187,884-byte updater WAV
+has SHA-256
+`4f887102b566b9cbdbd10dd52796e47485deee7e291e58582f23d2d2a69c8529`;
+the matching contract-19 field guide also reached ready.
 
 An August 4 hardware regression exposed two firmware defects in the custom
 Speech path: inconsistent `PLAITS_HAS_CUSTOM_SPEECH_BANKS` values changed the
@@ -834,6 +841,7 @@ target.
 | August 14, 2026 (complete remaining-engine metadata audit; all 87 engines covered) | `19666470542c` | `rev-19666470542c` |
 | August 16, 2026 (Analog Percussion community engine; all 88 engines covered) | `0eec23f182a1` | `rev-0eec23f182a1` |
 | August 21, 2026 (octave-switching root fix) | `ccf67eac9661` | `rev-ccf67eac9661` |
+| August 28, 2026 (schema 24 shared Wave Terrain bank and native equations, manual contract 19) | `e81f62517fc4` | `rev-e81f62517fc4` |
 
 The August 16 production canary used the same exact 24-slot recipe as staging:
 build `6cb08754024d2a7abf43ae0c6390eb23b11a051dbc04c4984a32212040a6e865`
