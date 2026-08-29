@@ -38,16 +38,18 @@ test("every environment's queue consumer agrees with its dead-letter variable", 
   assert.equal(staging.queues.consumers[0].dead_letter_queue, staging.vars.DEAD_LETTER_QUEUE);
 });
 
-test("the hardware smoke carries Speech plus the full Wave Terrain release bank", () => {
+test("the hardware smoke carries Speech plus the Terrain and Wavetable release banks", () => {
   assert.match(smoke, /engine\.id === "speech"/);
   assert.match(smoke, /engine\.id === "formant-speech"/);
   assert.match(smoke, /engine\.id === "lpc-speech"/);
   assert.match(smoke, /engine\.id === "wave-terrain"/);
+  assert.match(smoke, /engine\.id === "wavetable"/);
   assert.match(
     smoke,
-    /slots:\s*\[\s*reference\(waveTerrain\),\s*reference\(originalSpeech\),\s*reference\(speechSounds\),\s*reference\(lpcWords\),/s,
+    /slots:\s*\[\s*reference\(waveTerrain\),\s*reference\(wavetable\),\s*reference\(originalSpeech\),\s*reference\(speechSounds\),\s*reference\(lpcWords\),/s,
   );
   assert.match(smoke, /assert\.equal\(terrainBank\.length, 16/);
+  assert.match(smoke, /wavetableBank:\s*\{ mirrored: true, entries: wavetableBank \}/);
   assert.match(smoke, /"native"/);
 });
 

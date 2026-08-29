@@ -127,10 +127,12 @@ const chordCatalog = JSON.parse(await readFile(
 const originalSpeech = publicCatalog.engines.find((engine: { id: string }) => engine.id === "speech");
 const speechSounds = publicCatalog.engines.find((engine: { id: string }) => engine.id === "formant-speech");
 const lpcWords = publicCatalog.engines.find((engine: { id: string }) => engine.id === "lpc-speech");
+const wavetable = publicCatalog.engines.find((engine: { id: string }) => engine.id === "wavetable");
 const waveTerrain = publicCatalog.engines.find((engine: { id: string }) => engine.id === "wave-terrain");
 assert.ok(originalSpeech, "Original Speech is missing from the public catalog");
 assert.ok(speechSounds, "Speech Sounds is missing from the public catalog");
 assert.ok(lpcWords, "LPC Words is missing from the public catalog");
+assert.ok(wavetable, "Wavetable is missing from the public catalog");
 assert.ok(waveTerrain, "Wave Terrain is missing from the public catalog");
 const reference = (engine: any) => ({
   engine: engine.id,
@@ -169,6 +171,37 @@ function canaryTerrain(
       equation,
       data: canaryTerrainData(seed),
       ...(representation ? { representation } : {}),
+    },
+  };
+}
+
+function canaryWavetableData(harmonic: number): string {
+  const bytes = Buffer.alloc(64 * 128);
+  for (let frame = 0; frame < 64; frame += 1) {
+    const x = (frame % 8) / 7;
+    const y = Math.floor(frame / 8) / 7;
+    for (let sample = 0; sample < 128; sample += 1) {
+      const phi = 2 * Math.PI * sample / 128;
+      const value = (
+        Math.sin(harmonic * phi)
+        + 0.25 * x * Math.sin((harmonic + 1) * phi)
+        + 0.2 * y * Math.sin((harmonic + 2) * phi)
+      ) / 1.45;
+      bytes[frame * 128 + sample] = Math.max(-127, Math.min(127, Math.round(value * 127))) & 0xff;
+    }
+  }
+  return bytes.toString("base64");
+}
+
+function canaryWavetable(name: string, equation: string, harmonic: number) {
+  return {
+    kind: "custom",
+    model: {
+      kind: "wavetable",
+      name,
+      equation,
+      data: canaryWavetableData(harmonic),
+      representation: "native",
     },
   };
 }
@@ -227,20 +260,40 @@ const terrainBank = [
 ];
 assert.equal(terrainBank.length, 16, "hardware canary must exercise the full terrain bank");
 
+const wavetableBank = [
+  canaryWavetable(
+    "Harmonic current",
+    "sin(phi) + 0.25 * x * sin(2 * phi) + 0.2 * y * sin(3 * phi)",
+    1,
+  ),
+  canaryWavetable(
+    "Crossed partials",
+    "sin(3 * phi) + 0.25 * x * sin(4 * phi) + 0.2 * y * sin(5 * phi)",
+    3,
+  ),
+  canaryWavetable(
+    "Bright lattice",
+    "sin(6 * phi) + 0.25 * x * sin(7 * phi) + 0.2 * y * sin(8 * phi)",
+    6,
+  ),
+];
+
 const recipe = {
-  schemaVersion: 24,
+  schemaVersion: 25,
   target: "mutable-instruments-plaits",
   firmware: "rubato-plaits",
   // Keep Original Speech beside both split engines in this hardware gate. All
   // three paths must boot, navigate, and speak before an image is promoted.
-  // Wave Terrain adds the full factory/native/prebaked bank that the same exact
-  // artifact exercises during the physical hardware gate.
+  // Wave Terrain adds the full factory/native/prebaked bank, and Wavetable adds
+  // a compact native bank. The same exact artifact exercises both during the
+  // physical release gate.
   slots: [
     reference(waveTerrain),
+    reference(wavetable),
     reference(originalSpeech),
     reference(speechSounds),
     reference(lpcWords),
-    ...Array.from({ length: 20 }, () => null),
+    ...Array.from({ length: 19 }, () => null),
   ],
   output: "audio-wav",
   // Sync In's compile switch moved onto its own preference in v22. The starting
@@ -275,6 +328,7 @@ const recipe = {
       customBanks: [{ words, wordBoundaries: encoded.wordBoundaries, frameData: encoded.frameData }],
     },
     terrainBank,
+    wavetableBank: { mirrored: true, entries: wavetableBank },
   },
 };
 
@@ -325,9 +379,9 @@ if (build.manual?.downloadUrl) {
 if (artifactDir) {
   const output = resolve(artifactDir);
   await mkdir(output, { recursive: true });
-  await writeFile(resolve(output, `wave-terrain-${deploymentEnvironment}-${build.buildId}.wav`), firmware);
-  await writeFile(resolve(output, `wave-terrain-${deploymentEnvironment}-${build.buildId}.recipe.json`), `${JSON.stringify(recipe, null, 2)}\n`);
-  if (manual) await writeFile(resolve(output, `wave-terrain-${deploymentEnvironment}-${build.buildId}.pdf`), manual);
+  await writeFile(resolve(output, `release-gate-${deploymentEnvironment}-${build.buildId}.wav`), firmware);
+  await writeFile(resolve(output, `release-gate-${deploymentEnvironment}-${build.buildId}.recipe.json`), `${JSON.stringify(recipe, null, 2)}\n`);
+  if (manual) await writeFile(resolve(output, `release-gate-${deploymentEnvironment}-${build.buildId}.pdf`), manual);
   console.log(`Saved exact ${deploymentEnvironment} artifacts to ${output}`);
 }
 

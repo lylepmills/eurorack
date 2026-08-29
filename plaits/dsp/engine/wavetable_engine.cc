@@ -34,6 +34,10 @@
 #include "plaits/dsp/oscillator/sine_oscillator.h"
 #include "plaits/resources.h"
 
+#ifndef PLAITS_WAVETABLE_PRODUCTION_AUTOSWEEP
+#define PLAITS_WAVETABLE_PRODUCTION_AUTOSWEEP 0
+#endif
+
 namespace plaits {
 
 using namespace std;
@@ -46,6 +50,27 @@ const int kNumCustomWaves = 15;
 
 const size_t kTableSize = 128;
 const float kTableSizeF = float(kTableSize);
+
+#if PLAITS_WAVETABLE_PRODUCTION_AUTOSWEEP
+// Autonomous hardware gate for recipe-defined banks. The ordinary builder
+// never defines this flag, so these constants and branches are absent from
+// shipping firmware. Four differently pitched windows sweep the full
+// HARMONICS path while exercising neutral and corner TIMBRE/MORPH/MACRO
+// settings. Silent settling gaps make a Core Audio capture self-synchronizing.
+const uint32_t kWavetableAutosweepLeaderSamples = 6u * 48000u;
+const uint32_t kWavetableAutosweepGapSamples = 3u * 24000u;
+const uint32_t kWavetableAutosweepWindowSamples = 8u * 48000u;
+const uint32_t kWavetableAutosweepSlotSamples =
+    kWavetableAutosweepGapSamples + kWavetableAutosweepWindowSamples;
+const uint32_t kWavetableAutosweepProfiles = 4u;
+const uint32_t kWavetableAutosweepTrailerSamples = 6u * 48000u;
+const uint32_t kWavetableAutosweepCycleSamples =
+    kWavetableAutosweepLeaderSamples +
+    kWavetableAutosweepProfiles * kWavetableAutosweepSlotSamples +
+    kWavetableAutosweepTrailerSamples;
+
+uint32_t wavetable_autosweep_samples = 0;
+#endif
 
 void WavetableEngine::Init(BufferAllocator* allocator) {
   phase_ = 0.0f;
@@ -248,6 +273,61 @@ void WavetableEngine::Render(
     float* aux,
     size_t size,
     bool* already_enveloped) {
+#if PLAITS_WAVETABLE_PRODUCTION_AUTOSWEEP
+  EngineParameters automated = parameters;
+  uint32_t position = wavetable_autosweep_samples;
+  bool silent = true;
+  int profile = 0;
+  float harmonics = 0.0f;
+  if (position >= kWavetableAutosweepLeaderSamples) {
+    position -= kWavetableAutosweepLeaderSamples;
+    const uint32_t profile_region =
+        kWavetableAutosweepProfiles * kWavetableAutosweepSlotSamples;
+    if (position < profile_region) {
+      profile = static_cast<int>(position / kWavetableAutosweepSlotSamples);
+      const uint32_t within_slot = position % kWavetableAutosweepSlotSamples;
+      if (within_slot >= kWavetableAutosweepGapSamples) {
+        silent = false;
+        harmonics = static_cast<float>(
+            within_slot - kWavetableAutosweepGapSamples) /
+            static_cast<float>(kWavetableAutosweepWindowSamples - 1u);
+        CONSTRAIN(harmonics, 0.0f, 1.0f);
+      }
+    }
+  }
+  static const float kNotes[kWavetableAutosweepProfiles] = {
+    36.0f, 48.0f, 60.0f, 72.0f,
+  };
+  static const float kTimbres[kWavetableAutosweepProfiles] = {
+    0.5f, 0.0f, 1.0f, 1.0f,
+  };
+  static const float kMorphs[kWavetableAutosweepProfiles] = {
+    0.5f, 1.0f, 1.0f, 0.0f,
+  };
+  static const float kMacros[kWavetableAutosweepProfiles] = {
+    0.5f, 0.5f, 0.0f, 1.0f,
+  };
+  automated.note = kNotes[profile];
+  automated.timbre = kTimbres[profile];
+  automated.morph = kMorphs[profile];
+  automated.macro = kMacros[profile];
+  automated.harmonics = harmonics;
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
+  automated.hard_sync = 0;
+#endif
+  automated.stereo = false;
+
+  wavetable_autosweep_samples += static_cast<uint32_t>(size);
+  while (wavetable_autosweep_samples >= kWavetableAutosweepCycleSamples) {
+    wavetable_autosweep_samples -= kWavetableAutosweepCycleSamples;
+  }
+  RenderInternal<false>(automated, out, aux, size, already_enveloped);
+  if (silent) {
+    fill(out, out + size, 0.0f);
+    fill(aux, aux + size, 0.0f);
+  }
+  return;
+#endif
 #if PLAITS_BUILD_ENABLE_SYNC_INPUT
   if (parameters.hard_sync) {
     RenderInternal<true>(parameters, out, aux, size, already_enveloped);
