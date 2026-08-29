@@ -67,7 +67,7 @@ class WavetableProductionGateTest(unittest.TestCase):
         self.assertIn("kWavetableAutosweepCycleSamples", source)
         self.assertEqual(self.gate.AUTOSWEEP_DEFINE, "#define PLAITS_WAVETABLE_PRODUCTION_AUTOSWEEP 1")
 
-    def test_decoder_uses_the_midpoint_of_the_unique_twelve_second_gap(self):
+    def test_decoder_uses_repeated_long_gaps_to_recover_the_cycle(self):
         rate = 1000
         cycle = [0] * int(self.decoder.CYCLE * rate)
         for profile in range(self.decoder.PROFILES):
@@ -76,8 +76,12 @@ class WavetableProductionGateTest(unittest.TestCase):
         stream = cycle * 3
         offset = 17 * rate
         capture = stream[offset:offset + int(100 * rate)]
-        decoded = self.decoder.find_cycle(capture, rate)
+        decoded, time_scale = self.decoder.find_cycle(capture, rate)
         self.assertLessEqual(abs(decoded - 33 * rate), rate // 10)
+        self.assertAlmostEqual(time_scale, 1.0, places=2)
+        windows = self.decoder.find_profile_windows(capture, rate, decoded)
+        self.assertEqual(len(windows), self.decoder.PROFILES)
+        self.assertTrue(all(self.decoder.rms(window) > 0.1 for window in windows))
 
 
 if __name__ == "__main__":
