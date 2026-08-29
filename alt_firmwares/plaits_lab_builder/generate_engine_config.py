@@ -950,6 +950,38 @@ _WAVETABLE_FUNCTION_ARITIES = {
     "min": (2, 16), "max": (2, 16),
 }
 
+# Conservative high-water CPU readings from the autonomous ES-8 calibration.
+# Exact calibrated expressions use their measured result, matching the browser;
+# novel expressions retain the feature model and its 5% safety margin below.
+_WAVETABLE_HARDWARE_CPU_EQUATIONS = (
+    ("sin(phi + 3 * (x + 0.125) * sin((1 + floor(4 * y)) * phi))", 56.05),
+    ("sin(phi + (1 + 7 * x) * (0.2 + 0.65 * y) * sin(2 * phi))", 50.64),
+    ("sin(phi) + 0.45 * sin((2 + floor(5 * x)) * phi) + 0.28 * sin((3 + floor(8 * y)) * phi)", 73.4),
+    ("sin(phi + (0.3 + 2.8 * x) * sin(phi + pi * y))", 51.4),
+    ("sign(sin(phi) - (0.75 * x - 0.35)) + 0.18 * sin((2 + floor(5 * y)) * phi)", 64.49),
+    ("sin(phi) + 0.65 * x * sin(2 * phi) + 0.55 * y * sin(3 * phi) + 0.3 * x * y * sin(5 * phi)", 61.26),
+    ("(sin(phi + (1 + 7 * x) * (0.2 + 0.65 * y) * sin(2 * phi))) + 0.24 * sin((2 + floor(6 * x)) * phi)", 65.53),
+    ("(sin(phi + (1 + 7 * x) * (0.2 + 0.65 * y) * sin(2 * phi))) + 0.22 * sin((3 + 7 * y) * phi + pi * x)", 57.37),
+    ("sin(pi * (sin(phi + (1 + 7 * x) * (0.2 + 0.65 * y) * sin(2 * phi))))", 56.42),
+    ("sin(phi + (1 + 4 * y) * (sin(phi + (1 + 7 * x) * (0.2 + 0.65 * y) * sin(2 * phi))))", 56.05),
+    ("(sin(phi + (1 + 7 * x) * (0.2 + 0.65 * y) * sin(2 * phi))) * sin((2 + floor(4 * y)) * phi)", 62.02),
+    ("round(5 * (sin(phi + (1 + 7 * x) * (0.2 + 0.65 * y) * sin(2 * phi)))) / 5", 62.02),
+    ("atan(2.5 * (sin(phi + (1 + 7 * x) * (0.2 + 0.65 * y) * sin(2 * phi))))", 60.03),
+    ("max(-0.6, min(0.6, (sin(phi + (1 + 7 * x) * (0.2 + 0.65 * y) * sin(2 * phi)))))", 53.2),
+    ("atan(2.5 * (sin(pi * ((sin(phi + (1 + 7 * x) * (0.2 + 0.65 * y) * sin(2 * phi))) + 0.22 * sin((3 + 7 * y) * phi + pi * x)))))", 73.4),
+    ("0.125 * (sin(phi) + sin(2 * phi + x) + sin(3 * phi + y) + sin(4 * phi + x + y) + sin(5 * phi + 2 * x) + sin(6 * phi + 2 * y) + sin(7 * phi + x - y) + sin(8 * phi + 2 * x - y))", 96.06),
+)
+
+
+def _wavetable_equation_key(tree: ast.Expression) -> str:
+    return ast.dump(tree.body, annotate_fields=False, include_attributes=False)
+
+
+_WAVETABLE_HARDWARE_CPU = {
+    _wavetable_equation_key(ast.parse(equation.lower().replace("^", "**"), mode="eval")): cpu
+    for equation, cpu in _WAVETABLE_HARDWARE_CPU_EQUATIONS
+}
+
 
 def _wavetable_ast(equation: str) -> ast.Expression:
     try:
@@ -1040,8 +1072,10 @@ def _validate_native_wavetable(tree: ast.Expression) -> tuple[float, float]:
     heavy = sum(name in ("floor", "round", "atan") for name in calls)
     if nodes > 100 or depth > 24 or trig > 8 or heavy > 6:
         raise ValueError("native wavetable equation exceeds the calibrated complexity envelope")
-    estimated_cpu = (38.5 + trig * 6 + max(0, trig - 4) * 2.5 + heavy * 6
-                     + max(0, nodes - 18) * 0.22 + max(0, depth - 8) * 0.8 + 5.0)
+    measured_cpu = _WAVETABLE_HARDWARE_CPU.get(_wavetable_equation_key(tree))
+    estimated_cpu = measured_cpu if measured_cpu is not None else (
+        38.5 + trig * 6 + max(0, trig - 4) * 2.5 + heavy * 6
+        + max(0, nodes - 18) * 0.22 + max(0, depth - 8) * 0.8 + 5.0)
     if estimated_cpu > 75.0:
         raise ValueError("native wavetable equation exceeds the calibrated CPU gate")
     minimum, maximum = math.inf, -math.inf
@@ -2196,9 +2230,10 @@ def render_config(recipe: BuildRecipe) -> str:
             wavetable_pointers.append("NULL")
             wavetable_functions.append("NULL")
             factory_wavetable_mask |= 1 << table_type
+    wavetable_native_definition_block = "\n".join(wavetable_native_definitions)
     wavetable_bank_block = (
         f"\n#if PLAITS_HAS_WAVETABLE_BANK\n{wavetable_array_definitions}\n"
-        f"{'\n'.join(wavetable_native_definitions)}\n"
+        f"{wavetable_native_definition_block}\n"
         f"static const uint8_t kWavetableBankTypes[{len(recipe.wavetable_bank)}] = "
         f"{{ {', '.join(wavetable_types)} }};\n"
         f"static const int8_t* const kWavetableBankData[{len(recipe.wavetable_bank)}] = "

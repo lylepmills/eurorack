@@ -461,6 +461,17 @@ class GenerateEngineConfigTest(unittest.TestCase):
                     {"kind": "custom", "model": model},
                 ]))
 
+    def test_v25_native_wavetable_accepts_hardware_calibrated_harmonic_grid(self) -> None:
+        equation = (
+            "sin(phi) + 0.45 * sin((2 + floor(5 * x)) * phi) "
+            "+ 0.28 * sin((3 + floor(8 * y)) * phi)"
+        )
+        model = {**self.wavetable_model(equation), "representation": "native"}
+        build = validate_recipe(self.wavetable_bank_recipe([
+            {"kind": "custom", "model": model},
+        ]))
+        self.assertEqual(build.wavetable_bank[0][0], 4)
+
     def test_output_format_accepts_wav_and_intel_hex_only(self) -> None:
         recipe = self.load("default_recipe.json")
         validate_recipe(recipe)
