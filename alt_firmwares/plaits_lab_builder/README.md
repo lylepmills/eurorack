@@ -143,6 +143,19 @@ Terrain continued to produce audio. Near-silent positions during the MACRO
 sweep occurred symmetrically with the terrain geometry and recovered normally,
 not as CPU stalls.
 
+The exact schema-24 release gate used staging build
+`b20070a737e3aeb915bb7fd91c9222af6bd8d9fa9985671951a2db34cf597119`,
+compiler-stamped at source `e81f62517fc4`. Its 11,187,884-byte updater WAV
+has SHA-256
+`767aadf1ce1cac2cd2ac7307da4575deff1b7d14a183008e250c10c29cbc6a11`.
+After the complete two-instance staging pool was healthy on that immutable
+image, the WAV passed the physical checks above. The direct Core Audio gate
+captured 86.773 seconds from MAIN through ES-8 input 2; it contained no clipped
+samples, no 10 ms window below -50 dBFS, no held run longer than two samples,
+and no consecutive identical render blocks at 16, 24, 32, 48, 64, or 128
+samples. The capture's SHA-256 is
+`2c51443da5c5e85998c0f3c925e94265c2767f9f45b591b70fc48876bef59e2c`.
+
 An August 4 hardware regression exposed two firmware defects in the custom
 Speech path: inconsistent `PLAITS_HAS_CUSTOM_SPEECH_BANKS` values changed the
 `Voice` class layout between compilation units, and discrete LPC playback could
