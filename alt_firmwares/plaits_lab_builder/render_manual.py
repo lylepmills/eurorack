@@ -25,6 +25,16 @@ ACCESSIBLE_BANK_LEVELS = ("100%", "50%", "25%", "12.5%")
 ACCESSIBLE_BANK_COLOR = "#687069"
 CONTROL_IDS = ("harmonics", "timbre", "morph", "macro")
 PANEL_LABELS = ("HARMONICS", "TIMBRE", "MORPH", "MACRO")
+FACTORY_TERRAIN_NAMES = (
+    "Asymmetric Saddle",
+    "Pinched Crossing",
+    "Resonant Cross",
+    "Offset Folds",
+    "Twin Wells",
+    "Wavetable Terrain: Bank 3",
+    "Wavetable Terrain: Bank 2",
+    "Wavetable Terrain: Bank 1",
+)
 
 # The options menu is eight "lights", ordered so the ones a player reaches for
 # most sit nearest the start of the walk. Each light cycles through an ordered
@@ -159,6 +169,60 @@ def custom_bank_credits(recipe: Any, slots: list[str | None], by_id: dict[str, A
     return credits
 
 
+def custom_model_credits(recipe: Any, slots: list[str | None]) -> dict[int, dict[str, str]]:
+    """Printable identity for schema-24 terrain/wavetable slot data."""
+    resources = recipe.get("resources") if isinstance(recipe, dict) else None
+    entries = resources.get("customModelData") if isinstance(resources, dict) else None
+    if not isinstance(entries, list):
+        return {}
+    credits: dict[int, dict[str, str]] = {}
+    for entry in entries:
+        if not isinstance(entry, dict) or not isinstance(entry.get("model"), dict):
+            continue
+        slot = entry.get("slot")
+        model = entry["model"]
+        if (isinstance(slot, int) and 0 <= slot < len(slots)
+                and slots[slot] in ("wave-terrain", "wavetable")):
+            credits[slot] = {
+                "kind": str(model.get("kind", ""))[:32],
+                "name": str(model.get("name", ""))[:80].strip(),
+            }
+    return credits
+
+
+def terrain_bank_entries(recipe: Any) -> list[dict[str, str]]:
+    """The player-facing order and storage behavior of a shared terrain bank.
+
+    validate_recipe() has already rejected malformed entries before this helper
+    runs, so the remaining work is deliberately presentational: retain names and
+    representation without carrying the 4 KB sample grids into the document.
+    """
+    resources = recipe.get("resources") if isinstance(recipe, dict) else None
+    entries = resources.get("terrainBank") if isinstance(resources, dict) else None
+    if not isinstance(entries, list):
+        return []
+    result: list[dict[str, str]] = []
+    for entry in entries:
+        if entry["kind"] == "factory":
+            index = int(str(entry["id"]).split("-")[-1]) - 1
+            result.append({
+                "name": f"{FACTORY_TERRAIN_NAMES[index]} (stock bank {index + 1})",
+                "storage": "Stock terrain · fixed in firmware",
+            })
+        else:
+            model = entry["model"]
+            native = model.get("representation") == "native"
+            result.append({
+                "name": str(model["name"])[:80].strip(),
+                "storage": (
+                    "Compiled equation · fixed in firmware"
+                    if native else
+                    "Prebaked samples · replaceable over TIMBRE"
+                ),
+            })
+    return result
+
+
 def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]:
     build = validate_recipe(recipe)
     color_blind_mode = build.color_blind_mode == 1
@@ -179,8 +243,9 @@ def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]
         }
 
     credits = custom_bank_credits(recipe, slots, by_id)
+    custom_models = custom_model_credits(recipe, slots)
     models: list[dict[str, Any]] = []
-    seen: set[tuple[str, str | None]] = set()
+    seen: set[tuple[str, str | None, str | None]] = set()
     for slot, engine_id in enumerate(slots):
         # v7 short-bank recipes leave empty slots as None — they have no model
         # reference, so they must not be dereferenced (KeyError) or listed.
@@ -190,7 +255,12 @@ def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]
         # different custom banks are different models to a player, so they get
         # their own reference entries rather than merging into one.
         credit = credits.get(slot)
-        key = (engine_id, json.dumps(credit, sort_keys=True) if credit else None)
+        custom_model = custom_models.get(slot)
+        key = (
+            engine_id,
+            json.dumps(credit, sort_keys=True) if credit else None,
+            json.dumps(custom_model, sort_keys=True) if custom_model else None,
+        )
         if key in seen:
             continue
         seen.add(key)
@@ -199,12 +269,14 @@ def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]
             position(index, color_blind_mode)
             for index, value in enumerate(slots)
             if value == engine_id and (credits.get(index) or None) == credit
+            and (custom_models.get(index) or None) == custom_model
         ]
         models.append({
             **engine,
             "locations": locations,
             "customBank": credit,
             "fmCapabilities": active_fm_capabilities(engine_id),
+            "customModel": custom_model,
         })
     return {
         "buildKey": build_key,
@@ -214,6 +286,7 @@ def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]
                 "engine": by_id[engine_id] if engine_id is not None else None,
                 "position": position(slot, color_blind_mode),
                 "customBank": credits.get(slot),
+                "customModel": custom_models.get(slot),
             }
             for slot, engine_id in enumerate(slots)
         ],
@@ -229,6 +302,7 @@ def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]
             ) for engine_id in slots)
             else []
         ),
+        "terrainBank": terrain_bank_entries(recipe),
         # Only a build that compiled the procedure in answers the power-up
         # gesture, so only that build's guide documents it.
         "calibration": build.enable_calibration == 1,
@@ -251,8 +325,15 @@ def _escape(value: str) -> str:
 CUSTOM_BANK_LABEL = "Custom 6-Op FM Bank"
 
 
-def display_name(engine_name: str, credit: dict[str, Any] | None) -> str:
-    return CUSTOM_BANK_LABEL if credit else engine_name
+def display_name(
+        engine_name: str,
+        credit: dict[str, Any] | None,
+        custom_model: dict[str, str] | None = None) -> str:
+    if credit:
+        return CUSTOM_BANK_LABEL
+    if custom_model:
+        return "Custom Wave Terrain" if custom_model["kind"] == "wave-terrain" else "Custom Wavetable"
+    return engine_name
 
 
 def _clip(value: str, font: str, size: float, max_width: float) -> str:
@@ -475,7 +556,10 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
     # needs a second line. Rows stay a uniform height across all three (or four)
     # bank tables so slot N of one bank still lines up with slot N of the next.
     subtitled = any(
-        entry["engine"] is not None and (entry["customBank"] or {}).get("name")
+        entry["engine"] is not None and (
+            (entry["customBank"] or {}).get("name")
+            or (entry["customModel"] or {}).get("name")
+        )
         for entry in document["slots"]
     )
     slot_row_height = (0.35 if subtitled else 0.31) * inch
@@ -492,16 +576,20 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
             entry = document["slots"][bank_index * 8 + bank_slot]
             engine = entry["engine"]
             credit = entry["customBank"]
+            custom_model = entry["customModel"]
             # Empty slots (v7 short banks or a v11 sparse-bank gap) have no
             # engine — show a muted dash at the slot's true position.
             if engine is None:
                 name_para = Paragraph("—", small_muted_style)
             else:
-                label = _escape(display_name(engine["name"], credit))
-                subtitle = _escape(_clip((credit or {}).get("name", ""), "Helvetica", 6.4, 1.55 * inch))
+                label = _escape(display_name(engine["name"], credit, custom_model))
+                subtitle = _escape(_clip(
+                    (credit or custom_model or {}).get("name", ""),
+                    "Helvetica", 6.4, 1.55 * inch,
+                ))
                 name_para = Paragraph(
                     f'{label}<br/><font face="Helvetica" size="6.4" color="#687069">{subtitle}</font>'
-                    if credit and subtitle
+                    if (credit or custom_model) and subtitle
                     else label,
                     bank_model_style,
                 )
@@ -881,6 +969,45 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
             scale_table,
         ])
 
+    if document["terrainBank"]:
+        terrain_rows: list[list[Any]] = [[
+            Paragraph("HARMONICS", table_header_style),
+            Paragraph("TERRAIN", table_header_style),
+            Paragraph("STORAGE", table_header_style),
+        ]]
+        for index, entry in enumerate(document["terrainBank"], start=1):
+            terrain_rows.append([
+                Paragraph(str(index), small_muted_style),
+                Paragraph(_escape(entry["name"]), small_style),
+                Paragraph(_escape(entry["storage"]), small_muted_style),
+            ])
+        terrain_table = Table(
+            terrain_rows,
+            colWidths=[0.7 * inch, 2.65 * inch, 2.95 * inch],
+            rowHeights=[0.26 * inch] + [0.4 * inch] * len(document["terrainBank"]),
+            repeatRows=1,
+        )
+        terrain_table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#EFECE3")),
+            ("GRID", (0, 0), (-1, -1), 0.35, line),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 5),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ]))
+        story.extend([
+            PageBreak(),
+            Paragraph("Wave Terrain bank", section_style),
+            Paragraph(
+                "HARMONICS sweeps this list from top to bottom and interpolates between adjacent entries. "
+                "A TIMBRE audio transfer replaces the selected prebaked custom entry. Stock and compiled "
+                "equation entries refuse transfers without erasing anything.",
+                intro_style,
+            ),
+            terrain_table,
+        ])
+
     # Calibration, for the builds that asked for it. Most firmwares leave the
     # procedure out — a module keeps the pitch-CV calibration it already has
     # through any firmware install, so it is only needed by a module that has
@@ -959,7 +1086,9 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         locations = "  /  ".join(f"{item['bankName']} {item['number']}" for item in model["locations"])
         model_name_and_badges = Table(
             [[
-                Paragraph(_escape(display_name(model["name"], model.get("customBank"))), model_style),
+                Paragraph(_escape(display_name(
+                    model["name"], model.get("customBank"), model.get("customModel"),
+                )), model_style),
                 fm_badges(model.get("fmCapabilities")),
             ]],
             colWidths=[2.68 * inch, 0.66 * inch],
@@ -995,6 +1124,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         # about the engine (TIMBRE, MORPH, the fourth macro, TRIG) is unchanged
         # by a bank swap and keeps its catalog prose.
         credit = model.get("customBank")
+        custom_model = model.get("customModel")
         descriptions = model["manual"]["controls"]
         if credit:
             details_text = credit["description"] or (
@@ -1007,7 +1137,13 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
                 ),
             }
         else:
-            details_text = model["description"]
+            details_text = (
+                f'This slot uses the recipe-baked “{custom_model["name"]}” '
+                f'{"wave terrain" if custom_model["kind"] == "wave-terrain" else "wavetable"} data. '
+                "Its panel controls behave like the original model. A compatible "
+                "audio transfer through TIMBRE replaces this slot independently."
+                if custom_model else model["description"]
+            )
         details = Paragraph(_escape(details_text), body_style)
         parameter_rows: list[list[Any]] = [[
             Paragraph("PANEL", table_header_style),

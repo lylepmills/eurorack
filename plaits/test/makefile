@@ -139,7 +139,7 @@ $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
 $(BUILD_DIR)%.o: %.cc
-	g++ -c -DTEST -DPLAITS_BUILD_LINEAR_TZFM=1 -DPLAITS_BUILD_FAST_FM=1 -g -Wall -Werror $(HOST_ARCH_FLAGS) -Wno-unused-variable -Wno-unused-local-typedefs -Wno-deprecated-declarations -O2 $(CXXFLAGS) -I. $< -o $@
+	g++ -c -DTEST -DPLAITS_BUILD_LINEAR_TZFM=1 -DPLAITS_BUILD_FAST_FM=1 -DPLAITS_BUILD_ENABLE_SYNC_INPUT=1 -g -Wall -Werror $(HOST_ARCH_FLAGS) -Wno-unused-variable -Wno-unused-local-typedefs -Wno-deprecated-declarations -O2 $(CXXFLAGS) -I. $< -o $@
 
 $(BUILD_DIR)%.d: %.cc
 	g++ -MM -DTEST -I. $< -MF $@ -MT $(@:.d=.o)

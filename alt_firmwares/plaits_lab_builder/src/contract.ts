@@ -63,6 +63,16 @@ export const levelAutoMinSchemaVersion = 16; // engine-aware LEVEL routing
 const speechBanksMinSchemaVersion = 17;      // selectable/custom Speech LPC banks
 const attenuverterModeMinSchemaVersion = 18; // recipe-driven LIGHT 8 starting mode
 const oneKnobEnvelopeMinSchemaVersion = 19;  // triggered/gated FREQUENCY contours
+const customModelDataMinSchemaVersion = 24;  // per-slot Wavetable data
+const terrainBankMinSchemaVersion = 24;       // shared ordered Wave Terrain bank
+const nativeTerrainMinSchemaVersion = 24;      // compiled custom equations
+const customModelDataBytes = 4096;
+export const maxTerrainBankSize = 16;
+const factoryTerrainIds = [
+  "factory-1", "factory-2", "factory-3", "factory-4",
+  "factory-5", "factory-6", "factory-7", "factory-8",
+] as const;
+const factoryTerrainIdSet = new Set<string>(factoryTerrainIds);
 
 export const minScaleBankSize = 1;
 export const maxScaleBankSize = 16;
@@ -134,6 +144,25 @@ export type NormalizedSpeechBanks = {
   customBanks: NormalizedSpeechBank[];
 };
 
+export type NormalizedCustomModelData = {
+  slot: number;
+  model: {
+    kind: "wave-terrain" | "wavetable";
+    name: string;
+    equation: string;
+    data: string;
+    representation?: "native";
+  };
+};
+
+export type NormalizedTerrainBankEntry = {
+  kind: "factory";
+  id: typeof factoryTerrainIds[number];
+} | {
+  kind: "custom";
+  model: NormalizedCustomModelData["model"] & { kind: "wave-terrain" };
+};
+
 export type NormalizedRecipe = {
   schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24;
   target: "mutable-instruments-plaits" | "plum-audio-roved";
@@ -191,6 +220,10 @@ export type NormalizedRecipe = {
     userDataBanks?: NormalizedUserDataBank[] | NormalizedSlotBank[];
     // v17: selected shipped LPC banks followed by custom decoded-frame banks.
     speechBanks?: NormalizedSpeechBanks;
+    // v21: equation metadata plus the sampled 4 KB data for one terrain/table slot.
+    customModelData?: NormalizedCustomModelData[];
+    // v23: the shared ordered bank swept by every Wave Terrain slot's HARMONICS.
+    terrainBank?: NormalizedTerrainBankEntry[];
   };
   // Catalog ids of the engines built with the stereo render path (introduced in
   // schema 10). Absent on schema <= 9 (the global-stereo recipes, which the
@@ -509,6 +542,141 @@ function normalizeSpeechBanks(value: unknown): NormalizedSpeechBanks {
     };
   });
   return { stockBankIds: stockBankIds.map(Number), customBanks };
+}
+
+function normalizeCustomModelData(
+  value: unknown,
+  slots: (string | null)[],
+): NormalizedCustomModelData[] {
+  if (!Array.isArray(value) || value.length > slots.length) {
+    throw new ContractError(
+      "invalid_custom_model_data",
+      "The recipe contains an unsupported set of custom model data.",
+    );
+  }
+  const seen = new Set<number>();
+  return value.map((raw) => {
+    if (!raw || typeof raw !== "object") {
+      throw new ContractError("invalid_custom_model_data", "A custom model-data assignment is invalid.");
+    }
+    const entry = raw as Record<string, unknown>;
+    const slot = Number(entry.slot);
+    if (!hasExactKeys(entry, ["slot", "model"])
+        || !Number.isInteger(entry.slot) || slot < 0 || slot >= slots.length
+        || seen.has(slot) || !entry.model || typeof entry.model !== "object") {
+      throw new ContractError(
+        "invalid_custom_model_data",
+        "Custom model data must target a distinct palette slot.",
+      );
+    }
+    const model = entry.model as Record<string, unknown>;
+    const kind = slots[slot] === "wave-terrain" ? "wave-terrain"
+      : slots[slot] === "wavetable" ? "wavetable" : undefined;
+    if (!kind || !hasExactKeys(model, ["kind", "name", "equation", "data"])
+        || model.kind !== kind || !shortText(model.name, 80)
+        || !shortText(model.equation, 500) || typeof model.data !== "string"
+        || !canonicalBase64Pattern.test(model.data)) {
+      throw new ContractError(
+        "invalid_custom_model_data",
+        "Custom model data must match a Wave Terrain or Wavetable slot.",
+      );
+    }
+    let decoded: string;
+    try {
+      decoded = atob(model.data);
+    } catch {
+      throw new ContractError("invalid_custom_model_data", "Custom model data is not valid base64.");
+    }
+    if (decoded.length !== customModelDataBytes || btoa(decoded) !== model.data) {
+      throw new ContractError(
+        "invalid_custom_model_data",
+        `Custom model data must contain exactly ${customModelDataBytes} bytes.`,
+      );
+    }
+    seen.add(slot);
+    return {
+      slot,
+      model: {
+        kind,
+        name: String(model.name).trim(),
+        equation: String(model.equation).trim(),
+        data: model.data,
+      },
+    };
+  });
+}
+
+function normalizeTerrainBank(value: unknown, schemaVersion: number): NormalizedTerrainBankEntry[] {
+  if (!Array.isArray(value) || value.length < 1 || value.length > maxTerrainBankSize) {
+    throw new ContractError(
+      "invalid_terrain_bank",
+      `A terrain bank must contain between one and ${maxTerrainBankSize} terrains.`,
+    );
+  }
+  const seenFactories = new Set<string>();
+  return value.map((raw) => {
+    if (!raw || typeof raw !== "object") {
+      throw new ContractError("invalid_terrain_bank", "A terrain-bank entry is invalid.");
+    }
+    const entry = raw as Record<string, unknown>;
+    if (entry.kind === "factory") {
+      if (!hasExactKeys(entry, ["kind", "id"])
+          || typeof entry.id !== "string" || !factoryTerrainIdSet.has(entry.id)
+          || seenFactories.has(entry.id)) {
+        throw new ContractError(
+          "invalid_terrain_bank",
+          "Each Mutable Instruments factory terrain may appear at most once.",
+        );
+      }
+      seenFactories.add(entry.id);
+      return { kind: "factory", id: entry.id as typeof factoryTerrainIds[number] };
+    }
+    if (entry.kind !== "custom" || !hasExactKeys(entry, ["kind", "model"])
+        || !entry.model || typeof entry.model !== "object") {
+      throw new ContractError("invalid_terrain_bank", "A terrain-bank entry is invalid.");
+    }
+    const model = entry.model as Record<string, unknown>;
+    const sampledKeys = hasExactKeys(model, ["kind", "name", "equation", "data"]);
+    const nativeKeys = hasExactKeys(model, ["kind", "name", "equation", "data", "representation"]);
+    if ((!sampledKeys && !nativeKeys)
+        || model.kind !== "wave-terrain" || !shortText(model.name, 80)
+        || !shortText(model.equation, 500) || typeof model.data !== "string"
+        || !canonicalBase64Pattern.test(model.data)) {
+      throw new ContractError(
+        "invalid_terrain_bank",
+        "A custom terrain must contain a name, equation, and canonical 4 KB sample grid.",
+      );
+    }
+    if (nativeKeys && (model.representation !== "native"
+        || schemaVersion < nativeTerrainMinSchemaVersion)) {
+      throw new ContractError(
+        "invalid_terrain_bank",
+        `Native terrain equations require recipe schema ${nativeTerrainMinSchemaVersion}.`,
+      );
+    }
+    let decoded: string;
+    try {
+      decoded = atob(model.data);
+    } catch {
+      throw new ContractError("invalid_terrain_bank", "Custom terrain data is not valid base64.");
+    }
+    if (decoded.length !== customModelDataBytes || btoa(decoded) !== model.data) {
+      throw new ContractError(
+        "invalid_terrain_bank",
+        `Custom terrain data must contain exactly ${customModelDataBytes} bytes.`,
+      );
+    }
+    return {
+      kind: "custom",
+      model: {
+        kind: "wave-terrain",
+        name: String(model.name).trim(),
+        equation: String(model.equation).trim(),
+        data: model.data,
+        ...(model.representation === "native" ? { representation: "native" as const } : {}),
+      },
+    };
+  });
 }
 
 export class ContractError extends Error {
@@ -887,6 +1055,8 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
   let userDataBanks: NormalizedUserDataBank[] | undefined;   // v6 index-keyed
   let slotBanks: NormalizedSlotBank[] | undefined;           // v12 slot-keyed
   let speechBanks: NormalizedSpeechBanks | undefined;        // v17
+  let customModelData: NormalizedCustomModelData[] | undefined; // v24
+  let terrainBank: NormalizedTerrainBankEntry[] | undefined; // v24
   if (schemaVersion >= resourcesMinSchemaVersion) {
     const resources = candidate.resources;
     // v6 always carries index-keyed banks; v12 always carries per-slot banks (its
@@ -913,10 +1083,16 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
       && Object.hasOwn(resourceValues, "scaleBank");
     const carriesSpeechBanks = schemaVersion >= speechBanksMinSchemaVersion
       && Object.hasOwn(resourceValues, "speechBanks");
+    const carriesCustomModelData = schemaVersion >= customModelDataMinSchemaVersion
+      && Object.hasOwn(resourceValues, "customModelData");
+    const carriesTerrainBank = schemaVersion >= terrainBankMinSchemaVersion
+      && Object.hasOwn(resourceValues, "terrainBank");
     const baseKeys = [
       "chordTables",
       ...(carriesScaleBank ? ["scaleBank"] : []),
       ...(carriesSpeechBanks ? ["speechBanks"] : []),
+      ...(carriesCustomModelData ? ["customModelData"] : []),
+      ...(carriesTerrainBank ? ["terrainBank"] : []),
     ];
     const carriesUserDataBanks = expectsUserDataBanks
       || (schemaVersion >= calibrationMinSchemaVersion
@@ -938,6 +1114,25 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
         );
       }
       speechBanks = normalizeSpeechBanks(resourceValues.speechBanks);
+    }
+    if (carriesCustomModelData) {
+      customModelData = normalizeCustomModelData(resourceValues.customModelData, slots);
+      if (schemaVersion >= terrainBankMinSchemaVersion
+          && customModelData.some((entry) => entry.model.kind === "wave-terrain")) {
+        throw new ContractError(
+          "invalid_custom_model_data",
+          "Schema 24 terrain data belongs in the shared terrain bank, not on a palette slot.",
+        );
+      }
+    }
+    if (carriesTerrainBank) {
+      if (!slots.includes("wave-terrain")) {
+        throw new ContractError(
+          "invalid_terrain_bank",
+          "A terrain bank requires Wave Terrain in the palette.",
+        );
+      }
+      terrainBank = normalizeTerrainBank(resourceValues.terrainBank, schemaVersion);
     }
     if (carriesUserDataBanks) {
       const rawBanks = resourceValues.userDataBanks;
@@ -990,7 +1185,9 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     // (v8); a short-bank recipe (a trailing empty slot) stays v7; a candidate that
     // carried v6 resources (even an empty custom-bank list, e.g. a 32-slot recipe)
     // stays v6; else v5.
-    schemaVersion: configuration.preferences.simplifiedPitchRanges ? 24
+    schemaVersion: configuration.preferences.simplifiedPitchRanges
+      || terrainBank !== undefined
+      || customModelData !== undefined ? 24
       : configuration.preferences.linearTzfm
       || configuration.preferences.fastFm ? 23
       : configuration.preferences.syncInput ? 22
@@ -1022,6 +1219,8 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
       chordTables,
       ...(scaleBank !== undefined ? { scaleBank } : {}),
       ...(speechBanks !== undefined ? { speechBanks } : {}),
+      ...(customModelData !== undefined ? { customModelData } : {}),
+      ...(terrainBank !== undefined ? { terrainBank } : {}),
       ...((userDataBanks ?? slotBanks)
         ? { userDataBanks: userDataBanks ?? slotBanks }
         : {}),
@@ -1083,6 +1282,14 @@ export async function computeManualKey(
     chordTables: recipe.resources.chordTables.map((table) => table.name),
     scaleBank: recipe.resources.scaleBank?.map((scale) => scale.name) ?? [],
     customBanks,
+    customModelData: recipe.resources.customModelData?.map((entry) => [
+      entry.slot,
+      entry.model.kind,
+      entry.model.name,
+    ]) ?? [],
+    terrainBank: recipe.resources.terrainBank?.map((entry) => entry.kind === "factory"
+      ? [entry.kind, entry.id]
+      : [entry.kind, entry.model.name, entry.model.representation ?? "prebaked"]) ?? [],
     // The control instructions differ completely: Plaits has two buttons;
     // Ro'Ved has four clickable knobs. Never share a cached guide between them.
     target: recipe.target,

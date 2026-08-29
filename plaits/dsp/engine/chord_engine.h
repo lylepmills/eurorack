@@ -57,12 +57,14 @@ class ChordEngine : public Engine {
       size_t size,
       bool* already_enveloped);
   virtual bool stereo_capable() const { return PLAITS_STEREO_CHORDS; }
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
   virtual void HardSync() {
     for (int i = 0; i < kChordNumVoices; ++i) {
       divide_down_voice_[i].Init();
       wavetable_voice_[i].Init();
     }
   }
+#endif
 
  private:
   void ComputeRegistration(float registration, float* amplitudes);

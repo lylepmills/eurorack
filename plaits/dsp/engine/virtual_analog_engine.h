@@ -51,7 +51,9 @@ class VirtualAnalogEngine : public Engine {
   // OUT/AUX carry L/R when stereo is requested: the engine's saw and sync
   // square are panned across the field, and the monster-sync AUX is dropped.
   virtual bool stereo_capable() const { return PLAITS_STEREO_VIRTUAL_ANALOG; }
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
   virtual bool hard_sync_capable() const { return true; }
+#endif
   virtual bool linear_tzfm_capable() const { return true; }
   virtual bool fast_fm_capable() const { return true; }
 

@@ -337,10 +337,12 @@ class SubOscillatorEngine : public Engine {
   // Pattern A: the mix against the bare sub, decorrelated at matched gain.
   virtual bool stereo_capable() const { return true; }
   virtual bool fast_fm_capable() const { return true; }
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
   virtual void HardSync() {
     phase_ = 0.0f;
     phase_sub_ = 0.0f;
   }
+#endif
 
  private:
   // Both main waveforms run off ONE phase: Braids' two SUB models are the same

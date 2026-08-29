@@ -59,11 +59,13 @@ class StringMachineEngine : public Engine {
   // The audio path is inherently stereo (see header comment): stereo mode
   // just relabels the existing OUT/AUX pair as left/right.
   virtual bool stereo_capable() const { return true; }
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
   virtual void HardSync() {
     for (int i = 0; i < kChordNumNotes; ++i) {
       divide_down_voice_[i].Init();
     }
   }
+#endif
 
  private:
   void ComputeRegistration(float registration, float* amplitudes);

@@ -22,7 +22,7 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Swappable user-data region descriptor.
+// Rewritable user-data region descriptor.
 //
 // Its own header because the generated engine_config.h defines the region TABLE
 // and is force-included ahead of everything else, while user_data.h — which
@@ -37,7 +37,9 @@
 namespace plaits {
 
 // The flash one FM bank occupies, which an audio transfer erases and reprograms
-// in place.
+// in place. Custom Terrain/Wavetable regions use their direct per-engine pointer
+// table instead; both kinds share the page-aligned linker output section and
+// linked-ELF safety check.
 //
 // In a Plaits Palette build a bank's BAKED array IS its region: the generator
 // emits every bank 2 KB page-aligned and padded to a whole UserData::SIZE, so a

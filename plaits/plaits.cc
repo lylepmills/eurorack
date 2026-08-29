@@ -69,7 +69,10 @@ Voice voice;
 TzfmDiagnostic tzfm_diagnostic;
 #endif
 
-char shared_buffer[16384];
+// BufferAllocator returns typed pointers without adjusting their alignment.
+// A char array can otherwise follow the one-byte UserData object at an odd
+// address, faulting on Cortex-M4 floating-point loads/stores before audio starts.
+char shared_buffer[16384] __attribute__((aligned(8)));
 uint32_t test_ramp;
 
 // Default interrupt handlers.
@@ -147,7 +150,12 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
       if (state == PACKET_DECODER_STATE_END_OF_TRANSMISSION) {
         if (user_data_receiver.progress() == 1.0f) {
           int slot = voice.active_engine();
+#if PLAITS_HAS_TERRAIN_BANK
+          bool success = user_data.Save(
+              user_data_receiver.rx_buffer(), slot, patch.harmonics);
+#else
           bool success = user_data.Save(user_data_receiver.rx_buffer(), slot);
+#endif
           if (success) {
             voice.ReloadUserData();
           } else {

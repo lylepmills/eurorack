@@ -84,7 +84,11 @@ void FMEngine::RenderInternal(
     float* aux,
     size_t size,
     bool* already_enveloped) {
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
   uint32_t hard_sync = process_hard_sync ? parameters.hard_sync : 0;
+#else
+  uint32_t hard_sync = 0;
+#endif
   
   // 4x oversampling
   const float note = parameters.note - 24.0f;

@@ -35,11 +35,11 @@ from user_data_regions import check_elf, render_linker_script
 WORKSPACE = Path(os.environ.get("PLAITS_WORKSPACE", "/workspace")).resolve()
 STOCK_LINKER_SCRIPT = (
     WORKSPACE / "stmlib/linker_scripts/stm32f373x_flash_application_large.ld")
-_REGION_COUNT_RE = re.compile(r"^static const int kNumUserDataRegions = (\d+);", re.MULTILINE)
+_REGION_COUNT_RE = re.compile(r"^#define PLAITS_USER_DATA_REGION_COUNT (\d+)$", re.MULTILINE)
 
 
 def _declared_region_count(config_text: str) -> int:
-    """How many swappable FM bank regions the generated config declares."""
+    """How many rewritable FM/model regions the generated config declares."""
     match = _REGION_COUNT_RE.search(config_text)
     return int(match.group(1)) if match else 0
 
@@ -473,6 +473,38 @@ RAM_BUDGET_BYTES = 32 * 1024
 RAM_STACK_RESERVE_BYTES = 1024
 
 
+def _validate_shared_buffer_layout(nm_output: str) -> int:
+    """Reject a scratch arena that would fault on Cortex-M4 typed accesses."""
+    symbols = re.findall(
+        r"^([0-9a-fA-F]+)\s+([0-9a-fA-F]+)\s+[Bb]\s+shared_buffer$",
+        nm_output, re.MULTILINE,
+    )
+    if len(symbols) != 1:
+        raise BuildError(
+            "unsafe_ram_layout", "The linked firmware's audio scratch buffer "
+            "could not be verified and must not be installed.",
+        )
+    address, size = (int(value, 16) for value in symbols[0])
+    if (address % 8 != 0 or size != 16384
+            or address < 0x20000000
+            or address + size > 0x20000000 + RAM_BUDGET_BYTES):
+        raise BuildError(
+            "unsafe_ram_layout", "The linked firmware has an unsafe audio "
+            "scratch-buffer layout and must not be installed.",
+            f"shared_buffer at 0x{address:08x}, size {size}; expected an "
+            "8-byte-aligned 16384-byte arena entirely within SRAM.",
+        )
+    return address
+
+
+def _check_shared_buffer_alignment(elf_path: Path) -> int:
+    result = subprocess.run(
+        [_arm_tool("arm-none-eabi-nm"), "-S", "--defined-only", str(elf_path)],
+        check=True, capture_output=True, text=True, timeout=30,
+    )
+    return _validate_shared_buffer_layout(result.stdout)
+
+
 def validate_linked_firmware(elf_path: Path, config_text: str) -> dict[str, int]:
     """Apply the hosted builder's post-link memory and flash-layout gates."""
     if not elf_path.is_file():
@@ -493,7 +525,7 @@ def validate_linked_firmware(elf_path: Path, config_text: str) -> dict[str, int]
         except ValueError as error:
             raise BuildError(
                 "unsafe_flash_layout",
-                "The linked firmware has an unsafe replaceable-FM flash layout "
+                "The linked firmware has an unsafe rewritable user-data layout "
                 "and must not be installed.",
                 str(error),
             ) from error
@@ -521,11 +553,16 @@ def validate_linked_firmware(elf_path: Path, config_text: str) -> dict[str, int]
             "Remove a memory-heavy engine, then build again.",
         )
 
+    shared_buffer_address = _check_shared_buffer_alignment(elf_path)
     return {
         "textBytes": text_bytes,
         "dataBytes": data_bytes,
         "bssBytes": bss_bytes,
         "flashBytes": flash_bytes,
+        "userDataRegions": region_count,
+        "sharedBufferAddress": shared_buffer_address,
+        # Preserve the pre-schema-24 key for local tooling that has not yet
+        # learned that these regions can also hold Terrain/Wavetable data.
         "replaceableFmBankRegions": region_count,
     }
 
@@ -689,16 +726,17 @@ def build_firmware(payload: Any) -> tuple[Path, FirmwareOutput, dict[str, str]]:
         render_speech_config(validated_recipe.speech_banks), encoding="utf-8")
     recipe_path.write_text(json.dumps(recipe, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
 
-    # Swappable FM banks need their own page-aligned output section, which means
-    # a linker script this build owns. stmlib is an UPSTREAM submodule
+    # Rewritable FM banks and custom Terrain/Wavetable resources need their own
+    # page-aligned output section, which means a linker script this build owns.
+    # stmlib is an UPSTREAM submodule
     # (pichenettes/stmlib) and is never edited: the stock script is read, the
     # section spliced in, and the result passed with LINKER_SCRIPT. A build with
-    # banks locked (or with no FM banks) passes nothing and links against the
-    # stock script byte-for-byte, exactly as before.
+    # FM banks locked and no customized model slots passes nothing and links
+    # against the stock script byte-for-byte, exactly as before.
     region_count = _declared_region_count(config_text)
     linker_script_path: Path | None = None
     if region_count:
-        linker_script_path = build_dir / "plaits_user_banks.ld"
+        linker_script_path = build_dir / "plaits_user_data.ld"
         linker_script_path.write_text(
             render_linker_script(STOCK_LINKER_SCRIPT.read_text(encoding="utf-8")),
             encoding="utf-8")

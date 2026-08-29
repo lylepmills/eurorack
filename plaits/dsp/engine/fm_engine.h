@@ -51,7 +51,9 @@ class FMEngine : public Engine {
       size_t size,
       bool* already_enveloped);
   virtual bool stereo_capable() const { return PLAITS_STEREO_TWO_OP_FM; }
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
   virtual bool hard_sync_capable() const { return true; }
+#endif
   virtual bool linear_tzfm_capable() const { return true; }
   virtual bool fast_fm_capable() const { return true; }
 

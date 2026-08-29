@@ -209,6 +209,68 @@ class RenderManualTest(unittest.TestCase):
         }
         return recipe
 
+    def terrain_bank_recipe(self) -> dict:
+        recipe = self.load("default_recipe.json")
+        recipe["schemaVersion"] = 24
+        recipe["slots"][0] = "wave-terrain"
+        recipe["preferences"] = {
+            "navigationMode": "linear",
+            "calibration": False,
+            "colorBlindMode": False,
+            "replaceableFmBanks": False,
+            "syncInput": False,
+        }
+        recipe["initialOptions"] = {
+            **DEFAULT_CONFIGURATION["initialOptions"],
+            "attenuverterMode": "stock",
+        }
+        sampled = base64.b64encode(bytes([41]) * 4096).decode("ascii")
+        recipe["resources"] = {
+            "chordTables": DEFAULT_CHORD_TABLES,
+            "terrainBank": [
+                {"kind": "factory", "id": "factory-1"},
+                {"kind": "custom", "model": {
+                    "kind": "wave-terrain", "name": "Folded basin",
+                    "equation": "sin(x * y)", "data": sampled,
+                }},
+                {"kind": "custom", "model": {
+                    "kind": "wave-terrain", "name": "Soft rings",
+                    "equation": "sin(5 * (x * x + y * y))", "data": sampled,
+                    "representation": "native",
+                }},
+                {"kind": "factory", "id": "factory-6"},
+            ],
+        }
+        return recipe
+
+    def test_terrain_bank_order_and_storage_are_printable(self) -> None:
+        entries = manual_document(self.terrain_bank_recipe())["terrainBank"]
+        self.assertEqual(
+            entries,
+            [
+                {"name": "Asymmetric Saddle (stock bank 1)",
+                 "storage": "Stock terrain · fixed in firmware"},
+                {"name": "Folded basin",
+                 "storage": "Prebaked samples · replaceable over TIMBRE"},
+                {"name": "Soft rings",
+                 "storage": "Compiled equation · fixed in firmware"},
+                {"name": "Wavetable Terrain: Bank 3 (stock bank 6)",
+                 "storage": "Stock terrain · fixed in firmware"},
+            ],
+        )
+
+    @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
+    def test_terrain_bank_pdf_explains_selection_and_safe_replacement(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "terrain-bank.pdf"
+            render_pdf(manual_document(self.terrain_bank_recipe()), output)
+            printed = pdf_strings(output).replace(")(", " ")
+            self.assertIn("Wave Terrain bank", printed)
+            self.assertIn("HARMONICS sweeps this list from top to bottom", printed)
+            self.assertIn("refuse transfers without erasing anything", printed)
+            self.assertIn("Folded basin", printed)
+            self.assertIn("Compiled equation", printed)
+
     def test_scale_bank_order_is_printable_only_for_scale_engines(self) -> None:
         for engine_id in (
             "diatonic-chord",
@@ -476,6 +538,43 @@ class RenderManualTest(unittest.TestCase):
         })
         self.assertEqual(document["slots"][31]["position"]["number"], 8)
         self.assertEqual(document["slots"][23]["position"]["bank"], "amber")
+
+    def test_custom_model_data_names_distinct_wavetable_slots(self) -> None:
+        recipe = self.load("default_recipe.json")
+        recipe["schemaVersion"] = 24
+        recipe["slots"][0] = "wavetable"
+        recipe["slots"][1] = "wavetable"
+        recipe["preferences"] = dict(DEFAULT_CONFIGURATION["preferences"])
+        recipe["initialOptions"] = dict(DEFAULT_CONFIGURATION["initialOptions"])
+        recipe["initialOptions"]["attenuverterMode"] = "stock"
+        recipe["resources"] = {
+            "chordTables": [dict(table) for table in DEFAULT_CHORD_TABLES],
+            "customModelData": [
+                {
+                    "slot": 0,
+                    "model": {
+                        "kind": "wavetable",
+                        "name": "Spiral",
+                        "equation": "sin(5 * (y + theta))",
+                        "data": base64.b64encode(bytes(4096)).decode("ascii"),
+                    },
+                },
+                {
+                    "slot": 1,
+                    "model": {
+                        "kind": "wavetable",
+                        "name": "Rings",
+                        "equation": "sin(9 * r)",
+                        "data": base64.b64encode(bytes([1]) * 4096).decode("ascii"),
+                    },
+                },
+            ],
+        }
+        document = manual_document(recipe)
+        self.assertEqual(document["slots"][0]["customModel"]["name"], "Spiral")
+        self.assertEqual(document["slots"][1]["customModel"]["name"], "Rings")
+        customized = [model for model in document["models"] if model["customModel"]]
+        self.assertEqual([model["customModel"]["name"] for model in customized], ["Spiral", "Rings"])
 
     @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
     def test_fourth_bank_pdf_renders(self) -> None:

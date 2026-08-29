@@ -11,7 +11,11 @@ file's catalog can influence C++ output.
 from __future__ import annotations
 
 import argparse
+import ast
+import base64
+import binascii
 import json
+import math
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -74,6 +78,12 @@ SPEECH_BANKS_MIN_SCHEMA_VERSION = 17
 ATTENUVERTER_MODE_MIN_SCHEMA_VERSION = 18
 ONE_KNOB_ENVELOPE_MIN_SCHEMA_VERSION = 19
 SWAPPABLE_FM_BANKS_MIN_SCHEMA_VERSION = 20
+CUSTOM_MODEL_DATA_MIN_SCHEMA_VERSION = 24
+CUSTOM_MODEL_DATA_SIZE = 4096
+TERRAIN_BANK_MIN_SCHEMA_VERSION = 24
+NATIVE_TERRAIN_MIN_SCHEMA_VERSION = 24
+MAX_TERRAIN_BANK_SIZE = 16
+FACTORY_TERRAIN_IDS = tuple(f"factory-{index}" for index in range(1, 9))
 SYNC_INPUT_MIN_SCHEMA_VERSION = 21
 # v22 moves Sync In's COMPILE-TIME switch off the starting value and onto its own
 # preference. Starting Options are the module's initial RUNTIME values and the
@@ -182,6 +192,13 @@ class BuildRecipe:
     stereo_engines: tuple[str, ...] | None = None
     # v17: selected stock LPC banks followed by custom decoded-frame banks.
     speech_banks: dict[str, Any] | None = None
+    # v24: public slot, Wavetable kind, and the sampled Mutable-compatible 4 KB
+    # user-data block. The equation and display name stay in the public recipe;
+    # firmware needs only these bounded bytes.
+    custom_model_data: tuple[tuple[int, str, bytes], ...] = ()
+    # v23/v24: shared ordered Wave Terrain HARMONICS bank. Entries carry type,
+    # optional sampled bytes, optional native equation, and its normalization.
+    terrain_bank: tuple[tuple[int, bytes | None, str | None, float, float], ...] = ()
     # v22: 1 compiles Sync In in, making it selectable as a MODEL-input mode at
     # RUNTIME. Before v22 this was derived from the starting value, which meant a
     # user who did not choose Sync In at build time could never reach it.
@@ -468,6 +485,441 @@ def validate_user_data_banks_v12(value: Any, num_slots: int) -> list[tuple[int, 
     return result
 
 
+def validate_custom_model_data(
+        value: Any,
+        public_slots: list[str | None]) -> list[tuple[int, str, bytes]]:
+    """Validate v21 per-slot Wave Terrain/Wavetable payloads.
+
+    Equations are evaluated by the public editor. The trusted generator accepts
+    only one canonical, exact-size data block per matching model slot.
+    """
+    if not isinstance(value, list) or len(value) > len(public_slots):
+        raise ValueError("recipe contains an unsupported set of custom model data")
+    result: list[tuple[int, str, bytes]] = []
+    seen: set[int] = set()
+    for entry in value:
+        if not isinstance(entry, dict) or set(entry) != {"slot", "model"}:
+            raise ValueError("recipe contains an invalid custom model-data assignment")
+        slot = entry["slot"]
+        model = entry["model"]
+        if (type(slot) is not int or not 0 <= slot < len(public_slots)
+                or slot in seen or not isinstance(model, dict)
+                or set(model) != {"kind", "name", "equation", "data"}):
+            raise ValueError("custom model data must target a distinct palette slot")
+        expected_kind = public_slots[slot] if public_slots[slot] in (
+            "wave-terrain", "wavetable") else None
+        if (expected_kind is None or model.get("kind") != expected_kind
+                or not isinstance(model.get("name"), str)
+                or not model["name"].strip() or len(model["name"]) > 80
+                or not isinstance(model.get("equation"), str)
+                or not model["equation"].strip() or len(model["equation"]) > 500
+                or not isinstance(model.get("data"), str)):
+            raise ValueError(
+                "custom model data must match a Wave Terrain or Wavetable slot")
+        try:
+            data = base64.b64decode(model["data"], validate=True)
+        except (binascii.Error, ValueError) as error:
+            raise ValueError("custom model data is not valid base64") from error
+        if (len(data) != CUSTOM_MODEL_DATA_SIZE
+                or base64.b64encode(data).decode("ascii") != model["data"]):
+            raise ValueError(
+                f"custom model data must contain exactly {CUSTOM_MODEL_DATA_SIZE} bytes")
+        seen.add(slot)
+        result.append((slot, expected_kind, data))
+    return result
+
+
+_TERRAIN_VARIABLES = frozenset({"x", "y", "r", "theta", "mu"})
+_TERRAIN_FUNCTION_ARITIES = {
+    "sin": (1, 1), "cos": (1, 1), "tan": (1, 1), "atan": (1, 1),
+    "atan2": (2, 2), "floor": (1, 1), "ceil": (1, 1),
+    "round": (1, 1), "sqrt": (1, 1), "exp": (1, 1), "log": (1, 1),
+    "pow": (2, 2), "abs": (1, 1), "sign": (1, 1),
+    "min": (2, 16), "max": (2, 16), "ball": (3, 3),
+}
+
+
+def _terrain_ast(equation: str) -> ast.Expression:
+    """Parse the public equation language without ever evaluating Python code."""
+    try:
+        tree = ast.parse(equation.lower().replace("^", "**"), mode="eval")
+    except SyntaxError as error:
+        raise ValueError("native terrain equation has invalid syntax") from error
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Expression, ast.Load, ast.Constant, ast.Name,
+                             ast.UnaryOp, ast.UAdd, ast.USub, ast.BinOp,
+                             ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Pow,
+                             ast.Call)):
+            continue
+        raise ValueError("native terrain equation uses an unsupported operator")
+    return tree
+
+
+def _terrain_call(name: str, args: list[float], x: float, y: float) -> float:
+    if name == "sin": return math.sin(args[0])
+    if name == "cos": return math.cos(args[0])
+    if name == "tan": return math.tan(args[0])
+    if name == "atan": return math.atan(args[0])
+    if name == "atan2": return math.atan2(args[0], args[1])
+    if name == "floor": return math.floor(args[0])
+    if name == "ceil": return math.ceil(args[0])
+    if name == "round": return math.floor(args[0] + 0.5)
+    if name == "sqrt": return math.sqrt(args[0])
+    if name == "exp": return math.exp(args[0])
+    if name == "log": return math.log(args[0])
+    if name == "pow": return math.pow(args[0], args[1])
+    if name == "abs": return abs(args[0])
+    if name == "sign": return 1.0 if args[0] > 0 else -1.0 if args[0] < 0 else 0.0
+    if name == "min": return min(args)
+    if name == "max": return max(args)
+    if name == "ball":
+        dx, dy = x - args[0], y - args[1]
+        return math.exp(-(dx * dx + dy * dy) / (args[2] * args[2]))
+    raise ValueError("native terrain equation calls an unsupported function")
+
+
+def _eval_terrain_node(node: ast.AST, variables: dict[str, float]) -> float:
+    if isinstance(node, ast.Constant) and type(node.value) in (int, float):
+        return float(node.value)
+    if isinstance(node, ast.Name):
+        if node.id == "pi": return math.pi
+        if node.id in _TERRAIN_VARIABLES: return variables[node.id]
+        raise ValueError("native terrain equation uses an unsupported name")
+    if isinstance(node, ast.UnaryOp):
+        value = _eval_terrain_node(node.operand, variables)
+        return -value if isinstance(node.op, ast.USub) else value
+    if isinstance(node, ast.BinOp):
+        left = _eval_terrain_node(node.left, variables)
+        right = _eval_terrain_node(node.right, variables)
+        if isinstance(node.op, ast.Add): return left + right
+        if isinstance(node.op, ast.Sub): return left - right
+        if isinstance(node.op, ast.Mult): return left * right
+        if isinstance(node.op, ast.Div): return left / right
+        if isinstance(node.op, ast.Pow): return math.pow(left, right)
+        raise ValueError("native terrain equation uses an unsupported operator")
+    if isinstance(node, ast.Call):
+        if not isinstance(node.func, ast.Name) or node.keywords:
+            raise ValueError("native terrain equation has an unsupported call")
+        arity = _TERRAIN_FUNCTION_ARITIES.get(node.func.id)
+        if arity is None or not arity[0] <= len(node.args) <= arity[1]:
+            raise ValueError("native terrain equation has an unsupported call")
+        args = [_eval_terrain_node(argument, variables) for argument in node.args]
+        return _terrain_call(node.func.id, args, variables["x"], variables["y"])
+    raise ValueError("native terrain equation has an unsupported expression")
+
+
+def _terrain_is_constant(node: ast.AST) -> bool:
+    return not any(isinstance(item, ast.Name) and item.id in _TERRAIN_VARIABLES
+                   for item in ast.walk(node))
+
+
+def _terrain_constant(node: ast.AST) -> float | None:
+    if not _terrain_is_constant(node):
+        return None
+    variables = {name: 0.0 for name in _TERRAIN_VARIABLES}
+    try:
+        value = _eval_terrain_node(node, variables)
+    except (ArithmeticError, OverflowError, ValueError):
+        return None
+    return value if math.isfinite(value) else None
+
+
+def _terrain_interval(node: ast.AST) -> tuple[float, float]:
+    constant = _terrain_constant(node)
+    if constant is not None:
+        return constant, constant
+    if isinstance(node, ast.Name):
+        ranges = {
+            "x": (-1.0, 1.0), "y": (-1.0, 1.0),
+            "r": (0.0, math.sqrt(2.0)),
+            "theta": (-math.pi, math.pi), "mu": (0.0, 1.0),
+        }
+        if node.id in ranges: return ranges[node.id]
+        raise ValueError("native terrain equation uses an unsupported name")
+    if isinstance(node, ast.UnaryOp):
+        low, high = _terrain_interval(node.operand)
+        return (-high, -low) if isinstance(node.op, ast.USub) else (low, high)
+    if isinstance(node, ast.BinOp):
+        a, b = _terrain_interval(node.left), _terrain_interval(node.right)
+        if isinstance(node.op, ast.Add): return a[0] + b[0], a[1] + b[1]
+        if isinstance(node.op, ast.Sub): return a[0] - b[1], a[1] - b[0]
+        if isinstance(node.op, ast.Mult):
+            if ast.dump(node.left) == ast.dump(node.right):
+                maximum = max(abs(a[0]), abs(a[1])) ** 2
+                minimum = 0.0 if a[0] <= 0 <= a[1] else min(a[0] ** 2, a[1] ** 2)
+                return minimum, maximum
+            products = (a[0]*b[0], a[0]*b[1], a[1]*b[0], a[1]*b[1])
+            return min(products), max(products)
+        if isinstance(node.op, ast.Div):
+            if b[0] <= 0 <= b[1]:
+                raise ValueError("native terrain equation has a denominator that can reach zero")
+            reciprocals = (1.0 / b[0], 1.0 / b[1])
+            products = (a[0]*reciprocals[0], a[0]*reciprocals[1],
+                        a[1]*reciprocals[0], a[1]*reciprocals[1])
+            return min(products), max(products)
+        if isinstance(node.op, ast.Pow):
+            exponent = _terrain_constant(node.right)
+            if exponent is None:
+                raise ValueError("native terrain equation has a variable exponent")
+            if not float(exponent).is_integer() and a[0] < 0:
+                raise ValueError("native terrain equation has a fractional power of a negative base")
+            if exponent < 0 and a[0] <= 0 <= a[1]:
+                raise ValueError("native terrain equation has a negative power that can divide by zero")
+            samples = [math.pow(a[0], exponent), math.pow(a[1], exponent)]
+            if float(exponent).is_integer() and int(exponent) % 2 == 0 and a[0] <= 0 <= a[1]:
+                samples.append(0.0)
+            return min(samples), max(samples)
+    if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Name):
+        raise ValueError("native terrain equation has an unsupported expression")
+    name = node.func.id
+    args = [_terrain_interval(argument) for argument in node.args]
+    if name in ("sin", "cos"): return -1.0, 1.0
+    if name == "tan":
+        first = math.ceil((args[0][0] - math.pi / 2.0) / math.pi)
+        last = math.floor((args[0][1] - math.pi / 2.0) / math.pi)
+        if first <= last:
+            raise ValueError("native terrain equation has tan() crossing a singularity")
+        endpoints = (math.tan(args[0][0]), math.tan(args[0][1]))
+        return min(endpoints), max(endpoints)
+    if name == "atan": return math.atan(args[0][0]), math.atan(args[0][1])
+    if name == "atan2": return -math.pi, math.pi
+    if name == "floor": return math.floor(args[0][0]), math.floor(args[0][1])
+    if name == "ceil": return math.ceil(args[0][0]), math.ceil(args[0][1])
+    if name == "round": return math.floor(args[0][0] + 0.5), math.floor(args[0][1] + 0.5)
+    if name == "sqrt":
+        if args[0][0] < 0:
+            raise ValueError("native terrain equation has sqrt() receiving a negative value")
+        return math.sqrt(args[0][0]), math.sqrt(args[0][1])
+    if name == "exp":
+        if args[0][1] > 60:
+            raise ValueError("native terrain equation has exp() outside the reviewed range")
+        return math.exp(args[0][0]), math.exp(args[0][1])
+    if name == "log":
+        if args[0][0] <= 0:
+            raise ValueError("native terrain equation has log() receiving a non-positive value")
+        return math.log(args[0][0]), math.log(args[0][1])
+    if name == "pow":
+        return _terrain_interval(ast.BinOp(left=node.args[0], op=ast.Pow(), right=node.args[1]))
+    if name == "abs":
+        maximum = max(abs(args[0][0]), abs(args[0][1]))
+        return (0.0 if args[0][0] <= 0 <= args[0][1]
+                else min(abs(args[0][0]), abs(args[0][1]))), maximum
+    if name == "sign": return -1.0, 1.0
+    if name == "min": return min(value[0] for value in args), min(value[1] for value in args)
+    if name == "max": return max(value[0] for value in args), max(value[1] for value in args)
+    if name == "ball":
+        if args[2][0] <= 0 <= args[2][1]:
+            raise ValueError("native terrain equation has ball() width reaching zero")
+        return 0.0, 1.0
+    raise ValueError("native terrain equation calls an unsupported function")
+
+
+def _validate_native_terrain(tree: ast.Expression) -> tuple[float, float]:
+    nodes = trig = heavy = 0
+    cost = 0.0
+    variables_used: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name):
+            if node.id not in _TERRAIN_VARIABLES | {"pi"} | set(_TERRAIN_FUNCTION_ARITIES):
+                raise ValueError("native terrain equation uses an unsupported name")
+            if node.id in _TERRAIN_VARIABLES:
+                variables_used.add(node.id)
+                nodes += 1
+        elif isinstance(node, ast.BinOp):
+            nodes += 1
+            if isinstance(node.op, (ast.Add, ast.Sub)): cost += 0.15
+            elif isinstance(node.op, ast.Mult): cost += 0.2
+            elif isinstance(node.op, ast.Div): cost += 0.15 if _terrain_is_constant(node.right) else 1.5
+            elif isinstance(node.op, ast.Pow):
+                exponent = node.right.value if isinstance(node.right, ast.Constant) else None
+                if type(exponent) is int and 0 <= exponent <= 4:
+                    cost += max(0, exponent - 1) * 0.2
+                else:
+                    cost += 10.5
+                    heavy += 1
+        elif isinstance(node, ast.Call):
+            if not isinstance(node.func, ast.Name):
+                raise ValueError("native terrain equation has an unsupported call")
+            name = node.func.id
+            arity = _TERRAIN_FUNCTION_ARITIES.get(name)
+            if arity is None or node.keywords or not arity[0] <= len(node.args) <= arity[1]:
+                raise ValueError("native terrain equation has an unsupported call")
+            nodes += 1
+            if name in ("sin", "cos"):
+                cost += 4.5; trig += 1
+            elif name in ("tan", "sqrt", "floor", "ceil", "round"):
+                cost += 12; heavy += 1
+            elif name in ("atan", "log"):
+                cost += 8; heavy += 1
+            elif name == "atan2":
+                cost += 10; heavy += 1
+            elif name == "exp":
+                cost += 7; heavy += 1
+            elif name == "pow":
+                exponent = _terrain_constant(node.args[1])
+                if exponent is not None and float(exponent).is_integer() and 0 <= exponent <= 4:
+                    cost += max(0, exponent - 1) * 0.2
+                else:
+                    cost += 10.5; heavy += 1
+            elif name == "ball":
+                cost += 10.5; heavy += 1
+            else:
+                cost += 0.5
+    if "r" in variables_used:
+        cost += 12; heavy += 1
+    if "theta" in variables_used or "mu" in variables_used:
+        cost += 10; heavy += 1
+    if "mu" in variables_used: cost += 1.5
+    estimate = 34.4 + cost + max(0, heavy - 2) * 12 + max(0, trig - 4) * 2.5 \
+        + max(0, nodes - 32) * 0.35
+    if estimate + 5.0 > 75.0 or trig > 8 or heavy > 4 or nodes > 80:
+        raise ValueError("native terrain equation exceeds the calibrated CPU gate")
+
+    output_range = _terrain_interval(tree.body)
+    if (not all(math.isfinite(value) for value in output_range)
+            or max(abs(output_range[0]), abs(output_range[1])) > 1e9):
+        raise ValueError("native terrain equation has an unbounded output range")
+
+    # A denser validation grid than the stored preview catches poles and invalid
+    # domains between the 64 x 64 samples while remaining trivial at build time.
+    for row in range(129):
+        y = 2.0 * row / 128.0 - 1.0
+        for column in range(129):
+            x = 2.0 * column / 128.0 - 1.0
+            theta = math.atan2(y, x)
+            variables = {"x": x, "y": y, "r": math.sqrt(x*x + y*y),
+                         "theta": theta,
+                         "mu": (abs(theta) - math.pi) / -math.pi}
+            try:
+                value = _eval_terrain_node(tree.body, variables)
+            except (ArithmeticError, OverflowError, ValueError) as error:
+                raise ValueError("native terrain equation is not finite across the terrain") from error
+            if not math.isfinite(value) or abs(value) > 1e9:
+                raise ValueError("native terrain equation is not finite across the terrain")
+    # Match the browser preview's exact 64 x 64 extrema for normalization.
+    values: list[float] = []
+    for row in range(64):
+        y = 2.0 * row / 63.0 - 1.0
+        for column in range(64):
+            x = 2.0 * column / 63.0 - 1.0
+            theta = math.atan2(y, x)
+            variables = {"x": x, "y": y, "r": math.sqrt(x*x + y*y),
+                         "theta": theta,
+                         "mu": (abs(theta) - math.pi) / -math.pi}
+            values.append(_eval_terrain_node(tree.body, variables))
+    return min(values), max(values)
+
+
+def _float_literal(value: float) -> str:
+    if value == 0: return "0.0f"
+    literal = f"{value:.9g}"
+    if "." not in literal and "e" not in literal.lower():
+        literal += ".0"
+    return literal + "f"
+
+
+def _render_terrain_expression(node: ast.AST) -> str:
+    if isinstance(node, ast.Constant) and type(node.value) in (int, float):
+        return _float_literal(float(node.value))
+    if isinstance(node, ast.Name):
+        return _float_literal(math.pi) if node.id == "pi" else node.id
+    if isinstance(node, ast.UnaryOp):
+        value = _render_terrain_expression(node.operand)
+        return f"(-({value}))" if isinstance(node.op, ast.USub) else f"({value})"
+    if isinstance(node, ast.BinOp):
+        left = _render_terrain_expression(node.left)
+        right = _render_terrain_expression(node.right)
+        if isinstance(node.op, ast.Pow):
+            exponent = node.right.value if isinstance(node.right, ast.Constant) else None
+            if type(exponent) is int and 0 <= exponent <= 4:
+                if exponent == 0: return "1.0f"
+                return "(" + " * ".join(f"({left})" for _ in range(exponent)) + ")"
+            return f"TerrainEquationPower(({left}), ({right}))"
+        operator = {ast.Add: "+", ast.Sub: "-", ast.Mult: "*", ast.Div: "/"}[type(node.op)]
+        return f"(({left}) {operator} ({right}))"
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+        name = node.func.id
+        args = [_render_terrain_expression(argument) for argument in node.args]
+        unary = {"sin": "TerrainEquationSin", "cos": "TerrainEquationCos",
+                 "atan": "TerrainEquationAtan", "floor": "floorf", "ceil": "ceilf",
+                 "round": "TerrainEquationRound", "sqrt": "TerrainEquationSqrt",
+                 "exp": "TerrainEquationExp", "log": "TerrainEquationLog",
+                 "abs": "fabsf", "sign": "TerrainEquationSign"}
+        if name in unary: return f"{unary[name]}({args[0]})"
+        if name == "tan": return f"(TerrainEquationSin({args[0]}) / TerrainEquationCos({args[0]}))"
+        if name == "atan2": return f"TerrainEquationAtan2({args[0]}, {args[1]})"
+        if name == "pow":
+            exponent = _terrain_constant(node.args[1])
+            if exponent is not None and float(exponent).is_integer() and 0 <= exponent <= 4:
+                if exponent == 0: return "1.0f"
+                return "(" + " * ".join(f"({args[0]})" for _ in range(int(exponent))) + ")"
+            return f"TerrainEquationPower({args[0]}, {args[1]})"
+        if name == "ball": return f"TerrainEquationBall(x, y, {', '.join(args)})"
+        if name in ("min", "max"):
+            function = "TerrainEquationMin" if name == "min" else "TerrainEquationMax"
+            result = args[0]
+            for argument in args[1:]: result = f"{function}(({result}), ({argument}))"
+            return result
+    raise ValueError("native terrain equation cannot be rendered")
+
+
+def validate_terrain_bank(
+        value: Any, schema_version: int) -> list[tuple[int, bytes | None, str | None, float, float]]:
+    """Validate v24's shared, ordered Wave Terrain bank."""
+    if (not isinstance(value, list)
+            or not 1 <= len(value) <= MAX_TERRAIN_BANK_SIZE):
+        raise ValueError(
+            f"terrain bank must contain between one and {MAX_TERRAIN_BANK_SIZE} terrains")
+    result: list[tuple[int, bytes | None]] = []
+    seen_factories: set[str] = set()
+    for entry in value:
+        if not isinstance(entry, dict):
+            raise ValueError("recipe contains an invalid terrain-bank entry")
+        if entry.get("kind") == "factory":
+            terrain_id = entry.get("id")
+            if (set(entry) != {"kind", "id"}
+                    or terrain_id not in FACTORY_TERRAIN_IDS
+                    or terrain_id in seen_factories):
+                raise ValueError(
+                    "each factory terrain may appear at most once")
+            seen_factories.add(terrain_id)
+            result.append((FACTORY_TERRAIN_IDS.index(terrain_id), None, None, 0.0, 0.0))
+            continue
+        model = entry.get("model")
+        if (set(entry) != {"kind", "model"} or entry.get("kind") != "custom"
+                or not isinstance(model, dict)
+                or set(model) not in ({"kind", "name", "equation", "data"},
+                                      {"kind", "name", "equation", "data", "representation"})
+                or model.get("kind") != "wave-terrain"
+                or not isinstance(model.get("name"), str)
+                or not model["name"].strip() or len(model["name"]) > 80
+                or not isinstance(model.get("equation"), str)
+                or not model["equation"].strip() or len(model["equation"]) > 500
+                or not isinstance(model.get("data"), str)):
+            raise ValueError(
+                "a custom terrain must contain a name, equation, and data")
+        try:
+            data = base64.b64decode(model["data"], validate=True)
+        except (binascii.Error, ValueError) as error:
+            raise ValueError("custom terrain data is not valid base64") from error
+        if (len(data) != CUSTOM_MODEL_DATA_SIZE
+                or base64.b64encode(data).decode("ascii") != model["data"]):
+            raise ValueError(
+                f"custom terrain data must contain exactly {CUSTOM_MODEL_DATA_SIZE} bytes")
+        if model.get("representation") == "native":
+            if schema_version < NATIVE_TERRAIN_MIN_SCHEMA_VERSION:
+                raise ValueError(
+                    f"native terrains require schemaVersion {NATIVE_TERRAIN_MIN_SCHEMA_VERSION}")
+            tree = _terrain_ast(model["equation"])
+            minimum, maximum = _validate_native_terrain(tree)
+            result.append((9, None, _render_terrain_expression(tree.body), minimum, maximum))
+        elif "representation" in model:
+            raise ValueError("custom terrain representation must be native or omitted")
+        else:
+            result.append((8, data, None, 0.0, 0.0))
+    return result
+
+
 def normalize_slots(slots: list[Any], schema_version: int) -> list[str | None]:
     if schema_version in (2, 4, 5, 6) and all(isinstance(engine_id, str) for engine_id in slots):
         if any(engine_id not in CATALOG for engine_id in slots):
@@ -571,6 +1023,8 @@ def validate_recipe(value: Any) -> BuildRecipe:
     user_data_banks: list[tuple[int, bytes]] = []   # v6 index-keyed
     slot_banks: list[tuple[int, bytes]] = []        # v12 slot-keyed
     speech_banks: dict[str, Any] | None = None
+    custom_model_data: list[tuple[int, str, bytes]] = []  # v21 slot-keyed
+    terrain_bank: list[tuple[int, bytes | None, str | None, float, float]] = []
     scale_bank = validate_scale_bank(DEFAULT_SCALE_BANK)
     if schema_version >= RESOURCES_MIN_SCHEMA_VERSION:
         resources = value.get("resources")
@@ -602,11 +1056,25 @@ def validate_recipe(value: Any) -> BuildRecipe:
             and isinstance(resources, dict)
             and "speechBanks" in resources
         )
+        carries_custom_model_data = (
+            schema_version >= CUSTOM_MODEL_DATA_MIN_SCHEMA_VERSION
+            and isinstance(resources, dict)
+            and "customModelData" in resources
+        )
+        carries_terrain_bank = (
+            schema_version >= TERRAIN_BANK_MIN_SCHEMA_VERSION
+            and isinstance(resources, dict)
+            and "terrainBank" in resources
+        )
         base_resource_keys = {"chordTables"}
         if carries_scale_bank:
             base_resource_keys.add("scaleBank")
         if carries_speech_banks:
             base_resource_keys.add("speechBanks")
+        if carries_custom_model_data:
+            base_resource_keys.add("customModelData")
+        if carries_terrain_bank:
+            base_resource_keys.add("terrainBank")
         carries_user_data_banks = expect_user_data_banks or (
             schema_version >= CALIBRATION_MIN_SCHEMA_VERSION
             and isinstance(resources, dict)
@@ -627,6 +1095,20 @@ def validate_recipe(value: Any) -> BuildRecipe:
                 raise ValueError(
                     "speechBanks requires Speech or LPC Words in the palette")
             speech_banks = validate_speech_banks(resources.get("speechBanks"))
+        if carries_custom_model_data:
+            custom_model_data = validate_custom_model_data(
+                resources.get("customModelData"), public_slots)
+            if (schema_version >= TERRAIN_BANK_MIN_SCHEMA_VERSION
+                    and any(kind == "wave-terrain"
+                            for _slot, kind, _data in custom_model_data)):
+                raise ValueError(
+                    "schema 24 terrain data belongs in the shared terrain bank")
+        if carries_terrain_bank:
+            if "wave-terrain" not in public_slots:
+                raise ValueError(
+                    "a terrain bank requires Wave Terrain in the palette")
+            terrain_bank = validate_terrain_bank(
+                resources.get("terrainBank"), schema_version)
         if carries_user_data_banks:
             if schema_version >= SLOT_BANK_MIN_SCHEMA_VERSION:
                 slot_banks = validate_user_data_banks_v12(resources.get("userDataBanks"), len(slots))
@@ -911,6 +1393,8 @@ def validate_recipe(value: Any) -> BuildRecipe:
         slot_bank_overrides=tuple(slot_banks),
         stereo_engines=stereo_engines,
         speech_banks=speech_banks,
+        custom_model_data=tuple(custom_model_data),
+        terrain_bank=tuple(terrain_bank),
         **normalized_options,
     )
 
@@ -1017,6 +1501,11 @@ def render_config(recipe: BuildRecipe) -> str:
         1 << index
         for index, engine_id in enumerate(internal_slots)
         if engine_id in RESONATOR_ENVELOPE_ENGINE_IDS
+    )
+    terrain_engine_mask = sum(
+        1 << index
+        for index, engine_id in enumerate(internal_slots)
+        if engine_id == "wave-terrain"
     )
 
     # Resolve the catalog's semantic archetypes into a compact firmware table.
@@ -1249,6 +1738,138 @@ def render_config(recipe: BuildRecipe) -> str:
     # 4 + PLAITS_BUILD_ENABLE_SYNC_INPUT) while starting the module at index 4.
     sync_input_enabled = 1 if recipe.sync_input else 0
 
+    # Per-slot terrain/wavetable payloads use the same 4096-byte format as an
+    # audio transfer. Each customized slot owns a DISTINCT flash region, seeded
+    # by the recipe data and later rewritable through TIMBRE while that slot is
+    # active. Never intern identical bytes here: two slots that start alike must
+    # still be independently erasable and able to diverge after a transfer.
+    # Map PUBLIC slots through the bank rotation to selected-engine indices.
+    custom_model_by_slot = {
+        slot: data for slot, _kind, data in recipe.custom_model_data
+    }
+    custom_model_arrays: list[bytes] = []
+    custom_model_pointers: list[str] = []
+    for public_slot in public_slot_of_selected:
+        data = custom_model_by_slot.get(public_slot)
+        if data is None:
+            custom_model_pointers.append("NULL")
+            continue
+        array_index = len(custom_model_arrays)
+        custom_model_arrays.append(data)
+        custom_model_pointers.append(
+            f"kCustomModelData_{array_index}")
+
+    def _render_custom_model_array(index: int, data: bytes) -> str:
+        size = len(data)
+        body = ", ".join(str(byte) for byte in data)
+        attribute = (
+            f' __attribute__((section(".user_data_models.{index}"),'
+            f' aligned({FLASH_PAGE_SIZE})))')
+        # As with replaceable FM banks, Save (plaits.o) and the engine fallback
+        # (voice.o) must name the SAME object. One external definition lives in
+        # voice.o; every other force-included translation unit sees a declaration.
+        return (
+            f"#ifdef PLAITS_ENGINE_CONFIG_OWNS_USER_DATA_BANKS\n"
+            f"extern const uint8_t kCustomModelData_{index}[{size}]{attribute};\n"
+            f"extern const uint8_t kCustomModelData_{index}[{size}]"
+            f" = {{ {body} }};\n"
+            f"#else\n"
+            f"extern const uint8_t kCustomModelData_{index}[{size}];\n"
+            f"#endif"
+        )
+
+    custom_model_array_definitions = "\n".join(
+        _render_custom_model_array(index, data)
+        for index, data in enumerate(custom_model_arrays))
+    custom_model_data_block = (
+        f"\n#if PLAITS_HAS_CUSTOM_MODEL_DATA\n{custom_model_array_definitions}\n"
+        f"static const uint8_t* const kEngineCustomModelData[{len(selected)}] = "
+        f"{{ {', '.join(custom_model_pointers)} }};\n#endif\n"
+        if custom_model_arrays else ""
+    )
+
+    # v23 Wave Terrain bank. Each custom entry gets its own independently
+    # rewritable 4 KB page pair; factory entries name only their tiny type code,
+    # allowing the linker to discard any factory equation/table the bank removed.
+    terrain_custom_arrays = [
+        data for terrain_type, data, _equation, _minimum, _maximum in recipe.terrain_bank
+        if terrain_type == 8 and data is not None
+    ]
+
+    def _render_terrain_array(index: int, data: bytes) -> str:
+        body = ", ".join(str(byte) for byte in data)
+        attribute = (
+            f' __attribute__((section(".user_data_terrains.{index}"),'
+            f' aligned({FLASH_PAGE_SIZE})))')
+        return (
+            f"#ifdef PLAITS_ENGINE_CONFIG_OWNS_USER_DATA_BANKS\n"
+            f"extern const uint8_t kCustomTerrainData_{index}[{len(data)}]{attribute};\n"
+            f"extern const uint8_t kCustomTerrainData_{index}[{len(data)}]"
+            f" = {{ {body} }};\n"
+            f"#else\n"
+            f"extern const uint8_t kCustomTerrainData_{index}[{len(data)}];\n"
+            f"#endif"
+        )
+
+    terrain_array_definitions = "\n".join(
+        _render_terrain_array(index, data)
+        for index, data in enumerate(terrain_custom_arrays))
+    terrain_types: list[str] = []
+    terrain_pointers: list[str] = []
+    terrain_custom_index = 0
+    factory_terrain_mask = 0
+    terrain_functions: list[str] = []
+    terrain_native_definitions: list[str] = []
+    terrain_native_index = 0
+    for terrain_type, data, equation, minimum, maximum in recipe.terrain_bank:
+        terrain_types.append(str(terrain_type))
+        if terrain_type == 8:
+            terrain_pointers.append(
+                f"reinterpret_cast<const int8_t*>(kCustomTerrainData_{terrain_custom_index})")
+            terrain_custom_index += 1
+            terrain_functions.append("NULL")
+        elif terrain_type == 9 and equation is not None:
+            function_name = f"TerrainEquation_{terrain_native_index}"
+            terrain_native_index += 1
+            scale = 2.0 / (maximum - minimum) if maximum != minimum else 2.0
+            terrain_native_definitions.append(
+                f"static inline float {function_name}(float x, float y) {{\n"
+                + ("  const float r = TerrainEquationSqrt(x * x + y * y);\n"
+                   if re.search(r"\br\b", equation) else "")
+                + ("  const float theta = TerrainEquationAtan2(y, x);\n"
+                   if re.search(r"\b(?:theta|mu)\b", equation) else "")
+                + ("  const float mu = (fabsf(theta) - 3.14159265f) / -3.14159265f;\n"
+                   if re.search(r"\bmu\b", equation) else "")
+                + f"  const float raw = {equation};\n"
+                f"  float value = ((raw - {_float_literal(minimum)}) * "
+                f"{_float_literal(scale)} - 1.0f) * (127.0f / 128.0f);\n"
+                f"  value = TerrainEquationMax(-0.9921875f, "
+                f"TerrainEquationMin(0.9921875f, value));\n"
+                f"  return value;\n"
+                f"}}")
+            terrain_pointers.append("NULL")
+            terrain_functions.append(function_name)
+        else:
+            terrain_pointers.append("NULL")
+            terrain_functions.append("NULL")
+            factory_terrain_mask |= 1 << terrain_type
+    terrain_native_definition_block = "\n".join(terrain_native_definitions)
+    terrain_bank_block = (
+        f"\n#if PLAITS_HAS_TERRAIN_BANK\n{terrain_array_definitions}\n"
+        f"{terrain_native_definition_block}\n"
+        f"static const uint8_t kTerrainBankTypes[{len(recipe.terrain_bank)}] = "
+        f"{{ {', '.join(terrain_types)} }};\n"
+        f"static const int8_t* const kTerrainBankData[{len(recipe.terrain_bank)}] = "
+        f"{{ {', '.join(terrain_pointers)} }};\n"
+        f"static const WaveTerrainFunction kTerrainBankFunctions[{len(recipe.terrain_bank)}] = "
+        f"{{ {', '.join(terrain_functions)} }};\n"
+        f"static const WaveTerrainBank kTerrainBank = {{ kTerrainBankTypes, "
+        f"kTerrainBankData, kTerrainBankFunctions, {len(recipe.terrain_bank)} }};\n"
+        f"static const uint32_t kWaveTerrainEngineMask = 0x{terrain_engine_mask:08x}u;\n"
+        f"#endif\n"
+        if recipe.terrain_bank else ""
+    )
+
     registry_order = (
         "orange, green, red, amber"
         if len(public_banks) > 3
@@ -1264,6 +1885,9 @@ def render_config(recipe: BuildRecipe) -> str:
 // erase the optional frequency-offset interface from ordinary builds.
 #define PLAITS_BUILD_LINEAR_TZFM {recipe.linear_tzfm}
 #define PLAITS_BUILD_FAST_FM {recipe.fast_fm}
+#define PLAITS_BUILD_ENABLE_SYNC_INPUT {sync_input_enabled}
+#define PLAITS_HAS_TERRAIN_BANK {1 if recipe.terrain_bank else 0}
+#define PLAITS_WAVE_TERRAIN_FACTORY_MASK 0x{factory_terrain_mask if recipe.terrain_bank else 0xff:02x}
 
 {includes}
 #include "plaits/resources.h"
@@ -1278,6 +1902,8 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_HAS_USER_DATA_BANK {1 if has_user_data_bank else 0}
 #define PLAITS_HAS_USER_DATA_BANK_OVERRIDE {1 if override_arrays_all else 0}
 #define PLAITS_HAS_RESOLVED_USER_DATA_BANK {1 if has_user_data_bank else 0}
+#define PLAITS_HAS_CUSTOM_MODEL_DATA {1 if custom_model_arrays else 0}
+#define PLAITS_USER_DATA_REGION_COUNT {(len(region_banks) if swappable else 0) + len(custom_model_arrays) + len(terrain_custom_arrays)}
 #define PLAITS_RESONATOR_ENVELOPE_ENGINE_MASK 0x{resonator_envelope_mask:08x}u
 // Every FM bank's baked array doubles as the flash region a TIMBRE transfer
 // erases and reprograms, so any bank can be replaced without a reflash. 0 when
@@ -1303,7 +1929,6 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_BUILD_LOCKED_FREQUENCY_POT_OPTION {recipe.locked_frequency_pot_option}
 #define PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE {1 if recipe.locked_frequency_pot_option >= 4 else 0}
 #define PLAITS_BUILD_MODEL_CV_OPTION {recipe.model_cv_option}
-#define PLAITS_BUILD_ENABLE_SYNC_INPUT {sync_input_enabled}
 #define PLAITS_BUILD_SIMPLIFIED_PITCH_RANGES {recipe.simplified_pitch_ranges}
 #define PLAITS_BUILD_LEVEL_CV_OPTION {recipe.level_cv_option}
 #define PLAITS_BUILD_AUX_OUTPUT_OPTION {recipe.aux_output_option}
@@ -1328,6 +1953,8 @@ namespace plaits {{
 static const int8_t kEngineUserDataBank[{len(selected)}] = {{ {user_data_banks} }};
 #endif
 {user_data_bank_override_block}
+{custom_model_data_block}
+{terrain_bank_block}
 #if PLAITS_HAS_SPEECH_ENGINE
 static const uint32_t kSpeechEngineMask = 0x{speech_mask:08x};
 #endif

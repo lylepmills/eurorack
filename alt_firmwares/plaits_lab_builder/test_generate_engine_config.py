@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import re
 import unittest
@@ -126,6 +127,218 @@ class GenerateEngineConfigTest(unittest.TestCase):
         # container cannot see. It is held in step by its own guard (its tier
         # list must match defaultFirmwareConfiguration) plus the comment on each
         # copy. A conditional check here would silently never run.
+    def custom_model_recipe(self, assignments: list[dict]) -> dict:
+        recipe = self.load("default_recipe.json")
+        recipe["schemaVersion"] = 24
+        recipe["slots"][0] = "wavetable"
+        recipe["slots"][1] = "wavetable"
+        recipe["slots"][2] = "wavetable"
+        recipe["preferences"] = {"navigationMode": "linear"}
+        recipe["initialOptions"] = {
+            **DEFAULT_CONFIGURATION["initialOptions"],
+            "attenuverterMode": "stock",
+        }
+        recipe["resources"] = {
+            "chordTables": DEFAULT_CHORD_TABLES,
+            "customModelData": assignments,
+        }
+        return recipe
+
+    def custom_model_assignment(
+            self, slot: int, kind: str, fill: int = 17) -> dict:
+        return {
+            "slot": slot,
+            "model": {
+                "kind": kind,
+                "name": f"Custom {slot}",
+                "equation": "x + y" if kind == "wave-terrain" else "sin(phi)",
+                "data": base64.b64encode(bytes([fill]) * 4096).decode("ascii"),
+            },
+        }
+
+    def test_v24_custom_model_data_maps_to_independently_rewritable_slots(self) -> None:
+        recipe = self.custom_model_recipe([
+            self.custom_model_assignment(0, "wavetable", 17),
+            self.custom_model_assignment(1, "wavetable", 17),
+            self.custom_model_assignment(2, "wavetable", 29),
+        ])
+        build = validate_recipe(recipe)
+        self.assertEqual(len(build.custom_model_data), 3)
+        config = render_config(build)
+        self.assertIn("#define PLAITS_HAS_CUSTOM_MODEL_DATA 1", config)
+        # The first two seeds contain identical bytes, but they must NOT share a
+        # flash array: after installation each slot can be rewritten over TIMBRE
+        # and must be able to diverge without changing the other one.
+        self.assertEqual(config.count("extern const uint8_t kCustomModelData_0[4096] ="), 1)
+        self.assertEqual(config.count("extern const uint8_t kCustomModelData_1[4096] ="), 1)
+        self.assertEqual(config.count("extern const uint8_t kCustomModelData_2[4096] ="), 1)
+        self.assertIn(
+            'section(".user_data_models.0"), aligned(2048)', config)
+        self.assertIn("#define PLAITS_USER_DATA_REGION_COUNT 3", config)
+        pointer_line = next(
+            line for line in config.splitlines()
+            if "kEngineCustomModelData[24]" in line
+        )
+        # Green public slots 0..2 land at internal indices 8..10, each pointing
+        # at its own independently erasable seed region.
+        pointers = pointer_line.split("{", 1)[1].split("}", 1)[0].split(", ")
+        self.assertEqual(pointers[8:11], [
+            "kCustomModelData_0", "kCustomModelData_1", "kCustomModelData_2",
+        ])
+
+    def test_v24_counts_fm_banks_and_custom_models_in_one_region_section(self) -> None:
+        recipe = self.custom_model_recipe([
+            self.custom_model_assignment(0, "wavetable"),
+        ])
+        recipe["slots"][3] = "dx7-bank-a"
+        recipe["preferences"] = {
+            "navigationMode": "linear",
+            "calibration": False,
+            "colorBlindMode": False,
+            "replaceableFmBanks": True,
+        }
+        build = validate_recipe(recipe)
+        config = render_config(build)
+
+        self.assertIn('section(".user_data_banks.0"), aligned(2048)', config)
+        self.assertIn('section(".user_data_models.0"), aligned(2048)', config)
+        self.assertIn("#define PLAITS_USER_DATA_REGION_COUNT 2", config)
+
+    def test_locked_fm_banks_do_not_claim_rewritable_regions(self) -> None:
+        recipe = self.custom_model_recipe([
+            self.custom_model_assignment(0, "wavetable"),
+        ])
+        recipe["slots"][3] = "dx7-bank-a"
+        recipe["preferences"] = {
+            "navigationMode": "linear",
+            "calibration": False,
+            "colorBlindMode": False,
+            "replaceableFmBanks": False,
+        }
+        config = render_config(validate_recipe(recipe))
+
+        self.assertNotIn('section(".user_data_banks.0")', config)
+        self.assertIn('section(".user_data_models.0"), aligned(2048)', config)
+        self.assertIn("#define PLAITS_USER_DATA_REGION_COUNT 1", config)
+
+    def test_v24_custom_model_data_rejects_wrong_model_or_size(self) -> None:
+        wrong_kind = self.custom_model_recipe([
+            self.custom_model_assignment(0, "wave-terrain"),
+        ])
+        with self.assertRaisesRegex(ValueError, "must match"):
+            validate_recipe(wrong_kind)
+
+        wrong_size = self.custom_model_assignment(0, "wavetable")
+        wrong_size["model"]["data"] = base64.b64encode(bytes(4095)).decode("ascii")
+        with self.assertRaisesRegex(ValueError, "exactly 4096"):
+            validate_recipe(self.custom_model_recipe([wrong_size]))
+
+    def terrain_bank_recipe(self, entries: list[dict]) -> dict:
+        recipe = self.load("default_recipe.json")
+        recipe["schemaVersion"] = 24
+        recipe["slots"][0] = "wave-terrain"
+        recipe["preferences"] = {
+            "navigationMode": "linear",
+            "calibration": False,
+            "colorBlindMode": False,
+            "replaceableFmBanks": False,
+            "syncInput": False,
+        }
+        recipe["initialOptions"] = {
+            **DEFAULT_CONFIGURATION["initialOptions"],
+            "attenuverterMode": "stock",
+        }
+        recipe["resources"] = {
+            "chordTables": DEFAULT_CHORD_TABLES,
+            "terrainBank": entries,
+        }
+        return recipe
+
+    def test_v24_terrain_bank_exposes_factory_entries_and_private_custom_regions(self) -> None:
+        custom = self.custom_model_assignment(0, "wave-terrain", 33)["model"]
+        recipe = self.terrain_bank_recipe([
+            {"kind": "factory", "id": "factory-8"},
+            {"kind": "custom", "model": custom},
+            {"kind": "factory", "id": "factory-2"},
+            {"kind": "custom", "model": custom},
+        ])
+        build = validate_recipe(recipe)
+        self.assertEqual([entry[0] for entry in build.terrain_bank], [7, 8, 1, 8])
+        config = render_config(build)
+        self.assertIn("#define PLAITS_HAS_TERRAIN_BANK 1", config)
+        self.assertIn("#define PLAITS_WAVE_TERRAIN_FACTORY_MASK 0x82", config)
+        self.assertIn("static const uint8_t kTerrainBankTypes[4] = { 7, 8, 1, 8 };", config)
+        self.assertIn('section(".user_data_terrains.0"), aligned(2048)', config)
+        self.assertIn('section(".user_data_terrains.1"), aligned(2048)', config)
+        self.assertIn("#define PLAITS_USER_DATA_REGION_COUNT 2", config)
+        self.assertEqual(config.count("extern const uint8_t kCustomTerrainData_0[4096] ="), 1)
+        self.assertEqual(config.count("extern const uint8_t kCustomTerrainData_1[4096] ="), 1)
+
+    def test_v24_native_terrain_emits_code_without_a_user_data_region(self) -> None:
+        custom = self.custom_model_assignment(0, "wave-terrain", 33)["model"]
+        custom["equation"] = "sin(5 * (y + theta))"
+        custom["representation"] = "native"
+        recipe = self.terrain_bank_recipe([
+            {"kind": "factory", "id": "factory-1"},
+            {"kind": "custom", "model": custom},
+        ])
+        recipe["schemaVersion"] = 24
+        build = validate_recipe(recipe)
+        self.assertEqual([entry[0] for entry in build.terrain_bank], [0, 9])
+        config = render_config(build)
+        self.assertIn("static inline float TerrainEquation_0", config)
+        self.assertIn("static const uint8_t kTerrainBankTypes[2] = { 0, 9 };", config)
+        self.assertIn("kTerrainBankFunctions", config)
+        self.assertNotIn("kCustomTerrainData_", config)
+        self.assertIn("#define PLAITS_USER_DATA_REGION_COUNT 0", config)
+
+        unsafe = self.terrain_bank_recipe([{"kind": "custom", "model": {
+            **custom, "equation": "1 / x",
+        }}])
+        unsafe["schemaVersion"] = 24
+        with self.assertRaisesRegex(ValueError, "denominator"):
+            validate_recipe(unsafe)
+
+        for equation in ("1 / (2 + x)", "sqrt(x * x + y * y)", "pow(x, 2)"):
+            safe = self.terrain_bank_recipe([{"kind": "custom", "model": {
+                **custom, "equation": equation,
+            }}])
+            safe["schemaVersion"] = 24
+            validate_recipe(safe)
+
+        for equation in ("1 / (x - 0.001)", "sqrt(x)", "tan(2 * x)"):
+            unsafe = self.terrain_bank_recipe([{"kind": "custom", "model": {
+                **custom, "equation": equation,
+            }}])
+            unsafe["schemaVersion"] = 24
+            with self.assertRaises(ValueError, msg=equation):
+                validate_recipe(unsafe)
+
+    def test_v24_terrain_bank_rejects_duplicate_factories_and_slot_terrain_data(self) -> None:
+        duplicate = self.terrain_bank_recipe([
+            {"kind": "factory", "id": "factory-1"},
+            {"kind": "factory", "id": "factory-1"},
+        ])
+        with self.assertRaisesRegex(ValueError, "at most once"):
+            validate_recipe(duplicate)
+
+        legacy_slot = self.terrain_bank_recipe([
+            {"kind": "factory", "id": "factory-1"},
+        ])
+        legacy_slot["resources"]["customModelData"] = [
+            self.custom_model_assignment(0, "wave-terrain")]
+        with self.assertRaisesRegex(ValueError, "shared terrain bank"):
+            validate_recipe(legacy_slot)
+
+    def test_v24_terrain_bank_accepts_sixteen_entries_and_rejects_seventeen(self) -> None:
+        custom = self.custom_model_assignment(0, "wave-terrain")["model"]
+        entries = [
+            {"kind": "custom", "model": {**custom, "name": f"Terrain {index}"}}
+            for index in range(16)
+        ]
+        self.assertEqual(len(validate_recipe(self.terrain_bank_recipe(entries)).terrain_bank), 16)
+        with self.assertRaisesRegex(ValueError, "between one and 16"):
+            validate_recipe(self.terrain_bank_recipe(entries + [entries[0]]))
 
     def test_output_format_accepts_wav_and_intel_hex_only(self) -> None:
         recipe = self.load("default_recipe.json")
@@ -664,7 +877,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
             config)
 
     def test_swappable_build_re_emits_live_stock_banks_page_aligned(self) -> None:
-        # The same palette with banks swappable (the default). Every live bank —
+        # The same palette with banks swappable (the opt-in mode). Every live bank —
         # including the two STOCK ones — becomes a page-aligned region the module
         # can erase and reprogram, so the build re-emits them as its own arrays
         # and never names syx_bank_N. Net flash is unchanged: --gc-sections drops

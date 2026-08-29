@@ -17,7 +17,10 @@ from container_server import (
     RAM_BUDGET_BYTES,
     RAM_STACK_RESERVE_BYTES,
     _build_targets,
+    _check_shared_buffer_alignment,
+    _validate_shared_buffer_layout,
     _concatenate_pcm_wavs,
+    _declared_region_count,
     _validate_saved_bank_preview_request,
     _validate_speech_request,
     _write_saved_plan,
@@ -84,15 +87,18 @@ class LinkedFirmwareSafetyTest(unittest.TestCase):
     @patch("container_server._linked_flash_span", return_value=1200)
     @patch("container_server.parse_size", return_value=(1000, 100, 200))
     @patch("container_server.check_elf")
-    def test_safe_build_checks_replaceable_fm_layout(
-        self, check, _size, _span
+    @patch("container_server._check_shared_buffer_alignment", return_value=0x20000c98)
+    def test_safe_build_checks_user_data_layout(
+        self, alignment, check, _size, _span
     ) -> None:
-        config = "static const int kNumUserDataRegions = 2;\n"
+        config = "#define PLAITS_USER_DATA_REGION_COUNT 2\n"
         with tempfile.TemporaryDirectory() as directory:
             result = validate_linked_firmware(self.elf(directory), config)
         check.assert_called_once()
+        alignment.assert_called_once()
+        self.assertEqual(result["sharedBufferAddress"], 0x20000c98)
         self.assertEqual(result["flashBytes"], 1200)
-        self.assertEqual(result["replaceableFmBankRegions"], 2)
+        self.assertEqual(result["userDataRegions"], 2)
 
     @patch("container_server._linked_flash_span", return_value=0)
     @patch("container_server.parse_size")
@@ -117,12 +123,68 @@ class LinkedFirmwareSafetyTest(unittest.TestCase):
         self.assertEqual(raised.exception.code, "ram_budget_exceeded")
 
     @patch("container_server.check_elf", side_effect=ValueError("shared page"))
-    def test_unsafe_replaceable_fm_layout_fails_closed(self, _check) -> None:
-        config = "static const int kNumUserDataRegions = 1;\n"
+    def test_unsafe_user_data_layout_fails_closed(self, _check) -> None:
+        config = "#define PLAITS_USER_DATA_REGION_COUNT 1\n"
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaises(BuildError) as raised:
                 validate_linked_firmware(self.elf(directory), config)
         self.assertEqual(raised.exception.code, "unsafe_flash_layout")
+
+
+class SharedBufferLayoutTest(unittest.TestCase):
+    def test_aligned_arena_passes(self) -> None:
+        self.assertEqual(_validate_shared_buffer_layout(
+            "20000c98 00004000 B shared_buffer\n"), 0x20000c98)
+
+    def test_v4_canary_misalignment_is_rejected(self) -> None:
+        with self.assertRaises(BuildError) as raised:
+            _validate_shared_buffer_layout("20000c99 00004000 B shared_buffer\n")
+        self.assertEqual(raised.exception.code, "unsafe_ram_layout")
+        self.assertIn("0x20000c99", raised.exception.detail)
+
+    def test_all_non_aligned_offsets_are_rejected(self) -> None:
+        for offset in range(1, 8):
+            with self.subTest(offset=offset), self.assertRaises(BuildError):
+                _validate_shared_buffer_layout(
+                    f"{0x20001000 + offset:08x} 00004000 B shared_buffer\n")
+
+    def test_missing_duplicate_wrong_size_or_out_of_ram_fail_closed(self) -> None:
+        for symbols in (
+            "", "garbled output\n", "20001000 B shared_buffer\n",
+            "20001000 00003fff B shared_buffer\n",
+            "08001000 00004000 B shared_buffer\n",
+            "20004008 00004000 B shared_buffer\n",
+            "20001000 00004000 B shared_buffer\n" * 2,
+        ):
+            with self.subTest(symbols=symbols), self.assertRaises(BuildError):
+                _validate_shared_buffer_layout(symbols)
+
+    @patch("container_server.subprocess.run")
+    def test_elf_checker_uses_linked_symbols(self, run) -> None:
+        run.return_value.stdout = "20000c98 00004000 B shared_buffer\n"
+        self.assertEqual(_check_shared_buffer_alignment(Path("test.elf")), 0x20000c98)
+        self.assertEqual(run.call_args.args[0][1:],
+                         ["-S", "--defined-only", "test.elf"])
+
+    @patch("container_server._linked_flash_span", return_value=1000)
+    @patch("container_server.parse_size", return_value=(1000, 0, 20000))
+    @patch("container_server._check_shared_buffer_alignment",
+           side_effect=BuildError("unsafe_ram_layout", "misaligned buffer"))
+    def test_gate_applies_even_without_custom_resources(self, alignment, _size, _span):
+        with tempfile.TemporaryDirectory() as directory:
+            elf = Path(directory) / "plaits.elf"
+            elf.write_bytes(b"ELF")
+            with self.assertRaises(BuildError) as raised:
+                validate_linked_firmware(elf, "#define PLAITS_ENGINE_COUNT 24\n")
+        self.assertEqual(raised.exception.code, "unsafe_ram_layout")
+        alignment.assert_called_once()
+
+
+class UserDataRegionCountTest(unittest.TestCase):
+    def test_generated_region_macro_counts_fm_and_custom_model_regions(self) -> None:
+        config = "#define PLAITS_USER_DATA_REGION_COUNT 5\n"
+        self.assertEqual(_declared_region_count(config), 5)
+        self.assertEqual(_declared_region_count("#define PLAITS_ENGINE_COUNT 24\n"), 0)
 
 
 class RequestSizeBudgetTest(unittest.TestCase):
