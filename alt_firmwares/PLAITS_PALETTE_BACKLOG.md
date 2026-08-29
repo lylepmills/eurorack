@@ -22,59 +22,6 @@ release notes, and user documentation become the source of truth.
 | --- | --- | --- | --- |
 | Renaissance-style Speech remix | Parked | 2026-08-11 | `codex/renaissance-sam-prototype` at `a815337` |
 | Four independent pitch CVs for chord engines | Parked | 2026-08-11 | `session/plaits-four-voct` at `ebed081` |
-| Algorithm-32 FM TIMBRE fallback | Planned — integrate and launch | 2026-08-28 | `codex/plaits-fm-carrier-audition` at `8e5cb6d`; website branch `session/codex-plaits-fm-control-audit` |
-
-## Ready for integration
-
-### Algorithm-32 FM TIMBRE fallback
-
-Stock TIMBRE changes modulators only, so algorithm 32 (all carriers) is a
-structural no-op. The catalog audit found 71 such rows. Lyle chose the
-frequency-based Carrier Tilt after the browser listening comparison. Production
-Tilt is now automatic only for algorithm 32, preserves the stock patch exactly
-at noon, changes active carrier gains smoothly by their fixed frequency order,
-and bypasses every other algorithm. MORPH is unchanged.
-
-Generate the unattended hardware qualifier with
-`python3 alt_firmwares/plaits_lab_builder/export_fm_carrier_diagnostic.py
-<website>/prototypes/dx7-controls/generated/patches.json build/fm-carrier-diagnostic`.
-It bakes all 71 known algorithm-32 voices into three banks, ignores but does not
-erase a previously transferred runtime bank, and performs a muted 22.72-second
-sweep across five TIMBRE positions, four pitches, and drone/triggered operation.
-It fails on numerical silence at the center in both articulation modes, a
-missed render deadline, or peak CPU at or above 90%. A green progress bar is
-visible throughout the sweep; it then holds an animated green pass or blinking
-red fail while playing a repeating six-scene audible loop. No panel action or
-cable is required for the automatic checks.
-
-Host evidence covers exact noon preservation, exact bypass for all 3,429
-catalog rows on other algorithms, bounded output across pitch/velocity, and all
-71 target patches changing at an end. The complete 3,500-row audio audit found
-every algorithm-32 patch responsive in triggered mode (minimum 3.80 dB), with
-none weak in both triggered and drone modes. The diagnostic image passes ARM
-flash/RAM checks at 59,488 / 24,284 bytes and its updater WAV decodes byte for
-byte through the real bootloader. The first hardware attempt used diagnostic v3;
-an all-dark result exposed a reporting bug rather than a readable verdict: the
-terminal animation was restarted every audio block and pinned a failure blink in
-its dark phase. Diagnostic v4 latched the animation correctly, added the
-always-visible progress bar, and returned a real red failure on hardware.
-Diagnostic v5 separates that failure into three blinking red LED pairs: top for
-CPU headroom, middle for a missed deadline, and bottom for a silent center. Its
-bottom-only hardware result reproduced four patches (`TundStatc^`, `E.ORGAN 3`,
-`Res Filt.3`, and `PORTA B`) that are nearly silent as drones but healthy when
-triggered, so v6 accepts signal in either articulation mode. V6 then isolated
-one additional catalog-quality outlier: `PORTA B` peaks at only 4 integer counts
-at the center check and 6 counts (about -75 dBFS) across the complete sweep.
-The full `Voice` signal path reproduces the hardware verdict exactly. V7 uses
-the post-processor's one-count zero bias as its numerical-silence floor, so an
-inaudibly quiet source preset remains documented without masquerading as a DSP
-render failure. Physical v7 qualification passed on Lyle's Plaits on 2026-08-28:
-the final display was the animated all-green pass, proving CPU headroom, no
-missed deadline, and numerical signal integrity across the 71-patch sweep. The
-automatic audible loop also passed without clicks, dropouts, or an abrupt level
-collapse. Carrier Tilt is ready for integration and launch, but do not publish
-the firmware/catalog/website pieces independently. Use a fresh build directory
-after editing headers because exported builds use `DEPS=`.
 
 ## Parked
 
