@@ -63,6 +63,7 @@ void MakeEveryCarrierUnison(uint8_t* data) {
   for (int i = 0; i < 6; ++i) {
     data[i * 17 + 15] = 2;  // ratio mode, coarse = 1
     data[i * 17 + 16] = 0;
+    data[i * 17 + 12] = (data[i * 17 + 12] & 7) | (7 << 3);
   }
 }
 

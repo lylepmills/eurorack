@@ -8,13 +8,28 @@
 #ifndef PLAITS_DSP_FM_CARRIER_TIMBRE_H_
 #define PLAITS_DSP_FM_CARRIER_TIMBRE_H_
 
-#include <algorithm>
-#include <cmath>
-#include "plaits/dsp/fm/dx_units.h"
+#include <stdint.h>
+
+#include "plaits/dsp/fm/patch.h"
 
 namespace plaits { namespace fm {
 
+// The shared FM Voice template is also instantiated for the stock four-op
+// engine. Keep that instance a compile-time no-op so the six-carrier feature
+// costs no flash or state outside SixOpEngine.
+template<int num_operators>
 class CarrierTimbre {
+ public:
+  void Init() { }
+#ifdef TEST
+  void set_enabled(bool enabled) { }
+#endif
+  void SetPatch(const Patch& patch, const float* ratios) { }
+  float LevelOffset(int i, float timbre) const { return 0.0f; }
+};
+
+template<>
+class CarrierTimbre<6> {
  public:
   void Init() {
     active_ = false;
@@ -29,73 +44,60 @@ class CarrierTimbre {
   void set_enabled(bool enabled) { enabled_ = enabled; }
 #endif
 
-  void SetPatch(const Patch& patch) {
+  void SetPatch(const Patch& patch, const float* ratios) {
     active_ = patch.algorithm == 31;
-    int indices[6];
-    float positions[6];
-    int count = 0;
-    float mean = 0.0f;
     for (int i = 0; i < 6; ++i) {
-      tilt_[i] = 0.0f;
-      headroom_[i] = 127.0f - OperatorLevel(patch.op[i].level);
-      if (!active_ || !patch.op[i].level) continue;
-      const Patch::Operator& op = patch.op[i];
-      // Ignore tiny detuning: unison carriers should not receive a full-range
-      // spectral split. Mixed fixed/ratio operators are compared at MIDI 48;
-      // freeze this ordering at patch load so playing notes never flips it.
-      const float position = op.mode == 0
-          ? 84.375f + lut_coarse[op.coarse] +
-              FineSemitones(op.fine)
-          : float((op.coarse & 3) * 100 + op.fine) * 0.39864f;
-      indices[count] = i;
-      positions[i] = position;
-      mean += position;
-      ++count;
+      tilt_[i] = 0;
     }
-    if (count < 2) { active_ = false; return; }
-    mean /= count;
-    float span = 0.0f;
-    for (int j = 0; j < count; ++j) {
-      const int i = indices[j];
-      tilt_[i] = positions[i] - mean;
-      span = std::max(span, fabsf(tilt_[i]));
+    if (!active_) return;
+
+    // Rank every audible carrier against every other carrier at MIDI 48. The
+    // pairwise scores sum to zero, so the knob tilts rather than merely changing
+    // overall level. Only exactly matching frequencies share a rank; detuned
+    // unisons are distinct carriers and therefore remain useful tilt targets.
+    // This rank form is much smaller on Cortex-M4 than the
+    // former log-frequency mean/span normalization, while preserving the same
+    // low-to-high ordering and exact patch at noon.
+    for (int i = 0; i < 6; ++i) {
+      if (!patch.op[i].level) continue;
+      const float a = Position(ratios[i]);
+      for (int j = i + 1; j < 6; ++j) {
+        if (!patch.op[j].level) continue;
+        const float b = Position(ratios[j]);
+        if (a > b) {
+          ++tilt_[i];
+          --tilt_[j];
+        } else if (b > a) {
+          --tilt_[i];
+          ++tilt_[j];
+        }
+      }
     }
-    for (int j = 0; j < count; ++j) {
-      const int i = indices[j];
-      tilt_[i] = span > 0.001f ? tilt_[i] / span : 0.0f;
-    }
+    active_ = false;
+    for (int i = 0; i < 6; ++i) active_ |= tilt_[i] != 0;
   }
 
-  float Apply(int i, float timbre, float amplitude) const {
+  float LevelOffset(int i, float timbre) const {
 #ifdef TEST
-    if (!enabled_) return amplitude;
+    if (!enabled_) return 0.0f;
 #endif
-    if (!active_ || timbre == 0.5f) return amplitude;
-    const float delta = std::min(
-        (timbre - 0.5f) * 48.0f * tilt_[i], headroom_[i]);
-    if (delta == 0.0f) return amplitude;
-    // Runtime gain, NOT repeated patch edits: preserves envelope state/timing
-    // and uses the FM operator's existing block interpolation for smoothness.
-    // +/-24 DX log-level units = approximately +/-18 dB before headroom caps.
-    return amplitude * Pow2Fast<2>(delta * 0.125f);
+    // Six distinct carriers score -5,-3,-1,+1,+3,+5. A factor of 4.8 makes
+    // the endpoints +/-12 DX level units (about +/-9 dB), matching the
+    // qualified tilt's +/-18 dB low-to-high difference at either knob end.
+    return active_ ? (timbre - 0.5f) * 4.8f * float(tilt_[i]) : 0.0f;
   }
 
  private:
-  static float FineSemitones(int fine) {
-    // log2(1+x), x in [0,.99], using the atanh series. Error < .03 cents.
-    // Avoid libm log2f: the firmware's minimal C runtime has no errno support.
-    const float x = 0.01f * fine;
-    const float y = x / (2.0f + x);
-    const float y2 = y * y;
-    return 34.62468098f * y * (1.0f + y2 *
-        (1.0f / 3.0f + y2 * (1.0f / 5.0f + y2 / 7.0f)));
+  static float Position(float ratio) {
+    // ratios_ stores fixed-frequency operators as negative Hz and ratio-mode
+    // operators as positive multiples of the played note. Compare both at C3.
+    return ratio < 0.0f ? -ratio : ratio * 130.8128f;
   }
   bool active_;
 #ifdef TEST
   bool enabled_;
 #endif
-  float tilt_[6];
-  float headroom_[6];
+  int8_t tilt_[6];
 };
 
 } }  // namespace plaits::fm

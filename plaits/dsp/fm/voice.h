@@ -132,7 +132,7 @@ class Voice {
       ratios_[i] = sign * FrequencyRatio(op);
     }
     dirty_ = false;
-    carrier_timbre_.SetPatch(*patch_);
+    carrier_timbre_.SetPatch(*patch_, ratios_);
     return true;
   }
   
@@ -248,7 +248,7 @@ class Voice {
           float(op.velocity_sensitivity);
       const float brightness = algorithms_->is_modulator(patch_->algorithm, i)
           ? (parameters.brightness - 0.5f) * 32.0f
-          : 0.0f;
+          : carrier_timbre_.LevelOffset(i, parameters.brightness);
       
       level += 0.125f * std::min(
           kb_scaling + velocity_scaling + brightness,
@@ -265,7 +265,6 @@ class Voice {
       const float level_mod = 1.0f - Pow2Fast<2>(6.4f * log_level_mod);
       a[i] = Pow2Fast<2>(-14.0f + level * level_mod);
 #endif  // FAST_LINEAR_AMPLITUDE_MODULATION
-      a[i] = carrier_timbre_.Apply(i, parameters.brightness, a[i]);
     }
     
     for (int i = 0; i < num_operators; ) {
@@ -285,7 +284,7 @@ class Voice {
   }
   
  private:
-  CarrierTimbre carrier_timbre_;
+  CarrierTimbre<num_operators> carrier_timbre_;
   const Algorithms<num_operators>* algorithms_;
   float sample_rate_;
   float one_hz_;
