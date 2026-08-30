@@ -40,7 +40,7 @@ test("the Worker and compiler catalogs contain the same approved IDs", async () 
     approvedEngineIds,
     compilerCatalog.engines.map((engine: { id: string }) => engine.id),
   );
-  assert.equal(approvedEngineIds.length, 88);
+  assert.equal(approvedEngineIds.length, 89);
 });
 
 test("schema 24 carries distinct per-slot Wavetable data", async () => {
@@ -1868,4 +1868,74 @@ test("the unsupported-schema message names the range the guard accepts", () => {
   for (let version = minRecipeSchemaVersion; version <= highest; version += 1) {
     assert.equal(rejection(version), null, `schema version ${version} must not be rejected as unsupported`);
   }
+});
+
+test("schema 25 carries Natural Speech word banks, and only with the engine", async () => {
+  // The Worker validates before the container does, so a key the container
+  // accepts and the Worker does not (or vice versa) strands recipes between
+  // them. This is the Worker half of the container's matching gate test.
+  const publicCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const chordCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_chord_tables/catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const engines = new Map(
+    publicCatalog.engines.map((engine: any) => [engine.id, engine]),
+  );
+  const recipe = structuredClone(fixture) as any;
+  recipe.schemaVersion = 25;
+  recipe.slots[0] = "natural-speech";
+  recipe.slots = recipe.slots.map((engineId: string) => {
+    const engine = engines.get(engineId) as any;
+    return {
+      engine: engineId,
+      package: engine.packageId,
+      version: engine.version,
+      digest: engine.digest,
+    };
+  });
+  recipe.preferences = { navigationMode: "linear" };
+  recipe.initialOptions = {
+    lockedFrequencyKnob: "octaves",
+    modelInput: "model",
+    levelInput: "level",
+    auxOutput: "alternate-model",
+    suboscillatorOctave: 0,
+    chordTable: "original",
+    holdOnTrigger: false,
+    attenuverterMode: "stock",
+  };
+  // Ten 23-byte NSH1 frames. Only the framing matters here, not the content.
+  const frameData = Buffer.alloc(230, 7).toString("base64");
+  recipe.resources = {
+    chordTables: chordCatalog.tables,
+    naturalSpeechBanks: {
+      customBanks: [{ words: ["hello"], wordBoundaries: [0, 10], frameData }],
+    },
+  };
+
+  const normalized = normalizeRecipe(recipe);
+  assert.equal(normalized.schemaVersion, 25);
+  assert.deepEqual(
+    normalized.resources.naturalSpeechBanks?.customBanks[0].words, ["hello"]);
+
+  // Frames are 23 bytes here, not the LPC 14: a payload that is a whole number
+  // of LPC frames but not of NSH1 frames must be rejected, or the two formats
+  // could be silently swapped.
+  const wrongFrameSize = structuredClone(recipe);
+  wrongFrameSize.resources.naturalSpeechBanks.customBanks[0].frameData =
+    Buffer.alloc(140, 7).toString("base64");
+  assert.throws(() => normalizeRecipe(wrongFrameSize), /invalid word boundaries/);
+
+  const withoutEngine = structuredClone(recipe);
+  withoutEngine.slots[0] = {
+    engine: "virtual-analog",
+    package: (engines.get("virtual-analog") as any).packageId,
+    version: (engines.get("virtual-analog") as any).version,
+    digest: (engines.get("virtual-analog") as any).digest,
+  };
+  assert.throws(() => normalizeRecipe(withoutEngine), /Natural Speech model/);
 });

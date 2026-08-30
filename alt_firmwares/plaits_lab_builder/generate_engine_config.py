@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from natural_speech_banks import validate_natural_speech_banks
 from speech_banks import validate_speech_banks
 
 
@@ -60,7 +61,7 @@ assert PACKED_BANK_SIZE % FLASH_PAGE_SIZE == 0
 # versions so adding a schema at the ceiling does not require extending a trail
 # of "10, 11, 12..." whitelists in the build container.
 MIN_RECIPE_SCHEMA_VERSION = 2
-MAX_RECIPE_SCHEMA_VERSION = 24
+MAX_RECIPE_SCHEMA_VERSION = 25
 CONFIGURATION_MIN_SCHEMA_VERSION = 4
 RESOURCES_MIN_SCHEMA_VERSION = 5
 FOUR_BANK_MIN_SCHEMA_VERSION = 6
@@ -97,6 +98,15 @@ SYNC_INPUT_PREFERENCE_MIN_SCHEMA_VERSION = 22
 # in PitchRangeFromControl -- so a module moves between the two layouts without
 # losing its tuned root or locked octave.
 SIMPLIFIED_PITCH_RANGES_MIN_SCHEMA_VERSION = 24
+
+# v25: Natural Speech word banks. The engine's demo banks are a compile-time
+# fallback, so a recipe carrying its own REPLACES them wholesale rather than
+# adding to them -- there is no stock-bank list to merge with, unlike Speech.
+# This gate is what makes an older builder say "needs a builder update" instead
+# of rejecting the recipe as malformed: without the key in the resource set
+# below, validation fails on the key set and the handler further down is
+# unreachable, which is exactly the state this fixes.
+NATURAL_SPEECH_BANKS_MIN_SCHEMA_VERSION = 25
 
 # The preference tiers, in the order they were introduced. Every recipe shape
 # this container accepts is the union of some prefix of these. A missing key
@@ -192,6 +202,9 @@ class BuildRecipe:
     stereo_engines: tuple[str, ...] | None = None
     # v17: selected stock LPC banks followed by custom decoded-frame banks.
     speech_banks: dict[str, Any] | None = None
+    # Natural Speech word banks: NSH1 frames, validated by
+    # natural_speech_banks.validate_natural_speech_banks.
+    natural_speech_banks: dict[str, Any] | None = None
     # v24: public slot, Wavetable kind, and the sampled Mutable-compatible 4 KB
     # user-data block. The equation and display name stay in the public recipe;
     # firmware needs only these bounded bytes.
@@ -1023,6 +1036,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
     user_data_banks: list[tuple[int, bytes]] = []   # v6 index-keyed
     slot_banks: list[tuple[int, bytes]] = []        # v12 slot-keyed
     speech_banks: dict[str, Any] | None = None
+    natural_speech_banks: dict[str, Any] | None = None
     custom_model_data: list[tuple[int, str, bytes]] = []  # v21 slot-keyed
     terrain_bank: list[tuple[int, bytes | None, str | None, float, float]] = []
     scale_bank = validate_scale_bank(DEFAULT_SCALE_BANK)
@@ -1066,6 +1080,11 @@ def validate_recipe(value: Any) -> BuildRecipe:
             and isinstance(resources, dict)
             and "terrainBank" in resources
         )
+        carries_natural_speech_banks = (
+            schema_version >= NATURAL_SPEECH_BANKS_MIN_SCHEMA_VERSION
+            and isinstance(resources, dict)
+            and "naturalSpeechBanks" in resources
+        )
         base_resource_keys = {"chordTables"}
         if carries_scale_bank:
             base_resource_keys.add("scaleBank")
@@ -1075,6 +1094,8 @@ def validate_recipe(value: Any) -> BuildRecipe:
             base_resource_keys.add("customModelData")
         if carries_terrain_bank:
             base_resource_keys.add("terrainBank")
+        if carries_natural_speech_banks:
+            base_resource_keys.add("naturalSpeechBanks")
         carries_user_data_banks = expect_user_data_banks or (
             schema_version >= CALIBRATION_MIN_SCHEMA_VERSION
             and isinstance(resources, dict)
@@ -1095,6 +1116,12 @@ def validate_recipe(value: Any) -> BuildRecipe:
                 raise ValueError(
                     "speechBanks requires Speech or LPC Words in the palette")
             speech_banks = validate_speech_banks(resources.get("speechBanks"))
+        if carries_natural_speech_banks:
+            if "natural-speech" not in public_slots:
+                raise ValueError(
+                    "naturalSpeechBanks requires Natural Speech in the palette")
+            natural_speech_banks = validate_natural_speech_banks(
+                resources.get("naturalSpeechBanks"))
         if carries_custom_model_data:
             custom_model_data = validate_custom_model_data(
                 resources.get("customModelData"), public_slots)
@@ -1393,6 +1420,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
         slot_bank_overrides=tuple(slot_banks),
         stereo_engines=stereo_engines,
         speech_banks=speech_banks,
+        natural_speech_banks=natural_speech_banks,
         custom_model_data=tuple(custom_model_data),
         terrain_bank=tuple(terrain_bank),
         **normalized_options,
@@ -1496,12 +1524,12 @@ def render_config(recipe: BuildRecipe) -> str:
     )
     speech_mask = sum(1 << index for index, item in enumerate(selected) if item.behavior == "speech")
     lpc_words_mask = sum(1 << index for index, item in enumerate(selected) if item.behavior == "lpc-words")
-    natural_voice_mask = sum(1 << index for index, item in enumerate(selected) if item.behavior == "natural-voice")
+    natural_speech_mask = sum(1 << index for index, item in enumerate(selected) if item.behavior == "natural-speech")
     # voice.cc reaches the engine through this member name, which differs
     # between a community package and a catalog engine.
-    natural_voice_member = next(
+    natural_speech_member = next(
         (item.member for item in selected
-         if item.behavior == "natural-voice"), "")
+         if item.behavior == "natural-speech"), "")
     chiptune_mask = sum(1 << index for index, item in enumerate(selected) if item.behavior == "chiptune")
     resonator_envelope_mask = sum(
         1 << index
@@ -1904,8 +1932,8 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_ENGINE_ROWS {{ {", ".join(str(row) for row in engine_rows)} }}
 #define PLAITS_HAS_SPEECH_ENGINE {1 if any(item.behavior == 'speech' for item in selected) else 0}
 #define PLAITS_HAS_LPC_WORDS_ENGINE {1 if any(item.behavior == 'lpc-words' for item in selected) else 0}
-#define PLAITS_HAS_NATURAL_VOICE_ENGINE {1 if natural_voice_mask else 0}
-{f'#define PLAITS_NATURAL_VOICE_ENGINE_MEMBER {natural_voice_member}' if natural_voice_mask else ''}
+#define PLAITS_HAS_NATURAL_SPEECH_ENGINE {1 if natural_speech_mask else 0}
+{f'#define PLAITS_NATURAL_SPEECH_ENGINE_MEMBER {natural_speech_member}' if natural_speech_mask else ''}
 #define PLAITS_HAS_CHIPTUNE_ENGINE {1 if any(item.behavior == 'chiptune' for item in selected) else 0}
 #define PLAITS_HAS_USER_DATA_BANK {1 if has_user_data_bank else 0}
 #define PLAITS_HAS_USER_DATA_BANK_OVERRIDE {1 if override_arrays_all else 0}
@@ -1966,8 +1994,8 @@ static const int8_t kEngineUserDataBank[{len(selected)}] = {{ {user_data_banks} 
 #if PLAITS_HAS_SPEECH_ENGINE
 static const uint32_t kSpeechEngineMask = 0x{speech_mask:08x};
 #endif
-#if PLAITS_HAS_NATURAL_VOICE_ENGINE
-static const uint32_t kNaturalVoiceEngineMask = 0x{natural_voice_mask:08x};
+#if PLAITS_HAS_NATURAL_SPEECH_ENGINE
+static const uint32_t kNaturalSpeechEngineMask = 0x{natural_speech_mask:08x};
 #endif
 #if PLAITS_HAS_LPC_WORDS_ENGINE
 static const uint32_t kLPCWordsEngineMask = 0x{lpc_words_mask:08x};

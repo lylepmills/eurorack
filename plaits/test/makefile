@@ -30,6 +30,7 @@ CC_FILES       = algorithms.cc \
 		gendy_engine.cc \
 		grain_engine.cc \
 		glisson_engine.cc \
+		natural_speech_engine.cc \
 		helix_engine.cc \
 		hi_hat_engine.cc \
 		lockstep_engine.cc \

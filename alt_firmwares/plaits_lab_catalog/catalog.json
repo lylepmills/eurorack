@@ -1306,6 +1306,45 @@
       }
     },
     {
+      "id": "natural-speech",
+      "packageId": "rubato/natural-speech",
+      "name": "Natural Speech",
+      "author": "Lyle Mills",
+      "origin": "Rubato Lab",
+      "family": "Vocal",
+      "description": "Spoken words resynthesized through a vocal tract you can reshape, from mumbled to over-enunciated.",
+      "tags": [
+        "speech",
+        "voice",
+        "vocal tract",
+        "words"
+      ],
+      "controls": [
+        "Word bank",
+        "Vocal tract",
+        "Word",
+        "Articulation"
+      ],
+      "outputs": [
+        "Mono: the voice. Stereo: the voice leaning left, with the whisper opposite it.",
+        "Mono: a whisper, the same tract driven by noise alone. Stereo: the right channel of the widened pair."
+      ],
+      "source": {
+        "header": "plaits/dsp/engine2/natural_speech_engine.h",
+        "className": "NaturalSpeechEngine",
+        "member": "natural_speech_engine_",
+        "files": [
+          "plaits/dsp/engine2/natural_speech_engine.cc"
+        ],
+        "behavior": "natural-speech"
+      },
+      "postProcessing": {
+        "alreadyEnveloped": false,
+        "outGain": 0.8,
+        "auxGain": 0.8
+      }
+    },
+    {
       "id": "glisson",
       "packageId": "rubato/glisson",
       "name": "Glisson",
@@ -4277,7 +4316,7 @@
     "question-mark": {
       "controls": {
         "harmonics": "The module's own COLOR: the noise bed's floor and the distortion depth together, as one knob.",
-        "timbre": "The keying rate, from a 123 ms dit to a 37 ms one \u2014 the module's own TIMBRE.",
+        "timbre": "The keying rate, from a 123 ms dit to a 37 ms one — the module's own TIMBRE.",
         "morph": "The noise level on its own, from a bare keyed tone to well past the module's loudest bed.",
         "macro": "The squared distortion on its own, from a clean sum to twice the module's depth."
       },
@@ -4444,6 +4483,15 @@
         "macro": "Sweeps the envelope transfer curve from arccos S-curves through triangle at noon to near-sine and bump shapes."
       },
       "trigger": "Realigns the driver oscillator and retriggers any envelope that is no longer in its attack stage."
+    },
+    "natural-speech": {
+      "controls": {
+        "harmonics": "Selects which bank of words the module speaks from.",
+        "timbre": "Resizes the vocal tract, from a larger head to a smaller one, without changing the pitch.",
+        "morph": "Chooses the word. With nothing patched into TRIG it scrubs by hand across the whole bank instead.",
+        "macro": "Sets how hard the voice articulates: mumbled toward one sustained vowel, or over-enunciated."
+      },
+      "trigger": "Speaks the selected word once."
     }
   },
   "presets": {

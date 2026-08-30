@@ -1275,6 +1275,46 @@
       }
     },
     {
+      "id": "natural-speech",
+      "packageId": "rubato/natural-speech",
+      "name": "Natural Speech",
+      "author": "Lyle Mills",
+      "origin": "Rubato Lab",
+      "family": "Vocal",
+      "description": "Spoken words resynthesized through a vocal tract you can reshape, from mumbled to over-enunciated.",
+      "tags": [
+        "speech",
+        "voice",
+        "vocal tract",
+        "words"
+      ],
+      "controls": [
+        "Word bank",
+        "Vocal tract",
+        "Word",
+        "Articulation"
+      ],
+      "outputs": [
+        "Mono: the voice. Stereo: the voice leaning left, with the whisper opposite it.",
+        "Mono: a whisper, the same tract driven by noise alone. Stereo: the right channel of the widened pair."
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:a25c8da57250666317d3fccfa792fd92675a193d84e94c393919f925c149292d",
+      "documentationDigest": "sha256:7ab10c5900c9e576dae362da660ae4498a04d2f23100a293697d3a6d22b78b5d",
+      "manual": {
+        "controls": {
+          "harmonics": "Selects which bank of words the module speaks from.",
+          "timbre": "Resizes the vocal tract, from a larger head to a smaller one, without changing the pitch.",
+          "morph": "Chooses the word. With nothing patched into TRIG it scrubs by hand across the whole bank instead.",
+          "macro": "Sets how hard the voice articulates: mumbled toward one sustained vowel, or over-enunciated."
+        },
+        "trigger": "Speaks the selected word once."
+      },
+      "implementation": {
+        "className": "NaturalSpeechEngine"
+      }
+    },
+    {
       "id": "glisson",
       "packageId": "rubato/glisson",
       "name": "Glisson",
