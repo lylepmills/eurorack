@@ -768,6 +768,19 @@ export default {
           cacheNamespace: "banks-v3",
           maxBytes: 64 * 1024,
         });
+      } else if (request.method === "POST" && url.pathname === "/v1/speech/encode-natural") {
+        // Its own cache namespace: the request bodies are shaped alike but the
+        // encoders are different, so sharing one would let an LPC bank answer a
+        // Natural Speech request.
+        response = await proxySpeechJson(request, env, "/speech/encode-natural", {
+          cacheNamespace: "natural-banks-v1",
+          maxBytes: 64 * 1024,
+        });
+      } else if (request.method === "POST" && url.pathname === "/v1/speech/render-bank-natural") {
+        response = await proxySpeechJson(request, env, "/speech/render-bank-natural", {
+          cacheNamespace: "rendered-natural-banks-v1",
+          maxBytes: 64 * 1024,
+        });
       } else if (request.method === "POST" && url.pathname === "/v1/speech/render-bank") {
         response = await proxySpeechJson(request, env, "/speech/render-bank", {
           cacheNamespace: "rendered-banks-v2",

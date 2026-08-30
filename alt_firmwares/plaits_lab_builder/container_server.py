@@ -23,7 +23,10 @@ from typing import Any, Literal
 
 from generate_engine_config import render_config, validate_recipe
 from render_manual import manual_document, render_pdf
-from natural_speech_banks import render_natural_speech_config
+from natural_speech_banks import (
+    render_natural_speech_config,
+    validate_natural_speech_banks,
+)
 from speech_banks import (
     MAX_FRAMES,
     MAX_WORDS,
@@ -318,7 +321,9 @@ def encode_natural_speech_bank(value: Any) -> dict[str, Any]:
     for entry in manifest["entries"]:
         files = entry["files"]
         entries.append({
-            key: entry[key] for key in ("index", "word", "spokenAs", "frames", "frameBytes")
+            key: entry[key] for key in (
+                "index", "word", "spokenAs", "frames", "frameBytes",
+                "durationSeconds")
         } | {"audio": {mode: _data_audio(output / files[mode])
                        for mode in ("source", "natural", "flat")}})
     bank = manifest["bank"]
@@ -346,6 +351,55 @@ def _validate_saved_bank_preview_request(value: Any) -> dict[str, Any]:
     except (KeyError, ValueError, TypeError) as error:
         raise BuildError("invalid_request", "The saved Speech bank is invalid.", str(error)) from error
     return normalized["customBanks"][0]
+
+
+NATURAL_SPEECH_BANK_PREVIEW_FORMAT = "rubato.plaits-natural-speech-bank-preview/v1"
+
+
+def render_saved_natural_speech_bank(value: Any) -> dict[str, Any]:
+    """Preview a SAVED Natural Speech bank, straight from its frames.
+
+    The encode endpoint returns preview audio with the bank it just made, but a
+    bank that arrives from a saved configuration -- or from the editor's seeded
+    starter banks -- has no encode session behind it, so its previews have to be
+    rendered from the stored frames alone. That path is LPC-only otherwise, and
+    a 23-byte NSH1 bank fails its validator as malformed rather than
+    unsupported ("The saved Speech bank is invalid").
+
+    Cheaper than encoding: no TTS and no analysis, just the config header and
+    one compile of the same preview harness the encoder uses.
+    """
+    if (not isinstance(value, dict) or set(value) != {"format", "bank"}
+            or value.get("format") != NATURAL_SPEECH_BANK_PREVIEW_FORMAT):
+        raise BuildError("invalid_request", "The saved Natural Speech preview request is invalid.")
+    try:
+        normalized = validate_natural_speech_banks({"customBanks": [value["bank"]]})
+    except (KeyError, ValueError, TypeError) as error:
+        raise BuildError("invalid_request", "The saved Natural Speech bank is invalid.", str(error)) from error
+
+    encoded = json.dumps(value, sort_keys=True, ensure_ascii=False).encode("utf-8")
+    job_id = _speech_job_key(encoded, "saved-natural-speech-bank-preview-v1")
+    output = SPEECH_ROOT / "saved-natural-banks" / job_id
+    targets = {mode: output / f"bank-{mode}.wav" for mode in ("natural", "flat")}
+    cached = all(path.is_file() for path in targets.values())
+    if not cached:
+        with SPEECH_LOCK:
+            cached = all(path.is_file() for path in targets.values())
+            if not cached:
+                output.mkdir(parents=True, exist_ok=True)
+                request_path = output / "bank.json"
+                request_path.write_text(
+                    json.dumps(normalized, ensure_ascii=False), encoding="utf-8")
+                _run_speech_script("render_natural_speech_bank.py", [
+                    "--repo", str(WORKSPACE),
+                    "--bank", str(request_path),
+                    "--output-dir", str(output),
+                ])
+    return {
+        "jobId": job_id,
+        "cached": cached,
+        "bankAudio": {mode: _data_audio(target) for mode, target in targets.items()},
+    }
 
 
 def _write_saved_plan(path: Path, frames: list[tuple[int, ...]]) -> None:
@@ -1043,6 +1097,9 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/speech/encode-natural":
             self.handle_natural_speech_encode()
             return
+        if self.path == "/speech/render-bank-natural":
+            self.handle_natural_speech_render_bank()
+            return
         if self.path == "/speech/render-bank":
             self.handle_speech_render_bank()
             return
@@ -1129,6 +1186,22 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as error:  # noqa: BLE001
             print(f"builder: natural speech encoding failed: {redact_log(str(error))}", flush=True)
             self.send_json_error(BuildError("speech_encoding_failed", "The Speech bank could not be encoded."), HTTPStatus.INTERNAL_SERVER_ERROR)
+
+    def handle_natural_speech_render_bank(self) -> None:
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            if not 0 < length <= MAX_SPEECH_JSON_BYTES:
+                raise BuildError("invalid_request", "The saved Natural Speech preview request size is invalid.")
+            value = json.loads(self.rfile.read(length))
+            self.send_json(render_saved_natural_speech_bank(value), HTTPStatus.OK)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            self.send_json_error(BuildError("invalid_request", "The saved Natural Speech preview request is not valid JSON."), HTTPStatus.BAD_REQUEST)
+        except BuildError as error:
+            status = HTTPStatus.BAD_REQUEST if error.code == "invalid_request" else HTTPStatus.UNPROCESSABLE_ENTITY
+            self.send_json_error(error, status)
+        except Exception as error:  # noqa: BLE001
+            print(f"builder: natural speech bank preview failed: {redact_log(str(error))}", flush=True)
+            self.send_json_error(BuildError("speech_encoding_failed", "The saved Natural Speech bank could not be previewed."), HTTPStatus.INTERNAL_SERVER_ERROR)
 
     def handle_speech_render_bank(self) -> None:
         try:

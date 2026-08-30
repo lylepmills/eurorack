@@ -47,6 +47,8 @@ from preview_artifacts import (
 )
 
 PREVIEW_SECONDS = 2.0
+BYTES_PER_FRAME = 23
+FRAME_RATE_HZ = 40.0   # 25 ms hop, matching natural_speech_encode.HOP_MS
 BUILDER_DIR = Path(__file__).resolve().parent
 
 
@@ -147,7 +149,8 @@ def main() -> int:
     boundaries = bank["wordBoundaries"]
     for index, entry in enumerate(entries):
         entry["frames"] = boundaries[index + 1] - boundaries[index]
-        entry["frameBytes"] = entry["frames"] * 23
+        entry["frameBytes"] = entry["frames"] * BYTES_PER_FRAME
+        entry["durationSeconds"] = round(entry["frames"] / FRAME_RATE_HZ, 3)
         entry["files"].update({
             "natural": f"word-{index:02d}-natural.wav",
             "flat": f"word-{index:02d}-flat.wav",
@@ -174,7 +177,12 @@ def main() -> int:
         "preview": preview_totals,
         "totals": {
             "frames": boundaries[-1],
-            "frameBytes": boundaries[-1] * 23,
+            "frameBytes": boundaries[-1] * BYTES_PER_FRAME,
+            # NSH1 has no inter-word guard frames -- the LPC path inserts one
+            # per word, and the editor renders "frames + guards", so reporting
+            # zero keeps that display honest rather than borrowing its shape.
+            "guardFrames": 0,
+            "durationSeconds": round(boundaries[-1] / FRAME_RATE_HZ, 3),
             "words": len(entries),
         },
     }
