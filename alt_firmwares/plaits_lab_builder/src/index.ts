@@ -118,7 +118,14 @@ async function loadQueuedRecipe(message: BuildMessage, env: Env): Promise<Normal
 // The name is the Durable Object identity, not just a label. Bump it when the
 // compiler image's baked speech dependencies change so a long-lived encoder
 // instance cannot keep serving the previous image after a container rollout.
-const SPEECH_ENCODER_CONTAINER = "speech-encoder-v7";
+// Rotated to v8 for the Piper voice expansion. A named Speech container
+// attaches to whichever image was live when it started and keeps serving
+// it after the pool advances, so a bumped catalog reaches only some
+// requests until the identity changes: with v7 still attached to the old
+// image, German encoded while Bulgarian returned "Choose a supported voice
+// for the selected language" from the same deployment. Rotate only once the
+// new image reports starting == 0.
+const SPEECH_ENCODER_CONTAINER = "speech-encoder-v8";
 
 async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", bytes);
