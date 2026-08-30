@@ -141,8 +141,16 @@ int main(int argc, char** argv) {
     return 2;
   }
   const std::string dir = argv[1];
-  const float seconds = argc > 2 ? atof(argv[2]) : 2.0f;
-  const size_t frames = static_cast<size_t>(seconds * kSampleRate);
+  // A CEILING, not the render length. Each word is rendered for its own
+  // duration instead: a flat window left every short word followed by more
+  // than a second of silence, and the concatenated bank preview inherited a
+  // gap between every word that the firmware does not have.
+  const float max_seconds = argc > 2 ? atof(argv[2]) : 4.0f;
+  // Frames are stored at 40 Hz (25 ms hop) -- see natural_speech_encode.HOP_MS.
+  const float kFrameRateHz = 40.0f;
+  // Enough for the tract to ring out past the final frame without padding the
+  // gap back in. The lattice decays quickly once excitation stops.
+  const float kTailSeconds = 0.25f;
 
   // Rendered first, scaled second. TRIG is patched for a word preview, so on
   // hardware Voice's LPG shapes the output; this harness bypasses the LPG (as
@@ -169,6 +177,13 @@ int main(int argc, char** argv) {
         {"natural", 0.0f, &concat_natural},
         {"flat", -1.0f, &concat_flat},
       };
+      // This word's own length, from the frame table the firmware plays.
+      const int word_frames =
+          bank::kWordBoundaries[first + w + 1] - bank::kWordBoundaries[first + w];
+      float word_seconds =
+          static_cast<float>(word_frames) / kFrameRateHz + kTailSeconds;
+      if (word_seconds > max_seconds) word_seconds = max_seconds;
+      const size_t frames = static_cast<size_t>(word_seconds * kSampleRate);
       for (int m = 0; m < 2; ++m) {
         RenderWord(b, w, words, modes[m].prosody, frames, &buffer);
         snprintf(name, sizeof(name), "%s/word-%02d-%s.wav",
