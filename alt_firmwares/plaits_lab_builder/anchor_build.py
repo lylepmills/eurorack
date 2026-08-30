@@ -15,8 +15,12 @@ sys.path.insert(0, '/work/alt_firmwares/plaits_lab_builder')
 from flash_sweep import BASE, build_size  # noqa: E402
 from generate_engine_config import DEFAULT_CHORD_TABLES  # noqa: E402
 
-# Measured at 3514880253d9, the previous anchor.
-PUBLISHED = 229_204
+# The builder's OWN four-table stock-24 figure, measured at 1d0de19a4df6 and
+# again at d1cab7e03e84. Deliberately NOT the 229,204 in flash-budget.ts's
+# release-anchor note: that is the WEBSITE's four default chord tables, a
+# different set, and differencing the two suggested moving the base 80 B in the
+# direction that would make the meter under-report.
+PUBLISHED = 229_124
 
 recipe = json.loads(json.dumps(BASE))
 recipe['schemaVersion'] = 10
