@@ -93,11 +93,16 @@ RUN python3 -m pip install --no-cache-dir \
 # --no-build-isolation. setuptools stays below 81 because pyworld 0.3.5's
 # setup.py imports pkg_resources, which 81 removed. Late in the file on
 # purpose: it is small, and the voice layers above it should stay cached.
+# scipy rides along because the encoder resamples with signal.resample_poly;
+# it was the SECOND unbaked dependency found the same way as the first, by
+# running the encoder in the image rather than by reading its imports.
 RUN python3 -m pip install --no-cache-dir \
         "setuptools<81" \
     && python3 -m pip install --no-cache-dir --no-build-isolation \
         "pyworld==0.3.5" \
-    && python3 -c "import pyworld"
+    && python3 -m pip install --no-cache-dir \
+        "scipy==1.15.3" \
+    && python3 -c "import pyworld, scipy"
 
 RUN useradd --create-home --uid 10001 builder
 

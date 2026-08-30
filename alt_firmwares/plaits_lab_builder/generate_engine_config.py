@@ -61,7 +61,7 @@ assert PACKED_BANK_SIZE % FLASH_PAGE_SIZE == 0
 # versions so adding a schema at the ceiling does not require extending a trail
 # of "10, 11, 12..." whitelists in the build container.
 MIN_RECIPE_SCHEMA_VERSION = 2
-MAX_RECIPE_SCHEMA_VERSION = 24
+MAX_RECIPE_SCHEMA_VERSION = 25
 CONFIGURATION_MIN_SCHEMA_VERSION = 4
 RESOURCES_MIN_SCHEMA_VERSION = 5
 FOUR_BANK_MIN_SCHEMA_VERSION = 6
@@ -98,6 +98,15 @@ SYNC_INPUT_PREFERENCE_MIN_SCHEMA_VERSION = 22
 # in PitchRangeFromControl -- so a module moves between the two layouts without
 # losing its tuned root or locked octave.
 SIMPLIFIED_PITCH_RANGES_MIN_SCHEMA_VERSION = 24
+
+# v25: Natural Speech word banks. The engine's demo banks are a compile-time
+# fallback, so a recipe carrying its own REPLACES them wholesale rather than
+# adding to them -- there is no stock-bank list to merge with, unlike Speech.
+# This gate is what makes an older builder say "needs a builder update" instead
+# of rejecting the recipe as malformed: without the key in the resource set
+# below, validation fails on the key set and the handler further down is
+# unreachable, which is exactly the state this fixes.
+NATURAL_SPEECH_BANKS_MIN_SCHEMA_VERSION = 25
 
 # The preference tiers, in the order they were introduced. Every recipe shape
 # this container accepts is the union of some prefix of these. A missing key
@@ -1071,6 +1080,11 @@ def validate_recipe(value: Any) -> BuildRecipe:
             and isinstance(resources, dict)
             and "terrainBank" in resources
         )
+        carries_natural_speech_banks = (
+            schema_version >= NATURAL_SPEECH_BANKS_MIN_SCHEMA_VERSION
+            and isinstance(resources, dict)
+            and "naturalSpeechBanks" in resources
+        )
         base_resource_keys = {"chordTables"}
         if carries_scale_bank:
             base_resource_keys.add("scaleBank")
@@ -1080,6 +1094,8 @@ def validate_recipe(value: Any) -> BuildRecipe:
             base_resource_keys.add("customModelData")
         if carries_terrain_bank:
             base_resource_keys.add("terrainBank")
+        if carries_natural_speech_banks:
+            base_resource_keys.add("naturalSpeechBanks")
         carries_user_data_banks = expect_user_data_banks or (
             schema_version >= CALIBRATION_MIN_SCHEMA_VERSION
             and isinstance(resources, dict)
@@ -1100,7 +1116,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
                 raise ValueError(
                     "speechBanks requires Speech or LPC Words in the palette")
             speech_banks = validate_speech_banks(resources.get("speechBanks"))
-        if resources.get("naturalSpeechBanks") is not None:
+        if carries_natural_speech_banks:
             if "natural-speech" not in public_slots:
                 raise ValueError(
                     "naturalSpeechBanks requires Natural Speech in the palette")

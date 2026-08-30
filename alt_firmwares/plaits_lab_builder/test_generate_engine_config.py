@@ -64,6 +64,68 @@ class GenerateEngineConfigTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Speech or LPC Words"):
             validate_recipe(recipe)
 
+    def _natural_speech_recipe(self, schema: int = 25):
+        import base64
+        from natural_speech_banks import FRAME_STRUCT
+        packed = b"".join(
+            FRAME_STRUCT.pack(180, 4, 0xCC, 0xCC, 0x1C, *([0] * 18))
+            for _ in range(10))
+        recipe = self.load("default_recipe.json")
+        recipe["slots"][7] = "natural-speech"
+        options = dict(DEFAULT_CONFIGURATION["initialOptions"])
+        options["attenuverterMode"] = "stock"
+        recipe.update({
+            "schemaVersion": schema,
+            "preferences": dict(DEFAULT_CONFIGURATION["preferences"]),
+            "initialOptions": options,
+            "stereoEngines": [],
+            "resources": {
+                "chordTables": DEFAULT_CHORD_TABLES,
+                "naturalSpeechBanks": {"customBanks": [{
+                    "words": ["hello"],
+                    "wordBoundaries": [0, 10],
+                    "frameData": base64.b64encode(packed).decode("ascii"),
+                }]},
+            },
+        })
+        return recipe
+
+    def test_natural_speech_banks_need_the_engine_and_schema_25(self) -> None:
+        # The regression this locks: naturalSpeechBanks was handled further
+        # down but never added to the accepted resource key set, so every such
+        # recipe died on "only supported firmware resources" and the handler
+        # was unreachable. Nothing caught it because no test sent the key
+        # through validate_recipe at all.
+        build = validate_recipe(self._natural_speech_recipe())
+        self.assertIsNotNone(build.natural_speech_banks)
+        self.assertEqual(
+            build.natural_speech_banks["customBanks"][0]["words"], ["hello"])
+
+        without_engine = self._natural_speech_recipe()
+        without_engine["slots"][7] = "virtual-analog"
+        with self.assertRaisesRegex(ValueError, "Natural Speech"):
+            validate_recipe(without_engine)
+
+        # An older builder must reject the key rather than silently ignore it.
+        with self.assertRaisesRegex(ValueError, "supported firmware resources"):
+            validate_recipe(self._natural_speech_recipe(schema=24))
+
+    def test_natural_speech_banks_reach_the_generated_config(self) -> None:
+        # Acceptance is not enough: the banks have to survive into the header
+        # the firmware compiles, which is the half a validation test misses.
+        # That header is NOT engine_config.h -- bank content is a separate
+        # generated file, force-included through its own make variable the way
+        # Speech's is -- so this asserts on the artifact that actually carries
+        # it, and the engine mask on the one that carries that.
+        from natural_speech_banks import render_natural_speech_config
+        build = validate_recipe(self._natural_speech_recipe())
+        banks = render_natural_speech_config(build.natural_speech_banks)
+        self.assertIn("#define PLAITS_HAS_CUSTOM_NATURAL_SPEECH_BANKS 1", banks)
+        self.assertIn("namespace natural_speech_recipe", banks)
+        self.assertIn("const int kNumBanks = 1;", banks)
+        config = render_config(build)
+        self.assertIn("#define PLAITS_HAS_NATURAL_SPEECH_ENGINE 1", config)
+
     def test_randomizer_profiles_are_compact_and_cover_every_selected_slot(self) -> None:
         build = validate_recipe(self.load("default_recipe.json"))
         config = render_config(build)

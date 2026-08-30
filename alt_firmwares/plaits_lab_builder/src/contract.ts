@@ -36,7 +36,7 @@ export type NormalizedChordTable = {
 // feature gates below use minimums so a newly supported schema cannot get
 // stranded behind an old "10, 11, 12..." whitelist.
 export const minRecipeSchemaVersion = 2;
-export const maxRecipeSchemaVersion = 24;
+export const maxRecipeSchemaVersion = 25;
 const configurationMinSchemaVersion = 4;
 const resourcesMinSchemaVersion = 5;
 const fourBankMinSchemaVersion = 6;       // 32 slots
@@ -65,6 +65,10 @@ const attenuverterModeMinSchemaVersion = 18; // recipe-driven LIGHT 8 starting m
 const oneKnobEnvelopeMinSchemaVersion = 19;  // triggered/gated FREQUENCY contours
 const customModelDataMinSchemaVersion = 24;  // per-slot Wavetable data
 const terrainBankMinSchemaVersion = 24;       // shared ordered Wave Terrain bank
+// v25 Natural Speech word banks. Unlike Speech there is no stock-bank list to
+// merge with: the engine's demo banks are a compile-time fallback, so a recipe
+// carrying its own replaces them entirely.
+const naturalSpeechBanksMinSchemaVersion = 25;
 const nativeTerrainMinSchemaVersion = 24;      // compiled custom equations
 const customModelDataBytes = 4096;
 export const maxTerrainBankSize = 16;
@@ -144,6 +148,10 @@ export type NormalizedSpeechBanks = {
   customBanks: NormalizedSpeechBank[];
 };
 
+export type NormalizedNaturalSpeechBanks = {
+  customBanks: NormalizedSpeechBank[];
+};
+
 export type NormalizedCustomModelData = {
   slot: number;
   model: {
@@ -164,7 +172,7 @@ export type NormalizedTerrainBankEntry = {
 };
 
 export type NormalizedRecipe = {
-  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24;
+  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25;
   target: "mutable-instruments-plaits" | "plum-audio-roved";
   firmware: "rubato-plaits";
   // A null entry is an empty slot (v7 short banks); filled slots are engine ids.
@@ -220,6 +228,7 @@ export type NormalizedRecipe = {
     userDataBanks?: NormalizedUserDataBank[] | NormalizedSlotBank[];
     // v17: selected shipped LPC banks followed by custom decoded-frame banks.
     speechBanks?: NormalizedSpeechBanks;
+    naturalSpeechBanks?: NormalizedNaturalSpeechBanks;
     // v21: equation metadata plus the sampled 4 KB data for one terrain/table slot.
     customModelData?: NormalizedCustomModelData[];
     // v23: the shared ordered bank swept by every Wave Terrain slot's HARMONICS.
@@ -488,7 +497,63 @@ const lpcFrameBytes = 14;
 const maxSpeechBanks = 8;
 const maxSpeechWords = 32;
 const maxSpeechFrames = 1024;
+const naturalSpeechFrameBytes = 23;   // NSH1
+const maxNaturalSpeechBanks = 8;
+const maxNaturalSpeechWords = 32;
+const maxNaturalSpeechFrames = 1024;
 const canonicalBase64Pattern = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+
+function normalizeNaturalSpeechBanks(value: unknown): NormalizedNaturalSpeechBanks {
+  // The sibling of normalizeSpeechBanks, with two differences that come from
+  // the format: frames are 23 bytes (NSH1) rather than 14, and there is no
+  // stockBankIds list -- Natural Speech's demo banks are compiled out when a
+  // recipe supplies its own, so custom banks replace rather than extend.
+  if (!value || typeof value !== "object") {
+    throw new ContractError("invalid_natural_speech_banks", "The recipe contains invalid Natural Speech word banks.");
+  }
+  const candidate = value as Record<string, unknown>;
+  if (!hasExactKeys(candidate, ["customBanks"]) || !Array.isArray(candidate.customBanks)) {
+    throw new ContractError("invalid_natural_speech_banks", "The recipe contains invalid Natural Speech word banks.");
+  }
+  if (candidate.customBanks.length < 1 || candidate.customBanks.length > maxNaturalSpeechBanks) {
+    throw new ContractError(
+      "invalid_natural_speech_banks",
+      `Natural Speech must contain between one and ${maxNaturalSpeechBanks} banks.`,
+    );
+  }
+  const customBanks = candidate.customBanks.map((raw): NormalizedSpeechBank => {
+    if (!raw || typeof raw !== "object") {
+      throw new ContractError("invalid_natural_speech_bank", "The recipe contains an invalid Natural Speech bank.");
+    }
+    const bank = raw as Record<string, unknown>;
+    if (!hasExactKeys(bank, ["words", "wordBoundaries", "frameData"])
+        || !Array.isArray(bank.words)
+        || bank.words.length < 1 || bank.words.length > maxNaturalSpeechWords
+        || bank.words.some((word) => typeof word !== "string" || !word.trim() || word.length > 80)
+        || !Array.isArray(bank.wordBoundaries)
+        || typeof bank.frameData !== "string"
+        || !canonicalBase64Pattern.test(bank.frameData)) {
+      throw new ContractError("invalid_natural_speech_bank", "The recipe contains an invalid Natural Speech bank.");
+    }
+    const packedBytes = (bank.frameData.length / 4) * 3
+      - (bank.frameData.endsWith("==") ? 2 : bank.frameData.endsWith("=") ? 1 : 0);
+    const frameCount = packedBytes / naturalSpeechFrameBytes;
+    const boundaries = bank.wordBoundaries;
+    if (packedBytes <= 0 || !Number.isInteger(frameCount) || frameCount > maxNaturalSpeechFrames
+        || boundaries.length !== bank.words.length + 1
+        || boundaries.some((item) => !Number.isInteger(item))
+        || boundaries[0] !== 0 || boundaries.at(-1) !== frameCount
+        || boundaries.slice(1).some((item, index) => Number(item) <= Number(boundaries[index]))) {
+      throw new ContractError("invalid_natural_speech_bank", "A Natural Speech bank contains invalid word boundaries.");
+    }
+    return {
+      words: bank.words.map((word) => String(word).trim()),
+      wordBoundaries: boundaries.map(Number),
+      frameData: bank.frameData,
+    };
+  });
+  return { customBanks };
+}
 
 function normalizeSpeechBanks(value: unknown): NormalizedSpeechBanks {
   if (!value || typeof value !== "object") {
@@ -1055,6 +1120,7 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
   let userDataBanks: NormalizedUserDataBank[] | undefined;   // v6 index-keyed
   let slotBanks: NormalizedSlotBank[] | undefined;           // v12 slot-keyed
   let speechBanks: NormalizedSpeechBanks | undefined;        // v17
+  let naturalSpeechBanks: NormalizedNaturalSpeechBanks | undefined; // v25
   let customModelData: NormalizedCustomModelData[] | undefined; // v24
   let terrainBank: NormalizedTerrainBankEntry[] | undefined; // v24
   if (schemaVersion >= resourcesMinSchemaVersion) {
@@ -1087,12 +1153,15 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
       && Object.hasOwn(resourceValues, "customModelData");
     const carriesTerrainBank = schemaVersion >= terrainBankMinSchemaVersion
       && Object.hasOwn(resourceValues, "terrainBank");
+    const carriesNaturalSpeechBanks = schemaVersion >= naturalSpeechBanksMinSchemaVersion
+      && Object.hasOwn(resourceValues, "naturalSpeechBanks");
     const baseKeys = [
       "chordTables",
       ...(carriesScaleBank ? ["scaleBank"] : []),
       ...(carriesSpeechBanks ? ["speechBanks"] : []),
       ...(carriesCustomModelData ? ["customModelData"] : []),
       ...(carriesTerrainBank ? ["terrainBank"] : []),
+      ...(carriesNaturalSpeechBanks ? ["naturalSpeechBanks"] : []),
     ];
     const carriesUserDataBanks = expectsUserDataBanks
       || (schemaVersion >= calibrationMinSchemaVersion
@@ -1114,6 +1183,15 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
         );
       }
       speechBanks = normalizeSpeechBanks(resourceValues.speechBanks);
+    }
+    if (carriesNaturalSpeechBanks) {
+      if (!slots.includes("natural-speech")) {
+        throw new ContractError(
+          "invalid_natural_speech_banks",
+          "Natural Speech word banks require the Natural Speech model in the palette.",
+        );
+      }
+      naturalSpeechBanks = normalizeNaturalSpeechBanks(resourceValues.naturalSpeechBanks);
     }
     if (carriesCustomModelData) {
       customModelData = normalizeCustomModelData(resourceValues.customModelData, slots);
@@ -1185,7 +1263,8 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     // (v8); a short-bank recipe (a trailing empty slot) stays v7; a candidate that
     // carried v6 resources (even an empty custom-bank list, e.g. a 32-slot recipe)
     // stays v6; else v5.
-    schemaVersion: configuration.preferences.simplifiedPitchRanges
+    schemaVersion: naturalSpeechBanks !== undefined ? 25
+      : configuration.preferences.simplifiedPitchRanges
       || terrainBank !== undefined
       || customModelData !== undefined ? 24
       : configuration.preferences.linearTzfm
@@ -1221,6 +1300,7 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
       ...(speechBanks !== undefined ? { speechBanks } : {}),
       ...(customModelData !== undefined ? { customModelData } : {}),
       ...(terrainBank !== undefined ? { terrainBank } : {}),
+      ...(naturalSpeechBanks !== undefined ? { naturalSpeechBanks } : {}),
       ...((userDataBanks ?? slotBanks)
         ? { userDataBanks: userDataBanks ?? slotBanks }
         : {}),

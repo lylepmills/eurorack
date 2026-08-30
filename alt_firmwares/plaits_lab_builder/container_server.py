@@ -192,8 +192,21 @@ def _pack_plans(paths: list[Path]) -> tuple[list[int], str]:
     return boundaries, base64.b64encode(packed).decode("ascii")
 
 
-def _validate_speech_request(value: Any) -> dict[str, Any]:
-    if not isinstance(value, dict) or value.get("format") != "rubato.plaits-lpc-word-bank/v1":
+LPC_WORD_BANK_FORMAT = "rubato.plaits-lpc-word-bank/v1"
+NATURAL_SPEECH_WORD_BANK_FORMAT = "rubato.plaits-natural-speech-word-bank/v1"
+
+
+def _validate_speech_request(
+    value: Any,
+    word_bank_format: str = LPC_WORD_BANK_FORMAT,
+) -> dict[str, Any]:
+    """Validate a word-bank request for either engine family.
+
+    The two formats differ only in how frames are encoded downstream -- the
+    words, the voice and the pronunciation hints are the same request, so this
+    is parameterised rather than forked.
+    """
+    if not isinstance(value, dict) or value.get("format") != word_bank_format:
         raise BuildError("invalid_request", "The Speech bank request is invalid.")
     language = value.get("language")
     synthesis = value.get("synthesis")
@@ -218,7 +231,7 @@ def _validate_speech_request(value: Any) -> dict[str, Any]:
             raise BuildError("invalid_request", f"Pronunciation hint {index + 1} is invalid.")
         normalized_entries.append({"word": word.strip(), **({"spokenAs": spoken_as.strip()} if spoken_as.strip() else {})})
     return {
-        "format": "rubato.plaits-lpc-word-bank/v1",
+        "format": word_bank_format,
         "name": str(value.get("name", "Custom words"))[:80],
         "language": language,
         "entries": normalized_entries,
@@ -267,6 +280,60 @@ def encode_speech_bank(value: Any) -> dict[str, Any]:
         "cache": manifest.get("cache"),
         "wordBoundaries": boundaries,
         "frameData": frame_data,
+    }
+
+
+def encode_natural_speech_bank(value: Any) -> dict[str, Any]:
+    """Encode a Natural Speech word bank and render its previews.
+
+    The same cache-by-content-key shape as encode_speech_bank, with a distinct
+    revision tag so the two engines' jobs can never collide on one key. The
+    driver returns the recipe bank ready for validation -- it validates its own
+    output against the recipe contract before writing the manifest, so a bank
+    that would fail at build time fails here instead, while the user can still
+    do something about it.
+    """
+    request = _validate_speech_request(value, NATURAL_SPEECH_WORD_BANK_FORMAT)
+    encoded = json.dumps(request, sort_keys=True, ensure_ascii=False).encode("utf-8")
+    job_id = _speech_job_key(encoded, "natural-speech-nsh1-v1")
+    output = SPEECH_ROOT / "natural-banks" / job_id
+    manifest_path = output / "manifest.json"
+    cached = manifest_path.is_file()
+    if not cached:
+        with SPEECH_LOCK:
+            cached = manifest_path.is_file()
+            if not cached:
+                output.mkdir(parents=True, exist_ok=True)
+                request_path = output / "request.json"
+                request_path.write_text(
+                    json.dumps(request, ensure_ascii=False), encoding="utf-8")
+                _run_speech_script("encode_natural_speech_bank.py", [
+                    "--repo", str(WORKSPACE),
+                    "--request", str(request_path),
+                    "--output-dir", str(output),
+                    "--artifact-cache", str(SPEECH_ROOT / "artifacts"),
+                ])
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    entries = []
+    for entry in manifest["entries"]:
+        files = entry["files"]
+        entries.append({
+            key: entry[key] for key in ("index", "word", "spokenAs", "frames", "frameBytes")
+        } | {"audio": {mode: _data_audio(output / files[mode])
+                       for mode in ("source", "natural", "flat")}})
+    bank = manifest["bank"]
+    return {
+        "jobId": job_id,
+        "cached": cached,
+        "bankAudio": {mode: _data_audio(output / manifest["bankFiles"][mode])
+                      for mode in ("natural", "flat")},
+        "entries": entries,
+        "totals": manifest["totals"],
+        "synthesis": manifest["synthesis"],
+        "cache": manifest.get("cache"),
+        "words": bank["words"],
+        "wordBoundaries": bank["wordBoundaries"],
+        "frameData": bank["frameData"],
     }
 
 
@@ -973,6 +1040,9 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/speech/encode":
             self.handle_speech_encode()
             return
+        if self.path == "/speech/encode-natural":
+            self.handle_natural_speech_encode()
+            return
         if self.path == "/speech/render-bank":
             self.handle_speech_render_bank()
             return
@@ -1042,6 +1112,22 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json_error(error, status)
         except Exception as error:  # noqa: BLE001
             print(f"builder: speech encoding failed: {redact_log(str(error))}", flush=True)
+            self.send_json_error(BuildError("speech_encoding_failed", "The Speech bank could not be encoded."), HTTPStatus.INTERNAL_SERVER_ERROR)
+
+    def handle_natural_speech_encode(self) -> None:
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            if not 0 < length <= MAX_SPEECH_JSON_BYTES:
+                raise BuildError("invalid_request", "The Speech bank request size is invalid.")
+            value = json.loads(self.rfile.read(length))
+            self.send_json(encode_natural_speech_bank(value), HTTPStatus.OK)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            self.send_json_error(BuildError("invalid_request", "The Speech bank request is not valid JSON."), HTTPStatus.BAD_REQUEST)
+        except BuildError as error:
+            status = HTTPStatus.BAD_REQUEST if error.code == "invalid_request" else HTTPStatus.UNPROCESSABLE_ENTITY
+            self.send_json_error(error, status)
+        except Exception as error:  # noqa: BLE001
+            print(f"builder: natural speech encoding failed: {redact_log(str(error))}", flush=True)
             self.send_json_error(BuildError("speech_encoding_failed", "The Speech bank could not be encoded."), HTTPStatus.INTERNAL_SERVER_ERROR)
 
     def handle_speech_render_bank(self) -> None:
