@@ -1306,6 +1306,45 @@
       }
     },
     {
+      "id": "natural-speech",
+      "packageId": "rubato/natural-speech",
+      "name": "Natural Speech",
+      "author": "Lyle Mills",
+      "origin": "Rubato Lab",
+      "family": "Vocal",
+      "description": "Spoken words resynthesized through a vocal tract you can reshape, from mumbled to over-enunciated.",
+      "tags": [
+        "speech",
+        "voice",
+        "vocal tract",
+        "words"
+      ],
+      "controls": [
+        "Word bank",
+        "Vocal tract",
+        "Word",
+        "Articulation"
+      ],
+      "outputs": [
+        "Mono: the voice. Stereo: the voice leaning left, with the whisper opposite it.",
+        "Mono: a whisper, the same tract driven by noise alone. Stereo: the right channel of the widened pair."
+      ],
+      "source": {
+        "header": "plaits/dsp/engine2/natural_speech_engine.h",
+        "className": "NaturalSpeechEngine",
+        "member": "natural_speech_engine_",
+        "files": [
+          "plaits/dsp/engine2/natural_speech_engine.cc"
+        ],
+        "behavior": "natural-speech"
+      },
+      "postProcessing": {
+        "alreadyEnveloped": false,
+        "outGain": 0.8,
+        "auxGain": 0.8
+      }
+    },
+    {
       "id": "glisson",
       "packageId": "rubato/glisson",
       "name": "Glisson",
@@ -3649,45 +3688,6 @@
       },
       "artwork": {
         "color": "#009a98"
-      }
-    },
-    {
-      "id": "natural-speech",
-      "packageId": "rubato/natural-speech",
-      "name": "Natural Speech",
-      "author": "Lyle Mills",
-      "origin": "Rubato Lab",
-      "family": "Vocal",
-      "description": "Spoken words resynthesized through a vocal tract you can reshape, from mumbled to over-enunciated.",
-      "tags": [
-        "speech",
-        "voice",
-        "vocal tract",
-        "words"
-      ],
-      "controls": [
-        "Word bank",
-        "Vocal tract",
-        "Word",
-        "Articulation"
-      ],
-      "outputs": [
-        "Mono: the voice. Stereo: the voice leaning left, with the whisper opposite it.",
-        "Mono: a whisper, the same tract driven by noise alone. Stereo: the right channel of the widened pair."
-      ],
-      "source": {
-        "header": "plaits/dsp/engine2/natural_speech_engine.h",
-        "className": "NaturalSpeechEngine",
-        "member": "natural_speech_engine_",
-        "files": [
-          "plaits/dsp/engine2/natural_speech_engine.cc"
-        ],
-        "behavior": "natural-speech"
-      },
-      "postProcessing": {
-        "alreadyEnveloped": false,
-        "outGain": 0.8,
-        "auxGain": 0.8
       }
     }
   ],
