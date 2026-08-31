@@ -125,7 +125,13 @@ async function loadQueuedRecipe(message: BuildMessage, env: Env): Promise<Normal
 // image, German encoded while Bulgarian returned "Choose a supported voice
 // for the selected language" from the same deployment. Rotate only once the
 // new image reports starting == 0.
-const SPEECH_ENCODER_CONTAINER = "speech-encoder-v8";
+// v8 was rotated in the same deploy that changed the image, so its first
+// instance attached to the OLD image during the ~15 minute gradual rollout
+// and kept serving it: production returned 400 for every Piper voice while
+// reporting the new revision. Rotating AFTER the pool has fully advanced is
+// what the README means by waiting for starting == 0 — the wait applies to
+// the rotation, not just the deploy.
+const SPEECH_ENCODER_CONTAINER = "speech-encoder-v9";
 
 async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", bytes);
