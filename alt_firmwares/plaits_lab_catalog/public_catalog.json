@@ -3770,6 +3770,136 @@
       "implementation": {
         "className": "FreshetsFormantEngine"
       }
+    },
+    {
+      "id": "bubbletime",
+      "packageId": "community/bubbletime",
+      "name": "BubbleTime",
+      "author": "Combust",
+      "origin": "Community",
+      "family": "Experimental",
+      "description": "A bubbly point-process instrument: strike timing drawn from a rigidity ladder (hyperuniform to clustered) pings chord-tone plucks. A bubbling timing generator at CV rates; a bubbling arp at audio rates.",
+      "tags": [
+        "community",
+        "bubbletime",
+        "point-process",
+        "percussion",
+        "rhythm",
+        "statistics"
+      ],
+      "controls": [
+        "Rigidity",
+        "Tempo/Char",
+        "Wrap",
+        "Loop"
+      ],
+      "outputs": [
+        "Mono: gap-melody resonator pings. Stereo: left channel, with bubble positions derived from the two wrap rings.",
+        "Mono: polymetric XOR accent gates. Stereo: right channel, with bubble positions derived from the two wrap rings."
+      ],
+      "sharedModules": [
+        "chord-bank"
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:0b898904058d922afd7d66d28fc622c56508cc9f96c7413b2a5cf951d4a9fb6d",
+      "documentationDigest": "sha256:e063f01302c58102957234f0106e5f72b06ba9cc26a87db6d1015cb3d1e8e738",
+      "manual": {
+        "controls": {
+          "harmonics": "Moves through the spacing-statistics ladder: rigid sigma-delta, jittered lattice, quasiperiodic, GUE, GOE, Poisson, then clustered.",
+          "timbre": "Below noon, sets necklace tempo from quarter speed to full speed without changing pitch. Above noon, changes the selected timing zone's character.",
+          "morph": "Below noon, chooses a wrap modulus from 3 through 16 and its chord. Above noon, sets the base-tone interval from sub-octave through octave.",
+          "macro": "Counter-clockwise tightens the loop to eight gaps; noon stores 64; clockwise adds fresh ensemble draws, ending in full free-run."
+        },
+        "trigger": "Replays the stored realization from gap zero. Hold TRIG for about 1.5 seconds to draw a new seed."
+      },
+      "implementation": {
+        "className": "BubbleTimeEngine"
+      }
+    },
+    {
+      "id": "zxphase48k",
+      "packageId": "community/zxphase48k",
+      "name": "ZxPhase48k",
+      "author": "Combust",
+      "origin": "Community",
+      "family": "Chiptune",
+      "description": "ZX Spectrum beeper interference synthesis: two squares boolean-combined on a 1-bit bus that also XORs with its own past \u2014 a boolean flanger. Audio into V/OCT is crushed block-rate FM, on purpose.",
+      "tags": [
+        "community",
+        "chiptune",
+        "1-bit",
+        "beeper",
+        "zx-spectrum"
+      ],
+      "controls": [
+        "Mix method",
+        "PWM",
+        "Interval",
+        "Clean/Ghost"
+      ],
+      "outputs": [
+        "Mono: boolean-combined bus. Stereo: shorter phase-rotated left channel.",
+        "Mono: oscillator 2 solo. Stereo: longer phase-rotated right channel derived from the same boolean bus."
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:fb0d6afcab7cacf11b995b40e9a3e9b0d8b478c4d8c7270b1a86b4dc84bcfcda",
+      "documentationDigest": "sha256:64434ec08718a6a1c0204bebb6cd985c1f8a0b93498d049bcb7c66f7530cc48f",
+      "manual": {
+        "controls": {
+          "harmonics": "Moves through XOR, OR and AND mix zones. Within each zone, clockwise motion increases the 1-bit self-XOR feedback comb from off to shimmer.",
+          "timbre": "Counter-clockwise gives static squares. Clockwise motion deepens and speeds the tick-clocked duty-cycle sweep on oscillator 2.",
+          "morph": "Moves from fine beating into a quantized interval ladder: fourth, fifth, octave, twelfth and two octaves, with LFSR noise at the top.",
+          "macro": "Counter-clockwise arms the triggered pitch kick; noon is neutral; clockwise adds the parasite-carrier sheen."
+        },
+        "trigger": "Resets both oscillator phases and reseeds the noise register. With Clean/Ghost counter-clockwise, it also fires the pitch kick."
+      },
+      "implementation": {
+        "className": "ZxPhase48kEngine"
+      }
+    },
+    {
+      "id": "zxpulse48k",
+      "packageId": "community/zxpulse48k",
+      "name": "ZxPulse48k",
+      "author": "Combust",
+      "origin": "Community",
+      "family": "Chiptune",
+      "description": "Follin-style 1-bit pulse-frequency modulation: chord-bank driven pin-train stacks and arpeggios with pulse-width-as-volume, tick-quantized echo, load-dependent pitch pull, and selectable voice-level stereo.",
+      "tags": [
+        "community",
+        "chiptune",
+        "1-bit",
+        "beeper",
+        "pfm"
+      ],
+      "controls": [
+        "Chord",
+        "Pin width",
+        "Stack/Arp",
+        "Echo/Pull"
+      ],
+      "outputs": [
+        "Mono: band-limited pin-train sum. Stereo: left voice field.",
+        "Mono: raw aliased pin bus. Stereo: right voice field."
+      ],
+      "sharedModules": [
+        "chord-bank"
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:e1f66ce99f07e10971e3e1c0d70d594122ef9b5f2f2656be14d17b64b6e11926",
+      "documentationDigest": "sha256:75464183031e0b583048af92c08490e73a71498f6335603dc1902bea06b1852a",
+      "manual": {
+        "controls": {
+          "harmonics": "Selects a chord from the firmware chord bank, including the current Palette chord tables.",
+          "timbre": "Sets speaker on-time per click, from whisper-thin pins to full-bodied pulses. In this synthesis method, width acts as the level control.",
+          "morph": "The lower half stacks chord voices one at a time. The upper half arpeggiates the chord, with rate increasing toward tick speed.",
+          "macro": "Clockwise deepens the Follin echo to about 220 ms; noon keeps the authentic three-cent pull; counter-clockwise exaggerates dying-speaker sag."
+        },
+        "trigger": "Restarts all pin phases, the frame tick and the arpeggio."
+      },
+      "implementation": {
+        "className": "ZxPulse48kEngine"
+      }
     }
   ],
   "fmCapabilities": {
