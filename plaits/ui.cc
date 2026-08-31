@@ -1001,9 +1001,8 @@ void Ui::ReadSwitches() {
                 old_value, num_values, value_delta);
             if (option_index_ == OPTION_LIGHT_FREQUENCY_POT) {
               // Leaving octave switching while the knob is in the locked
-              // position freezes its current octave. Returning to it restores
-              // the neutral octave. This is keyed on the transition so it
-              // behaves the same in either menu direction.
+              // position freezes its current octave. Keyed on the transition so
+              // it behaves the same in either menu direction.
               if (old_value == 0 && new_value != 0 &&
                   PitchRangeFromControl(octave_) == PITCH_RANGE_OCTAVES) {
                 locked_octave_ = static_cast<uint8_t>(
@@ -1011,9 +1010,19 @@ void Ui::ReadSwitches() {
                         octave_catch_up_.Process(
                             0.5f * transposition_ + 0.5f)));
               } else if (old_value != 0 && new_value == 0) {
-                locked_octave_ = 4;
+                // Octave switching is value 0, so every walk of this menu to a
+                // later option steps THROUGH it. Arriving here is therefore not
+                // by itself a request to retune: seed the catch-up AT the
+                // stored octave rather than resetting to neutral, so an
+                // untouched knob holds the octave and the capture above hands
+                // the same value straight back on the way out. Turning the
+                // FREQUENCY knob while resting here is what moves it. Resetting
+                // to neutral instead silently discarded the frozen octave for
+                // anyone cycling past, audibly so with the selector already in
+                // octave switching.
                 octave_catch_up_.Init(
-                    0.5f, 0.5f * transposition_ + 0.5f);
+                    static_cast<float>(locked_octave_) / 8.0f,
+                    0.5f * transposition_ + 0.5f);
               }
             }
             *value = static_cast<uint8_t>(new_value);

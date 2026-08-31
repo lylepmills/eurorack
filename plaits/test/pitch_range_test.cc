@@ -11,6 +11,8 @@
 #include <cmath>
 #include <cstdio>
 
+#include "stmlib/dsp/hysteresis_quantizer.h"
+
 using namespace plaits;
 
 static int checks = 0;
@@ -118,6 +120,71 @@ struct RangeSim {
 };
 
 static const int kWideRangeMiddleC = 5;   // WideRangeNote(5, 0) == 60.
+
+// Mirrors the locked-FREQUENCY-knob option handling in Ui (the
+// OPTION_LIGHT_FREQUENCY_POT branch of the options menu, plus the
+// PITCH_RANGE_OCTAVES arm of Ui::Poll), so that cycling the menu can be
+// replayed without hardware. Octave switching is value 0 of that option, so
+// walking the menu necessarily passes THROUGH it on the way to anything else.
+struct LockedOptionSim {
+  uint8_t locked_octave;
+  int option;
+  float transposition;            // FREQUENCY knob, in [-1, +1].
+  float selector;                 // The hidden range selector.
+  EndpointCatchUp octave_catch_up;
+  stmlib::HysteresisQuantizer2 octave_quantizer;
+
+  void Init(uint8_t stored_octave, int starting_option, float knob,
+      float selector_value) {
+    locked_octave = stored_octave;
+    option = starting_option;
+    transposition = knob;
+    selector = selector_value;
+    octave_catch_up.Reset();
+    octave_quantizer.Init(9, 0.01f, false);
+  }
+
+  // One step of the options menu, in either direction.
+  void StepOption(int delta, int num_values) {
+    const int old_value = option;
+    int new_value = option + delta;
+    if (new_value < 0) new_value = num_values - 1;
+    else if (new_value >= num_values) new_value = 0;
+
+    if (old_value == 0 && new_value != 0 &&
+        PitchRangeFromControl(selector) == PITCH_RANGE_OCTAVES) {
+      locked_octave = static_cast<uint8_t>(
+          octave_quantizer.Process(
+              octave_catch_up.Process(0.5f * transposition + 0.5f)));
+    } else if (old_value != 0 && new_value == 0) {
+      octave_catch_up.Init(
+          static_cast<float>(locked_octave) / 8.0f,
+          0.5f * transposition + 0.5f);
+    }
+    option = new_value;
+  }
+
+  // The octave offset Ui::Poll would be sounding right now.
+  int SoundingOctaveOffset() {
+    if (PitchRangeFromControl(selector) != PITCH_RANGE_OCTAVES) return 0;
+    if (option == 0) {
+      return octave_quantizer.Process(
+          octave_catch_up.Process(0.5f * transposition + 0.5f)) - 4;
+    }
+    return static_cast<int>(locked_octave) - 4;
+  }
+
+  // Turning the FREQUENCY knob, at the control rate.
+  void TurnKnob(float target) {
+    const int steps = 200;
+    const float from = transposition;
+    for (int i = 1; i <= steps; ++i) {
+      transposition = from + (target - from)
+          * static_cast<float>(i) / static_cast<float>(steps);
+      SoundingOctaveOffset();          // Poll runs while the knob moves.
+    }
+  }
+};
 
 int main() {
   // The special positions are adjacent and the eight wide ranges keep their
@@ -433,6 +500,65 @@ int main() {
   CHECK(Near(snapshot.Root(96.0f), kDefaultTunedRootNote));
   snapshot.Reset();
   CHECK(!snapshot.editing());
+
+  // Cycling the options menu past octave switching must not disturb the stored
+  // octave. Value 0 of the locked-FREQUENCY-knob option IS octave switching, so
+  // reaching any later option steps through it; before this was fixed, stepping
+  // ONTO 0 reset the octave to neutral and stepping OFF it re-froze that
+  // neutral, so a user cycling to a different option silently lost the octave
+  // they had frozen -- audibly, if the selector was in octave switching.
+  const int kNumLockedFrequencyPotOptions = 6;
+
+  // Passing through, with the selector NOT in octave switching.
+  for (int stored = 0; stored <= 8; ++stored) {
+    LockedOptionSim sim;
+    sim.Init(static_cast<uint8_t>(stored), 4, 0.0f,
+        SelectorFor(PITCH_RANGE_PRECISION));
+    sim.StepOption(1, kNumLockedFrequencyPotOptions);   // 4 -> 5
+    sim.StepOption(1, kNumLockedFrequencyPotOptions);   // 5 -> 0, through it
+    sim.StepOption(1, kNumLockedFrequencyPotOptions);   // 0 -> 1, and out
+    CHECK(sim.option == 1);
+    CHECK(sim.locked_octave == stored);
+  }
+
+  // Passing through WHILE in octave switching: the sounding octave must not
+  // move either, since the knob was never touched.
+  for (int stored = 0; stored <= 8; ++stored) {
+    LockedOptionSim sim;
+    sim.Init(static_cast<uint8_t>(stored), 4, 0.0f,
+        SelectorFor(PITCH_RANGE_OCTAVES));
+    const int before = sim.SoundingOctaveOffset();
+    CHECK(before == stored - 4);
+    sim.StepOption(1, kNumLockedFrequencyPotOptions);
+    sim.StepOption(1, kNumLockedFrequencyPotOptions);   // now at 0
+    CHECK(sim.SoundingOctaveOffset() == stored - 4);
+    sim.StepOption(1, kNumLockedFrequencyPotOptions);   // and out again
+    CHECK(sim.locked_octave == stored);
+    CHECK(sim.SoundingOctaveOffset() == stored - 4);
+  }
+
+  // The same walked the other way round the menu.
+  for (int stored = 0; stored <= 8; ++stored) {
+    LockedOptionSim sim;
+    sim.Init(static_cast<uint8_t>(stored), 1, 0.0f,
+        SelectorFor(PITCH_RANGE_OCTAVES));
+    sim.StepOption(-1, kNumLockedFrequencyPotOptions);  // 1 -> 0
+    sim.StepOption(-1, kNumLockedFrequencyPotOptions);  // 0 -> 5, out again
+    CHECK(sim.locked_octave == stored);
+  }
+
+  // What SHOULD change it: resting on octave switching and turning the knob.
+  {
+    LockedOptionSim sim;
+    sim.Init(4, 1, 0.0f, SelectorFor(PITCH_RANGE_OCTAVES));
+    sim.StepOption(-1, kNumLockedFrequencyPotOptions);  // rest at 0
+    CHECK(sim.option == 0);
+    sim.TurnKnob(1.0f);                                 // sweep to the top
+    const int moved = sim.SoundingOctaveOffset();
+    CHECK(moved > 0);
+    sim.StepOption(1, kNumLockedFrequencyPotOptions);   // leave, freezing it
+    CHECK(static_cast<int>(sim.locked_octave) - 4 == moved);
+  }
 
   std::printf("pitch_range_test: %d checks passed\n", checks);
   return 0;
