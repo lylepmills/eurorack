@@ -129,11 +129,17 @@ const speechSounds = publicCatalog.engines.find((engine: { id: string }) => engi
 const lpcWords = publicCatalog.engines.find((engine: { id: string }) => engine.id === "lpc-speech");
 const wavetable = publicCatalog.engines.find((engine: { id: string }) => engine.id === "wavetable");
 const waveTerrain = publicCatalog.engines.find((engine: { id: string }) => engine.id === "wave-terrain");
+const bubbleTime = publicCatalog.engines.find((engine: { id: string }) => engine.id === "bubbletime");
+const zxPhase48k = publicCatalog.engines.find((engine: { id: string }) => engine.id === "zxphase48k");
+const zxPulse48k = publicCatalog.engines.find((engine: { id: string }) => engine.id === "zxpulse48k");
 assert.ok(originalSpeech, "Original Speech is missing from the public catalog");
 assert.ok(speechSounds, "Speech Sounds is missing from the public catalog");
 assert.ok(lpcWords, "LPC Words is missing from the public catalog");
 assert.ok(wavetable, "Wavetable is missing from the public catalog");
 assert.ok(waveTerrain, "Wave Terrain is missing from the public catalog");
+assert.ok(bubbleTime, "BubbleTime is missing from the public catalog");
+assert.ok(zxPhase48k, "ZxPhase48k is missing from the public catalog");
+assert.ok(zxPulse48k, "ZxPulse48k is missing from the public catalog");
 const reference = (engine: any) => ({
   engine: engine.id,
   package: engine.packageId,
@@ -285,15 +291,19 @@ const recipe = {
   // Keep Original Speech beside both split engines in this hardware gate. All
   // three paths must boot, navigate, and speak before an image is promoted.
   // Wave Terrain adds the full factory/native/prebaked bank, and Wavetable adds
-  // a compact native bank. The same exact artifact exercises both during the
-  // physical release gate.
+  // a compact native bank. The three Combust community engines are compiled
+  // together with their true-stereo paths so this exact artifact is also their
+  // release canary.
   slots: [
     reference(waveTerrain),
     reference(wavetable),
     reference(originalSpeech),
     reference(speechSounds),
     reference(lpcWords),
-    ...Array.from({ length: 19 }, () => null),
+    reference(bubbleTime),
+    reference(zxPhase48k),
+    reference(zxPulse48k),
+    ...Array.from({ length: 16 }, () => null),
   ],
   output: "audio-wav",
   // Sync In's compile switch moved onto its own preference in v22. The starting
@@ -313,7 +323,7 @@ const recipe = {
     lockedFrequencyKnob: "octaves",
     modelInput: "sync-in",
     levelInput: "level",
-    auxOutput: "alternate-model",
+    auxOutput: "stereo",
     suboscillatorOctave: 0,
     chordTable: chordCatalog.tables[0].id,
     holdOnTrigger: false,
