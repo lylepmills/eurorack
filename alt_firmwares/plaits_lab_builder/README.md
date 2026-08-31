@@ -787,7 +787,7 @@ revision before building — a tag that disagrees with the source inside it is
 the failure the `development` sentinel exists to catch, caught earlier.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-d857fbab280f` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-1cf8cd56ba6f` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a new
 image, use `wrangler containers info <application-id>` and wait until
@@ -801,8 +801,9 @@ attached and answering. Do not infer from the deploy succeeding either —
 staging application can temporarily return "no Container instance available"
 while its image is starting; the bounded staging smoke retries that response.
 
-Schema 24 is live, with shared Wave Terrain banks and native equations,
-independent experimental Linear TZFM and Fast FM preferences, Sync In as an
+Schema 26 is live, with shared custom Wavetable banks, schema 24's shared Wave
+Terrain banks and native equations, independent experimental Linear TZFM and
+Fast FM preferences, Sync In as an
 opt-in preference, and custom Speech banks accepting
 up to 32 words inside the 1,024-frame ceiling. It inherits schema 22's explicit
 Sync capability, schema 21's experimental MODEL-input assignment, schema 20's
@@ -812,7 +813,7 @@ and Step unpatched-attenuverter modes; schema 17's selectable stock LPC banks,
 custom text/recording-derived Speech banks, source/engine previews; and the
 earlier recipe-driven scale banks and automatic LEVEL routing. The generalized
 schema-inheritance hardening from `5b2b077` is also live: current production
-source `3514880253d9` descends from that commit, so future supported schemas
+source `1cf8cd56ba6f` descends from that commit, so future supported schemas
 inherit older feature shapes without another version-list edit.
 
 ### Rolling back
@@ -893,6 +894,16 @@ target.
 | August 28, 2026 (schema 24 shared Wave Terrain bank and native equations, manual contract 19) | `e81f62517fc4` | `rev-e81f62517fc4` |
 | August 28, 2026 (algorithm-32 Carrier Tilt) | `3514880253d9` | `rev-3514880253d9` |
 | August 31, 2026 (schema 26 shared custom Wavetable banks, manual contract 20) | `1f3441f4b15c` | `rev-1f3441f4b15c` |
+| August 31, 2026 (BubbleTime, ZXPhase48k, and ZXPulse48k community engines; 92 engines) | `1cf8cd56ba6f` | `rev-1cf8cd56ba6f` |
+
+The August 31 Combust release passed its physical-module gate with staging build
+`401fa89c556743a5d4e10f67dd36b8563457926fccb71276bfc44211f255a27d`.
+Its exact 13,523,564-byte updater WAV had SHA-256
+`95d36c8275b8a9395626cc561ecb9a2d81dd19ea397b47e7ebcb075a6e1cf43b`.
+After the production image and the rotated `speech-encoder-v12` singleton both
+reported compiler-stamped source `1cf8cd56ba6f`, production canary build
+`ad72ba7e3cf9a9a1c3144da840f410deb0d9e8df2839fff2366f41cca3ab7da2`
+completed and produced another 13,523,564-byte updater WAV.
 
 The August 16 production canary used the same exact 24-slot recipe as staging:
 build `6cb08754024d2a7abf43ae0c6390eb23b11a051dbc04c4984a32212040a6e865`
