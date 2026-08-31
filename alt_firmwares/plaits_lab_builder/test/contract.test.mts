@@ -2084,3 +2084,52 @@ test("the health check distinguishes a stale pool from a stale speech singleton"
   // that as staleness would block on traffic rather than on a stale image.
   assert.match(helper, /reachable: false/);
 });
+
+test("every speech route records a decision about its Natural Speech variant", async () => {
+  // The bug this prevents shipped: "Use my voice" ran recordings through the
+  // LPC encoder no matter which engine the bank was for, so a Natural Speech
+  // user recorded their voice and heard the OLD engine play it back. Not an
+  // error -- a plausible wrong answer, which is why it survived review and two
+  // rounds of "what is left before we deploy".
+  //
+  // The cause was method, not carelessness: encode and render-bank were
+  // branched as each was reported, and nobody enumerated the family. This test
+  // does the enumerating. A NEW /v1/speech route fails it until it appears
+  // below, which forces the question "does this need a Natural Speech variant?"
+  // to be answered rather than remembered.
+  const source = await readFile(new URL("../src/index.ts", import.meta.url), "utf8");
+  const routes = new Set(
+    [...source.matchAll(/"(\/v1\/speech\/[a-z-]+)"/g)].map((m) => m[1]),
+  );
+
+  // Each base route and what was decided about it. "paired" means a
+  // -natural sibling must exist; "shared" means the route is genuinely
+  // format-agnostic and one implementation serves both engines.
+  const decisions: Record<string, "paired" | "shared"> = {
+    "/v1/speech/encode": "paired",
+    "/v1/speech/encode-recording": "paired",
+    "/v1/speech/render-bank": "paired",
+    // Splits source text into words. Produces no frames and reads no format,
+    // so both engines use it unchanged.
+    "/v1/speech/segment": "shared",
+  };
+
+  const bases = [...routes].filter((route) => !route.endsWith("-natural"));
+  const undecided = bases.filter((route) => !(route in decisions));
+  assert.deepEqual(undecided, [],
+    "a speech route exists with no recorded decision about its Natural Speech "
+    + "variant — add it to `decisions` as 'paired' (and add the sibling) or "
+    + "'shared' (with a comment saying why one implementation serves both)");
+
+  for (const [route, decision] of Object.entries(decisions)) {
+    assert.ok(routes.has(route), `${route} is classified but no longer exists`);
+    if (decision === "paired") {
+      assert.ok(routes.has(`${route}-natural`),
+        `${route} is paired but ${route}-natural is missing — this is exactly `
+        + "the shape that shipped LPC output for a Natural Speech bank");
+    } else {
+      assert.ok(!routes.has(`${route}-natural`),
+        `${route} is marked shared but a -natural sibling exists; reclassify it`);
+    }
+  }
+});

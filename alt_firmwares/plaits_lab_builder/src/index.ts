@@ -199,6 +199,29 @@ async function askContainer(
   }
 }
 
+type ContainerVoices = {
+  reachable: boolean;
+  sourceRevision?: string;
+  languages?: Record<string, string[]>;
+  error?: string;
+};
+
+async function askContainerVoices(env: Env): Promise<ContainerVoices> {
+  const container = getContainer(env.FIRMWARE_BUILDER, SPEECH_ENCODER_CONTAINER);
+  try {
+    const response = await container.fetch("http://container/voices");
+    if (!response.ok) {
+      // An image predating this endpoint 404s. Say so plainly rather than
+      // reporting an empty voice list, which a consumer could read as "this
+      // builder speaks nothing" and act on.
+      return { reachable: false, error: `voices returned ${response.status}` };
+    }
+    return { reachable: true, ...(await response.json() as Omit<ContainerVoices, "reachable">) };
+  } catch (error) {
+    return { reachable: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 async function proxySpeechJson(
   request: Request,
   env: Env,
@@ -798,7 +821,16 @@ export default {
 
     let response: Response;
     try {
-      if (request.method === "GET" && url.pathname === "/v1/health") {
+      if (request.method === "GET" && url.pathname === "/v1/voices") {
+        // What the DEPLOYED image can actually speak. Engines get this for
+        // free through approvedEngineIds, which is why an unsupported engine
+        // shows "needs a builder update" while an unsupported VOICE used to
+        // fail only once a user picked it. Served from the container rather
+        // than a mirrored list so it cannot drift from the image answering
+        // requests.
+        const voices = await askContainerVoices(env);
+        response = json(voices, { status: voices.reachable ? 200 : 503 });
+      } else if (request.method === "GET" && url.pathname === "/v1/health") {
         // Answers "has the container rollout actually landed?" in ~2 s, which
         // previously required a queued multi-minute firmware compile and was
         // therefore never run during a rollout.

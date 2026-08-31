@@ -1118,6 +1118,22 @@ class Handler(BaseHTTPRequestHandler):
     server_version = "PlaitsLabBuilder/1"
 
     def do_GET(self) -> None:  # noqa: N802
+        if self.path == "/voices":
+            # The capability contract for voices, and the reason it exists:
+            # engines are advertised through /v1/catalog's approvedEngineIds, so
+            # an editor offering an engine the builder lacks degrades politely
+            # ("needs a builder update"). Voices had no such contract, so the
+            # website could offer a voice this image cannot speak and the only
+            # symptom was a validation error AFTER the user picked it. Now the
+            # image says what it can speak and the live canary can compare.
+            self.send_json({
+                "sourceRevision": SOURCE_REVISION,
+                "languages": {
+                    language: sorted(voices)
+                    for language, (voices, *_rest) in VOICE_CATALOG.items()
+                },
+            }, HTTPStatus.OK)
+            return
         if self.path == "/ping":
             # Reports WHICH IMAGE is answering, not merely that something is.
             # A container rollout leaves the Worker on the new release while an
