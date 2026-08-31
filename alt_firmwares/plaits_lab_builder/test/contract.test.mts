@@ -904,12 +904,15 @@ test("the simplified pitch-range preference requires and normalizes to v24", asy
   );
 
   // Every preference must survive normalization at the newest key set. The
-  // derivations use the same exact-key-set matching as the schema floors, so a
-  // future preference that adds its own set without extending these ORs makes
-  // every OLDER one derive to false -- a recipe's calibration or Sync In quietly
-  // becoming absent from the firmware it builds. That is not hypothetical: the
-  // website copy of this logic shipped exactly that bug for `calibration` when
-  // v24 landed, caught only by adding this assertion.
+  // derivations now read each key directly, so an absent one is undefined and
+  // simply never true. They used to be exact-key-set matched, as the schema
+  // floors were, where a future preference that added its own set without
+  // extending those ORs made every OLDER one derive to false -- a recipe's
+  // calibration or Sync In quietly becoming absent from the firmware it builds.
+  // That is not hypothetical: the website copy of this logic shipped exactly
+  // that bug for `calibration` when v24 landed, caught only by adding this
+  // assertion. Keep it, so a derivation that ever regains a dependency on the
+  // matched tier fails here instead of in someone's firmware.
   const allOn = structuredClone(base);
   allOn.preferences = {
     ...preferences(true),
