@@ -858,6 +858,7 @@ target.
 | August 21, 2026 (octave-switching root fix) | `ccf67eac9661` | `rev-ccf67eac9661` |
 | August 28, 2026 (schema 24 shared Wave Terrain bank and native equations, manual contract 19) | `e81f62517fc4` | `rev-e81f62517fc4` |
 | August 28, 2026 (algorithm-32 Carrier Tilt) | `3514880253d9` | `rev-3514880253d9` |
+| August 31, 2026 (schema 26 shared custom Wavetable banks, manual contract 20) | `1f3441f4b15c` | `rev-1f3441f4b15c` |
 
 The August 16 production canary used the same exact 24-slot recipe as staging:
 build `6cb08754024d2a7abf43ae0c6390eb23b11a051dbc04c4984a32212040a6e865`
