@@ -1119,7 +1119,20 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802
         if self.path == "/ping":
-            self.send_json({"ok": True}, HTTPStatus.OK)
+            # Reports WHICH IMAGE is answering, not merely that something is.
+            # A container rollout leaves the Worker on the new release while an
+            # old container keeps serving, and nothing else distinguishes those
+            # states cheaply: the only revision signal used to be the stamp on a
+            # finished firmware, which costs a queued multi-minute compile. The
+            # revision is already baked in (PLAITS_SOURCE_REVISION, defaulting
+            # to the deliberate "development" sentinel), so this just reads it
+            # back.
+            self.send_json({
+                "ok": True,
+                "sourceRevision": SOURCE_REVISION,
+                "buildContract": BUILD_CONTRACT_VERSION,
+                "toolchain": TOOLCHAIN_ID,
+            }, HTTPStatus.OK)
             return
         voice_match = re.fullmatch(r"/speech/voice-preview/([^/]+)/([^/]+)\.wav", self.path)
         stock_match = re.fullmatch(r"/speech/stock/bank-([1-5])-(natural|flat)\.wav", self.path)

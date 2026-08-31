@@ -297,12 +297,34 @@ Two rollout notes worth keeping:
   too low, and the container rejected the Worker's own output. A new version is
   not landed until something asserts the version it NORMALIZES to.
 - **`wrangler containers info` reporting `healthy >= 1` does NOT mean the new
-  image is serving.** Production rolls gradually, so during a rollout the healthy
-  instance can be the old one while another slot is still scheduling. Gate on
-  `configuration.image` matching the new tag, `healthy` matching the configured
-  instance count, and both `scheduling == 0` and `starting == 0`. A build that
-  fails against a stale instance is not cached permanently — the same recipe
+  image is serving — and `healthy` does not mean what it looks like.** For a
+  DO-attached application (all Containers apps are), Cloudflare's own API model
+  defines `healthy` as the number of *prepared* container instances, not
+  serving ones. `active` is the count of running containers. So the gate this
+  file used to specify — image, `healthy`, `scheduling == 0`, `starting == 0` —
+  **can pass while an old container is still attached and serving**, which is
+  exactly what happened on 2026-08-31: the app reported the new image with two
+  healthy instances and zero failures for over 25 minutes while requests kept
+  hitting the previous image. Gate on `configuration.image` matching the new
+  tag, `active_rollout_id == null`, `scheduling == 0`, `starting == 0`,
+  `failed == 0`, **and `active == 0`** (no old container still attached).
+  Then confirm with `GET /v1/health` rather than inferring. A build that fails
+  against a stale instance is not cached permanently — the same recipe
   recompiles and succeeds once the rollout lands.
+- **`GET /v1/health` answers "has the rollout landed?" in ~2 s.** It probes two
+  containers and reports both against the Worker's own revision: a FRESH
+  uniquely-named DO (no warm container, so it starts on the configured image —
+  tells you whether the POOL rolled) and the speech singleton under its real
+  name (fixed name kept warm by traffic — tells you whether the endpoint users
+  hit is current). `poolMatches` false means keep waiting; `poolMatches` true
+  with `speechEncoderMatches` false means rotate `SPEECH_ENCODER_CONTAINER`.
+  Before this existed the only revision signal was the stamp on a finished
+  firmware, which costs a queued multi-minute compile, so nobody asked during a
+  rollout.
+- **`wrangler containers instances <app-id>` names the singleton directly.** It
+  is the only view that shows `speech-encoder-vN` as a row with its own state
+  and age, which is what distinguishes "a warm old instance is still attached"
+  from "the pool has not rolled".
 - The named Speech encoder Container can outlive a gradual image rollout. Do
   not exercise a freshly bumped identity while `configuration.image` still
   names the old image: it can attach to that image and keep serving it after the
@@ -755,15 +777,27 @@ that limit. This is a lightweight abuse guard rather than an account or billing
 system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
+Image builds run on GitHub Actions (`.github/workflows/plaits-builder-image.yml`,
+manual dispatch with a revision). The local path still works and is documented
+below, but it builds linux/amd64 under QEMU on an Apple Silicon Mac and then
+pushes ~12 GB over a home connection; a runner is natively x86 and sits beside
+the registry. The workflow needs a `CLOUDFLARE_REGISTRY_TOKEN` repository
+secret, and it verifies that the checked-out commit matches the requested
+revision before building — a tag that disagrees with the source inside it is
+the failure the `development` sentinel exists to catch, caught earlier.
+
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-3514880253d9` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-d857fbab280f` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a new
 image, use `wrangler containers info <application-id>` and wait until
-`configuration.image` matches the intended immutable tag, `healthy` equals the
-configured instance count, and both `scheduling == 0` and `starting == 0` before
-submitting the production canary. `healthy >= 1` alone can still mean the
-previous image is serving or another pool slot is not ready. A first-time
+`configuration.image` matches the intended immutable tag, `active_rollout_id`
+is null, `scheduling`, `starting`, `failed` and **`active`** are all 0, then
+confirm with `GET /v1/health` before submitting the production canary.
+`healthy >= 1` alone means nothing here: for a DO-attached application `healthy`
+counts PREPARED instances, not serving ones, so the old image can still be
+attached and answering. Do not infer from the deploy succeeding either —
+`wrangler deploy` returning means the rollout STARTED. A first-time
 staging application can temporarily return "no Container instance available"
 while its image is starting; the bounded staging smoke retries that response.
 

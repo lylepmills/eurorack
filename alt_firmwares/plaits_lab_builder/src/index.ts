@@ -153,6 +153,52 @@ async function speechRateLimit(request: Request, env: Env): Promise<Response | n
   );
 }
 
+/** What a container reports about itself, or why it could not be asked. */
+type ContainerIdentity = {
+  reachable: boolean;
+  sourceRevision?: string;
+  buildContract?: string;
+  toolchain?: string;
+  error?: string;
+};
+
+async function askContainer(
+  env: Env,
+  name: string,
+  destroyAfter: boolean,
+): Promise<ContainerIdentity> {
+  const container = getContainer(env.FIRMWARE_BUILDER, name);
+  try {
+    const response = await container.fetch("http://container/ping");
+    if (!response.ok) {
+      return { reachable: false, error: `ping returned ${response.status}` };
+    }
+    const body = await response.json() as {
+      sourceRevision?: string; buildContract?: string; toolchain?: string;
+    };
+    return {
+      reachable: true,
+      sourceRevision: body.sourceRevision,
+      buildContract: body.buildContract,
+      toolchain: body.toolchain,
+    };
+  } catch (error) {
+    // With max_instances at 2 a probe can legitimately find no free slot. That
+    // is INCONCLUSIVE, not a failure -- a deploy gate that treated it as a
+    // mismatch would block on load rather than on staleness.
+    return { reachable: false, error: error instanceof Error ? error.message : String(error) };
+  } finally {
+    if (destroyAfter) {
+      try {
+        await container.destroy();
+      } catch {
+        // Best effort: a probe container that outlives this request idles out
+        // on its own, and failing to reap one must not fail the health check.
+      }
+    }
+  }
+}
+
 async function proxySpeechJson(
   request: Request,
   env: Env,
@@ -752,7 +798,38 @@ export default {
 
     let response: Response;
     try {
-      if (request.method === "GET" && url.pathname === "/v1/catalog") {
+      if (request.method === "GET" && url.pathname === "/v1/health") {
+        // Answers "has the container rollout actually landed?" in ~2 s, which
+        // previously required a queued multi-minute firmware compile and was
+        // therefore never run during a rollout.
+        //
+        // Two probes, because two different things go stale and they need
+        // different remedies. A FRESH uniquely-named Durable Object has no
+        // warm container, so it starts on whatever image the application is
+        // configured with -- that reports whether the POOL has rolled. The
+        // speech singleton is a FIXED name kept warm by ordinary traffic, so it
+        // can keep serving a previous image long after the pool moved -- that
+        // reports whether the endpoint you actually hit is current.
+        //
+        // pool stale            -> wait, the rollout is still going
+        // pool current, singleton stale -> rotate SPEECH_ENCODER_CONTAINER
+        const worker = env.PLAITS_SOURCE_REVISION;
+        const [pool, singleton] = await Promise.all([
+          askContainer(env, `health-probe-${worker}-${Date.now()}`, true),
+          askContainer(env, SPEECH_ENCODER_CONTAINER, false),
+        ]);
+        const agrees = (identity: ContainerIdentity) =>
+          identity.reachable && identity.sourceRevision === worker;
+        response = json({
+          worker,
+          deploymentEnvironment: env.DEPLOYMENT_ENVIRONMENT,
+          pool,
+          speechEncoder: { name: SPEECH_ENCODER_CONTAINER, ...singleton },
+          poolMatches: agrees(pool),
+          speechEncoderMatches: agrees(singleton),
+          match: agrees(pool) && agrees(singleton),
+        });
+      } else if (request.method === "GET" && url.pathname === "/v1/catalog") {
         response = json({
           schemaVersion: 2,
           recipeSchemaVersion: maxRecipeSchemaVersion,

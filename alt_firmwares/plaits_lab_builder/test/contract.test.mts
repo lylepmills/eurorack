@@ -2051,3 +2051,36 @@ test("schema 25 carries Natural Speech word banks, and only with the engine", as
   };
   assert.throws(() => normalizeRecipe(withoutEngine), /Natural Speech model/);
 });
+
+test("the health check distinguishes a stale pool from a stale speech singleton", async () => {
+  // The rollout failure this exists for is silent by construction: the Worker
+  // reports the new release from its own var while an old container serves, and
+  // `wrangler containers info` shows the new image with healthy instances the
+  // whole time (healthy counts PREPARED instances, not serving ones). Answering
+  // it used to require a queued firmware compile, so nobody asked during a
+  // rollout.
+  const source = await readFile(new URL("../src/index.ts", import.meta.url), "utf8");
+
+  const health = source.indexOf('url.pathname === "/v1/health"');
+  assert.ok(health >= 0, "expected a /v1/health route");
+  const body = source.slice(health, health + 2000);
+
+  // A FRESH name is the entire point of the pool probe: a fixed one would find
+  // a warm container and answer "is it warm?" instead of "has it rolled?".
+  assert.match(body, /health-probe-\$\{worker\}-\$\{Date\.now\(\)\}/,
+    "the pool probe must use a unique Durable Object name");
+  assert.match(body, /askContainer\(env, SPEECH_ENCODER_CONTAINER, false\)/,
+    "the singleton must be probed under its real name, and not destroyed");
+  assert.match(body, /poolMatches/);
+  assert.match(body, /speechEncoderMatches/);
+
+  // The probe container must be reaped, or a health check costs a slot out of
+  // max_instances every time it runs.
+  const helper = source.slice(source.indexOf("async function askContainer"), health);
+  assert.match(helper, /finally\s*\{[\s\S]*?destroy\(\)/,
+    "the probe container must be destroyed in a finally");
+  // An unreachable container is inconclusive, not a mismatch: with two
+  // instances a probe can find no free slot under load, and a gate that read
+  // that as staleness would block on traffic rather than on a stale image.
+  assert.match(helper, /reachable: false/);
+});

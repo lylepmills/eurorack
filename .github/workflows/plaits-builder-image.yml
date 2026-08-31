@@ -1,0 +1,84 @@
+name: Plaits builder image
+
+# Builds and pushes the Plaits Lab compiler image on a NATIVE x86 runner.
+#
+# Locally this image is built for linux/amd64 on an Apple Silicon Mac, so every
+# RUN goes through QEMU, and the ~12 GB result is then pushed over a home
+# connection -- roughly 20 minutes for the push alone. A GitHub runner is
+# already x86_64 and sits next to Cloudflare's registry, which removes both
+# costs. The repository is public, so the runner minutes are free.
+#
+# Manual only: an image is a deliberate release artifact, and building one per
+# push would be both wasteful and confusing about which tag is current.
+
+on:
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: >-
+          12-character commit SHA to build and stamp. Must be a commit that
+          exists on this repository -- the image is tagged rev-<revision> and
+          every artifact it compiles is stamped with it.
+        required: true
+      push:
+        description: Push to the Cloudflare registry (false = build only)
+        type: boolean
+        default: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the requested revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.revision }}
+          # The image build FAILS by design on an uninitialised submodule
+          # rather than producing an image that breaks every compile at
+          # request time, so fetch them here.
+          submodules: true
+
+      - name: Verify the revision matches what was checked out
+        # A tag that disagrees with the source inside it is the failure the
+        # PLAITS_SOURCE_REVISION sentinel exists to catch; catch it earlier.
+        run: |
+          actual="$(git rev-parse --short=12 HEAD)"
+          if [ "$actual" != "${{ inputs.revision }}" ]; then
+            echo "checked out $actual but was asked for ${{ inputs.revision }}" >&2
+            exit 1
+          fi
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Cloudflare registry
+        if: ${{ inputs.push }}
+        uses: docker/login-action@v3
+        with:
+          registry: registry.cloudflare.com
+          username: v1
+          password: ${{ secrets.CLOUDFLARE_REGISTRY_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.plaits-builder
+          platforms: linux/amd64
+          push: ${{ inputs.push }}
+          # The build arg is the whole point: without it the image stamps the
+          # "development" sentinel onto everything it compiles.
+          build-args: PLAITS_SOURCE_REVISION=${{ inputs.revision }}
+          tags: >-
+            registry.cloudflare.com/256bac4d555b969399df16f575c5f464/plaits-lab-build-service-firmwarebuilder:rev-${{ inputs.revision }}
+          # The heavy layers (torch, Kokoro, Piper voices, the ARM toolchain)
+          # are worth carrying between runs; a cold runner would re-download
+          # several GB every time.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Report the tag
+        run: |
+          echo "Pushed rev-${{ inputs.revision }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Next: point wrangler.jsonc at this tag, deploy, then poll /v1/health until it matches." >> "$GITHUB_STEP_SUMMARY"
