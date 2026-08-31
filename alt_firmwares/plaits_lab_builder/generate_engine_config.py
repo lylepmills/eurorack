@@ -61,7 +61,7 @@ assert PACKED_BANK_SIZE % FLASH_PAGE_SIZE == 0
 # versions so adding a schema at the ceiling does not require extending a trail
 # of "10, 11, 12..." whitelists in the build container.
 MIN_RECIPE_SCHEMA_VERSION = 2
-MAX_RECIPE_SCHEMA_VERSION = 25
+MAX_RECIPE_SCHEMA_VERSION = 26
 CONFIGURATION_MIN_SCHEMA_VERSION = 4
 RESOURCES_MIN_SCHEMA_VERSION = 5
 FOUR_BANK_MIN_SCHEMA_VERSION = 6
@@ -85,8 +85,8 @@ TERRAIN_BANK_MIN_SCHEMA_VERSION = 24
 NATIVE_TERRAIN_MIN_SCHEMA_VERSION = 24
 MAX_TERRAIN_BANK_SIZE = 16
 FACTORY_TERRAIN_IDS = tuple(f"factory-{index}" for index in range(1, 9))
-WAVETABLE_BANK_MIN_SCHEMA_VERSION = 25
-NATIVE_WAVETABLE_MIN_SCHEMA_VERSION = 25
+WAVETABLE_BANK_MIN_SCHEMA_VERSION = 26
+NATIVE_WAVETABLE_MIN_SCHEMA_VERSION = 26
 WAVETABLE_BANK_DATA_SIZE = 64 * 128
 MAX_MIRRORED_WAVETABLE_BANK_SIZE = 8
 MAX_ONE_WAY_WAVETABLE_BANK_SIZE = 16
@@ -218,7 +218,7 @@ class BuildRecipe:
     # v23/v24: shared ordered Wave Terrain HARMONICS bank. Entries carry type,
     # optional sampled bytes, optional native equation, and its normalization.
     terrain_bank: tuple[tuple[int, bytes | None, str | None, float, float], ...] = ()
-    # v25: shared Wavetable HARMONICS path. A sampled entry stores all 64
+    # v26: shared Wavetable HARMONICS path. A sampled entry stores all 64
     # 128-sample frames; a native entry stores compiled equation code instead.
     wavetable_bank: tuple[tuple[int, bytes | None, str | None, float, float], ...] = ()
     wavetable_bank_mirrored: int = 1

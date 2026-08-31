@@ -279,7 +279,7 @@ const wavetableBank = [
 ];
 
 const recipe = {
-  schemaVersion: 25,
+  schemaVersion: 26,
   target: "mutable-instruments-plaits",
   firmware: "rubato-plaits",
   // Keep Original Speech beside both split engines in this hardware gate. All

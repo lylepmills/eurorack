@@ -404,7 +404,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
 
     def wavetable_bank_recipe(self, entries: list[dict], mirrored: bool = True) -> dict:
         recipe = self.terrain_bank_recipe([])
-        recipe["schemaVersion"] = 25
+        recipe["schemaVersion"] = 26
         recipe["slots"][0] = "wavetable"
         recipe["resources"] = {
             "chordTables": DEFAULT_CHORD_TABLES,
@@ -420,7 +420,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
             "data": base64.b64encode(bytes([fill]) * (64 * 128)).decode("ascii"),
         }
 
-    def test_v25_wavetable_bank_emits_factory_sampled_and_native_entries(self) -> None:
+    def test_v26_wavetable_bank_emits_factory_sampled_and_native_entries(self) -> None:
         sampled = self.wavetable_model(fill=29)
         native = {**self.wavetable_model(
             "sin(phi) + 0.65 * x * sin(2 * phi) + 0.55 * y * sin(3 * phi)"),
@@ -442,7 +442,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertIn("kWavetableBankFunctions, 3, true", config)
         self.assertNotIn("user_data_wavetables", config)
 
-    def test_v25_wavetable_bank_enforces_mirror_specific_limits(self) -> None:
+    def test_v26_wavetable_bank_enforces_mirror_specific_limits(self) -> None:
         entry = {"kind": "custom", "model": self.wavetable_model()}
         validate_recipe(self.wavetable_bank_recipe([entry] * 8, mirrored=True))
         with self.assertRaisesRegex(ValueError, "between one and 8"):
@@ -451,7 +451,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "between one and 16"):
             validate_recipe(self.wavetable_bank_recipe([entry] * 17, mirrored=False))
 
-    def test_v25_native_wavetable_rejects_uncalibrated_variables_and_cpu(self) -> None:
+    def test_v26_native_wavetable_rejects_uncalibrated_variables_and_cpu(self) -> None:
         for equation, message in (("sin(phi + row)", "unsupported name"),
                                   (" + ".join(f"sin({n} * phi)" for n in range(1, 9)),
                                    "CPU gate")):
@@ -461,7 +461,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
                     {"kind": "custom", "model": model},
                 ]))
 
-    def test_v25_native_wavetable_accepts_hardware_calibrated_harmonic_grid(self) -> None:
+    def test_v26_native_wavetable_accepts_hardware_calibrated_harmonic_grid(self) -> None:
         equation = (
             "sin(phi) + 0.45 * sin((2 + floor(5 * x)) * phi) "
             "+ 0.28 * sin((3 + floor(8 * y)) * phi)"

@@ -245,7 +245,7 @@ class RenderManualTest(unittest.TestCase):
 
     def wavetable_bank_recipe(self) -> dict:
         recipe = self.load("default_recipe.json")
-        recipe["schemaVersion"] = 25
+        recipe["schemaVersion"] = 26
         recipe["slots"][0] = "wavetable"
         recipe["preferences"] = {"navigationMode": "linear"}
         recipe["initialOptions"] = {

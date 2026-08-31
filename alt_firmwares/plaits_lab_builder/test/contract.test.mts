@@ -186,7 +186,7 @@ test("schema 24 carries one ordered shared terrain bank", async () => {
   assert.throws(() => normalizeRecipe(legacySlotShape), /shared terrain bank/);
 });
 
-test("schema 25 carries one ordered shared wavetable bank", async () => {
+test("schema 26 carries one ordered shared wavetable bank", async () => {
   const publicCatalog = JSON.parse(await readFile(
     new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),
     "utf8",
@@ -197,7 +197,7 @@ test("schema 25 carries one ordered shared wavetable bank", async () => {
   ));
   const engines = new Map(publicCatalog.engines.map((engine: any) => [engine.id, engine]));
   const recipe = structuredClone(fixture) as any;
-  recipe.schemaVersion = 25;
+  recipe.schemaVersion = 26;
   recipe.slots[0] = "wavetable";
   recipe.slots = recipe.slots.map((engineId: string) => {
     const engine = engines.get(engineId) as any;
@@ -236,7 +236,7 @@ test("schema 25 carries one ordered shared wavetable bank", async () => {
   };
 
   const normalized = normalizeRecipe(recipe);
-  assert.equal(normalized.schemaVersion, 25);
+  assert.equal(normalized.schemaVersion, 26);
   assert.deepEqual(normalized.resources.wavetableBank, recipe.resources.wavetableBank);
   assert.notEqual(
     await computeBuildKey(normalized, { sourceRevision: "source", toolchain: "toolchain", contract: "25" }),
@@ -269,6 +269,33 @@ test("schema 25 carries one ordered shared wavetable bank", async () => {
     slot.engine === "wavetable" ? replacement : slot
   ));
   assert.throws(() => normalizeRecipe(withoutConsumer), /requires Wavetable/);
+
+  const schema25 = structuredClone(recipe);
+  schema25.schemaVersion = 25;
+  assert.throws(() => normalizeRecipe(schema25), /supported firmware resources/);
+
+  const naturalSpeech = engines.get("natural-speech") as any;
+  const combined = structuredClone(recipe);
+  combined.slots[1] = {
+    engine: naturalSpeech.id,
+    package: naturalSpeech.packageId,
+    version: naturalSpeech.version,
+    digest: naturalSpeech.digest,
+  };
+  combined.resources.naturalSpeechBanks = {
+    customBanks: [{
+      words: ["hello"],
+      wordBoundaries: [0, 10],
+      frameData: Buffer.alloc(230, 7).toString("base64"),
+    }],
+  };
+  const combinedNormalized = normalizeRecipe(combined);
+  assert.equal(combinedNormalized.schemaVersion, 26);
+  assert.equal(combinedNormalized.resources.wavetableBank?.entries.length, 3);
+  assert.deepEqual(
+    combinedNormalized.resources.naturalSpeechBanks?.customBanks[0].words,
+    ["hello"],
+  );
 });
 
 test("normalization removes nondeterministic manifest fields", () => {

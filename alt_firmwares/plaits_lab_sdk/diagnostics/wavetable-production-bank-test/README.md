@@ -55,7 +55,7 @@ The tested application SHA-256 values were
 ## Production flash matrix
 
 `build_flash_matrix.py` performs ordinary production links with the autonomous
-sequencer disabled. It measures the legacy stock engine, explicit schema-25
+sequencer disabled. It measures the legacy stock engine, explicit schema-26
 factory banks, sampled-only, native-only, and mixed banks:
 
 ```sh

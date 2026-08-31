@@ -82,7 +82,7 @@ def recipe(entries: list[dict], mirrored: bool) -> dict:
     # implementation and one recipe-defined bank across all placements.
     slots = ["wavetable"] * 24
     return {
-        "schemaVersion": 25,
+        "schemaVersion": 26,
         "target": "mutable-instruments-plaits",
         "firmware": "rubato-plaits",
         "slots": slots,

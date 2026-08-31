@@ -36,7 +36,7 @@ export type NormalizedChordTable = {
 // feature gates below use minimums so a newly supported schema cannot get
 // stranded behind an old "10, 11, 12..." whitelist.
 export const minRecipeSchemaVersion = 2;
-export const maxRecipeSchemaVersion = 25;
+export const maxRecipeSchemaVersion = 26;
 const configurationMinSchemaVersion = 4;
 const resourcesMinSchemaVersion = 5;
 const fourBankMinSchemaVersion = 6;       // 32 slots
@@ -70,8 +70,8 @@ const terrainBankMinSchemaVersion = 24;       // shared ordered Wave Terrain ban
 // carrying its own replaces them entirely.
 const naturalSpeechBanksMinSchemaVersion = 25;
 const nativeTerrainMinSchemaVersion = 24;      // compiled custom equations
-const wavetableBankMinSchemaVersion = 25;      // shared ordered Wavetable bank
-const nativeWavetableMinSchemaVersion = 25;    // compiled custom equations
+const wavetableBankMinSchemaVersion = 26;      // shared ordered Wavetable bank
+const nativeWavetableMinSchemaVersion = 26;    // compiled custom equations
 const customModelDataBytes = 4096;
 const wavetableBankDataBytes = 8192;
 export const maxTerrainBankSize = 16;
@@ -192,7 +192,7 @@ export type NormalizedWavetableBank = {
 };
 
 export type NormalizedRecipe = {
-  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25;
+  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26;
   target: "mutable-instruments-plaits" | "plum-audio-roved";
   firmware: "rubato-plaits";
   // A null entry is an empty slot (v7 short banks); filled slots are engine ids.
@@ -253,7 +253,7 @@ export type NormalizedRecipe = {
     customModelData?: NormalizedCustomModelData[];
     // v23: the shared ordered bank swept by every Wave Terrain slot's HARMONICS.
     terrainBank?: NormalizedTerrainBankEntry[];
-    // v25: shared ordered Wavetable bank, optionally folded back through
+    // v26: shared ordered Wavetable bank, optionally folded back through
     // HARMONICS. Sampled custom banks retain all 64 128-sample frames.
     wavetableBank?: NormalizedWavetableBank;
   };
@@ -1232,7 +1232,7 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
   let naturalSpeechBanks: NormalizedNaturalSpeechBanks | undefined; // v25
   let customModelData: NormalizedCustomModelData[] | undefined; // v24
   let terrainBank: NormalizedTerrainBankEntry[] | undefined; // v24
-  let wavetableBank: NormalizedWavetableBank | undefined; // v25
+  let wavetableBank: NormalizedWavetableBank | undefined; // v26
   if (schemaVersion >= resourcesMinSchemaVersion) {
     const resources = candidate.resources;
     // v6 always carries index-keyed banks; v12 always carries per-slot banks (its
@@ -1385,7 +1385,8 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     // (v8); a short-bank recipe (a trailing empty slot) stays v7; a candidate that
     // carried v6 resources (even an empty custom-bank list, e.g. a 32-slot recipe)
     // stays v6; else v5.
-    schemaVersion: naturalSpeechBanks !== undefined || wavetableBank !== undefined ? 25
+    schemaVersion: wavetableBank !== undefined ? 26
+      : naturalSpeechBanks !== undefined ? 25
       : configuration.preferences.simplifiedPitchRanges
       || terrainBank !== undefined
       || customModelData !== undefined ? 24

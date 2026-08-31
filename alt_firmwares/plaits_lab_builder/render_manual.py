@@ -229,7 +229,7 @@ def terrain_bank_entries(recipe: Any) -> list[dict[str, str]]:
 
 
 def wavetable_bank_document(recipe: Any) -> dict[str, Any]:
-    """Player-facing order, transport, and storage for schema-25 Wavetable banks."""
+    """Player-facing order, transport, and storage for schema-26 Wavetable banks."""
     resources = recipe.get("resources") if isinstance(recipe, dict) else None
     bank = resources.get("wavetableBank") if isinstance(resources, dict) else None
     if not isinstance(bank, dict) or not isinstance(bank.get("entries"), list):
