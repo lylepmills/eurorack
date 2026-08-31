@@ -138,6 +138,23 @@ RUN test -f /workspace/stmlib/dsp/dsp.h \
 # otherwise it would silently compile with default options instead of the recipe's.
 RUN cd /workspace && python3 alt_firmwares/plaits_lab_builder/check_config_scope.py
 
+# Run the builder's own test suite, so a broken encoder cannot ship. These
+# tests are otherwise unreachable by CI: the eurorack fork has no workflows,
+# and the image build is the only gate every change to this directory passes
+# through. Placed after the config-scope check and before the C++ compiles so
+# it fails in seconds, and late enough that pyworld/scipy/reportlab are all
+# installed -- several suites skip themselves without those, and a suite that
+# silently skips is the failure mode this step exists to avoid.
+#
+# The catalog-vs-engine guard in test_encode_entry_points.py is the reason this
+# step was added: shipping a Kokoro-only manifest field broke every Piper voice
+# in the Natural Speech panel in production, and nothing between the edit and
+# the users would have caught it.
+# No pipe here on purpose: `... | tail` would make this RUN exit with tail's
+# status, so a failing suite would pass the build silently.
+RUN cd /workspace/alt_firmwares/plaits_lab_builder \
+    && python3 -m unittest discover -p "test_*.py"
+
 RUN c++ -std=c++11 -O2 -w -I /workspace \
         /workspace/alt_firmwares/plaits_lab_builder/render_lpc_bank.cc \
         /workspace/plaits/dsp/speech/lpc_speech_synth.cc \
