@@ -502,6 +502,46 @@ def render_saved_speech_bank(value: Any) -> dict[str, Any]:
     }
 
 
+def encode_natural_speech_recording(audio: bytes) -> dict[str, Any]:
+    """A recorded bank for Natural Speech, segmented the same way as the LPC one.
+
+    Its own job-key revision so a recording encoded for one engine can never be
+    served from the other's cache: the bodies are identical bytes, and only the
+    endpoint says which format the caller wants back.
+    """
+    job_id = _speech_job_key(audio, "paused-recording-natural-speech-v1")
+    with tempfile.TemporaryDirectory(prefix="natural-speech-recording-") as temporary:
+        output = Path(temporary)
+        source = output / "recording.wav"
+        source.write_bytes(audio)
+        _run_speech_script("encode_natural_speech_recording.py", [
+            "--repo", str(WORKSPACE), "--source", str(source), "--output-dir", str(output),
+        ])
+        manifest = json.loads((output / "recording-manifest.json").read_text(encoding="utf-8"))
+        entries = []
+        for entry in manifest["entries"]:
+            files = entry["files"]
+            entries.append({
+                key: entry[key] for key in (
+                    "index", "frames", "guardFrames", "frameBytes", "durationSeconds")
+            } | {"audio": {mode: _data_audio(output / files[mode])
+                           for mode in ("source", "natural", "flat")}})
+        bank = manifest["bank"]
+        return {
+            "jobId": job_id,
+            "cached": False,
+            "entries": entries,
+            "bankAudio": {mode: _data_audio(output / manifest["bankFiles"][mode])
+                          for mode in ("natural", "flat")},
+            "totals": manifest["totals"],
+            "segmentation": manifest["segmentation"],
+            "normalization": manifest["normalization"],
+            "sampleRate": manifest["sampleRate"],
+            "wordBoundaries": bank["wordBoundaries"],
+            "frameData": bank["frameData"],
+        }
+
+
 def encode_recording(audio: bytes) -> dict[str, Any]:
     job_id = _speech_job_key(audio, "paused-recording-production-v1")
     with tempfile.TemporaryDirectory(prefix="speech-recording-") as temporary:
@@ -1131,6 +1171,9 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/speech/render-bank":
             self.handle_speech_render_bank()
             return
+        if self.path == "/speech/encode-recording-natural":
+            self.handle_natural_speech_encode_recording()
+            return
         if self.path == "/speech/encode-recording":
             self.handle_speech_recording()
             return
@@ -1246,6 +1289,19 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as error:  # noqa: BLE001
             print(f"builder: saved speech preview failed: {redact_log(str(error))}", flush=True)
             self.send_json_error(BuildError("speech_encoding_failed", "The saved Speech bank preview could not be rendered."), HTTPStatus.INTERNAL_SERVER_ERROR)
+
+    def handle_natural_speech_encode_recording(self) -> None:
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            if not 0 < length <= MAX_RECORDING_BYTES:
+                raise BuildError("invalid_request", "Keep the recording to 15 seconds or less.")
+            self.send_json(encode_natural_speech_recording(self.rfile.read(length)), HTTPStatus.OK)
+        except BuildError as error:
+            status = HTTPStatus.BAD_REQUEST if error.code == "invalid_request" else HTTPStatus.UNPROCESSABLE_ENTITY
+            self.send_json_error(error, status)
+        except Exception as error:  # noqa: BLE001
+            print(f"builder: natural speech recording failed: {redact_log(str(error))}", flush=True)
+            self.send_json_error(BuildError("speech_encoding_failed", "The recording could not be encoded."), HTTPStatus.INTERNAL_SERVER_ERROR)
 
     def handle_speech_recording(self) -> None:
         try:

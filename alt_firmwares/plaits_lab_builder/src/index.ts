@@ -799,6 +799,10 @@ export default {
           cacheNamespace: "rendered-banks-v2",
           maxBytes: 64 * 1024,
         });
+      } else if (request.method === "POST" && url.pathname === "/v1/speech/encode-recording-natural") {
+        response = await proxySpeechJson(request, env, "/speech/encode-recording-natural", {
+          maxBytes: 4 * 1024 * 1024,
+        });
       } else if (request.method === "POST" && url.pathname === "/v1/speech/encode-recording") {
         response = await proxySpeechJson(request, env, "/speech/encode-recording", {
           maxBytes: 4 * 1024 * 1024,
