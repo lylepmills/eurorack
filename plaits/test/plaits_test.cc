@@ -112,8 +112,11 @@
 #include "plaits/dsp/engine2/brass_engine.h"
 #include "plaits/dsp/engine2/clap_engine.h"
 #include "plaits/dsp/engine2/analog_percussion_engine.h"
+#include "plaits/dsp/engine2/bubbletime_engine.h"
 #include "plaits/dsp/engine2/freshets_formant_engine.h"
 #include "plaits/dsp/engine2/z_filter_engine.h"
+#include "plaits/dsp/engine2/zxphase48k_engine.h"
+#include "plaits/dsp/engine2/zxpulse48k_engine.h"
 #include "plaits/dsp/engine2/string_machine_engine.h"
 #include "plaits/dsp/engine2/tapfield_engine.h"
 #include "plaits/dsp/engine2/undertow_engine.h"
@@ -3787,6 +3790,9 @@ void TestExperimentalEngines() {
   RenderAuditionEngine<ClapEngine>("54-clap.wav");
   RenderAuditionEngine<AnalogPercussionEngine>("56-analog-percussion.wav");
   RenderAuditionEngine<FreshetsFormantEngine>("55-freshets-formant.wav");
+  RenderAuditionEngine<BubbleTimeEngine>("57-bubbletime.wav");
+  RenderAuditionEngine<ZxPhase48kEngine>("58-zxphase48k.wav");
+  RenderAuditionEngine<ZxPulse48kEngine>("59-zxpulse48k.wav");
   RenderAuditionEngine<RawFmEngine>("21-raw-fm.wav");
   RenderAuditionEngine<VowelFofEngine>("20-vowel-fof.wav");
   RenderAuditionEngine<SawCombEngine>("19-saw-comb.wav");
@@ -3862,6 +3868,9 @@ void TestExperimentalEngines() {
   ValidateExperimentalEngineExtremes<ClapEngine>();
   ValidateExperimentalEngineExtremes<AnalogPercussionEngine>();
   ValidateExperimentalEngineExtremes<FreshetsFormantEngine>();
+  ValidateExperimentalEngineExtremes<BubbleTimeEngine>();
+  ValidateExperimentalEngineExtremes<ZxPhase48kEngine>();
+  ValidateExperimentalEngineExtremes<ZxPulse48kEngine>();
   ValidateExperimentalEngineExtremes<ZFilterEngine>();
   ValidateExperimentalEngineExtremes<ToyEngine>();
   ValidateExperimentalEngineExtremes<CSawEngine>();
@@ -3925,6 +3934,9 @@ void TestExperimentalEngines() {
   ValidateExperimentalControlResponse<AnalogPercussionEngine>(
       "Analog Percussion");
   ValidateExperimentalControlResponse<FreshetsFormantEngine>("Freshets Formant");
+  ValidateExperimentalControlResponse<BubbleTimeEngine>("BubbleTime");
+  ValidateExperimentalControlResponse<ZxPhase48kEngine>("ZxPhase48k");
+  ValidateExperimentalControlResponse<ZxPulse48kEngine>("ZxPulse48k");
   ValidateExperimentalControlResponse<ZFilterEngine>("Z Filter");
   ValidateExperimentalControlResponse<ToyEngine>("Toy");
   ValidateExperimentalControlResponse<CSawEngine>("CSaw");

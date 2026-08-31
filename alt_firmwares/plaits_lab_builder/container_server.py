@@ -854,6 +854,9 @@ STEREO_MACROS = {
     "analog-percussion": "ANALOG_PERCUSSION",
     "freshets-formant": "FRESHETS_FORMANT",
     "natural-speech": "NATURAL_SPEECH",
+    "bubbletime": "BUBBLETIME",
+    "zxphase48k": "ZXPHASE48K",
+    "zxpulse48k": "ZXPULSE48K",
 }
 ALL_STEREO_MACROS = frozenset(STEREO_MACROS.values())
 

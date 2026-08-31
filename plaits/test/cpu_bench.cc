@@ -99,8 +99,11 @@
 #include "plaits/dsp/engine2/brass_engine.h"
 #include "plaits/dsp/engine2/clap_engine.h"
 #include "plaits/dsp/engine2/analog_percussion_engine.h"
+#include "plaits/dsp/engine2/bubbletime_engine.h"
 #include "plaits/dsp/engine2/freshets_formant_engine.h"
 #include "plaits/dsp/engine2/z_filter_engine.h"
+#include "plaits/dsp/engine2/zxphase48k_engine.h"
+#include "plaits/dsp/engine2/zxpulse48k_engine.h"
 #include "plaits/dsp/engine2/string_machine_engine.h"
 #include "plaits/dsp/engine2/tapfield_engine.h"
 #include "plaits/dsp/engine2/undertow_engine.h"
@@ -238,6 +241,9 @@ int main() {
   bench<ClapEngine>("clap");
   bench<AnalogPercussionEngine>("analog-percussion");
   bench<FreshetsFormantEngine>("freshets-formant");
+  bench<BubbleTimeEngine>("bubbletime");
+  bench<ZxPhase48kEngine>("zxphase48k");
+  bench<ZxPulse48kEngine>("zxpulse48k");
   bench<ZFilterEngine>("z-filter");
   bench<LoopbackEngine>("loopback");
   bench<LockstepEngine>("lockstep");

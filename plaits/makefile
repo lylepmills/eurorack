@@ -173,7 +173,9 @@ PLAITS_STEREO_MODELS = \
   DIGITAL_MODULATION:digital_modulation_engine CLAP:clap_engine \
   ANALOG_PERCUSSION:analog_percussion_engine \
   FRESHETS_FORMANT:freshets_formant_engine \
-  NATURAL_SPEECH:natural_speech_engine
+  NATURAL_SPEECH:natural_speech_engine \
+  BUBBLETIME:bubbletime_engine ZXPHASE48K:zxphase48k_engine \
+  ZXPULSE48K:zxpulse48k_engine
 define _plaits_stereo_rule
 $(BUILD_DIR)$(word 2,$(subst :, ,$(1))).o: CPPFLAGS += $$(if $$(filter 0,$$(PLAITS_STEREO_$(word 1,$(subst :, ,$(1))))),-DPLAITS_STEREO_$(word 1,$(subst :, ,$(1)))=0)
 endef

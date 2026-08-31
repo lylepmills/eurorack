@@ -18,6 +18,7 @@ endif
 CC_FILES       = algorithms.cc \
 		additive_engine.cc \
 		analog_percussion_engine.cc \
+		bubbletime_engine.cc \
 		attractor_engine.cc \
 		bass_drum_engine.cc \
 		chiptune_engine.cc \
@@ -128,7 +129,9 @@ CC_FILES       = algorithms.cc \
 		clap_engine.cc \
 		freshets_formant_engine.cc \
 		freshets_formant_shapes.cc \
-		z_filter_engine.cc
+		z_filter_engine.cc \
+		zxphase48k_engine.cc \
+		zxpulse48k_engine.cc
 OBJ_FILES      = $(CC_FILES:.cc=.o)
 OBJS           = $(patsubst %,$(BUILD_DIR)%,$(OBJ_FILES)) $(STARTUP_OBJ)
 DEPS           = $(OBJS:.o=.d)

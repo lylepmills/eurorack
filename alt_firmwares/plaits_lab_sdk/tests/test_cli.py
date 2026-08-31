@@ -511,7 +511,7 @@ class PackageTests(unittest.TestCase):
 
     def test_authoritative_catalog_exposes_every_forkable_model(self) -> None:
         catalog, public = plaits_lab.load_builtin_catalog()
-        self.assertEqual(len(catalog), 89)
+        self.assertEqual(len(catalog), 92)
         self.assertEqual(set(catalog), set(public))
         self.assertTrue(all(item["digest"].startswith("sha256:") for item in public.values()))
 
