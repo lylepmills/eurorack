@@ -17,21 +17,6 @@
       "lessacDerived": true,
       "datasetLicense": "CC0"
     },
-    "de_DE-thorsten-high": {
-      "language": "de",
-      "files": {
-        "de/de_DE/thorsten/high/de_DE-thorsten-high.onnx": {
-          "md5": "256505fe58fb8b9d6ed78b83f6b8a9d2",
-          "bytes": 113895201
-        },
-        "de/de_DE/thorsten/high/de_DE-thorsten-high.onnx.json": {
-          "md5": "e81686e00a9d825e2488ead660bec6fd",
-          "bytes": 4875
-        }
-      },
-      "lessacDerived": true,
-      "datasetLicense": "CC0"
-    },
     "nl_BE-nathalie-medium": {
       "language": "nl",
       "files": {

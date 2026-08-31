@@ -147,7 +147,7 @@ VOICE_CATALOG = {
     "bg": ({"bg_BG-dimitar-medium"}, "Пеещият глас се приближи бързо."),
     "cs": ({"cs_CZ-jirka-medium"}, "Zpívající hlas se rychle přiblížil."),
     "da": ({"da_DK-talesyntese-medium"}, "Den syngende stemme nærmede sig hurtigt."),
-    "de": ({"de_DE-thorsten-high", "de_DE-thorsten-medium"}, "Die singende Stimme näherte sich schnell."),
+    "de": ({"de_DE-thorsten-medium"}, "Die singende Stimme näherte sich schnell."),
     "hu": ({"hu_HU-anna-medium", "hu_HU-imre-medium"}, "Az éneklő hang gyorsan közeledett."),
     "nl": ({"nl_BE-nathalie-medium", "nl_NL-alex-medium", "nl_NL-pim-medium"}, "De zingende stem kwam snel dichterbij."),
     "no": ({"no_NO-nvcc-medium__KMN", "no_NO-nvcc-medium__KNV", "no_NO-nvcc-medium__MMN", "no_NO-nvcc-medium__MNV"}, "Den syngende stemmen nærmet seg raskt."),
