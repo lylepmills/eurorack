@@ -33,6 +33,7 @@ from encode_recording import (
     FRAME_RATE,
     MAX_SECONDS,
     MIN_GAP_FRAMES,
+    concatenate,
     normalize_recording_level,
     segment_word_bounds,
 )
@@ -88,6 +89,14 @@ def main() -> int:
     if not sources:
         raise ValueError("No words were found in the recording")
 
+    # The whole-bank "Source" preview, the counterpart of the per-word one. The
+    # natural and flat bank previews are concatenated by the preview renderer,
+    # which only ever sees encoded frames -- nothing downstream of it knows the
+    # untouched recording, so the source bank has to be assembled here or the
+    # button has no audio to play at all.
+    source_bank = args.output_dir / "bank-source.wav"
+    concatenate([path for _, path in sources], source_bank, gate2.SOURCE_RATE)
+
     bank = encode_bank(sources)
     # Validate our own output against the recipe contract before the editor can
     # save it, the same as the text path does.
@@ -126,7 +135,11 @@ def main() -> int:
         "format": "rubato.plaits-natural-speech-recording-preview/v1",
         "entries": entries,
         "bank": bank,
-        "bankFiles": {"natural": "bank-natural.wav", "flat": "bank-flat.wav"},
+        "bankFiles": {
+            "source": source_bank.name,
+            "natural": "bank-natural.wav",
+            "flat": "bank-flat.wav",
+        },
         "totals": {
             "words": len(entries),
             "frames": boundaries[-1],

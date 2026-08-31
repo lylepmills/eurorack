@@ -24,6 +24,7 @@ from container_server import (
     _validate_saved_bank_preview_request,
     _validate_speech_request,
     _write_saved_plan,
+    encode_natural_speech_recording,
     _recipe_is_stereo,
     _stereo_disable_flags,
     classify_link_failure,
@@ -406,6 +407,53 @@ class StereoMacroRegistrationTest(unittest.TestCase):
 
     def test_every_makefile_macro_is_mapped_from_a_catalog_id(self) -> None:
         self.assertEqual(self.makefile_macros(), set(ALL_STEREO_MACROS))
+
+
+class NaturalSpeechRecordingPreviewTest(unittest.TestCase):
+    """Every preview the editor offers a button for has to come back.
+
+    "Use my voice" renders three whole-bank previews -- Source, Natural, Flat --
+    and the Source one silently had no audio to play because the manifest and
+    this handler both listed only two modes. A dropped key in a comprehension
+    reads as an unremarkable line, so the shape is asserted rather than eyeballed.
+    """
+
+    MODES = ("source", "natural", "flat")
+
+    def fake_run(self, _script: str, argv: list[str]) -> None:
+        output = Path(argv[argv.index("--output-dir") + 1])
+        files = {}
+        for mode in self.MODES:
+            name = f"bank-{mode}.wav"
+            (output / name).write_bytes(mode.encode("ascii"))
+            files[mode] = name
+        for mode in self.MODES:
+            (output / f"word-00-{mode}.wav").write_bytes(b"w")
+        (output / "recording-manifest.json").write_text(json.dumps({
+            "entries": [{
+                "index": 0, "frames": 40, "guardFrames": 0, "frameBytes": 920,
+                "durationSeconds": 1.0,
+                "files": {mode: f"word-00-{mode}.wav" for mode in self.MODES},
+            }],
+            "bank": {"wordBoundaries": [0, 40], "frameData": ""},
+            "bankFiles": files,
+            "totals": {"words": 1, "frames": 40},
+            "segmentation": {}, "normalization": {}, "sampleRate": 16000,
+        }), encoding="utf-8")
+
+    def encode(self) -> dict:
+        with patch("container_server._run_speech_script", side_effect=self.fake_run):
+            return encode_natural_speech_recording(b"RIFF")
+
+    def test_the_whole_bank_carries_a_preview_for_every_mode(self) -> None:
+        result = self.encode()
+        self.assertEqual(set(result["bankAudio"]), set(self.MODES))
+        for mode in self.MODES:
+            self.assertTrue(result["bankAudio"][mode].startswith("data:audio/wav;base64,"))
+
+    def test_each_word_carries_a_preview_for_every_mode(self) -> None:
+        result = self.encode()
+        self.assertEqual(set(result["entries"][0]["audio"]), set(self.MODES))
 
 
 if __name__ == "__main__":

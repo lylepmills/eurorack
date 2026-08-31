@@ -532,7 +532,7 @@ def encode_natural_speech_recording(audio: bytes) -> dict[str, Any]:
             "cached": False,
             "entries": entries,
             "bankAudio": {mode: _data_audio(output / manifest["bankFiles"][mode])
-                          for mode in ("natural", "flat")},
+                          for mode in ("source", "natural", "flat")},
             "totals": manifest["totals"],
             "segmentation": manifest["segmentation"],
             "normalization": manifest["normalization"],
