@@ -700,6 +700,133 @@ test("every declared preference is registered in the tier list", async () => {
   }
 });
 
+test("every historical starting-option shape still loads, and nothing else does", async () => {
+  // Same guarantee as the preference walk above, for the option tiers: the
+  // cumulative prefixes must be exactly the shapes released editors have ever
+  // written. Unlike the preferences, the shape here is COUPLED to the schema
+  // version by the biconditional gate -- a v18-or-later recipe must carry
+  // attenuverterMode and an older one must not -- so each tier is exercised at
+  // a version that tier is legal at.
+  const publicCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url), "utf8",
+  ));
+  const chordCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_chord_tables/catalog.json", import.meta.url), "utf8",
+  ));
+  const fixture = JSON.parse(await readFile(
+    new URL("../default_recipe.json", import.meta.url), "utf8",
+  ));
+  const engines = new Map<string, unknown>(
+    publicCatalog.engines.map((engine: { id: string }) => [engine.id, engine]),
+  );
+  const base = structuredClone(fixture) as any;
+  base.slots = fixture.slots.map((engineId: string) => {
+    const engine = engines.get(engineId) as {
+      packageId: string; version: string; digest: string;
+    };
+    return {
+      engine: engineId,
+      package: engine.packageId,
+      version: engine.version,
+      digest: engine.digest,
+    };
+  });
+  base.preferences = { navigationMode: "linear" };
+  base.resources = { chordTables: chordCatalog.tables };
+
+  const legacyOptions = {
+    lockedFrequencyKnob: "octaves",
+    modelInput: "model",
+    levelInput: "level",
+    auxOutput: "alternate-model",
+    suboscillatorOctave: 0,
+    chordTable: "original",
+    holdOnTrigger: false,
+  };
+
+  // Must mirror the tier order in src/contract.ts, paired with a schema version
+  // the biconditional accepts that shape at.
+  const tiers = [
+    { keys: legacyOptions, schemaVersion: 17 },
+    { keys: { ...legacyOptions, attenuverterMode: "stock" }, schemaVersion: 24 },
+  ];
+
+  for (const tier of tiers) {
+    const recipe = structuredClone(base);
+    recipe.schemaVersion = tier.schemaVersion;
+    recipe.initialOptions = tier.keys;
+    const normalized = normalizeRecipe(recipe);
+    // Every option must arrive; an absent attenuverterMode falls to `stock`
+    // rather than going missing, exactly as an absent preference reads false.
+    assert.deepEqual(normalized.initialOptions, {
+      ...legacyOptions, attenuverterMode: "stock",
+    }, `the {${Object.keys(tier.keys).join(",")}} shape did not normalize intact`);
+  }
+
+  // And a tier-1 recipe must carry its VALUE through, not just its key: the
+  // point of deriving straight off the key is that a present option can never
+  // be replaced by the default the absent case falls to.
+  const drift = structuredClone(base);
+  drift.schemaVersion = 24;
+  drift.initialOptions = { ...legacyOptions, attenuverterMode: "drift" };
+  assert.equal(normalizeRecipe(drift).initialOptions.attenuverterMode, "drift");
+
+  // A gap in the middle of the prefix is not a shape any editor produced.
+  const gapped = structuredClone(base);
+  gapped.schemaVersion = 17;
+  gapped.initialOptions = { ...legacyOptions };
+  delete gapped.initialOptions.holdOnTrigger;
+  assert.throws(
+    () => normalizeRecipe(gapped),
+    (error: { code?: string }) => error.code === "invalid_preferences",
+  );
+
+  // Neither is an unknown key riding along with a valid prefix.
+  const extra = structuredClone(base);
+  extra.schemaVersion = 24;
+  extra.initialOptions = {
+    ...legacyOptions, attenuverterMode: "stock", somethingElse: "yes",
+  };
+  assert.throws(
+    () => normalizeRecipe(extra),
+    (error: { code?: string }) => error.code === "invalid_preferences",
+  );
+});
+
+test("every declared starting option is registered in the tier list", async () => {
+  // The same structural guarantee the preferences have: an option added to the
+  // type but not to initialOptionTiers would be silently rejected by the closed
+  // key-set check, and one added to the tiers but never derived would silently
+  // normalize to its default forever. Parse both out of the source and require
+  // they agree.
+  const source = await readFile(new URL("../src/contract.ts", import.meta.url), "utf8");
+  const tierBlock = source.match(
+    /const initialOptionTiers: readonly \(readonly string\[\]\)\[\] = \[([\s\S]*?)\];/,
+  );
+  assert.ok(tierBlock, "expected an initialOptionTiers table in contract.ts");
+  const tierKeys = [...tierBlock[1].matchAll(/"([a-zA-Z0-9]+)"/g)].map((match) => match[1]);
+
+  const typeBlock = source.match(/initialOptions: \{([\s\S]*?)\n  \};/);
+  assert.ok(typeBlock, "expected an initialOptions type on the recipe");
+  const typeKeys = [...typeBlock[1].matchAll(/^\s{4}([a-zA-Z0-9]+)\??:/gm)]
+    .map((match) => match[1]);
+
+  assert.deepEqual(
+    [...tierKeys].sort(), [...typeKeys].sort(),
+    "initialOptionTiers and the initialOptions type must declare the same keys",
+  );
+
+  // And each one must actually be carried through to the normalized recipe, or
+  // it silently reverts to its legacy value on every load.
+  for (const key of tierKeys) {
+    assert.match(
+      source,
+      new RegExp(`${key}: \\(?optionValues\\.${key}\\b`),
+      `${key} is registered but never derived`,
+    );
+  }
+});
+
 test("the simplified pitch-range preference requires and normalizes to v24", async () => {
   const publicCatalog = JSON.parse(await readFile(
     new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),

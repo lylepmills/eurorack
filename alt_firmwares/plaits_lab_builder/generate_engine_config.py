@@ -129,6 +129,20 @@ PREFERENCE_TIERS = (
     ("linearTzfm", "fastFm"),
     ("simplifiedPitchRanges",),
 )
+
+# The starting-option tiers, same scheme and same reasoning as PREFERENCE_TIERS:
+# every option shape this container accepts is the union of some prefix. Every
+# recipe ever written carries the seven original options, and a v18-or-later one
+# adds attenuverterMode; a missing key means the option keeps its legacy value.
+# Mirrored by initialOptionTiers in the Worker's src/contract.ts and the editor's
+# manifest.ts -- all three must agree on content AND order, since the accepted
+# shapes are prefixes, so reordering changes which sets are legal.
+INITIAL_OPTION_TIERS = (
+    ("auxOutput", "chordTable", "holdOnTrigger", "levelInput",
+     "lockedFrequencyKnob", "modelInput", "suboscillatorOctave"),
+    ("attenuverterMode",),
+)
+
 # v23 adds two independent experimental FM preferences. Linear TZFM changes
 # the attenuverter law on supporting engines; Fast FM changes SDADC2 acquisition
 # and therefore makes LEVEL CV unavailable. Keeping them separate allows all
@@ -349,6 +363,22 @@ DEFAULT_SCALE_BANK = [
      "description": "Six evenly spaced whole tones.",
      "pitches": [0, 256, 512, 768, 1024, 1280], "tuning": "12-TET", "source": "Shipped"},
 ]
+
+
+def _matching_tier(keys: set[str], tiers: tuple[tuple[str, ...], ...]) -> int:
+    """Index of the cumulative prefix `keys` matches exactly, or -1.
+
+    Shared by the preference and starting-option tiers: both grew one tier at a
+    time, so the shapes ever written are exactly the unions of the prefixes.
+    Matching is exact per prefix, so a partial shape (a gap in the middle) or an
+    unknown key riding along is rejected outright rather than tolerated.
+    """
+    cumulative: set[str] = set()
+    for index, tier in enumerate(tiers):
+        cumulative = cumulative | set(tier)
+        if keys == cumulative:
+            return index
+    return -1
 
 
 def validate_chord_tables(value: Any) -> list[dict[str, Any]]:
@@ -1427,24 +1457,19 @@ def validate_recipe(value: Any) -> BuildRecipe:
     options = configuration.get("initialOptions")
     if not isinstance(preferences, dict) or not isinstance(options, dict):
         raise ValueError("recipe must contain firmware preferences and starting options")
-    legacy_option_keys = {
-        "lockedFrequencyKnob", "modelInput", "levelInput", "auxOutput",
-        "suboscillatorOctave", "chordTable", "holdOnTrigger",
-    }
-    current_option_keys = legacy_option_keys | {"attenuverterMode"}
-    carries_attenuverter_mode = set(options) == current_option_keys
     # Preferences arrived incrementally, and every accepted shape is a
     # cumulative PREFIX of PREFERENCE_TIERS: pre-v14 carries navigationMode
     # alone, v14 adds calibration, and so on. Adding a preference is one row
     # there rather than another literal set here. Keep it in step with the
     # Worker's copy in src/contract.ts and the editor's in manifest.ts.
-    accepted_preference_shapes = []
-    cumulative: set[str] = set()
-    for tier in PREFERENCE_TIERS:
-        cumulative = cumulative | set(tier)
-        accepted_preference_shapes.append(set(cumulative))
-    if set(preferences) not in accepted_preference_shapes or (
-            set(options) != legacy_option_keys and not carries_attenuverter_mode):
+    preference_tier = _matching_tier(set(preferences), PREFERENCE_TIERS)
+    # Starting options are matched the same way, against INITIAL_OPTION_TIERS:
+    # the seven original options, then attenuverterMode from v18. This replaced
+    # one literal key set per shape, each of which had to be ORed in at every
+    # use -- the quadratic, silently-failing shape the preferences shed above.
+    option_tier = _matching_tier(set(options), INITIAL_OPTION_TIERS)
+    carries_attenuverter_mode = option_tier >= 1
+    if preference_tier < 0 or option_tier < 0:
         raise ValueError("recipe contains an unsupported firmware option")
     # The Worker stores a fully normalized option profile and therefore adds
     # the legacy-equivalent `stock` value before handing a pre-v18 recipe to

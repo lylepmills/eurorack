@@ -13,6 +13,7 @@ from generate_engine_config import (
     DEFAULT_CHORD_TABLES,
     DEFAULT_CONFIGURATION,
     DEFAULT_SCALE_BANK,
+    INITIAL_OPTION_TIERS,
     MAX_RECIPE_SCHEMA_VERSION,
     PREFERENCE_TIERS,
     MIN_RECIPE_SCHEMA_VERSION,
@@ -164,6 +165,13 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertEqual(int(minimum.group(1)), MIN_RECIPE_SCHEMA_VERSION)
         self.assertEqual(int(maximum.group(1)), MAX_RECIPE_SCHEMA_VERSION)
 
+    def worker_tiers(self, pattern: str) -> list[list[str]]:
+        source = (FIXTURES / "src" / "contract.ts").read_text(encoding="utf-8")
+        block = re.search(pattern, source, re.S)
+        self.assertIsNotNone(block, "expected a tier table in the Worker")
+        rows = re.findall(r"\[([^\]]*)\]", block.group(1))
+        return [re.findall(r'"([a-zA-Z0-9]+)"', row) for row in rows]
+
     def test_preference_tiers_stay_in_sync_across_all_three_copies(self) -> None:
         # The same preference tiers are declared three times: here, in the
         # public Worker, and in the editor. The Worker validates first and hands
@@ -172,14 +180,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
         # container contract split that failed the rev-4749aec727af canary.
         # Compare the ORDER too, not just membership: the shapes accepted are
         # cumulative prefixes, so a reordering changes which sets are legal.
-        def tiers_from(source: str, pattern: str) -> list[list[str]]:
-            block = re.search(pattern, source, re.S)
-            self.assertIsNotNone(block, "expected a preference tier table")
-            rows = re.findall(r"\[([^\]]*)\]", block.group(1))
-            return [re.findall(r'"([a-zA-Z0-9]+)"', row) for row in rows]
-
-        worker = tiers_from(
-            (FIXTURES / "src" / "contract.ts").read_text(encoding="utf-8"),
+        worker = self.worker_tiers(
             r"const preferenceTiers: readonly \(readonly string\[\]\)\[\] = \[(.*?)\];",
         )
         ours = [list(tier) for tier in PREFERENCE_TIERS]
@@ -189,6 +190,90 @@ class GenerateEngineConfigTest(unittest.TestCase):
         # container cannot see. It is held in step by its own guard (its tier
         # list must match defaultFirmwareConfiguration) plus the comment on each
         # copy. A conditional check here would silently never run.
+
+    def test_initial_option_tiers_stay_in_sync_across_all_three_copies(self) -> None:
+        # Exactly the same hazard as the preference tiers above, for the
+        # starting options: three declarations, the Worker validating before
+        # this container sees the recipe, and prefix matching that makes ORDER
+        # part of the contract rather than a formatting choice.
+        worker = self.worker_tiers(
+            r"const initialOptionTiers: readonly \(readonly string\[\]\)\[\] = \[(.*?)\];",
+        )
+        ours = [list(tier) for tier in INITIAL_OPTION_TIERS]
+        self.assertEqual(
+            worker, ours, "Worker and container starting-option tiers differ")
+
+        # The editor's third copy is guarded on its own side, as above.
+
+    def option_recipe(self, schema_version: int, options: dict) -> dict:
+        recipe = self.load("default_recipe.json")
+        recipe["schemaVersion"] = schema_version
+        recipe["preferences"] = {"navigationMode": "linear"}
+        recipe["initialOptions"] = options
+        recipe["resources"] = {"chordTables": DEFAULT_CHORD_TABLES}
+        return recipe
+
+    def test_every_historical_option_shape_still_loads(self) -> None:
+        # The tier list is only safe if its cumulative prefixes are exactly the
+        # shapes released editors have ever written. Walk them, each at a schema
+        # version the attenuverter gate accepts that shape at, and require the
+        # normalized options to come out identical either way -- an absent
+        # attenuverterMode must fall to `stock`, not go missing.
+        legacy = {
+            key: DEFAULT_CONFIGURATION["initialOptions"][key]
+            for key in INITIAL_OPTION_TIERS[0]
+        }
+        shapes = (
+            (ATTENUVERTER_MODE_MIN_SCHEMA_VERSION - 1, legacy),
+            (ATTENUVERTER_MODE_MIN_SCHEMA_VERSION, {**legacy, "attenuverterMode": "stock"}),
+        )
+        option_fields = (
+            "locked_frequency_pot_option", "model_cv_option", "level_cv_option",
+            "aux_output_option", "aux_subosc_option", "chord_set_option",
+            "hold_on_trigger_option", "attenuverter_mode", "options_profile_id",
+        )
+        baseline = None
+        for schema_version, options in shapes:
+            build = validate_recipe(self.option_recipe(schema_version, options))
+            normalized = tuple(getattr(build, field) for field in option_fields)
+            if baseline is None:
+                baseline = normalized
+            self.assertEqual(
+                normalized, baseline,
+                f"the {sorted(options)} shape normalized differently")
+
+        # And a tier-1 recipe must carry its VALUE through, not just its key:
+        # deriving straight off the key is what makes it impossible for a
+        # present option to be replaced by the absent case's default.
+        drift = validate_recipe(self.option_recipe(
+            ATTENUVERTER_MODE_MIN_SCHEMA_VERSION,
+            {**legacy, "attenuverterMode": "drift"}))
+        self.assertEqual(drift.attenuverter_mode, 1)
+
+        # A gap in the middle of the prefix is not a shape any editor produced,
+        # and neither is an unknown key riding along with a valid prefix.
+        gapped = dict(legacy)
+        del gapped["holdOnTrigger"]
+        rejected = (
+            (ATTENUVERTER_MODE_MIN_SCHEMA_VERSION - 1, gapped),
+            (ATTENUVERTER_MODE_MIN_SCHEMA_VERSION,
+             {**legacy, "attenuverterMode": "stock", "somethingElse": "yes"}),
+        )
+        for schema_version, options in rejected:
+            with self.assertRaises(ValueError):
+                validate_recipe(self.option_recipe(schema_version, options))
+
+    def test_every_registered_option_is_actually_mapped(self) -> None:
+        # A key in the tier list that no mapping reads would be accepted and
+        # then silently ignored, and a mapped option missing from the tiers
+        # would make every recipe carrying it fail the closed key-set check.
+        # Tie the two together rather than trusting them to be edited in step.
+        source = (FIXTURES / "generate_engine_config.py").read_text(encoding="utf-8")
+        body = re.search(r"\n    mappings = \{(.*?)\n    \}\n", source, re.S)
+        self.assertIsNotNone(body, "expected the option mapping table")
+        read = set(re.findall(r'options\.get\("([a-zA-Z0-9]+)"', body.group(1)))
+        registered = {key for tier in INITIAL_OPTION_TIERS for key in tier}
+        self.assertEqual(read, registered)
     def custom_model_recipe(self, assignments: list[dict]) -> dict:
         recipe = self.load("default_recipe.json")
         recipe["schemaVersion"] = 24

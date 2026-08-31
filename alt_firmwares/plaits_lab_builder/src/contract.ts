@@ -866,10 +866,11 @@ function isOneOf<T extends string | number>(value: unknown, choices: readonly T[
   return choices.includes(value as T);
 }
 
-// Matches a preference object against the cumulative prefixes of an ordered
-// tier list, returning the matched tier index or -1. Exact match per prefix, so
-// an unknown or partial key set is still rejected outright.
-function matchPreferenceTier(
+// Matches an object against the cumulative prefixes of an ordered tier list,
+// returning the matched tier index or -1. Exact match per prefix, so an unknown
+// or partial key set is still rejected outright. Shared by the preference and
+// starting-option tiers below -- both grew the same way and fail the same way.
+function matchKeySetTier(
   value: Record<string, unknown>,
   tiers: readonly (readonly string[])[],
 ): number {
@@ -965,22 +966,38 @@ function normalizeConfiguration(
   ];
   // The index of the cumulative prefix the recipe's keys match exactly, or -1
   // for a shape no released editor ever produced.
-  const preferenceTier = matchPreferenceTier(preferenceValues, preferenceTiers);
+  const preferenceTier = matchKeySetTier(preferenceValues, preferenceTiers);
   // Every preference but navigationMode is a boolean flag.
   const booleanPreferenceKeys = preferenceTiers
     .slice(1, preferenceTier + 1)
     .flatMap((keys) => keys);
-  const legacyInitialOptions = hasExactKeys(optionValues, [
-    "auxOutput", "chordTable", "holdOnTrigger", "levelInput",
-    "lockedFrequencyKnob", "modelInput", "suboscillatorOctave",
-  ]);
-  const carriesAttenuverterMode = hasExactKeys(optionValues, [
-    "attenuverterMode", "auxOutput", "chordTable", "holdOnTrigger", "levelInput",
-    "lockedFrequencyKnob", "modelInput", "suboscillatorOctave",
-  ]);
+  // Starting options grew the same way, so they are matched the same way: every
+  // shape accepted here is a cumulative PREFIX of these tiers -- every recipe
+  // ever written carries the seven original options, and a v18-or-later one adds
+  // attenuverterMode. Adding an option is one row; presence, type-checking and
+  // the derived value all follow from it.
+  //
+  // This replaced one hasExactKeys boolean per shape, which needed a
+  // hand-maintained OR of every LATER shape at each use. That is the shape that
+  // failed silently for the preferences: a missed OR made an older setting
+  // derive to its default, so a saved recipe's option simply vanished from the
+  // firmware it built. With two shapes it was still tractable; the third would
+  // have recreated the bug.
+  //
+  // The option set stays CLOSED, so a new key must be added here as well as
+  // version-gated below. Keep this list -- content AND order, since the accepted
+  // shapes are its prefixes -- in step with INITIAL_OPTION_TIERS in
+  // generate_engine_config.py and initialOptionTiers in the editor's manifest.ts.
+  const initialOptionTiers: readonly (readonly string[])[] = [
+    ["auxOutput", "chordTable", "holdOnTrigger", "levelInput",
+      "lockedFrequencyKnob", "modelInput", "suboscillatorOctave"],
+    ["attenuverterMode"],
+  ];
+  const initialOptionTier = matchKeySetTier(optionValues, initialOptionTiers);
+  const carriesAttenuverterMode = initialOptionTier >= 1;
   if (preferenceTier < 0
       || booleanPreferenceKeys.some((key) => typeof preferenceValues[key] !== "boolean")
-      || (!legacyInitialOptions && !carriesAttenuverterMode)
+      || initialOptionTier < 0
       || !isOneOf(preferenceValues.navigationMode, ["linear", "banked"] as const)
       || !isOneOf(optionValues.lockedFrequencyKnob, [
         "octaves", "decay", "aux-crossfade", "macro-4",
@@ -1107,9 +1124,12 @@ function normalizeConfiguration(
       suboscillatorOctave: optionValues.suboscillatorOctave,
       chordTable: optionValues.chordTable,
       holdOnTrigger: optionValues.holdOnTrigger,
-      attenuverterMode: carriesAttenuverterMode
-        ? optionValues.attenuverterMode as NormalizedRecipe["initialOptions"]["attenuverterMode"]
-        : "stock",
+      // As with the preferences above, an absent key is undefined, so the
+      // option falls to its legacy default with no reference to which tier
+      // matched -- which is what makes forgetting to extend a condition here
+      // impossible rather than merely unlikely.
+      attenuverterMode: (optionValues.attenuverterMode
+        ?? "stock") as NormalizedRecipe["initialOptions"]["attenuverterMode"],
     },
   };
 }
