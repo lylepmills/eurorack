@@ -1,7 +1,7 @@
 # Plaits Palette firmware build service
 
 This directory contains the approved-engine backend for Plaits Palette. It accepts
-legacy recipes and manifests through schema 24 containing 24 or 32 versioned
+legacy recipes and manifests through schema 26 containing 24 or 32 versioned
 engine references, firmware preferences and starting options, and bounded
 chord-table/custom-FM/scale-bank/Speech-bank/custom-model resources. Schema 15 can target either Mutable
 Instruments Plaits or Plum Audio Ro'Ved and adds the color-blind bank display.
@@ -109,7 +109,7 @@ in either direction. Leave it off for LFO use or one-gesture octave jumps.
 Note the option is NOT experimental and is not in the Experimental section: it
 changes which selector positions exist, not what any of them do.
 
-Schema 23 is available in production with recipe-driven scale banks, automatic
+Schema 26 is available in production with recipe-driven scale banks, automatic
 LEVEL routing, selectable/custom LPC Speech banks of up to 32 words, text and
 recording encoders, source/engine audio previews, unpatched-attenuverter modes,
 and the triggered and gated FREQUENCY contours. It also includes schema 20's
@@ -749,11 +749,12 @@ production artifact exactly (58,148/20,668, WAV `dcae8300...`). Two consequences
   `dcae8300a81f0d35612f3ade3779113848fe512c62829758ebfce74dd708d872` -- byte-identical
   to production, at 58,148/20,668 text/BSS.
 
-The hardware audition for this rollout was deferred: the fix shipped on a
-listening-only basis with the module unavailable, and the flash-and-play
-confirmation is outstanding. Flash
-`dcae8300a81f0d35612f3ade3779113848fe512c62829758ebfce74dd708d872` -- after the
-purge and re-gate, the staging and production artifacts are the same bytes, so
+The hardware audition for this rollout was deferred rather than skipped: the fix
+shipped on a listening-only basis while the module was unavailable. It PASSED on
+physical hardware on 2026-08-31, confirming the octave-switching root behaves as
+intended. The audition artifact is
+`dcae8300a81f0d35612f3ade3779113848fe512c62829758ebfce74dd708d872`; after the
+purge and re-gate the staging and production artifacts are the same bytes, so
 either copy is the right one. (Before the purge only the production copy was,
 which is why the saved gate artifact had to be replaced.)
 

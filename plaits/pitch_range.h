@@ -2,7 +2,12 @@
 //
 // Pure pitch-range math shared by the hardware UI and its host test. The
 // selector keeps Plaits' eight ordinary +/-7-semitone octave ranges, followed
-// by octave switching, precision tuning, and the high-frequency range.
+// by octave switching, precision tuning, and a full-range coarse sweep.
+//
+// That last one is PITCH_RANGE_HIGH, and the name misleads: it is not a
+// high-frequency range but `60 + transposition * 48`, i.e. 12..108 on one knob
+// -- the position players reach for as COARSE, and the far-clockwise one a
+// module ships pointing at. Prefer "coarse" in user-facing copy.
 
 #ifndef PLAITS_PITCH_RANGE_H_
 #define PLAITS_PITCH_RANGE_H_
