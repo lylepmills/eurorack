@@ -43,6 +43,7 @@ from preview_artifacts import (
     PUBLISHED_MODEL_SHA256,
     TtsArtifactSession,
     link_or_copy,
+    synthesis_provenance,
     write_json_atomic,
 )
 
@@ -120,12 +121,7 @@ def main() -> int:
             trim_token_edges=language in {"en-US", "en-GB"},
         )
         source_cache_hits += int(source_hit)
-        synthesis_provenance = {
-            k: v for k, v in tts_manifest.items()
-            if k in ("engine", "repository", "model", "speaker",
-                     "publishedModelSha256", "publishedVoiceSha256",
-                     "trimTokenEdgesApplied")
-        }
+        synthesis_provenance = synthesis_provenance(tts_manifest)
         link_or_copy(tts_source, source_output)
         sources.append((word, source_output))
         entries.append({

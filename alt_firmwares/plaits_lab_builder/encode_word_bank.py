@@ -18,6 +18,7 @@ from preview_artifacts import (
     TtsArtifactSession,
     content_key,
     link_or_copy,
+    synthesis_provenance,
     write_json_atomic,
 )
 
@@ -213,12 +214,7 @@ def main() -> int:
         # Carry whatever provenance the engine recorded rather than reaching for
         # Kokoro's field names — a Piper voice has a model hash and no voice
         # hash, and reading the wrong key raises rather than degrading.
-        synthesis_provenance = {
-            k: v for k, v in tts_manifest.items()
-            if k in ("engine", "repository", "model", "speaker",
-                     "publishedModelSha256", "publishedVoiceSha256",
-                     "trimTokenEdgesApplied")
-        }
+        synthesis_provenance = synthesis_provenance(tts_manifest)
         link_or_copy(artifact_dir / "source.wav", source_output)
         link_or_copy(artifact_dir / "natural.wav", natural_output)
         link_or_copy(artifact_dir / "flat.wav", flat_output)

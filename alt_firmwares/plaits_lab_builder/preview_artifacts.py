@@ -58,6 +58,37 @@ LANGUAGE_CODES = {
 }
 
 
+SYNTHESIS_PROVENANCE_FIELDS = (
+    "engine",
+    "repository",
+    "model",
+    "speaker",
+    "publishedModelSha256",
+    "publishedVoiceSha256",
+    "trimTokenEdgesApplied",
+)
+
+
+def synthesis_provenance(manifest: dict) -> dict:
+    """The engine-recorded provenance an encoder copies into its manifest.
+
+    Carry whatever the engine actually recorded rather than reaching for a
+    specific engine's field names. The two engines do not agree on shape: a
+    Kokoro manifest has `repository` and `publishedVoiceSha256`, a Piper one has
+    `model`, `speaker` and no voice hash. Subscripting a field the other engine
+    lacks raises instead of degrading, and the encoders report that as a generic
+    "could not be encoded" with no clue which field was missing.
+
+    That is not hypothetical. `encode_natural_speech_bank.py` read
+    `manifest["publishedVoiceSha256"]` directly, so widening the catalog to
+    Piper broke EVERY Piper voice in the Natural Speech panel in production.
+    Both encoders then grew their own identical copy of this filter, which is
+    the same divergence waiting to happen a third time — hence one function,
+    and a test asserting every encode entry point calls it.
+    """
+    return {k: v for k, v in manifest.items() if k in SYNTHESIS_PROVENANCE_FIELDS}
+
+
 def is_piper_voice(voice: str) -> bool:
     """Which engine owns this voice id?
 
