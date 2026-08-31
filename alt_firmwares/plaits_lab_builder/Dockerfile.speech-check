@@ -38,6 +38,21 @@ RUN python3 -m pip install --no-cache-dir "pip==26.1" \
         "kokoro==0.9.4" "misaki[en,ja,zh]==0.9.4" "soundfile==0.14.0" \
         "huggingface_hub==1.26.0" "piper-tts==1.7.0"
 
+
+# Lifted verbatim from Dockerfile.plaits-builder. Its absence is what this
+# check image got wrong: Natural Speech's encoder resamples with scipy, so
+# without it every natural-speech bank failed here while production was
+# healthy — a false alarm from the very drift this file warns about.
+# scipy rides along because the encoder resamples with signal.resample_poly;
+# it was the SECOND unbaked dependency found the same way as the first, by
+# running the encoder in the image rather than by reading its imports.
+RUN python3 -m pip install --no-cache-dir \
+        "setuptools<81" \
+    && python3 -m pip install --no-cache-dir --no-build-isolation \
+        "pyworld==0.3.5" \
+    && python3 -m pip install --no-cache-dir \
+        "scipy==1.15.3" \
+    && python3 -c "import pyworld, scipy"
 ENV PIPER_VOICE_ROOT="/opt/piper-voices" HF_HOME="/opt/huggingface"
 COPY . /workspace
 RUN python3 /workspace/alt_firmwares/plaits_lab_builder/fetch_piper_voices.py \

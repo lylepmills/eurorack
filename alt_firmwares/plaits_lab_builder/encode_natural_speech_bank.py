@@ -103,7 +103,12 @@ def main() -> int:
     sources: list[tuple[str, Path]] = []
     entries = []
     source_cache_hits = 0
-    voice_sha256 = ""
+    # Whatever provenance the engine recorded, not Kokoro's field names. A
+    # Piper voice has a model hash and no voice hash, so reaching for
+    # publishedVoiceSha256 raises KeyError and the whole bank fails with a
+    # generic "could not be encoded" — which is what shipping the widened voice
+    # catalog did to every Piper voice in this panel.
+    synthesis_provenance: dict[str, object] = {}
     for index, entry in enumerate(request["entries"]):
         word = entry["word"]
         spoken_as = entry.get("spokenAs", "")
@@ -115,7 +120,12 @@ def main() -> int:
             trim_token_edges=language in {"en-US", "en-GB"},
         )
         source_cache_hits += int(source_hit)
-        voice_sha256 = str(tts_manifest["publishedVoiceSha256"])
+        synthesis_provenance = {
+            k: v for k, v in tts_manifest.items()
+            if k in ("engine", "repository", "model", "speaker",
+                     "publishedModelSha256", "publishedVoiceSha256",
+                     "trimTokenEdgesApplied")
+        }
         link_or_copy(tts_source, source_output)
         sources.append((word, source_output))
         entries.append({
@@ -163,7 +173,7 @@ def main() -> int:
             "voice": voice,
             "repository": KOKORO_REPOSITORY,
             "publishedModelSha256": PUBLISHED_MODEL_SHA256,
-            "publishedVoiceSha256": voice_sha256,
+            **synthesis_provenance,
             "referencePitchHz": 100,
             "sampleRate": 48000,
         },
