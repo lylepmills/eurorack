@@ -69,7 +69,7 @@ const catalogResponse = await fetch(new URL("/v1/catalog", apiBase), { headers, 
 const catalog = await json(catalogResponse, "catalog");
 assert.equal(catalogResponse.headers.get("access-control-allow-origin"), origin, "CORS origin");
 assert.equal(catalog.deploymentEnvironment, deploymentEnvironment);
-assert.ok(catalog.recipeSchemaVersion >= 22, "builder must support the Sync In preference");
+assert.ok(catalog.recipeSchemaVersion >= 27, "builder must support gate articulation and sixteen chord tables");
 // The catalog reports the WORKER's var. It proves the Worker deployed; it does
 // NOT prove the Container serving compiles is the matching image, because the
 // two disagree for the length of a Container rollout. The authoritative check is
@@ -132,6 +132,7 @@ const waveTerrain = publicCatalog.engines.find((engine: { id: string }) => engin
 const bubbleTime = publicCatalog.engines.find((engine: { id: string }) => engine.id === "bubbletime");
 const zxPhase48k = publicCatalog.engines.find((engine: { id: string }) => engine.id === "zxphase48k");
 const zxPulse48k = publicCatalog.engines.find((engine: { id: string }) => engine.id === "zxpulse48k");
+const chords = publicCatalog.engines.find((engine: { id: string }) => engine.id === "chords");
 assert.ok(originalSpeech, "Original Speech is missing from the public catalog");
 assert.ok(speechSounds, "Speech Sounds is missing from the public catalog");
 assert.ok(lpcWords, "LPC Words is missing from the public catalog");
@@ -140,12 +141,42 @@ assert.ok(waveTerrain, "Wave Terrain is missing from the public catalog");
 assert.ok(bubbleTime, "BubbleTime is missing from the public catalog");
 assert.ok(zxPhase48k, "ZxPhase48k is missing from the public catalog");
 assert.ok(zxPulse48k, "ZxPulse48k is missing from the public catalog");
+assert.ok(chords, "Chords is missing from the public catalog");
 const reference = (engine: any) => ({
   engine: engine.id,
   package: engine.packageId,
   version: engine.version,
   digest: engine.digest,
 });
+
+// Exercise the complete two-bank chord-table gesture, not merely schema 27's
+// upper bound. The four published tables stay byte-for-byte intact; twelve
+// local variants make every remaining LED position audible on hardware by
+// progressively widening the second voice in each chord.
+const canaryChordTables = [
+  ...structuredClone(chordCatalog.tables),
+  ...Array.from({ length: 12 }, (_, index) => {
+    const source = structuredClone(chordCatalog.tables[index % chordCatalog.tables.length]);
+    const number = index + 1;
+    return {
+      ...source,
+      id: `staging-local-${number}`,
+      packageId: `local/staging-local-${number}`,
+      version: "draft",
+      digest: null,
+      name: `Staging local ${number}`,
+      author: "Rubato Audio",
+      origin: "Local",
+      description: "A schema-27 hardware canary table.",
+      chords: source.chords.map((chord: any) => ({
+        ...chord,
+        voices: chord.voices.map((voice: number, voiceIndex: number) =>
+          voiceIndex === 1 ? voice + 25 * number : voice),
+      })),
+    };
+  }),
+];
+assert.equal(canaryChordTables.length, 16, "hardware canary must exercise both chord-table banks");
 
 function canaryTerrainData(seed: number): string {
   const bytes = Buffer.alloc(64 * 64);
@@ -285,7 +316,7 @@ const wavetableBank = [
 ];
 
 const recipe = {
-  schemaVersion: 26,
+  schemaVersion: 27,
   target: "mutable-instruments-plaits",
   firmware: "rubato-plaits",
   // Keep Original Speech beside both split engines in this hardware gate. All
@@ -303,7 +334,8 @@ const recipe = {
     reference(bubbleTime),
     reference(zxPhase48k),
     reference(zxPulse48k),
-    ...Array.from({ length: 16 }, () => null),
+    reference(chords),
+    ...Array.from({ length: 15 }, () => null),
   ],
   output: "audio-wav",
   // Sync In's compile switch moved onto its own preference in v22. The starting
@@ -318,19 +350,21 @@ const recipe = {
     linearTzfm: false,
     fastFm: false,
     simplifiedPitchRanges: false,
+    envelopeContour: true,
   },
   initialOptions: {
-    lockedFrequencyKnob: "octaves",
+    lockedFrequencyKnob: "envelope-contour",
+    trigResponse: "velocity-gate",
     modelInput: "sync-in",
     levelInput: "level",
     auxOutput: "stereo",
     suboscillatorOctave: 0,
-    chordTable: chordCatalog.tables[0].id,
+    chordTable: canaryChordTables[0].id,
     holdOnTrigger: false,
     attenuverterMode: "stock",
   },
   resources: {
-    chordTables: [chordCatalog.tables[0]],
+    chordTables: canaryChordTables,
     speechBanks: {
       // Deliberately remove three factory banks: this covers the flash/resource
       // path that failed during the first Speech rollout.

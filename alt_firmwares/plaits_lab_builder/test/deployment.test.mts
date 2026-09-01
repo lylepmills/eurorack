@@ -53,6 +53,17 @@ test("the hardware smoke carries Speech plus the Terrain and Wavetable release b
   assert.match(smoke, /"native"/);
 });
 
+test("the hardware smoke exercises schema 27 gate articulation and both chord-table banks", () => {
+  assert.match(smoke, /schemaVersion:\s*27/);
+  assert.match(smoke, /engine\.id === "chords"/);
+  assert.match(smoke, /reference\(chords\)/);
+  assert.match(smoke, /envelopeContour:\s*true/);
+  assert.match(smoke, /lockedFrequencyKnob:\s*"envelope-contour"/);
+  assert.match(smoke, /trigResponse:\s*"velocity-gate"/);
+  assert.match(smoke, /assert\.equal\(canaryChordTables\.length, 16/);
+  assert.match(smoke, /chordTables:\s*canaryChordTables/);
+});
+
 // The 2026-08-21 octave-fix rollout passed this gate against the PREVIOUS
 // firmware. The build key is derived from the Worker's PLAITS_SOURCE_REVISION
 // var, and the var updates the instant `deploy:staging` returns, while the
