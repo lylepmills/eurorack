@@ -18,6 +18,7 @@ endif
 CC_FILES       = algorithms.cc \
 		additive_engine.cc \
 		analog_percussion_engine.cc \
+		acid_engine.cc \
 		bubbletime_engine.cc \
 		attractor_engine.cc \
 		bass_drum_engine.cc \
