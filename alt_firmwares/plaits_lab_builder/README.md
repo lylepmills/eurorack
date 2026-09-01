@@ -452,6 +452,21 @@ together with the immutable source revision and image tag.** Never deploy the
 contract bump by itself — the current production container renders the old
 Ro'Ved prose.
 
+Since contract 21 this is enforced rather than remembered. `render_manual.py`
+declares `MANUAL_CONTRACT`, the lowest contract that describes what it prints;
+raise it in the same commit that changes the guide's layout or prose.
+`check_manual_contract.py` — wired into `pnpm run deploy` and
+`deploy:staging` next to `catalog:check` — then refuses any environment whose
+`PLAITS_MANUAL_CONTRACT` is below what the renderer requires **at the commit
+`PLAITS_SOURCE_REVISION` names**, which is the renderer actually inside the
+image being deployed. That is deliberately not an equality check: a landed but
+unshipped renderer constrains nothing, so the waiting state described above
+still deploys. It also catches an image tag naming a commit other than
+`PLAITS_SOURCE_REVISION`, and fails closed when the revision cannot be resolved
+locally — an unfetchable commit means nobody can say what the running container
+renders. A revision predating the constant requires nothing, so older rollouts
+do not fail retroactively. Tests: `python3 -m unittest test_check_manual_contract`.
+
 The contract is the Worker's alone, and in source (`a0c0791`) it rides in the
 `POST /manual` body as `manualContract` for the container to echo on
 `X-Plaits-Manual-Contract`, so that header describes the render that actually
@@ -556,6 +571,13 @@ Container are managed by `wrangler.jsonc`. Before each firmware-source rollout:
 > Ro'Ved Field Guide's navigation and locked-octave prose changed with the
 > firmware. The renderer is already landed; the Worker cannot be moved to 21
 > before the image carrying that renderer ships. See the contract notes above.
+>
+> You do not have to remember this: `pnpm run deploy` runs `contract:check`,
+> which refuses any deploy whose `PLAITS_MANUAL_CONTRACT` is below the
+> `MANUAL_CONTRACT` that `render_manual.py` declares **at the commit named by
+> `PLAITS_SOURCE_REVISION`**, and names the value to set. Run
+> `pnpm run contract:check` by hand at any point to see where a deployment
+> stands.
 
 1. Compute and set a new immutable `PLAITS_SOURCE_REVISION`.
 2. Build and push the matching container image tag. **Pass the revision as a
