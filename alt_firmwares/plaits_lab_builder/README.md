@@ -551,6 +551,12 @@ revision under test rather than treating either set as an expected value.
 The production Worker, queues, R2 bucket, Durable Objects, and compiler
 Container are managed by `wrangler.jsonc`. Before each firmware-source rollout:
 
+> **Pending as of `c32eff52b0b5`: the next rollout must also bump
+> `PLAITS_MANUAL_CONTRACT` from 20 to 21** (both env blocks), because the
+> Ro'Ved Field Guide's navigation and locked-octave prose changed with the
+> firmware. The renderer is already landed; the Worker cannot be moved to 21
+> before the image carrying that renderer ships. See the contract notes above.
+
 1. Compute and set a new immutable `PLAITS_SOURCE_REVISION`.
 2. Build and push the matching container image tag. **Pass the revision as a
    build arg**, not just as a Worker var — the container stamps its own
