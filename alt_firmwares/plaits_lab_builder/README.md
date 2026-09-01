@@ -566,7 +566,7 @@ revision under test rather than treating either set as an expected value.
 The production Worker, queues, R2 bucket, Durable Objects, and compiler
 Container are managed by `wrangler.jsonc`. Before each firmware-source rollout:
 
-> **The schema-27 staging candidate `80a0e84ddc6b` carries
+> **The schema-27 staging candidate `4b6403f90a0e` carries
 > `PLAITS_MANUAL_CONTRACT=21` in both environment blocks.** Preserve that value
 > when promoting it to production: the Ro'Ved Field Guide's navigation and
 > locked-octave prose changed with this firmware and its renderer ships in the
