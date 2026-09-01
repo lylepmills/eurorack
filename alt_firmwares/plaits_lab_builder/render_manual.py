@@ -13,6 +13,19 @@ from generate_engine_config import validate_recipe
 
 BUILDER_DIR = Path(__file__).resolve().parent
 PUBLIC_CATALOG_PATH = BUILDER_DIR.parent / "plaits_lab_catalog/public_catalog.json"
+
+# The lowest PLAITS_MANUAL_CONTRACT that correctly describes what this renderer
+# prints. Raise it in the same commit that changes the guide's layout or prose,
+# then bump the Worker's var to match when the image carrying this file ships.
+#
+# This is a REQUIREMENT, not the deployed value: the contract itself stays the
+# Worker's alone, and the renderer is allowed to sit ahead of it while it waits
+# out a rollout cycle. What is NOT allowed is deploying a Worker whose contract
+# is below the requirement of the renderer inside the image it points at — that
+# serves cached guides written by an older renderer under a key that no longer
+# describes them. `pnpm run contract:check` enforces exactly that; see
+# check_manual_contract.py and the contract notes in README.md.
+MANUAL_CONTRACT = 21
 BANKS = (
     {"id": "green", "name": "GREEN", "start": 0, "color": "#4F9868"},
     {"id": "red", "name": "RED", "start": 8, "color": "#C6534B"},
