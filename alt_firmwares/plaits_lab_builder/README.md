@@ -829,7 +829,7 @@ revision before building — a tag that disagrees with the source inside it is
 the failure the `development` sentinel exists to catch, caught earlier.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-1cf8cd56ba6f` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-633cc8cc9e1d` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a new
 image, use `wrangler containers info <application-id>` and wait until
@@ -938,6 +938,7 @@ target.
 | August 31, 2026 (schema 26 shared custom Wavetable banks, manual contract 20) | `1f3441f4b15c` | `rev-1f3441f4b15c` |
 | August 31, 2026 (Natural Speech recordings; /ping reports its revision) | `d857fbab280f` | `rev-d857fbab280f` |
 | August 31, 2026 (BubbleTime, ZXPhase48k, and ZXPulse48k community engines; 92 engines) | `1cf8cd56ba6f` | `rev-1cf8cd56ba6f` |
+| September 1, 2026 (invalidate fixed-window Natural Speech preview cache) | `633cc8cc9e1d` | `rev-633cc8cc9e1d` |
 
 The August 16 production canary used the same exact 24-slot recipe as staging:
 build `6cb08754024d2a7abf43ae0c6390eb23b11a051dbc04c4984a32212040a6e865`
