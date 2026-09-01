@@ -382,6 +382,21 @@ def _validate_saved_bank_preview_request(value: Any) -> dict[str, Any]:
 
 
 NATURAL_SPEECH_BANK_PREVIEW_FORMAT = "rubato.plaits-natural-speech-bank-preview/v1"
+NATURAL_SPEECH_BANK_PREVIEW_CACHE_REVISION = "saved-natural-speech-bank-preview-v2"
+
+
+def _natural_speech_bank_preview_job_key(encoded: bytes) -> str:
+    """Key a reconstructed preview to both its bank and renderer source.
+
+    Saved-bank audio is an artifact of the preview harness, not only of the
+    NSH1 frames.  The first timing fix shortened each word from a fixed two
+    second window to its real frame duration, but the unchanged v1 key kept
+    serving the old long-gap WAVs for the three starter banks.  Including the
+    image revision makes future renderer changes invalidate their artifacts
+    automatically instead of relying on another manual cache-version bump.
+    """
+    revision = f"{NATURAL_SPEECH_BANK_PREVIEW_CACHE_REVISION}-{SOURCE_REVISION}"
+    return _speech_job_key(encoded, revision)
 
 
 def render_saved_natural_speech_bank(value: Any) -> dict[str, Any]:
@@ -406,7 +421,7 @@ def render_saved_natural_speech_bank(value: Any) -> dict[str, Any]:
         raise BuildError("invalid_request", "The saved Natural Speech bank is invalid.", str(error)) from error
 
     encoded = json.dumps(value, sort_keys=True, ensure_ascii=False).encode("utf-8")
-    job_id = _speech_job_key(encoded, "saved-natural-speech-bank-preview-v1")
+    job_id = _natural_speech_bank_preview_job_key(encoded)
     output = SPEECH_ROOT / "saved-natural-banks" / job_id
     targets = {mode: output / f"bank-{mode}.wav" for mode in ("natural", "flat")}
     cached = all(path.is_file() for path in targets.values())

@@ -21,6 +21,8 @@ from container_server import (
     _validate_shared_buffer_layout,
     _concatenate_pcm_wavs,
     _declared_region_count,
+    _natural_speech_bank_preview_job_key,
+    _speech_job_key,
     _validate_saved_bank_preview_request,
     _validate_speech_request,
     _write_saved_plan,
@@ -304,6 +306,25 @@ class SavedSpeechPreviewTest(unittest.TestCase):
             _concatenate_pcm_wavs(sources, target)
             with wave.open(str(target), "rb") as result:
                 self.assertEqual(result.getnframes(), 3)
+
+
+class SavedNaturalSpeechPreviewTest(unittest.TestCase):
+    def test_cache_key_cannot_reuse_the_obsolete_fixed_window_preview(self) -> None:
+        encoded = b'{"bank":"starter"}'
+        old_fixed_window_key = _speech_job_key(
+            encoded, "saved-natural-speech-bank-preview-v1")
+        self.assertNotEqual(
+            _natural_speech_bank_preview_job_key(encoded),
+            old_fixed_window_key,
+        )
+
+    def test_cache_key_tracks_the_renderer_source_revision(self) -> None:
+        encoded = b'{"bank":"starter"}'
+        with patch("container_server.SOURCE_REVISION", "renderer-a"):
+            first = _natural_speech_bank_preview_job_key(encoded)
+        with patch("container_server.SOURCE_REVISION", "renderer-b"):
+            second = _natural_speech_bank_preview_job_key(encoded)
+        self.assertNotEqual(first, second)
 
 
 class SpeechEncodeRequestTest(unittest.TestCase):
