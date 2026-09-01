@@ -780,13 +780,14 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
     options_note = (
         "LIGHT 1 applies to chord-capable models and lists the chord tables loaded in this build (up to nine). "
         "LIGHT 3 stays dark, and the light navigation skips it, unless LIGHT 2 is set to a suboscillator — it has nothing to act on otherwise. "
-        "LIGHT 4 applies in octave-switching (frequency-locked) mode. LIGHT 6's LPG-decay and Auto settings apply only when TRIG is patched. "
+        "LIGHT 4 applies in octave-switching (frequency-locked) mode. Whenever LIGHT 4 is not Octaves, push and hold FREQUENCY and turn it to change octaves. "
+        "LIGHT 6's LPG-decay and Auto settings apply only when TRIG is patched. "
         f"{contour_options_note}"
         f"{sync_input_options_note}"
         "Auto sends LEVEL to LPG decay on ordinary oscillator models, but keeps LEVEL as velocity/accent on models with their own envelope. "
         f"{ATTENUVERTER_OPTIONS_NOTE}"
-        "Outside the menu, click FREQUENCY/TIMBRE for previous/next bank and "
-        "MORPH/HARMONICS for previous/next model."
+        "Outside the menu, click FREQUENCY/TIMBRE for previous/next model and "
+        "MORPH/HARMONICS for previous/next bank. Model clicks stay inside the current bank."
         if roved else
         "LIGHT 1 applies to chord-capable models and lists the chord tables loaded in this build (up to nine). "
         "LIGHT 3 stays dark, and the left button walks past it, unless LIGHT 2 is set to a suboscillator — it has nothing to act on otherwise. "
@@ -933,13 +934,21 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
             ]),
         ),
     ])
-    if not roved and document.get("lockedFrequencyPotOption") != 0:
+    if document.get("lockedFrequencyPotOption") != 0:
         story.extend([
             Spacer(1, 0.12 * inch),
             Table(
                 [[
                     Paragraph("LOCKED OCTAVES", table_header_style),
                     Paragraph(
+                        # Ro'Ved rides the gesture on FREQUENCY's own click,
+                        # free precisely because a locked FREQUENCY is no longer
+                        # setting pitch. Stock Plaits has no spare knob click, so
+                        # it spends its right button and MORPH instead.
+                        "This build gives FREQUENCY another job, but octave switching is still available. "
+                        "Push and hold FREQUENCY and turn it. The lights fill from the left as the octave rises; "
+                        "all eight lights means the highest octave."
+                        if roved else
                         "This build gives FREQUENCY another job, but octave switching is still available. "
                         "Hold the right button and turn MORPH. The lights climb with the selected octave; "
                         "all eight lights means the highest octave.",

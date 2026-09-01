@@ -439,6 +439,19 @@ TIMBRE audio transfers replace only selected prebaked custom entries. The
 terrain representation is part of `computeManualKey`, so changing a custom
 terrain between native and prebaked cannot reuse a stale guide.
 
+Contract 21 corrects the Ro'Ved guide against Plum Audio's manual and the
+firmware that now matches it. Outside the options menu FREQ/TIMBRE step models
+and MORPH/HARM change bank — the guide had the two pairs the other way round —
+and model clicks stay inside the current bank. It also prints the LOCKED OCTAVES
+section for Ro'Ved, which was suppressed entirely on the belief that the panel
+had no octave gesture; pushing and turning FREQUENCY is that gesture, free
+because a locked FREQUENCY is no longer setting pitch. Like contract 14, the
+renderer and its tests are landed while the Worker stays on 20 until the next
+builder-image rollout: **that rollout must bump `PLAITS_MANUAL_CONTRACT` to 21
+together with the immutable source revision and image tag.** Never deploy the
+contract bump by itself — the current production container renders the old
+Ro'Ved prose.
+
 The contract is the Worker's alone, and in source (`a0c0791`) it rides in the
 `POST /manual` body as `manualContract` for the container to echo on
 `X-Plaits-Manual-Contract`, so that header describes the render that actually

@@ -418,11 +418,24 @@ class RenderManualTest(unittest.TestCase):
             render_pdf(manual_document(normal_recipe), octaves)
             self.assertNotIn("LOCKED OCTAVES", pdf_strings(octaves))
 
+            # Ro'Ved reaches the same octaves through FREQUENCY's own click,
+            # so it prints the section with its own gesture — never the stock
+            # panel's right button and MORPH, which it does not have.
             roved = Path(temp_dir) / "roved-locked-frequency.pdf"
             roved_recipe = self.roved_recipe()
             roved_recipe["initialOptions"]["lockedFrequencyKnob"] = "decay"
             render_pdf(manual_document(roved_recipe), roved)
-            self.assertNotIn("LOCKED OCTAVES", pdf_strings(roved))
+            roved_printed = pdf_strings(roved).replace(")(", " ")
+            self.assertIn("LOCKED OCTAVES", roved_printed)
+            self.assertIn("Push and hold FREQUENCY and turn it", roved_printed)
+            self.assertIn("all eight lights means the highest octave", roved_printed)
+            self.assertNotIn("Hold the right button and turn MORPH", roved_printed)
+
+            # A build that leaves FREQUENCY on pitch has no locked octave to
+            # edit, so its click stays an ordinary navigation press.
+            roved_pitch = Path(temp_dir) / "roved-pitch.pdf"
+            render_pdf(manual_document(self.roved_recipe()), roved_pitch)
+            self.assertNotIn("LOCKED OCTAVES", pdf_strings(roved_pitch))
 
     @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
     def test_macro_and_fine_tuning_use_one_consistent_control_name(self) -> None:
@@ -482,8 +495,11 @@ class RenderManualTest(unittest.TestCase):
             printed = pdf_strings(path)
             self.assertIn("Your Ro'Ved Field Guide", printed)
             self.assertIn("TIMBRE + FREQUENCY", printed)
-            self.assertIn("FREQUENCY/TIMBRE for previous/next bank", printed)
-            self.assertIn("MORPH/HARMONICS for previous/next", printed)
+            # The mapping Plum Audio's manual documents and the panel's arrows
+            # mark: FREQ/TIMBRE step models, MORPH/HARM change bank.
+            self.assertIn("FREQUENCY/TIMBRE for previous/next model", printed)
+            self.assertIn("MORPH/HARMONICS for previous/next bank", printed)
+            self.assertIn("Model clicks stay inside the current bank", printed)
             self.assertIn("FREQUENCY/TIMBRE for the previous/next light", printed)
             self.assertIn("MORPH/HARMONICS for the previous/next setting", printed)
             self.assertIn("keep holding it", printed)
