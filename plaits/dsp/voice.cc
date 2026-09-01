@@ -273,7 +273,9 @@ void Voice::Render(
   // Feed it through the existing LEVEL/LPG path so that release still uses the
   // stock decay and COLOUR behavior without carrying a parallel VCA path in
   // the flash-constrained default build.
+#if PLAITS_HAS_CHIPTUNE_ENGINE
   const bool level_input_controls_articulation = level_patched;
+#endif
   if (gate_response) {
     ApplyGateLevel(
         trigger_state_,
