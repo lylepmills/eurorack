@@ -1,5 +1,5 @@
 [
-  { "id": "hero", "name": "Cowbell through agogo, plate and gong", "durationSeconds": 7, "note": 52, "triggerHz": 1.5,
+  { "id": "hero", "name": "Anvil through agogo, plate and gong", "durationSeconds": 7, "note": 52, "triggerHz": 1.5,
     "controls": { "harmonics": [0.0, 1.0], "timbre": [0.3, 0.85], "morph": [0.45, 0.9], "macro": [0.1, 0.75] } },
   { "id": "hardness", "name": "Soft mallet to hard metal stick", "durationSeconds": 5, "note": 48, "triggerHz": 2,
     "controls": { "harmonics": [0.68, 0.68], "timbre": [0.0, 1.0], "morph": [0.7, 0.7], "macro": [0.3, 0.3] } },

@@ -1,17 +1,17 @@
 // Copyright 2026 Lyle Mills.
 // SPDX-License-Identifier: MIT
 
-#ifndef PLAITS_DSP_ENGINE2_CIRCUIT_TOMS_ENGINE_H_
-#define PLAITS_DSP_ENGINE2_CIRCUIT_TOMS_ENGINE_H_
+#ifndef PLAITS_DSP_ENGINE2_CIRCUIT_ZAPS_ENGINE_H_
+#define PLAITS_DSP_ENGINE2_CIRCUIT_ZAPS_ENGINE_H_
 
 #include "plaits/dsp/engine/engine.h"
 
 namespace plaits {
 
-class CircuitTomsEngine : public Engine {
+class CircuitZapsEngine : public Engine {
  public:
-  CircuitTomsEngine() { }
-  ~CircuitTomsEngine() { }
+  CircuitZapsEngine() { }
+  ~CircuitZapsEngine() { }
 
   virtual void Init(stmlib::BufferAllocator* allocator);
   virtual void Reset();
@@ -27,14 +27,14 @@ class CircuitTomsEngine : public Engine {
   float phase_b_;
   float body_envelope_;
   float sweep_ratio_;
-  float noise_envelope_;
-  float noise_lowpass_;
+  float spark_envelope_;
+  float spark_lowpass_;
   float out_dc_;
   float aux_dc_;
 
-  DISALLOW_COPY_AND_ASSIGN(CircuitTomsEngine);
+  DISALLOW_COPY_AND_ASSIGN(CircuitZapsEngine);
 };
 
 }  // namespace plaits
 
-#endif  // PLAITS_DSP_ENGINE2_CIRCUIT_TOMS_ENGINE_H_
+#endif  // PLAITS_DSP_ENGINE2_CIRCUIT_ZAPS_ENGINE_H_

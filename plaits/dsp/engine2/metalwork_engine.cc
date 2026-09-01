@@ -1,7 +1,7 @@
 // Copyright 2026 Lyle Mills.
 // SPDX-License-Identifier: MIT
 //
-// Paired inharmonic modal banks for cowbell, agogo, plate and gong families.
+// Paired inharmonic modal banks for anvil, agogo, plate and gong families.
 
 #include "plaits/dsp/engine2/metalwork_engine.h"
 
@@ -19,14 +19,16 @@ using namespace stmlib;
 namespace {
 
 const float kMetalRatios[4][kMetalworkNumModes] = {
-  { 1.000f, 1.480f, 2.020f, 2.690f, 3.540f, 4.830f },  // Cowbell.
+  // Anvil: a hard, upper-heavy spectrum without the paired-oscillator ratios
+  // of an analog cowbell.
+  { 1.000f, 1.711f, 2.948f, 4.372f, 5.934f, 7.613f },  // Anvil.
   { 1.000f, 1.410f, 2.760f, 3.180f, 4.120f, 5.430f },  // Agogo.
   { 1.000f, 1.630f, 2.140f, 2.910f, 3.870f, 5.120f },  // Plate.
   { 1.000f, 1.315f, 1.765f, 2.420f, 3.160f, 4.510f },  // Gong.
 };
 
 const float kMetalLevels[4][kMetalworkNumModes] = {
-  { 1.00f, 0.82f, 0.28f, 0.18f, 0.10f, 0.06f },
+  { 0.62f, 1.00f, 0.76f, 0.58f, 0.42f, 0.30f },
   { 1.00f, 0.58f, 0.52f, 0.26f, 0.14f, 0.08f },
   { 0.72f, 0.80f, 0.62f, 0.45f, 0.28f, 0.18f },
   { 1.00f, 0.72f, 0.61f, 0.48f, 0.35f, 0.22f },
