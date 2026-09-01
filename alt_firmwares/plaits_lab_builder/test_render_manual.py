@@ -19,6 +19,7 @@ from render_manual import (
     CONTROL_IDS,
     MENU_LIGHTS,
     SYNC_INPUT_OPTIONS_NOTE,
+    TRIG_RESPONSE_LED_STATE_INDICES,
     _clip,
     display_name,
     manual_document,
@@ -87,6 +88,7 @@ class RenderManualTest(unittest.TestCase):
             MENU_LIGHTS[3],
             ("TRIG response", ("Trigger", "Gate", "Velocity trigger", "Velocity gate")),
         )
+        self.assertEqual(TRIG_RESPONSE_LED_STATE_INDICES, (0, 1, 3, 4))
 
     def test_model_input_menu_places_sync_in_fifth(self) -> None:
         self.assertEqual(MENU_LIGHTS[4][1][-1], "Sync In (experimental)")
@@ -192,6 +194,9 @@ class RenderManualTest(unittest.TestCase):
             printed = pdf_strings(output).replace(")(", " ")
             self.assertIn("Velocity trigger", printed)
             self.assertIn("Velocity gate", printed)
+            self.assertIn(r"Green \(blink\) : Velocity trigger", printed)
+            self.assertIn(r"Red \(blink\) : Velocity gate", printed)
+            self.assertNotIn("Yellow : Velocity trigger", printed)
             self.assertIn("Elements-derived Envelope contour", printed)
             self.assertIn("rising-edge voltage", printed)
 

@@ -113,6 +113,11 @@ LED_STATES = (
     ("Yellow", BANKS[2]["color"], "fast blink"),
 )
 
+# TRIG response is deliberately a 2x2 display: trigger/gate is green/red and
+# velocity off/on is solid/blinking. It therefore skips yellow rather than
+# using the generic sequential option-state mapping.
+TRIG_RESPONSE_LED_STATE_INDICES = (0, 1, 3, 4)
+
 
 def load_catalog() -> dict[str, Any]:
     return json.loads(PUBLIC_CATALOG_PATH.read_text(encoding="utf-8"))
@@ -709,7 +714,14 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
             # Sync detection and engine reset paths are recipe-scoped for flash.
             # Guides for ordinary builds keep the original four settings.
             meanings = meanings[:4]
-        lines = [led_setting(k, meaning) for k, meaning in enumerate(meanings)]
+        state_indices = (
+            TRIG_RESPONSE_LED_STATE_INDICES
+            if light_index == 3 else range(len(meanings))
+        )
+        lines = [
+            led_setting(state_index, meaning)
+            for state_index, meaning in zip(state_indices, meanings)
+        ]
         menu_rows.append([
             Paragraph(str(light_index + 1), small_muted_style),
             Paragraph(_escape(assigns), small_style),
