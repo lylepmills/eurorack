@@ -3900,6 +3900,52 @@
       "implementation": {
         "className": "ZxPulse48kEngine"
       }
+    },
+    {
+      "id": "acid",
+      "packageId": "community/acid",
+      "name": "Acid",
+      "author": "Dylan Bolink",
+      "origin": "Community",
+      "family": "Acid",
+      "description": "A silver-box bassline voice: one saw-to-pulse oscillator into a four-pole ladder, then a diode-style clipper. The filter sweep is DECAY through MORPH's attenuverter, and LEVEL is a real accent.",
+      "tags": [
+        "community",
+        "acid",
+        "bassline",
+        "diode ladder",
+        "resonant filter",
+        "accent",
+        "distortion"
+      ],
+      "controls": [
+        "Resonance",
+        "Drive",
+        "Cutoff",
+        "Waveform"
+      ],
+      "outputs": [
+        "Mono: filter output through the asymmetric drive stage. Stereo: left channel, with cutoff offset below centre.",
+        "Mono: clean filter tap before the clipper. Stereo: right channel, with cutoff offset above centre."
+      ],
+      "artwork": {
+        "color": "#009a98"
+      },
+      "version": "1.0.0",
+      "digest": "sha256:f3ef097de8436aa1aff8d3f42e621ff30da9fcb99fb70d3b74a573be201cc003",
+      "documentationDigest": "sha256:2d79a7acf2790d23bde38f043a3bacd88bcc0ba646826d81b4566097deaae935",
+      "manual": {
+        "controls": {
+          "harmonics": "Raises ladder feedback from a plain low-pass response into self-oscillating squelch, with less resonance as cutoff closes.",
+          "timbre": "Drives the filtered voice into a soft-kneed asymmetric clipper. LEVEL accent pushes the drive harder.",
+          "morph": "Sweeps cutoff from roughly 26 Hz to 4.2 kHz with half keyboard tracking. Its unpatched attenuverter becomes ENV MOD.",
+          "macro": "Moves from a narrow pulse through saw at noon to square clockwise."
+        },
+        "trigger": "Patched TRIG drives Plaits' shared envelope and accent sweep. Unpatched, the voice drones with every control still live."
+      },
+      "implementation": {
+        "className": "AcidEngine"
+      }
     }
   ],
   "fmCapabilities": {
