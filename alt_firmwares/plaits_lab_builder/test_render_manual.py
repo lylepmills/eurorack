@@ -171,7 +171,7 @@ class RenderManualTest(unittest.TestCase):
     @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
     def test_envelope_build_prints_four_way_trig_behavior(self) -> None:
         recipe = self.calibration_recipe(False)
-        recipe["schemaVersion"] = 25
+        recipe["schemaVersion"] = 27
         recipe["preferences"] = {
             "navigationMode": "linear",
             "calibration": False,
@@ -510,7 +510,7 @@ class RenderManualTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "roved.pdf"
             render_pdf(manual_document(self.roved_recipe(True)), path)
-            printed = pdf_strings(path)
+            printed = pdf_strings(path).replace(")(", " ")
             self.assertIn("Your Ro'Ved Field Guide", printed)
             self.assertIn("TIMBRE + FREQUENCY", printed)
             # The mapping Plum Audio's manual documents and the panel's arrows

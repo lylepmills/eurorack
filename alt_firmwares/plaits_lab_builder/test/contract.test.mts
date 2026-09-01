@@ -749,6 +749,10 @@ test("every historical starting-option shape still loads, and nothing else does"
   const tiers = [
     { keys: legacyOptions, schemaVersion: 17 },
     { keys: { ...legacyOptions, attenuverterMode: "stock" }, schemaVersion: 24 },
+    {
+      keys: { ...legacyOptions, attenuverterMode: "stock", trigResponse: "trigger" },
+      schemaVersion: 27,
+    },
   ];
 
   for (const tier of tiers) {
@@ -759,7 +763,7 @@ test("every historical starting-option shape still loads, and nothing else does"
     // Every option must arrive; an absent attenuverterMode falls to `stock`
     // rather than going missing, exactly as an absent preference reads false.
     assert.deepEqual(normalized.initialOptions, {
-      ...legacyOptions, attenuverterMode: "stock",
+      ...legacyOptions, trigResponse: "trigger", attenuverterMode: "stock",
     }, `the {${Object.keys(tier.keys).join(",")}} shape did not normalize intact`);
   }
 
@@ -819,6 +823,11 @@ test("every declared starting option is registered in the tier list", async () =
   // And each one must actually be carried through to the normalized recipe, or
   // it silently reverts to its legacy value on every load.
   for (const key of tierKeys) {
+    if (key === "trigResponse") {
+      assert.match(source, /const trigResponse = carriesGateArticulation\b/,
+        "trigResponse is registered but never derived");
+      continue;
+    }
     assert.match(
       source,
       new RegExp(`${key}: \\(?optionValues\\.${key}\\b`),
@@ -2084,7 +2093,7 @@ test("per-engine stereo (stereoEngines) requires and normalizes to v10", async (
         ? {
           ...(recipe.initialOptions as object),
           attenuverterMode: "stock",
-          ...(version >= 25 ? { trigResponse: "trigger" } : {}),
+          ...(version >= 27 ? { trigResponse: "trigger" } : {}),
         }
         : recipe.initialOptions,
       resources: version === 12 || version === 13
