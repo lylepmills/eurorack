@@ -64,7 +64,7 @@ TOOLCHAIN_BIN = os.environ.get("PLAITS_TOOLCHAIN_BIN", "/usr/local/arm-4.8.3/bin
 # 32-voice FM bank per palette slot; those 7-bit bytes expand to decimal JSON,
 # so the old 32 KiB transport cap rejected valid recipes long before the
 # contract's 32-bank ceiling. The maximum normalized shape is under 1 MiB
-# (including nine full chord tables), leaving this as a meaningful defence
+# (including sixteen full chord tables), leaving this as a meaningful defence
 # against malformed internal requests without contradicting the public schema.
 MAX_REQUEST_BYTES = 1024 * 1024
 MAX_BUILD_SECONDS = 12 * 60

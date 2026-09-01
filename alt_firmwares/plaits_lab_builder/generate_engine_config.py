@@ -1547,8 +1547,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
             "envelope-contour": 4,
         }),
         "trig_response_option": (
-            options.get(
-                "trigResponse",
+            options.get("trigResponse",
                 "gate" if options.get("lockedFrequencyKnob") == "gated-envelope"
                 else "trigger"),
             {
@@ -1572,7 +1571,6 @@ def validate_recipe(value: Any) -> BuildRecipe:
         # The recipe records the suboscillator's SHAPE inside auxOutput and its
         # octave beside it; the firmware splits the pair the other way, into one
         # aux-output setting (regular / stereo / subosc) and one suboscillator
-        # setting that carries shape and octave together. The two forms are a
         # bijection, so the recipe format is unchanged and every saved recipe
         # still builds - the shape just moves across, below.
         "aux_output_option": (options.get("auxOutput"), {"alternate-model": 0, "stereo": 1, "square-subosc": 2, "sine-subosc": 2}),

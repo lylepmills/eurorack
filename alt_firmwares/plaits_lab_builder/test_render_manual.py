@@ -75,11 +75,17 @@ class RenderManualTest(unittest.TestCase):
 
     def test_frequency_menu_has_one_orthogonal_envelope_contour(self) -> None:
         self.assertEqual(
-            MENU_LIGHTS[3][1],
+            MENU_LIGHTS[2][1],
             (
                 "Octaves", "MACRO (fourth control)", "Aux crossfade", "LPG decay",
                 "Envelope contour",
             ),
+        )
+
+    def test_trig_response_is_light_four(self) -> None:
+        self.assertEqual(
+            MENU_LIGHTS[3],
+            ("TRIG response", ("Trigger", "Gate", "Velocity trigger", "Velocity gate")),
         )
 
     def test_model_input_menu_places_sync_in_fifth(self) -> None:

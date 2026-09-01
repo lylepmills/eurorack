@@ -63,7 +63,6 @@ FACTORY_WAVETABLE_NAMES = {
 # fourth macro and stereo sit at value 1 (solid red) rather than out in the
 # blinking tier. Both orders mirror plaits/dsp/voice.h — keep them in step.
 MENU_LIGHTS = (
-    ("TRIG response", ("Trigger", "Gate", "Velocity trigger", "Velocity gate")),
     ("Aux output", ("Regular aux model", "Stereo (OUT/AUX = L/R)", "Suboscillator")),
     ("Suboscillator", (
         "Square", "Square, -1 octave", "Square, -2 octaves",
@@ -73,6 +72,7 @@ MENU_LIGHTS = (
         "Octaves", "MACRO (fourth control)", "Aux crossfade", "LPG decay",
         "Envelope contour",
     )),
+    ("TRIG response", ("Trigger", "Gate", "Velocity trigger", "Velocity gate")),
     ("MODEL input", (
         "Model select", "MACRO (fourth control)", "Aux crossfade",
         "LPG colour (VCFA->VCA)", "Sync In (experimental)",
@@ -734,11 +734,11 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
     if color_blind_mode:
         fourth_control = (
             "Press the HARMONICS knob down, keep holding it, and turn until the model LEDs blink; this selects the octave-switching frequency range. "
-            "Click TIMBRE + FREQUENCY together to open the alternate-firmware options menu. Click TIMBRE to walk forward to LIGHT 4, then click HARMONICS once, until it uses medium brightness. "
+            "Click TIMBRE + FREQUENCY together to open the alternate-firmware options menu. Click TIMBRE to walk forward to LIGHT 3, then click HARMONICS once, until it uses medium brightness. "
             "Click TIMBRE + FREQUENCY again to exit. The FREQUENCY knob now controls the selected model's MACRO, its fourth synthesis control; for Mutable Instruments models, noon preserves the original sound."
             if roved else
             "Hold the right button and turn HARMONICS until the model LEDs blink; this selects the octave-switching frequency range. "
-            "Short-press both model buttons to open the alternate-firmware options menu. Use the left button to walk to LIGHT 4, then press the right button once, until it uses medium brightness. "
+            "Short-press both model buttons to open the alternate-firmware options menu. Use the left button to walk to LIGHT 3, then press the right button once, until it uses medium brightness. "
             "Press both buttons again to exit. The FREQUENCY knob now controls the selected model's MACRO, its fourth synthesis control; for Mutable Instruments models, noon preserves the original sound."
         )
         options_intro = (
@@ -753,11 +753,11 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
     else:
         fourth_control = (
             "Press the HARMONICS knob down, keep holding it, and turn until the model LEDs blink yellow; this selects the octave-switching frequency range. "
-            "Click TIMBRE + FREQUENCY together to open the alternate-firmware options menu. Click TIMBRE to walk forward to LIGHT 4, then click HARMONICS once, until it turns red. "
+            "Click TIMBRE + FREQUENCY together to open the alternate-firmware options menu. Click TIMBRE to walk forward to LIGHT 3, then click HARMONICS once, until it turns red. "
             "Click TIMBRE + FREQUENCY again to exit. The FREQUENCY knob now controls the selected model's MACRO, its fourth synthesis control; for Mutable Instruments models, noon preserves the original sound."
             if roved else
             "Hold the right button and turn HARMONICS until the model LEDs blink yellow; this selects the octave-switching frequency range. "
-            "Short-press both model buttons to open the alternate-firmware options menu. Use the left button to walk to LIGHT 4, then press the right button once, until it turns red. "
+            "Short-press both model buttons to open the alternate-firmware options menu. Use the left button to walk to LIGHT 3, then press the right button once, until it turns red. "
             "Press both buttons again to exit. The FREQUENCY knob now controls the selected model's MACRO, its fourth synthesis control; for Mutable Instruments models, noon preserves the original sound."
         )
         options_intro = (
@@ -770,8 +770,8 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
             "green, red, and yellow, then the same three colors blinking for a fourth, fifth, or sixth setting."
         )
     contour_options_note = (
-        "LIGHT 4's Elements-derived Envelope contour uses FREQUENCY for timing. "
-        "LIGHT 1 makes it a one-shot attack/decay in either Trigger mode, or an "
+        "LIGHT 3's Elements-derived Envelope contour uses FREQUENCY for timing. "
+        "LIGHT 4 makes it a one-shot attack/decay in either Trigger mode, or an "
         "attack/sustain/release shape in either Gate mode; either Velocity "
         "mode scales the contour from the rising-edge voltage. "
         if document.get("envelopeContour") else ""
@@ -781,9 +781,9 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         if document.get("modelCVOption", 0) == 4 else ""
     )
     options_note = (
-        "LIGHT 1 chooses Trigger, Gate, Velocity trigger, or Velocity gate response. "
-        "LIGHT 3 stays dark, and the light navigation skips it, unless LIGHT 2 is set to a suboscillator — it has nothing to act on otherwise. "
-        "LIGHT 4 applies in octave-switching (frequency-locked) mode. Whenever LIGHT 4 is not Octaves, push and hold FREQUENCY and turn it to change octaves. "
+        "LIGHT 4 chooses Trigger, Gate, Velocity trigger, or Velocity gate response. "
+        "LIGHT 2 stays dark, and the light navigation skips it, unless LIGHT 1 is set to a suboscillator — it has nothing to act on otherwise. "
+        "LIGHT 3 applies in octave-switching (frequency-locked) mode. Whenever LIGHT 3 is not Octaves, push and hold FREQUENCY and turn it to change octaves. "
         "LIGHT 6's LPG-decay and Auto settings apply only when TRIG is patched. "
         f"{contour_options_note}"
         f"{sync_input_options_note}"
@@ -792,9 +792,9 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         "Outside the menu, click FREQUENCY/TIMBRE for previous/next model and "
         "MORPH/HARMONICS for previous/next bank. Model clicks stay inside the current bank."
         if roved else
-        "LIGHT 1 chooses Trigger, Gate, Velocity trigger, or Velocity gate response. "
-        "LIGHT 3 stays dark, and the left button walks past it, unless LIGHT 2 is set to a suboscillator — it has nothing to act on otherwise. "
-        "LIGHT 4 applies in octave-switching (frequency-locked) mode. Whenever LIGHT 4 is not Octaves, hold the right button and turn MORPH to change octaves. "
+        "LIGHT 4 chooses Trigger, Gate, Velocity trigger, or Velocity gate response. "
+        "LIGHT 2 stays dark, and the left button walks past it, unless LIGHT 1 is set to a suboscillator — it has nothing to act on otherwise. "
+        "LIGHT 3 applies in octave-switching (frequency-locked) mode. Whenever LIGHT 3 is not Octaves, hold the right button and turn MORPH to change octaves. "
         f"{contour_options_note}"
         f"{sync_input_options_note}"
         "LIGHT 6's LPG-decay and Auto settings apply only when TRIG is patched. "

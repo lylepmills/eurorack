@@ -78,10 +78,10 @@ static const uint8_t kEngineRows[] = PLAITS_ENGINE_ROWS;
 // they are named rather than numbered - a silent disagreement between them
 // would be the whole hazard of reordering.
 enum OptionLight {
-  OPTION_LIGHT_TRIG_RESPONSE = 0,
-  OPTION_LIGHT_AUX_OUTPUT,
+  OPTION_LIGHT_AUX_OUTPUT = 0,
   OPTION_LIGHT_SUBOSC,
   OPTION_LIGHT_FREQUENCY_POT,
+  OPTION_LIGHT_TRIG_RESPONSE,
   OPTION_LIGHT_MODEL_CV,
   OPTION_LIGHT_LEVEL_CV,
   OPTION_LIGHT_HOLD_ON_TRIGGER,
