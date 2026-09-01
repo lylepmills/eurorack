@@ -95,7 +95,7 @@ NEW = ARGV or [
 STEREO_DEFAULT = ['toy', 'bowed', 'csaw', 'ring-mod', 'vowel-fof',
                   'digital-modulation', 'clap', 'analog-percussion',
                   'freshets-formant', 'bubbletime', 'zxphase48k', 'zxpulse48k',
-                  'harmonic', 'glisson']
+                  'acid', 'harmonic', 'glisson']
 STEREO_CONTROLS = {'harmonic': 2_512, 'glisson': 432}
 
 # The MONO sweep's controls, same idea: engines whose marginal flash-budget.ts

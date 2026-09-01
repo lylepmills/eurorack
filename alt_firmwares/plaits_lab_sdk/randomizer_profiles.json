@@ -594,6 +594,11 @@
       "timbre": "broad-texture",
       "morph": "stepped-identity"
     },
+    "acid": {
+      "status": "seeded",
+      "timbre": "broad-texture",
+      "morph": "patient-structure"
+    },
     "wavetable-chord": {
       "status": "seeded",
       "timbre": "pitch-interval",

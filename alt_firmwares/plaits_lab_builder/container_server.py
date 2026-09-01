@@ -872,6 +872,7 @@ STEREO_MACROS = {
     "bubbletime": "BUBBLETIME",
     "zxphase48k": "ZXPHASE48K",
     "zxpulse48k": "ZXPULSE48K",
+    "acid": "ACID",
 }
 ALL_STEREO_MACROS = frozenset(STEREO_MACROS.values())
 

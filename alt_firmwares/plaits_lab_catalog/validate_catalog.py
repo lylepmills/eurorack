@@ -145,6 +145,9 @@ AUDITED_REMAINING_METADATA_DIGESTS = {
     "bubbletime": "sha256:ab82314d6d6e98a1e195513e7a2300beb6b9e1302352fabbe38428224bae387f",
     "zxphase48k": "sha256:68fd122b61ce457a0481760bf6348308495686d87a4b1a7447a4b2e09786c151",
     "zxpulse48k": "sha256:cdcdf57550901493db4ded937e0085683922a8d428b94a2c8c920f011d5c896a",
+    # Acid: software gauntlet and stereo hardware CPU diagnostics audited
+    # during the 2026-09-01 community review.
+    "acid": "sha256:0393a1306b7b8ace98e2bbd9924346fbff710635eeb0df2f48e0280adb6c0fe8",
 }
 
 REMAINING_FIXED_PAIR_ENGINES = {

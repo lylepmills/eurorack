@@ -3816,6 +3816,50 @@
       "sharedModules": [
         "chord-bank"
       ]
+    },
+    {
+      "id": "acid",
+      "packageId": "community/acid",
+      "name": "Acid",
+      "author": "Dylan Bolink",
+      "origin": "Community",
+      "family": "Acid",
+      "description": "A silver-box bassline voice: one saw-to-pulse oscillator into a four-pole ladder, then a diode-style clipper. The filter sweep is DECAY through MORPH's attenuverter, and LEVEL is a real accent.",
+      "tags": [
+        "community",
+        "acid",
+        "bassline",
+        "diode ladder",
+        "resonant filter",
+        "accent",
+        "distortion"
+      ],
+      "controls": [
+        "Resonance",
+        "Drive",
+        "Cutoff",
+        "Waveform"
+      ],
+      "outputs": [
+        "Mono: filter output through the asymmetric drive stage. Stereo: left channel, with cutoff offset below centre.",
+        "Mono: clean filter tap before the clipper. Stereo: right channel, with cutoff offset above centre."
+      ],
+      "source": {
+        "header": "plaits/dsp/engine2/acid_engine.h",
+        "className": "AcidEngine",
+        "member": "acid_engine_",
+        "files": [
+          "plaits/dsp/engine2/acid_engine.cc"
+        ]
+      },
+      "postProcessing": {
+        "alreadyEnveloped": false,
+        "outGain": 0.9,
+        "auxGain": 0.9
+      },
+      "artwork": {
+        "color": "#009a98"
+      }
     }
   ],
   "manuals": {
@@ -4646,6 +4690,15 @@
         "macro": "Clockwise deepens the Follin echo to about 220 ms; noon keeps the authentic three-cent pull; counter-clockwise exaggerates dying-speaker sag."
       },
       "trigger": "Restarts all pin phases, the frame tick and the arpeggio."
+    },
+    "acid": {
+      "controls": {
+        "harmonics": "Raises ladder feedback from a plain low-pass response into self-oscillating squelch, with less resonance as cutoff closes.",
+        "timbre": "Drives the filtered voice into a soft-kneed asymmetric clipper. LEVEL accent pushes the drive harder.",
+        "morph": "Sweeps cutoff from roughly 26 Hz to 4.2 kHz with half keyboard tracking. Its unpatched attenuverter becomes ENV MOD.",
+        "macro": "Moves from a narrow pulse through saw at noon to square clockwise."
+      },
+      "trigger": "Patched TRIG drives Plaits' shared envelope and accent sweep. Unpatched, the voice drones with every control still live."
     }
   },
   "presets": {
