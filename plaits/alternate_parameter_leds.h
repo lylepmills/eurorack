@@ -15,6 +15,15 @@ inline int AlternateParameterLedIndex(
   return parameter * 4 + (roved_panel ? segment : 3 - segment);
 }
 
+// Where the Nth step of an ordered display lights up, for the same reason.
+// Plaits' column is read bottom-to-top, so a rising value walks DOWN the
+// driver indices; Ro'Ved's row is read left-to-right, so it walks UP them.
+// Without this the octave and frequency-range displays run right-to-left on
+// Ro'Ved while the knob turns clockwise.
+inline int OrderedLedIndex(int step, bool roved_panel) {
+  return roved_panel ? step : 7 - step;
+}
+
 }  // namespace plaits
 
 #endif  // PLAITS_ALTERNATE_PARAMETER_LEDS_H_

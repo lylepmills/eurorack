@@ -58,11 +58,15 @@ inline int RowOfEngine(const uint8_t* bank_sizes, int num_banks, int engine) {
 // Step to the next engine within the current bank, wrapping back to the bank's
 // first engine after its real last one (so a 3-engine bank cycles 0->1->2->0).
 inline int StepWithinBank(
-    const uint8_t* bank_sizes, int num_banks, int engine) {
+    const uint8_t* bank_sizes, int num_banks, int engine, int direction = 1) {
   const int bank = BankOfEngine(bank_sizes, num_banks, engine);
   const int base = BankOffset(bank_sizes, bank);
+  const int size = bank_sizes[bank];
+  if (size <= 0) {
+    return engine;
+  }
   const int row = engine - base;
-  const int next_row = (row + 1 >= bank_sizes[bank]) ? 0 : row + 1;
+  const int next_row = ((row + direction) % size + size) % size;
   return base + next_row;
 }
 

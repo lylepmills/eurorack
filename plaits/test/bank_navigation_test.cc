@@ -163,6 +163,39 @@ int main() {
     CHECK(s.engine == 2);
   }
 
+  // --- Stepping models stays inside the bank, in both directions. Ro'Ved's
+  // FREQ/TIMBRE pair steps models while MORPH/HARM change bank, so a model
+  // step must never walk out of the bank the player is in.
+  {
+    const uint8_t sizes[] = {8, 3, 8};
+    const int red = BankOffset(sizes, 1);
+    // Forward off the short bank's last engine wraps to its first, not into
+    // the bank after it.
+    CHECK(StepWithinBank(sizes, 3, red + 2, 1) == red);
+    // Backward off its first wraps to its last, not into the bank before.
+    CHECK(StepWithinBank(sizes, 3, red, -1) == red + 2);
+    // And in the middle it just moves.
+    CHECK(StepWithinBank(sizes, 3, red + 1, 1) == red + 2);
+    CHECK(StepWithinBank(sizes, 3, red + 1, -1) == red);
+    // The default is still forward, so stock Plaits' calls are unchanged.
+    CHECK(StepWithinBank(sizes, 3, red + 1) == red + 2);
+    // A full circuit in either direction returns to the start.
+    int forward = red;
+    for (int i = 0; i < 3; ++i) forward = StepWithinBank(sizes, 3, forward, 1);
+    CHECK(forward == red);
+    int backward = red;
+    for (int i = 0; i < 3; ++i) backward = StepWithinBank(sizes, 3, backward, -1);
+    CHECK(backward == red);
+  }
+
+  // A single-engine bank steps to itself rather than escaping.
+  {
+    const uint8_t sizes[] = {8, 1, 8};
+    const int only = BankOffset(sizes, 1);
+    CHECK(StepWithinBank(sizes, 3, only, 1) == only);
+    CHECK(StepWithinBank(sizes, 3, only, -1) == only);
+  }
+
   std::printf("bank_navigation_test: all %d checks passed\n", checks);
   return 0;
 }

@@ -572,7 +572,7 @@ void Ui::UpdateLEDs() {
           } else {
             color = (octave - 1) == i ? LED_COLOR_YELLOW : LED_COLOR_OFF;
           }
-          leds_.set(7 - i, color);
+          leds_.set(OrderedLedIndex(i, PLAITS_ROVED_PANEL != 0), color);
         }
       }
       break;
@@ -685,10 +685,12 @@ void Ui::Navigate(int button) {
     patch_->engine = ChangeBank(
         kBankSizes, kNumBanks, patch_->engine, bank_last_row_, direction);
   } else {
-    const uint8_t increment =
-        button == 0 ? 1 : PLAITS_ENGINE_COUNT - 1;
-    patch_->engine =
-        (patch_->engine + increment) % PLAITS_ENGINE_COUNT;
+    // Within the current bank, not across the whole registry: the panel has
+    // dedicated bank knobs, so stepping models has no reason to walk out of
+    // the bank you are in.
+    const int direction = button == 0 ? 1 : -1;
+    patch_->engine = StepWithinBank(
+        kBankSizes, kNumBanks, patch_->engine, direction);
   }
 #else  // PLAITS_ROVED_PANEL
   if (PLAITS_BUILD_NAVIGATION_MODE == 1) {

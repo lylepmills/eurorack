@@ -11,6 +11,7 @@
 #include <cstdio>
 
 using plaits::AlternateParameterLedIndex;
+using plaits::OrderedLedIndex;
 
 int main() {
   const int stock[] = {3, 2, 1, 0, 7, 6, 5, 4};
@@ -25,6 +26,19 @@ int main() {
           roved[offset]);
     }
   }
+
+  // An ordered display (octave, frequency range) has to climb in the panel's
+  // own reading direction: up Plaits' column, rightwards along Ro'Ved's row.
+  // Getting this backwards makes the lights run against a clockwise turn.
+  for (int step = 0; step < 8; ++step) {
+    assert(OrderedLedIndex(step, false) == 7 - step);
+    assert(OrderedLedIndex(step, true) == step);
+  }
+  // The two panels disagree on every step but the middle pair.
+  assert(OrderedLedIndex(0, false) == 7);
+  assert(OrderedLedIndex(0, true) == 0);
+  assert(OrderedLedIndex(7, false) == 0);
+  assert(OrderedLedIndex(7, true) == 7);
 
   std::printf("alternate_parameter_leds_test: all checks passed\n");
   return 0;
