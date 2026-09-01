@@ -2215,6 +2215,15 @@ test("the health check distinguishes a stale pool from a stale speech singleton"
   assert.match(helper, /reachable: false/);
 });
 
+test("saved Natural Speech previews expire with their renderer image", async () => {
+  const source = await readFile(new URL("../src/index.ts", import.meta.url), "utf8");
+  const route = source.indexOf('url.pathname === "/v1/speech/render-bank-natural"');
+  assert.ok(route >= 0, "expected a saved Natural Speech preview route");
+  const body = source.slice(route, route + 900);
+  assert.match(body, /cacheNamespace: `rendered-natural-banks-v2-\$\{env\.PLAITS_SOURCE_REVISION\}`/,
+    "the Worker R2 cache must move whenever the preview renderer image moves");
+});
+
 test("every speech route records a decision about its Natural Speech variant", async () => {
   // The bug this prevents shipped: "Use my voice" ran recordings through the
   // LPC encoder no matter which engine the bank was for, so a Natural Speech

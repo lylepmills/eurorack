@@ -900,7 +900,11 @@ export default {
         });
       } else if (request.method === "POST" && url.pathname === "/v1/speech/render-bank-natural") {
         response = await proxySpeechJson(request, env, "/speech/render-bank-natural", {
-          cacheNamespace: "rendered-natural-banks-v1",
+          // Saved-bank WAVs are renderer artifacts. Include the immutable image
+          // revision here as well as in the container's own job key, otherwise
+          // R2 can answer with an obsolete rendering before the request ever
+          // reaches the updated container.
+          cacheNamespace: `rendered-natural-banks-v2-${env.PLAITS_SOURCE_REVISION}`,
           maxBytes: 64 * 1024,
         });
       } else if (request.method === "POST" && url.pathname === "/v1/speech/render-bank") {
