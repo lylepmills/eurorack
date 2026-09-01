@@ -566,16 +566,17 @@ revision under test rather than treating either set as an expected value.
 The production Worker, queues, R2 bucket, Durable Objects, and compiler
 Container are managed by `wrangler.jsonc`. Before each firmware-source rollout:
 
-> **Pending as of `c32eff52b0b5`: the next rollout must also bump
-> `PLAITS_MANUAL_CONTRACT` from 20 to 21** (both env blocks), because the
-> Ro'Ved Field Guide's navigation and locked-octave prose changed with the
-> firmware. The renderer is already landed; the Worker cannot be moved to 21
-> before the image carrying that renderer ships. See the contract notes above.
+> **The schema-27 staging candidate `80a0e84ddc6b` carries
+> `PLAITS_MANUAL_CONTRACT=21` in both environment blocks.** Preserve that value
+> when promoting it to production: the Ro'Ved Field Guide's navigation and
+> locked-octave prose changed with this firmware and its renderer ships in the
+> same immutable image. Production remains on the previous release until the
+> physical-module validation is complete. See the contract notes above.
 >
-> You do not have to remember this: `pnpm run deploy` runs `contract:check`,
-> which refuses any deploy whose `PLAITS_MANUAL_CONTRACT` is below the
-> `MANUAL_CONTRACT` that `render_manual.py` declares **at the commit named by
-> `PLAITS_SOURCE_REVISION`**, and names the value to set. Run
+> You do not have to remember the contract value: `pnpm run deploy` runs
+> `contract:check`, which refuses any deploy whose `PLAITS_MANUAL_CONTRACT` is
+> below the `MANUAL_CONTRACT` that `render_manual.py` declares **at the commit
+> named by `PLAITS_SOURCE_REVISION`**, and names the value to set. Run
 > `pnpm run contract:check` by hand at any point to see where a deployment
 > stands.
 
