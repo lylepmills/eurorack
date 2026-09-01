@@ -384,15 +384,19 @@ let build = await json(await fetch(new URL("/v1/builds", apiBase), {
 }), "firmware submission");
 assert.equal(typeof build.buildId, "string");
 const deadline = Date.now() + 20 * 60 * 1000;
-while (build.status === "queued" || build.status === "building") {
+while (build.status === "queued" || build.status === "building" || build.manual?.status === "pending") {
   assert.ok(Date.now() < deadline, `firmware build ${build.buildId} timed out`);
   await new Promise((resolveDelay) => setTimeout(resolveDelay, 5000));
   build = await json(await fetch(new URL(`/v1/builds/${build.buildId}`, apiBase), {
     headers, cache: "no-store",
   }), "firmware status");
-  console.log(`Build ${build.buildId}: ${build.status}`);
+  console.log(
+    `Build ${build.buildId}: ${build.status}`
+    + (build.manual?.status === "pending" ? " (manual pending)" : ""),
+  );
 }
 assert.equal(build.status, "succeeded", JSON.stringify(build.error ?? build));
+assert.equal(build.manual?.status, "ready", "the release field guide did not finish rendering");
 
 // THE gate this script exists for: the revision the compiler stamped into these
 // exact bytes. Checking the catalog var instead let the 2026-08-21 octave-fix
@@ -414,18 +418,15 @@ if (expectedRevision) {
 
 const firmware = await getBinary(build.downloadUrl, /audio\/wav/, "firmware download");
 assert.equal(Buffer.from(firmware.subarray(0, 4)).toString("ascii"), "RIFF");
-let manual: Uint8Array | undefined;
-if (build.manual?.downloadUrl) {
-  manual = await getBinary(build.manual.downloadUrl, /application\/pdf/, "field guide");
-  assert.equal(Buffer.from(manual.subarray(0, 4)).toString("ascii"), "%PDF");
-}
+const manual = await getBinary(build.manual.downloadUrl, /application\/pdf/, "field guide");
+assert.equal(Buffer.from(manual.subarray(0, 4)).toString("ascii"), "%PDF");
 
 if (artifactDir) {
   const output = resolve(artifactDir);
   await mkdir(output, { recursive: true });
   await writeFile(resolve(output, `release-gate-${deploymentEnvironment}-${build.buildId}.wav`), firmware);
   await writeFile(resolve(output, `release-gate-${deploymentEnvironment}-${build.buildId}.recipe.json`), `${JSON.stringify(recipe, null, 2)}\n`);
-  if (manual) await writeFile(resolve(output, `release-gate-${deploymentEnvironment}-${build.buildId}.pdf`), manual);
+  await writeFile(resolve(output, `release-gate-${deploymentEnvironment}-${build.buildId}.pdf`), manual);
   console.log(`Saved exact ${deploymentEnvironment} artifacts to ${output}`);
 }
 

@@ -80,6 +80,12 @@ test("the release gate checks the revision the compiler stamped, not the Worker'
   );
 });
 
+test("the release gate waits for and requires the recipe-specific field guide", () => {
+  assert.match(smoke, /build\.manual\?\.status === "pending"/);
+  assert.match(smoke, /assert\.equal\(build\.manual\?\.status, "ready"/);
+  assert.match(smoke, /getBinary\(build\.manual\.downloadUrl, \/application\\\/pdf\//);
+});
+
 test("a stale-image gate failure explains that the Container is still rolling", () => {
   // The failure is indistinguishable from a bad build unless the message says
   // so, and it also leaves a mis-keyed artifact behind that must be purged.
