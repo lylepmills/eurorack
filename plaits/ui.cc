@@ -560,14 +560,14 @@ void Ui::UpdateLEDs() {
               leds_.set(i, LED_COLOR_YELLOW);
             }
             leds_.set(
-                OrderedLedIndex(position, PLAITS_ROVED_PANEL != 0),
+                ChordTableLedIndex(position),
                 LED_COLOR_OFF);
           } else {
 #endif
             // UpdateLEDs clears the bank before entering the mode, so bank A
             // needs only its selected light written.
             leds_.set(
-                OrderedLedIndex(position, PLAITS_ROVED_PANEL != 0),
+                ChordTableLedIndex(position),
                 LED_COLOR_YELLOW);
 #if PLAITS_CHORD_TABLE_COUNT > 8
           }
@@ -577,7 +577,10 @@ void Ui::UpdateLEDs() {
           // eight model lights. The first eight choices climb one light at a
           // time; all lights indicate the ninth/highest octave. Existing hidden
           // octave/range editing keeps its original display.
-          const int octave = contextual_control_target_ == CONTEXTUAL_CONTROL_OCTAVE
+          const bool show_locked_octave = ShowLockedOctave(
+              contextual_control_target_ == CONTEXTUAL_CONTROL_OCTAVE,
+              pots_[POTS_ADC_CHANNEL_HARMONICS_POT].editing_hidden_parameter());
+          const int octave = show_locked_octave
               ? (locked_octave_ == 8 ? PITCH_RANGE_HIGH : locked_octave_ + 1)
               : PitchRangeFromControl(octave_);
           for (int i = 0; i < 8; ++i) {
@@ -615,7 +618,7 @@ void Ui::UpdateLEDs() {
 
         int option_value = 0;
         if (i == OPTION_LIGHT_TRIG_RESPONSE) {
-          option_value = patch_->trig_response_option;
+          option_value = TrigResponseLedValue(patch_->trig_response_option);
         } else if (i == OPTION_LIGHT_AUX_OUTPUT) {
           option_value = patch_->aux_output_option;
         } else if (i == OPTION_LIGHT_SUBOSC) {

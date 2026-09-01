@@ -11,7 +11,10 @@
 #include <cstdio>
 
 using plaits::AlternateParameterLedIndex;
+using plaits::ChordTableLedIndex;
 using plaits::OrderedLedIndex;
+using plaits::ShowLockedOctave;
+using plaits::TrigResponseLedValue;
 
 int main() {
   const int stock[] = {3, 2, 1, 0, 7, 6, 5, 4};
@@ -39,6 +42,26 @@ int main() {
   assert(OrderedLedIndex(0, true) == 0);
   assert(OrderedLedIndex(7, false) == 0);
   assert(OrderedLedIndex(7, true) == 7);
+
+  // Loaded tables are listed from the top down, so the physical table display
+  // uses that same order on Plaits instead of the range ladder's bottom-up one.
+  for (int position = 0; position < 8; ++position) {
+    assert(ChordTableLedIndex(position) == position);
+  }
+
+  // LIGHT 4 has no amber state: velocity is represented by blinking the
+  // corresponding non-velocity colour.
+  const int trig_response_led_values[] = { 0, 1, 3, 4 };
+  for (int option = 0; option < 4; ++option) {
+    assert(TrigResponseLedValue(option) == trig_response_led_values[option]);
+  }
+
+  // Preparing the locked-octave shortcut must not mask a simultaneous
+  // HARMONICS range edit. With no range edit, the shortcut still displays.
+  assert(ShowLockedOctave(true, false));
+  assert(!ShowLockedOctave(true, true));
+  assert(!ShowLockedOctave(false, false));
+  assert(!ShowLockedOctave(false, true));
 
   std::printf("alternate_parameter_leds_test: all checks passed\n");
   return 0;
