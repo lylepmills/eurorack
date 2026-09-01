@@ -25,6 +25,7 @@ class SkinsEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
+  virtual bool stereo_capable() const { return true; }
 
  private:
   float phase_[kSkinsNumModes];

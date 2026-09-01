@@ -68,6 +68,7 @@ void MetalworkEngine::Render(
     bool* already_enveloped) {
   *already_enveloped = true;
 
+  const bool stereo = parameters.stereo;
   const float hardness = parameters.timbre;
   if (parameters.trigger & TRIGGER_RISING_EDGE) {
     object_ = static_cast<int>(parameters.harmonics * 4.0f);
@@ -127,8 +128,15 @@ void MetalworkEngine::Render(
     strike_lowpass_ += 0.06f * (noise - strike_lowpass_);
     const float strike = (noise - strike_lowpass_) * strike_envelope_;
     strike_envelope_ *= strike_decay;
-    out[i] = 0.20f * full + 0.10f * strike;
-    aux[i] = 0.29f * upper + 0.40f * strike;
+    if (stereo) {
+      // Centre the low body and oppose the existing upper-mode pickup. This
+      // provides width without adding another bank or per-mode multipliers.
+      out[i] = 0.18f * full + 0.12f * upper + 0.10f * strike;
+      aux[i] = 0.18f * full - 0.12f * upper + 0.10f * strike;
+    } else {
+      out[i] = 0.20f * full + 0.10f * strike;
+      aux[i] = 0.29f * upper + 0.40f * strike;
+    }
   }
 }
 

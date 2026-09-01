@@ -23,6 +23,7 @@ class MetalworkEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
+  virtual bool stereo_capable() const { return true; }
 
  private:
   int object_;

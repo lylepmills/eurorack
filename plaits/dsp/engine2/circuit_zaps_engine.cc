@@ -50,6 +50,7 @@ void CircuitZapsEngine::Reset() {
   sweep_ratio_ = 1.0f;
   spark_envelope_ = 0.0f;
   spark_lowpass_ = 0.0f;
+  spark_lowpass_aux_ = 0.0f;
   out_dc_ = 0.0f;
   aux_dc_ = 0.0f;
 }
@@ -62,6 +63,7 @@ void CircuitZapsEngine::Render(
     bool* already_enveloped) {
   *already_enveloped = true;
 
+  const bool stereo = parameters.stereo;
   if (parameters.trigger & TRIGGER_RISING_EDGE) {
     const float accent = 0.30f + 0.70f * parameters.accent;
     body_envelope_ = accent;
@@ -106,21 +108,49 @@ void CircuitZapsEngine::Render(
         ? sine + (dual - sine) * axis
         : dual + (ring - dual) * (axis - 1.0f);
 
-    const float noise = Noise();
-    spark_lowpass_ += 0.12f * (noise - spark_lowpass_);
-    const float spark = (noise - spark_lowpass_) * spark_envelope_;
-    const float clean = voice * body_envelope_;
-    const float driven_input = clean + 0.68f * charge * spark;
-    const float saturated = 1.45f * SoftClip(driven_input, drive);
-    const float dirty = driven_input + charge * (saturated - driven_input);
+    const float noise_left = Noise();
+    spark_lowpass_ += 0.12f * (noise_left - spark_lowpass_);
+    const float spark_left =
+        (noise_left - spark_lowpass_) * spark_envelope_;
+    if (stereo) {
+      const float noise_right = Noise();
+      spark_lowpass_aux_ +=
+          0.12f * (noise_right - spark_lowpass_aux_);
+      const float spark_right =
+          (noise_right - spark_lowpass_aux_) * spark_envelope_;
 
-    const float aux_sample = 0.72f * clean + 0.28f * spark;
-    out_dc_ += 0.001f * (dirty - out_dc_);
-    aux_dc_ += 0.001f * (aux_sample - aux_dc_);
-    // The previous prototype hit full-scale for much of the upper Charge
-    // range. This trim keeps the soft saturation audible without PCM clipping.
-    out[i] = 0.62f * (dirty - out_dc_);
-    aux[i] = aux_sample - aux_dc_;
+      // Cross the two oscillator identities across the field. Width grows
+      // with Topology, so the single swept sine begins focused and the
+      // crossed/ring-modulated circuits open outward.
+      const float side = 0.30f * topology * (sine - partner);
+      const float clean_left = (voice + side) * body_envelope_;
+      const float clean_right = (voice - side) * body_envelope_;
+      const float driven_left = clean_left + 0.68f * charge * spark_left;
+      const float driven_right = clean_right + 0.68f * charge * spark_right;
+      const float saturated_left = 1.45f * SoftClip(driven_left, drive);
+      const float saturated_right = 1.45f * SoftClip(driven_right, drive);
+      const float dirty_left =
+          driven_left + charge * (saturated_left - driven_left);
+      const float dirty_right =
+          driven_right + charge * (saturated_right - driven_right);
+      out_dc_ += 0.001f * (dirty_left - out_dc_);
+      aux_dc_ += 0.001f * (dirty_right - aux_dc_);
+      out[i] = 0.58f * (dirty_left - out_dc_);
+      aux[i] = 0.58f * (dirty_right - aux_dc_);
+    } else {
+      const float clean = voice * body_envelope_;
+      const float driven_input = clean + 0.68f * charge * spark_left;
+      const float saturated = 1.45f * SoftClip(driven_input, drive);
+      const float dirty =
+          driven_input + charge * (saturated - driven_input);
+      const float aux_sample = 0.72f * clean + 0.28f * spark_left;
+      out_dc_ += 0.001f * (dirty - out_dc_);
+      aux_dc_ += 0.001f * (aux_sample - aux_dc_);
+      // The previous prototype hit full-scale for much of the upper Charge
+      // range. This trim keeps soft saturation audible without PCM clipping.
+      out[i] = 0.62f * (dirty - out_dc_);
+      aux[i] = aux_sample - aux_dc_;
+    }
 
     body_envelope_ *= body_decay;
     sweep_ratio_ += (1.0f - sweep_decay) * (1.0f - sweep_ratio_);

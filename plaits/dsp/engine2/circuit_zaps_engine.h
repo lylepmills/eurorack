@@ -21,6 +21,7 @@ class CircuitZapsEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
+  virtual bool stereo_capable() const { return true; }
 
  private:
   float phase_a_;
@@ -29,6 +30,7 @@ class CircuitZapsEngine : public Engine {
   float sweep_ratio_;
   float spark_envelope_;
   float spark_lowpass_;
+  float spark_lowpass_aux_;
   float out_dc_;
   float aux_dc_;
 

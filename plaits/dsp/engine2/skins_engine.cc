@@ -62,6 +62,7 @@ void SkinsEngine::Render(
     bool* already_enveloped) {
   *already_enveloped = true;
 
+  const bool stereo = parameters.stereo;
   const float accent = 0.35f + 0.65f * parameters.accent;
   const float position = parameters.timbre;
   if (parameters.trigger & TRIGGER_RISING_EDGE) {
@@ -122,8 +123,15 @@ void SkinsEngine::Render(
     strike_envelope_ *= strike_decay;
     bend_ratio_ += 0.0035f * (1.0f - bend_ratio_);
 
-    out[i] = 0.18f * body + 0.12f * strike;
-    aux[i] = 0.22f * edge + 0.32f * strike;
+    if (stereo) {
+      // Keep the fundamental/body and dry strike centred, then oppose the
+      // already-computed upper-mode pickup for inexpensive acoustic width.
+      out[i] = 0.17f * body + 0.10f * edge + 0.12f * strike;
+      aux[i] = 0.17f * body - 0.10f * edge + 0.12f * strike;
+    } else {
+      out[i] = 0.18f * body + 0.12f * strike;
+      aux[i] = 0.22f * edge + 0.32f * strike;
+    }
   }
 }
 

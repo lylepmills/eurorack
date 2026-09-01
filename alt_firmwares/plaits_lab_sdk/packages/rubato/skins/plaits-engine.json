@@ -18,7 +18,7 @@
     { "id": "morph", "label": "Damping", "description": "Opens the head from a short muted knock to a long resonant ring." },
     { "id": "macro", "label": "Pressure", "description": "Adds hand pressure: stronger pitch dive and faster loss of the upper modes." }
   ],
-  "outputs": { "main": "The full membrane and strike.", "aux": "The rim-weighted upper modes and dry slap." },
+  "outputs": { "main": "Mono: the full membrane and strike. Stereo: the left membrane pickup.", "aux": "Mono: rim-weighted upper modes and dry slap. Stereo: the right membrane pickup." },
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/skins_engine.h",

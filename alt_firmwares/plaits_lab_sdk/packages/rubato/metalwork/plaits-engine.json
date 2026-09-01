@@ -18,7 +18,7 @@
     { "id": "morph", "label": "Damping", "description": "Opens the object from a dry knock to a long metal ring." },
     { "id": "macro", "label": "Beating", "description": "Detunes a paired copy of every mode from stable metal to slow shimmering interference." }
   ],
-  "outputs": { "main": "The complete struck object.", "aux": "The upper modes and dry metal strike." },
+  "outputs": { "main": "Mono: the complete struck object. Stereo: the left modal pickup.", "aux": "Mono: upper modes and dry metal strike. Stereo: the right modal pickup." },
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/metalwork_engine.h",
