@@ -90,6 +90,16 @@ enum OptionLight {
 };
 
 static const uint8_t kNumOptions = OPTION_LIGHT_LAST;
+
+// Which knob carries the locked-octave gesture. Stock Plaits spends its right
+// button + MORPH on it; Ro'Ved has no spare button, so it rides FREQUENCY's
+// own click — free there precisely because a locked FREQUENCY is no longer
+// setting pitch.
+#if PLAITS_ROVED_PANEL
+static const PotsAdcChannel kLockedOctavePot = POTS_ADC_CHANNEL_FREQUENCY_POT;
+#else
+static const PotsAdcChannel kLockedOctavePot = POTS_ADC_CHANNEL_MORPH_POT;
+#endif  // PLAITS_ROVED_PANEL
 static const uint8_t kNumLockedFrequencyPotOptions =
     4 + 2 * PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE;
 static const uint8_t kNumModelCVOptions =
@@ -665,18 +675,18 @@ void Ui::Navigate(int button) {
 
 #if PLAITS_ROVED_PANEL
   // Four clickable knobs give both traversals at once, so the build-time
-  // navigation mode is not consulted. In physical left-to-right order,
-  // FREQUENCY/TIMBRE change bank and MORPH/HARMONICS step one engine globally.
-  // The left knob in each pair goes backward and the right knob goes forward.
-  // Bank changes use the same per-bank memory as stock Plaits and work with
-  // short, empty, sparse, and fourth banks.
-  if (button == 0 || button == 3) {
-    const int direction = button == 0 ? 1 : -1;
+  // navigation mode is not consulted. The mapping is the one Plum Audio's
+  // manual documents and the panel's own arrows mark: FREQ / TIMBRE step one
+  // model, MORPH / HARM change bank, and the left knob of each pair goes
+  // backward. Bank changes use the same per-bank memory as stock Plaits and
+  // work with short, empty, sparse, and fourth banks.
+  if (button == 1 || button == 2) {
+    const int direction = button == 2 ? 1 : -1;
     patch_->engine = ChangeBank(
         kBankSizes, kNumBanks, patch_->engine, bank_last_row_, direction);
   } else {
     const uint8_t increment =
-        button == 2 ? 1 : PLAITS_ENGINE_COUNT - 1;
+        button == 0 ? 1 : PLAITS_ENGINE_COUNT - 1;
     patch_->engine =
         (patch_->engine + increment) % PLAITS_ENGINE_COUNT;
   }
@@ -777,8 +787,12 @@ void Ui::ReadSwitches() {
         }
 
 #if PLAITS_ROVED_PANEL
-        // Each click locks its own knob; FREQUENCY is not locked on press
-        // because its click is the backward-navigation control.
+        // Each click locks its own knob so it can be pushed and turned.
+        // FREQUENCY joins them only once it has been handed to MACRO or
+        // another locked-knob role: pushing and turning it then edits the
+        // octave, which is what stock Plaits spends right button + MORPH on.
+        // While FREQUENCY is still setting pitch there is no separate octave
+        // to edit, so its click stays an ordinary navigation press.
         if (switches_.just_pressed(Switch(0))) {
           pots_[POTS_ADC_CHANNEL_TIMBRE_POT].Lock();
         }
@@ -788,13 +802,22 @@ void Ui::ReadSwitches() {
         if (switches_.just_pressed(Switch(2))) {
           pots_[POTS_ADC_CHANNEL_HARMONICS_POT].Lock();
         }
+        if (switches_.just_pressed(Switch(3)) &&
+            patch_->locked_frequency_pot_option != 0) {
+          locked_octave_control_ =
+              static_cast<float>(locked_octave_) / 8.0f;
+          pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].Lock(&locked_octave_control_);
+          locked_octave_gesture_armed_ = true;
+        }
 
         if (pots_[POTS_ADC_CHANNEL_MORPH_POT].editing_hidden_parameter() ||
             pots_[POTS_ADC_CHANNEL_TIMBRE_POT].editing_hidden_parameter()) {
           mode_ = UI_MODE_DISPLAY_ALTERNATE_PARAMETERS;
         }
 
-        if (pots_[POTS_ADC_CHANNEL_HARMONICS_POT].editing_hidden_parameter()) {
+        if (pots_[POTS_ADC_CHANNEL_HARMONICS_POT].editing_hidden_parameter() ||
+            (pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].editing_hidden_parameter() &&
+             editing_locked_octave_)) {
           mode_ = UI_MODE_DISPLAY_OCTAVE;
         }
 
@@ -809,6 +832,10 @@ void Ui::ReadSwitches() {
         }
 
         if (switches_.released(Switch(3)) && !ignore_release_[3]) {
+          // A click that did not turn the knob navigates instead; drop the
+          // armed octave gesture with it, as the stock panel does.
+          locked_octave_gesture_armed_ = false;
+          editing_locked_octave_ = false;
           Navigate(3);
         } else if (switches_.released(Switch(0)) && !ignore_release_[0]) {
           Navigate(0);
@@ -1049,7 +1076,7 @@ void Ui::ProcessPotsHiddenParameters() {
     pots_[i].ProcessUIRate();
   }
   if (locked_octave_gesture_armed_ &&
-      pots_[POTS_ADC_CHANNEL_MORPH_POT].editing_hidden_parameter()) {
+      pots_[kLockedOctavePot].editing_hidden_parameter()) {
     editing_locked_octave_ = true;
     locked_octave_ = static_cast<uint8_t>(
         octave_quantizer_.Process(locked_octave_control_));
