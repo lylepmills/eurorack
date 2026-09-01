@@ -19,6 +19,7 @@
     { "id": "macro", "label": "Beating", "description": "Detunes a paired copy of every mode from stable metal to slow shimmering interference." }
   ],
   "outputs": { "main": "Mono: the complete struck object. Stereo: the left modal pickup.", "aux": "Mono: upper modes and dry metal strike. Stereo: the right modal pickup." },
+  "trigger": "Strikes the object and samples the current Object selection for that hit.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/metalwork_engine.h",

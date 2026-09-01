@@ -19,6 +19,7 @@
     { "id": "macro", "label": "Pressure", "description": "Adds hand pressure: stronger pitch dive and faster loss of the upper modes." }
   ],
   "outputs": { "main": "Mono: the full membrane and strike. Stereo: the left membrane pickup.", "aux": "Mono: rim-weighted upper modes and dry slap. Stereo: the right membrane pickup." },
+  "trigger": "Strikes the membrane and restarts its downward pitch bend.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/skins_engine.h",

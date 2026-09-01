@@ -137,6 +137,11 @@ AUDITED_REMAINING_METADATA_DIGESTS = {
     "shakers": "sha256:dc3b8a2a7e0daa8ae80e1dd85ff39377e1b1d79fd6efc753d8cb712160481448",
     "brass": "sha256:bf2dbd2b7a717b28f18e9d4a28e7e61b3ee376da438c2ec2a6cc4f528cfa286d",
     "helix": "sha256:f15a76e28e45bb7d7ee18d07c62d3367d60b0d463bafaf603ba975af3476836d",
+    # Rubato percussion trio: control behavior, trigger semantics, mono AUX,
+    # and the dedicated stereo paths audited during the 2026-09-01 review.
+    "skins": "sha256:07e1a710343cca0d2f806a01af172c8e80430a5b16ddc1b1eb353b080f75c78c",
+    "circuit-zaps": "sha256:80510a65f159b4eb2dffab2144112b7089be74c0684c67ca44f6cc73b01dd19d",
+    "metalwork": "sha256:fac00d54bcbbb807a6e83699cd8c0a834957ad7219d5d30715427e6c9dcd2687",
     "clap": "sha256:42049635c356f8518329a9d9fd5be5285d2ebaef89c29676e0f785f7053be173",
     "analog-percussion": "sha256:edc5a2223b0862c75f310357717ef162927c29eddfd2ec6da1ac308aa8346cd1",
     "freshets-formant": "sha256:5b17fc800bf990df2a8091a893999d6493974a8f139119eaef188039fd8f7306",

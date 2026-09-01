@@ -19,6 +19,7 @@
     { "id": "macro", "label": "Charge", "description": "Adds a noisy electrical spark and pushes the output circuit into soft saturation." }
   ],
   "outputs": { "main": "Mono: the saturated electronic percussion voice. Stereo: the left crossed circuit and independent spark.", "aux": "Mono: the clean oscillators and attack transient. Stereo: the right crossed circuit and independent spark." },
+  "trigger": "Starts a new falling-pitch discharge and electrical spark.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/circuit_zaps_engine.h",

@@ -40,7 +40,7 @@ test("the Worker and compiler catalogs contain the same approved IDs", async () 
     approvedEngineIds,
     compilerCatalog.engines.map((engine: { id: string }) => engine.id),
   );
-  assert.equal(approvedEngineIds.length, 93);
+  assert.equal(approvedEngineIds.length, 96);
 });
 
 test("schema 24 carries distinct per-slot Wavetable data", async () => {
