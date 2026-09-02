@@ -140,7 +140,10 @@
           "class_name": "FirmwareBuilder",
             "image": "registry.cloudflare.com/256bac4d555b969399df16f575c5f464/plaits-lab-build-service-firmwarebuilder:rev-bdf148346885",
           "instance_type": "standard-4",
-          "max_instances": 2
+          // Staging exercises a compile, the dedicated Speech encoder, and
+          // both rollout probes together. Keep enough slots for that release
+          // gate without changing production's two-instance ceiling.
+          "max_instances": 4
         }
       ],
       "durable_objects": {
