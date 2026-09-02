@@ -28,7 +28,10 @@ from generate_engine_config import (  # noqa: E402
 )
 
 
-AUTOSWEEP_DEFINE = "#define PLAITS_SHARED_WAVE_PARAPHONIC_AUTOSWEEP 1"
+AUTOSWEEP_DEFINES = {
+    "wave-paraphonic": "#define PLAITS_SHARED_WAVE_PARAPHONIC_AUTOSWEEP 1",
+    "scale-wavetables": "#define PLAITS_SHARED_WAVE_SCALE_AUTOSWEEP 1",
+}
 IMAGE = "plaits-lab-builder:local"
 
 
@@ -46,7 +49,7 @@ def sampled_data() -> str:
     return base64.b64encode(values).decode("ascii")
 
 
-def recipe() -> dict:
+def recipe(engine: str = "wave-paraphonic") -> dict:
     data = sampled_data()
     entries = []
     for index in range(16):
@@ -64,7 +67,11 @@ def recipe() -> dict:
         "schemaVersion": 28,
         "target": "mutable-instruments-plaits",
         "firmware": "rubato-plaits",
-        "slots": ["wave-paraphonic"] * 24,
+        "slots": (
+            ["wave-paraphonic"] * 24
+            if engine == "wave-paraphonic"
+            else ["wavetable-chord", "wavetable-scale-stack"] * 12
+        ),
         "output": "audio-wav",
         "preferences": {
             "navigationMode": "linear",
@@ -101,8 +108,8 @@ def recipe() -> dict:
     }
 
 
-def build(output_dir: Path) -> None:
-    payload = recipe()
+def build(output_dir: Path, engine: str = "wave-paraphonic") -> None:
+    payload = recipe(engine)
     with tempfile.TemporaryDirectory(prefix="plaits-shared-paraphonic-") as temporary:
         root = Path(temporary)
         build_root = root / "build"
@@ -113,7 +120,9 @@ def build(output_dir: Path) -> None:
         if marker not in config:
             raise SystemExit("generated config layout changed; autosweep was not enabled")
         config_path.write_text(
-            config.replace(marker, f"{AUTOSWEEP_DEFINE}\n{marker}", 1),
+            config.replace(
+                marker, f"{AUTOSWEEP_DEFINES[engine]}\n{marker}", 1
+            ),
             encoding="utf-8",
         )
 
@@ -132,7 +141,11 @@ def build(output_dir: Path) -> None:
             "-j4", "wav",
         ], check=True)
 
-        stem = "shared-wave-line-wave-paraphonic-autonomous"
+        stem = (
+            "shared-wave-line-wave-paraphonic-autonomous"
+            if engine == "wave-paraphonic"
+            else "shared-wave-line-scale-wavetables-autonomous"
+        )
         output_dir.mkdir(parents=True, exist_ok=True)
         artifacts = {
             ".bin": build_root / "plaits" / "plaits.bin",
@@ -150,7 +163,7 @@ def build(output_dir: Path) -> None:
         binary = artifacts[".bin"]
         digest = hashlib.sha256(binary.read_bytes()).hexdigest()
         print(
-            f"Wave Paraphonic: {binary.stat().st_size:,} application bytes, "
+            f"{engine}: {binary.stat().st_size:,} application bytes, "
             f"sha256 {digest}\n  {output_dir / f'{stem}.wav'}",
             flush=True,
         )
@@ -159,8 +172,12 @@ def build(output_dir: Path) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument(
+        "--engine", choices=tuple(AUTOSWEEP_DEFINES),
+        default="wave-paraphonic",
+    )
     args = parser.parse_args()
-    build(args.output_dir.resolve())
+    build(args.output_dir.resolve(), args.engine)
     print("Cycle: 50 s; capture MAIN for at least 100 s at 48 kHz mono 16-bit PCM.")
     return 0
 

@@ -99,6 +99,25 @@ two complete cycles, corresponding contours correlated at 0.9995--0.9998 on
 AUX and 0.9837--0.9994 on MAIN. The tested application SHA-256 was
 `84cf8d8fe975402385d046d388ae8c17b4705c820d3c5b6b9f492d2c319db080`.
 
+The last shared-line hardware path is the oscillator used by Wavetable
+Diatonic Chord and Wavetable Scale Stack. One fixture alternates those engines
+across all 24 slots and instruments their common renderer, so either persisted
+slot exercises the same autonomous 3/4/5/6-voice scan:
+
+```sh
+python3 alt_firmwares/plaits_lab_sdk/diagnostics/wavetable-production-bank-test/build_shared_wave_paraphonic.py \
+  --engine scale-wavetables --output-dir /tmp/shared-wave-scale-test
+```
+
+This common scale-wavetable reader passed on physical Plaits hardware on
+2026-09-02, with AUX captured through ES-8 input 1 and MAIN through input 2.
+All four 3/4/5/6-voice profiles traversed the complete 33-wave line. Direction
+correlation was +1.000 on AUX and +0.999--1.000 on MAIN; peaks were 0.654 and
+0.770 respectively. Corresponding contours from adjacent cycles correlated at
+0.9995--0.9998 on AUX and 0.9991--0.9995 on MAIN, with repeat level deltas no
+larger than 0.9%. The tested application SHA-256 was
+`b8f665ba3921cdb56b21e474b02b5cfbd59cf80bdbfca5584e98f9b07035565d`.
+
 ## Production flash matrix
 
 `build_flash_matrix.py` performs ordinary production links with the autonomous

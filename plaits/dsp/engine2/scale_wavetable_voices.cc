@@ -17,12 +17,34 @@
 #include "plaits/dsp/integrated_wavetable.h"
 #include "plaits/resources.h"
 
+#ifndef PLAITS_SHARED_WAVE_SCALE_AUTOSWEEP
+#define PLAITS_SHARED_WAVE_SCALE_AUTOSWEEP 0
+#endif
+
 namespace plaits {
 
 using namespace std;
 using namespace stmlib;
 
 namespace {
+
+#if PLAITS_SHARED_WAVE_SCALE_AUTOSWEEP
+const uint32_t kScaleWavetableAutosweepLeaderSamples = 6u * 48000u;
+const uint32_t kScaleWavetableAutosweepGapSamples = 3u * 24000u;
+const uint32_t kScaleWavetableAutosweepWindowSamples = 8u * 48000u;
+const uint32_t kScaleWavetableAutosweepSlotSamples =
+    kScaleWavetableAutosweepGapSamples +
+    kScaleWavetableAutosweepWindowSamples;
+const uint32_t kScaleWavetableAutosweepProfiles = 4u;
+const uint32_t kScaleWavetableAutosweepTrailerSamples = 6u * 48000u;
+const uint32_t kScaleWavetableAutosweepCycleSamples =
+    kScaleWavetableAutosweepLeaderSamples +
+    kScaleWavetableAutosweepProfiles *
+        kScaleWavetableAutosweepSlotSamples +
+    kScaleWavetableAutosweepTrailerSamples;
+
+uint32_t scale_wavetable_autosweep_samples = 0;
+#endif
 
 // Renaissance's WTCH and WTx6 models scan Braids' 33-entry mini_wave_line.
 // These are the measured counterparts already used by Wave Paraphonic: 16
@@ -126,6 +148,47 @@ void ScaleVoiceBank::RenderWavetable(
     float* out,
     float* aux,
     size_t size) {
+#if PLAITS_SHARED_WAVE_SCALE_AUTOSWEEP
+  const size_t block_size = size;
+  const uint32_t cycle_position =
+      scale_wavetable_autosweep_samples %
+      kScaleWavetableAutosweepCycleSamples;
+  const uint32_t active_start = kScaleWavetableAutosweepLeaderSamples;
+  const uint32_t active_end = active_start +
+      kScaleWavetableAutosweepProfiles *
+          kScaleWavetableAutosweepSlotSamples;
+  bool autosweep_silent = true;
+  float autosweep_notes[kScaleVoicesMaxVoices];
+  if (cycle_position >= active_start && cycle_position < active_end) {
+    const uint32_t relative = cycle_position - active_start;
+    const uint32_t profile = relative / kScaleWavetableAutosweepSlotSamples;
+    const uint32_t within_profile =
+        relative % kScaleWavetableAutosweepSlotSamples;
+    const uint32_t rendered =
+        within_profile > kScaleWavetableAutosweepGapSamples
+            ? within_profile - kScaleWavetableAutosweepGapSamples
+            : 0u;
+    float progress = static_cast<float>(rendered) /
+        static_cast<float>(kScaleWavetableAutosweepWindowSamples);
+    CONSTRAIN(progress, 0.0f, 1.0f);
+    const float roots[kScaleWavetableAutosweepProfiles] = {
+      36.0f, 42.0f, 48.0f, 54.0f
+    };
+    const float intervals[kScaleVoicesMaxVoices] = {
+      0.0f, 4.0f, 7.0f, 10.0f, 14.0f, 17.0f
+    };
+    for (int voice = 0; voice < kScaleVoicesMaxVoices; ++voice) {
+      autosweep_notes[voice] = roots[profile] + intervals[voice];
+    }
+    notes = autosweep_notes;
+    num_voices = 3 + profile;
+    scan = progress;
+    detune_cents = static_cast<float>(profile) * 2.0f;
+    autosweep_silent =
+        within_profile < kScaleWavetableAutosweepGapSamples;
+  }
+#endif
+
   // This path must be costed at the chord engine's VARIABLE voice count. The
   // original generic sweep never selected its six-voice rows: explicit
   // Cortex-M4 counts were 256.4/320.0/382.7/446.8 instructions per sample for
@@ -174,6 +237,15 @@ void ScaleVoiceBank::RenderWavetable(
     out[i] = mixed;
     aux[i] = root;
   }
+#if PLAITS_SHARED_WAVE_SCALE_AUTOSWEEP
+  if (autosweep_silent) {
+    fill(&out[0], &out[block_size], 0.0f);
+    fill(&aux[0], &aux[block_size], 0.0f);
+  }
+  scale_wavetable_autosweep_samples =
+      (scale_wavetable_autosweep_samples + block_size) %
+      kScaleWavetableAutosweepCycleSamples;
+#endif
 }
 
 void ScaleVoiceBank::RenderWavetableFrequencyOffset(
