@@ -340,7 +340,7 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:185ec72acc748430995d07c023a4ad4de02c51e4e3a211ef40b86e492d494f1a",
+      "digest": "sha256:28b68bacba3205e6657929b7ce91bbef3a78f8072fa6b33bc441f6c241c1e15a",
       "documentationDigest": "sha256:630d5b540d55f0d184fd5054c16712ba7b1f8a9a6af9c5c8d661dbc96685f049",
       "manual": {
         "controls": {
@@ -387,7 +387,7 @@
         "chord-bank"
       ],
       "version": "1.0.0",
-      "digest": "sha256:153fc81e1abff086e97c5488ed468d695d96934a7ff1a28c89b94ddd84fbb5d7",
+      "digest": "sha256:4fcf4c5b7924f9748b4e52e41fb2975375cdd1f9bdebbfcc13dfc6efb61cf076",
       "documentationDigest": "sha256:80d07cb2b3e4cae4610d0288f25d777674eec98d35ae384a50d99660a1fee32c",
       "manual": {
         "controls": {
@@ -1163,7 +1163,7 @@
         "tone": "amber"
       },
       "version": "1.0.0",
-      "digest": "sha256:741c95229408b13365aabeca675c8c0d78dd206b74f16355ecd5ca7b1e750a89",
+      "digest": "sha256:3a090cab26ad73c2adf1ca3a54412507a96865a932068697a547ab65d0da0c95",
       "documentationDigest": "sha256:36a0238da0e609042ae6a2819e6262d31baa3240a3c21e48529bd709367fdc01",
       "manual": {
         "controls": {
@@ -2914,7 +2914,7 @@
         "chord-bank"
       ],
       "version": "1.0.0",
-      "digest": "sha256:4efe20387d4a4220b7854066d501f70ede3a97e5f6c4725fd753d3682f69172c",
+      "digest": "sha256:77cebfcafb7438f77603cabd7de328d4755e09bbb2b7d7df305b4ddc3b2ca4b1",
       "documentationDigest": "sha256:f53e50e8f1398223576cf7f65144b51b27f58f3953f9b09938513005fe1882b4",
       "manual": {
         "controls": {
@@ -3443,7 +3443,7 @@
         "Root voice; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:11180c89cb9bfc7dace43ee3a206d4b2ffce56ba3796493337163e63ad1a40c6",
+      "digest": "sha256:8fbb5ff308cae98b9c7962cd8ee0abb218f8c3b78081040f28dfca49f8e50ad8",
       "documentationDigest": "sha256:9be03d32a4976fd097b3c211907d3e79ab48ff7786e8bef5cdbc6f8841717459",
       "manual": {
         "controls": {
@@ -3486,7 +3486,7 @@
         "Root voice; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:a68c528725cd642e008976f65e255e914e7fc2ffe0f84f3c7aa87e579e3afa0b",
+      "digest": "sha256:e63b2b0d8f7f3425146a2908e5884698041fb8028ed807eeb358d2ad00dad42c",
       "documentationDigest": "sha256:41f026c025e849672899349ffbc0f91d5dc20f3f8fdf62e9eb85db330c6b56ca",
       "manual": {
         "controls": {
