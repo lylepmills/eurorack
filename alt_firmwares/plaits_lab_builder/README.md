@@ -566,13 +566,14 @@ revision under test rather than treating either set as an expected value.
 The production Worker, queues, R2 bucket, Durable Objects, and compiler
 Container are managed by `wrangler.jsonc`. Before each firmware-source rollout:
 
-> **The schema-27 staging candidate `4b6403f90a0e` carries
+> **The schema-27 + Acid release image `8f97241069cc` carries
 > `PLAITS_MANUAL_CONTRACT=22` in both environment blocks.** Preserve that value
 > when promoting it to production: the Ro'Ved Field Guide's navigation and
 > locked-octave prose changed with this firmware and its renderer ships in the
 > same immutable image. Contract 22 also invalidates the schema-27 staging PDF
-> cached before LIGHT 4's special LED order was documented. Production remains on the previous release until the
-> physical-module validation is complete. See the contract notes above.
+> cached before LIGHT 4's special LED order was documented. The combined image
+> also carries the Acid community engine and was promoted only after the
+> schema-27 physical-module validation. See the contract notes above.
 >
 > You do not have to remember the contract value: `pnpm run deploy` runs
 > `contract:check`, which refuses any deploy whose `PLAITS_MANUAL_CONTRACT` is
