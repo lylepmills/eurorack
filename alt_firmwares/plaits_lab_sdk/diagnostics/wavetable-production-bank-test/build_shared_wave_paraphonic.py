@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the autonomous schema-28 shared-wave Chords hardware gate."""
+"""Build the autonomous schema-28 Wave Paraphonic shared-line gate."""
 
 from __future__ import annotations
 
@@ -28,51 +28,43 @@ from generate_engine_config import (  # noqa: E402
 )
 
 
-AUTOSWEEP_DEFINE = "#define PLAITS_SHARED_WAVE_CHORD_AUTOSWEEP 1"
+AUTOSWEEP_DEFINE = "#define PLAITS_SHARED_WAVE_PARAPHONIC_AUTOSWEEP 1"
 IMAGE = "plaits-lab-builder:local"
 
 
-def sampled_data(harmonic: int) -> str:
+def sampled_data() -> str:
     values = bytearray()
-    for _frame in range(64):
+    for frame in range(64):
+        harmonic = frame + 1
         for sample in range(128):
             phase = 2.0 * math.pi * sample / 128.0
-            signed = max(-127, min(127, round(math.sin(harmonic * phase) * 127.0)))
+            signed = max(
+                -127,
+                min(127, round(math.sin(harmonic * phase) * 127.0)),
+            )
             values.append(signed & 0xFF)
     return base64.b64encode(values).decode("ascii")
 
 
-def custom_bank(harmonic: int) -> dict:
-    model = {
-        "kind": "wavetable",
-        "name": f"Diagnostic harmonic {harmonic}",
-        "equation": f"sin({harmonic} * phi)",
-        "data": sampled_data(harmonic),
-    }
-    if harmonic & 1:
-        model["representation"] = "native"
-    return {
-        "kind": "custom",
-        "model": model,
-    }
-
-
 def recipe() -> dict:
-    entries = [custom_bank(harmonic) for harmonic in range(1, 16)]
-    chord_line = [
-        {"bank": index, "frame": (index * 13) % 64}
-        for index in range(15)
-    ]
-    braids_line = [
-        {"bank": index % 15, "frame": (index * 7) % 64}
-        for index in range(33)
-    ]
+    data = sampled_data()
+    entries = []
+    for index in range(16):
+        model = {
+            "kind": "wavetable",
+            "name": f"Diagnostic frame ladder {index + 1}",
+            "equation": "sin((1 + floor(x * 63.999)) * phi)",
+            "data": data,
+        }
+        if index & 1:
+            model["representation"] = "native"
+        entries.append({"kind": "custom", "model": model})
+
     return {
         "schemaVersion": 28,
         "target": "mutable-instruments-plaits",
         "firmware": "rubato-plaits",
-        # Persisted engine selection cannot escape the instrumented path.
-        "slots": ["chords"] * 24,
+        "slots": ["wave-paraphonic"] * 24,
         "output": "audio-wav",
         "preferences": {
             "navigationMode": "linear",
@@ -95,8 +87,14 @@ def recipe() -> dict:
                 "mirrored": False,
                 "entries": entries,
                 "waveLines": {
-                    "chords": chord_line,
-                    "braids": braids_line,
+                    "chords": [
+                        {"bank": index, "frame": index}
+                        for index in range(15)
+                    ],
+                    "braids": [
+                        {"bank": index % 16, "frame": index}
+                        for index in range(33)
+                    ],
                 },
             },
         },
@@ -105,7 +103,7 @@ def recipe() -> dict:
 
 def build(output_dir: Path) -> None:
     payload = recipe()
-    with tempfile.TemporaryDirectory(prefix="plaits-shared-chords-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="plaits-shared-paraphonic-") as temporary:
         root = Path(temporary)
         build_root = root / "build"
         build_root.mkdir()
@@ -114,15 +112,12 @@ def build(output_dir: Path) -> None:
         marker = "#define PLAITS_BUILD_LINEAR_TZFM"
         if marker not in config:
             raise SystemExit("generated config layout changed; autosweep was not enabled")
-        config = config.replace(marker, f"{AUTOSWEEP_DEFINE}\n{marker}", 1)
-        config_path.write_text(config, encoding="utf-8")
+        config_path.write_text(
+            config.replace(marker, f"{AUTOSWEEP_DEFINE}\n{marker}", 1),
+            encoding="utf-8",
+        )
 
-        # resources.cc is checked in, but fresh checkout mtimes can make GNU
-        # make try to regenerate it with SciPy inside the lean builder image.
-        # Match the SDK hardware-build path: stamp the generated source newest
-        # without changing its contents.
         (REPO / "plaits" / "resources.cc").touch()
-
         subprocess.run([
             "docker", "run", "--rm", "--platform", "linux/amd64",
             "-v", f"{REPO}:/work",
@@ -137,7 +132,7 @@ def build(output_dir: Path) -> None:
             "-j4", "wav",
         ], check=True)
 
-        stem = "shared-wave-lines-chords-autonomous"
+        stem = "shared-wave-line-wave-paraphonic-autonomous"
         output_dir.mkdir(parents=True, exist_ok=True)
         artifacts = {
             ".bin": build_root / "plaits" / "plaits.bin",
@@ -155,8 +150,8 @@ def build(output_dir: Path) -> None:
         binary = artifacts[".bin"]
         digest = hashlib.sha256(binary.read_bytes()).hexdigest()
         print(
-            f"Chords: {binary.stat().st_size:,} application bytes, sha256 {digest}\n"
-            f"  {output_dir / f'{stem}.wav'}",
+            f"Wave Paraphonic: {binary.stat().st_size:,} application bytes, "
+            f"sha256 {digest}\n  {output_dir / f'{stem}.wav'}",
             flush=True,
         )
 

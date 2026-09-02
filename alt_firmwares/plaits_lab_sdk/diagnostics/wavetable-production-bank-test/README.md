@@ -65,8 +65,39 @@ python3 alt_firmwares/plaits_lab_sdk/diagnostics/wavetable-production-bank-test/
 Every physical slot contains Chords, so a model selection saved in hardware
 cannot bypass the test. The four sounding windows use different roots, chord
 positions, and inversions while MORPH sweeps a deliberately ordered line of
-harmonics 1 through 15. Capture AUX for at least 100 seconds at 48 kHz as mono
+harmonics 1 through 15. Capture MAIN for at least 100 seconds at 48 kHz as mono
 16-bit PCM. Its timing is compatible with `decode_capture.py --mode one-way`.
+
+This image passed on physical Plaits hardware on 2026-09-02 with TRIG
+unpatched. We captured MAIN through ES-8 input 2. Its four windows were
+unclipped (0.439--0.585 peak), traversed 281--10,231 Hz of crossing-rate range,
+and the first three ordered scans had
+direction correlations of +0.977, +0.998, and +0.999. The fourth, highest-note
+profile entered the expected aliasing/rolloff region but still traversed
+7,091 Hz. Corresponding contours across two complete cycles correlated at
+0.969--1.000. The tested application SHA-256 was
+`61169d2d98b3d4cb6cf1c81d832383a05a717eb64304d801ce19a1e297098cdc`.
+
+The companion Wave Paraphonic gate exercises the 33-wave Braids line through
+the production four-voice renderer. It uses 33 ordered harmonic frames spread
+across the full 16-entry library and sweeps TIMBRE through the line:
+
+```sh
+python3 alt_firmwares/plaits_lab_sdk/diagnostics/wavetable-production-bank-test/build_shared_wave_paraphonic.py \
+  --output-dir /tmp/shared-wave-paraphonic-test
+```
+
+As with the Chords image, leave TRIG unpatched and capture MAIN. The same
+50-second timing and `decode_capture.py --mode one-way` decoder apply.
+
+The Wave Paraphonic image passed on physical Plaits hardware on 2026-09-02.
+AUX was captured through ES-8 input 1 and MAIN through input 2 in one
+synchronized pass. All four profiles traversed the 33-wave line without
+clipping: AUX peaked at 0.306 with direction correlation +1.000 throughout;
+MAIN peaked at 0.475--0.583 with direction correlation +0.921--1.000. Across
+two complete cycles, corresponding contours correlated at 0.9995--0.9998 on
+AUX and 0.9837--0.9994 on MAIN. The tested application SHA-256 was
+`84cf8d8fe975402385d046d388ae8c17b4705c820d3c5b6b9f492d2c319db080`.
 
 ## Production flash matrix
 

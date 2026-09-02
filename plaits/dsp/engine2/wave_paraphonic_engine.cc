@@ -18,12 +18,34 @@
 
 #include "plaits/resources.h"
 
+#ifndef PLAITS_SHARED_WAVE_PARAPHONIC_AUTOSWEEP
+#define PLAITS_SHARED_WAVE_PARAPHONIC_AUTOSWEEP 0
+#endif
+
 namespace plaits {
 
 using namespace std;
 using namespace stmlib;
 
 namespace {
+
+#if PLAITS_SHARED_WAVE_PARAPHONIC_AUTOSWEEP
+const uint32_t kWaveParaphonicAutosweepLeaderSamples = 6u * 48000u;
+const uint32_t kWaveParaphonicAutosweepGapSamples = 3u * 24000u;
+const uint32_t kWaveParaphonicAutosweepWindowSamples = 8u * 48000u;
+const uint32_t kWaveParaphonicAutosweepSlotSamples =
+    kWaveParaphonicAutosweepGapSamples +
+    kWaveParaphonicAutosweepWindowSamples;
+const uint32_t kWaveParaphonicAutosweepProfiles = 4u;
+const uint32_t kWaveParaphonicAutosweepTrailerSamples = 6u * 48000u;
+const uint32_t kWaveParaphonicAutosweepCycleSamples =
+    kWaveParaphonicAutosweepLeaderSamples +
+    kWaveParaphonicAutosweepProfiles *
+        kWaveParaphonicAutosweepSlotSamples +
+    kWaveParaphonicAutosweepTrailerSamples;
+
+uint32_t wave_paraphonic_autosweep_samples = 0;
+#endif
 
 // ChordBank stores frequency ratios while Spread is defined in pitch space.
 // The bare-metal firmware cannot afford libm log2f (it pulls in __errno), so
@@ -179,36 +201,86 @@ void WaveParaphonicEngine::Render(
     bool* already_enveloped) {
   *already_enveloped = false;
 
-  if (parameters.trigger & TRIGGER_RISING_EDGE) {
+#if PLAITS_SHARED_WAVE_PARAPHONIC_AUTOSWEEP
+  EngineParameters p = parameters;
+  float* out_start = out;
+  float* aux_start = aux;
+  const size_t block_size = size;
+  const uint32_t cycle_position =
+      wave_paraphonic_autosweep_samples %
+      kWaveParaphonicAutosweepCycleSamples;
+  const uint32_t active_start = kWaveParaphonicAutosweepLeaderSamples;
+  const uint32_t active_end = active_start +
+      kWaveParaphonicAutosweepProfiles *
+          kWaveParaphonicAutosweepSlotSamples;
+  bool autosweep_silent = true;
+  if (cycle_position >= active_start && cycle_position < active_end) {
+    const uint32_t relative = cycle_position - active_start;
+    const uint32_t profile =
+        relative / kWaveParaphonicAutosweepSlotSamples;
+    const uint32_t within_profile =
+        relative % kWaveParaphonicAutosweepSlotSamples;
+    const uint32_t rendered =
+        within_profile > kWaveParaphonicAutosweepGapSamples
+            ? within_profile - kWaveParaphonicAutosweepGapSamples
+            : 0u;
+    float progress = static_cast<float>(rendered) /
+        static_cast<float>(kWaveParaphonicAutosweepWindowSamples);
+    CONSTRAIN(progress, 0.0f, 1.0f);
+    const float notes[kWaveParaphonicAutosweepProfiles] = {
+      36.0f, 48.0f, 60.0f, 72.0f
+    };
+    const float chord_positions[kWaveParaphonicAutosweepProfiles] = {
+      0.12f, 0.37f, 0.62f, 0.87f
+    };
+    const float spreads[kWaveParaphonicAutosweepProfiles] = {
+      0.0f, 0.33f, 0.67f, 1.0f
+    };
+    p.note = notes[profile];
+    p.harmonics = chord_positions[profile];
+    p.timbre = progress;
+    p.morph = 0.5f;
+    p.macro = spreads[profile];
+    p.chord_set_option = 0;
+    p.stereo = false;
+    p.trigger = TRIGGER_UNPATCHED;
+    p.frequency_offset = NULL;
+    autosweep_silent =
+        within_profile < kWaveParaphonicAutosweepGapSamples;
+  }
+#else
+#define p parameters
+#endif
+
+  if (p.trigger & TRIGGER_RISING_EDGE) {
     strike_ = true;
   }
 
-  const bool stereo = PLAITS_STEREO_WAVE_PARAPHONIC && parameters.stereo;
+  const bool stereo = PLAITS_STEREO_WAVE_PARAPHONIC && p.stereo;
 
   // HARMONICS selects one position in the active firmware chord table. This
   // is the compatibility contract shared with the other chord-bank engines.
   // Wave Paraphonic always sounds all four stored voices; `arpLength` remains
   // an arpeggiator concern and does not mute oscillators here.
-  chords_.set_chord(parameters.harmonics, parameters.chord_set_option);
+  chords_.set_chord(p.harmonics, p.chord_set_option);
 
   // Braids' TIMBRE, :1794-1796, plus the port's per-voice fan.
-  const int timbre = static_cast<int>(parameters.timbre * 32767.0f);
+  const int timbre = static_cast<int>(p.timbre * 32767.0f);
   const int timbre_ticks = timbre < 0 ? 0 : (timbre > 32767 ? 32767 : timbre);
-  const int fan = static_cast<int>((parameters.morph - 0.5f) * 2.0f *
+  const int fan = static_cast<int>((p.morph - 0.5f) * 2.0f *
       kWaveParaphonicMaxFan * 32767.0f);
 
   const float spread = ApplyMacro(
       1.0f,
       kWaveParaphonicMinSpread,
       kWaveParaphonicMaxSpread,
-      parameters.macro);
+      p.macro);
 
   WaveTap tap[kWaveParaphonicNumVoices];
   float target_frequency[kWaveParaphonicNumVoices];
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
   float frequency_offset_ratio[kWaveParaphonicNumVoices];
-  const float root_frequency = max(
-      1e-7f, NoteToFrequency(parameters.note));
+  const float root_frequency = max(1e-7f, NoteToFrequency(p.note));
 #endif
   float pan_left[kWaveParaphonicNumVoices];
   float pan_right[kWaveParaphonicNumVoices];
@@ -228,7 +300,7 @@ void WaveParaphonicEngine::Render(
     // ChordBank exposes ratios; return to log-pitch space so Spread remains a
     // musical 0x..2x interval scaler, including for rootless/inverted tables.
     const float interval = 12.0f * FastLog2(chords_.ratio(i));
-    const float note = parameters.note + interval * spread;
+    const float note = p.note + interval * spread;
     target_frequency[i] = NoteToFrequency(note);
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
     frequency_offset_ratio[i] = target_frequency[i] / root_frequency;
@@ -265,9 +337,9 @@ void WaveParaphonicEngine::Render(
     for (int i = 0; i < kWaveParaphonicNumVoices; ++i) {
       float increment = fm[i]->Next();
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
-      if (parameters.frequency_offset) {
+      if (p.frequency_offset) {
         increment = max(
-            0.0f, increment + parameters.frequency_offset[frequency_sample] *
+            0.0f, increment + p.frequency_offset[frequency_sample] *
                 frequency_offset_ratio[i]);
       }
 #endif
@@ -316,6 +388,17 @@ void WaveParaphonicEngine::Render(
     ++frequency_sample;
 #endif
   }
+#if PLAITS_SHARED_WAVE_PARAPHONIC_AUTOSWEEP
+  if (autosweep_silent) {
+    fill(&out_start[0], &out_start[block_size], 0.0f);
+    fill(&aux_start[0], &aux_start[block_size], 0.0f);
+  }
+  wave_paraphonic_autosweep_samples =
+      (wave_paraphonic_autosweep_samples + block_size) %
+      kWaveParaphonicAutosweepCycleSamples;
+#else
+#undef p
+#endif
 }
 
 }  // namespace plaits
