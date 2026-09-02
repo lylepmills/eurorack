@@ -832,7 +832,7 @@ revision before building — a tag that disagrees with the source inside it is
 the failure the `development` sentinel exists to catch, caught earlier.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-633cc8cc9e1d` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-8f97241069cc` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a new
 image, use `wrangler containers info <application-id>` and wait until
@@ -846,7 +846,11 @@ attached and answering. Do not infer from the deploy succeeding either —
 staging application can temporarily return "no Container instance available"
 while its image is starting; the bounded staging smoke retries that response.
 
-Schema 24 is live, with shared Wave Terrain banks and native equations,
+Schema 27 is live, adding independent Trigger / Gate / Velocity Trigger /
+Velocity Gate articulation and two eight-table chord banks. The same release
+adds the Acid community engine and retains schema 26's custom Wavetable banks,
+schema 25's Natural Speech engine, schema 24's shared Wave Terrain banks and
+native equations,
 independent experimental Linear TZFM and Fast FM preferences, Sync In as an
 opt-in preference, and custom Speech banks accepting
 up to 32 words inside the 1,024-frame ceiling. It inherits schema 22's explicit
@@ -857,7 +861,7 @@ and Step unpatched-attenuverter modes; schema 17's selectable stock LPC banks,
 custom text/recording-derived Speech banks, source/engine previews; and the
 earlier recipe-driven scale banks and automatic LEVEL routing. The generalized
 schema-inheritance hardening from `5b2b077` is also live: current production
-source `3514880253d9` descends from that commit, so future supported schemas
+source `8f97241069cc` descends from that commit, so future supported schemas
 inherit older feature shapes without another version-list edit.
 
 ### Rolling back
@@ -942,6 +946,15 @@ target.
 | August 31, 2026 (Natural Speech recordings; /ping reports its revision) | `d857fbab280f` | `rev-d857fbab280f` |
 | August 31, 2026 (BubbleTime, ZXPhase48k, and ZXPulse48k community engines; 92 engines) | `1cf8cd56ba6f` | `rev-1cf8cd56ba6f` |
 | September 1, 2026 (invalidate fixed-window Natural Speech preview cache) | `633cc8cc9e1d` | `rev-633cc8cc9e1d` |
+| September 1, 2026 (schema 27 four-way articulation, sixteen chord tables, Ro'Ved gestures, and Acid; 93 engines) | `8f97241069cc` | `rev-8f97241069cc` |
+
+The schema-27 production canary compiled fresh as build
+`7dc3da2f77d7b8bfbe55e1884f6f7336c61902ac2e0167b26fe89da7442c0885`:
+181,952 B text, 48 B data, and 22,544 B BSS. Its binary SHA-256 was
+`922ab41f6e55ba88c964b64add601962fea83d30bf310b72c7a4d79eb78fad5e`;
+the 14,302,124-byte updater WAV SHA-256 was
+`0e984ff32bbbc5c6c63cf29ce49b95786c230fe6176ceef45c666350509b43ec`.
+The compiler stamped `8f97241069cc`, and the matching field guide completed.
 
 The August 16 production canary used the same exact 24-slot recipe as staging:
 build `6cb08754024d2a7abf43ae0c6390eb23b11a051dbc04c4984a32212040a6e865`
