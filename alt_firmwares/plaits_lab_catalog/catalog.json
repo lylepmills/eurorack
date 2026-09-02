@@ -3556,6 +3556,127 @@
       }
     },
     {
+      "id": "skins",
+      "packageId": "rubato/skins",
+      "name": "Skins",
+      "author": "Lyle Mills",
+      "origin": "Rubato Lab",
+      "family": "Percussion",
+      "description": "Struck membrane modes move from a round open head to a tighter loaded skin, with centre, rim, damping and pitch-dive control.",
+      "tags": [
+        "drum",
+        "hand drum",
+        "membrane",
+        "modal",
+        "percussion",
+        "physical"
+      ],
+      "controls": [
+        "Membrane",
+        "Strike",
+        "Damping",
+        "Pressure"
+      ],
+      "outputs": [
+        "Mono: the full membrane and strike. Stereo: the left membrane pickup.",
+        "Mono: rim-weighted upper modes and dry slap. Stereo: the right membrane pickup."
+      ],
+      "source": {
+        "header": "plaits/dsp/engine2/skins_engine.h",
+        "className": "SkinsEngine",
+        "member": "skins_engine_",
+        "files": [
+          "plaits/dsp/engine2/skins_engine.cc"
+        ]
+      },
+      "postProcessing": {
+        "alreadyEnveloped": true,
+        "outGain": 0.9,
+        "auxGain": 0.9
+      }
+    },
+    {
+      "id": "circuit-zaps",
+      "packageId": "rubato/circuit-zaps",
+      "name": "Circuit Zaps",
+      "author": "Lyle Mills",
+      "origin": "Rubato Lab",
+      "family": "Percussion",
+      "description": "Falling-pitch electronic strikes cross two oscillators into ring-modulated zaps, sparks and driven discharges.",
+      "tags": [
+        "electronic",
+        "percussion",
+        "pitch envelope",
+        "ring modulation",
+        "sweep",
+        "zap"
+      ],
+      "controls": [
+        "Topology",
+        "Dive",
+        "Tail",
+        "Charge"
+      ],
+      "outputs": [
+        "Mono: the saturated electronic percussion voice. Stereo: the left crossed circuit and independent spark.",
+        "Mono: the clean oscillators and attack transient. Stereo: the right crossed circuit and independent spark."
+      ],
+      "source": {
+        "header": "plaits/dsp/engine2/circuit_zaps_engine.h",
+        "className": "CircuitZapsEngine",
+        "member": "circuit_zaps_engine_",
+        "files": [
+          "plaits/dsp/engine2/circuit_zaps_engine.cc"
+        ]
+      },
+      "postProcessing": {
+        "alreadyEnveloped": true,
+        "outGain": 1.0,
+        "auxGain": 1.0
+      }
+    },
+    {
+      "id": "metalwork",
+      "packageId": "rubato/metalwork",
+      "name": "Metalwork",
+      "author": "Lyle Mills",
+      "origin": "Rubato Lab",
+      "family": "Percussion",
+      "description": "Paired inharmonic modes turn one struck-metal model into anvil, agogo, plate and gong families with controllable beating.",
+      "tags": [
+        "agogo",
+        "anvil",
+        "gong",
+        "metal",
+        "modal",
+        "percussion",
+        "plate"
+      ],
+      "controls": [
+        "Object",
+        "Hardness",
+        "Damping",
+        "Beating"
+      ],
+      "outputs": [
+        "Mono: the complete struck object. Stereo: the left modal pickup.",
+        "Mono: upper modes and dry metal strike. Stereo: the right modal pickup."
+      ],
+      "source": {
+        "header": "plaits/dsp/engine2/metalwork_engine.h",
+        "className": "MetalworkEngine",
+        "member": "metalwork_engine_",
+        "files": [
+          "plaits/dsp/engine2/metalwork_engine.cc"
+        ]
+      },
+      "postProcessing": {
+        "alreadyEnveloped": true,
+        "outGain": 1.0,
+        "auxGain": 1.0
+      }
+    },
+    {
       "id": "clap",
       "packageId": "community/clap",
       "name": "Clap",
@@ -4627,6 +4748,33 @@
         "macro": "Sets how much of the helix you hear at once, from a tight chord to a wide cloud of octaves."
       },
       "trigger": "Strikes the low-pass gate while the helix keeps gliding underneath."
+    },
+    "skins": {
+      "controls": {
+        "harmonics": "Retensions the mode ratios from a round open head toward a tighter loaded skin.",
+        "timbre": "Moves the strike from the centre's low body toward a bright rim slap.",
+        "morph": "Opens the head from a short muted knock to a long resonant ring.",
+        "macro": "Adds hand pressure: stronger pitch dive and faster loss of the upper modes."
+      },
+      "trigger": "Strikes the membrane and restarts its downward pitch bend."
+    },
+    "circuit-zaps": {
+      "controls": {
+        "harmonics": "Crosses a swept sine with a harder twin, then multiplies them into ring modulation.",
+        "timbre": "Deepens and lengthens the fall from a fifth above the note to a four-octave plunge.",
+        "morph": "Extends the discharge from a clipped blip to a ringing electronic trail.",
+        "macro": "Adds a noisy electrical spark and pushes the output circuit into soft saturation."
+      },
+      "trigger": "Starts a new falling-pitch discharge and electrical spark."
+    },
+    "metalwork": {
+      "controls": {
+        "harmonics": "Selects anvil, agogo, plate or gong mode ratios on the next strike.",
+        "timbre": "Trades a soft low mallet response for a hard upper-mode strike.",
+        "morph": "Opens the object from a dry knock to a long metal ring.",
+        "macro": "Detunes a paired copy of every mode from stable metal to slow shimmering interference."
+      },
+      "trigger": "Strikes the object and samples the current Object selection for that hit."
     },
     "clap": {
       "controls": {

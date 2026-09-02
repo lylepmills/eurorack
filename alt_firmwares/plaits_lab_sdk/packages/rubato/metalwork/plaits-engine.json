@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "rubato/metalwork",
+  "catalogId": "metalwork",
+  "version": "0.1.0",
+  "name": "Metalwork",
+  "author": "Lyle Mills",
+  "origin": "Rubato Lab",
+  "license": "MIT",
+  "description": "Paired inharmonic modes turn one struck-metal model into anvil, agogo, plate and gong families with controllable beating.",
+  "family": "Percussion",
+  "tags": ["agogo", "anvil", "gong", "metal", "modal", "percussion", "plate"],
+  "controls": [
+    { "id": "harmonics", "label": "Object", "description": "Selects anvil, agogo, plate or gong mode ratios on the next strike." },
+    { "id": "timbre", "label": "Hardness", "description": "Trades a soft low mallet response for a hard upper-mode strike." },
+    { "id": "morph", "label": "Damping", "description": "Opens the object from a dry knock to a long metal ring." },
+    { "id": "macro", "label": "Beating", "description": "Detunes a paired copy of every mode from stable metal to slow shimmering interference." }
+  ],
+  "outputs": { "main": "Mono: the complete struck object. Stereo: the left modal pickup.", "aux": "Mono: upper modes and dry metal strike. Stereo: the right modal pickup." },
+  "trigger": "Strikes the object and samples the current Object selection for that hit.",
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/metalwork_engine.h",
+    "files": ["plaits/dsp/engine2/metalwork_engine.cc"],
+    "className": "MetalworkEngine"
+  },
+  "postProcessing": { "alreadyEnveloped": true, "outGain": 1.0, "auxGain": 1.0 },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Original Rubato Lab prototype"
+}

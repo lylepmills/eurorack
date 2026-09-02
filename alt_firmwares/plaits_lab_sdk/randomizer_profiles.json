@@ -564,6 +564,21 @@
       "timbre": "centered",
       "morph": "broad-texture"
     },
+    "skins": {
+      "status": "seeded",
+      "timbre": "broad-texture",
+      "morph": "patient-structure"
+    },
+    "circuit-zaps": {
+      "status": "seeded",
+      "timbre": "pitch-interval",
+      "morph": "patient-structure"
+    },
+    "metalwork": {
+      "status": "seeded",
+      "timbre": "broad-texture",
+      "morph": "patient-structure"
+    },
     "clap": {
       "status": "seeded",
       "timbre": "broad-texture",

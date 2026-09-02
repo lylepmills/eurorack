@@ -511,7 +511,7 @@ class PackageTests(unittest.TestCase):
 
     def test_authoritative_catalog_exposes_every_forkable_model(self) -> None:
         catalog, public = plaits_lab.load_builtin_catalog()
-        self.assertEqual(len(catalog), 93)
+        self.assertEqual(len(catalog), 96)
         self.assertEqual(set(catalog), set(public))
         self.assertTrue(all(item["digest"].startswith("sha256:") for item in public.values()))
 
@@ -960,6 +960,14 @@ class PackageTests(unittest.TestCase):
             "Inversion and transposition",
         )
         self.assertEqual(package["digest"], plaits_lab.builtin_engine("chords")[1]["digest"])
+
+    def test_live_strike_spacebar_shortcut_is_wired(self) -> None:
+        html = (plaits_lab.SDK_DIR / "dev_editor.html").read_text(encoding="utf-8")
+        self.assertIn('aria-keyshortcuts="Space"', html)
+        self.assertIn("event.code !== 'Space'", html)
+        self.assertIn("event.repeat", html)
+        self.assertIn("event.preventDefault()", html)
+        self.assertIn("void strikeLive()", html)
 
     def test_live_audition_stereo_surface_is_wired(self) -> None:
         # The audition must be able to drive parameters.stereo and read back

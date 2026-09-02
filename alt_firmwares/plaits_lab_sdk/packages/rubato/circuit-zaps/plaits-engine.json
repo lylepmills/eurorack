@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "rubato/circuit-zaps",
+  "catalogId": "circuit-zaps",
+  "version": "0.1.0",
+  "name": "Circuit Zaps",
+  "author": "Lyle Mills",
+  "origin": "Rubato Lab",
+  "license": "MIT",
+  "description": "Falling-pitch electronic strikes cross two oscillators into ring-modulated zaps, sparks and driven discharges.",
+  "family": "Percussion",
+  "tags": ["electronic", "percussion", "pitch envelope", "ring modulation", "sweep", "zap"],
+  "controls": [
+    { "id": "harmonics", "label": "Topology", "description": "Crosses a swept sine with a harder twin, then multiplies them into ring modulation." },
+    { "id": "timbre", "label": "Dive", "description": "Deepens and lengthens the fall from a fifth above the note to a four-octave plunge." },
+    { "id": "morph", "label": "Tail", "description": "Extends the discharge from a clipped blip to a ringing electronic trail." },
+    { "id": "macro", "label": "Charge", "description": "Adds a noisy electrical spark and pushes the output circuit into soft saturation." }
+  ],
+  "outputs": { "main": "Mono: the saturated electronic percussion voice. Stereo: the left crossed circuit and independent spark.", "aux": "Mono: the clean oscillators and attack transient. Stereo: the right crossed circuit and independent spark." },
+  "trigger": "Starts a new falling-pitch discharge and electrical spark.",
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/circuit_zaps_engine.h",
+    "files": ["plaits/dsp/engine2/circuit_zaps_engine.cc"],
+    "className": "CircuitZapsEngine"
+  },
+  "postProcessing": { "alreadyEnveloped": true, "outGain": 1.0, "auxGain": 1.0 },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Original Rubato Lab prototype"
+}

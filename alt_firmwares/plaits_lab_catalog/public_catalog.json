@@ -3632,6 +3632,133 @@
       }
     },
     {
+      "id": "skins",
+      "packageId": "rubato/skins",
+      "name": "Skins",
+      "author": "Lyle Mills",
+      "origin": "Rubato Lab",
+      "family": "Percussion",
+      "description": "Struck membrane modes move from a round open head to a tighter loaded skin, with centre, rim, damping and pitch-dive control.",
+      "tags": [
+        "drum",
+        "hand drum",
+        "membrane",
+        "modal",
+        "percussion",
+        "physical"
+      ],
+      "controls": [
+        "Membrane",
+        "Strike",
+        "Damping",
+        "Pressure"
+      ],
+      "outputs": [
+        "Mono: the full membrane and strike. Stereo: the left membrane pickup.",
+        "Mono: rim-weighted upper modes and dry slap. Stereo: the right membrane pickup."
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:db7ff61dfcd1aea57d5d38f4cf2b407349f62b7c5ad2c04611b0e49078831380",
+      "documentationDigest": "sha256:5687113fc28da2cf517486551a6ba10edb8b75e1f8b0ddd7cf11cd868a1c479d",
+      "manual": {
+        "controls": {
+          "harmonics": "Retensions the mode ratios from a round open head toward a tighter loaded skin.",
+          "timbre": "Moves the strike from the centre's low body toward a bright rim slap.",
+          "morph": "Opens the head from a short muted knock to a long resonant ring.",
+          "macro": "Adds hand pressure: stronger pitch dive and faster loss of the upper modes."
+        },
+        "trigger": "Strikes the membrane and restarts its downward pitch bend."
+      },
+      "implementation": {
+        "className": "SkinsEngine"
+      }
+    },
+    {
+      "id": "circuit-zaps",
+      "packageId": "rubato/circuit-zaps",
+      "name": "Circuit Zaps",
+      "author": "Lyle Mills",
+      "origin": "Rubato Lab",
+      "family": "Percussion",
+      "description": "Falling-pitch electronic strikes cross two oscillators into ring-modulated zaps, sparks and driven discharges.",
+      "tags": [
+        "electronic",
+        "percussion",
+        "pitch envelope",
+        "ring modulation",
+        "sweep",
+        "zap"
+      ],
+      "controls": [
+        "Topology",
+        "Dive",
+        "Tail",
+        "Charge"
+      ],
+      "outputs": [
+        "Mono: the saturated electronic percussion voice. Stereo: the left crossed circuit and independent spark.",
+        "Mono: the clean oscillators and attack transient. Stereo: the right crossed circuit and independent spark."
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:b146ea4aff5fd052f40e4e8f2351bceaddd6adde02b9cf441f8381efc370b300",
+      "documentationDigest": "sha256:ef2eff973237a76b76a4daa2de99a138c337fc38df3242c092799f9b3394df0d",
+      "manual": {
+        "controls": {
+          "harmonics": "Crosses a swept sine with a harder twin, then multiplies them into ring modulation.",
+          "timbre": "Deepens and lengthens the fall from a fifth above the note to a four-octave plunge.",
+          "morph": "Extends the discharge from a clipped blip to a ringing electronic trail.",
+          "macro": "Adds a noisy electrical spark and pushes the output circuit into soft saturation."
+        },
+        "trigger": "Starts a new falling-pitch discharge and electrical spark."
+      },
+      "implementation": {
+        "className": "CircuitZapsEngine"
+      }
+    },
+    {
+      "id": "metalwork",
+      "packageId": "rubato/metalwork",
+      "name": "Metalwork",
+      "author": "Lyle Mills",
+      "origin": "Rubato Lab",
+      "family": "Percussion",
+      "description": "Paired inharmonic modes turn one struck-metal model into anvil, agogo, plate and gong families with controllable beating.",
+      "tags": [
+        "agogo",
+        "anvil",
+        "gong",
+        "metal",
+        "modal",
+        "percussion",
+        "plate"
+      ],
+      "controls": [
+        "Object",
+        "Hardness",
+        "Damping",
+        "Beating"
+      ],
+      "outputs": [
+        "Mono: the complete struck object. Stereo: the left modal pickup.",
+        "Mono: upper modes and dry metal strike. Stereo: the right modal pickup."
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:05c5ed8704a9989e87a91d1a9a959fdc416c0b6b02198d8da35e92293ea0e4f8",
+      "documentationDigest": "sha256:0d123a32082dc308c5048a4f57f29f3e907aa254de36c5fc1d2bb6ea2a4c5fa7",
+      "manual": {
+        "controls": {
+          "harmonics": "Selects anvil, agogo, plate or gong mode ratios on the next strike.",
+          "timbre": "Trades a soft low mallet response for a hard upper-mode strike.",
+          "morph": "Opens the object from a dry knock to a long metal ring.",
+          "macro": "Detunes a paired copy of every mode from stable metal to slow shimmering interference."
+        },
+        "trigger": "Strikes the object and samples the current Object selection for that hit."
+      },
+      "implementation": {
+        "className": "MetalworkEngine"
+      }
+    },
+    {
       "id": "clap",
       "packageId": "community/clap",
       "name": "Clap",

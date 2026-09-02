@@ -34,6 +34,9 @@ CC_FILES       = algorithms.cc \
 		glisson_engine.cc \
 		natural_speech_engine.cc \
 		helix_engine.cc \
+		skins_engine.cc \
+		circuit_zaps_engine.cc \
+		metalwork_engine.cc \
 		hi_hat_engine.cc \
 		lockstep_engine.cc \
 		loopback_engine.cc \
