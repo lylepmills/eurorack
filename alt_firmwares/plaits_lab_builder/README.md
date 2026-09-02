@@ -623,7 +623,7 @@ Container are managed by `wrangler.jsonc`. Before each firmware-source rollout:
 5. Run the contract, generator, type, and dry-run deployment checks.
 6. Deploy the candidate to the named staging environment with `pnpm run
    deploy:staging`. Staging uses a one-step Container rollout so the old and new
-   image do not temporarily consume its two-instance test capacity. It uses the
+   image do not temporarily consume its four-instance release-gate capacity. It uses the
    same immutable image tag and source
    revision as production, but separate Durable Object namespaces, queues,
    dead-letter queue, R2 artifact bucket, and rate-limit namespace. Its stable
@@ -832,7 +832,7 @@ revision before building — a tag that disagrees with the source inside it is
 the failure the `development` sentinel exists to catch, caught earlier.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-37c608fa2a69` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-bdf148346885` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a new
 image, use `wrangler containers info <application-id>` and wait until
@@ -846,8 +846,8 @@ attached and answering. Do not infer from the deploy succeeding either —
 staging application can temporarily return "no Container instance available"
 while its image is starting; the bounded staging smoke retries that response.
 
-Schema 27 is live, adding independent Trigger / Gate / Velocity Trigger /
-Velocity Gate articulation and two eight-table chord banks. The same release
+Schema 28 is live. It retains schema 27's independent Trigger / Gate / Velocity
+Trigger / Velocity Gate articulation and two eight-table chord banks. That release
 adds the Acid community engine and retains schema 26's custom Wavetable banks,
 schema 25's Natural Speech engine, schema 24's shared Wave Terrain banks and
 native equations,
@@ -861,7 +861,7 @@ and Step unpatched-attenuverter modes; schema 17's selectable stock LPC banks,
 custom text/recording-derived Speech banks, source/engine previews; and the
 earlier recipe-driven scale banks and automatic LEVEL routing. The generalized
 schema-inheritance hardening from `5b2b077` is also live: current production
-source `8f97241069cc` descends from that commit, so future supported schemas
+source `bdf148346885` descends from that commit, so future supported schemas
 inherit older feature shapes without another version-list edit.
 
 Schema 28 promotes the Wavetable resource into one shared Wave Tables library.
@@ -963,6 +963,18 @@ target.
 | September 1, 2026 (invalidate fixed-window Natural Speech preview cache) | `633cc8cc9e1d` | `rev-633cc8cc9e1d` |
 | September 1, 2026 (schema 27 four-way articulation, sixteen chord tables, Ro'Ved gestures, and Acid; 93 engines) | `8f97241069cc` | `rev-8f97241069cc` |
 | September 1, 2026 (stereo Skins, Circuit Zaps, and Metalwork percussion engines; 96 engines) | `37c608fa2a69` | `rev-37c608fa2a69` |
+| September 2, 2026 (schema 28 shared Wave Tables library and per-engine wave routes) | `bdf148346885` | `rev-bdf148346885` |
+
+The schema-28 shared-wave production canary compiled fresh as build
+`e114ffb89814dc91dd8faeff3b8eb46354130497f79ce9267f7e0b8b9185f94a`:
+166,608 B text, 48 B data, and 22,608 B BSS. Its binary SHA-256 was
+`ab733c4bb5d5215267d50cb73d8646597e7171c0ba468aef8641f10fdfb6642f`;
+the 13,212,140-byte updater WAV SHA-256 was
+`1b1a8c486d0886b17a51301b4d0fb43bf9a7538a926b2b8a22ed758c2574ed5a`.
+The compiler stamped `bdf148346885`, the matching field guide completed, and
+the dedicated Speech encoder was rotated to `speech-encoder-v19` only after
+the production application reported the new image ready with no active,
+starting, scheduling, or failed instances.
 
 The percussion production canary compiled fresh as build
 `63f32b04116c478261f93720e3a85da7798580eed0378ee631a0b5dd28fd2bf5`:

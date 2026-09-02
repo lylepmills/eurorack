@@ -131,7 +131,7 @@ async function loadQueuedRecipe(message: BuildMessage, env: Env): Promise<Normal
 // reporting the new revision. Rotating AFTER the pool has fully advanced is
 // what the README means by waiting for starting == 0 — the wait applies to
 // the rotation, not just the deploy.
-const SPEECH_ENCODER_CONTAINER = "speech-encoder-v18";
+const SPEECH_ENCODER_CONTAINER = "speech-encoder-v19";
 
 async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", bytes);
