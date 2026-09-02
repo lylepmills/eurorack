@@ -40,7 +40,7 @@ test("the Worker and compiler catalogs contain the same approved IDs", async () 
     approvedEngineIds,
     compilerCatalog.engines.map((engine: { id: string }) => engine.id),
   );
-  assert.equal(approvedEngineIds.length, 92);
+  assert.equal(approvedEngineIds.length, 93);
 });
 
 test("schema 24 carries distinct per-slot Wavetable data", async () => {
@@ -2240,6 +2240,17 @@ test("the health check distinguishes a stale pool from a stale speech singleton"
   // instances a probe can find no free slot under load, and a gate that read
   // that as staleness would block on traffic rather than on a stale image.
   assert.match(helper, /reachable: false/);
+});
+
+test("the public catalog advertises both schema-27 chord-table banks", async () => {
+  const source = await readFile(new URL("../src/index.ts", import.meta.url), "utf8");
+  const catalog = source.indexOf('url.pathname === "/v1/catalog"');
+  assert.ok(catalog >= 0, "expected a /v1/catalog route");
+  assert.match(
+    source.slice(catalog, catalog + 1400),
+    /limits:\s*\{[\s\S]*?chordTables:\s*16,/,
+    "the editor must be told that schema 27 supports all sixteen tables",
+  );
 });
 
 test("saved Natural Speech previews expire with their renderer image", async () => {
