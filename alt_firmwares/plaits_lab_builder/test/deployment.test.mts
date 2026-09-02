@@ -71,6 +71,11 @@ test("the hardware smoke exercises schema 27 gate articulation and both chord-ta
 // finishes. So the smoke asserted a revision the Worker merely advertised and
 // saved a pre-fix WAV as the artifact for the hardware audition.
 test("the release gate checks the revision the compiler stamped, not the Worker's var", () => {
+  assert.match(
+    smoke,
+    /expectedRevision\s*=\s*process\.env\.PLAITS_EXPECTED_SOURCE_REVISION\s*\?\?\s*configuredRevisions\[0\]/,
+    "the default staging command must require the revision pinned in Wrangler",
+  );
   // The catalog var alone must never be the only revision assertion.
   assert.match(smoke, /build\.artifact\?\.sourceRevision/);
   assert.match(

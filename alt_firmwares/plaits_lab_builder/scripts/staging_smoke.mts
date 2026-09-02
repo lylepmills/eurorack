@@ -5,11 +5,24 @@ import { resolve } from "node:path";
 const apiBase = process.env.PLAITS_STAGING_API ?? "https://plaits-api-staging.rubato.audio";
 const siteBase = process.env.PLAITS_STAGING_SITE ?? "https://rubato-audio-staging.pages.dev";
 const artifactDir = process.env.PLAITS_STAGING_ARTIFACT_DIR;
-const expectedRevision = process.env.PLAITS_EXPECTED_SOURCE_REVISION;
 // The same recipe is both the staging release gate and the production canary the
 // README requires after a rollout. Defaults target staging, so an unset
 // environment runs the gate exactly as before; the canary opts in explicitly.
 const deploymentEnvironment = process.env.PLAITS_DEPLOYMENT_ENVIRONMENT ?? "staging";
+const wranglerSource = await readFile(new URL("../wrangler.jsonc", import.meta.url), "utf8");
+const configuredRevisions = [
+  ...wranglerSource.matchAll(/"PLAITS_SOURCE_REVISION"\s*:\s*"([^"]+)"/g),
+].map((match) => match[1]);
+assert.ok(configuredRevisions.length >= 2, "Wrangler must pin production and staging revisions");
+assert.equal(
+  new Set(configuredRevisions).size,
+  1,
+  "production and staging must name the same release revision",
+);
+// An ordinary `pnpm run smoke:staging` must be a real release gate. Previously
+// omitting this environment variable silently skipped the compiler-stamp check
+// and allowed a cached artifact from the preceding image to pass.
+const expectedRevision = process.env.PLAITS_EXPECTED_SOURCE_REVISION ?? configuredRevisions[0];
 const origin = new URL(siteBase).origin;
 const headers = { Accept: "application/json", Origin: origin };
 
@@ -74,7 +87,7 @@ assert.ok(catalog.recipeSchemaVersion >= 27, "builder must support gate articula
 // NOT prove the Container serving compiles is the matching image, because the
 // two disagree for the length of a Container rollout. The authoritative check is
 // against the artifact's own stamped revision, below.
-if (expectedRevision) assert.equal(catalog.sourceRevision, expectedRevision, "Worker catalog revision");
+assert.equal(catalog.sourceRevision, expectedRevision, "Worker catalog revision");
 
 await getBinary("/v1/speech/voice-preview/en-US/af_heart.wav", /audio\/wav/, "voice preview");
 await getBinary("/v1/speech/stock/bank-1-natural.wav", /audio\/wav/, "stock-bank preview");
@@ -404,17 +417,15 @@ assert.equal(build.manual?.status, "ready", "the release field guide did not fin
 // so the gate validated -- and saved for the hardware audition -- pre-fix
 // firmware. A cache hit is also covered: the stored artifact reports the
 // revision that built it, not the current var.
-if (expectedRevision) {
-  assert.equal(
-    build.artifact?.sourceRevision,
-    expectedRevision,
-    `compiler stamped ${build.artifact?.sourceRevision || "(nothing)"} but this gate expects `
-    + `${expectedRevision}. If these differ, the Container is still rolling: wait until `
-    + "`wrangler containers info <app-id>` shows configuration.image on the intended tag "
-    + "with starting == 0, then re-run. NOTE the artifact just built is cached under a key "
-    + "claiming the wrong revision, so purge it before re-gating this revision.",
-  );
-}
+assert.equal(
+  build.artifact?.sourceRevision,
+  expectedRevision,
+  `compiler stamped ${build.artifact?.sourceRevision || "(nothing)"} but this gate expects `
+  + `${expectedRevision}. If these differ, the Container is still rolling: wait until `
+  + "`wrangler containers info <app-id>` shows configuration.image on the intended tag "
+  + "with starting == 0, then re-run. NOTE the artifact just built is cached under a key "
+  + "claiming the wrong revision, so purge it before re-gating this revision.",
+);
 
 const firmware = await getBinary(build.downloadUrl, /audio\/wav/, "firmware download");
 assert.equal(Buffer.from(firmware.subarray(0, 4)).toString("ascii"), "RIFF");
