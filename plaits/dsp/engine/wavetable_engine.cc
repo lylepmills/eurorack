@@ -31,6 +31,7 @@
 #include <algorithm>
 
 #include "plaits/build_config.h"
+#include "plaits/dsp/integrated_wavetable.h"
 #include "plaits/dsp/oscillator/sine_oscillator.h"
 #include "plaits/resources.h"
 
@@ -107,8 +108,8 @@ void WavetableEngine::LoadUserData(const uint8_t* user_data) {
 #if !PLAITS_WAVETABLE_FACTORY_MASK
   // A compact shared bank containing only sampled/native entries never uses
   // the legacy 3-bank map. Keep this virtual method for Engine compatibility,
-  // but do not name wav_integrated_waves: that lets --gc-sections reclaim the
-  // complete factory pool when no other selected model needs it.
+  // but do not name a factory wave bank: that lets --gc-sections reclaim every
+  // unused bank when no other selected model needs it.
   (void) user_data;
   return;
 #endif
@@ -122,12 +123,16 @@ void WavetableEngine::LoadUserData(const uint8_t* user_data) {
         w = user_data ? user_data[wave] : (w * 101 % kNumWaves);
       }
 
-      const int16_t* base = wav_integrated_waves;
       if (w >= kNumWaves) {
-        base = (const int16_t*)(user_data + 64);
+        const int16_t* base = (const int16_t*)(user_data + 64);
         w = min(w - kNumWaves, kNumCustomWaves);
+        wave_map_[i] = base + size_t(w) * (kTableSize + 4);
+      } else {
+        const int16_t* wave = FactoryIntegratedWavetable(w);
+        // Customized banks never read omitted factory entries through this
+        // legacy map. Give the allocator a valid fallback nevertheless.
+        wave_map_[i] = wave ? wave : FactoryIntegratedWavetableBank(0);
       }
-      wave_map_[i] = base + size_t(w) * (kTableSize + 4);
     }
   }
 }
@@ -152,10 +157,9 @@ float WavetableEngine::ReadDynamicIntegrated(
     float x_fractional,
     float y_fractional,
     int phase_integral,
-    float phase_fractional) {
+  float phase_fractional) {
 #if PLAITS_WAVETABLE_FACTORY_MASK
   const int type = wavetable_bank_->types[bank];
-  const int wave_offset = type * kNumWavesPerBank;
   const int cells[4] = {
     x0 + y0 * 8,
     x1 + y0 * 8,
@@ -165,14 +169,12 @@ float WavetableEngine::ReadDynamicIntegrated(
   float phase_samples[4];
   for (int tap = 0; tap < 4; ++tap) {
     const int p = phase_integral + tap;
-    const int16_t* a = wav_integrated_waves +
-        size_t(wave_offset + cells[0]) * (kTableSize + 4);
-    const int16_t* b = wav_integrated_waves +
-        size_t(wave_offset + cells[1]) * (kTableSize + 4);
-    const int16_t* c = wav_integrated_waves +
-        size_t(wave_offset + cells[2]) * (kTableSize + 4);
-    const int16_t* d = wav_integrated_waves +
-        size_t(wave_offset + cells[3]) * (kTableSize + 4);
+    const int16_t* base = FactoryIntegratedWavetableBank(type);
+    if (!base) return 0.0f;
+    const int16_t* a = base + size_t(cells[0]) * (kTableSize + 4);
+    const int16_t* b = base + size_t(cells[1]) * (kTableSize + 4);
+    const int16_t* c = base + size_t(cells[2]) * (kTableSize + 4);
+    const int16_t* d = base + size_t(cells[3]) * (kTableSize + 4);
     const float low = a[p] + (b[p] - a[p]) * x_fractional;
     const float high = c[p] + (d[p] - c[p]) * x_fractional;
     phase_samples[tap] = low + (high - low) * y_fractional;

@@ -37,7 +37,7 @@ export type NormalizedChordTable = {
 // feature gates below use minimums so a newly supported schema cannot get
 // stranded behind an old "10, 11, 12..." whitelist.
 export const minRecipeSchemaVersion = 2;
-export const maxRecipeSchemaVersion = 27;
+export const maxRecipeSchemaVersion = 28;
 const configurationMinSchemaVersion = 4;
 const resourcesMinSchemaVersion = 5;
 const fourBankMinSchemaVersion = 6;       // 32 slots
@@ -60,6 +60,7 @@ const experimentalFmMinSchemaVersion = 23; // independent TZFM law / fast ADC
 // moves between the two layouts keeping its tuned root and locked octave.
 const simplifiedPitchRangesMinSchemaVersion = 24;
 const gateArticulationMinSchemaVersion = 27;
+const wavetableWaveLinesMinSchemaVersion = 28;
 const scaleBankMinSchemaVersion = 16;      // recipe-driven scale bank
 export const levelAutoMinSchemaVersion = 16; // engine-aware LEVEL routing
 const speechBanksMinSchemaVersion = 17;      // selectable/custom Speech LPC banks
@@ -86,6 +87,19 @@ const factoryTerrainIds = [
 const factoryTerrainIdSet = new Set<string>(factoryTerrainIds);
 const factoryWavetableIds = ["mutable-1", "mutable-2", "mutable-3"] as const;
 const factoryWavetableIdSet = new Set<string>(factoryWavetableIds);
+const factoryTerrainWaveSources = new Map<string, string>([
+  ["factory-6", "mutable-3"],
+  ["factory-7", "mutable-2"],
+  ["factory-8", "mutable-1"],
+]);
+const sharedWaveLibraryEngineIds = new Set([
+  "wavetable",
+  "wave-terrain",
+  "chords",
+  "wave-paraphonic",
+  "wavetable-chord",
+  "wavetable-scale-stack",
+]);
 
 export const minScaleBankSize = 1;
 export const maxScaleBankSize = 16;
@@ -191,10 +205,20 @@ export type NormalizedWavetableBankEntry = {
 export type NormalizedWavetableBank = {
   mirrored: boolean;
   entries: NormalizedWavetableBankEntry[];
+  waveLines?: {
+    chords: NormalizedWaveLinePoint[];
+    braids: NormalizedWaveLinePoint[];
+  };
+};
+
+export type NormalizedWaveLinePoint = {
+  bank: number;
+  frame: number;
+  gain?: number;
 };
 
 export type NormalizedRecipe = {
-  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27;
+  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28;
   target: "mutable-instruments-plaits" | "plum-audio-roved";
   firmware: "rubato-plaits";
   // A null entry is an empty slot (v7 short banks); filled slots are engine ids.
@@ -774,12 +798,57 @@ function normalizeTerrainBank(value: unknown, schemaVersion: number): Normalized
   });
 }
 
+function normalizeWaveLine(
+  value: unknown,
+  name: string,
+  size: number,
+  bankCount: number,
+): NormalizedWaveLinePoint[] {
+  if (!Array.isArray(value) || value.length !== size) {
+    throw new ContractError("invalid_wavetable_bank", `${name} must contain exactly ${size} stops.`);
+  }
+  return value.map((raw): NormalizedWaveLinePoint => {
+    if (!raw || typeof raw !== "object") {
+      throw new ContractError("invalid_wavetable_bank", `${name} contains an invalid stop.`);
+    }
+    const point = raw as Record<string, unknown>;
+    if (!hasExactKeys(point, point.gain === undefined ? ["bank", "frame"] : ["bank", "frame", "gain"])
+        || !Number.isInteger(point.bank) || Number(point.bank) < 0 || Number(point.bank) >= bankCount
+        || !Number.isInteger(point.frame) || Number(point.frame) < 0 || Number(point.frame) >= 64
+        || (point.gain !== undefined && (typeof point.gain !== "number"
+          || !Number.isFinite(point.gain) || point.gain < 0 || point.gain > 2))) {
+      throw new ContractError("invalid_wavetable_bank", `${name} contains an invalid stop.`);
+    }
+    return {
+      bank: Number(point.bank),
+      frame: Number(point.frame),
+      ...(point.gain === undefined ? {} : { gain: Number(point.gain) }),
+    };
+  });
+}
+
+function normalizeWaveLines(value: unknown, bankCount: number): NonNullable<NormalizedWavetableBank["waveLines"]> {
+  if (!value || typeof value !== "object") {
+    throw new ContractError("invalid_wavetable_bank", "The engine wave lines are invalid.");
+  }
+  const lines = value as Record<string, unknown>;
+  if (!hasExactKeys(lines, ["chords", "braids"])) {
+    throw new ContractError("invalid_wavetable_bank", "The engine wave lines must contain Chords and Braids mappings.");
+  }
+  return {
+    chords: normalizeWaveLine(lines.chords, "The Chords wave line", 15, bankCount),
+    braids: normalizeWaveLine(lines.braids, "The Braids wave line", 33, bankCount),
+  };
+}
+
 function normalizeWavetableBank(value: unknown, schemaVersion: number): NormalizedWavetableBank {
   if (!value || typeof value !== "object") {
     throw new ContractError("invalid_wavetable_bank", "A wavetable bank is invalid.");
   }
   const bank = value as Record<string, unknown>;
-  if (!hasExactKeys(bank, ["mirrored", "entries"]) || typeof bank.mirrored !== "boolean"
+  const expectedKeys = schemaVersion >= wavetableWaveLinesMinSchemaVersion
+    ? ["mirrored", "entries", "waveLines"] : ["mirrored", "entries"];
+  if (!hasExactKeys(bank, expectedKeys) || typeof bank.mirrored !== "boolean"
       || !Array.isArray(bank.entries)) {
     throw new ContractError(
       "invalid_wavetable_bank",
@@ -857,7 +926,13 @@ function normalizeWavetableBank(value: unknown, schemaVersion: number): Normaliz
       },
     };
   });
-  return { mirrored: bank.mirrored, entries };
+  return {
+    mirrored: bank.mirrored,
+    entries,
+    ...(schemaVersion >= wavetableWaveLinesMinSchemaVersion
+      ? { waveLines: normalizeWaveLines(bank.waveLines, entries.length) }
+      : {}),
+  };
 }
 
 export class ContractError extends Error {
@@ -1389,13 +1464,41 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
       terrainBank = normalizeTerrainBank(resourceValues.terrainBank, schemaVersion);
     }
     if (carriesWavetableBank) {
-      if (!slots.includes("wavetable")) {
+      if (!(schemaVersion >= wavetableWaveLinesMinSchemaVersion
+        ? slots.some((id) => id !== null && sharedWaveLibraryEngineIds.has(id))
+        : slots.includes("wavetable"))) {
         throw new ContractError(
           "invalid_wavetable_bank",
-          "A wavetable bank requires Wavetable in the palette.",
+          schemaVersion >= wavetableWaveLinesMinSchemaVersion
+            ? "A shared wave library requires a compatible model in the palette."
+            : "A wavetable bank requires Wavetable in the palette.",
         );
       }
       wavetableBank = normalizeWavetableBank(resourceValues.wavetableBank, schemaVersion);
+    }
+    const retainedFactoryWaves = new Set<string>(wavetableBank?.entries.flatMap((entry) => (
+      entry.kind === "factory" ? [entry.id] : []
+    )) ?? []);
+    if (schemaVersion >= wavetableWaveLinesMinSchemaVersion
+        && wavetableBank && slots.includes("wave-terrain") && !carriesTerrainBank
+        && factoryWavetableIds.some((id) => !retainedFactoryWaves.has(id))) {
+      throw new ContractError(
+        "invalid_terrain_bank",
+        "A shared wave library missing a factory source requires an explicit Wave Terrain bank.",
+      );
+    }
+    if (schemaVersion >= wavetableWaveLinesMinSchemaVersion && terrainBank && wavetableBank) {
+      const hasMissingFactorySource = terrainBank.some((entry) => (
+        entry.kind === "factory"
+        && factoryTerrainWaveSources.has(entry.id)
+        && !retainedFactoryWaves.has(factoryTerrainWaveSources.get(entry.id)!)
+      ));
+      if (hasMissingFactorySource) {
+        throw new ContractError(
+          "invalid_terrain_bank",
+          "A factory wavetable terrain requires its source bank in the shared wave library.",
+        );
+      }
     }
     if (carriesUserDataBanks) {
       const rawBanks = resourceValues.userDataBanks;
@@ -1463,6 +1566,7 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
         || configuration.initialOptions.trigResponse !== "trigger"
         || configuration.initialOptions.lockedFrequencyKnob === "envelope-contour"
       )) ? 27
+      : wavetableBank?.waveLines !== undefined ? 28
       : wavetableBank !== undefined ? 26
       : naturalSpeechBanks !== undefined ? 25
       : configuration.preferences.simplifiedPitchRanges
@@ -1577,6 +1681,7 @@ export async function computeManualKey(
         entries: recipe.resources.wavetableBank.entries.map((entry) => entry.kind === "factory"
           ? [entry.kind, entry.id]
           : [entry.kind, entry.model.name, entry.model.representation ?? "prebaked"]),
+        waveLines: recipe.resources.wavetableBank.waveLines ?? null,
       }
       : null,
     // The control instructions differ completely: Plaits has two buttons;

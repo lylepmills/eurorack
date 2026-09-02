@@ -36,6 +36,7 @@
 #include <algorithm>
 
 #include "plaits/build_config.h"
+#include "plaits/dsp/integrated_wavetable.h"
 #include "plaits/resources.h"
 
 namespace plaits {
@@ -87,25 +88,25 @@ void ChordEngine::ComputeRegistration(
   }
 }
 
-#define WAVE(bank, row, column) &wav_integrated_waves[(bank * 64 + row * 8 + column) * 132]
+#if PLAITS_HAS_CUSTOM_WAVE_LINES
+inline const int16_t* const* ChordWaveLine() {
+  return kChordWaveLine;
+}
+#else
+#define WAVE(bank, row, column) \
+  FactoryIntegratedWavetable(bank, row * 8 + column)
 
-const int16_t* const wavetable[] = {
-  WAVE(2, 6, 1),
-  WAVE(2, 6, 6),
-  WAVE(2, 6, 4),
-  WAVE(0, 6, 0),
-  WAVE(0, 6, 1),
-  WAVE(0, 6, 2),
-  WAVE(0, 6, 7),
-  WAVE(2, 4, 7),
-  WAVE(2, 4, 6),
-  WAVE(2, 4, 5),
-  WAVE(2, 4, 4),
-  WAVE(2, 4, 3),
-  WAVE(2, 4, 2),
-  WAVE(2, 4, 1),
-  WAVE(2, 4, 0),
+const int16_t* const kFactoryChordWaveLine[] = {
+  WAVE(2, 6, 1), WAVE(2, 6, 6), WAVE(2, 6, 4),
+  WAVE(0, 6, 0), WAVE(0, 6, 1), WAVE(0, 6, 2), WAVE(0, 6, 7),
+  WAVE(2, 4, 7), WAVE(2, 4, 6), WAVE(2, 4, 5), WAVE(2, 4, 4),
+  WAVE(2, 4, 3), WAVE(2, 4, 2), WAVE(2, 4, 1), WAVE(2, 4, 0),
 };
+
+inline const int16_t* const* ChordWaveLine() {
+  return kFactoryChordWaveLine;
+}
+#endif
 
 void ChordEngine::Render(
     const EngineParameters& parameters,
@@ -178,7 +179,7 @@ void ChordEngine::Render(
             note_f0 * 1.004f,
             note_amplitudes[note] * wavetable_amount * note_gain,
             waveform,
-            wavetable,
+            ChordWaveLine(),
             destination,
             size,
             parameters.frequency_offset,
@@ -188,7 +189,7 @@ void ChordEngine::Render(
             note_f0 * 1.004f,
             note_amplitudes[note] * wavetable_amount * note_gain,
             waveform,
-            wavetable,
+            ChordWaveLine(),
             destination,
             size);
 #endif
@@ -248,7 +249,7 @@ void ChordEngine::Render(
           note_f0 * 1.004f,
           note_amplitudes[note] * wavetable_amount,
           waveform,
-          wavetable,
+          ChordWaveLine(),
           destination,
           size,
           parameters.frequency_offset,
@@ -258,7 +259,7 @@ void ChordEngine::Render(
           note_f0 * 1.004f,
           note_amplitudes[note] * wavetable_amount,
           waveform,
-          wavetable,
+          ChordWaveLine(),
           destination,
           size);
 #endif

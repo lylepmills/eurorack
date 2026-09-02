@@ -55,27 +55,37 @@ The tested application SHA-256 values were
 ## Production flash matrix
 
 `build_flash_matrix.py` performs ordinary production links with the autonomous
-sequencer disabled. It measures the legacy stock engine, explicit schema-26
-factory banks, sampled-only, native-only, and mixed banks:
+sequencer disabled. Alongside the legacy schema-26 cases it measures schema
+28's shared library with Wavetable, Chords, and the Braids-derived wave line:
 
 ```sh
 python3 alt_firmwares/plaits_lab_sdk/diagnostics/wavetable-production-bank-test/build_flash_matrix.py \
   --output-dir /tmp/wavetable-flash-matrix
 ```
 
-The 2026-08-29 ARM 4.8.3 matrix measured:
+The schema-28 ARM 4.8.3 matrix measured on September 1, 2026:
 
-| Recipe | Application bytes | Marginal bank cost |
+| Consumer / resource | Application bytes | Factory banks retained |
 | --- | ---: | ---: |
-| Legacy stock | 81,376 | baseline |
-| Explicit factory 3 | 84,512 | +3,136 |
-| Sampled 1 / 2 / 8 / 16 | 40,992 / 49,200 / 98,400 / 164,016 | +10,304 / +18,512 / +67,712 / +133,328 over the 30,688-byte pool-free baseline |
-| Native 1 / 2 / 3 / 8 / 16 | 33,248 / 33,520 / 33,920 / 35,840 / 39,104 | +2,560 / +2,832 / +3,232 / +5,152 / +8,416 over the pool-free baseline |
-| Mixed 8 (3 factory, 3 native, 2 sampled) | 102,032 | +20,656 over legacy stock |
+| Wavetable · shared factory 3 | 83,856 | 1 + 2 + 3 |
+| Wavetable · shared factory 2 | 67,008 | 1 + 2 |
+| Wavetable · shared factory 1 | 49,936 | 1 |
+| Wavetable · shared sampled 1 | 40,064 | none |
+| Wavetable · legacy factory 3 | 83,984 | 1 + 2 + 3 |
+| Wavetable · legacy sampled 1 | 40,096 | none |
+| Chords · stock route | 66,960 | 1 + 3 |
+| Chords · shared factory 3 | 83,872 | 1 + 2 + 3 |
+| Chords · shared factory 1 | 50,080 | 1 |
+| Chords · shared sampled 1 | 37,136 | none |
+| Braids line · stock route | 79,248 | 1 + 2 + 3 |
+| Braids line · shared factory 3 | 79,168 | 1 + 2 + 3 |
+| Braids line · shared sampled 1 | 37,184 | none |
 
-The fifteen calibrated native equation functions linked at 256--468 bytes
-each (284, 260, 388, 256, 352, 456, 404, 412, 352, 348, 360, 304, 296, 320,
-468). The remaining delta is shared bank dispatch, entry arrays, alignment, and
-the math helper linked by `atan`. These links are the source for the website's
-per-equation figures and its rounded-up shared-runtime terms; sampled payloads
-remain exactly 8,192 bytes per bank.
+Each split factory section is exactly 16,896 bytes. Observed removal deltas are
+16,848--17,072 bytes because the linker also changes the small pointer/switch
+path around the removed section. A custom-only Chords route stores its 15
+selected integrated cycles (3,960 bytes), not an 8 KB bank; a custom-only
+Braids route stores 33 cycles (8,712 bytes). That distinction drives the
+editor's content-aware estimate. Full sampled banks remain exactly 8,192 bytes
+when the Wavetable engine itself consumes them, while a Chords/Braids-only
+palette pays only for the selected 264-byte cycles plus compact route metadata.

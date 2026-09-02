@@ -11,6 +11,7 @@
 #include <cmath>
 
 #include "plaits/build_config.h"
+#include "plaits/dsp/integrated_wavetable.h"
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/dsp/parameter_interpolator.h"
 #include "stmlib/utils/random.h"
@@ -38,7 +39,7 @@ inline float FastLog2(float x) {
 
 // The scan line. Braids' mini_wave_line (digital_oscillator.cc:1622-1626) names
 // 33 waves in its own wt_waves; this is the corresponding wave in Plaits'
-// wav_integrated_waves, which is generated from the SAME waves.bin (verified
+// integrated factory waves, which are generated from the SAME waves.bin (verified
 // byte-identical to wt_waves, all 33,024 bytes).
 //
 // 16 slots have an exact counterpart in Plaits' bank 3 -- slots 4, 5, 7, 10,
@@ -65,10 +66,9 @@ const uint8_t kWaveGain[kWaveParaphonicNumSlots] = {
   126, 108, 112, 119, 106, 122, 125, 120,  94, 151, 127
 };
 
-// wav_integrated_waves is 192 waves of 128 samples plus a 4-sample guard
-// (plaits/dsp/engine/wavetable_engine.cc:88, WAV_INTEGRATED_WAVES_SIZE 25344).
+// The three factory banks contain 192 waves of 128 samples plus a 4-sample
+// guard (64 waves and 8,448 int16 values per independently linked bank).
 const int kWaveTableSize = 128;
-const int kWaveStride = kWaveTableSize + 4;
 
 // wavetables.py stores the running sum scaled by 4 * 32768 / 128, so the
 // difference of two adjacent entries IS the peak-normalised wave sample times
@@ -76,7 +76,19 @@ const int kWaveStride = kWaveTableSize + 4;
 const float kIntegratedScale = 1.0f / 1024.0f;
 
 inline const int16_t* WaveAt(int slot) {
-  return wav_integrated_waves + size_t(kWaveIndex[slot]) * kWaveStride;
+#if PLAITS_HAS_CUSTOM_WAVE_LINES
+  return kBraidsWaveLine[slot];
+#else
+  return FactoryIntegratedWavetable(kWaveIndex[slot]);
+#endif
+}
+
+inline float WaveGainAt(int slot) {
+#if PLAITS_HAS_CUSTOM_WAVE_LINES
+  return float(kBraidsWaveLineGains[slot]) / 128.0f;
+#else
+  return float(kWaveGain[slot]) / 128.0f;
+#endif
 }
 
 // One voice's readout position, the crossfade, and the PER-WAVE gain each of
@@ -109,8 +121,8 @@ inline void ResolveTap(int ticks, WaveTap* tap) {
   tap->low = WaveAt(slot);
   tap->high = WaveAt(slot + 1);
   tap->crossfade = crossfade;
-  tap->gain_low = float(kWaveGain[slot]) / 128.0f;
-  tap->gain_high = float(kWaveGain[slot + 1]) / 128.0f;
+  tap->gain_low = WaveGainAt(slot);
+  tap->gain_high = WaveGainAt(slot + 1);
 }
 
 // One wave sample, LINEARLY interpolated -- Braids' Interpolate824 readout

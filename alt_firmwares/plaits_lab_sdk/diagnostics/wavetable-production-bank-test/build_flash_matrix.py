@@ -53,6 +53,53 @@ def sampled(index: int) -> dict:
     return custom(index % 12 + 1, "sampled")
 
 
+def wave_lines(bank_count: int) -> dict[str, list[dict[str, int]]]:
+    """A deterministic shared-library mapping that touches every input bank."""
+    def line(length: int) -> list[dict[str, int]]:
+        return [
+            {
+                "bank": min(bank_count - 1, index * bank_count // length),
+                "frame": round(index * 63 / (length - 1)),
+            }
+            for index in range(length)
+        ]
+
+    return {"chords": line(15), "braids": line(33)}
+
+
+def shared_recipe(entries: list[dict]) -> dict:
+    payload = recipe(entries, True)
+    payload["schemaVersion"] = 28
+    payload["initialOptions"]["trigResponse"] = "trigger"
+    payload["resources"]["wavetableBank"]["waveLines"] = wave_lines(len(entries))
+    return payload
+
+
+def shared_consumer_recipe(entries: list[dict], consumer: str = "chords") -> dict:
+    payload = shared_recipe(entries)
+    payload["slots"] = [consumer] * 24
+    return payload
+
+
+def shared_all_consumers_recipe(entries: list[dict]) -> dict:
+    payload = shared_recipe(entries)
+    consumers = [
+        "wavetable", "wave-terrain", "chords", "wave-paraphonic",
+        "wavetable-chord", "wavetable-scale-stack",
+    ]
+    payload["slots"] = consumers * 4
+    return payload
+
+
+def stock_consumer_recipe(consumer: str = "chords") -> dict:
+    payload = recipe([{"kind": "factory", "id": "mutable-1"}], True)
+    payload["schemaVersion"] = 27
+    payload["slots"] = [consumer] * 24
+    payload["initialOptions"]["trigResponse"] = "trigger"
+    del payload["resources"]["wavetableBank"]
+    return payload
+
+
 def matrix() -> dict[str, dict]:
     legacy = recipe([{"kind": "factory", "id": "mutable-1"}], True)
     legacy["schemaVersion"] = 24
@@ -86,6 +133,47 @@ def matrix() -> dict[str, dict]:
         "native-8": recipe(natives[:8], True),
         "native-16": recipe(native_sixteen, False),
         "mixed-8": recipe(mixed, True),
+        # Schema 28 makes the left-column library authoritative for every
+        # wavetable consumer. These four cases prove that each factory entry is
+        # now independently linker-prunable and calibrate the selector cost.
+        "shared-factory-3": shared_recipe([
+            {"kind": "factory", "id": "mutable-1"},
+            {"kind": "factory", "id": "mutable-2"},
+            {"kind": "factory", "id": "mutable-3"},
+        ]),
+        "shared-factory-2": shared_recipe([
+            {"kind": "factory", "id": "mutable-1"},
+            {"kind": "factory", "id": "mutable-2"},
+        ]),
+        "shared-factory-1": shared_recipe([
+            {"kind": "factory", "id": "mutable-1"},
+        ]),
+        "shared-sampled-1": shared_recipe([sampled(0)]),
+        "chords-stock": stock_consumer_recipe(),
+        "chords-factory-3": shared_consumer_recipe([
+            {"kind": "factory", "id": "mutable-1"},
+            {"kind": "factory", "id": "mutable-2"},
+            {"kind": "factory", "id": "mutable-3"},
+        ]),
+        "chords-factory-1": shared_consumer_recipe([
+            {"kind": "factory", "id": "mutable-1"},
+        ]),
+        "chords-sampled-1": shared_consumer_recipe([sampled(0)]),
+        "braids-stock": stock_consumer_recipe("wave-paraphonic"),
+        "braids-factory-3": shared_consumer_recipe([
+            {"kind": "factory", "id": "mutable-1"},
+            {"kind": "factory", "id": "mutable-2"},
+            {"kind": "factory", "id": "mutable-3"},
+        ], "wave-paraphonic"),
+        "braids-sampled-1": shared_consumer_recipe(
+            [sampled(0)], "wave-paraphonic"),
+        "shared-all-consumers": shared_all_consumers_recipe([
+            {"kind": "factory", "id": "mutable-1"},
+            sampled(2),
+            {"kind": "factory", "id": "mutable-2"},
+            natives[1],
+            {"kind": "factory", "id": "mutable-3"},
+        ]),
     }
 
 
@@ -124,20 +212,25 @@ def build(slug: str, payload: dict, output_dir: Path) -> dict:
                 map_text,
             )
         }
-        pool_addresses = re.findall(
-            r"\.rodata\._ZN6plaits20wav_integrated_wavesE\n\s+"
-            r"(0x[0-9a-f]+)\s+0xc600",
-            map_text,
-        )
+        linked_factory_banks = [
+            int(bank)
+            for bank, address in re.findall(
+                r"\.rodata\._ZN6plaits22wav_integrated_waves_([123])E\n\s+"
+                r"(0x[0-9a-f]+)\s+0x4200",
+                map_text,
+            )
+            if address != "0x00000000"
+        ]
         result = {
             "bytes": binary.stat().st_size,
             "sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
-            "factoryPoolLinked": any(address != "0x00000000" for address in pool_addresses),
+            "factoryPoolLinked": bool(linked_factory_banks),
+            "linkedFactoryBanks": linked_factory_banks,
             "nativeFunctionBytes": functions,
         }
         print(
             f"{slug:14} {result['bytes']:>7,} B  "
-            f"factory pool {'yes' if result['factoryPoolLinked'] else 'no'}",
+            f"factory banks {linked_factory_banks or 'none'}",
             flush=True,
         )
         return result

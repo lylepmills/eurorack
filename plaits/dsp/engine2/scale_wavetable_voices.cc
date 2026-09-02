@@ -14,6 +14,7 @@
 #include "stmlib/dsp/dsp.h"
 
 #include "plaits/dsp/engine/engine.h"
+#include "plaits/dsp/integrated_wavetable.h"
 #include "plaits/resources.h"
 
 namespace plaits {
@@ -44,7 +45,6 @@ const uint8_t kWaveGain[33] = {
 };
 
 const int kWaveTableSize = 128;
-const int kWaveStride = kWaveTableSize + 4;
 const float kIntegratedScale = 1.0f / 1024.0f;
 
 // The source-level WTCH/WTx6 endpoint averaged about 8 dB below the square in
@@ -60,7 +60,19 @@ struct WaveTap {
 };
 
 inline const int16_t* WaveAt(int slot) {
-  return wav_integrated_waves + size_t(kWaveIndex[slot]) * kWaveStride;
+#if PLAITS_HAS_CUSTOM_WAVE_LINES
+  return kBraidsWaveLine[slot];
+#else
+  return FactoryIntegratedWavetable(kWaveIndex[slot]);
+#endif
+}
+
+inline float WaveGainAt(int slot) {
+#if PLAITS_HAS_CUSTOM_WAVE_LINES
+  return static_cast<float>(kBraidsWaveLineGains[slot]);
+#else
+  return static_cast<float>(kWaveGain[slot]);
+#endif
 }
 
 inline void ResolveWaveTap(float scan, WaveTap* tap) {
@@ -71,13 +83,13 @@ inline void ResolveWaveTap(float scan, WaveTap* tap) {
   tap->high = WaveAt(slot + 1);
   const float crossfade = position - static_cast<float>(slot);
   const float scale = kIntegratedScale * kWavetableLevelMakeup / 128.0f;
-  tap->low_weight = static_cast<float>(kWaveGain[slot]) *
+  tap->low_weight = WaveGainAt(slot) *
       (1.0f - crossfade) * scale;
-  tap->high_weight = static_cast<float>(kWaveGain[slot + 1]) *
+  tap->high_weight = WaveGainAt(slot + 1) *
       crossfade * scale;
 }
 
-// wav_integrated_waves stores a scaled running sum. Difference first, then
+// The factory/generated integrated waves store a scaled running sum. Difference first, then
 // interpolate the reconstructed samples: this matches Braids' linear table
 // read and avoids the zero-order-hold images produced by interpolating the
 // integral before differentiating it.

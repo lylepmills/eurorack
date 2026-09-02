@@ -3114,7 +3114,7 @@ const uint8_t syx_bank_2[] = {
 };
 
 
-const uint8_t* const fm_patches_table[] = {
+const uint8_t* fm_patches_table[] = {
   syx_bank_0,
   syx_bank_1,
   syx_bank_2,
@@ -3671,7 +3671,7 @@ const float lut_4x_downsampler_fir[] = {
 };
 
 
-const float* const lookup_table_table[] = {
+const float* lookup_table_table[] = {
   lut_sine,
   lut_fm_frequency_quantizer,
   lut_fold,
@@ -4018,7 +4018,7 @@ const int16_t lut_ws_double_bump[] = {
 };
 
 
-const int16_t* const lookup_table_i16_table[] = {
+const int16_t* lookup_table_i16_table[] = {
   lut_ws_inverse_tan,
   lut_ws_inverse_sin,
   lut_ws_linear,
@@ -4029,7 +4029,7 @@ const int16_t* const lookup_table_i16_table[] = {
 
 
 
-const int32_t* const lookup_table_i32_table[] = {
+const int32_t* lookup_table_i32_table[] = {
 };
 
 const int8_t lut_lpc_excitation_pulse[] = {
@@ -4196,11 +4196,11 @@ const int8_t lut_lpc_excitation_pulse[] = {
 };
 
 
-const int8_t* const lookup_table_i8_table[] = {
+const int8_t* lookup_table_i8_table[] = {
   lut_lpc_excitation_pulse,
 };
 
-const int16_t wav_integrated_waves[] = {
+const int16_t wav_integrated_waves_1[] = {
   -20556, -20706, -20806, -20857,
   -20857, -20806, -20706, -20556,
   -20356, -20107, -19810, -19465,
@@ -6313,6 +6313,8 @@ const int16_t wav_integrated_waves[] = {
      104,     99,    106,     98,
       14,   -233,   -723,  -1484,
    -2455,  -3479,  -4342,  -4836,
+};
+const int16_t wav_integrated_waves_2[] = {
   -24465, -24934, -25303, -25650,
   -25650, -25303, -24934, -24465,
   -23963, -23391, -22788, -22130,
@@ -8425,6 +8427,8 @@ const int16_t wav_integrated_waves[] = {
    -1634,  -1649,  -1649,  -1649,
    -1649,  -1649,  -1649,  -1650,
    -1892,  -1892,  -1892,  -1892,
+};
+const int16_t wav_integrated_waves_3[] = {
   -11705, -12211, -12571, -12800,
   -12800, -12571, -12211, -11705,
   -11057, -10270,  -9392,  -8442,
@@ -10540,8 +10544,10 @@ const int16_t wav_integrated_waves[] = {
 };
 
 
-const int16_t* const wavetables_table[] = {
-  wav_integrated_waves,
+const int16_t* wavetables_table[] = {
+  wav_integrated_waves_1,
+  wav_integrated_waves_2,
+  wav_integrated_waves_3,
 };
 
 

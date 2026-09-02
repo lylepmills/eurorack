@@ -1,7 +1,7 @@
 # Plaits Palette firmware build service
 
 This directory contains the approved-engine backend for Plaits Palette. It accepts
-legacy recipes and manifests through schema 27 containing 24 or 32 versioned
+legacy recipes and manifests through schema 28 containing 24 or 32 versioned
 engine references, firmware preferences and starting options, and bounded
 chord-table/custom-FM/scale-bank/Speech-bank/custom-model resources. Schema 15 can target either Mutable
 Instruments Plaits or Plum Audio Ro'Ved and adds the color-blind bank display.
@@ -863,6 +863,21 @@ earlier recipe-driven scale banks and automatic LEVEL routing. The generalized
 schema-inheritance hardening from `5b2b077` is also live: current production
 source `8f97241069cc` descends from that commit, so future supported schemas
 inherit older feature shapes without another version-list edit.
+
+Schema 28 promotes the Wavetable resource into one shared Wave Tables library.
+The ordered library can be consumed by Wavetable, Chords, Wave Paraphonic,
+Wavetable Diatonic Chord, Wavetable Scale Stack, and compatible Wave Terrain
+entries. Chords stores a 15-wave route through the library; the three
+Braids-derived models share a 33-wave route with per-wave gain; Wavetable uses
+the full ordered bank. Routes are compiled rather than interpreted at runtime:
+factory cycles point directly at their retained source bank, while only the
+distinct custom cycles selected by a route are emitted as integrated tables.
+Removing a factory bank therefore removes it from every consumer and permits
+the linker to reclaim that bank's independent 16,896-byte section. A retained
+factory Wave Terrain is rejected if its source bank has been removed, so an
+old terrain selection cannot silently relink waves the library no longer owns.
+The schema also keeps legacy schema-26 Wavetable resources valid and migrates
+older browser state to the stock 15- and 33-wave routes.
 
 ### Rolling back
 

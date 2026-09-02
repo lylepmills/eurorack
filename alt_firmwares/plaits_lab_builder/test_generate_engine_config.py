@@ -505,6 +505,20 @@ class GenerateEngineConfigTest(unittest.TestCase):
             "data": base64.b64encode(bytes([fill]) * (64 * 128)).decode("ascii"),
         }
 
+    def wavetable_wave_lines(self) -> dict:
+        return {
+            "chords": [
+                {"bank": index % 2, "frame": (index * 5) % 64,
+                 **({"gain": 0.75} if index == 4 else {})}
+                for index in range(15)
+            ],
+            "braids": [
+                {"bank": (index + 1) % 2, "frame": (index * 2) % 64,
+                 "gain": 0.5 + index / 32.0}
+                for index in range(33)
+            ],
+        }
+
     def test_v26_wavetable_bank_emits_factory_sampled_and_native_entries(self) -> None:
         sampled = self.wavetable_model(fill=29)
         native = {**self.wavetable_model(
@@ -556,6 +570,67 @@ class GenerateEngineConfigTest(unittest.TestCase):
             {"kind": "custom", "model": model},
         ]))
         self.assertEqual(build.wavetable_bank[0][0], 4)
+
+    def test_v28_shared_wave_library_emits_engine_lines_and_selected_cycles(self) -> None:
+        recipe = self.wavetable_bank_recipe([
+            {"kind": "factory", "id": "mutable-1"},
+            {"kind": "custom", "model": self.wavetable_model(fill=29)},
+        ], mirrored=False)
+        recipe["schemaVersion"] = 28
+        recipe["initialOptions"]["trigResponse"] = "trigger"
+        # Schema 28 is a shared library resource, so Chords can carry it even
+        # when the Wavetable engine itself is absent.
+        recipe["slots"] = ["chords"] * 24
+        recipe["resources"]["wavetableBank"]["waveLines"] = self.wavetable_wave_lines()
+
+        build = validate_recipe(recipe)
+        self.assertEqual(len(build.chord_wave_line), 15)
+        self.assertEqual(len(build.braids_wave_line), 33)
+        config = render_config(build)
+        self.assertIn('#include "plaits/dsp/engine/wavetable_engine.h"', config)
+        self.assertIn("#define PLAITS_HAS_CUSTOM_WAVE_LINES 1", config)
+        self.assertIn("extern const int16_t* const kChordWaveLine[15] =", config)
+        self.assertIn("extern const int16_t* const kBraidsWaveLine[33] =", config)
+        self.assertIn("extern const uint16_t kBraidsWaveLineGains[33] =", config)
+        self.assertIn("&wav_integrated_waves_1[0]", config)
+        self.assertIn("kGeneratedIntegratedWave_", config)
+
+        invalid = self.wavetable_bank_recipe([
+            {"kind": "factory", "id": "mutable-1"},
+            {"kind": "custom", "model": self.wavetable_model(fill=29)},
+        ])
+        invalid["schemaVersion"] = 28
+        invalid["initialOptions"]["trigResponse"] = "trigger"
+        invalid["resources"]["wavetableBank"]["waveLines"] = self.wavetable_wave_lines()
+        invalid["resources"]["wavetableBank"]["waveLines"]["chords"].pop()
+        with self.assertRaisesRegex(ValueError, "exactly 15"):
+            validate_recipe(invalid)
+
+    def test_v28_wave_terrain_can_only_use_retained_factory_wave_banks(self) -> None:
+        recipe = self.wavetable_bank_recipe([
+            {"kind": "custom", "model": self.wavetable_model()},
+        ])
+        recipe["schemaVersion"] = 28
+        recipe["initialOptions"]["trigResponse"] = "trigger"
+        recipe["resources"]["wavetableBank"]["waveLines"] = {
+            "chords": [{"bank": 0, "frame": index} for index in range(15)],
+            "braids": [{"bank": 0, "frame": index} for index in range(33)],
+        }
+        recipe["slots"][1] = "wave-terrain"
+        with self.assertRaisesRegex(ValueError, "requires an explicit Wave Terrain bank"):
+            validate_recipe(recipe)
+
+        # Factory terrain 7 reads Mutable bank 2. Removing a factory wave in the
+        # shared editor removes it everywhere, so a stale terrain reference is
+        # rejected instead of silently linking the supposedly removed bank.
+        recipe["resources"]["terrainBank"] = [{"kind": "factory", "id": "factory-7"}]
+        with self.assertRaisesRegex(ValueError, "requires its source bank"):
+            validate_recipe(recipe)
+
+        recipe["resources"]["wavetableBank"]["entries"].append(
+            {"kind": "factory", "id": "mutable-2"})
+        config = render_config(validate_recipe(recipe))
+        self.assertIn("#define PLAITS_WAVETABLE_FACTORY_MASK 0x02", config)
 
     def test_output_format_accepts_wav_and_intel_hex_only(self) -> None:
         recipe = self.load("default_recipe.json")
