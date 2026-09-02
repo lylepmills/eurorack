@@ -299,6 +299,13 @@ class AcidEngine : public Engine {
   void Render(const EngineParameters& parameters, float* out, float* aux,
       size_t size, bool* already_enveloped);
   virtual bool stereo_capable() const { return PLAITS_STEREO_ACID; }
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
+  // The oscillator consumes the full per-sample edge mask, so an audio-rate
+  // sync source sweeps rather than resetting once per block. This is also
+  // cheaper than the bounded fallback here: no split render, and the filter's
+  // per-block coefficient setup runs once instead of twice.
+  virtual bool hard_sync_capable() const { return true; }
+#endif
 
  private:
   VariableShapeOscillator oscillator_;

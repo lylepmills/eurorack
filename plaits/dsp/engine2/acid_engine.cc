@@ -7,6 +7,14 @@
 
 #include "stmlib/dsp/parameter_interpolator.h"
 
+#include "plaits/build_config.h"
+
+#if PLAITS_BUILD_ENABLE_SYNC_INPUT
+#define PLAITS_HARD_SYNC_EVENTS(parameters) ((parameters).hard_sync)
+#else
+#define PLAITS_HARD_SYNC_EVENTS(parameters) 0u
+#endif
+
 namespace plaits {
 
 using namespace stmlib;
@@ -161,7 +169,10 @@ void AcidEngine::Render(
     CONSTRAIN(pw, f0 * 2.0f, 1.0f - 2.0f * f0);
   }
 
-  oscillator_.Render(f0, pw, waveshape, aux, size);
+  // The oscillator is the only sync-sensitive state: a real 303's sync resets
+  // the VCO, while the ladder and the clipper carry on from wherever they were.
+  oscillator_.Render(
+      f0, pw, waveshape, aux, size, PLAITS_HARD_SYNC_EVENTS(parameters));
   input_dc_blocker_.Process<FILTER_MODE_HIGH_PASS>(aux, size);
 
   if (parameters.trigger & TRIGGER_UNPATCHED) {
@@ -253,3 +264,5 @@ void AcidEngine::Render(
 }
 
 }  // namespace plaits
+
+#undef PLAITS_HARD_SYNC_EVENTS

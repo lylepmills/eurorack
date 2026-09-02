@@ -11,6 +11,7 @@
 #include "plaits/dsp/engine/swarm_engine.h"
 #include "plaits/dsp/engine/waveshaping_engine.h"
 #include "plaits/dsp/engine/wavetable_engine.h"
+#include "plaits/dsp/engine2/acid_engine.h"
 #include "plaits/dsp/engine2/virtual_analog_vcf_engine.h"
 #include "plaits/dsp/engine2/wave_terrain_engine.h"
 #include "stmlib/utils/buffer_allocator.h"
@@ -184,7 +185,8 @@ int main() {
       !TestResetPlacement<plaits::GrainEngine>("granular formant") ||
       !TestResetPlacement<plaits::AdditiveEngine>("harmonic") ||
       !TestResetPlacement<plaits::SwarmEngine>("swarm") ||
-      !TestResetPlacement<plaits::WaveTerrainEngine>("wave terrain")) {
+      !TestResetPlacement<plaits::WaveTerrainEngine>("wave terrain") ||
+      !TestResetPlacement<plaits::AcidEngine>("acid")) {
     return 1;
   }
   printf("hard_sync_engine_test: all checks passed\n");
