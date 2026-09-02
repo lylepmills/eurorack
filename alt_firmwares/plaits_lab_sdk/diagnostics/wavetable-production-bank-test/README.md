@@ -52,6 +52,22 @@ The tested application SHA-256 values were
 `66b164a31f849499d615731eec51b81ba586b8610652959e5b21842eecf3206d`
 (one-way).
 
+## Shared-wave Chords route
+
+Schema 28 also routes an editor-defined 15-wave line into the production
+Chords engine. Build its autonomous, audio-installable gate with:
+
+```sh
+python3 alt_firmwares/plaits_lab_sdk/diagnostics/wavetable-production-bank-test/build_shared_chords.py \
+  --output-dir /tmp/shared-wave-chords-test
+```
+
+Every physical slot contains Chords, so a model selection saved in hardware
+cannot bypass the test. The four sounding windows use different roots, chord
+positions, and inversions while MORPH sweeps a deliberately ordered line of
+harmonics 1 through 15. Capture AUX for at least 100 seconds at 48 kHz as mono
+16-bit PCM. Its timing is compatible with `decode_capture.py --mode one-way`.
+
 ## Production flash matrix
 
 `build_flash_matrix.py` performs ordinary production links with the autonomous
