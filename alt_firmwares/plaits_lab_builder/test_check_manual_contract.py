@@ -194,7 +194,9 @@ class DeclaredContractTest(unittest.TestCase):
         source = (guard.BUILDER_DIR / "render_manual.py").read_text()
         match = guard.CONTRACT_PATTERN.search(source)
         self.assertIsNotNone(match, "render_manual.py must declare MANUAL_CONTRACT")
-        self.assertGreaterEqual(int(match.group(1)), 21)
+        # A floor, not a pin: it only ever rises. 22 is the LIGHT 4 TRIG
+        # articulation prose, which is the newest change the guide prints.
+        self.assertGreaterEqual(int(match.group(1)), 22)
 
 
 if __name__ == "__main__":

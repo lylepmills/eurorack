@@ -25,7 +25,13 @@ PUBLIC_CATALOG_PATH = BUILDER_DIR.parent / "plaits_lab_catalog/public_catalog.js
 # serves cached guides written by an older renderer under a key that no longer
 # describes them. `pnpm run contract:check` enforces exactly that; see
 # check_manual_contract.py and the contract notes in README.md.
-MANUAL_CONTRACT = 21
+#
+# 21 was the Ro'Ved navigation and locked-octave rewrite. 22 added LIGHT 4's
+# special LED order for four-way TRIG articulation; the Worker went to 22 with
+# that prose while this constant was left at 21, which under-declared what the
+# renderer prints without breaking anything, since a Worker ahead of the
+# requirement is the safe direction.
+MANUAL_CONTRACT = 22
 BANKS = (
     {"id": "green", "name": "GREEN", "start": 0, "color": "#4F9868"},
     {"id": "red", "name": "RED", "start": 8, "color": "#C6534B"},
