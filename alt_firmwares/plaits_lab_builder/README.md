@@ -446,11 +446,11 @@ and model clicks stay inside the current bank. It also prints the LOCKED OCTAVES
 section for Ro'Ved, which was suppressed entirely on the belief that the panel
 had no octave gesture; pushing and turning FREQUENCY is that gesture, free
 because a locked FREQUENCY is no longer setting pitch. Like contract 14, the
-renderer and its tests are landed while the Worker stays on 20 until the next
-builder-image rollout: **that rollout must bump `PLAITS_MANUAL_CONTRACT` to 21
-together with the immutable source revision and image tag.** Never deploy the
-contract bump by itself — the current production container renders the old
-Ro'Ved prose.
+renderer landed while the Worker waited a cycle on 20; it shipped with the
+schema-27 image `8f97241069cc`, whose rollout carried the Worker to 22 (21's
+Ro'Ved prose plus 22's LIGHT 4 LED order). Never deploy a contract bump by
+itself — until that image was live, the production container still rendered the
+old Ro'Ved prose.
 
 Since contract 21 this is enforced rather than remembered. `render_manual.py`
 declares `MANUAL_CONTRACT`, the lowest contract that describes what it prints;
