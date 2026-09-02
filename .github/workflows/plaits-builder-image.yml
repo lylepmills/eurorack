@@ -32,11 +32,20 @@ jobs:
       - name: Check out the requested revision
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.revision }}
+          # actions/checkout treats an abbreviated SHA as a branch/tag pattern,
+          # even though this workflow's public contract is a 12-character
+          # commit. Fetch the dispatch ref's history, then resolve the requested
+          # commit explicitly below.
+          fetch-depth: 0
+
+      - name: Resolve the requested revision and submodules
+        run: |
+          git rev-parse --verify "${{ inputs.revision }}^{commit}"
+          git checkout --detach "${{ inputs.revision }}"
           # The image build FAILS by design on an uninitialised submodule
           # rather than producing an image that breaks every compile at
-          # request time, so fetch them here.
-          submodules: true
+          # request time, so fetch them after selecting the source revision.
+          git submodule update --init stmlib stm_audio_bootloader
 
       - name: Verify the revision matches what was checked out
         # A tag that disagrees with the source inside it is the failure the
