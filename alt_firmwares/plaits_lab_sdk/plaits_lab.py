@@ -65,8 +65,8 @@ BUILD_CONFIG_HEADER = "plaits/build_config.h"
 # lookup-table data, build_config.h is nothing but #ifndef-guarded macros — so
 # neither adds a symbol to the shared firmware image or a link-order obligation.
 # build_config.h is here because it is the ONE include a fork of a stock engine
-# cannot satisfy: 87 of the 88 catalog models read a recipe option through it
-# (PLAITS_BUILD_FREQUENCY_OFFSET_FM in nearly all of them), so without it
+# cannot satisfy: nearly every catalog model reads a recipe option through it
+# (PLAITS_BUILD_FREQUENCY_OFFSET_FM in most of them), so without it
 # `init --from <catalog id>` scaffolds a package that its own `check` rejects.
 # It is also not a boundary the old rule actually held: plaits/dsp/ is
 # allowlisted wholesale and plaits/dsp/voice.h includes build_config.h, so every

@@ -1,7 +1,7 @@
 # Plaits Palette firmware build service
 
 This directory contains the approved-engine backend for Plaits Palette. It accepts
-legacy recipes and manifests through schema 26 containing 24 or 32 versioned
+legacy recipes and manifests through schema 27 containing 24 or 32 versioned
 engine references, firmware preferences and starting options, and bounded
 chord-table/custom-FM/scale-bank/Speech-bank/custom-model resources. Schema 15 can target either Mutable
 Instruments Plaits or Plum Audio Ro'Ved and adds the color-blind bank display.
@@ -109,7 +109,7 @@ in either direction. Leave it off for LFO use or one-gesture octave jumps.
 Note the option is NOT experimental and is not in the Experimental section: it
 changes which selector positions exist, not what any of them do.
 
-Schema 26 is available in production with recipe-driven scale banks, automatic
+Schema 26 introduced recipe-driven scale banks, automatic
 LEVEL routing, selectable/custom LPC Speech banks of up to 32 words, text and
 recording encoders, source/engine audio previews, unpatched-attenuverter modes,
 and the triggered and gated FREQUENCY contours. It also includes schema 20's

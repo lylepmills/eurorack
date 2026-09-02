@@ -597,7 +597,7 @@ class PackageTests(unittest.TestCase):
 
     def test_build_config_include_is_allowed_but_the_boundary_holds(self) -> None:
         # Forking a stock engine vendors its `#include "plaits/build_config.h"`,
-        # and 87 of the 88 catalog models read a recipe option through it. The
+        # and nearly every catalog model reads a recipe option through it. The
         # header is macros only, so it adds nothing to the shared image — but the
         # widening is specific to it, not to plaits/ at large.
         with tempfile.TemporaryDirectory() as temp_dir:
