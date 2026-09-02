@@ -566,7 +566,7 @@ revision under test rather than treating either set as an expected value.
 The production Worker, queues, R2 bucket, Durable Objects, and compiler
 Container are managed by `wrangler.jsonc`. Before each firmware-source rollout:
 
-> **The schema-27 + Acid release image `8f97241069cc` carries
+> **The schema-27 percussion release image `37c608fa2a69` carries
 > `PLAITS_MANUAL_CONTRACT=22` in both environment blocks.** Preserve that value
 > when promoting it to production: the Ro'Ved Field Guide's navigation and
 > locked-octave prose changed with this firmware and its renderer ships in the
@@ -832,7 +832,7 @@ revision before building — a tag that disagrees with the source inside it is
 the failure the `development` sentinel exists to catch, caught earlier.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-8f97241069cc` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-37c608fa2a69` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a new
 image, use `wrangler containers info <application-id>` and wait until
@@ -947,6 +947,17 @@ target.
 | August 31, 2026 (BubbleTime, ZXPhase48k, and ZXPulse48k community engines; 92 engines) | `1cf8cd56ba6f` | `rev-1cf8cd56ba6f` |
 | September 1, 2026 (invalidate fixed-window Natural Speech preview cache) | `633cc8cc9e1d` | `rev-633cc8cc9e1d` |
 | September 1, 2026 (schema 27 four-way articulation, sixteen chord tables, Ro'Ved gestures, and Acid; 93 engines) | `8f97241069cc` | `rev-8f97241069cc` |
+| September 1, 2026 (stereo Skins, Circuit Zaps, and Metalwork percussion engines; 96 engines) | `37c608fa2a69` | `rev-37c608fa2a69` |
+
+The percussion production canary compiled fresh as build
+`63f32b04116c478261f93720e3a85da7798580eed0378ee631a0b5dd28fd2bf5`:
+181,952 B text, 48 B data, and 22,544 B BSS. Its binary SHA-256 was
+`922ab41f6e55ba88c964b64add601962fea83d30bf310b72c7a4d79eb78fad5e`;
+the 14,302,124-byte updater WAV SHA-256 was
+`0e984ff32bbbc5c6c63cf29ce49b95786c230fe6176ceef45c666350509b43ec`.
+The compiler stamped `37c608fa2a69`, the matching field guide completed, and
+the dedicated Speech encoder was rotated to `speech-encoder-v18` only after
+the production pool had settled on the immutable image.
 
 The schema-27 production canary compiled fresh as build
 `7dc3da2f77d7b8bfbe55e1884f6f7336c61902ac2e0167b26fe89da7442c0885`:
