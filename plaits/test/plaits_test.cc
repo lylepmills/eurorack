@@ -124,6 +124,7 @@
 #include "plaits/dsp/engine2/wave_terrain_engine.h"
 
 #include "plaits/dsp/fx/sample_rate_reducer.h"
+#include "plaits/dsp/integrated_wavetable.h"
 
 #include "plaits/dsp/oscillator/formant_oscillator.h"
 #include "plaits/dsp/oscillator/grainlet_oscillator.h"
@@ -687,7 +688,8 @@ void TestWavetableOscillator() {
   WavWriter wav_writer(1, kSampleRate, 20);
   wav_writer.Open("plaits_wavetable_oscillator.wav");
   
-  #define WAVE(bank, row, column) &wav_integrated_waves[(bank * 64 + row * 8 + column) * 132]
+  #define WAVE(bank, row, column) \
+    FactoryIntegratedWavetable(bank, row * 8 + column)
 
   const int16_t* wavetable[] = {
     WAVE(2, 6, 1),

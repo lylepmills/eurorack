@@ -21,6 +21,18 @@
 #define PLAITS_HAS_CUSTOM_SPEECH_BANKS 0
 #endif
 
+#ifndef PLAITS_HAS_CUSTOM_WAVE_LINES
+#define PLAITS_HAS_CUSTOM_WAVE_LINES 0
+#endif
+
+// Ordinary and host-test builds compile engine translation units directly,
+// without force-including engine_config.h. Their stock behavior retains all
+// three factory wave banks; generated Palette configs override this before
+// build_config.h is included so the linker can prune individual banks.
+#ifndef PLAITS_WAVETABLE_FACTORY_MASK
+#define PLAITS_WAVETABLE_FACTORY_MASK 0x07
+#endif
+
 #if PLAITS_ENGINE_COUNT < 1 || PLAITS_ENGINE_COUNT > 32
 #error "PLAITS_ENGINE_COUNT must be between 1 and 32"
 #endif

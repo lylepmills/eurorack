@@ -296,6 +296,66 @@ test("schema 26 carries one ordered shared wavetable bank", async () => {
     combinedNormalized.resources.naturalSpeechBanks?.customBanks[0].words,
     ["hello"],
   );
+
+  const shared = structuredClone(recipe);
+  shared.schemaVersion = 28;
+  shared.initialOptions.trigResponse = "trigger";
+  const chords = engines.get("chords") as any;
+  shared.slots = shared.slots.map((slot: any) => (
+    slot.engine === "wavetable"
+      ? { engine: chords.id, package: chords.packageId, version: chords.version, digest: chords.digest }
+      : slot
+  ));
+  shared.resources.wavetableBank.waveLines = {
+    chords: Array.from({ length: 15 }, (_, index) => ({
+      bank: index % 3, frame: index * 3, ...(index === 2 ? { gain: 0.75 } : {}),
+    })),
+    braids: Array.from({ length: 33 }, (_, index) => ({
+      bank: (index + 1) % 3, frame: index, gain: 0.5 + index / 32,
+    })),
+  };
+  const sharedNormalized = normalizeRecipe(shared);
+  assert.equal(sharedNormalized.schemaVersion, 28);
+  assert.equal(sharedNormalized.resources.wavetableBank?.waveLines?.chords.length, 15);
+  assert.equal(sharedNormalized.resources.wavetableBank?.waveLines?.braids.length, 33);
+
+  const changedLine = structuredClone(shared);
+  changedLine.resources.wavetableBank.waveLines.chords[0].frame = 63;
+  assert.notEqual(
+    await computeBuildKey(sharedNormalized, { sourceRevision: "source", toolchain: "toolchain", contract: "25" }),
+    await computeBuildKey(normalizeRecipe(changedLine), {
+      sourceRevision: "source", toolchain: "toolchain", contract: "25",
+    }),
+  );
+
+  const shortLine = structuredClone(shared);
+  shortLine.resources.wavetableBank.waveLines.braids.pop();
+  assert.throws(() => normalizeRecipe(shortLine), /exactly 33/);
+
+  const waveTerrain = engines.get("wave-terrain") as any;
+  const terrainMismatch = structuredClone(shared);
+  terrainMismatch.slots[0] = {
+    engine: waveTerrain.id, package: waveTerrain.packageId,
+    version: waveTerrain.version, digest: waveTerrain.digest,
+  };
+  assert.throws(() => normalizeRecipe(terrainMismatch), /requires an explicit Wave Terrain bank/);
+  terrainMismatch.resources.terrainBank = [{ kind: "factory", id: "factory-8" }];
+  assert.throws(() => normalizeRecipe(terrainMismatch), /requires its source bank/);
+  terrainMismatch.resources.terrainBank = [{ kind: "factory", id: "factory-7" }];
+  assert.equal(normalizeRecipe(terrainMismatch).resources.terrainBank?.[0]?.id, "factory-7");
+
+  const noSharedConsumer = structuredClone(shared);
+  const virtualAnalog = engines.get("virtual-analog") as any;
+  noSharedConsumer.slots = noSharedConsumer.slots.map((slot: any) => (
+    ["wavetable", "wave-terrain", "chords", "wave-paraphonic", "wavetable-chord", "wavetable-scale-stack"]
+      .includes(slot.engine)
+      ? {
+        engine: virtualAnalog.id, package: virtualAnalog.packageId,
+        version: virtualAnalog.version, digest: virtualAnalog.digest,
+      }
+      : slot
+  ));
+  assert.throws(() => normalizeRecipe(noSharedConsumer), /compatible model/);
 });
 
 test("normalization removes nondeterministic manifest fields", () => {

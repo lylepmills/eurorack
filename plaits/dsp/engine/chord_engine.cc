@@ -36,12 +36,37 @@
 #include <algorithm>
 
 #include "plaits/build_config.h"
+#include "plaits/dsp/integrated_wavetable.h"
 #include "plaits/resources.h"
+
+#ifndef PLAITS_SHARED_WAVE_CHORD_AUTOSWEEP
+#define PLAITS_SHARED_WAVE_CHORD_AUTOSWEEP 0
+#endif
 
 namespace plaits {
 
 using namespace std;
 using namespace stmlib;
+
+#if PLAITS_SHARED_WAVE_CHORD_AUTOSWEEP
+// Test-only production-path gate for schema-28 shared wave lines. Every slot
+// in the matching diagnostic recipe is Chords, so persisted module settings
+// cannot bypass this renderer. Silent gaps make a direct hardware capture
+// self-synchronizing; four pitched windows sweep all 15 compiled wave cycles.
+const uint32_t kChordAutosweepLeaderSamples = 6u * 48000u;
+const uint32_t kChordAutosweepGapSamples = 3u * 24000u;
+const uint32_t kChordAutosweepWindowSamples = 8u * 48000u;
+const uint32_t kChordAutosweepSlotSamples =
+    kChordAutosweepGapSamples + kChordAutosweepWindowSamples;
+const uint32_t kChordAutosweepProfiles = 4u;
+const uint32_t kChordAutosweepTrailerSamples = 6u * 48000u;
+const uint32_t kChordAutosweepCycleSamples =
+    kChordAutosweepLeaderSamples +
+    kChordAutosweepProfiles * kChordAutosweepSlotSamples +
+    kChordAutosweepTrailerSamples;
+
+uint32_t chord_autosweep_samples = 0;
+#endif
 
 void ChordEngine::Init(BufferAllocator* allocator) {
   for (int i = 0; i < kChordNumVoices; ++i) {
@@ -87,25 +112,25 @@ void ChordEngine::ComputeRegistration(
   }
 }
 
-#define WAVE(bank, row, column) &wav_integrated_waves[(bank * 64 + row * 8 + column) * 132]
+#if PLAITS_HAS_CUSTOM_WAVE_LINES
+inline const int16_t* const* ChordWaveLine() {
+  return kChordWaveLine;
+}
+#else
+#define WAVE(bank, row, column) \
+  FactoryIntegratedWavetable(bank, row * 8 + column)
 
-const int16_t* const wavetable[] = {
-  WAVE(2, 6, 1),
-  WAVE(2, 6, 6),
-  WAVE(2, 6, 4),
-  WAVE(0, 6, 0),
-  WAVE(0, 6, 1),
-  WAVE(0, 6, 2),
-  WAVE(0, 6, 7),
-  WAVE(2, 4, 7),
-  WAVE(2, 4, 6),
-  WAVE(2, 4, 5),
-  WAVE(2, 4, 4),
-  WAVE(2, 4, 3),
-  WAVE(2, 4, 2),
-  WAVE(2, 4, 1),
-  WAVE(2, 4, 0),
+const int16_t* const kFactoryChordWaveLine[] = {
+  WAVE(2, 6, 1), WAVE(2, 6, 6), WAVE(2, 6, 4),
+  WAVE(0, 6, 0), WAVE(0, 6, 1), WAVE(0, 6, 2), WAVE(0, 6, 7),
+  WAVE(2, 4, 7), WAVE(2, 4, 6), WAVE(2, 4, 5), WAVE(2, 4, 4),
+  WAVE(2, 4, 3), WAVE(2, 4, 2), WAVE(2, 4, 1), WAVE(2, 4, 0),
 };
+
+inline const int16_t* const* ChordWaveLine() {
+  return kFactoryChordWaveLine;
+}
+#endif
 
 void ChordEngine::Render(
     const EngineParameters& parameters,
@@ -113,10 +138,53 @@ void ChordEngine::Render(
     float* aux,
     size_t size,
     bool* already_enveloped) {
-  ONE_POLE(morph_lp_, parameters.morph, 0.1f);
-  ONE_POLE(timbre_lp_, parameters.timbre, 0.1f);
+#if PLAITS_SHARED_WAVE_CHORD_AUTOSWEEP
+  EngineParameters p = parameters;
+  const uint32_t cycle_position =
+      chord_autosweep_samples % kChordAutosweepCycleSamples;
+  const uint32_t active_start = kChordAutosweepLeaderSamples;
+  const uint32_t active_end = active_start +
+      kChordAutosweepProfiles * kChordAutosweepSlotSamples;
+  bool autosweep_silent = true;
+  if (cycle_position >= active_start && cycle_position < active_end) {
+    const uint32_t relative = cycle_position - active_start;
+    const uint32_t profile = relative / kChordAutosweepSlotSamples;
+    const uint32_t within_profile = relative % kChordAutosweepSlotSamples;
+    const uint32_t rendered = within_profile > kChordAutosweepGapSamples
+        ? within_profile - kChordAutosweepGapSamples
+        : 0u;
+    float progress = static_cast<float>(rendered) /
+        static_cast<float>(kChordAutosweepWindowSamples);
+    CONSTRAIN(progress, 0.0f, 1.0f);
+    const float notes[kChordAutosweepProfiles] = {
+      36.0f, 48.0f, 60.0f, 72.0f
+    };
+    const float chord_positions[kChordAutosweepProfiles] = {
+      0.12f, 0.37f, 0.62f, 0.87f
+    };
+    const float inversions[kChordAutosweepProfiles] = {
+      0.0f, 0.33f, 0.67f, 1.0f
+    };
+    p.note = notes[profile];
+    p.harmonics = chord_positions[profile];
+    p.timbre = inversions[profile];
+    // Chords maps MORPH 0.535..1.0 onto its 15-entry wavetable line.
+    p.morph = 0.535f + 0.465f * progress;
+    p.macro = 0.5f;
+    p.chord_set_option = 0;
+    p.stereo = false;
+    p.trigger = TRIGGER_UNPATCHED;
+    p.frequency_offset = NULL;
+    autosweep_silent = within_profile < kChordAutosweepGapSamples;
+  }
+#else
+#define p parameters
+#endif
 
-  chords_.set_chord(parameters.harmonics, parameters.chord_set_option);
+  ONE_POLE(morph_lp_, p.morph, 0.1f);
+  ONE_POLE(timbre_lp_, p.timbre, 0.1f);
+
+  chords_.set_chord(p.harmonics, p.chord_set_option);
 
   float harmonics[kChordNumHarmonics * 2 + 2];
   float note_amplitudes[kChordNumVoices];
@@ -134,13 +202,13 @@ void ChordEngine::Render(
   fill(&out[0], &out[size], 0.0f);
   fill(&aux[0], &aux[size], 0.0f);
 
-  const float f0 = NoteToFrequency(parameters.note) * 0.998f;
+  const float f0 = NoteToFrequency(p.note) * 0.998f;
   const float waveform = max((morph_lp_ - 0.535f) * 2.15f, 0.0f);
-  if ((PLAITS_STEREO_CHORDS && parameters.stereo)) {
+  if ((PLAITS_STEREO_CHORDS && p.stereo)) {
     float center_samples[kMaxBlockSize];
     fill(&center_samples[0], &center_samples[size], 0.0f);
     const float voice_balance = ApplyMacro(
-        1.0f, 0.0f, 2.0f, parameters.macro);
+        1.0f, 0.0f, 2.0f, p.macro);
 
     for (int note = 0; note < kChordNumVoices; ++note) {
       // ComputeChordInversion crossfades one chord tone between two oscillator
@@ -178,17 +246,17 @@ void ChordEngine::Render(
             note_f0 * 1.004f,
             note_amplitudes[note] * wavetable_amount * note_gain,
             waveform,
-            wavetable,
+            ChordWaveLine(),
             destination,
             size,
-            parameters.frequency_offset,
+            p.frequency_offset,
             ratios[note] * 0.998f * 1.004f);
 #else
         wavetable_voice_[note].Render(
             note_f0 * 1.004f,
             note_amplitudes[note] * wavetable_amount * note_gain,
             waveform,
-            wavetable,
+            ChordWaveLine(),
             destination,
             size);
 #endif
@@ -202,7 +270,7 @@ void ChordEngine::Render(
             note_amplitudes[note] * divide_down_amount * note_gain,
             destination,
             size,
-            parameters.frequency_offset,
+            p.frequency_offset,
             ratios[note] * 0.998f);
 #else
         divide_down_voice_[note].Render(
@@ -248,17 +316,17 @@ void ChordEngine::Render(
           note_f0 * 1.004f,
           note_amplitudes[note] * wavetable_amount,
           waveform,
-          wavetable,
+          ChordWaveLine(),
           destination,
           size,
-          parameters.frequency_offset,
+          p.frequency_offset,
           ratios[note] * 0.998f * 1.004f);
 #else
       wavetable_voice_[note].Render(
           note_f0 * 1.004f,
           note_amplitudes[note] * wavetable_amount,
           waveform,
-          wavetable,
+          ChordWaveLine(),
           destination,
           size);
 #endif
@@ -272,7 +340,7 @@ void ChordEngine::Render(
           note_amplitudes[note] * divide_down_amount,
           destination,
           size,
-          parameters.frequency_offset,
+          p.frequency_offset,
           ratios[note] * 0.998f);
 #else
       divide_down_voice_[note].Render(
@@ -286,11 +354,21 @@ void ChordEngine::Render(
   }
 
   const float voice_balance = ApplyMacro(
-      1.0f, 0.0f, 2.0f, parameters.macro);
+      1.0f, 0.0f, 2.0f, p.macro);
   for (size_t i = 0; i < size; ++i) {
     out[i] += aux[i] * voice_balance;
     aux[i] *= 3.0f;
   }
+#if PLAITS_SHARED_WAVE_CHORD_AUTOSWEEP
+  if (autosweep_silent) {
+    fill(&out[0], &out[size], 0.0f);
+    fill(&aux[0], &aux[size], 0.0f);
+  }
+  chord_autosweep_samples =
+      (chord_autosweep_samples + size) % kChordAutosweepCycleSamples;
+#else
+#undef p
+#endif
 }
 
 }  // namespace plaits

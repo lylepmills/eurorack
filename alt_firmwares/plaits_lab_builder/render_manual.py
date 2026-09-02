@@ -250,8 +250,11 @@ def terrain_bank_entries(recipe: Any) -> list[dict[str, str]]:
     return result
 
 
-def wavetable_bank_document(recipe: Any) -> dict[str, Any]:
-    """Player-facing order, transport, and storage for schema-26 Wavetable banks."""
+def wavetable_bank_document(
+        recipe: Any,
+        public_slots: list[str | None] | None = None,
+        ) -> dict[str, Any]:
+    """Player-facing order, transport, storage, and schema-28 shared routes."""
     resources = recipe.get("resources") if isinstance(recipe, dict) else None
     bank = resources.get("wavetableBank") if isinstance(resources, dict) else None
     if not isinstance(bank, dict) or not isinstance(bank.get("entries"), list):
@@ -274,7 +277,23 @@ def wavetable_bank_document(recipe: Any) -> dict[str, Any]:
                     "Prebaked 64 × 128 samples · fixed in firmware"
                 ),
             })
-    return {"mirrored": bool(bank["mirrored"]), "entries": entries}
+    result: dict[str, Any] = {"mirrored": bool(bank["mirrored"]), "entries": entries}
+    if isinstance(bank.get("waveLines"), dict):
+        active = set(public_slots or [])
+        result["shared"] = True
+        result["routes"] = {
+            "wavetable": "wavetable" in active,
+            "chords": "chords" in active,
+            "braids": [
+                name for engine_id, name in (
+                    ("wave-paraphonic", "Wave Paraphonic"),
+                    ("wavetable-chord", "Wavetable Diatonic Chord"),
+                    ("wavetable-scale-stack", "Wavetable Scale Stack"),
+                ) if engine_id in active
+            ],
+            "waveTerrain": "wave-terrain" in active,
+        }
+    return result
 
 
 def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]:
@@ -357,7 +376,7 @@ def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]
             else []
         ),
         "terrainBank": terrain_bank_entries(recipe),
-        "wavetableBank": wavetable_bank_document(recipe),
+        "wavetableBank": wavetable_bank_document(recipe, build.public_slots),
         # Only a build that compiled the procedure in answers the power-up
         # gesture, so only that build's guide documents it.
         "calibration": build.enable_calibration == 1,
@@ -1136,14 +1155,38 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
             if wavetable_bank["mirrored"] else
             "sweeps once from the first bank to the last"
         )
+        shared = bool(wavetable_bank.get("shared"))
+        routes = wavetable_bank.get("routes", {})
+        route_copy: list[str] = []
+        if routes.get("wavetable"):
+            route_copy.append(
+                f"In Wavetable, HARMONICS {transport}, interpolating between adjacent banks; "
+                "TIMBRE and MORPH move through each bank's 8 × 8 wave field, and MACRO phase-warps the result.")
+        if routes.get("chords"):
+            route_copy.append(
+                "Chords crossfades through this build's saved 15-wave ribbon in the upper part of MORPH.")
+        if routes.get("braids"):
+            route_copy.append(
+                f"{', '.join(routes['braids'])} share this build's saved 33-wave line.")
+        if routes.get("waveTerrain"):
+            route_copy.append(
+                "Wave Terrain can keep a wavetable-derived factory terrain only while that terrain's source bank remains in this list; custom wavetableTerrain() shapes are prebaked and independent afterward.")
+        if shared:
+            intro = (
+                "This is the shared wave library for the compatible models in this build. "
+                + " ".join(route_copy)
+                + " The saved routes are compiled into firmware: factory waves are referenced directly, "
+                "and selected custom waves are prepared at build time, with no playback penalty."
+            )
+        else:
+            intro = (
+                f"HARMONICS {transport}, interpolating between adjacent banks. "
+                "TIMBRE and MORPH move through each bank's 8 × 8 wave field; MACRO phase-warps the result."
+            )
         story.extend([
             PageBreak(),
-            Paragraph("Wavetable bank", section_style),
-            Paragraph(
-                f"HARMONICS {transport}, interpolating between adjacent banks. "
-                "TIMBRE and MORPH move through each bank's 8 × 8 wave field; MACRO phase-warps the result.",
-                intro_style,
-            ),
+            Paragraph("Wave Tables library" if shared else "Wavetable bank", section_style),
+            Paragraph(intro, intro_style),
             wavetable_table,
         ])
 

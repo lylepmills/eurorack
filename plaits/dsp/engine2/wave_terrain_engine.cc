@@ -27,6 +27,7 @@
 // Wave terrain synthesis.
 
 #include "plaits/dsp/engine2/wave_terrain_engine.h"
+#include "plaits/dsp/integrated_wavetable.h"
 
 #include <cmath>
 #include <algorithm>
@@ -108,8 +109,8 @@ inline float TerrainLookupWT(float x, float y, int bank) {
   const float sample = (y + 1.0f) * 0.5f * float(table_size);
   const float wt = (x + 1.0f) * 0.5f * float(num_waves - 1);
   
-  const int16_t* waves = wav_integrated_waves + \
-      bank * num_waves * table_size_full;
+  const int16_t* waves = FactoryIntegratedWavetableBank(bank);
+  if (!waves) return 0.0f;
   
   MAKE_INTEGRAL_FRACTIONAL(sample);
   MAKE_INTEGRAL_FRACTIONAL(wt);

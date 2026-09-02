@@ -336,6 +336,21 @@ class RenderManualTest(unittest.TestCase):
             ],
         )
 
+    def test_shared_wave_routes_are_documented_for_the_models_in_the_build(self) -> None:
+        recipe = self.wavetable_bank_recipe()
+        recipe["schemaVersion"] = 28
+        recipe["initialOptions"]["trigResponse"] = "trigger"
+        recipe["slots"] = ["chords"] * 8 + ["wave-paraphonic"] * 8 + ["wavetable"] * 8
+        recipe["resources"]["wavetableBank"]["waveLines"] = {
+            "chords": [{"bank": 0, "frame": index} for index in range(15)],
+            "braids": [{"bank": 0, "frame": index} for index in range(33)],
+        }
+        bank = manual_document(recipe)["wavetableBank"]
+        self.assertTrue(bank["shared"])
+        self.assertTrue(bank["routes"]["wavetable"])
+        self.assertTrue(bank["routes"]["chords"])
+        self.assertEqual(bank["routes"]["braids"], ["Wave Paraphonic"])
+
     @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
     def test_wavetable_bank_pdf_explains_controls_and_one_way_transport(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

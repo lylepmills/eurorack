@@ -273,33 +273,32 @@ bank_3 += make_braids_family([236, 238, 240, 242, 244, 246, 248, 250])  # Fant
 bank_3 += make_braids_family([172, 173, 174, 175, 176, 177, 178, 179], False)
 bank_3 += make_braids_family([180, 181, 182, 183, 184, 185, 186, 187], False)
 
-all_waves = bank_1 + bank_2 + bank_3
-
 # New wavetable code uses integrated wavetables
 # Reference:
 # "Higher-order integrated Wavetable Synthesis", Franck & Valimaki, DAFX-12.
 #
 # Here we use K = 1 (first order), N = 1 (linear interpolation).
-data = []
-i = 0
-for wave in all_waves:
-  n = len(wave)
-  x = numpy.array(list(wave) * 2 + wave[0] + wave[1] + wave[2] + wave[3])
-  x -= x.mean()
-  x /= numpy.abs(x).max()
-  
-  # pylab.figure()
-  # pylab.plot(x[:n])
-  # pylab.savefig('wave_%04d_%04d.pdf' % (i, WAVETABLE_SIZE), format='pdf')
-  # pylab.close()
-  # i = i + 1
-  
-  x = numpy.cumsum(x)
-  x -= x.mean()
-  x = list(numpy.round(x * (4 * 32768.0 / WAVETABLE_SIZE)).astype(int))
-  data += list(x[-n-4:])
-  
-wavetables.append(('integrated_waves', data))
+for bank_index, bank in enumerate([bank_1, bank_2, bank_3]):
+  data = []
+  i = 0
+  for wave in bank:
+    n = len(wave)
+    x = numpy.array(list(wave) * 2 + wave[0] + wave[1] + wave[2] + wave[3])
+    x -= x.mean()
+    x /= numpy.abs(x).max()
+
+    # pylab.figure()
+    # pylab.plot(x[:n])
+    # pylab.savefig('wave_%04d_%04d.pdf' % (i, WAVETABLE_SIZE), format='pdf')
+    # pylab.close()
+    # i = i + 1
+
+    x = numpy.cumsum(x)
+    x -= x.mean()
+    x = list(numpy.round(x * (4 * 32768.0 / WAVETABLE_SIZE)).astype(int))
+    data += list(x[-n-4:])
+
+  wavetables.append(('integrated_waves_%d' % (bank_index + 1), data))
 
 # import base64
 # s = numpy.array(data, numpy.short)

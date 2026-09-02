@@ -42,17 +42,17 @@ namespace plaits {
 
 typedef uint8_t ResourceId;
 
-extern const uint8_t* const fm_patches_table[];
+extern const uint8_t* fm_patches_table[];
 
-extern const float* const lookup_table_table[];
+extern const float* lookup_table_table[];
 
-extern const int16_t* const lookup_table_i16_table[];
+extern const int16_t* lookup_table_i16_table[];
 
-extern const int32_t* const lookup_table_i32_table[];
+extern const int32_t* lookup_table_i32_table[];
 
-extern const int8_t* const lookup_table_i8_table[];
+extern const int8_t* lookup_table_i8_table[];
 
-extern const int16_t* const wavetables_table[];
+extern const int16_t* wavetables_table[];
 
 extern const uint8_t syx_bank_0[];
 extern const uint8_t syx_bank_1[];
@@ -70,7 +70,9 @@ extern const int16_t lut_ws_linear[];
 extern const int16_t lut_ws_bump[];
 extern const int16_t lut_ws_double_bump[];
 extern const int8_t lut_lpc_excitation_pulse[];
-extern const int16_t wav_integrated_waves[];
+extern const int16_t wav_integrated_waves_1[];
+extern const int16_t wav_integrated_waves_2[];
+extern const int16_t wav_integrated_waves_3[];
 #define SYX_BANK_0 0
 #define SYX_BANK_0_SIZE 4096
 #define SYX_BANK_1 1
@@ -105,8 +107,12 @@ extern const int16_t wav_integrated_waves[];
 #define LUT_WS_DOUBLE_BUMP_SENTINEL_SIZE 257
 #define LUT_LPC_EXCITATION_PULSE 0
 #define LUT_LPC_EXCITATION_PULSE_SIZE 640
-#define WAV_INTEGRATED_WAVES 0
-#define WAV_INTEGRATED_WAVES_SIZE 25344
+#define WAV_INTEGRATED_WAVES_1 0
+#define WAV_INTEGRATED_WAVES_1_SIZE 8448
+#define WAV_INTEGRATED_WAVES_2 1
+#define WAV_INTEGRATED_WAVES_2_SIZE 8448
+#define WAV_INTEGRATED_WAVES_3 2
+#define WAV_INTEGRATED_WAVES_3_SIZE 8448
 
 }  // namespace plaits
 

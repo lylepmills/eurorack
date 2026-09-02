@@ -62,7 +62,7 @@ assert PACKED_BANK_SIZE % FLASH_PAGE_SIZE == 0
 # versions so adding a schema at the ceiling does not require extending a trail
 # of "10, 11, 12..." whitelists in the build container.
 MIN_RECIPE_SCHEMA_VERSION = 2
-MAX_RECIPE_SCHEMA_VERSION = 27
+MAX_RECIPE_SCHEMA_VERSION = 28
 CONFIGURATION_MIN_SCHEMA_VERSION = 4
 RESOURCES_MIN_SCHEMA_VERSION = 5
 FOUR_BANK_MIN_SCHEMA_VERSION = 6
@@ -88,10 +88,15 @@ MAX_TERRAIN_BANK_SIZE = 16
 FACTORY_TERRAIN_IDS = tuple(f"factory-{index}" for index in range(1, 9))
 WAVETABLE_BANK_MIN_SCHEMA_VERSION = 26
 NATIVE_WAVETABLE_MIN_SCHEMA_VERSION = 26
+WAVETABLE_WAVE_LINES_MIN_SCHEMA_VERSION = 28
 WAVETABLE_BANK_DATA_SIZE = 64 * 128
 MAX_MIRRORED_WAVETABLE_BANK_SIZE = 8
 MAX_ONE_WAY_WAVETABLE_BANK_SIZE = 16
 FACTORY_WAVETABLE_IDS = ("mutable-1", "mutable-2", "mutable-3")
+SHARED_WAVE_LIBRARY_ENGINE_IDS = frozenset((
+    "wavetable", "wave-terrain", "chords", "wave-paraphonic",
+    "wavetable-chord", "wavetable-scale-stack",
+))
 SYNC_INPUT_MIN_SCHEMA_VERSION = 21
 # v22 moves Sync In's COMPILE-TIME switch off the starting value and onto its own
 # preference. Starting Options are the module's initial RUNTIME values and the
@@ -245,6 +250,8 @@ class BuildRecipe:
     # 128-sample frames; a native entry stores compiled equation code instead.
     wavetable_bank: tuple[tuple[int, bytes | None, str | None, float, float], ...] = ()
     wavetable_bank_mirrored: int = 1
+    chord_wave_line: tuple[tuple[int, int, float], ...] = ()
+    braids_wave_line: tuple[tuple[int, int, float], ...] = ()
     # v22: 1 compiles Sync In in, making it selectable as a MODEL-input mode at
     # RUNTIME. Before v22 this was derived from the starting value, which meant a
     # user who did not choose Sync In at build time could never reach it.
@@ -275,6 +282,7 @@ class BuildRecipe:
 _FACTORY_BANK_RE = re.compile(
     r"const uint8_t syx_bank_(\d+)\[\] = \{(.*?)\};", re.DOTALL)
 _factory_bank_cache: dict[int, bytes] | None = None
+_factory_integrated_wave_cache: tuple[tuple[int, ...], ...] | None = None
 
 
 def load_factory_bank_bytes() -> dict[int, bytes]:
@@ -303,6 +311,69 @@ def load_factory_bank_bytes() -> dict[int, bytes]:
                 f"{RESOURCES_PATH.name}, found {len(banks)}")
         _factory_bank_cache = banks
     return _factory_bank_cache
+
+
+def load_factory_integrated_waves() -> tuple[tuple[int, ...], ...]:
+    """Read the 192 factory integrated cycles from generated resources.cc.
+
+    The parser accepts both the historical monolithic symbol and schema 28's
+    three independently linkable bank symbols so generator tests remain usable
+    on either side of the resource regeneration commit.
+    """
+    global _factory_integrated_wave_cache
+    if _factory_integrated_wave_cache is not None:
+        return _factory_integrated_wave_cache
+    source = RESOURCES_PATH.read_text(encoding="utf-8")
+    pattern = re.compile(
+        r"const int16_t wav_integrated_waves(?:_([123]))?\[\] = \{(.*?)\};",
+        re.DOTALL)
+    matches = list(pattern.finditer(source))
+    if not matches:
+        raise ValueError("factory integrated wavetable data is missing")
+    banks: list[list[int]] = []
+    if len(matches) == 1 and matches[0].group(1) is None:
+        values = [int(token) for token in matches[0].group(2).split(",") if token.strip()]
+        if len(values) != 3 * 64 * 132:
+            raise ValueError("factory integrated wavetable data has the wrong size")
+        banks = [values[index * 64 * 132:(index + 1) * 64 * 132] for index in range(3)]
+    else:
+        by_index = {
+            int(match.group(1)): [int(token) for token in match.group(2).split(",") if token.strip()]
+            for match in matches if match.group(1) is not None
+        }
+        if set(by_index) != {1, 2, 3} or any(len(values) != 64 * 132 for values in by_index.values()):
+            raise ValueError("factory integrated wavetable banks have the wrong shape")
+        banks = [by_index[index] for index in (1, 2, 3)]
+    waves = []
+    for bank in banks:
+        waves.extend(tuple(bank[offset:offset + 132]) for offset in range(0, len(bank), 132))
+    _factory_integrated_wave_cache = tuple(waves)
+    return _factory_integrated_wave_cache
+
+
+def integrate_wavetable_frame(data: bytes, frame: int) -> tuple[int, ...]:
+    raw = [byte - 256 if byte > 127 else byte
+           for byte in data[frame * 128:(frame + 1) * 128]]
+    extended = [float(value) for value in raw + raw + raw[:4]]
+    mean = sum(extended) / len(extended)
+    centered = [value - mean for value in extended]
+    peak = max((abs(value) for value in centered), default=0.0)
+    if peak <= 1.0e-12:
+        return (0,) * 132
+    total = 0.0
+    integrated = []
+    for value in centered:
+        total += value / peak
+        integrated.append(total)
+    integrated_mean = sum(integrated) / len(integrated)
+    scaled = [int(round((value - integrated_mean) * 1024.0)) for value in integrated]
+    return tuple(scaled[-132:])
+
+
+def scale_integrated_wave(wave: tuple[int, ...], gain: float) -> tuple[int, ...]:
+    if abs(gain - 1.0) < 1.0e-12:
+        return wave
+    return tuple(max(-32768, min(32767, int(round(value * gain)))) for value in wave)
 
 
 def load_catalog() -> dict[str, Engine]:
@@ -1174,9 +1245,17 @@ def _render_wavetable_expression(node: ast.AST) -> str:
 
 def validate_wavetable_bank(
         value: Any, schema_version: int,
-        ) -> tuple[list[tuple[int, bytes | None, str | None, float, float]], bool]:
-    if not isinstance(value, dict) or set(value) != {"mirrored", "entries"}:
-        raise ValueError("wavetable bank must contain mirrored and entries")
+        ) -> tuple[
+            list[tuple[int, bytes | None, str | None, float, float]],
+            bool,
+            list[tuple[int, int, float]],
+            list[tuple[int, int, float]],
+        ]:
+    expected_keys = ({"mirrored", "entries", "waveLines"}
+                     if schema_version >= WAVETABLE_WAVE_LINES_MIN_SCHEMA_VERSION
+                     else {"mirrored", "entries"})
+    if not isinstance(value, dict) or set(value) != expected_keys:
+        raise ValueError("wavetable bank must contain mirrored, entries, and its schema-defined wave lines")
     mirrored = value.get("mirrored")
     entries = value.get("entries")
     maximum = MAX_MIRRORED_WAVETABLE_BANK_SIZE if mirrored is True else MAX_ONE_WAY_WAVETABLE_BANK_SIZE
@@ -1221,12 +1300,44 @@ def validate_wavetable_bank(
                     f"native wavetables require schemaVersion {NATIVE_WAVETABLE_MIN_SCHEMA_VERSION}")
             tree = _wavetable_ast(model["equation"])
             minimum, maximum_value = _validate_native_wavetable(tree)
-            result.append((4, None, _render_wavetable_expression(tree.body), minimum, maximum_value))
+            # Retain the browser's bounded sample bank in generator memory even
+            # though native firmware does not emit it wholesale. Schema 28 may
+            # select individual frames for Chords/Braids; those are integrated
+            # here at build time and only the selected 132-sample cycles ship.
+            result.append((4, data, _render_wavetable_expression(tree.body), minimum, maximum_value))
         elif "representation" in model:
             raise ValueError("custom wavetable representation must be native or omitted")
         else:
             result.append((3, data, None, 0.0, 0.0))
-    return result, mirrored
+    def validate_line(raw: Any, name: str, size: int) -> list[tuple[int, int, float]]:
+        if not isinstance(raw, list) or len(raw) != size:
+            raise ValueError(f"{name} must contain exactly {size} stops")
+        line: list[tuple[int, int, float]] = []
+        for point in raw:
+            if not isinstance(point, dict) or set(point) not in (
+                    {"bank", "frame"}, {"bank", "frame", "gain"}):
+                raise ValueError(f"{name} contains an invalid stop")
+            bank = point.get("bank")
+            frame = point.get("frame")
+            gain = point.get("gain", 1.0)
+            if (type(bank) is not int or not 0 <= bank < len(result)
+                    or type(frame) is not int or not 0 <= frame < 64
+                    or type(gain) not in (int, float) or isinstance(gain, bool)
+                    or not math.isfinite(gain) or not 0.0 <= gain <= 2.0):
+                raise ValueError(f"{name} contains an invalid stop")
+            line.append((bank, frame, float(gain)))
+        return line
+
+    if schema_version >= WAVETABLE_WAVE_LINES_MIN_SCHEMA_VERSION:
+        lines = value["waveLines"]
+        if not isinstance(lines, dict) or set(lines) != {"chords", "braids"}:
+            raise ValueError("wavetable waveLines must contain chords and braids")
+        chord_line = validate_line(lines["chords"], "chord wave line", 15)
+        braids_line = validate_line(lines["braids"], "braids wave line", 33)
+    else:
+        chord_line = []
+        braids_line = []
+    return result, mirrored, chord_line, braids_line
 
 
 def normalize_slots(slots: list[Any], schema_version: int) -> list[str | None]:
@@ -1337,6 +1448,8 @@ def validate_recipe(value: Any) -> BuildRecipe:
     terrain_bank: list[tuple[int, bytes | None, str | None, float, float]] = []
     wavetable_bank: list[tuple[int, bytes | None, str | None, float, float]] = []
     wavetable_bank_mirrored = True
+    chord_wave_line: list[tuple[int, int, float]] = []
+    braids_wave_line: list[tuple[int, int, float]] = []
     scale_bank = validate_scale_bank(DEFAULT_SCALE_BANK)
     if schema_version >= RESOURCES_MIN_SCHEMA_VERSION:
         resources = value.get("resources")
@@ -1442,10 +1555,41 @@ def validate_recipe(value: Any) -> BuildRecipe:
             terrain_bank = validate_terrain_bank(
                 resources.get("terrainBank"), schema_version)
         if carries_wavetable_bank:
-            if "wavetable" not in public_slots:
-                raise ValueError("a wavetable bank requires Wavetable in the palette")
-            wavetable_bank, wavetable_bank_mirrored = validate_wavetable_bank(
+            has_consumer = (any(engine_id in SHARED_WAVE_LIBRARY_ENGINE_IDS
+                                for engine_id in public_slots)
+                            if schema_version >= WAVETABLE_WAVE_LINES_MIN_SCHEMA_VERSION
+                            else "wavetable" in public_slots)
+            if not has_consumer:
+                raise ValueError(
+                    "a shared wave library requires a compatible model in the palette"
+                    if schema_version >= WAVETABLE_WAVE_LINES_MIN_SCHEMA_VERSION
+                    else "a wavetable bank requires Wavetable in the palette")
+            (wavetable_bank, wavetable_bank_mirrored,
+             chord_wave_line, braids_wave_line) = validate_wavetable_bank(
                 resources.get("wavetableBank"), schema_version)
+        if (schema_version >= WAVETABLE_WAVE_LINES_MIN_SCHEMA_VERSION
+                and wavetable_bank and "wave-terrain" in public_slots
+                and not carries_terrain_bank
+                and not all(any(table_type == factory_type
+                                for table_type, _data, _equation, _minimum, _maximum
+                                in wavetable_bank)
+                            for factory_type in range(3))):
+            raise ValueError(
+                "a shared wave library missing a factory source requires an explicit Wave Terrain bank")
+        if (schema_version >= WAVETABLE_WAVE_LINES_MIN_SCHEMA_VERSION
+                and terrain_bank and wavetable_bank):
+            retained_factory_waves = {
+                table_type for table_type, _data, _equation, _minimum, _maximum
+                in wavetable_bank if table_type < 3
+            }
+            missing_factory_waves = {
+                7 - terrain_type
+                for terrain_type, _data, _equation, _minimum, _maximum in terrain_bank
+                if 5 <= terrain_type <= 7 and 7 - terrain_type not in retained_factory_waves
+            }
+            if missing_factory_waves:
+                raise ValueError(
+                    "a factory wavetable terrain requires its source bank in the shared wave library")
         if carries_user_data_banks:
             if schema_version >= SLOT_BANK_MIN_SCHEMA_VERSION:
                 slot_banks = validate_user_data_banks_v12(resources.get("userDataBanks"), len(slots))
@@ -1802,6 +1946,8 @@ def validate_recipe(value: Any) -> BuildRecipe:
         terrain_bank=tuple(terrain_bank),
         wavetable_bank=tuple(wavetable_bank),
         wavetable_bank_mirrored=1 if wavetable_bank_mirrored else 0,
+        chord_wave_line=tuple(chord_wave_line),
+        braids_wave_line=tuple(braids_wave_line),
         **normalized_options,
     )
 
@@ -1890,6 +2036,16 @@ def render_config(recipe: BuildRecipe) -> str:
             unique.append(selected_engine)
 
     includes = "\n".join(f'#include "{item.header}"' for item in unique)
+    # Schema 28 lets Chords and the Braids-derived engines carry the shared
+    # library without placing Wavetable itself. The generated resource still
+    # uses WavetableBank/WavetableFunction, so make their type definitions an
+    # explicit resource dependency rather than an accidental engine include.
+    wavetable_bank_include = (
+        '#include "plaits/dsp/engine/wavetable_engine.h"'
+        if recipe.wavetable_bank
+        and all(item.header != "plaits/dsp/engine/wavetable_engine.h" for item in unique)
+        else ""
+    )
     continuation = " " + "\\" + "\n  "
     members = continuation.join(f"{item.class_name} {item.member};" for item in unique)
     registrations = continuation.join(
@@ -2275,6 +2431,22 @@ def render_config(recipe: BuildRecipe) -> str:
             terrain_pointers.append("NULL")
             terrain_functions.append("NULL")
             factory_terrain_mask |= 1 << terrain_type
+
+    # The last three factory terrains reinterpret Mutable wavetable banks 3,
+    # 2, and 1 respectively. Keep those bank sections whenever the terrain
+    # library still includes the corresponding shape, even if the shared wave
+    # library does not otherwise refer to it.
+    terrain_wavetable_factory_mask = 0
+    if factory_terrain_mask & (1 << 5):
+        terrain_wavetable_factory_mask |= 1 << 2
+    if factory_terrain_mask & (1 << 6):
+        terrain_wavetable_factory_mask |= 1 << 1
+    if factory_terrain_mask & (1 << 7):
+        terrain_wavetable_factory_mask |= 1 << 0
+    if not recipe.terrain_bank and "wave-terrain" in recipe.public_slots:
+        # An implicit terrain library is the complete stock set, including all
+        # three wavetable-derived terrains.
+        terrain_wavetable_factory_mask = 0x07
     terrain_native_definition_block = "\n".join(terrain_native_definitions)
     terrain_bank_block = (
         f"\n#if PLAITS_HAS_TERRAIN_BANK\n{terrain_array_definitions}\n"
@@ -2344,6 +2516,7 @@ def render_config(recipe: BuildRecipe) -> str:
             wavetable_pointers.append("NULL")
             wavetable_functions.append("NULL")
             factory_wavetable_mask |= 1 << table_type
+    factory_wavetable_mask |= terrain_wavetable_factory_mask
     wavetable_native_definition_block = "\n".join(wavetable_native_definitions)
     wavetable_bank_block = (
         f"\n#if PLAITS_HAS_WAVETABLE_BANK\n{wavetable_array_definitions}\n"
@@ -2361,6 +2534,73 @@ def render_config(recipe: BuildRecipe) -> str:
         f"#endif\n"
         if recipe.wavetable_bank else ""
     )
+
+    generated_integrated_waves: list[tuple[int, ...]] = []
+    generated_integrated_wave_indices: dict[tuple[int, ...], int] = {}
+
+    def _generated_wave_pointer(wave: tuple[int, ...]) -> str:
+        index = generated_integrated_wave_indices.get(wave)
+        if index is None:
+            index = len(generated_integrated_waves)
+            generated_integrated_wave_indices[wave] = index
+            generated_integrated_waves.append(wave)
+        return f"kGeneratedIntegratedWave_{index}"
+
+    def _resolve_wave_pointer(bank_index: int, frame: int, gain: float) -> str:
+        table_type, data, _equation, _minimum, _maximum = recipe.wavetable_bank[bank_index]
+        if table_type < 3 and abs(gain - 1.0) < 1.0e-12:
+            return f"&wav_integrated_waves_{table_type + 1}[{frame * 132}]"
+        if table_type < 3:
+            wave = load_factory_integrated_waves()[table_type * 64 + frame]
+        else:
+            if data is None:
+                raise ValueError("a selected custom wave is missing its bounded sample source")
+            wave = integrate_wavetable_frame(data, frame)
+        return _generated_wave_pointer(scale_integrated_wave(wave, gain))
+
+    chord_wave_pointers = [
+        _resolve_wave_pointer(bank, frame, gain)
+        for bank, frame, gain in recipe.chord_wave_line
+    ]
+    braids_wave_pointers = [
+        _resolve_wave_pointer(bank, frame, 1.0)
+        for bank, frame, _gain in recipe.braids_wave_line
+    ]
+    braids_wave_gains = [
+        max(0, min(256, int(round(gain * 128.0))))
+        for _bank, _frame, gain in recipe.braids_wave_line
+    ]
+
+    def _render_integrated_wave(index: int, wave: tuple[int, ...]) -> str:
+        body = ", ".join(str(value) for value in wave)
+        return (
+            "#ifdef PLAITS_ENGINE_CONFIG_OWNS_USER_DATA_BANKS\n"
+            f"extern const int16_t kGeneratedIntegratedWave_{index}[132];\n"
+            f"extern const int16_t kGeneratedIntegratedWave_{index}[132] = {{ {body} }};\n"
+            "#else\n"
+            f"extern const int16_t kGeneratedIntegratedWave_{index}[132];\n"
+            "#endif")
+
+    wave_line_arrays = "\n".join(
+        _render_integrated_wave(index, wave)
+        for index, wave in enumerate(generated_integrated_waves))
+    wave_line_block = ""
+    if recipe.chord_wave_line and recipe.braids_wave_line:
+        wave_line_block = (
+            f"\n#if PLAITS_HAS_CUSTOM_WAVE_LINES\n{wave_line_arrays}\n"
+            "#ifdef PLAITS_ENGINE_CONFIG_OWNS_USER_DATA_BANKS\n"
+            "extern const int16_t* const kChordWaveLine[15];\n"
+            f"extern const int16_t* const kChordWaveLine[15] = {{ {', '.join(chord_wave_pointers)} }};\n"
+            "extern const int16_t* const kBraidsWaveLine[33];\n"
+            f"extern const int16_t* const kBraidsWaveLine[33] = {{ {', '.join(braids_wave_pointers)} }};\n"
+            "extern const uint16_t kBraidsWaveLineGains[33];\n"
+            f"extern const uint16_t kBraidsWaveLineGains[33] = {{ {', '.join(str(value) for value in braids_wave_gains)} }};\n"
+            "#else\n"
+            "extern const int16_t* const kChordWaveLine[15];\n"
+            "extern const int16_t* const kBraidsWaveLine[33];\n"
+            "extern const uint16_t kBraidsWaveLineGains[33];\n"
+            "#endif\n"
+            "#endif\n")
 
     registry_order = (
         "orange, green, red, amber"
@@ -2382,8 +2622,10 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_WAVE_TERRAIN_FACTORY_MASK 0x{factory_terrain_mask if recipe.terrain_bank else 0xff:02x}
 #define PLAITS_HAS_WAVETABLE_BANK {1 if recipe.wavetable_bank else 0}
 #define PLAITS_WAVETABLE_FACTORY_MASK 0x{factory_wavetable_mask if recipe.wavetable_bank else 0x07:02x}
+#define PLAITS_HAS_CUSTOM_WAVE_LINES {1 if recipe.chord_wave_line and recipe.braids_wave_line else 0}
 
 {includes}
+{wavetable_bank_include}
 #include "plaits/resources.h"
 #include "plaits/user_data_region.h"
 
@@ -2454,6 +2696,7 @@ static const int8_t kEngineUserDataBank[{len(selected)}] = {{ {user_data_banks} 
 {custom_model_data_block}
 {terrain_bank_block}
 {wavetable_bank_block}
+{wave_line_block}
 #if PLAITS_HAS_SPEECH_ENGINE
 static const uint32_t kSpeechEngineMask = 0x{speech_mask:08x};
 #endif
