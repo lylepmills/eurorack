@@ -105,7 +105,10 @@ STEREO_CONTROLS = {'harmonic': 2_512, 'glisson': 432}
 # check the Helix measurement used. If a control does NOT reproduce, stop: the toolchain
 # or the base moved, and every new marginal is being compared against a different
 # baseline than the rest of the table.
-CONTROLS = {'speech': 23_200, 'reed-pipe': 2_000, 'spectral-spiral': 2_032}
+# Schema 27 moved the shared articulation/navigation base and re-anchored
+# Speech's full-context marginal at 23,120 B. Keep this diagnostic snapshot in
+# sync with website/src/components/plaits-palette/flash-budget.ts.
+CONTROLS = {'speech': 23_120, 'reed-pipe': 2_000, 'spectral-spiral': 2_032}
 
 
 def build_size(tag, recipe):
