@@ -1028,6 +1028,18 @@ Three things about this rollout are worth carrying forward:
   reported `active: 1` after the pool had rolled while `containers instances`
   showed every instance inactive — prefer the instance list.
 
+The website flash meter's Sync In rows are maintained by
+`sync_flash_sweep.py` here (run `--all` inside the builder container to
+re-derive the whole table; `sync_anchor_probe.py` re-measures just the
+24-model reference palette the anchor is pinned to). Re-measuring them the
+day after this rollout found two rows a month stale — `harmonic` 1,968 B high
+and `swarm` 560 B high, against a base 1,088 B low — because the sweep as
+originally written could not measure any engine the base palette already
+carried: adding it produced a duplicate slot, which collapses, so the arms
+were identical and the row read 0 with no error. The sweep now removes such an
+engine instead. flash-budget.ts gained `syncInputAnchorRevision` so those rows
+cannot silently outlive a rollout the way they just did.
+
 A stock-24 palette carrying both Acid and Sync In no longer links at this
 revision: it overflows FLASH by 64 bytes. That is a real ceiling users can
 reach, and it is what the website flash meter's 816 B Acid sync row exists to
