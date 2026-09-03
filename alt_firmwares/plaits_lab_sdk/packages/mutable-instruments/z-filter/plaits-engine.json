@@ -13,7 +13,7 @@
   "family": "Subtractive",
   "tags": ["braids", "filter", "resonator", "subtractive"],
   "controls": [
-    { "id": "harmonics", "label": "Model", "description": "Selects the lowpass, peaking, bandpass and highpass filter models." },
+    { "id": "harmonics", "label": "Model", "description": "Selects the lowpass, peaking, bandpass, and highpass filter models." },
     { "id": "timbre", "label": "Cutoff", "description": "Sweeps the filter cutoff from below the note to ten octaves above it." },
     { "id": "morph", "label": "Shape", "description": "Morphs the filter excitation from saw through square at noon to triangle." },
     { "id": "macro", "label": "Bend", "description": "Bends the burst envelope from the flat stock ramp toward a sharp percussive attack." }

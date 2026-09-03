@@ -9,11 +9,11 @@
   "author": "Lyle Mills",
   "origin": "Rubato Lab",
   "license": "MIT",
-  "description": "Paired inharmonic modes turn one struck-metal model into anvil, agogo, plate and gong families with controllable beating.",
+  "description": "Paired inharmonic modes turn one struck-metal model into anvil, agogo, plate, and gong families with controllable beating.",
   "family": "Percussion",
   "tags": ["agogo", "anvil", "gong", "metal", "modal", "percussion", "plate"],
   "controls": [
-    { "id": "harmonics", "label": "Object", "description": "Selects anvil, agogo, plate or gong mode ratios on the next strike." },
+    { "id": "harmonics", "label": "Object", "description": "Selects anvil, agogo, plate, or gong mode ratios on the next strike." },
     { "id": "timbre", "label": "Hardness", "description": "Trades a soft low mallet response for a hard upper-mode strike." },
     { "id": "morph", "label": "Damping", "description": "Opens the object from a dry knock to a long metal ring." },
     { "id": "macro", "label": "Beating", "description": "Detunes a paired copy of every mode from stable metal to slow shimmering interference." }

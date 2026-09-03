@@ -31,7 +31,7 @@
     {
       "id": "morph",
       "label": "Register",
-      "description": "Steps the vocal register from bass through tenor, countertenor and alto to soprano."
+      "description": "Steps the vocal register from bass through tenor, countertenor, and alto to soprano."
     },
     {
       "id": "macro",

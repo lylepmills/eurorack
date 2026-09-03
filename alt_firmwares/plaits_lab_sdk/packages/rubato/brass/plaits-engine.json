@@ -28,7 +28,7 @@
     {
       "id": "timbre",
       "label": "Breath",
-      "description": "Raises breath pressure from gentle to strong while staying above the model's oscillation threshold across the full range."
+      "description": "Raises breath pressure from gentle to strong, staying above the model's oscillation threshold across the full range."
     },
     {
       "id": "morph",

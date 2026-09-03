@@ -9,7 +9,7 @@
   "author": "Lyle Mills",
   "origin": "Rubato Lab",
   "license": "MIT",
-  "description": "Struck membrane modes move from a round open head to a tighter loaded skin, with center, rim, damping and pitch-dive control.",
+  "description": "Struck membrane modes move from a round open head to a tighter loaded skin, with center, rim, damping, and pitch-dive control.",
   "family": "Percussion",
   "tags": ["drum", "hand drum", "membrane", "modal", "percussion", "physical"],
   "controls": [

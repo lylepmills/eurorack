@@ -9,7 +9,7 @@
   "author": "Emilie Gillet",
   "origin": "Mutable Instruments",
   "license": "MIT",
-  "description": "A bowed string waveguide with a stick-slip friction exciter, a movable bow and an adjustable instrument body.",
+  "description": "A bowed string waveguide with a stick-slip friction exciter, a movable bow, and an adjustable instrument body.",
   "family": "Physical",
   "tags": ["braids", "waveguide", "physical", "string"],
   "controls": [

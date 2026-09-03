@@ -135,21 +135,21 @@ AUDITED_REMAINING_METADATA_DIGESTS = {
     "wavetable-chord": "sha256:e7d126301a60ea915c7f0e775b22a250b44fb115c4a4ee4a7b04f6dd6ec8e49e",
     "wavetable-scale-stack": "sha256:f4d32f3e629f54094fc04f1be65b2bc8cfeed914848c0bb61169f5dae9c1a554",
     "shakers": "sha256:dc3b8a2a7e0daa8ae80e1dd85ff39377e1b1d79fd6efc753d8cb712160481448",
-    "brass": "sha256:473c031b4f7aab2ee8dbb868f0c5e42515bb18719334cf69a7cbe5b2e7d0ccfa",
+    "brass": "sha256:c21801b6b3248f3216e57f9157848868a6c014216be6d4ffa6a49f9616741c88",
     "helix": "sha256:209c5191778a23c1286e875abaeeb6bdd200a4741795ec29e9bdf6fa01c64086",
     # Rubato percussion trio: control behavior, trigger semantics, mono AUX,
     # and the dedicated stereo paths audited during the 2026-09-01 review.
-    "skins": "sha256:a106e9101324ce98d726caece7702ba7ddaf06d36f5c83d94767d7d9c44b6b57",
-    "circuit-zaps": "sha256:80510a65f159b4eb2dffab2144112b7089be74c0684c67ca44f6cc73b01dd19d",
-    "metalwork": "sha256:fac00d54bcbbb807a6e83699cd8c0a834957ad7219d5d30715427e6c9dcd2687",
-    "clap": "sha256:b97e4d965e150a93d7ea8640a69ce186a7cf721bb8aea594be76922591107db5",
-    "analog-percussion": "sha256:98dc8ec07a323a1d303329cf925820c674f80886ca076ef859a47455ce8b53f3",
+    "skins": "sha256:993a4a474162525da929028be61bdf97ba7394430155a2005327fb3bd0e92e36",
+    "circuit-zaps": "sha256:bacacca0e506d6d5b72754ba825f1e50da317d1034931b7962e3fd29a7e57bb9",
+    "metalwork": "sha256:4dfaf831a027ee4719af94269446d431ab2886b73b706003a3672bc885ffae09",
+    "clap": "sha256:3e20922123ae803deb63ca13ad4ba0266a8cf5512ef3c4c82b7adbb69a2cec1c",
+    "analog-percussion": "sha256:ebcfb960708600329410fe98b228e2d19cad3bd42999f178712d209f3295a554",
     "freshets-formant": "sha256:5b17fc800bf990df2a8091a893999d6493974a8f139119eaef188039fd8f7306",
     # Combust community engines: source, stereo behavior, controls, and
     # hardware CPU diagnostics audited during the 2026-08-31 review.
     "bubbletime": "sha256:ab82314d6d6e98a1e195513e7a2300beb6b9e1302352fabbe38428224bae387f",
-    "zxphase48k": "sha256:68fd122b61ce457a0481760bf6348308495686d87a4b1a7447a4b2e09786c151",
-    "zxpulse48k": "sha256:cdcdf57550901493db4ded937e0085683922a8d428b94a2c8c920f011d5c896a",
+    "zxphase48k": "sha256:c5c82bb414b95fc53c7dc8f78654d67ee93d9d112299a2eddd921119c59dd26f",
+    "zxpulse48k": "sha256:43925cf5cccd3025234460c47dab19d989cbaa1689c3ab855988b94ccf2c0dab",
     # Acid: software gauntlet and stereo hardware CPU diagnostics audited
     # during the 2026-09-01 community review.
     "acid": "sha256:386fa01e192a0ccbff3389892faf757e1fa1c311611feeb495ec2133847eb189",
@@ -162,29 +162,38 @@ REMAINING_FIXED_PAIR_ENGINES = {
 }
 
 AUDITED_STOCK_OUTPUTS = {
-    "two-op-fm": ["FM voice", "Sub-oscillator"],
+    "two-op-fm": [
+        "Mono: FM voice. Stereo: left channel, with the carrier panned slightly left of center and the sub-oscillator slightly right.",
+        "Mono: sub-oscillator. Stereo: right channel of that same carrier and sub pair.",
+    ],
     "filtered-noise": [
-        "Filtered noise",
+        "Filtered noise.",
         "Mono: two separated band-pass voices. Stereo: decorrelated matching filter.",
     ],
     "dx7-bank-a": [
-        "Six-operator FM voice; left channel in stereo",
-        "Same voice mix in mono; right channel in stereo",
+        "Six-operator FM voice; left channel in stereo.",
+        "Same voice mix in mono; right channel in stereo.",
     ],
     "dx7-bank-b": [
-        "Six-operator FM voice; left channel in stereo",
-        "Same voice mix in mono; right channel in stereo",
+        "Six-operator FM voice; left channel in stereo.",
+        "Same voice mix in mono; right channel in stereo.",
     ],
     "dx7-bank-c": [
-        "Six-operator FM voice; left channel in stereo",
-        "Same voice mix in mono; right channel in stereo",
+        "Six-operator FM voice; left channel in stereo.",
+        "Same voice mix in mono; right channel in stereo.",
     ],
-    "string-machine": ["Voices 1 and 3 predominantly", "Voices 2 and 4 predominantly"],
+    "string-machine": [
+        "Voices 1 and 3 predominantly; the left channel in stereo, unchanged.",
+        "Voices 2 and 4 predominantly; the right channel in stereo, unchanged.",
+    ],
     "chords": [
         "Mono: full chord. Stereo: left side of the chord spread.",
         "Mono: root or alternate voice group. Stereo: right side of the chord spread.",
     ],
-    "chiptune": ["Chiptune chord or arpeggio", "NES triangle bass"],
+    "chiptune": [
+        "Mono: chiptune chord or arpeggio. Stereo: left channel, with the chord voices spread across fixed positions and the arpeggio alternating sides.",
+        "Mono: NES triangle bass. Stereo: right channel of that spread; the bass stays centered.",
+    ],
 }
 
 AUDITED_STOCK_TRIGGERS = {

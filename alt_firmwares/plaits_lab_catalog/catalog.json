@@ -92,8 +92,8 @@
         "Oscillator balance"
       ],
       "outputs": [
-        "Mixed variable oscillators",
-        "Synchronized oscillator pair"
+        "Mono: mixed variable oscillators. Stereo: left channel, with the square panned left of center and the detuned saw right of center.",
+        "Mono: synchronized oscillator pair. Stereo: right channel of that panned pair; the sync oscillator is not rendered."
       ],
       "artwork": {
         "icon": "/model-icons/virtual-analog.png",
@@ -220,8 +220,8 @@
         "Wavefolder symmetry"
       ],
       "outputs": [
-        "Waveshaped oscillator",
-        "Alternate waveshaping response"
+        "Mono: waveshaped oscillator. Stereo: left channel, with the first wavefolder table panned left of center and the second right of center.",
+        "Mono: alternate waveshaping response. Stereo: right channel of that same panned pair of folder tables."
       ],
       "artwork": {
         "icon": "/model-icons/waveshaping.png",
@@ -262,8 +262,8 @@
         "Modulator detune"
       ],
       "outputs": [
-        "FM voice",
-        "Sub-oscillator"
+        "Mono: FM voice. Stereo: left channel, with the carrier panned slightly left of center and the sub-oscillator slightly right.",
+        "Mono: sub-oscillator. Stereo: right channel of that same carrier and sub pair."
       ],
       "artwork": {
         "icon": "/model-icons/two-op-fm.png",
@@ -304,8 +304,8 @@
         "Carrier bleed"
       ],
       "outputs": [
-        "Granular formant voice",
-        "Filtered-noise variant"
+        "Mono: granular formant voice. Stereo: left channel, with the two grainlets panned apart.",
+        "Mono: filtered-noise variant. Stereo: right channel of that grainlet pair; the noise variant is not rendered."
       ],
       "artwork": {
         "icon": "/model-icons/granular-formant.png",
@@ -346,7 +346,7 @@
         "Odd/even balance"
       ],
       "outputs": [
-        "Additive partial bank",
+        "Additive partial bank.",
         "Mono: complementary organ subset. Stereo: magnitude-matched phase-rotated copy of the full partial bank."
       ],
       "artwork": {
@@ -388,7 +388,7 @@
         "Phase warp"
       ],
       "outputs": [
-        "Interpolated wavetable",
+        "Interpolated wavetable.",
         "Mono: 5-bit version of the wavetable. Stereo: magnitude-matched phase-rotated copy."
       ],
       "artwork": {
@@ -475,8 +475,8 @@
         "Spectral emphasis"
       ],
       "outputs": [
-        "Speech synthesizer",
-        "Raw excitation or alternate voice"
+        "Mono: speech synthesizer. Stereo: left channel, with the voice panned slightly left of center and the secondary path slightly right.",
+        "Mono: raw excitation or alternate voice. Stereo: right channel of that same widened pair."
       ],
       "artwork": {
         "icon": "/model-icons/speech.png",
@@ -623,8 +623,8 @@
         "Size dispersion"
       ],
       "outputs": [
-        "Sawtooth swarm",
-        "Sine swarm"
+        "Mono: sawtooth swarm. Stereo: left channel, with the eight saw voices panned by detune rank.",
+        "Mono: sine swarm. Stereo: right channel of that same spread; the sine swarm is not rendered."
       ],
       "artwork": {
         "icon": "/model-icons/swarm.png",
@@ -665,7 +665,7 @@
         "Filter position"
       ],
       "outputs": [
-        "Filtered noise",
+        "Filtered noise.",
         "Mono: two separated band-pass voices. Stereo: decorrelated matching filter."
       ],
       "artwork": {
@@ -707,8 +707,8 @@
         "Diffusion"
       ],
       "outputs": [
-        "Resonant particles",
-        "Raw particle impulses"
+        "Mono: resonant particles. Stereo: left channel, with the six particles spread across fixed pan positions.",
+        "Mono: raw particle impulses. Stereo: right channel of that same spread."
       ],
       "artwork": {
         "icon": "/model-icons/particle-noise.png",
@@ -749,8 +749,8 @@
         "Excitation duration"
       ],
       "outputs": [
-        "Physical string",
-        "Raw exciter"
+        "Mono: physical string. Stereo: left channel, with the three strings panned across fixed positions.",
+        "Mono: raw exciter. Stereo: right channel of that same spread."
       ],
       "artwork": {
         "icon": "/model-icons/inharmonic-string.png",
@@ -794,8 +794,8 @@
         "Exciter resonance"
       ],
       "outputs": [
-        "Modal resonator",
-        "Raw exciter"
+        "Mono: modal resonator. Stereo: left channel, with even-numbered modes leaning left and odd-numbered modes right.",
+        "Mono: raw exciter. Stereo: right channel of that same mode split."
       ],
       "artwork": {
         "icon": "/model-icons/modal-resonator.png",
@@ -839,8 +839,8 @@
         "Pitch-envelope punch"
       ],
       "outputs": [
-        "Analog-modeled bass drum",
-        "Synthetic bass drum"
+        "Mono: analog-modeled bass drum. Stereo: left channel, with the two kick models panned close to center.",
+        "Mono: synthetic bass drum. Stereo: right channel of that same pair."
       ],
       "artwork": {
         "icon": "/model-icons/analog-bass-drum.png",
@@ -881,8 +881,8 @@
         "Shell inharmonicity"
       ],
       "outputs": [
-        "Analog-modeled snare",
-        "Synthetic snare"
+        "Mono: analog-modeled snare. Stereo: left channel, with the two snare models panned apart.",
+        "Mono: synthetic snare. Stereo: right channel of that same pair."
       ],
       "artwork": {
         "icon": "/model-icons/analog-snare.png",
@@ -924,8 +924,8 @@
         "Oscillator spacing"
       ],
       "outputs": [
-        "Analog-modeled hi-hat",
-        "Synthetic hi-hat"
+        "Mono: analog-modeled hi-hat. Stereo: left channel, with the two hi-hat models panned apart.",
+        "Mono: synthetic hi-hat. Stereo: right channel of that same pair."
       ],
       "artwork": {
         "icon": "/model-icons/analog-hi-hat.png",
@@ -967,8 +967,8 @@
         "Drive"
       ],
       "outputs": [
-        "Two-stage low-pass output",
-        "Soft-clipped high-pass output"
+        "Mono: two-stage low-pass output. Stereo: left channel, the low-pass body with the high band added as a side signal.",
+        "Mono: soft-clipped high-pass output. Stereo: right channel, the same body with that side signal subtracted."
       ],
       "artwork": {
         "icon": "/model-icons/virtual-analog-vcf.png",
@@ -1009,8 +1009,8 @@
         "Modulator ratio"
       ],
       "outputs": [
-        "Hard-synced phase-distortion voice",
-        "Free-running phase-modulation voice"
+        "Hard-synced phase-distortion voice; the left channel in stereo, unchanged.",
+        "Free-running phase-modulation voice; the right channel in stereo, unchanged. The two oscillators are already decorrelated."
       ],
       "artwork": {
         "icon": "/model-icons/phase-distortion.png",
@@ -1052,8 +1052,8 @@
         "Network detune"
       ],
       "outputs": [
-        "Six-operator FM voice; left channel in stereo",
-        "Same voice mix in mono; right channel in stereo"
+        "Six-operator FM voice; left channel in stereo.",
+        "Same voice mix in mono; right channel in stereo."
       ],
       "artwork": {
         "icon": "/model-icons/dx7-bank-a.png",
@@ -1099,8 +1099,8 @@
         "Network detune"
       ],
       "outputs": [
-        "Six-operator FM voice; left channel in stereo",
-        "Same voice mix in mono; right channel in stereo"
+        "Six-operator FM voice; left channel in stereo.",
+        "Same voice mix in mono; right channel in stereo."
       ],
       "artwork": {
         "icon": "/model-icons/dx7-bank-b.png",
@@ -1146,8 +1146,8 @@
         "Network detune"
       ],
       "outputs": [
-        "Six-operator FM voice; left channel in stereo",
-        "Same voice mix in mono; right channel in stereo"
+        "Six-operator FM voice; left channel in stereo.",
+        "Same voice mix in mono; right channel in stereo."
       ],
       "artwork": {
         "icon": "/model-icons/dx7-bank-c.png",
@@ -1192,7 +1192,7 @@
         "Y offset"
       ],
       "outputs": [
-        "Wave-terrain scan",
+        "Wave-terrain scan.",
         "The alternate Sine(y + z) projection of the same trajectory; used as the right channel in stereo."
       ],
       "artwork": {
@@ -1235,8 +1235,8 @@
         "Ensemble amount"
       ],
       "outputs": [
-        "Voices 1 and 3 predominantly",
-        "Voices 2 and 4 predominantly"
+        "Voices 1 and 3 predominantly; the left channel in stereo, unchanged.",
+        "Voices 2 and 4 predominantly; the right channel in stereo, unchanged."
       ],
       "artwork": {
         "icon": "/model-icons/string-machine.png",
@@ -1281,8 +1281,8 @@
         "Register preset"
       ],
       "outputs": [
-        "Chiptune chord or arpeggio",
-        "NES triangle bass"
+        "Mono: chiptune chord or arpeggio. Stereo: left channel, with the chord voices spread across fixed positions and the arpeggio alternating sides.",
+        "Mono: NES triangle bass. Stereo: right channel of that spread; the bass stays centered."
       ],
       "artwork": {
         "icon": "/model-icons/chiptune.png",
@@ -2811,7 +2811,7 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Wavetable",
-      "description": "Braids' three wavetable models in one slot, over its own 256-wave 8-bit bank: 20 named banks, a 16x16 interpolated map, and a curated line with a phase-domain crush.",
+      "description": "Braids' three wavetable models in one slot, over its own set of 256 8-bit waves: 20 named banks, a 16x16 interpolated map, and a curated line with a phase-domain crush.",
       "tags": [
         "braids",
         "wavetable",
@@ -2826,7 +2826,7 @@
       ],
       "outputs": [
         "Mono: the scanned readout. Stereo: the same scan with a small leftward crossfade offset.",
-        "Mono: the adjacent wave, opposite map corner or other crush endpoint. Stereo: the scan with a small rightward offset."
+        "Mono: the adjacent wave, opposite map corner, or other crush endpoint. Stereo: the scan with a small rightward offset."
       ],
       "source": {
         "header": "plaits/dsp/engine2/wave_scan_engine.h",
@@ -2967,7 +2967,7 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Physical",
-      "description": "A bowed string waveguide with a stick-slip friction exciter, a movable bow and an adjustable instrument body.",
+      "description": "A bowed string waveguide with a stick-slip friction exciter, a movable bow, and an adjustable instrument body.",
       "tags": [
         "braids",
         "waveguide",
@@ -3196,7 +3196,7 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Polyphonic",
-      "description": "Three oscillators with two continuously swept interval knobs, morphing together through square, saw, triangle and sine. It overlaps Chords and Swarm in territory, not lineage: intervals you sweep rather than a table you author.",
+      "description": "Three oscillators with two continuously swept interval knobs, morphing together through square, saw, triangle, and sine. It overlaps Chords and Swarm in territory, not lineage: intervals you sweep rather than a table you author.",
       "tags": [
         "braids",
         "detune",
@@ -3566,7 +3566,7 @@
       "author": "Lyle Mills",
       "origin": "Rubato Lab",
       "family": "Percussion",
-      "description": "Struck membrane modes move from a round open head to a tighter loaded skin, with center, rim, damping and pitch-dive control.",
+      "description": "Struck membrane modes move from a round open head to a tighter loaded skin, with center, rim, damping, and pitch-dive control.",
       "tags": [
         "drum",
         "hand drum",
@@ -3606,7 +3606,7 @@
       "author": "Lyle Mills",
       "origin": "Rubato Lab",
       "family": "Percussion",
-      "description": "Falling-pitch electronic strikes cross two oscillators into ring-modulated zaps, sparks and driven discharges.",
+      "description": "Falling-pitch electronic strikes cross two oscillators into ring-modulated zaps, sparks, and driven discharges.",
       "tags": [
         "electronic",
         "percussion",
@@ -3646,7 +3646,7 @@
       "author": "Lyle Mills",
       "origin": "Rubato Lab",
       "family": "Percussion",
-      "description": "Paired inharmonic modes turn one struck-metal model into anvil, agogo, plate and gong families with controllable beating.",
+      "description": "Paired inharmonic modes turn one struck-metal model into anvil, agogo, plate, and gong families with controllable beating.",
       "tags": [
         "agogo",
         "anvil",
@@ -3683,7 +3683,7 @@
     {
       "id": "clap",
       "packageId": "community/clap",
-      "name": "Clap",
+      "name": "Analog Clap",
       "author": "Dylan Bolink",
       "origin": "Community",
       "family": "Drums",
@@ -3731,7 +3731,7 @@
       "author": "Dylan Bolink",
       "origin": "Community",
       "family": "Drums",
-      "description": "The 808's tuned percussion: toms, congas, rimshot, claves and cowbell are points in one plane of pitch, ring length and material rather than separate instruments.",
+      "description": "The 808's tuned percussion: toms, congas, rimshot, claves, and cowbell are points in one plane of pitch, ring length, and material rather than separate instruments.",
       "tags": [
         "community",
         "drum",
@@ -4377,7 +4377,7 @@
     },
     "z-filter": {
       "controls": {
-        "harmonics": "Selects the lowpass, peaking, bandpass and highpass filter models.",
+        "harmonics": "Selects the lowpass, peaking, bandpass, and highpass filter models.",
         "timbre": "Sweeps the filter cutoff from below the note to ten octaves above it.",
         "morph": "Morphs the filter excitation from saw through square at noon to triangle.",
         "macro": "Bends the burst envelope from the flat stock ramp toward a sharp percussive attack."
@@ -4531,11 +4531,11 @@
     "blown": {
       "controls": {
         "harmonics": "Braids' COLOR: the corner of the body filter the bore is heard through. Its live travel narrows with the note.",
-        "timbre": "Braids' TIMBRE: how much noise rides on the breath. Low is turbulent, airy and quiet; high is steady and loud.",
+        "timbre": "Braids' TIMBRE: how much noise rides on the breath. Low is turbulent, airy, and quiet; high is steady and loud.",
         "morph": "Mouth pressure, which Braids welds at 0.8. Down for an under-blown pipe, up to drive the reed into its clip.",
         "macro": "The reed's rest offset, which Braids welds at 0.7. Down for a loose reed, up for one pinned open most of the cycle."
       },
-      "trigger": "Flushes the bore pressure while leaving the breath, filter state and delay position running."
+      "trigger": "Flushes the bore pressure while leaving the breath, filter state, and delay position running."
     },
     "struck-bell": {
       "controls": {
@@ -4607,7 +4607,7 @@
         "morph": "Breath pressure, welded at twice the envelope in Braids. Under- or over-blow the pipe until it changes register.",
         "macro": "The bore's damping, which Braids ties rigidly to the note and gives no knob. Down for a dark pipe, up for a bright one."
       },
-      "trigger": "Restarts the excitation envelope, flushes both delay lines and clears the reflection filter."
+      "trigger": "Restarts the excitation envelope, flushes both delay lines, and clears the reflection filter."
     },
     "question-mark": {
       "controls": {
@@ -4658,7 +4658,7 @@
       "controls": {
         "harmonics": "Tilts the excitation from a dark buzz to a bright breathy hiss.",
         "timbre": "Sweeps the vowel through the five phonemes: /a/, /e/, /i/, /o/, /u/.",
-        "morph": "Steps the vocal register from bass through tenor, countertenor and alto to soprano.",
+        "morph": "Steps the vocal register from bass through tenor, countertenor, and alto to soprano.",
         "macro": "Restores the formant amplitude balance the stock model leaves flat. Centered is flat, exactly as hardware."
       },
       "trigger": "Re-initializes the filter bank; the model has no internal envelope and otherwise ignores TRIG."
@@ -4738,7 +4738,7 @@
     "brass": {
       "controls": {
         "harmonics": "Lip tension. Climbs the bore's partials — unison, fifth, octave, tenth, twelfth — and bends each one sharp as it rises.",
-        "timbre": "Raises breath pressure from gentle to strong while staying above the model's oscillation threshold across the full range.",
+        "timbre": "Raises breath pressure from gentle to strong, staying above the model's oscillation threshold across the full range.",
         "morph": "Bell size, from a stopped horn that barely sustains to an open one that rings and overblows easily.",
         "macro": "Buzz. How far the lips swing into closure each cycle — a soft flutter at the bottom, a real mouthpiece buzz at the top."
       },
@@ -4773,7 +4773,7 @@
     },
     "metalwork": {
       "controls": {
-        "harmonics": "Selects anvil, agogo, plate or gong mode ratios on the next strike.",
+        "harmonics": "Selects anvil, agogo, plate, or gong mode ratios on the next strike.",
         "timbre": "Trades a soft low mallet response for a hard upper-mode strike.",
         "morph": "Opens the object from a dry knock to a long metal ring.",
         "macro": "Detunes a paired copy of every mode from stable metal to slow shimmering interference."
@@ -4796,7 +4796,7 @@
         "morph": "Sets the ring length. With TRIG unpatched, it becomes the drone level, matching the stock analog drum models.",
         "macro": "Moves the second mode's ratio away from the value selected by Material. Noon keeps the default ratio."
       },
-      "trigger": "With TRIG patched, each rising edge strikes the two tuned modes, click and octave-down AUX voice. Unpatched, the engine becomes a continuous percussion drone."
+      "trigger": "With TRIG patched, each rising edge strikes the two tuned modes, click, and octave-down AUX voice. Unpatched, the engine becomes a continuous percussion drone."
     },
     "freshets-formant": {
       "controls": {
@@ -4827,9 +4827,9 @@
     },
     "zxphase48k": {
       "controls": {
-        "harmonics": "Moves through XOR, OR and AND mix zones. Within each zone, clockwise motion increases the 1-bit self-XOR feedback comb from off to shimmer.",
+        "harmonics": "Moves through XOR, OR, and AND mix zones. Within each zone, clockwise motion increases the 1-bit self-XOR feedback comb from off to shimmer.",
         "timbre": "Counter-clockwise gives static squares. Clockwise motion deepens and speeds the tick-clocked duty-cycle sweep on oscillator 2.",
-        "morph": "Moves from fine beating into a quantized interval ladder: fourth, fifth, octave, twelfth and two octaves, with LFSR noise at the top.",
+        "morph": "Moves from fine beating into a quantized interval ladder: fourth, fifth, octave, twelfth, and two octaves, with LFSR noise at the top.",
         "macro": "Counter-clockwise arms the triggered pitch kick; noon is neutral; clockwise adds the parasite-carrier sheen."
       },
       "trigger": "Resets both oscillator phases and reseeds the noise register. With Clean/Ghost counter-clockwise, it also fires the pitch kick."
@@ -4841,7 +4841,7 @@
         "morph": "The lower half stacks chord voices one at a time. The upper half arpeggiates the chord, with rate increasing toward tick speed.",
         "macro": "Clockwise deepens the Follin echo to about 220 ms; noon keeps the authentic three-cent pull; counter-clockwise exaggerates dying-speaker sag."
       },
-      "trigger": "Restarts all pin phases, the frame tick and the arpeggio."
+      "trigger": "Restarts all pin phases, the frame tick, and the arpeggio."
     },
     "acid": {
       "controls": {
@@ -4911,32 +4911,6 @@
       "dx7-bank-b",
       "dx7-bank-c",
       "wave-terrain",
-      "string-machine",
-      "chiptune"
-    ],
-    "audition": [
-      "loopback",
-      "lockstep",
-      "phase-weave",
-      "sideband-bank",
-      "undertow",
-      "reed-pipe",
-      "phase-flock",
-      "spectral-spiral",
-      "tapfield",
-      "attractor",
-      "rulefield",
-      "glisson",
-      "gendy",
-      "scanned",
-      "pulsar",
-      "particle-noise",
-      "virtual-analog-vcf",
-      "phase-distortion",
-      "virtual-analog",
-      "waveshaping",
-      "two-op-fm",
-      "wavetable",
       "string-machine",
       "chiptune"
     ]

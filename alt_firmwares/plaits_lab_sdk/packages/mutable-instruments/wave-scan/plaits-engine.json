@@ -9,7 +9,7 @@
   "author": "Emilie Gillet",
   "origin": "Mutable Instruments",
   "license": "MIT",
-  "description": "Braids' three wavetable models in one slot, over its own 256-wave 8-bit bank: 20 named banks, a 16x16 interpolated map, and a curated line with a phase-domain crush.",
+  "description": "Braids' three wavetable models in one slot, over its own set of 256 8-bit waves: 20 named banks, a 16x16 interpolated map, and a curated line with a phase-domain crush.",
   "family": "Wavetable",
   "tags": [
     "braids",
@@ -41,7 +41,7 @@
   ],
   "outputs": {
     "main": "Mono: the scanned readout. Stereo: the same scan with a small leftward crossfade offset.",
-    "aux": "Mono: the adjacent wave, opposite map corner or other crush endpoint. Stereo: the scan with a small rightward offset."
+    "aux": "Mono: the adjacent wave, opposite map corner, or other crush endpoint. Stereo: the scan with a small rightward offset."
   },
   "trigger": "The engine itself ignores TRIG and its wavetable phase keeps running; Plaits' shared envelope still shapes a patched note.",
   "source": {

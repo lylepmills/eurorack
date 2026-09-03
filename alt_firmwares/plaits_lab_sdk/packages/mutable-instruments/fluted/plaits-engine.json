@@ -43,7 +43,7 @@
     "main": "The bore pressure at the far end, which is what the module emits.",
     "aux": "A second tap halfway along the same bore, level-matched but decorrelated. The stereo toggle does not change this fixed two-pickup pair."
   },
-  "trigger": "Restarts the excitation envelope, flushes both delay lines and clears the reflection filter.",
+  "trigger": "Restarts the excitation envelope, flushes both delay lines, and clears the reflection filter.",
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/fluted_engine.h",
