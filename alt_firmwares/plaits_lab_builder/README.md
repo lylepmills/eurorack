@@ -325,6 +325,22 @@ Two rollout notes worth keeping:
   is the only view that shows `speech-encoder-vN` as a row with its own state
   and age, which is what distinguishes "a warm old instance is still attached"
   from "the pool has not rolled".
+- **`GET /v1/health` COSTS A PRODUCTION CONTAINER SLOT — never poll it in a
+  loop.** The fresh uniquely-named DO that makes the probe trustworthy is a
+  real container start, and production runs `max_instances: 2` with
+  `speech-encoder-vN` holding one of them permanently. So health probes
+  compete with user builds for the single remaining slot. Polling it during
+  the 2026-09-02 Acid rollout exhausted capacity and put real builds into
+  `compiler_retry` with "Maximum number of running container instances
+  exceeded" — which then reads exactly like a broken rollout and nearly
+  triggered an unnecessary image rollback. Probe ONCE, wait minutes between
+  probes, and gate a rollout on `containers info` (free) plus a single
+  confirming probe. This is why staging carries four instances (`effd546`);
+  production has no such headroom. Builds retry rather than fail, so the
+  damage is delay rather than data loss, but it IS user-visible.
+- **`containers info`'s `active` count lags `containers instances`.** After the
+  Acid rollout the former reported `active: 1` while the latter showed every
+  instance inactive. Trust the instance list.
 - The named Speech encoder Container can outlive a gradual image rollout. Do
   not exercise a freshly bumped identity while `configuration.image` still
   names the old image: it can attach to that image and keep serving it after the
