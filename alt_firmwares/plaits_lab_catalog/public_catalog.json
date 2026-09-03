@@ -73,11 +73,12 @@
       ],
       "artwork": {
         "icon": "/model-icons/virtual-analog.png",
-        "kind": "official"
+        "kind": "official",
+        "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:01e3a77ed47953d0008649eb0dc5543398cf2d79f858e0d5907d616fb02932f6",
-      "documentationDigest": "sha256:ebfc77e3979ef9d9b814efce4c8f878de5b2e94a942aa6f08d8bc81ada266560",
+      "digest": "sha256:d15d38d767a68cd28499806e2a120b39f90b51f74d4fd607571247f55427395f",
+      "documentationDigest": "sha256:29da22de50e88b987e352041a5fd83d3e89515fee6c802a765a9e7f9c153a055",
       "manual": {
         "controls": {
           "harmonics": "Detunes the secondary oscillator through musical intervals and sets the mono hard-sync AUX ratio.",
@@ -117,11 +118,12 @@
       ],
       "artwork": {
         "icon": "/model-icons/virtual-analog.png",
-        "kind": "official"
+        "kind": "official",
+        "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:13b364744e6803f305194ca7d8b4afefc17664e9b8c25bf85a1ab14c175542c0",
-      "documentationDigest": "sha256:5073937553f4a4e3b50d98c62cfb0fd605dd92a0de33c0a48d5be1e8450a4661",
+      "digest": "sha256:7b1ad5606f6f32c271211a47d9ca17e266d2754a0ece57358b469738eece53b8",
+      "documentationDigest": "sha256:7b3070c69a72cc44e2fc2d5cb7cd30e421a8677ee8326547ef0773d36af84093",
       "manual": {
         "controls": {
           "harmonics": "Detunes the secondary oscillator through closely spaced and musical intervals.",
@@ -785,7 +787,7 @@
         "Pitch-envelope punch"
       ],
       "outputs": [
-        "Analog-modelled bass drum",
+        "Analog-modeled bass drum",
         "Synthetic bass drum"
       ],
       "artwork": {
@@ -794,8 +796,8 @@
         "tone": "red"
       },
       "version": "1.0.0",
-      "digest": "sha256:4f153c8ebe86baea9f32dd49a3058eb03c5ae936354357994463944128c6c720",
-      "documentationDigest": "sha256:7f8261ff2d79961420ffdf645f694cdaabfd7de3154750207cad47f389d6015f",
+      "digest": "sha256:e6316c6fbc0abe3d04732ee657c7e01aba094133ba8a3dbb71129f4229de9104",
+      "documentationDigest": "sha256:8d5fd1869cb01778a8b2be8b3c3c8103d12763dffca8efd4196dc38041426a42",
       "manual": {
         "controls": {
           "harmonics": "Changes attack sharpness, pitch-envelope amount, and overdrive.",
@@ -829,7 +831,7 @@
         "Shell inharmonicity"
       ],
       "outputs": [
-        "Analog-modelled snare",
+        "Analog-modeled snare",
         "Synthetic snare"
       ],
       "artwork": {
@@ -838,8 +840,8 @@
         "tone": "red"
       },
       "version": "1.0.0",
-      "digest": "sha256:643738802597dc8c1b994a3051fa34d69ea65f77ad485b6535c589f9bfab93ee",
-      "documentationDigest": "sha256:99ec2e8418522d616ecfe8853b0ebe7f86ecf0860d900ffa2981dbbe3805c35d",
+      "digest": "sha256:38298cdb465becc6afcbb837b465e024e50c0f17fca913a48a81df6dff76187a",
+      "documentationDigest": "sha256:e52448dc9e7caf6c21d38715fa8e6ed0afce76c18eb557e29e80646513c5bf64",
       "manual": {
         "controls": {
           "harmonics": "Balances the tuned shell oscillators against the filtered noise component.",
@@ -874,7 +876,7 @@
         "Oscillator spacing"
       ],
       "outputs": [
-        "Analog-modelled hi-hat",
+        "Analog-modeled hi-hat",
         "Synthetic hi-hat"
       ],
       "artwork": {
@@ -883,8 +885,8 @@
         "tone": "red"
       },
       "version": "1.0.0",
-      "digest": "sha256:676dc1bf775898949909bb8b48fde855c439be4264310e73628257151cc9d7e0",
-      "documentationDigest": "sha256:34fecb9adf5a834aefb65915fa4647e83fe23a0d0eef8e6914980c3ee286fde7",
+      "digest": "sha256:d3b030d860082cc0d9a16ce8b2d835f38101bb0ccd67e0d8940257bdd1611ba6",
+      "documentationDigest": "sha256:778ab02b11692112c1963a777f65c8aa9b603593dead72119dbed0c23b57f395",
       "manual": {
         "controls": {
           "harmonics": "Balances the metallic oscillator bank against filtered noise.",
@@ -2082,7 +2084,7 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Waveshaping",
-      "description": "Braids' two wavefolders crossfaded against each other, the sine one saturating where the triangle one keeps folding. The model Plaits' waveshaping engine descends from, with the second curve it left behind.",
+      "description": "Braids' two wavefolders crossfaded against each other, the sine one saturating where the triangle one keeps folding. The model Plaits' Waveshaping model descends from, with the second curve it left behind.",
       "tags": [
         "braids",
         "wavefolder",
@@ -2100,8 +2102,8 @@
         "Mono: the complementary folder crossfade. Stereo: the same sound with a small rightward blend offset."
       ],
       "version": "1.0.0",
-      "digest": "sha256:0ee4e482af6ae1f33d39460906f9b6ec2c77e508946750bd1066c9a39ab487b6",
-      "documentationDigest": "sha256:22817555801dfa9e0386f14306eee17621331b7a45b6048c2e8e9554053a1fab",
+      "digest": "sha256:8e456bb7ae3735ba1a0d21c6f4eafdc10ea81f289ee13bfd069875cae9d30dd8",
+      "documentationDigest": "sha256:b38c0f1af22a6181ad1db966e832490fa95810748498d81d1233d43c2d06dc5e",
       "manual": {
         "controls": {
           "harmonics": "Crossfades from the sine folder, which saturates, to the triangle folder, which keeps folding.",
@@ -2243,8 +2245,8 @@
       "name": "Morph",
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
-      "family": "Virtual analog",
-      "description": "Braids' one-knob walk from triangle through saw to a narrowing pulse, into a low-pass that tracks the note and a tanh fuzz. Virtual analog shares the waveforms and has neither.",
+      "family": "Subtractive",
+      "description": "Braids' one-knob walk from triangle through saw to a narrowing pulse, into a low-pass that tracks the note and a tanh fuzz. Virtual Analog shares the waveforms and has neither.",
       "tags": [
         "braids",
         "analog",
@@ -2262,13 +2264,13 @@
         "Mono: the dry morph oscillator. Stereo: the processed voice at the higher Fuzz offset on the right."
       ],
       "version": "1.0.0",
-      "digest": "sha256:7bc92f5f9fc614550f32e964a05be13619d48f44f520db2da0c6baac392dc7f4",
-      "documentationDigest": "sha256:3a58278f3d34211a0274d70718f8128461c473887155d67ee938b3215320926c",
+      "digest": "sha256:b59f6bd5e57ea0e3eed38d5a013792b0b8dfeadd1bb391a7fbf388afccc649de",
+      "documentationDigest": "sha256:48b331f57210b99632c8a9766c75e98dc0eef4b4f4494d7943db6207b52509c4",
       "manual": {
         "controls": {
           "harmonics": "Closes the low-pass onto the note while raising the fuzz from dry to wet, welded as the module welds them.",
           "timbre": "Walks one oscillator from triangle through saw to square, then narrows the square into a pulse.",
-          "morph": "Offsets the low-pass five octaves either side of where Fuzz put it -- the coupling the module cannot undo.",
+          "morph": "Offsets the low-pass five octaves either side of where Fuzz put it \u2014 the coupling the module cannot undo.",
           "macro": "Gain into the overdrive, from a soft saturation up to a hard clip. The module welds it at unity."
         },
         "trigger": "Restarts the morph oscillator phase so each triggered note begins alike."
@@ -2293,7 +2295,7 @@
       ],
       "controls": [
         "Model",
-        "Colour",
+        "Color",
         "Shape",
         "Drive"
       ],
@@ -2302,8 +2304,8 @@
         "Its fixed complement: the notch, the peak difference, or a second sequence. The stereo toggle does not change this pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:3ea27b6e586658365a19f9cbdaeb49c74b02ee964eedfeb61a7559dff55a389f",
-      "documentationDigest": "sha256:869ffc3d18fb27b34eedb1466aa99b03f20a5114ab0ccce994026a6017c2b53c",
+      "digest": "sha256:eed05ce032f4d727706fa3cfecb78bb74c7ca21012bd712914b7a77e86f14540",
+      "documentationDigest": "sha256:7c592297073303b12f5aa9b8a8e2dfd4952489ad97fabe6d6264bd056a23d509",
       "manual": {
         "controls": {
           "harmonics": "Selects filtered noise, twin peaks, or clocked noise.",
@@ -2324,7 +2326,7 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Noise",
-      "description": "Braids' PRTC: three fixed-interval resonant filters, a chord above the note, re-struck by a shared decaying noise burst at a random rate. Plaits' particle-noise scatters six particles around one pitch instead -- a cloud, not a chord.",
+      "description": "Braids' PRTC: three fixed-interval resonant filters, a chord above the note, re-struck by a shared decaying noise burst at a random rate. Plaits' Particle Noise scatters six particles around one pitch instead \u2014 a cloud, not a chord.",
       "tags": [
         "braids",
         "particle",
@@ -2343,8 +2345,8 @@
         "Mono: the raw decaying-noise burst before filtering. Stereo: a second, fully independent filter bank and RNG stream, for genuinely decorrelated left and right bursts."
       ],
       "version": "1.0.0",
-      "digest": "sha256:482d55e07f2aa373d9b4d5af83be5ea594da54ac98c92cd19589795e1339fd33",
-      "documentationDigest": "sha256:14bf37134411092fc0c485a707fb83ae40c657fdadb64a458ab32e8406de5935",
+      "digest": "sha256:7f93c6c7c31f790e6d78c84fa63b7a46a1ad057b94a9bd65bb21063ee72860a1",
+      "documentationDigest": "sha256:8b0df5915c3dec9bd3a2674d4cee950d57823983ce328c26700c2d8adff64303",
       "manual": {
         "controls": {
           "harmonics": "Jitters each filter around its own fixed interval; the lowest one jitters about three quarters as far as the other two.",
@@ -2384,12 +2386,12 @@
       ],
       "version": "1.0.0",
       "digest": "sha256:ad04ba72220871d223b2ea3e2a1df96f426598ecd350b2fafc6374ac00fb042d",
-      "documentationDigest": "sha256:c52343dd408dc368463e37ff9e4ba8c9886b5abdb8fedb3c0cc7fe7e705583d3",
+      "documentationDigest": "sha256:a1a5ef7507cf0cd39f3b81ddcaa3786361350901d398a4cb1afdd1749107d65d",
       "manual": {
         "controls": {
           "harmonics": "Crossfades from the saw to the attenuated square.",
-          "timbre": "Opens the saw's pulse width as it narrows the square's, or the reverse -- one knob, two waveforms.",
-          "morph": "Offsets the square's phase against the saw's -- the module's two oscillators are always locked together.",
+          "timbre": "Opens the saw's pulse width as it narrows the square's, or the reverse \u2014 one knob, two waveforms.",
+          "morph": "Offsets the square's phase against the saw's \u2014 the module's two oscillators are always locked together.",
           "macro": "Braids fixes the square at 58% of full level; this sweeps that attenuation from silent to unattenuated."
         },
         "trigger": "Realigns the saw and square phases at the selected Phase offset."
@@ -2405,7 +2407,7 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Subtractive",
-      "description": "Braids' seven-voice detuned sawtooth chorus, soft-clipped and carved by a resonant filter tracking the note. A fixed chorus, not the granular cloud Plaits' own Swarm engine is, and deliberately raw, aliasing sawtooths.",
+      "description": "Braids' seven-voice detuned sawtooth chorus, soft-clipped and carved by a resonant filter tracking the note. A fixed chorus of deliberately raw, aliasing sawtooths \u2014 not the granular cloud of Plaits' own Swarm model.",
       "tags": [
         "braids",
         "sawtooth",
@@ -2424,14 +2426,14 @@
         "Mono: the mirrored filter position. Stereo: a magnitude-matched phase-rotated copy of the filtered swarm."
       ],
       "version": "1.0.0",
-      "digest": "sha256:82eabeacdc7e81ceae28cb64d7c62b4340a2cae227f8a81681e1f8485b3b8666",
-      "documentationDigest": "sha256:5cd838de658f84bc1847413131ef41dac550f8c392f88ad989133d020ed223f1",
+      "digest": "sha256:fd716f2e90e397a5e37d694414d15d8dd7c553ed268ec54fd35c6f0fb8834808",
+      "documentationDigest": "sha256:67858991bbcbaadbf6f17cb67d3dc817e5003cb9d64b279b91ef7675f356a2d1",
       "manual": {
         "controls": {
           "harmonics": "The filter's cutoff: on the note a third of the way up, closing below that twice as fast as it opens above.",
           "timbre": "Spreads the seven saws apart in pitch, from unison to a wide, wavering chorus.",
           "morph": "Sweeps the same filter's response from lowpass, through the module's own highpass at center, to bandpass.",
-          "macro": "The filter's resonance, fixed in the module -- calmer below center, a controlled peak above it."
+          "macro": "The filter's resonance, fixed in the module \u2014 calmer below center, a controlled peak above it."
         },
         "trigger": "Randomizes the phases of all seven saw oscillators."
       },
@@ -2446,7 +2448,7 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Vocal",
-      "description": "Braids' table-driven vowel synthesiser: three formants read at sixteen steps a cycle, gated by a ramp that restarts every pitch period, through a tanh shaper. The stepped ancestor of Speech's SAM mode.",
+      "description": "Braids' table-driven vowel synthesizer: three formants read at sixteen steps a cycle, gated by a ramp that restarts every pitch period, through a tanh shaper. The stepped ancestor of Speech's SAM mode.",
       "tags": [
         "braids",
         "formant",
@@ -2464,8 +2466,8 @@
         "Mono: the clean stack ahead of the overdrive. Stereo: the shaped stack with a small upward formant shift on the right."
       ],
       "version": "1.0.0",
-      "digest": "sha256:2d7867ec5070b9bb4fb7e35448d42e3b33cb4b7b33e4cd84bfecd6a605f42beb",
-      "documentationDigest": "sha256:293fec1fef5d303e49e7fb671c39b61e35f5d89818734642d0ec4e782e5d109f",
+      "digest": "sha256:d1d45155355b1048a5b9bc31634e269c8d4590b4fe4f137f93710116aa750290",
+      "documentationDigest": "sha256:3c9e4a5a3ca9b5228d5a6393770d3b1bc452a478b47c819c07e5f797db2d1146",
       "manual": {
         "controls": {
           "harmonics": "Pulls the upper two formants toward the first or pushes them apart, past the vowels in the module's list.",
@@ -2486,7 +2488,7 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Additive",
-      "description": "Braids' twelve-partial additive stack, with two Lorentzian bumps sliding over the harmonic series. Its integer amplitude slew gates quiet partials out entirely, which is the grain the Plaits harmonic engine's float smoothing does not have.",
+      "description": "Braids' twelve-partial additive stack, with two Lorentzian bumps sliding over the harmonic series. Its integer amplitude slew gates quiet partials out entirely, the grain the Plaits Harmonic Oscillator's float smoothing does not have.",
       "tags": [
         "braids",
         "additive",
@@ -2494,7 +2496,7 @@
         "formant"
       ],
       "controls": [
-        "Colour",
+        "Color",
         "Peak",
         "Spread",
         "Width"
@@ -2504,14 +2506,14 @@
         "Mono: the stack with Peak reflected. Stereo: the same stack with a small rightward Peak offset."
       ],
       "version": "1.0.0",
-      "digest": "sha256:1c529b463c89cc9f55b75310e173317a7a6b888c253f757e431c85d3a6a645d8",
-      "documentationDigest": "sha256:b203f8acb03792dd0607102a8177335ce9d45013867d5b42976634eca52099b9",
+      "digest": "sha256:0e1495a5b3a475f72d5431a2d8250fa8bb2cd4c4f7b1b68ed200c982649fe165",
+      "documentationDigest": "sha256:2e3823116f39af46ab7bdb870d31c769add07a9563baa360e26ec8324d71f1ef",
       "manual": {
         "controls": {
           "harmonics": "Braids' COLOR, welded as the module has it: the bumps narrow toward both ends while the second one grows.",
           "timbre": "Slides the first bump from the fundamental to the twelfth partial; the second follows at half that index plus six.",
-          "morph": "Moves the second bump off the module's fixed relation, six partials either way. Centre is Braids.",
-          "macro": "Scales the bump width around whatever Colour chose, so the two stop sharing a knob. Noon is Braids."
+          "morph": "Moves the second bump off the module's fixed relation, six partials either way. Center is Braids.",
+          "macro": "Scales the bump width around whatever Color chose, so the two stop sharing a knob. Noon is Braids."
         },
         "trigger": "Realigns the shared partial phase so each triggered note starts alike."
       },
@@ -2566,7 +2568,7 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Physical",
-      "description": "Braids' PLUK: three round-robin Karplus-Strong voices, a noise burst dropped into a resonant loop per strike. Inharmonic-string is the same round robin with a far more elaborate model; this keeps PLUK's own stochastic damping instead.",
+      "description": "Braids' PLUK: three round-robin Karplus-Strong voices, a noise burst dropped into a resonant loop per strike. Inharmonic String is the same round robin with a far more elaborate model; this keeps PLUK's own stochastic damping instead.",
       "tags": [
         "braids",
         "karplus-strong",
@@ -2582,11 +2584,11 @@
       ],
       "outputs": [
         "All three round-robin voices, summed.",
-        "Mono: the raw noise excitation only, silent between strikes. Stereo: dropped in favour of panning each voice to a fixed round-robin position."
+        "Mono: the raw noise excitation only, silent between strikes. Stereo: dropped in favor of panning each voice to a fixed round-robin position."
       ],
       "version": "1.0.0",
-      "digest": "sha256:abca9a0dcfdaf88c1aba34379fba4d376c9787986c35d4a6c3761ee32086debc",
-      "documentationDigest": "sha256:1458901ce54556c9af8e1b01922d1e20c474a86004bb5c71dc82de1480f28624",
+      "digest": "sha256:d742a2e8cc48858e578f30aaaace524d9160f7b02524905ddf1d057a20a88fd1",
+      "documentationDigest": "sha256:1082d19848134bcb23c39bc832b49b89eb096a9fef29345d4a6dda0a3dfba9c0",
       "manual": {
         "controls": {
           "harmonics": "How much of one string period gets struck with noise, from a narrow flick to most of the cycle.",
@@ -2606,8 +2608,8 @@
       "name": "Blown",
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
-      "family": "Physical modelling",
-      "description": "Braids' blown bore: one delay line closed by an inverting reflection, driven by a clipped reed and a breath pressure the noise rides on. Its tone filter sits outside the loop, so the body colour and the pipe are separate controls.",
+      "family": "Physical",
+      "description": "Braids' blown bore: one delay line closed by an inverting reflection, driven by a clipped reed and a breath pressure the noise rides on. Its tone filter sits outside the loop, so the body color and the pipe are separate controls.",
       "tags": [
         "braids",
         "physical",
@@ -2625,8 +2627,8 @@
         "Mono: the raw bore pressure, before the body filter. Stereo: a second pickup 0.62 of the way down the same bore, through its own copy of the body filter, so the two channels are one standing wave heard at two points."
       ],
       "version": "1.0.0",
-      "digest": "sha256:0fca1d36645b34f248854b2b6fd07b0eed89702fc6da26e9076e21a066e2224c",
-      "documentationDigest": "sha256:124c2643ea956bb884f1f5392f70c7cdc5beb503e96bf968acb1cda8b79b1ccb",
+      "digest": "sha256:d975df7281d1d51ca797d62188e9149288cedea33dbd57e9ac0a3100eb6c8b19",
+      "documentationDigest": "sha256:8e9faf98ec7c6715360b820db6e198a811b958a57b582c8ce1e7a38aef44364a",
       "manual": {
         "controls": {
           "harmonics": "Braids' COLOR: the corner of the body filter the bore is heard through. Its live travel narrows with the note.",
@@ -2647,7 +2649,7 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Additive",
-      "description": "Braids' BELL: eleven fixed inharmonic partials, additively synthesised and struck once per trigger, sharing one decay curve and one odd/even detune. A fixed hand-tuned voicing, not a stretched-harmonic formula.",
+      "description": "Braids' BELL: eleven fixed inharmonic partials, additively synthesized and struck once per trigger, sharing one decay curve and one odd/even detune. A fixed hand-tuned voicing, not a stretched-harmonic formula.",
       "tags": [
         "braids",
         "bell",
@@ -2663,12 +2665,12 @@
         "Decay spread"
       ],
       "outputs": [
-        "The eleven-partial sum. Tracks the module's own output closely; tests/ab.json carries the measured figures.",
+        "The eleven-partial sum. Tracks the module's own output closely.",
         "Mono: the five highest partials alone, a bright fast-decaying companion voice. Stereo: a magnitude-matched phase-rotated copy of the full bell, widening the same eleven partials without retuning them."
       ],
       "version": "1.0.0",
-      "digest": "sha256:ed0b6de98d1bcc9c93785ba6825de97700178942bc08a40458feb86caf2bebc2",
-      "documentationDigest": "sha256:e174f254db576ecd84898f5f585ab88649b6b4ef3ce73816175053a7b8fc7bb8",
+      "digest": "sha256:ae6df023756f3530befa1b821224965ad3b7ac7cb06d4c4641979877302bf647",
+      "documentationDigest": "sha256:999d0d723662b5d2d0e18f1fceaccbfe5cc736172cd9d4b91a1892f3e6a9e839",
       "manual": {
         "controls": {
           "harmonics": "Spreads alternate partials apart around the module's own fixed ratios: every other one up, the rest down.",
@@ -2689,7 +2691,7 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Additive",
-      "description": "Braids' DRUM: six fixed partials struck once per trigger. Two are ring-modulated by lowpass-filtered noise instead of played straight -- a different mechanism from a resonator excited by noise.",
+      "description": "Braids' DRUM: six fixed partials struck once per trigger. Two are ring-modulated by lowpass-filtered noise instead of played straight \u2014 a different mechanism from a resonator excited by noise.",
       "tags": [
         "braids",
         "drum",
@@ -2705,12 +2707,12 @@
         "Decay spread"
       ],
       "outputs": [
-        "The six-partial mix. Tracks the module's own output closely; tests/ab.json carries the measured figures.",
+        "The six-partial mix. Tracks the module's own output closely.",
         "Mono: the two noise-ring-modulated partials alone, without the direct tone or the harmonics sum. Stereo: a second, independently-filtered noise realization for the right channel, sharing the same tonal partials as the left."
       ],
       "version": "1.0.0",
-      "digest": "sha256:add11226de6e7419c64dfcff70ae9f7b9384e34820f5d826284529bc4b6deddd",
-      "documentationDigest": "sha256:1d1ea976de884af38e7d669ded322e28ad00af047b8b51212dd1261cfc9789dc",
+      "digest": "sha256:da02983eaf38de2f1f912a96a005907c225949b2a53832744594a47b1910bf97",
+      "documentationDigest": "sha256:6cc152d8d4474949df039e6fa49429cdfafb75e617cf6a4d7b2d17957843edfd",
       "manual": {
         "controls": {
           "harmonics": "The noise's cutoff, the six-partial harmonics level, and a two-voice noise crossfade, coupled as the module does.",
@@ -2731,7 +2733,7 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Drums",
-      "description": "Braids' self-enveloping kick: two decaying pulses into a bandpass that jumps up in pitch for a brief click, then self-brightens. A different mechanism from Plaits' own analog-bass-drum, which clicks with FM rather than a retuned filter.",
+      "description": "Braids' self-enveloping kick: two decaying pulses into a bandpass that jumps up in pitch for a brief click, then self-brightens. A different mechanism from Plaits' own Analog Bass Drum, which clicks with FM rather than a retuned filter.",
       "tags": [
         "braids",
         "drum",
@@ -2749,13 +2751,13 @@
         "Mono: the raw excitation pulses before the resonator. Stereo: the kick body minus that side signal on the right."
       ],
       "version": "1.0.0",
-      "digest": "sha256:54fde050307488d8c28f2598b7067288009746b441b448de8d5206743344d709",
-      "documentationDigest": "sha256:582759fdf7dfdcaee9fa9923bd17c9f54f1b665e8be27696f69f40b8b327a749",
+      "digest": "sha256:f4eb4270a8f7a3622ce9611d5395cbf895c6abca8795e7873e48c35044539f6b",
+      "documentationDigest": "sha256:ace5968a9542a074c511b21477c604c963c0e7a9454db235b739b50122c73655",
       "manual": {
         "controls": {
-          "harmonics": "The output filter's brightness -- Braids' COLOR, applied after the resonator.",
-          "timbre": "The resonator's decay -- Braids' TIMBRE. Turning it up lengthens the boom toward near-self-oscillation.",
-          "morph": "Crossfades the two excitation pulses. Centred is native level; the ends fade one out to just click or just thump.",
+          "harmonics": "The output filter's brightness \u2014 Braids' COLOR, applied after the resonator.",
+          "timbre": "The resonator's decay \u2014 Braids' TIMBRE. Turning it up lengthens the boom toward near-self-oscillation.",
+          "morph": "Crossfades the two excitation pulses. Centered is native level; the ends fade one out to just click or just thump.",
           "macro": "Scales the self-brightening dynamic filter modulation around the module's one fixed amount, from off to 4x."
         },
         "trigger": "Strikes or re-strikes the self-enveloped kick."
@@ -2791,12 +2793,12 @@
       ],
       "version": "1.0.0",
       "digest": "sha256:18eea9422e4854d4c4d07a949c53bf64eb38bec5715291dd2a9abad5089be003",
-      "documentationDigest": "sha256:a01021e82f7b1c41b9f67f9264270975688af7b1d0bf278900a5a52ec8d6ed92",
+      "documentationDigest": "sha256:b30714432f0a4ff6539dae44353dbba939871713373164bbb55bca483ca8857e",
       "manual": {
         "controls": {
           "harmonics": "The noise burst's peak level, and past noon, how long both the snap and the tone ring.",
           "timbre": "Balances the two tonal resonators, which sound at the note itself and an octave above it.",
-          "morph": "Crossfades the tonal sum against the snap resonator. Centred is the module's own unweighted sum.",
+          "morph": "Crossfades the tonal sum against the snap resonator. Centered is the module's own unweighted sum.",
           "macro": "Widens the interval between the two tonal resonators: unison at 0, the module's octave at noon, two at 1."
         },
         "trigger": "Strikes or re-strikes the self-enveloped snare."
@@ -2815,8 +2817,10 @@
       "description": "Braids' CYMBAL: six square oscillators through a resonant bandpass, crossfaded against clocked noise through a resonant highpass. Free-running, not self-enveloping.",
       "tags": [
         "braids",
+        "drum",
         "cymbal",
         "hihat",
+        "percussion",
         "noise",
         "metallic"
       ],
@@ -2828,11 +2832,11 @@
       ],
       "outputs": [
         "The crossfaded pair, Braids' own signal.",
-        "Mono: the complementary crossfade, always favouring the side MAIN does not. Stereo: a second, independent raw-noise stream and a small opposing offset on Color."
+        "Mono: the complementary crossfade, always favoring the side MAIN does not. Stereo: a second, independent raw-noise stream and a small opposing offset on Color."
       ],
       "version": "1.0.0",
-      "digest": "sha256:a058af914dc14fafa2b9bc50dbf898f654fb50d54a337fe273d17cf4e4f91dac",
-      "documentationDigest": "sha256:ca50b0fae4fbc233efd18a4ca67ddc686d86177214217ae23d64a46e578a7921",
+      "digest": "sha256:807e6eea97490c266cf6a5371fe9335d5c3875c4946d723b8938b715cc7c4751",
+      "documentationDigest": "sha256:75a5d9765d30b1df47b8c462cfd32ce5c8b15afbe507e84f96640eb4d2258f89",
       "manual": {
         "controls": {
           "harmonics": "Crossfades from the resonant metallic noise to the resonant raw noise, the module's own COLOR.",
@@ -2935,7 +2939,7 @@
       "name": "Fluted",
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
-      "family": "Physical modelling",
+      "family": "Physical",
       "description": "A jet flute derived from Braids' FLUT: a bore and a jet delay line sharing one loop, driven by an asymmetric cubic jet and a breath the noise multiplies. It overblows into a higher register, as the module does.",
       "tags": [
         "braids",
@@ -2954,8 +2958,8 @@
         "A second tap halfway along the same bore, level-matched but decorrelated. The stereo toggle does not change this fixed two-pickup pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:14ac86856c853277a540f318d7835e6a7ea9a7f2d71899396f292a35e961f1af",
-      "documentationDigest": "sha256:3cb957545ca827d0802872cb726ec649a7d6089dbb38a1df2897f991ba89e46a",
+      "digest": "sha256:df6840295d6121ca99caf2546c9144783acf810a534252257af85730a2d4076a",
+      "documentationDigest": "sha256:645ae7600b19b407021d687e824a1c5314465fde418dfd4243c693be79a1a2fd",
       "manual": {
         "controls": {
           "harmonics": "Braids' COLOR: splits one fixed loop length between jet and bore. Moves the embouchure without moving the pitch.",
@@ -2976,7 +2980,7 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Noise",
-      "description": "Braids' hidden model, reachable on the module only with the marquee set to \"49\": a Morse transmitter keying a sine over a drifting noise bed, through a squared-distortion stage.",
+      "description": "Braids' hidden model, reachable on the module only with the marquee set to \u201c49\u201d: a Morse transmitter keying a sine over a drifting noise bed, through a squared-distortion stage.",
       "tags": [
         "braids",
         "morse",
@@ -2992,11 +2996,11 @@
       ],
       "outputs": [
         "The transmission, the module's own signal.",
-        "Mono: the keyed carrier alone, before the bed and the distortion. Stereo: a second full transmission whose noise draws come from an independent generator, so the tone stays centred and the bed opens out."
+        "Mono: the keyed carrier alone, before the bed and the distortion. Stereo: a second full transmission whose noise draws come from an independent generator, so the tone stays centered and the bed opens out."
       ],
       "version": "1.0.0",
-      "digest": "sha256:d0c6c15d6eb242fd91303a7b4e580a5aafa493c223796e93d6565510e06c91aa",
-      "documentationDigest": "sha256:6da704f381581ccc9b1c074a9bfa604e7e50c8d1bf3e2854731d4994a796d638",
+      "digest": "sha256:489bc0e319059237b37bcaeeceec478e8cfa028586ce49ee43af31eb610c10b6",
+      "documentationDigest": "sha256:0e00eabcd9acb9e1e50f13f9a78ed6eaabfafc6d2607094af2788792ec9309d6",
       "manual": {
         "controls": {
           "harmonics": "The module's own COLOR: the noise bed's floor and the distortion depth together, as one knob.",
@@ -3196,13 +3200,13 @@
       ],
       "version": "1.0.0",
       "digest": "sha256:a3d8a8f5b3be2272e4b091406988ee86b33397067fcf5b77289a118914135665",
-      "documentationDigest": "sha256:98b37cac4282f62c48686bdd112c711e44c8fb500100d5336f1b01362ad57bf1",
+      "documentationDigest": "sha256:e12dec021b9014f7c616cd36d7bacecd4c49d8735f05d6e833d3dca9f23e11da",
       "manual": {
         "controls": {
           "harmonics": "Tilts the excitation from a dark buzz to a bright breathy hiss.",
           "timbre": "Sweeps the vowel through the five phonemes: /a/, /e/, /i/, /o/, /u/.",
           "morph": "Steps the vocal register from bass through tenor, countertenor and alto to soprano.",
-          "macro": "Restores the formant amplitude balance the stock model leaves flat. Centred is flat, exactly as hardware."
+          "macro": "Restores the formant amplitude balance the stock model leaves flat. Centered is flat, exactly as hardware."
         },
         "trigger": "Re-initializes the filter bank; the model has no internal envelope and otherwise ignores TRIG."
       },
@@ -3380,7 +3384,7 @@
       "author": "Tom Burns",
       "origin": "Community",
       "family": "Polyphonic",
-      "description": "Five voices spaced an equal number of scale degrees apart, sweeping from cluster to wide chord without ever leaving the scale. From Braids Renaissance.",
+      "description": "Five voices spaced an equal number of scale degrees apart, sweeping from cluster to wide chord without ever leaving the scale. From Tom Burns' Braids Renaissance firmware.",
       "tags": [
         "braids",
         "braids renaissance",
@@ -3400,14 +3404,14 @@
         "Root voice; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:c8cd50726e53f4808e1598e0d3e1602fbd0a81f592a727d02d6e88e1efdceb3e",
-      "documentationDigest": "sha256:935299edcb526fa672ce59e673b9bcb1764173414bff347a077b5e57e2e3f056",
+      "digest": "sha256:e0e179b85f66d47315bf769d2b58028075bcefa1df8fead925287322a3d2226b",
+      "documentationDigest": "sha256:eb37d954a490fa032bdcf67f7e81a2576b503c6d000e1872561cdf9430cb9548",
       "manual": {
         "controls": {
           "harmonics": "Sets the spacing between voices, from one scale degree up to sixteen.",
           "timbre": "Detunes the voices against each other and folds them where the waveform is still near sine.",
           "morph": "Morphs every voice from sine through triangle and saw to square.",
-          "macro": "Selects the scale the stack is quantised to, which is what the spacing counts in."
+          "macro": "Selects the scale the stack is quantized to, which is what the spacing counts in."
         },
         "trigger": "Realigns every voice so a struck stack starts the same way each time."
       },
@@ -3422,7 +3426,7 @@
       "author": "Tom Burns",
       "origin": "Community",
       "family": "Polyphonic",
-      "description": "Diatonic chords over Braids Renaissance's WTCH scan, with independent voice spread and wavetable position.",
+      "description": "Diatonic chords over Braids Renaissance's WTCH scan, with independent voice spread and wavetable position. From Tom Burns' Braids Renaissance firmware.",
       "tags": [
         "braids",
         "braids renaissance",
@@ -3443,8 +3447,8 @@
         "Root voice; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:8fbb5ff308cae98b9c7962cd8ee0abb218f8c3b78081040f28dfca49f8e50ad8",
-      "documentationDigest": "sha256:9be03d32a4976fd097b3c211907d3e79ab48ff7786e8bef5cdbc6f8841717459",
+      "digest": "sha256:4595325747e0bb9cebc56d1d3138fc85fad91702ff403c78e6d09ec2c3feeddb",
+      "documentationDigest": "sha256:5a0c3c76ca9f53c9fac7af92c97075e2dfdc426cc042934c8603d41b0bf6f7ba",
       "manual": {
         "controls": {
           "harmonics": "Steps through the same sixteen scale-degree chord shapes as Diatonic Chord.",
@@ -3465,7 +3469,7 @@
       "author": "Tom Burns",
       "origin": "Community",
       "family": "Polyphonic",
-      "description": "Five scale-spaced voices over Braids Renaissance's WTx6 scan, with independent span, spread, and wavetable position.",
+      "description": "Five scale-spaced voices over Braids Renaissance's WTx6 scan, with independent span, spread, and wavetable position. From Tom Burns' Braids Renaissance firmware.",
       "tags": [
         "braids",
         "braids renaissance",
@@ -3486,8 +3490,8 @@
         "Root voice; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:e63b2b0d8f7f3425146a2908e5884698041fb8028ed807eeb358d2ad00dad42c",
-      "documentationDigest": "sha256:41f026c025e849672899349ffbc0f91d5dc20f3f8fdf62e9eb85db330c6b56ca",
+      "digest": "sha256:b5cdd68416cc6e40b4c0691c546b93c8ceccd21f2741c5011230da1eaf4b32da",
+      "documentationDigest": "sha256:d4be06fdc2414a0373f5fbb28a28628b23990f94a670088aa340685d4f66fae7",
       "manual": {
         "controls": {
           "harmonics": "Sets the spacing between voices, from one scale degree up to sixteen.",
@@ -3550,7 +3554,7 @@
       "author": "Lyle Mills, after Perry R. Cook and Gary P. Scavone",
       "origin": "Rubato Lab",
       "family": "Physical",
-      "description": "A lip-reed brass instrument. Breath makes it speak, and the lip knob climbs the bore's harmonic series the way a bugle player does.",
+      "description": "A lip-reed brass instrument after Perry R. Cook and Gary P. Scavone's STK brass model. Breath makes it speak, and the lip knob climbs the bore's harmonic series the way a bugle player does.",
       "tags": [
         "brass",
         "lip",
@@ -3570,14 +3574,14 @@
         "Valve flow that drives the bore; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:031476cd7dfaa3981a8969beef220cdd8ae480751c28adc406713d738037bffa",
-      "documentationDigest": "sha256:aa63fdfa7f73653f9a83aa670f77791d9c5d7ae27a517371772014874a67f138",
+      "digest": "sha256:d5bd416b28409864ca63e59875c36613d47c2c6f99b15595f4129a966eb0df3c",
+      "documentationDigest": "sha256:d265b589d27ca841aee715c4c9671e6bdd3024665f59282036e401e1beacf613",
       "manual": {
         "controls": {
-          "harmonics": "Lip tension. Climbs the bore's partials -- unison, fifth, octave, tenth, twelfth -- and bends each one sharp as it rises.",
+          "harmonics": "Lip tension. Climbs the bore's partials \u2014 unison, fifth, octave, tenth, twelfth \u2014 and bends each one sharp as it rises.",
           "timbre": "Raises breath pressure from gentle to strong while staying above the model's oscillation threshold across the full range.",
           "morph": "Bell size, from a stopped horn that barely sustains to an open one that rings and overblows easily.",
-          "macro": "Buzz. How far the lips swing into closure each cycle -- a soft flutter at the bottom, a real mouthpiece buzz at the top."
+          "macro": "Buzz. How far the lips swing into closure each cycle \u2014 a soft flutter at the bottom, a real mouthpiece buzz at the top."
         },
         "trigger": "Empties the bore and resets the lips so each note starts the same way."
       },
@@ -3617,11 +3621,11 @@
       },
       "version": "1.0.0",
       "digest": "sha256:70482ec3d92d0a8dc33d1580f0db98095b8a743c50fe8471dd94c867305ed537",
-      "documentationDigest": "sha256:07b7b3f550f8330611c2ac303a59ec8ab19b4b9471282a36519723966150e6e2",
+      "documentationDigest": "sha256:1d09323253c57adf115ad3f73e0e4b3d639c4e0dfddab2283747d4941a55a2e6",
       "manual": {
         "controls": {
           "harmonics": "Selects the chord, voiced at every octave of the helix at once.",
-          "timbre": "Sets the glide: centred is still, either side sends the stack endlessly rising or falling.",
+          "timbre": "Sets the glide: centered is still, either side sends the stack endlessly rising or falling.",
           "morph": "Folds the summed voices, from clean through progressively harder wavefolding.",
           "macro": "Sets how much of the helix you hear at once, from a tight chord to a wide cloud of octaves."
         },
@@ -3638,7 +3642,7 @@
       "author": "Lyle Mills",
       "origin": "Rubato Lab",
       "family": "Percussion",
-      "description": "Struck membrane modes move from a round open head to a tighter loaded skin, with centre, rim, damping and pitch-dive control.",
+      "description": "Struck membrane modes move from a round open head to a tighter loaded skin, with center, rim, damping and pitch-dive control.",
       "tags": [
         "drum",
         "hand drum",
@@ -3658,12 +3662,12 @@
         "Mono: rim-weighted upper modes and dry slap. Stereo: the right membrane pickup."
       ],
       "version": "1.0.0",
-      "digest": "sha256:db7ff61dfcd1aea57d5d38f4cf2b407349f62b7c5ad2c04611b0e49078831380",
-      "documentationDigest": "sha256:5687113fc28da2cf517486551a6ba10edb8b75e1f8b0ddd7cf11cd868a1c479d",
+      "digest": "sha256:e9da04409d329f916a11d9b6b016ef98676f6c0c19e0219186cb2724829d61b0",
+      "documentationDigest": "sha256:bf5fe1a7c57019e8ef85d606062ab623fedbecc09285b938e4fe7dc6c059ede2",
       "manual": {
         "controls": {
           "harmonics": "Retensions the mode ratios from a round open head toward a tighter loaded skin.",
-          "timbre": "Moves the strike from the centre's low body toward a bright rim slap.",
+          "timbre": "Moves the strike from the center's low body toward a bright rim slap.",
           "morph": "Opens the head from a short muted knock to a long resonant ring.",
           "macro": "Adds hand pressure: stronger pitch dive and faster loss of the upper modes."
         },
@@ -3765,7 +3769,7 @@
       "author": "Dylan Bolink",
       "origin": "Community",
       "family": "Drums",
-      "description": "808 style clap, noise gated a few milliseconds at a time into a wide band with a steep bottom, and a longer tail for the room. Four hands become seven that disagree; unpatched, an audience.",
+      "description": "808-style clap, noise gated a few milliseconds at a time into a wide band with a steep bottom, and a longer tail for the room. Four hands become seven that disagree; unpatched, an audience.",
       "tags": [
         "community",
         "drum",
@@ -3789,12 +3793,12 @@
         "color": "#009a98"
       },
       "version": "1.0.0",
-      "digest": "sha256:0dd38c5da96c9eb286bc2c59e165592ba50f11c599d292de6db524cd6909a192",
-      "documentationDigest": "sha256:2091b2ebb0074f863a349276a64497a46b8b728acead550bb98639ed34970dc5",
+      "digest": "sha256:05de8a6c622a292fb444dc32f2ab9b8bada34f19ada3c174ccf6425a85539696",
+      "documentationDigest": "sha256:61bd9b849a9cfe299c592b5f63c19c942c5f0ec0ee275cb70d7d00d63bcee9fd",
       "manual": {
         "controls": {
           "harmonics": "Sets the hands in a triggered clap from one through seven. Past noon, their timing and level begin to disagree. With TRIG unpatched, this becomes the audience density instead.",
-          "timbre": "Sets the width of the noise band around a fixed centre, from narrow and hollow through the original width at noon to open and crisp.",
+          "timbre": "Sets the width of the noise band around a fixed center, from narrow and hollow through the original width at noon to open and crisp.",
           "morph": "Sets the room tail behind the hands, from 8 ms to 1.2 seconds, with the original 32 ms at noon.",
           "macro": "Sets the interval between hands from 4 ms to 35 ms, with the 808's 10 ms at noon. In the unpatched single-hand audience mode, it has no audible effect."
         },
@@ -3839,11 +3843,11 @@
       },
       "version": "1.0.0",
       "digest": "sha256:f724d2dbc651d2a896e8bf3cd7b8ffb6042146bc3b91dab174b3dc2c4d120830",
-      "documentationDigest": "sha256:01abe5fadd8624b3f0d145f80953c36f62d5d2d66447a7e9c5dcd7a3ceb4bb98",
+      "documentationDigest": "sha256:d6cdaacf80464fd11b2913dbd0c0159bf90b5a900c094a8ee229a396367eef65",
       "manual": {
         "controls": {
           "harmonics": "Sets the noise crack at the strike. With TRIG unpatched, it sets the drone's tone-to-noise balance instead.",
-          "timbre": "Fades in a second oscillator at the Ratio interval, then shapes both modes towards square waves through a high-pass band. Cowbell sounds live clockwise.",
+          "timbre": "Fades in a second oscillator at the Ratio interval, then shapes both modes toward square waves through a high-pass band. Cowbell sounds live clockwise.",
           "morph": "Sets the ring length. With TRIG unpatched, it becomes the drone level, matching the stock analog drum models.",
           "macro": "Moves the second mode's ratio away from the value selected by Material. Noon keeps the default ratio."
         },
@@ -4052,15 +4056,15 @@
         "Waveform"
       ],
       "outputs": [
-        "Mono: filter output through the asymmetric drive stage. Stereo: left channel, with cutoff offset below centre.",
-        "Mono: clean filter tap before the clipper. Stereo: right channel, with cutoff offset above centre."
+        "Mono: filter output through the asymmetric drive stage. Stereo: left channel, with cutoff offset below center.",
+        "Mono: clean filter tap before the clipper. Stereo: right channel, with cutoff offset above center."
       ],
       "artwork": {
         "color": "#009a98"
       },
       "version": "1.0.0",
-      "digest": "sha256:f80a79f57cbe7e72fa07b49da0af8e1371f16d72c3625fc720d5a2249820e3cd",
-      "documentationDigest": "sha256:2d79a7acf2790d23bde38f043a3bacd88bcc0ba646826d81b4566097deaae935",
+      "digest": "sha256:dd6c501714bccf529cacfdbf0d2d1a5be6c871b55c0514dff41ae9191ac5dd9e",
+      "documentationDigest": "sha256:abacb52cd74a8d71ccefa1b97bac67ea8ebeb9381fe48c0be79a1151956db668",
       "manual": {
         "controls": {
           "harmonics": "Raises ladder feedback from a plain low-pass response into self-oscillating squelch, with less resonance as cutoff closes.",
