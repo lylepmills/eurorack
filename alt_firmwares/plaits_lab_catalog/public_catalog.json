@@ -23,8 +23,8 @@
         "Oscillator balance"
       ],
       "outputs": [
-        "Mixed variable oscillators",
-        "Synchronized oscillator pair"
+        "Mono: mixed variable oscillators. Stereo: left channel, with the square panned left of center and the detuned saw right of center.",
+        "Mono: synchronized oscillator pair. Stereo: right channel of that panned pair; the sync oscillator is not rendered."
       ],
       "artwork": {
         "icon": "/model-icons/virtual-analog.png",
@@ -32,8 +32,8 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:42b0b3b4df701ab3869566fd0e7b8106f667f69b6dbd1600b92d4211f03207a4",
-      "documentationDigest": "sha256:9b62dde3b0fbc20a189053f02b57a4fe2efd37e571abe15c1e6570daf4d69173",
+      "digest": "sha256:2be100946e76c7c4db97145d46edfa82e1c956f9c93578d7fdfb1aa94c0001aa",
+      "documentationDigest": "sha256:10385a1ca2561134eecc9ecaf912e13e019bd44c9f5b1743a4b34545dd4e8ba1",
       "manual": {
         "controls": {
           "harmonics": "Detunes the paired oscillators through closely spaced and musical intervals.",
@@ -157,8 +157,8 @@
         "Wavefolder symmetry"
       ],
       "outputs": [
-        "Waveshaped oscillator",
-        "Alternate waveshaping response"
+        "Mono: waveshaped oscillator. Stereo: left channel, with the first wavefolder table panned left of center and the second right of center.",
+        "Mono: alternate waveshaping response. Stereo: right channel of that same panned pair of folder tables."
       ],
       "artwork": {
         "icon": "/model-icons/waveshaping.png",
@@ -166,8 +166,8 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:2c18339e2908bf5ca3501934798d87da721b10589823697966b179b35144c514",
-      "documentationDigest": "sha256:716f4cf0e607fabaff9a2ccf3a76194b4e162c913e9800a69d07354d576505c0",
+      "digest": "sha256:3ff3063d858723f8c20d3c4aa5d1daa34daa2ab7f5bc88c1f10cedb364af9905",
+      "documentationDigest": "sha256:cddaf571ca106c3b4c2a548351663dd3f05655aab7de3073d099500110f6abd5",
       "manual": {
         "controls": {
           "harmonics": "Changes the waveshaper waveform before the signal reaches the wavefolder.",
@@ -201,8 +201,8 @@
         "Modulator detune"
       ],
       "outputs": [
-        "FM voice",
-        "Sub-oscillator"
+        "Mono: FM voice. Stereo: left channel, with the carrier panned slightly left of center and the sub-oscillator slightly right.",
+        "Mono: sub-oscillator. Stereo: right channel of that same carrier and sub pair."
       ],
       "artwork": {
         "icon": "/model-icons/two-op-fm.png",
@@ -210,8 +210,8 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:8320d5e7424f75330420244df05a3fb5f863fa52a6576c6557da32263ee82d8a",
-      "documentationDigest": "sha256:6f2c4f12a6db0e649400e0ee232cadaeb71f848ab379286b899e85031b3f78de",
+      "digest": "sha256:8ec57a9ac641d8abd9b0f2703556b50041a83d2c6d0436938f6989708e6edea9",
+      "documentationDigest": "sha256:88a50d2e624e15b03a4ee649bf570e8a3b92f645b710138c6ce06676573a3860",
       "manual": {
         "controls": {
           "harmonics": "Selects the carrier-to-modulator frequency ratio.",
@@ -245,8 +245,8 @@
         "Carrier bleed"
       ],
       "outputs": [
-        "Granular formant voice",
-        "Filtered-noise variant"
+        "Mono: granular formant voice. Stereo: left channel, with the two grainlets panned apart.",
+        "Mono: filtered-noise variant. Stereo: right channel of that grainlet pair; the noise variant is not rendered."
       ],
       "artwork": {
         "icon": "/model-icons/granular-formant.png",
@@ -254,8 +254,8 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:90ca70e808d9f58562ed279e8a4d16e22fdd76968659413d3c10f6ce953f76f8",
-      "documentationDigest": "sha256:01342c1cefdc8551afbc5543bbb7f75b85972796710a1de8fdb7d9b78b57196e",
+      "digest": "sha256:10e1c132e7b0981317933a78e4e04a6af9a8f93a077c4a692ccec31680c01d39",
+      "documentationDigest": "sha256:29ff46962c624c5d756f01114b76b1a89bb1405b0cf4396e271ccbb16957a5c1",
       "manual": {
         "controls": {
           "harmonics": "Sets the frequency ratio between the two formant components.",
@@ -289,7 +289,7 @@
         "Odd/even balance"
       ],
       "outputs": [
-        "Additive partial bank",
+        "Additive partial bank.",
         "Mono: complementary organ subset. Stereo: magnitude-matched phase-rotated copy of the full partial bank."
       ],
       "artwork": {
@@ -298,8 +298,8 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:a6c47825bc7ce182f8347cdc6bfb655563677834daefdafa5e645faad414a1dc",
-      "documentationDigest": "sha256:97f318d3bc25159f86cf498fd59520ecbdd070477c64f0d8dde2b692b6ea7f47",
+      "digest": "sha256:cf86bc329f27c4c4b4c2b5510d1e520aa24a99fb231430ae54782c9cb5d3487c",
+      "documentationDigest": "sha256:3a859701532734d9b913a4b8c12b5f41e1e7ef3de48ade0c499f67ec8aa07b3c",
       "manual": {
         "controls": {
           "harmonics": "Changes the number of spectral bumps and the ripples distributed around them.",
@@ -333,7 +333,7 @@
         "Phase warp"
       ],
       "outputs": [
-        "Interpolated wavetable",
+        "Interpolated wavetable.",
         "Mono: 5-bit version of the wavetable. Stereo: magnitude-matched phase-rotated copy."
       ],
       "artwork": {
@@ -342,8 +342,8 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:28b68bacba3205e6657929b7ce91bbef3a78f8072fa6b33bc441f6c241c1e15a",
-      "documentationDigest": "sha256:630d5b540d55f0d184fd5054c16712ba7b1f8a9a6af9c5c8d661dbc96685f049",
+      "digest": "sha256:b74b2d49fd2afbde9d023b60a6498149d8d1f24d2a672497af9e876d40789514",
+      "documentationDigest": "sha256:c8eff8dccd67678e4f70032ca2fb51886e6cc5db7e82795c833e0ed5cb842efa",
       "manual": {
         "controls": {
           "harmonics": "Selects a family within the integrated wavetable collection.",
@@ -424,8 +424,8 @@
         "Spectral emphasis"
       ],
       "outputs": [
-        "Speech synthesizer",
-        "Raw excitation or alternate voice"
+        "Mono: speech synthesizer. Stereo: left channel, with the voice panned slightly left of center and the secondary path slightly right.",
+        "Mono: raw excitation or alternate voice. Stereo: right channel of that same widened pair."
       ],
       "artwork": {
         "icon": "/model-icons/speech.png",
@@ -433,8 +433,8 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:70ccf071f6b33e17adf1f7a2a967dfa76ccac4f1c00eb11bdca8b52abbd2fc40",
-      "documentationDigest": "sha256:c6fca2e8acaae4f711cc1505a395e20cccb1a08635407e4d14a8dacf7d265b0c",
+      "digest": "sha256:c5daa39ab23c9627b6ecb9926257b4c99e6772eb3e90958c87530b79f3ae4fb3",
+      "documentationDigest": "sha256:c4950b3c470fa914813b41693376f8a13ab0d0dc3fe0f2bc5ebf442392dcf31d",
       "manual": {
         "controls": {
           "harmonics": "Crossfades the speech models, then selects LPC word banks.",
@@ -561,8 +561,8 @@
         "Size dispersion"
       ],
       "outputs": [
-        "Sawtooth swarm",
-        "Sine swarm"
+        "Mono: sawtooth swarm. Stereo: left channel, with the eight saw voices panned by detune rank.",
+        "Mono: sine swarm. Stereo: right channel of that same spread; the sine swarm is not rendered."
       ],
       "artwork": {
         "icon": "/model-icons/swarm.png",
@@ -570,8 +570,8 @@
         "tone": "red"
       },
       "version": "1.0.0",
-      "digest": "sha256:79f3713254d067d101ef287152079715ab96beb000e59e475d52b01262e3dcdb",
-      "documentationDigest": "sha256:bb7400c30f8a33170f1a6bf6e94e1d63331764106291329aa9263a030d26d2b8",
+      "digest": "sha256:f00defbdeb842c942d130d44cde0dbbfe7142fd46c3c07530d37abfec90cd449",
+      "documentationDigest": "sha256:66c6745a611123f9309fd6dbe5bc0ddc5437ebaf237012a9fa3b1d33c188d505",
       "manual": {
         "controls": {
           "harmonics": "Changes the amount of random pitch spread across the eight swarm voices.",
@@ -605,7 +605,7 @@
         "Filter position"
       ],
       "outputs": [
-        "Filtered noise",
+        "Filtered noise.",
         "Mono: two separated band-pass voices. Stereo: decorrelated matching filter."
       ],
       "artwork": {
@@ -614,8 +614,8 @@
         "tone": "red"
       },
       "version": "1.0.0",
-      "digest": "sha256:5a823b519b5c454f0156b8aa0ae860473a2cb08b317dc94062e7e65913275e3f",
-      "documentationDigest": "sha256:b5304993a5196b5a198bf8c6b646281217ec227971e867beb8a4bb334c50d6d3",
+      "digest": "sha256:abe5268917ebca3bc98525b50245227e1d02f9c31b0a9206377962c9d509de81",
+      "documentationDigest": "sha256:31cdf53a3f38be0c9ec2b1d1eda8b53d41aabddfaf1f02f5619b93c20d437a70",
       "manual": {
         "controls": {
           "harmonics": "Sweeps the primary filter response continuously from low-pass through band-pass to high-pass.",
@@ -649,8 +649,8 @@
         "Diffusion"
       ],
       "outputs": [
-        "Resonant particles",
-        "Raw particle impulses"
+        "Mono: resonant particles. Stereo: left channel, with the six particles spread across fixed pan positions.",
+        "Mono: raw particle impulses. Stereo: right channel of that same spread."
       ],
       "artwork": {
         "icon": "/model-icons/particle-noise.png",
@@ -658,8 +658,8 @@
         "tone": "red"
       },
       "version": "1.0.0",
-      "digest": "sha256:95c7d8b157f1e70f2e77c55f8f36f2f6b3cc63b723ca06849fed0bf5b6060818",
-      "documentationDigest": "sha256:285d692e51ab761a990910c6a66fb2053ed0aef1d59fd0c3f087e7e74cfc3c1e",
+      "digest": "sha256:a2e53a6699cb302a607f62e6a1cc9153fd992244907849b5de183b35940aa9df",
+      "documentationDigest": "sha256:777124f848a99a33d6208874e634ad4fd1e02bb256d9b7e6d6bbe54dfddddac8",
       "manual": {
         "controls": {
           "harmonics": "Randomizes particle frequencies around the played note.",
@@ -693,8 +693,8 @@
         "Excitation duration"
       ],
       "outputs": [
-        "Physical string",
-        "Raw exciter"
+        "Mono: physical string. Stereo: left channel, with the three strings panned across fixed positions.",
+        "Mono: raw exciter. Stereo: right channel of that same spread."
       ],
       "artwork": {
         "icon": "/model-icons/inharmonic-string.png",
@@ -705,8 +705,8 @@
         "physical-string"
       ],
       "version": "1.0.0",
-      "digest": "sha256:3c25a839aa0cdb06dcbdd9861940cd445d86fb6dbb3f9b298155be5f5dd65ea5",
-      "documentationDigest": "sha256:271fe6e2c7c55e915e66ec3415472b0992cbb5cb3e2af981759f9327d5d5c068",
+      "digest": "sha256:65ff8e7f8a16e467a444d3e91b02614e8f30c1919974cdb053e56b199aaf0b77",
+      "documentationDigest": "sha256:3142f028c13831a694b02a1f563983e29fb724c917adfe29748ede95c6a8c919",
       "manual": {
         "controls": {
           "harmonics": "Changes string dispersion from harmonic plucks to inharmonic material.",
@@ -740,8 +740,8 @@
         "Exciter resonance"
       ],
       "outputs": [
-        "Modal resonator",
-        "Raw exciter"
+        "Mono: modal resonator. Stereo: left channel, with even-numbered modes leaning left and odd-numbered modes right.",
+        "Mono: raw exciter. Stereo: right channel of that same mode split."
       ],
       "artwork": {
         "icon": "/model-icons/modal-resonator.png",
@@ -752,8 +752,8 @@
         "physical-modal"
       ],
       "version": "1.0.0",
-      "digest": "sha256:18a116d9945c44b5743c67a5cc970e4d139e7295316efb99015b5bada4bc697d",
-      "documentationDigest": "sha256:ed0f242effc18f10c87c91dee52ab4802a1e8a0dfa0545a420430354f3487b3e",
+      "digest": "sha256:fa2105a2ce7533eaa160f266af2593b7f0b3edd99759b623a8f438c57b7f8d10",
+      "documentationDigest": "sha256:56f462a745b67956eddb054108013a3e0048a2cf34bc525473413fc1e756f74d",
       "manual": {
         "controls": {
           "harmonics": "Changes modal structure across strings, plates, tubes, and bells.",
@@ -787,8 +787,8 @@
         "Pitch-envelope punch"
       ],
       "outputs": [
-        "Analog-modeled bass drum",
-        "Synthetic bass drum"
+        "Mono: analog-modeled bass drum. Stereo: left channel, with the two kick models panned close to center.",
+        "Mono: synthetic bass drum. Stereo: right channel of that same pair."
       ],
       "artwork": {
         "icon": "/model-icons/analog-bass-drum.png",
@@ -796,8 +796,8 @@
         "tone": "red"
       },
       "version": "1.0.0",
-      "digest": "sha256:e6316c6fbc0abe3d04732ee657c7e01aba094133ba8a3dbb71129f4229de9104",
-      "documentationDigest": "sha256:8d5fd1869cb01778a8b2be8b3c3c8103d12763dffca8efd4196dc38041426a42",
+      "digest": "sha256:83f9a20b6979b7ed40faa1540d27c39de33527cab39a0dfb71d6f1be39644d5d",
+      "documentationDigest": "sha256:49c0a0c29b76a6d030defeb61b3eb2235a4e6a437786bedd25ef85ff45fd8ef2",
       "manual": {
         "controls": {
           "harmonics": "Changes attack sharpness, pitch-envelope amount, and overdrive.",
@@ -831,8 +831,8 @@
         "Shell inharmonicity"
       ],
       "outputs": [
-        "Analog-modeled snare",
-        "Synthetic snare"
+        "Mono: analog-modeled snare. Stereo: left channel, with the two snare models panned apart.",
+        "Mono: synthetic snare. Stereo: right channel of that same pair."
       ],
       "artwork": {
         "icon": "/model-icons/analog-snare.png",
@@ -840,8 +840,8 @@
         "tone": "red"
       },
       "version": "1.0.0",
-      "digest": "sha256:38298cdb465becc6afcbb837b465e024e50c0f17fca913a48a81df6dff76187a",
-      "documentationDigest": "sha256:e52448dc9e7caf6c21d38715fa8e6ed0afce76c18eb557e29e80646513c5bf64",
+      "digest": "sha256:f96653a528773213c3ab4180d43e6c47573220234c04d359a7f4642d85863523",
+      "documentationDigest": "sha256:1867326eb49cbb2092e087ad681dd3e425e694876ab97161880e033dc23af7b4",
       "manual": {
         "controls": {
           "harmonics": "Balances the tuned shell oscillators against the filtered noise component.",
@@ -876,8 +876,8 @@
         "Oscillator spacing"
       ],
       "outputs": [
-        "Analog-modeled hi-hat",
-        "Synthetic hi-hat"
+        "Mono: analog-modeled hi-hat. Stereo: left channel, with the two hi-hat models panned apart.",
+        "Mono: synthetic hi-hat. Stereo: right channel of that same pair."
       ],
       "artwork": {
         "icon": "/model-icons/analog-hi-hat.png",
@@ -885,8 +885,8 @@
         "tone": "red"
       },
       "version": "1.0.0",
-      "digest": "sha256:d3b030d860082cc0d9a16ce8b2d835f38101bb0ccd67e0d8940257bdd1611ba6",
-      "documentationDigest": "sha256:778ab02b11692112c1963a777f65c8aa9b603593dead72119dbed0c23b57f395",
+      "digest": "sha256:0a5e78899fc674aebd17f9283de4ee78344d5c25da068fcd6d984c9d6670b7bf",
+      "documentationDigest": "sha256:344ca6272fba253fa380188d03ce1c60f22446863fbb58708a9e9a69b06b45cf",
       "manual": {
         "controls": {
           "harmonics": "Balances the metallic oscillator bank against filtered noise.",
@@ -921,8 +921,8 @@
         "Drive"
       ],
       "outputs": [
-        "Two-stage low-pass output",
-        "Soft-clipped high-pass output"
+        "Mono: two-stage low-pass output. Stereo: left channel, the low-pass body with the high band added as a side signal.",
+        "Mono: soft-clipped high-pass output. Stereo: right channel, the same body with that side signal subtracted."
       ],
       "artwork": {
         "icon": "/model-icons/virtual-analog-vcf.png",
@@ -930,8 +930,8 @@
         "tone": "amber"
       },
       "version": "1.0.0",
-      "digest": "sha256:afb8ce48bf57b0ed4daa0827f633ab3f4e21954e12f0273a6c0b048da2c43f70",
-      "documentationDigest": "sha256:7d4303e9413d2e6704fce0ae809d1674b3e63b3512dc91a4e34555b5566f5a7a",
+      "digest": "sha256:182cf45e00edd3c7365d3c53ce1cefd72099abfdc59659401ee322a7975fb419",
+      "documentationDigest": "sha256:f3575b572723fb28257f34da4a27edf3b8b3dbb8e6ac1c06878aa0888f4e2798",
       "manual": {
         "controls": {
           "harmonics": "Changes filter character from a gentle four-pole response through resonance to a harsher two-pole response.",
@@ -965,8 +965,8 @@
         "Modulator ratio"
       ],
       "outputs": [
-        "Hard-synced phase-distortion voice",
-        "Free-running phase-modulation voice"
+        "Hard-synced phase-distortion voice; the left channel in stereo, unchanged.",
+        "Free-running phase-modulation voice; the right channel in stereo, unchanged. The two oscillators are already decorrelated."
       ],
       "artwork": {
         "icon": "/model-icons/phase-distortion.png",
@@ -974,8 +974,8 @@
         "tone": "amber"
       },
       "version": "1.0.0",
-      "digest": "sha256:17c47e71f0a579e84034679983bbb58d40aed00b44cd9eb0f3f66c2b4d506401",
-      "documentationDigest": "sha256:654850f281292ff0028632148be45918df0559d7e4277434660f90d5b51fae71",
+      "digest": "sha256:1b389bd08b497ab9dd69aa234e6654e02969282c2d2081c3be602ebb83b214f9",
+      "documentationDigest": "sha256:318fb9bf07e2402c60a0ddbb164a98e1b96f57f8c5c09df04eba7b3504966fbd",
       "manual": {
         "controls": {
           "harmonics": "Selects the distortion or modulator frequency through quantized ratios.",
@@ -1010,8 +1010,8 @@
         "Network detune"
       ],
       "outputs": [
-        "Six-operator FM voice; left channel in stereo",
-        "Same voice mix in mono; right channel in stereo"
+        "Six-operator FM voice; left channel in stereo.",
+        "Same voice mix in mono; right channel in stereo."
       ],
       "artwork": {
         "icon": "/model-icons/dx7-bank-a.png",
@@ -1022,8 +1022,8 @@
         "fm-core"
       ],
       "version": "1.0.0",
-      "digest": "sha256:f689c80767d88ac768e7ad1ee19c216109b09b385c8ba2e3a71505fa951fffbb",
-      "documentationDigest": "sha256:0abdb1691f49cb2fc670afbbfe297d9f03e617f331302c28af4e742d1313fb2b",
+      "digest": "sha256:3b3f7ef36e7a531897f243127cad11a7783f1883c683b9227b979721cf9fee52",
+      "documentationDigest": "sha256:5ebab97ab34e9cba9de05474d30b1b25df8c75da587ceb492543b0231b63d79b",
       "manual": {
         "controls": {
           "harmonics": "Selects a patch from the first built-in six-operator FM bank.",
@@ -1059,8 +1059,8 @@
         "Network detune"
       ],
       "outputs": [
-        "Six-operator FM voice; left channel in stereo",
-        "Same voice mix in mono; right channel in stereo"
+        "Six-operator FM voice; left channel in stereo.",
+        "Same voice mix in mono; right channel in stereo."
       ],
       "artwork": {
         "icon": "/model-icons/dx7-bank-b.png",
@@ -1071,8 +1071,8 @@
         "fm-core"
       ],
       "version": "1.0.0",
-      "digest": "sha256:66069c582ab92fecdb08db8690c0e072bf8696ea176dbb20eeb87f606c8bc27c",
-      "documentationDigest": "sha256:81e5c7857243717bf6020fde222b224effa3e31d36dab8e8dcf49edd58e34d41",
+      "digest": "sha256:7264a45223e660818da660e79f8a1fc63b2eba1715e3427c5b5c023e7ce5fc07",
+      "documentationDigest": "sha256:2e862986408f2e40486f862aebdd389de5ef914a6277bec746f0958642cb788f",
       "manual": {
         "controls": {
           "harmonics": "Selects a patch from the second built-in six-operator FM bank.",
@@ -1108,8 +1108,8 @@
         "Network detune"
       ],
       "outputs": [
-        "Six-operator FM voice; left channel in stereo",
-        "Same voice mix in mono; right channel in stereo"
+        "Six-operator FM voice; left channel in stereo.",
+        "Same voice mix in mono; right channel in stereo."
       ],
       "artwork": {
         "icon": "/model-icons/dx7-bank-c.png",
@@ -1120,8 +1120,8 @@
         "fm-core"
       ],
       "version": "1.0.0",
-      "digest": "sha256:d199156086068c7cea01f716ba0a93669e24fa4da38de6269bacc1ec7e1beacf",
-      "documentationDigest": "sha256:9f60db48e9b96db91ee2eae6bea449bace67119a8937bf4fdc3859fbd9a4a41e",
+      "digest": "sha256:0809b304ac72121e8704779394aeb21b7e817989ba0e2c9e2e5ac7e78d9c793d",
+      "documentationDigest": "sha256:3b32f1799ab38b374c1d1524da37f86cbbad51b4cba91b7332f34f0d45868a34",
       "manual": {
         "controls": {
           "harmonics": "Selects a patch from the third built-in six-operator FM bank.",
@@ -1156,7 +1156,7 @@
         "Y offset"
       ],
       "outputs": [
-        "Wave-terrain scan",
+        "Wave-terrain scan.",
         "The alternate Sine(y + z) projection of the same trajectory; used as the right channel in stereo."
       ],
       "artwork": {
@@ -1165,8 +1165,8 @@
         "tone": "amber"
       },
       "version": "1.0.0",
-      "digest": "sha256:3a090cab26ad73c2adf1ca3a54412507a96865a932068697a547ab65d0da0c95",
-      "documentationDigest": "sha256:36a0238da0e609042ae6a2819e6262d31baa3240a3c21e48529bd709367fdc01",
+      "digest": "sha256:76881b3e0b3d7074c49209c2b706d71273f2f833209423a79fd90c7f441c21b8",
+      "documentationDigest": "sha256:7b9ccd6024fe03393363a66f7ad9d8039cf32deb1dd5a4639fe8e74611345d16",
       "manual": {
         "controls": {
           "harmonics": "Selects the terrain or waveform family used by the two-dimensional scan.",
@@ -1201,8 +1201,8 @@
         "Ensemble amount"
       ],
       "outputs": [
-        "Voices 1 and 3 predominantly",
-        "Voices 2 and 4 predominantly"
+        "Voices 1 and 3 predominantly; the left channel in stereo, unchanged.",
+        "Voices 2 and 4 predominantly; the right channel in stereo, unchanged."
       ],
       "artwork": {
         "icon": "/model-icons/string-machine.png",
@@ -1213,8 +1213,8 @@
         "chord-bank"
       ],
       "version": "1.0.0",
-      "digest": "sha256:c4ff86a03622c6abb591142240f7cdabdfbf63f45e40dd7db39f7b771cf2b3ec",
-      "documentationDigest": "sha256:9960a2dd157338fceed31ad84fa48ec4c49093b5f06b6578c0e65da1ca19106b",
+      "digest": "sha256:c2e98ada7c30c5f4af6144c457df46be850c5ed87a8cece639e4c017344e3caf",
+      "documentationDigest": "sha256:280a414deb2a1d27eb1d7b5aec6a552ed16c60bf93c1d9bf5364e510883ccd43",
       "manual": {
         "controls": {
           "harmonics": "Selects the chord from the active chord table.",
@@ -1249,8 +1249,8 @@
         "Register preset"
       ],
       "outputs": [
-        "Chiptune chord or arpeggio",
-        "NES triangle bass"
+        "Mono: chiptune chord or arpeggio. Stereo: left channel, with the chord voices spread across fixed positions and the arpeggio alternating sides.",
+        "Mono: NES triangle bass. Stereo: right channel of that spread; the bass stays centered."
       ],
       "artwork": {
         "icon": "/model-icons/chiptune.png",
@@ -1261,8 +1261,8 @@
         "chord-bank"
       ],
       "version": "1.0.0",
-      "digest": "sha256:5d8fcb2d3d64d498947440d267ab37a337cde970fa404f648b87a0c23522bb9d",
-      "documentationDigest": "sha256:52e57ae792d1e52d97c73c2ebcd5019dcc1a1265b02128375843986d76312075",
+      "digest": "sha256:d97f21901ee6e9f9063c415578ea954b64ec82ac58013258874021330ae93a3b",
+      "documentationDigest": "sha256:3428ef64647bef3ad0eaa19418f4c93cb39755d19804139072ca9307083d956f",
       "manual": {
         "controls": {
           "harmonics": "Selects the chord or interval pattern of the square-wave voices.",
@@ -1943,10 +1943,10 @@
       ],
       "version": "1.0.0",
       "digest": "sha256:d70190882a2fd892dab74f46244e251b1e1dfee37af6cfd9bfe064271e7e5576",
-      "documentationDigest": "sha256:217bb62e7fa836d32f95a46cabdf554c245439a244e35ff0de011aa148ce6040",
+      "documentationDigest": "sha256:a6fe44d473317600014aa58912d4523b21935f5e6b65a8f520b0f291bab7c8bd",
       "manual": {
         "controls": {
-          "harmonics": "Selects the lowpass, peaking, bandpass and highpass filter models.",
+          "harmonics": "Selects the lowpass, peaking, bandpass, and highpass filter models.",
           "timbre": "Sweeps the filter cutoff from below the note to ten octaves above it.",
           "morph": "Morphs the filter excitation from saw through square at noon to triangle.",
           "macro": "Bends the burst envelope from the flat stock ramp toward a sharp percussive attack."
@@ -2628,15 +2628,15 @@
       ],
       "version": "1.0.0",
       "digest": "sha256:d975df7281d1d51ca797d62188e9149288cedea33dbd57e9ac0a3100eb6c8b19",
-      "documentationDigest": "sha256:8e9faf98ec7c6715360b820db6e198a811b958a57b582c8ce1e7a38aef44364a",
+      "documentationDigest": "sha256:f4c5ecf5d7d11c1e2ca18fccd4c94788ebb9601cabe62b889029c081c65b2a1a",
       "manual": {
         "controls": {
           "harmonics": "Braids' COLOR: the corner of the body filter the bore is heard through. Its live travel narrows with the note.",
-          "timbre": "Braids' TIMBRE: how much noise rides on the breath. Low is turbulent, airy and quiet; high is steady and loud.",
+          "timbre": "Braids' TIMBRE: how much noise rides on the breath. Low is turbulent, airy, and quiet; high is steady and loud.",
           "morph": "Mouth pressure, which Braids welds at 0.8. Down for an under-blown pipe, up to drive the reed into its clip.",
           "macro": "The reed's rest offset, which Braids welds at 0.7. Down for a loose reed, up for one pinned open most of the cycle."
         },
-        "trigger": "Flushes the bore pressure while leaving the breath, filter state and delay position running."
+        "trigger": "Flushes the bore pressure while leaving the breath, filter state, and delay position running."
       },
       "implementation": {
         "className": "BlownEngine"
@@ -2857,7 +2857,7 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Wavetable",
-      "description": "Braids' three wavetable models in one slot, over its own 256-wave 8-bit bank: 20 named banks, a 16x16 interpolated map, and a curated line with a phase-domain crush.",
+      "description": "Braids' three wavetable models in one slot, over its own set of 256 8-bit waves: 20 named banks, a 16x16 interpolated map, and a curated line with a phase-domain crush.",
       "tags": [
         "braids",
         "wavetable",
@@ -2872,11 +2872,11 @@
       ],
       "outputs": [
         "Mono: the scanned readout. Stereo: the same scan with a small leftward crossfade offset.",
-        "Mono: the adjacent wave, opposite map corner or other crush endpoint. Stereo: the scan with a small rightward offset."
+        "Mono: the adjacent wave, opposite map corner, or other crush endpoint. Stereo: the scan with a small rightward offset."
       ],
       "version": "1.0.0",
-      "digest": "sha256:fa678a09b26f9b5a0ae38fdcc201ce7a363ebdaf1e1f8e52b641e742801a0b21",
-      "documentationDigest": "sha256:0a48a5f31e136926122ff75d9f3b20fcea271f1c1ddb5c25049b9cf0b9210851",
+      "digest": "sha256:e2d758c11a7706b2a46666b9cc645836491251eb26c8f0be1d2c75fe911cf6c3",
+      "documentationDigest": "sha256:27075802027561171fee70f7919479264c86dd51e309dcec7cd1fe8c4aa606dd",
       "manual": {
         "controls": {
           "harmonics": "Selects the banks, the 16x16 map, or the curated line.",
@@ -2959,7 +2959,7 @@
       ],
       "version": "1.0.0",
       "digest": "sha256:df6840295d6121ca99caf2546c9144783acf810a534252257af85730a2d4076a",
-      "documentationDigest": "sha256:645ae7600b19b407021d687e824a1c5314465fde418dfd4243c693be79a1a2fd",
+      "documentationDigest": "sha256:f764e28ec71485acb65367c8cd79d51b758405589060d50b5b3fbabfd2444dbc",
       "manual": {
         "controls": {
           "harmonics": "Braids' COLOR: splits one fixed loop length between jet and bore. Moves the embouchure without moving the pitch.",
@@ -2967,7 +2967,7 @@
           "morph": "Breath pressure, welded at twice the envelope in Braids. Under- or over-blow the pipe until it changes register.",
           "macro": "The bore's damping, which Braids ties rigidly to the note and gives no knob. Down for a dark pipe, up for a bright one."
         },
-        "trigger": "Restarts the excitation envelope, flushes both delay lines and clears the reflection filter."
+        "trigger": "Restarts the excitation envelope, flushes both delay lines, and clears the reflection filter."
       },
       "implementation": {
         "className": "FlutedEngine"
@@ -3021,7 +3021,7 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Physical",
-      "description": "A bowed string waveguide with a stick-slip friction exciter, a movable bow and an adjustable instrument body.",
+      "description": "A bowed string waveguide with a stick-slip friction exciter, a movable bow, and an adjustable instrument body.",
       "tags": [
         "braids",
         "waveguide",
@@ -3039,8 +3039,8 @@
         "Mono: the bow exciter before the string and body. Stereo: the neck pickup through the body on the right."
       ],
       "version": "1.0.0",
-      "digest": "sha256:a4e5c2d6a224021e194b036789d17ce4bf39603a99013ed3176f4d1ac813d8c5",
-      "documentationDigest": "sha256:4d0a19fabc6a0a96b96c36e8ce88b6684871126fd03a30b54713eb86a67dbb7b",
+      "digest": "sha256:377705da94b289b20380a3bb36d36e97ef829b0394010d28e7ac318c8402bda6",
+      "documentationDigest": "sha256:141d84a780fe6ef5d8609f1cab204a218043c8c09ea10998a1837f721ae8c657",
       "manual": {
         "controls": {
           "harmonics": "Moves the bow from near the bridge to well up the neck.",
@@ -3200,12 +3200,12 @@
       ],
       "version": "1.0.0",
       "digest": "sha256:a3d8a8f5b3be2272e4b091406988ee86b33397067fcf5b77289a118914135665",
-      "documentationDigest": "sha256:e12dec021b9014f7c616cd36d7bacecd4c49d8735f05d6e833d3dca9f23e11da",
+      "documentationDigest": "sha256:70845b0b47564e633f264bfd15367816b64aedc8eade801d5eed2e854641a0eb",
       "manual": {
         "controls": {
           "harmonics": "Tilts the excitation from a dark buzz to a bright breathy hiss.",
           "timbre": "Sweeps the vowel through the five phonemes: /a/, /e/, /i/, /o/, /u/.",
-          "morph": "Steps the vocal register from bass through tenor, countertenor and alto to soprano.",
+          "morph": "Steps the vocal register from bass through tenor, countertenor, and alto to soprano.",
           "macro": "Restores the formant amplitude balance the stock model leaves flat. Centered is flat, exactly as hardware."
         },
         "trigger": "Re-initializes the filter bank; the model has no internal envelope and otherwise ignores TRIG."
@@ -3261,7 +3261,7 @@
       "author": "Emilie Gillet",
       "origin": "Mutable Instruments",
       "family": "Polyphonic",
-      "description": "Three oscillators with two continuously swept interval knobs, morphing together through square, saw, triangle and sine. It overlaps Chords and Swarm in territory, not lineage: intervals you sweep rather than a table you author.",
+      "description": "Three oscillators with two continuously swept interval knobs, morphing together through square, saw, triangle, and sine. It overlaps Chords and Swarm in territory, not lineage: intervals you sweep rather than a table you author.",
       "tags": [
         "braids",
         "detune",
@@ -3279,8 +3279,8 @@
         "Undetuned root voice. The stereo toggle does not change this fixed mix/root pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:abdc8064b720b7841cd439934d1f18be69bdd76c711632e026f94609a5950107",
-      "documentationDigest": "sha256:2baea99e9508918fe183a5b3b63da6a256228e63d1da1a7ed352f718d2fc3348",
+      "digest": "sha256:cb29a4469ec076d83dcd71752893aa195191a396dde5118b6f60d2e008d8c3c6",
+      "documentationDigest": "sha256:5fb78bca38b27859fb878aeecf8611cfa498ce1c2a09c138dca07a37e1099cc9",
       "manual": {
         "controls": {
           "harmonics": "Spreads the second voice through closely spaced and musical intervals.",
@@ -3575,11 +3575,11 @@
       ],
       "version": "1.0.0",
       "digest": "sha256:d5bd416b28409864ca63e59875c36613d47c2c6f99b15595f4129a966eb0df3c",
-      "documentationDigest": "sha256:d265b589d27ca841aee715c4c9671e6bdd3024665f59282036e401e1beacf613",
+      "documentationDigest": "sha256:c0fa3899d6930a09346e0f0b0608bc42dcbf261e3fa56066a59be95026dc9237",
       "manual": {
         "controls": {
           "harmonics": "Lip tension. Climbs the bore's partials \u2014 unison, fifth, octave, tenth, twelfth \u2014 and bends each one sharp as it rises.",
-          "timbre": "Raises breath pressure from gentle to strong while staying above the model's oscillation threshold across the full range.",
+          "timbre": "Raises breath pressure from gentle to strong, staying above the model's oscillation threshold across the full range.",
           "morph": "Bell size, from a stopped horn that barely sustains to an open one that rings and overblows easily.",
           "macro": "Buzz. How far the lips swing into closure each cycle \u2014 a soft flutter at the bottom, a real mouthpiece buzz at the top."
         },
@@ -3642,7 +3642,7 @@
       "author": "Lyle Mills",
       "origin": "Rubato Lab",
       "family": "Percussion",
-      "description": "Struck membrane modes move from a round open head to a tighter loaded skin, with center, rim, damping and pitch-dive control.",
+      "description": "Struck membrane modes move from a round open head to a tighter loaded skin, with center, rim, damping, and pitch-dive control.",
       "tags": [
         "drum",
         "hand drum",
@@ -3662,8 +3662,8 @@
         "Mono: rim-weighted upper modes and dry slap. Stereo: the right membrane pickup."
       ],
       "version": "1.0.0",
-      "digest": "sha256:e9da04409d329f916a11d9b6b016ef98676f6c0c19e0219186cb2724829d61b0",
-      "documentationDigest": "sha256:bf5fe1a7c57019e8ef85d606062ab623fedbecc09285b938e4fe7dc6c059ede2",
+      "digest": "sha256:7414698f9652092d33a83a553f635093fd8ed185610663f29c0336797b070c37",
+      "documentationDigest": "sha256:224c5930a754f115cf5c938681fe56fbf44b5df394822a87cc502830e959ed76",
       "manual": {
         "controls": {
           "harmonics": "Retensions the mode ratios from a round open head toward a tighter loaded skin.",
@@ -3684,7 +3684,7 @@
       "author": "Lyle Mills",
       "origin": "Rubato Lab",
       "family": "Percussion",
-      "description": "Falling-pitch electronic strikes cross two oscillators into ring-modulated zaps, sparks and driven discharges.",
+      "description": "Falling-pitch electronic strikes cross two oscillators into ring-modulated zaps, sparks, and driven discharges.",
       "tags": [
         "electronic",
         "percussion",
@@ -3704,8 +3704,8 @@
         "Mono: the clean oscillators and attack transient. Stereo: the right crossed circuit and independent spark."
       ],
       "version": "1.0.0",
-      "digest": "sha256:b146ea4aff5fd052f40e4e8f2351bceaddd6adde02b9cf441f8381efc370b300",
-      "documentationDigest": "sha256:ef2eff973237a76b76a4daa2de99a138c337fc38df3242c092799f9b3394df0d",
+      "digest": "sha256:40c5c2c6be235663c6974e8660cc4812729d257c34bfa8dfadb8f8ffe36aeb6d",
+      "documentationDigest": "sha256:92c6d5e20eee4d5d36d8e7ce34611b88519ecdff4755addb7d22f9a6e78798ec",
       "manual": {
         "controls": {
           "harmonics": "Crosses a swept sine with a harder twin, then multiplies them into ring modulation.",
@@ -3726,7 +3726,7 @@
       "author": "Lyle Mills",
       "origin": "Rubato Lab",
       "family": "Percussion",
-      "description": "Paired inharmonic modes turn one struck-metal model into anvil, agogo, plate and gong families with controllable beating.",
+      "description": "Paired inharmonic modes turn one struck-metal model into anvil, agogo, plate, and gong families with controllable beating.",
       "tags": [
         "agogo",
         "anvil",
@@ -3747,11 +3747,11 @@
         "Mono: upper modes and dry metal strike. Stereo: the right modal pickup."
       ],
       "version": "1.0.0",
-      "digest": "sha256:05c5ed8704a9989e87a91d1a9a959fdc416c0b6b02198d8da35e92293ea0e4f8",
-      "documentationDigest": "sha256:0d123a32082dc308c5048a4f57f29f3e907aa254de36c5fc1d2bb6ea2a4c5fa7",
+      "digest": "sha256:3e4894bebf688ef5d3407fea36c39b38b54268cd7018ddd7502dad91efef82b1",
+      "documentationDigest": "sha256:879984b407439825a987b735a59a29b360910c06af758f5d58bc136136e46b9e",
       "manual": {
         "controls": {
-          "harmonics": "Selects anvil, agogo, plate or gong mode ratios on the next strike.",
+          "harmonics": "Selects anvil, agogo, plate, or gong mode ratios on the next strike.",
           "timbre": "Trades a soft low mallet response for a hard upper-mode strike.",
           "morph": "Opens the object from a dry knock to a long metal ring.",
           "macro": "Detunes a paired copy of every mode from stable metal to slow shimmering interference."
@@ -3765,7 +3765,7 @@
     {
       "id": "clap",
       "packageId": "community/clap",
-      "name": "Clap",
+      "name": "Analog Clap",
       "author": "Dylan Bolink",
       "origin": "Community",
       "family": "Drums",
@@ -3793,8 +3793,8 @@
         "color": "#009a98"
       },
       "version": "1.0.0",
-      "digest": "sha256:05de8a6c622a292fb444dc32f2ab9b8bada34f19ada3c174ccf6425a85539696",
-      "documentationDigest": "sha256:61bd9b849a9cfe299c592b5f63c19c942c5f0ec0ee275cb70d7d00d63bcee9fd",
+      "digest": "sha256:b562ed61a6e816c2975f8e86ea41b65d56279fdfbf64f0ee34b5cb42a498b85e",
+      "documentationDigest": "sha256:08dcb3bdd157a2e14627de3337bbe4f4895986b207af3b35b7bfb95e9c59df60",
       "manual": {
         "controls": {
           "harmonics": "Sets the hands in a triggered clap from one through seven. Past noon, their timing and level begin to disagree. With TRIG unpatched, this becomes the audience density instead.",
@@ -3815,7 +3815,7 @@
       "author": "Dylan Bolink",
       "origin": "Community",
       "family": "Drums",
-      "description": "The 808's tuned percussion: toms, congas, rimshot, claves and cowbell are points in one plane of pitch, ring length and material rather than separate instruments.",
+      "description": "The 808's tuned percussion: toms, congas, rimshot, claves, and cowbell are points in one plane of pitch, ring length, and material rather than separate instruments.",
       "tags": [
         "community",
         "drum",
@@ -3842,8 +3842,8 @@
         "color": "#009a98"
       },
       "version": "1.0.0",
-      "digest": "sha256:f724d2dbc651d2a896e8bf3cd7b8ffb6042146bc3b91dab174b3dc2c4d120830",
-      "documentationDigest": "sha256:d6cdaacf80464fd11b2913dbd0c0159bf90b5a900c094a8ee229a396367eef65",
+      "digest": "sha256:c8d34dbbe796500c69e7838b56990074ee971b2377d1da06189a72dde988e14a",
+      "documentationDigest": "sha256:5d4adf54503186191252981e63cd45a2422196d14dc409d2df505273f5c79766",
       "manual": {
         "controls": {
           "harmonics": "Sets the noise crack at the strike. With TRIG unpatched, it sets the drone's tone-to-noise balance instead.",
@@ -3851,7 +3851,7 @@
           "morph": "Sets the ring length. With TRIG unpatched, it becomes the drone level, matching the stock analog drum models.",
           "macro": "Moves the second mode's ratio away from the value selected by Material. Noon keeps the default ratio."
         },
-        "trigger": "With TRIG patched, each rising edge strikes the two tuned modes, click and octave-down AUX voice. Unpatched, the engine becomes a continuous percussion drone."
+        "trigger": "With TRIG patched, each rising edge strikes the two tuned modes, click, and octave-down AUX voice. Unpatched, the engine becomes a continuous percussion drone."
       },
       "implementation": {
         "className": "AnalogPercussionEngine"
@@ -3974,12 +3974,12 @@
       ],
       "version": "1.0.0",
       "digest": "sha256:fb0d6afcab7cacf11b995b40e9a3e9b0d8b478c4d8c7270b1a86b4dc84bcfcda",
-      "documentationDigest": "sha256:64434ec08718a6a1c0204bebb6cd985c1f8a0b93498d049bcb7c66f7530cc48f",
+      "documentationDigest": "sha256:604d8e79ee1cf5b35af170af9690fbae331fe0f4d7de671a26e3eade042f0030",
       "manual": {
         "controls": {
-          "harmonics": "Moves through XOR, OR and AND mix zones. Within each zone, clockwise motion increases the 1-bit self-XOR feedback comb from off to shimmer.",
+          "harmonics": "Moves through XOR, OR, and AND mix zones. Within each zone, clockwise motion increases the 1-bit self-XOR feedback comb from off to shimmer.",
           "timbre": "Counter-clockwise gives static squares. Clockwise motion deepens and speeds the tick-clocked duty-cycle sweep on oscillator 2.",
-          "morph": "Moves from fine beating into a quantized interval ladder: fourth, fifth, octave, twelfth and two octaves, with LFSR noise at the top.",
+          "morph": "Moves from fine beating into a quantized interval ladder: fourth, fifth, octave, twelfth, and two octaves, with LFSR noise at the top.",
           "macro": "Counter-clockwise arms the triggered pitch kick; noon is neutral; clockwise adds the parasite-carrier sheen."
         },
         "trigger": "Resets both oscillator phases and reseeds the noise register. With Clean/Ghost counter-clockwise, it also fires the pitch kick."
@@ -4018,7 +4018,7 @@
       ],
       "version": "1.0.0",
       "digest": "sha256:e1f66ce99f07e10971e3e1c0d70d594122ef9b5f2f2656be14d17b64b6e11926",
-      "documentationDigest": "sha256:75464183031e0b583048af92c08490e73a71498f6335603dc1902bea06b1852a",
+      "documentationDigest": "sha256:30a4a96dc394e68957730d47c0131727dc1b5d3ae4b56ec287b7b2faea2a8058",
       "manual": {
         "controls": {
           "harmonics": "Selects a chord from the firmware chord bank, including the current Palette chord tables.",
@@ -4026,7 +4026,7 @@
           "morph": "The lower half stacks chord voices one at a time. The upper half arpeggiates the chord, with rate increasing toward tick speed.",
           "macro": "Clockwise deepens the Follin echo to about 220 ms; noon keeps the authentic three-cent pull; counter-clockwise exaggerates dying-speaker sag."
         },
-        "trigger": "Restarts all pin phases, the frame tick and the arpeggio."
+        "trigger": "Restarts all pin phases, the frame tick, and the arpeggio."
       },
       "implementation": {
         "className": "ZxPulse48kEngine"
@@ -4206,32 +4206,6 @@
       "dx7-bank-b",
       "dx7-bank-c",
       "wave-terrain",
-      "string-machine",
-      "chiptune"
-    ],
-    "audition": [
-      "loopback",
-      "lockstep",
-      "phase-weave",
-      "sideband-bank",
-      "undertow",
-      "reed-pipe",
-      "phase-flock",
-      "spectral-spiral",
-      "tapfield",
-      "attractor",
-      "rulefield",
-      "glisson",
-      "gendy",
-      "scanned",
-      "pulsar",
-      "particle-noise",
-      "virtual-analog-vcf",
-      "phase-distortion",
-      "virtual-analog",
-      "waveshaping",
-      "two-op-fm",
-      "wavetable",
       "string-machine",
       "chiptune"
     ]
