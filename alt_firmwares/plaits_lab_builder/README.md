@@ -964,6 +964,7 @@ target.
 | September 1, 2026 (schema 27 four-way articulation, sixteen chord tables, Ro'Ved gestures, and Acid; 93 engines) | `8f97241069cc` | `rev-8f97241069cc` |
 | September 1, 2026 (stereo Skins, Circuit Zaps, and Metalwork percussion engines; 96 engines) | `37c608fa2a69` | `rev-37c608fa2a69` |
 | September 2, 2026 (schema 28 shared Wave Tables library and per-engine wave routes) | `bdf148346885` | `rev-bdf148346885` |
+| September 2, 2026 (Acid native hard sync) | `06d11c08e05e` | `rev-06d11c08e05e` |
 
 The schema-28 shared-wave production canary compiled fresh as build
 `e114ffb89814dc91dd8faeff3b8eb46354130497f79ce9267f7e0b8b9185f94a`:
@@ -975,6 +976,46 @@ The compiler stamped `bdf148346885`, the matching field guide completed, and
 the dedicated Speech encoder was rotated to `speech-encoder-v19` only after
 the production application reported the new image ready with no active,
 starting, scheduling, or failed instances.
+
+The Acid native-hard-sync production canary compiled fresh as build
+`ad4d8558fde8c965dc4b0a9f51cf908af428e9be0fedc006092d450d62d5da71`:
+228,548 B text, 80 B data, and 28,620 B BSS. Its binary SHA-256 was
+`85f8839a565a35f885d97fe7ba661df2a8a1765ccf4b09b3fbcff62f5e129092`;
+the 17,727,788-byte updater WAV SHA-256 was
+`0d4105ff6cd86043d1e7b7b1c6916b064ea36771794313019018ef835fd2df91`.
+The compiler stamped `06d11c08e05e` on a cache MISS, the field guide
+completed, and the Speech encoder was rotated to `speech-encoder-v20` only
+after the production application reported the new image with no active,
+starting, scheduling, or failed instances.
+
+Three things about this rollout are worth carrying forward:
+
+- **A source change to a catalogued engine moves its digest, so it needs the
+  allowlist regenerated exactly like a new engine does.** Giving Acid a
+  native sync path changed `acid_engine.{h,cc}`, which moved
+  `f3ef097de843 -> f80a79f57cbe`. The engine merge landed without that step;
+  `sync_public_catalog.sh --check` named the drifting engine and the image
+  had to be rebuilt from the regenerated commit. Read step 3 of the publish
+  runbook as applying to any engine source edit, not just additions.
+- **`wrangler.jsonc` carries the revision TWICE** — the container `image` tag
+  and the Worker's own `PLAITS_SOURCE_REVISION` var. Bumping only the image
+  gets as far as upload before `check_manual_contract.py` rejects it: "the
+  Worker would record a revision the container never compiled."
+- **Two deploys exited non-zero without meaning what the exit code implied.**
+  Staging died on `code 100146` looking up the Worker version it had just
+  uploaded, having left the containers untouched — a straight retry fixed it.
+  Production died on `code 10013` from a queues call AFTER `SUCCESS Modified
+  application`; the queues were verified intact (1 producer, 1 consumer) and
+  no retry was needed, which mattered because retrying would have restarted
+  an in-flight container rollout. Neither exit code was a reliable signal;
+  `/v1/health` and `containers info` were. Note also that `containers info`
+  reported `active: 1` after the pool had rolled while `containers instances`
+  showed every instance inactive — prefer the instance list.
+
+A stock-24 palette carrying both Acid and Sync In no longer links at this
+revision: it overflows FLASH by 64 bytes. That is a real ceiling users can
+reach, and it is what the website flash meter's 816 B Acid sync row exists to
+predict before the linker does.
 
 The percussion production canary compiled fresh as build
 `63f32b04116c478261f93720e3a85da7798580eed0378ee631a0b5dd28fd2bf5`:
