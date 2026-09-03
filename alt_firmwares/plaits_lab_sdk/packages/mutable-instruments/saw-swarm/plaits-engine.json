@@ -9,7 +9,7 @@
   "author": "Emilie Gillet",
   "origin": "Mutable Instruments",
   "license": "MIT",
-  "description": "Braids' seven-voice detuned sawtooth chorus, soft-clipped and carved by a resonant filter tracking the note. A fixed chorus, not the granular cloud Plaits' own Swarm engine is, and deliberately raw, aliasing sawtooths.",
+  "description": "Braids' seven-voice detuned sawtooth chorus, soft-clipped and carved by a resonant filter tracking the note. A fixed chorus of deliberately raw, aliasing sawtooths — not the granular cloud of Plaits' own Swarm model.",
   "family": "Subtractive",
   "tags": [
     "braids",
@@ -37,7 +37,7 @@
     {
       "id": "macro",
       "label": "Resonance",
-      "description": "The filter's resonance, fixed in the module -- calmer below center, a controlled peak above it."
+      "description": "The filter's resonance, fixed in the module — calmer below center, a controlled peak above it."
     }
   ],
   "outputs": {

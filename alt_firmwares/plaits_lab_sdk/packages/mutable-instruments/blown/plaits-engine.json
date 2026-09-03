@@ -9,8 +9,8 @@
   "author": "Emilie Gillet",
   "origin": "Mutable Instruments",
   "license": "MIT",
-  "description": "Braids' blown bore: one delay line closed by an inverting reflection, driven by a clipped reed and a breath pressure the noise rides on. Its tone filter sits outside the loop, so the body colour and the pipe are separate controls.",
-  "family": "Physical modelling",
+  "description": "Braids' blown bore: one delay line closed by an inverting reflection, driven by a clipped reed and a breath pressure the noise rides on. Its tone filter sits outside the loop, so the body color and the pipe are separate controls.",
+  "family": "Physical",
   "tags": [
     "braids",
     "physical",

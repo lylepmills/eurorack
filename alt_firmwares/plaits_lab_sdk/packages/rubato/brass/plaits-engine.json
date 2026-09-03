@@ -9,7 +9,7 @@
   "author": "Lyle Mills, after Perry R. Cook and Gary P. Scavone",
   "origin": "Rubato Lab",
   "license": "MIT",
-  "description": "A lip-reed brass instrument. Breath makes it speak, and the lip knob climbs the bore's harmonic series the way a bugle player does.",
+  "description": "A lip-reed brass instrument after Perry R. Cook and Gary P. Scavone's STK brass model. Breath makes it speak, and the lip knob climbs the bore's harmonic series the way a bugle player does.",
   "family": "Physical",
   "tags": [
     "brass",
@@ -23,7 +23,7 @@
     {
       "id": "harmonics",
       "label": "Lip",
-      "description": "Lip tension. Climbs the bore's partials -- unison, fifth, octave, tenth, twelfth -- and bends each one sharp as it rises."
+      "description": "Lip tension. Climbs the bore's partials — unison, fifth, octave, tenth, twelfth — and bends each one sharp as it rises."
     },
     {
       "id": "timbre",
@@ -38,7 +38,7 @@
     {
       "id": "macro",
       "label": "Buzz",
-      "description": "Buzz. How far the lips swing into closure each cycle -- a soft flutter at the bottom, a real mouthpiece buzz at the top."
+      "description": "Buzz. How far the lips swing into closure each cycle — a soft flutter at the bottom, a real mouthpiece buzz at the top."
     }
   ],
   "outputs": {

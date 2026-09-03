@@ -9,7 +9,7 @@
   "author": "Emilie Gillet",
   "origin": "Mutable Instruments",
   "license": "MIT",
-  "description": "Braids' self-enveloping kick: two decaying pulses into a bandpass that jumps up in pitch for a brief click, then self-brightens. A different mechanism from Plaits' own analog-bass-drum, which clicks with FM rather than a retuned filter.",
+  "description": "Braids' self-enveloping kick: two decaying pulses into a bandpass that jumps up in pitch for a brief click, then self-brightens. A different mechanism from Plaits' own Analog Bass Drum, which clicks with FM rather than a retuned filter.",
   "family": "Drums",
   "tags": [
     "braids",
@@ -21,17 +21,17 @@
     {
       "id": "harmonics",
       "label": "Tone",
-      "description": "The output filter's brightness -- Braids' COLOR, applied after the resonator."
+      "description": "The output filter's brightness — Braids' COLOR, applied after the resonator."
     },
     {
       "id": "timbre",
       "label": "Decay",
-      "description": "The resonator's decay -- Braids' TIMBRE. Turning it up lengthens the boom toward near-self-oscillation."
+      "description": "The resonator's decay — Braids' TIMBRE. Turning it up lengthens the boom toward near-self-oscillation."
     },
     {
       "id": "morph",
       "label": "Balance",
-      "description": "Crossfades the two excitation pulses. Centred is native level; the ends fade one out to just click or just thump."
+      "description": "Crossfades the two excitation pulses. Centered is native level; the ends fade one out to just click or just thump."
     },
     {
       "id": "macro",

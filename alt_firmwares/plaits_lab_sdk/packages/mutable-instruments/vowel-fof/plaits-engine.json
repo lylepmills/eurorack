@@ -36,7 +36,7 @@
     {
       "id": "macro",
       "label": "Formant tilt",
-      "description": "Restores the formant amplitude balance the stock model leaves flat. Centred is flat, exactly as hardware."
+      "description": "Restores the formant amplitude balance the stock model leaves flat. Centered is flat, exactly as hardware."
     }
   ],
   "outputs": {

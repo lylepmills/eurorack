@@ -10,7 +10,7 @@
   "origin": "Mutable Instruments",
   "license": "MIT",
   "description": "A jet flute derived from Braids' FLUT: a bore and a jet delay line sharing one loop, driven by an asymmetric cubic jet and a breath the noise multiplies. It overblows into a higher register, as the module does.",
-  "family": "Physical modelling",
+  "family": "Physical",
   "tags": [
     "braids",
     "physical",

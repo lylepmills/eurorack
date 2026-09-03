@@ -9,7 +9,7 @@
   "author": "Tom Burns",
   "origin": "Community",
   "license": "MIT",
-  "description": "Five scale-spaced voices over Braids Renaissance's WTx6 scan, with independent span, spread, and wavetable position.",
+  "description": "Five scale-spaced voices over Braids Renaissance's WTx6 scan, with independent span, spread, and wavetable position. From Tom Burns' Braids Renaissance firmware.",
   "family": "Polyphonic",
   "tags": [
     "braids",

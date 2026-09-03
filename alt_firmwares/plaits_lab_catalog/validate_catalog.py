@@ -65,10 +65,10 @@ AUDITED_BRAIDS_CONTROLS = {
     "fluted": ["Embouchure", "Air", "Blow", "Body"],
     "fold": ["Blend", "Fold", "Symmetry", "Drive"],
     "granular-cloud": ["Scatter", "Grain", "Shape", "Density"],
-    "harmonics": ["Colour", "Peak", "Spread", "Width"],
+    "harmonics": ["Color", "Peak", "Spread", "Width"],
     "kick": ["Tone", "Decay", "Balance", "Punch"],
     "morph": ["Fuzz", "Shape", "Tone", "Drive"],
-    "noise-bank": ["Model", "Colour", "Shape", "Drive"],
+    "noise-bank": ["Model", "Color", "Shape", "Drive"],
     "particle-burst": ["Scatter", "Density", "Chord width", "Decay"],
     "plucked": ["Pluck", "Damping", "Spread", "Stretch"],
     "question-mark": ["Static", "Speed", "Bed", "Grit"],
@@ -131,19 +131,19 @@ AUDITED_REMAINING_METADATA_DIGESTS = {
     "spectral-spiral": "sha256:16ccf227fdceea2257d2bb262ef4deeeb1ef50313ec6dba150fad36dce72d86c",
     "bytebeat": "sha256:cdd0f83830b959013dc0b5cebf635def32475b97d3ad36d5ff682db008df4ebf",
     "diatonic-chord": "sha256:a371bf948b5dec7234ae430b96e7995f913b1f5881e4a829c23ff75135fca3b2",
-    "scale-stack": "sha256:c480bab7debf258bd43fefea77d2cbc4e174284de48374c4769d2d8d49764682",
-    "wavetable-chord": "sha256:cf8f1483af74d2d6fdf76fbc02c2a514ea1cf5a9a59cf18e7186cfe0329c1d6f",
-    "wavetable-scale-stack": "sha256:df642cdb8d7eba16ed2befd57b5735a45ab889c69a0288e0f26dacc7a5c2fcfe",
+    "scale-stack": "sha256:a8a5495c369487f5310590720bc70b625b0cd0e5b021cdfce64f8822b02d8d15",
+    "wavetable-chord": "sha256:e7d126301a60ea915c7f0e775b22a250b44fb115c4a4ee4a7b04f6dd6ec8e49e",
+    "wavetable-scale-stack": "sha256:f4d32f3e629f54094fc04f1be65b2bc8cfeed914848c0bb61169f5dae9c1a554",
     "shakers": "sha256:dc3b8a2a7e0daa8ae80e1dd85ff39377e1b1d79fd6efc753d8cb712160481448",
-    "brass": "sha256:bf2dbd2b7a717b28f18e9d4a28e7e61b3ee376da438c2ec2a6cc4f528cfa286d",
-    "helix": "sha256:f15a76e28e45bb7d7ee18d07c62d3367d60b0d463bafaf603ba975af3476836d",
+    "brass": "sha256:473c031b4f7aab2ee8dbb868f0c5e42515bb18719334cf69a7cbe5b2e7d0ccfa",
+    "helix": "sha256:209c5191778a23c1286e875abaeeb6bdd200a4741795ec29e9bdf6fa01c64086",
     # Rubato percussion trio: control behavior, trigger semantics, mono AUX,
     # and the dedicated stereo paths audited during the 2026-09-01 review.
-    "skins": "sha256:07e1a710343cca0d2f806a01af172c8e80430a5b16ddc1b1eb353b080f75c78c",
+    "skins": "sha256:a106e9101324ce98d726caece7702ba7ddaf06d36f5c83d94767d7d9c44b6b57",
     "circuit-zaps": "sha256:80510a65f159b4eb2dffab2144112b7089be74c0684c67ca44f6cc73b01dd19d",
     "metalwork": "sha256:fac00d54bcbbb807a6e83699cd8c0a834957ad7219d5d30715427e6c9dcd2687",
-    "clap": "sha256:42049635c356f8518329a9d9fd5be5285d2ebaef89c29676e0f785f7053be173",
-    "analog-percussion": "sha256:edc5a2223b0862c75f310357717ef162927c29eddfd2ec6da1ac308aa8346cd1",
+    "clap": "sha256:b97e4d965e150a93d7ea8640a69ce186a7cf721bb8aea594be76922591107db5",
+    "analog-percussion": "sha256:98dc8ec07a323a1d303329cf925820c674f80886ca076ef859a47455ce8b53f3",
     "freshets-formant": "sha256:5b17fc800bf990df2a8091a893999d6493974a8f139119eaef188039fd8f7306",
     # Combust community engines: source, stereo behavior, controls, and
     # hardware CPU diagnostics audited during the 2026-08-31 review.
@@ -152,7 +152,7 @@ AUDITED_REMAINING_METADATA_DIGESTS = {
     "zxpulse48k": "sha256:cdcdf57550901493db4ded937e0085683922a8d428b94a2c8c920f011d5c896a",
     # Acid: software gauntlet and stereo hardware CPU diagnostics audited
     # during the 2026-09-01 community review.
-    "acid": "sha256:0393a1306b7b8ace98e2bbd9924346fbff710635eeb0df2f48e0280adb6c0fe8",
+    "acid": "sha256:386fa01e192a0ccbff3389892faf757e1fa1c311611feeb495ec2133847eb189",
 }
 
 REMAINING_FIXED_PAIR_ENGINES = {

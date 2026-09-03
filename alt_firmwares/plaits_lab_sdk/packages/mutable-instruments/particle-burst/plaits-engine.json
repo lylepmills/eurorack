@@ -9,7 +9,7 @@
   "author": "Emilie Gillet",
   "origin": "Mutable Instruments",
   "license": "MIT",
-  "description": "Braids' PRTC: three fixed-interval resonant filters, a chord above the note, re-struck by a shared decaying noise burst at a random rate. Plaits' particle-noise scatters six particles around one pitch instead -- a cloud, not a chord.",
+  "description": "Braids' PRTC: three fixed-interval resonant filters, a chord above the note, re-struck by a shared decaying noise burst at a random rate. Plaits' Particle Noise scatters six particles around one pitch instead — a cloud, not a chord.",
   "family": "Noise",
   "tags": [
     "braids",

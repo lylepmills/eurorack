@@ -9,7 +9,7 @@
   "author": "Emilie Gillet",
   "origin": "Mutable Instruments",
   "license": "MIT",
-  "description": "Braids' hidden model, reachable on the module only with the marquee set to \"49\": a Morse transmitter keying a sine over a drifting noise bed, through a squared-distortion stage.",
+  "description": "Braids' hidden model, reachable on the module only with the marquee set to “49”: a Morse transmitter keying a sine over a drifting noise bed, through a squared-distortion stage.",
   "family": "Noise",
   "tags": [
     "braids",
@@ -42,7 +42,7 @@
   ],
   "outputs": {
     "main": "The transmission, the module's own signal.",
-    "aux": "Mono: the keyed carrier alone, before the bed and the distortion. Stereo: a second full transmission whose noise draws come from an independent generator, so the tone stays centred and the bed opens out."
+    "aux": "Mono: the keyed carrier alone, before the bed and the distortion. Stereo: a second full transmission whose noise draws come from an independent generator, so the tone stays centered and the bed opens out."
   },
   "trigger": "Restarts the Morse transmission from its first symbol.",
   "source": {

@@ -9,7 +9,7 @@
   "author": "Emilie Gillet",
   "origin": "Mutable Instruments",
   "license": "MIT",
-  "description": "Braids' PLUK: three round-robin Karplus-Strong voices, a noise burst dropped into a resonant loop per strike. Inharmonic-string is the same round robin with a far more elaborate model; this keeps PLUK's own stochastic damping instead.",
+  "description": "Braids' PLUK: three round-robin Karplus-Strong voices, a noise burst dropped into a resonant loop per strike. Inharmonic String is the same round robin with a far more elaborate model; this keeps PLUK's own stochastic damping instead.",
   "family": "Physical",
   "tags": [
     "braids",
@@ -42,7 +42,7 @@
   ],
   "outputs": {
     "main": "All three round-robin voices, summed.",
-    "aux": "Mono: the raw noise excitation only, silent between strikes. Stereo: dropped in favour of panning each voice to a fixed round-robin position."
+    "aux": "Mono: the raw noise excitation only, silent between strikes. Stereo: dropped in favor of panning each voice to a fixed round-robin position."
   },
   "trigger": "Plucks the next voice in the three-string round robin.",
   "source": {

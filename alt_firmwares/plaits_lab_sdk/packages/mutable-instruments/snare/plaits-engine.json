@@ -32,7 +32,7 @@
     {
       "id": "morph",
       "label": "Snap balance",
-      "description": "Crossfades the tonal sum against the snap resonator. Centred is the module's own unweighted sum."
+      "description": "Crossfades the tonal sum against the snap resonator. Centered is the module's own unweighted sum."
     },
     {
       "id": "macro",

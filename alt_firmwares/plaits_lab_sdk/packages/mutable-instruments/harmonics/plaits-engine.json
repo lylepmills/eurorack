@@ -9,7 +9,7 @@
   "author": "Emilie Gillet",
   "origin": "Mutable Instruments",
   "license": "MIT",
-  "description": "Braids' twelve-partial additive stack, with two Lorentzian bumps sliding over the harmonic series. Its integer amplitude slew gates quiet partials out entirely, which is the grain the Plaits harmonic engine's float smoothing does not have.",
+  "description": "Braids' twelve-partial additive stack, with two Lorentzian bumps sliding over the harmonic series. Its integer amplitude slew gates quiet partials out entirely, the grain the Plaits Harmonic Oscillator's float smoothing does not have.",
   "family": "Additive",
   "tags": [
     "braids",
@@ -20,7 +20,7 @@
   "controls": [
     {
       "id": "harmonics",
-      "label": "Colour",
+      "label": "Color",
       "description": "Braids' COLOR, welded as the module has it: the bumps narrow toward both ends while the second one grows."
     },
     {
@@ -31,12 +31,12 @@
     {
       "id": "morph",
       "label": "Spread",
-      "description": "Moves the second bump off the module's fixed relation, six partials either way. Centre is Braids."
+      "description": "Moves the second bump off the module's fixed relation, six partials either way. Center is Braids."
     },
     {
       "id": "macro",
       "label": "Width",
-      "description": "Scales the bump width around whatever Colour chose, so the two stop sharing a knob. Noon is Braids."
+      "description": "Scales the bump width around whatever Color chose, so the two stop sharing a knob. Noon is Braids."
     }
   ],
   "outputs": {

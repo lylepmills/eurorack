@@ -9,7 +9,7 @@
   "author": "Tom Burns",
   "origin": "Community",
   "license": "MIT",
-  "description": "Five voices spaced an equal number of scale degrees apart, sweeping from cluster to wide chord without ever leaving the scale. From Braids Renaissance.",
+  "description": "Five voices spaced an equal number of scale degrees apart, sweeping from cluster to wide chord without ever leaving the scale. From Tom Burns' Braids Renaissance firmware.",
   "family": "Polyphonic",
   "tags": [
     "braids",
@@ -38,7 +38,7 @@
     {
       "id": "macro",
       "label": "Scale",
-      "description": "Selects the scale the stack is quantised to, which is what the spacing counts in."
+      "description": "Selects the scale the stack is quantized to, which is what the spacing counts in."
     }
   ],
   "outputs": {

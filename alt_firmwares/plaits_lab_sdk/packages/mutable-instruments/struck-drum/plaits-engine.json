@@ -9,7 +9,7 @@
   "author": "Emilie Gillet",
   "origin": "Mutable Instruments",
   "license": "MIT",
-  "description": "Braids' DRUM: six fixed partials struck once per trigger. Two are ring-modulated by lowpass-filtered noise instead of played straight -- a different mechanism from a resonator excited by noise.",
+  "description": "Braids' DRUM: six fixed partials struck once per trigger. Two are ring-modulated by lowpass-filtered noise instead of played straight — a different mechanism from a resonator excited by noise.",
   "family": "Additive",
   "tags": [
     "braids",
@@ -42,7 +42,7 @@
     }
   ],
   "outputs": {
-    "main": "The six-partial mix. Tracks the module's own output closely; tests/ab.json carries the measured figures.",
+    "main": "The six-partial mix. Tracks the module's own output closely.",
     "aux": "Mono: the two noise-ring-modulated partials alone, without the direct tone or the harmonics sum. Stereo: a second, independently-filtered noise realization for the right channel, sharing the same tonal partials as the left."
   },
   "trigger": "Strikes or re-strikes the six-partial drum.",

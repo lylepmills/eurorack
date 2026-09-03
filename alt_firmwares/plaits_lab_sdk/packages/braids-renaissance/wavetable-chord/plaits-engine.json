@@ -9,7 +9,7 @@
   "author": "Tom Burns",
   "origin": "Community",
   "license": "MIT",
-  "description": "Diatonic chords over Braids Renaissance's WTCH scan, with independent voice spread and wavetable position.",
+  "description": "Diatonic chords over Braids Renaissance's WTCH scan, with independent voice spread and wavetable position. From Tom Burns' Braids Renaissance firmware.",
   "family": "Polyphonic",
   "tags": [
     "braids",

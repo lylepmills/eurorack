@@ -9,7 +9,7 @@
   "author": "Emilie Gillet",
   "origin": "Mutable Instruments",
   "license": "MIT",
-  "description": "Braids' BELL: eleven fixed inharmonic partials, additively synthesised and struck once per trigger, sharing one decay curve and one odd/even detune. A fixed hand-tuned voicing, not a stretched-harmonic formula.",
+  "description": "Braids' BELL: eleven fixed inharmonic partials, additively synthesized and struck once per trigger, sharing one decay curve and one odd/even detune. A fixed hand-tuned voicing, not a stretched-harmonic formula.",
   "family": "Additive",
   "tags": [
     "braids",
@@ -42,7 +42,7 @@
     }
   ],
   "outputs": {
-    "main": "The eleven-partial sum. Tracks the module's own output closely; tests/ab.json carries the measured figures.",
+    "main": "The eleven-partial sum. Tracks the module's own output closely.",
     "aux": "Mono: the five highest partials alone, a bright fast-decaying companion voice. Stereo: a magnitude-matched phase-rotated copy of the full bell, widening the same eleven partials without retuning them."
   },
   "trigger": "Strikes or re-strikes the eleven-partial bell.",

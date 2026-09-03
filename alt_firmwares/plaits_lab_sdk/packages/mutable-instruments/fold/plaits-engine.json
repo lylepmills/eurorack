@@ -9,7 +9,7 @@
   "author": "Emilie Gillet",
   "origin": "Mutable Instruments",
   "license": "MIT",
-  "description": "Braids' two wavefolders crossfaded against each other, the sine one saturating where the triangle one keeps folding. The model Plaits' waveshaping engine descends from, with the second curve it left behind.",
+  "description": "Braids' two wavefolders crossfaded against each other, the sine one saturating where the triangle one keeps folding. The model Plaits' Waveshaping model descends from, with the second curve it left behind.",
   "family": "Waveshaping",
   "tags": [
     "braids",

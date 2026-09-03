@@ -13,8 +13,10 @@
   "family": "Drums",
   "tags": [
     "braids",
+    "drum",
     "cymbal",
     "hihat",
+    "percussion",
     "noise",
     "metallic"
   ],
@@ -42,7 +44,7 @@
   ],
   "outputs": {
     "main": "The crossfaded pair, Braids' own signal.",
-    "aux": "Mono: the complementary crossfade, always favouring the side MAIN does not. Stereo: a second, independent raw-noise stream and a small opposing offset on Color."
+    "aux": "Mono: the complementary crossfade, always favoring the side MAIN does not. Stereo: a second, independent raw-noise stream and a small opposing offset on Color."
   },
   "trigger": "The engine itself ignores TRIG and keeps running; Plaits' shared envelope still shapes a patched note.",
   "source": {

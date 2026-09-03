@@ -9,7 +9,7 @@
   "author": "Emilie Gillet",
   "origin": "Mutable Instruments",
   "license": "MIT",
-  "description": "Braids' table-driven vowel synthesiser: three formants read at sixteen steps a cycle, gated by a ramp that restarts every pitch period, through a tanh shaper. The stepped ancestor of Speech's SAM mode.",
+  "description": "Braids' table-driven vowel synthesizer: three formants read at sixteen steps a cycle, gated by a ramp that restarts every pitch period, through a tanh shaper. The stepped ancestor of Speech's SAM mode.",
   "family": "Vocal",
   "tags": [
     "braids",

@@ -26,12 +26,12 @@
     {
       "id": "timbre",
       "label": "Shape",
-      "description": "Opens the saw's pulse width as it narrows the square's, or the reverse -- one knob, two waveforms."
+      "description": "Opens the saw's pulse width as it narrows the square's, or the reverse — one knob, two waveforms."
     },
     {
       "id": "morph",
       "label": "Phase",
-      "description": "Offsets the square's phase against the saw's -- the module's two oscillators are always locked together."
+      "description": "Offsets the square's phase against the saw's — the module's two oscillators are always locked together."
     },
     {
       "id": "macro",

@@ -25,7 +25,7 @@
     },
     {
       "id": "timbre",
-      "label": "Colour",
+      "label": "Color",
       "description": "Resonance for the two filtered models; loop length of the random sequence for the clocked one."
     },
     {
