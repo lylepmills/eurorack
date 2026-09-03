@@ -981,6 +981,7 @@ target.
 | September 1, 2026 (stereo Skins, Circuit Zaps, and Metalwork percussion engines; 96 engines) | `37c608fa2a69` | `rev-37c608fa2a69` |
 | September 2, 2026 (schema 28 shared Wave Tables library and per-engine wave routes) | `bdf148346885` | `rev-bdf148346885` |
 | September 2, 2026 (Acid native hard sync) | `06d11c08e05e` | `rev-06d11c08e05e` |
+| September 3, 2026 (catalog copy release: OUT/AUX stereo sentences, spelling, credits, Analog Clap; no firmware change — stock and Speech gate builds byte-identical to `06d11c08e05e`) | `f92cf0698662` | `rev-f92cf0698662` |
 
 The schema-28 shared-wave production canary compiled fresh as build
 `e114ffb89814dc91dd8faeff3b8eb46354130497f79ce9267f7e0b8b9185f94a`:
