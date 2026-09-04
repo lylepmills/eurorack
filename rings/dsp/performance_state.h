@@ -42,6 +42,7 @@ enum PerformanceMode {
   MODE_MINI_ELEMENTS_STEREO,
   MODE_MINI_ELEMENTS_EXCITER,
   MODE_EASTER_EGG,
+  MODE_EASTER_EGG_ROOT,
 };
 
 enum ChordTable {
