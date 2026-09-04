@@ -293,6 +293,31 @@ def load_audited_remaining_manifests() -> dict[str, dict[str, Any]]:
     return manifests
 
 
+def validate_engine_capability_review(value: Any, engine_ids: set[str]) -> None:
+    """Require an explicit three-capability review for every catalog engine."""
+    if (not isinstance(value, dict)
+            or set(value) != {"version", "reviewed"}
+            or value["version"] != 1):
+        raise ValueError(
+            "engineCapabilityReview must contain version 1 and reviewed")
+    reviewed = value["reviewed"]
+    if not isinstance(reviewed, list) or len(reviewed) != len(set(reviewed)):
+        raise ValueError(
+            "engineCapabilityReview.reviewed must list unique engine IDs")
+    reviewed_ids = set(reviewed)
+    if reviewed_ids != engine_ids:
+        missing = sorted(engine_ids - reviewed_ids)
+        unknown = sorted(reviewed_ids - engine_ids)
+        details = []
+        if missing:
+            details.append("missing " + ", ".join(missing))
+        if unknown:
+            details.append("unknown " + ", ".join(unknown))
+        raise ValueError(
+            "Every catalog engine must complete the Fast FM, linear TZFM, "
+            "and hard-sync review (" + "; ".join(details) + ")")
+
+
 def validate_catalog(catalog: dict[str, Any]) -> None:
     engines = catalog.get("engines")
     if not isinstance(engines, list) or not engines:
@@ -363,6 +388,9 @@ def validate_catalog(catalog: dict[str, Any]) -> None:
                 or any(engine_id not in ids for engine_id in engine_ids)):
             raise ValueError(
                 f"fmCapabilities.{capability} must list unique approved engine IDs")
+
+    validate_engine_capability_review(
+        catalog.get("engineCapabilityReview"), ids)
 
     for name, slots in catalog.get("presets", {}).items():
         if len(slots) not in (24, 32) or any(engine_id not in ids for engine_id in slots):

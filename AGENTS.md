@@ -27,6 +27,11 @@ The production editor is at <https://rubato.audio/plaits-palette/>.
   of Git. They are reproducible artifacts.
 - Preserve the existing alternate-firmware features unless a task explicitly
   changes them.
+- Before adding any engine to the approved catalog, explicitly review it for
+  Fast FM, linear TZFM, and native hard sync. A deliberate semantic/CPU
+  rejection or the shared hard-sync fallback is valid, but the engine must be
+  present in `engineCapabilityReview.reviewed`; catalog validation enforces
+  exact coverage.
 
 ## Required validation
 

@@ -134,6 +134,14 @@ contract.
 
 ## Validation and submission
 
+Every engine is reviewed for **Fast FM, linear TZFM, and hard sync** before it
+is published. These are capability decisions, not blanket requirements: an
+engine can be rejected when audio-rate pitch has no meaningful synthesis
+semantics, signed frequency cannot reverse an oscillator, the hardware budget
+does not fit, or the shared hard-sync fallback is the better behavior. The
+maintainer records the completed three-way review in the catalog; catalog
+validation rejects a new engine whose review is missing.
+
 ```sh
 $SDK check ./$PKG/my-engine --full
 $SDK submit ./$PKG/my-engine

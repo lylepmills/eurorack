@@ -20,6 +20,14 @@ assert SPEC and SPEC.loader
 plaits_lab = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(plaits_lab)
 
+CATALOG_SPEC = importlib.util.spec_from_file_location(
+    "validate_catalog",
+    SDK_DIR.parent / "plaits_lab_catalog" / "validate_catalog.py",
+)
+assert CATALOG_SPEC and CATALOG_SPEC.loader
+validate_catalog = importlib.util.module_from_spec(CATALOG_SPEC)
+CATALOG_SPEC.loader.exec_module(validate_catalog)
+
 
 def host_can_sanitize() -> bool:
     """Probe guard for tests that need a real sanitized build. Absent any host
@@ -96,6 +104,20 @@ void ChordProbeEngine::Render(const EngineParameters& parameters,
 
 
 class PackageTests(unittest.TestCase):
+    def test_engine_capability_review_requires_every_engine(self) -> None:
+        with self.assertRaisesRegex(ValueError, "missing new-engine"):
+            validate_catalog.validate_engine_capability_review(
+                {"version": 1, "reviewed": ["existing-engine"]},
+                {"existing-engine", "new-engine"},
+            )
+
+    def test_engine_capability_review_rejects_stale_engine(self) -> None:
+        with self.assertRaisesRegex(ValueError, "unknown removed-engine"):
+            validate_catalog.validate_engine_capability_review(
+                {"version": 1, "reviewed": ["existing-engine", "removed-engine"]},
+                {"existing-engine"},
+            )
+
     def test_reference_packages_validate(self) -> None:
         packages = [
             SDK_DIR / "packages" / "mutable-instruments" / "virtual-analog",
