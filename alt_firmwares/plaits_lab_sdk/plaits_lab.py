@@ -829,11 +829,18 @@ def engine_translation_units(package: dict[str, Any], entry: Path) -> list[str]:
 
 
 def dedupe_units(units: list[Path]) -> list[str]:
-    """Resolved-path de-duplication: each translation unit handed to the
-    compiler exactly once, in first-seen order."""
+    """Select and de-duplicate translation units for a compiler invocation.
+
+    Catalog ``source.files`` also doubles as the package file list, so it can
+    contain header-only dependencies.  Passing one of those headers to g++ as
+    a standalone input creates a precompiled-header artifact that the later
+    link step rejects as an object file.
+    """
     seen: set[str] = set()
     compiled: list[str] = []
     for unit in units:
+        if unit.suffix not in (".c", ".cc", ".cpp", ".cxx"):
+            continue
         key = str(unit.resolve())
         if key not in seen:
             seen.add(key)

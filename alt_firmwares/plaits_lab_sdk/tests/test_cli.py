@@ -390,6 +390,12 @@ class PackageTests(unittest.TestCase):
         self.assertEqual([Path(item).name for item in deduped],
                          ["cpu_bench.cc", "render_model.cc"])
 
+    def test_dedupe_units_ignores_packaged_headers(self) -> None:
+        root = Path(plaits_lab.__file__).parent
+        units = [root / "render_model.cc", root / "pulse_core.h"]
+        deduped = plaits_lab.dedupe_units(units)
+        self.assertEqual([Path(item).name for item in deduped], ["render_model.cc"])
+
     def test_check_arm_dispatches_to_builder_container(self) -> None:
         # With no local ARM toolchain, --arm compiles the package via the builder
         # image — a compile-only 'check', not a full firmware build.
