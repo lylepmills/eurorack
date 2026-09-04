@@ -12,6 +12,10 @@
 #include "plaits/dsp/dsp.h"
 #include "plaits/dsp/voice.h"
 
+#ifndef PLAITS_TZFM_DIAGNOSTIC_STEREO
+#define PLAITS_TZFM_DIAGNOSTIC_STEREO 0
+#endif
+
 namespace plaits {
 
 struct TzfmDiagnosticCounters {
@@ -110,7 +114,11 @@ class TzfmDiagnostic {
     patch->locked_frequency_pot_option = 0;
     patch->model_cv_option = 0;
     patch->level_cv_option = 0;
-    patch->aux_output_option = 0;
+    // Candidate qualification uses stereo when requested because every current
+    // post-audit candidate has a true stereo path, and that is never cheaper
+    // than its mono render. Production diagnostics retain their original mono
+    // behavior unless a private recipe opts in.
+    patch->aux_output_option = PLAITS_TZFM_DIAGNOSTIC_STEREO ? 1 : 0;
     patch->aux_subosc_option = 0;
     patch->chord_set_option = 0;
     patch->hold_on_trigger_option = 0;

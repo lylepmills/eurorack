@@ -112,8 +112,12 @@
 #include "plaits/dsp/engine2/brass_engine.h"
 #include "plaits/dsp/engine2/clap_engine.h"
 #include "plaits/dsp/engine2/analog_percussion_engine.h"
+#include "plaits/dsp/engine2/acid_engine.h"
 #include "plaits/dsp/engine2/bubbletime_engine.h"
+#include "plaits/dsp/engine2/circuit_zaps_engine.h"
 #include "plaits/dsp/engine2/freshets_formant_engine.h"
+#include "plaits/dsp/engine2/metalwork_engine.h"
+#include "plaits/dsp/engine2/skins_engine.h"
 #include "plaits/dsp/engine2/z_filter_engine.h"
 #include "plaits/dsp/engine2/zxphase48k_engine.h"
 #include "plaits/dsp/engine2/zxpulse48k_engine.h"
@@ -436,6 +440,7 @@ void ValidateLinearTzfmEngineCoverage() {
   ValidateLinearTzfmEngine<WaveScanEngine>("Wave Scan");
   ValidateLinearTzfmEngine<WaveTerrainEngine>("Wave Terrain");
   ValidateLinearTzfmEngine<SwarmEngine>("Swarm");
+  ValidateLinearTzfmEngine<AcidEngine>("Acid");
 }
 
 template<typename T>
@@ -600,6 +605,11 @@ void ValidateFastExponentialFmEngineCoverage() {
   ValidateFastExponentialFmEngine<ClapEngine>("Clap");
   ValidateFastExponentialFmEngine<AnalogPercussionEngine>(
       "Analog Percussion");
+  ValidateFastExponentialFmEngine<SkinsEngine>("Skins");
+  ValidateFastExponentialFmEngine<CircuitZapsEngine>("Circuit Zaps");
+  ValidateFastExponentialFmEngine<MetalworkEngine>("Metalwork");
+  ValidateFastExponentialFmEngine<ZxPulse48kEngine>("ZxPulse48k");
+  ValidateFastExponentialFmEngine<AcidEngine>("Acid");
 }
 
 void TestVariableShapeOscillator() {
@@ -4447,6 +4457,14 @@ void ValidateFmCapabilityPolicy() {
   BrassEngine brass;
   HelixEngine helix;
   ClapEngine clap;
+  AnalogPercussionEngine analog_percussion;
+  BubbleTimeEngine bubbletime;
+  ZxPhase48kEngine zxphase48k;
+  ZxPulse48kEngine zxpulse48k;
+  AcidEngine acid;
+  SkinsEngine skins;
+  CircuitZapsEngine circuit_zaps;
+  MetalworkEngine metalwork;
   Engine* linear_engines[] = {
     &waveshaping,
     &two_op_fm,
@@ -4623,6 +4641,12 @@ void ValidateFmCapabilityPolicy() {
     &brass,
     &helix,
     &clap,
+    &analog_percussion,
+    &zxpulse48k,
+    &acid,
+    &skins,
+    &circuit_zaps,
+    &metalwork,
   };
   for (size_t i = 0;
        i < sizeof(pending_exponential_engines) /
@@ -4630,6 +4654,24 @@ void ValidateFmCapabilityPolicy() {
     if (pending_exponential_engines[i]->linear_tzfm_capable()
         || pending_exponential_engines[i]->fast_fm_capable()) {
       fprintf(stderr, "An unqualified exponential-only engine was enabled\n");
+      abort();
+    }
+  }
+
+  // BubbleTime maps pitch into event density and retunes its resonators only
+  // when a new event is born. ZxPhase48k deliberately block-rate-crushes V/OCT
+  // as part of its 1-bit sound. Neither semantic should be relabeled as
+  // continuous Fast FM or oscillator-reversing TZFM.
+  Engine* intentionally_block_rate_engines[] = {
+    &bubbletime,
+    &zxphase48k,
+  };
+  for (size_t i = 0;
+       i < sizeof(intentionally_block_rate_engines) /
+           sizeof(intentionally_block_rate_engines[0]); ++i) {
+    if (intentionally_block_rate_engines[i]->linear_tzfm_capable()
+        || intentionally_block_rate_engines[i]->fast_fm_capable()) {
+      fprintf(stderr, "An intentionally block-rate engine was FM-qualified\n");
       abort();
     }
   }

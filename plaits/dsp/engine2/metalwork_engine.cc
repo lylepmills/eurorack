@@ -7,6 +7,7 @@
 
 #include <algorithm>
 
+#include "plaits/build_config.h"
 #include "plaits/dsp/oscillator/sine_oscillator.h"
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/utils/random.h"
@@ -108,9 +109,24 @@ void MetalworkEngine::Render(
   }
 
   for (size_t i = 0; i < size; ++i) {
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    float sample_base = base;
+    if (parameters.frequency_offset) {
+      sample_base += parameters.frequency_offset[i];
+      CONSTRAIN(sample_base, 1.0e-7f, 0.065f);
+    }
+#endif
     float full = 0.0f;
     float upper = 0.0f;
     for (int j = 0; j < kMetalworkNumModes; ++j) {
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+      if (parameters.frequency_offset) {
+        const float ratio = kMetalRatios[object_][j];
+        frequency_a[j] = min(0.235f, sample_base * ratio);
+        frequency_b[j] = min(0.235f, sample_base * ratio *
+            (1.0f + beating * (1.0f + 0.3f * j)));
+      }
+#endif
       phase_a_[j] += frequency_a[j];
       phase_a_[j] -= static_cast<int>(phase_a_[j]);
       phase_b_[j] += frequency_b[j];

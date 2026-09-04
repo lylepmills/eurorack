@@ -3,6 +3,8 @@
 
 #include "plaits/dsp/engine2/zxpulse48k_engine.h"
 
+#include "plaits/build_config.h"
+
 #include <algorithm>
 
 namespace plaits {
@@ -197,6 +199,9 @@ void ZxPulse48kEngine::Render(
     }
   }
 
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  const float inverse_f0 = 1.0f / f0;
+#endif
   for (size_t i = 0; i < size; ++i) {
     if (tick_.Next()) {
       dt_history_[history_pos_] = dts[echo_src];
@@ -213,13 +218,30 @@ void ZxPulse48kEngine::Render(
         }
       }
     }
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    float frequency_scale = 1.0f;
+    if (parameters.frequency_offset) {
+      float sample_root = f0 + parameters.frequency_offset[i];
+      CONSTRAIN(sample_root, 1.0e-7f, kMaxDt);
+      frequency_scale = sample_root * inverse_f0;
+    }
+#endif
     if (stereo) {
       float left = 0.0f;
       float right = 0.0f;
       for (int v = 0; v < n; ++v) {
+        float dt = dts[v];
+        float duty = duties[v];
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+        if (parameters.frequency_offset) {
+          dt *= frequency_scale;
+          CONSTRAIN(dt, 1.0e-7f, kMaxDt);
+          duty = ClampDuty(width * dt, dt);
+        }
+#endif
         float naive;
         const float voice = amps[v] *
-            channels_[v].Next(dts[v], duties[v], &naive);
+            channels_[v].Next(dt, duty, &naive);
         left += voice * left_gain[v];
         right += voice * right_gain[v];
       }
@@ -229,8 +251,17 @@ void ZxPulse48kEngine::Render(
       float clean = 0.0f;
       float nasty = 0.0f;
       for (int v = 0; v < n; ++v) {
+        float dt = dts[v];
+        float duty = duties[v];
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+        if (parameters.frequency_offset) {
+          dt *= frequency_scale;
+          CONSTRAIN(dt, 1.0e-7f, kMaxDt);
+          duty = ClampDuty(width * dt, dt);
+        }
+#endif
         float naive;
-        clean += amps[v] * channels_[v].Next(dts[v], duties[v], &naive);
+        clean += amps[v] * channels_[v].Next(dt, duty, &naive);
         nasty += amps[v] * naive;
       }
       out[i] = clean;

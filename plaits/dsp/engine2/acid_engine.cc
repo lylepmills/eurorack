@@ -171,8 +171,23 @@ void AcidEngine::Render(
 
   // The oscillator is the only sync-sensitive state: a real 303's sync resets
   // the VCO, while the ladder and the clipper carry on from wherever they were.
-  oscillator_.Render(
-      f0, pw, waveshape, aux, size, PLAITS_HARD_SYNC_EVENTS(parameters));
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  if (parameters.frequency_offset) {
+    oscillator_.RenderLinearFm(
+        f0,
+        pw,
+        waveshape,
+        parameters.frequency_offset,
+        aux,
+        size,
+        PLAITS_HARD_SYNC_EVENTS(parameters));
+  } else {
+#endif
+    oscillator_.Render(
+        f0, pw, waveshape, aux, size, PLAITS_HARD_SYNC_EVENTS(parameters));
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  }
+#endif
   input_dc_blocker_.Process<FILTER_MODE_HIGH_PASS>(aux, size);
 
   if (parameters.trigger & TRIGGER_UNPATCHED) {

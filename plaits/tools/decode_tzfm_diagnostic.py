@@ -25,6 +25,9 @@ MODEL_NAMES = {
         "Fold", "Buzz", "Pulsar", "Toy",
     ],
     4: ["Saw Swarm", "Triple", "VOSIM", "Wave Scan", "Swarm"],
+    # Group 7 stays below the decoder's Fast-exponential group boundary while
+    # keeping its 6240 Hz metadata tone clear of the 6201 Hz count tone.
+    7: ["Acid"],
     # Group 8 is intentionally non-adjacent to the TZFM groups: its 6260 Hz
     # metadata tone stays comfortably clear of the 6208 Hz engine-count tone.
     8: [
@@ -57,6 +60,10 @@ MODEL_NAMES = {
         "Saw Comb", "Diatonic Chord", "Scale Stack",
         "Wavetable Diatonic Chord", "Wavetable Scale Stack", "Shakers",
         "Brass", "Helix", "Clap",
+    ],
+    15: [
+        "Analog Percussion", "Skins", "Circuit Zaps", "Metalwork",
+        "ZxPulse48k", "Acid",
     ],
 }
 

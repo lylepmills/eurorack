@@ -7,6 +7,7 @@
 
 #include <algorithm>
 
+#include "plaits/build_config.h"
 #include "plaits/dsp/oscillator/sine_oscillator.h"
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/utils/random.h"
@@ -91,11 +92,17 @@ void SkinsEngine::Render(
   const float strike_decay = DecayCoefficient(0.0015f + 0.006f * position);
 
   float mode_frequency[kSkinsNumModes];
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  float mode_ratio[kSkinsNumModes];
+#endif
   float mode_decay[kSkinsNumModes];
   for (int i = 0; i < kSkinsNumModes; ++i) {
     const float ratio = kOpenRatios[i] +
         (kLoadedRatios[i] - kOpenRatios[i]) * shape;
     mode_frequency[i] = min(0.235f, base_frequency * ratio);
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    mode_ratio[i] = ratio;
+#endif
     const float mode = static_cast<float>(i) /
         static_cast<float>(kSkinsNumModes - 1);
     const float pressure_loss = 1.0f + pressure * (2.0f + 12.0f * mode);
@@ -104,10 +111,24 @@ void SkinsEngine::Render(
   }
 
   for (size_t i = 0; i < size; ++i) {
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    float sample_base_frequency = base_frequency;
+    if (parameters.frequency_offset) {
+      sample_base_frequency += parameters.frequency_offset[i];
+      CONSTRAIN(sample_base_frequency, 1.0e-7f, 0.075f);
+    }
+#endif
     float body = 0.0f;
     float edge = 0.0f;
     for (int j = 0; j < kSkinsNumModes; ++j) {
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+      const float frequency = parameters.frequency_offset
+          ? min(0.235f, sample_base_frequency * mode_ratio[j])
+          : mode_frequency[j];
+      phase_[j] += min(0.245f, frequency * bend_ratio_);
+#else
       phase_[j] += min(0.245f, mode_frequency[j] * bend_ratio_);
+#endif
       phase_[j] -= static_cast<int>(phase_[j]);
       const float mode_sample = amplitude_[j] * SineNoWrap(phase_[j]);
       body += mode_sample;

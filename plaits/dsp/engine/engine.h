@@ -62,6 +62,10 @@
 #define PLAITS_FM_DIAGNOSTIC_FORCE_FAST_FM 0
 #endif
 
+#ifndef PLAITS_FM_DIAGNOSTIC_FORCE_LINEAR_TZFM
+#define PLAITS_FM_DIAGNOSTIC_FORCE_LINEAR_TZFM 0
+#endif
+
 namespace plaits {
 
 inline float NoteToFrequency(float midi_note) {
@@ -301,7 +305,15 @@ class Engine {
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
   // Engines returning true consume EngineParameters::frequency_offset as signed,
   // audio-rate frequency offsets and must preserve negative increments.
-  virtual bool linear_tzfm_capable() const { return false; }
+  virtual bool linear_tzfm_capable() const {
+#if PLAITS_FM_DIAGNOSTIC_FORCE_LINEAR_TZFM
+    // Private candidate registries can route signed offsets through a newly
+    // implemented engine before its hardware pass grants product capability.
+    return true;
+#else
+    return false;
+#endif
+  }
   // Audio-rate acquisition adds work before Render(), and some engines have no
   // callback headroom left. Opt in separately so Fast FM can fall back safely
   // without removing their control-rate TZFM support.

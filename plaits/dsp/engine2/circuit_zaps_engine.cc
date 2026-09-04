@@ -7,6 +7,7 @@
 
 #include <algorithm>
 
+#include "plaits/build_config.h"
 #include "plaits/dsp/oscillator/sine_oscillator.h"
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/utils/random.h"
@@ -91,7 +92,16 @@ void CircuitZapsEngine::Render(
   const float drive = 1.2f + 7.0f * charge;
 
   for (size_t i = 0; i < size; ++i) {
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    float sample_base = base;
+    if (parameters.frequency_offset) {
+      sample_base += parameters.frequency_offset[i];
+      CONSTRAIN(sample_base, 1.0e-7f, 0.12f);
+    }
+    const float frequency_a = min(0.235f, sample_base * sweep_ratio_);
+#else
     const float frequency_a = min(0.235f, base * sweep_ratio_);
+#endif
     const float frequency_b = min(0.235f, frequency_a * ratio);
     phase_a_ += frequency_a;
     phase_a_ -= static_cast<int>(phase_a_);

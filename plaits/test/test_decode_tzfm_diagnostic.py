@@ -30,6 +30,12 @@ class DecoderTest(unittest.TestCase):
         return [6000.0, 6260.0, 6208.0] + values + [6500.0]
 
     @staticmethod
+    def group_seven_frame():
+        values = [5000.0]
+        values.extend(2500.0 + field for field in range(10))
+        return [6000.0, 6240.0, 6201.0] + values + [6500.0]
+
+    @staticmethod
     def group_nine_frame():
         values = []
         for engine in range(8):
@@ -83,6 +89,15 @@ class DecoderTest(unittest.TestCase):
                           for field in range(10))
         return [6000.0, 6380.0, 6209.0] + values + [6500.0]
 
+    @staticmethod
+    def group_fifteen_frame():
+        values = []
+        for engine in range(6):
+            values.append(5000.0 + 50.0 * engine)
+            values.extend(2500.0 + engine * 10.0 + field
+                          for field in range(10))
+        return [6000.0, 6400.0, 6206.0] + values + [6500.0]
+
     def test_decodes_last_complete_frame(self):
         group = 4
         frame = self.group_four_frame()
@@ -118,6 +133,12 @@ class DecoderTest(unittest.TestCase):
         self.assertEqual(len(results), 8)
         self.assertEqual(results[0]["name"], "CSaw")
         self.assertEqual(results[-1]["name"], "Bytebeat")
+
+    def test_decodes_new_linear_tzfm_candidate(self):
+        group, results = decoder.decode_frequencies(self.group_seven_frame())
+        self.assertEqual(group, 7)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["name"], "Acid")
 
     def test_decodes_second_fast_exponential_group(self):
         group, results = decoder.decode_frequencies(self.group_nine_frame())
@@ -162,6 +183,14 @@ class DecoderTest(unittest.TestCase):
         self.assertEqual(len(results), 9)
         self.assertEqual(results[0]["name"], "Saw Comb")
         self.assertEqual(results[-1]["name"], "Clap")
+
+    def test_decodes_post_august_fast_exponential_group(self):
+        group, results = decoder.decode_frequencies(
+            self.group_fifteen_frame())
+        self.assertEqual(group, 15)
+        self.assertEqual(len(results), 6)
+        self.assertEqual(results[0]["name"], "Analog Percussion")
+        self.assertEqual(results[-1]["name"], "Acid")
 
     def test_rejects_incomplete_frame(self):
         with self.assertRaisesRegex(ValueError, "no complete"):
