@@ -1387,6 +1387,46 @@ class GenerateEngineConfigTest(unittest.TestCase):
                     config,
                 )
 
+    def quick_retune_recipe(self, slots: list) -> dict:
+        recipe = self.simplified_ranges_recipe(slots)
+        recipe["schemaVersion"] = 29
+        recipe["preferences"].update({
+            "simplifiedPitchRanges": False,
+            "envelopeContour": False,
+            "quickRetune": True,
+        })
+        recipe["initialOptions"]["trigResponse"] = "trigger"
+        return recipe
+
+    def test_quick_retune_is_off_by_default_and_compiles_only_when_selected(self) -> None:
+        slots = ["virtual-analog"] * 24
+        default_config = render_config(validate_recipe(self.v12_recipe(slots, [])))
+        enabled_config = render_config(validate_recipe(self.quick_retune_recipe(slots)))
+        self.assertIn("#define PLAITS_BUILD_QUICK_RETUNE 0", default_config)
+        self.assertIn("#define PLAITS_BUILD_QUICK_RETUNE 1", enabled_config)
+
+    def test_quick_retune_requires_v29_and_standard_plaits(self) -> None:
+        slots = ["virtual-analog"] * 24
+        too_old = self.quick_retune_recipe(slots)
+        too_old["schemaVersion"] = 28
+        with self.assertRaisesRegex(ValueError, "schemaVersion 29"):
+            validate_recipe(too_old)
+
+        roved = self.quick_retune_recipe(slots)
+        roved["target"] = "plum-audio-roved"
+        with self.assertRaisesRegex(ValueError, "only on standard Plaits"):
+            validate_recipe(roved)
+
+    def test_quick_retune_does_not_disturb_the_options_profile(self) -> None:
+        slots = ["virtual-analog"] * 24
+        enabled = self.quick_retune_recipe(slots)
+        disabled = self.quick_retune_recipe(slots)
+        disabled["preferences"]["quickRetune"] = False
+        self.assertEqual(
+            validate_recipe(enabled).options_profile_id,
+            validate_recipe(disabled).options_profile_id,
+        )
+
     def test_experimental_fm_preferences_are_independent_v23_flags(self) -> None:
         slots = ["waveshaping", "two-op-fm", "vowel-fof"] + ["virtual-analog"] * 21
         for linear_tzfm, fast_fm in product((False, True), repeat=2):

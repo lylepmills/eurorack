@@ -685,6 +685,8 @@ test("every historical preference shape still loads, and nothing else does", asy
     ["syncInput"],
     ["linearTzfm", "fastFm"],
     ["simplifiedPitchRanges"],
+    ["envelopeContour"],
+    ["quickRetune"],
   ];
 
   const cumulative: string[] = [];
@@ -697,7 +699,8 @@ test("every historical preference shape still loads, and nothing else does", asy
     const normalized = normalizeRecipe(recipe);
     // Present flags read false; absent ones must not invent a value either.
     for (const key of ["calibration", "colorBlindMode", "replaceableFmBanks",
-      "syncInput", "linearTzfm", "fastFm", "simplifiedPitchRanges"]) {
+      "syncInput", "linearTzfm", "fastFm", "simplifiedPitchRanges",
+      "envelopeContour", "quickRetune"]) {
       assert.equal(
         normalized.preferences[key as "calibration"], false,
         `${key} should be false for the {${cumulative.join(",")}} shape`,
@@ -1002,6 +1005,68 @@ test("the simplified pitch-range preference requires and normalizes to v24", asy
       `preference ${key} did not survive normalization`,
     );
   }
+});
+
+test("quick retune requires schema 29 and the standard Plaits panel", async () => {
+  const publicCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const chordCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_chord_tables/catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const engines = new Map<string, any>(
+    publicCatalog.engines.map((engine: { id: string }) => [engine.id, engine]),
+  );
+  const recipe = structuredClone(fixture);
+  recipe.schemaVersion = 29;
+  recipe.slots = fixture.slots.map((engineId: string) => {
+    const engine = engines.get(engineId);
+    return {
+      engine: engineId,
+      package: engine.packageId,
+      version: engine.version,
+      digest: engine.digest,
+    };
+  });
+  recipe.preferences = {
+    navigationMode: "linear",
+    calibration: false,
+    colorBlindMode: false,
+    replaceableFmBanks: false,
+    syncInput: false,
+    linearTzfm: false,
+    fastFm: false,
+    simplifiedPitchRanges: false,
+    envelopeContour: false,
+    quickRetune: true,
+  };
+  recipe.initialOptions = {
+    lockedFrequencyKnob: "octaves",
+    modelInput: "model",
+    levelInput: "level",
+    auxOutput: "alternate-model",
+    suboscillatorOctave: 0,
+    chordTable: "original",
+    holdOnTrigger: false,
+    attenuverterMode: "stock",
+    trigResponse: "trigger",
+  };
+  recipe.resources = { chordTables: chordCatalog.tables };
+
+  const normalized = normalizeRecipe(recipe);
+  assert.equal(normalized.schemaVersion, 29);
+  assert.equal(normalized.preferences.quickRetune, true);
+
+  assert.throws(
+    () => normalizeRecipe({ ...recipe, schemaVersion: 28 }),
+    /schema version 29/,
+  );
+  assert.throws(
+    () => normalizeRecipe({ ...recipe, target: "plum-audio-roved" }),
+    /only on standard Plaits/,
+  );
 });
 
 test("automatic LEVEL routing is carried only by schema 16", async () => {

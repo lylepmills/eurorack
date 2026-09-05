@@ -328,8 +328,23 @@ const wavetableBank = [
   ),
 ];
 
+// Schema 28+ treats this as the shared wave library for Wavetable, Chords,
+// Braids-derived consumers, and factory Wave Terrain shapes. Keep all three
+// factory banks so the representative terrain bank below retains its sources,
+// then add the native canary banks that exercise generated data.
+const sharedWaveLibrary = [
+  { kind: "factory", id: "mutable-1" },
+  { kind: "factory", id: "mutable-2" },
+  { kind: "factory", id: "mutable-3" },
+  ...wavetableBank,
+];
+const sequenceWaveLine = (size: number) => Array.from({ length: size }, (_, index) => ({
+  bank: 0,
+  frame: Math.round(index * 63 / Math.max(1, size - 1)),
+}));
+
 const recipe = {
-  schemaVersion: 27,
+  schemaVersion: 29,
   target: "mutable-instruments-plaits",
   firmware: "rubato-plaits",
   // Keep Original Speech beside both split engines in this hardware gate. All
@@ -364,6 +379,7 @@ const recipe = {
     fastFm: false,
     simplifiedPitchRanges: false,
     envelopeContour: true,
+    quickRetune: true,
   },
   initialOptions: {
     lockedFrequencyKnob: "envelope-contour",
@@ -385,7 +401,14 @@ const recipe = {
       customBanks: [{ words, wordBoundaries: encoded.wordBoundaries, frameData: encoded.frameData }],
     },
     terrainBank,
-    wavetableBank: { mirrored: true, entries: wavetableBank },
+    wavetableBank: {
+      mirrored: true,
+      entries: sharedWaveLibrary,
+      waveLines: {
+        chords: sequenceWaveLine(15),
+        braids: sequenceWaveLine(33),
+      },
+    },
   },
 };
 

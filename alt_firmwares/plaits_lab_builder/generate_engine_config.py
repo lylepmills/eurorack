@@ -62,7 +62,7 @@ assert PACKED_BANK_SIZE % FLASH_PAGE_SIZE == 0
 # versions so adding a schema at the ceiling does not require extending a trail
 # of "10, 11, 12..." whitelists in the build container.
 MIN_RECIPE_SCHEMA_VERSION = 2
-MAX_RECIPE_SCHEMA_VERSION = 28
+MAX_RECIPE_SCHEMA_VERSION = 29
 CONFIGURATION_MIN_SCHEMA_VERSION = 4
 RESOURCES_MIN_SCHEMA_VERSION = 5
 FOUR_BANK_MIN_SCHEMA_VERSION = 6
@@ -111,6 +111,7 @@ SYNC_INPUT_PREFERENCE_MIN_SCHEMA_VERSION = 22
 # losing its tuned root or locked octave.
 SIMPLIFIED_PITCH_RANGES_MIN_SCHEMA_VERSION = 24
 GATE_ARTICULATION_MIN_SCHEMA_VERSION = 27
+QUICK_RETUNE_MIN_SCHEMA_VERSION = 29
 
 # v25: Natural Speech word banks. The engine's demo banks are a compile-time
 # fallback, so a recipe carrying its own REPLACES them wholesale rather than
@@ -136,6 +137,7 @@ PREFERENCE_TIERS = (
     ("linearTzfm", "fastFm"),
     ("simplifiedPitchRanges",),
     ("envelopeContour",),
+    ("quickRetune",),
 )
 
 # The starting-option tiers, same scheme and same reasoning as PREFERENCE_TIERS:
@@ -263,6 +265,9 @@ class BuildRecipe:
     # calibration and the panel choice, it is a firmware shape rather than a
     # stored setting, so it stays out of the options profile-id fold.
     simplified_pitch_ranges: int = 0
+    # v29: restore the standard-panel right-button + FREQUENCY retune shortcut
+    # while FREQUENCY itself is selecting octaves. Build-time preview only.
+    quick_retune: int = 0
     # v23: independent experimental FM capabilities. Neither is a saved runtime
     # option, so neither belongs in the options profile-id fold.
     linear_tzfm: int = 0
@@ -1894,6 +1899,18 @@ def validate_recipe(value: Any) -> BuildRecipe:
             f"the simplified pitch-range preference requires schemaVersion "
             f"{SIMPLIFIED_PITCH_RANGES_MIN_SCHEMA_VERSION}")
 
+    # Quick retune (v29). The gesture belongs to the standard two-button panel;
+    # Ro'Ved has its own pushed-knob gesture map and cannot opt into this build.
+    quick_retune = bool(preferences.get("quickRetune", False))
+    if not isinstance(preferences.get("quickRetune", False), bool):
+        raise ValueError("recipe contains an unsupported firmware option")
+    if quick_retune and schema_version < QUICK_RETUNE_MIN_SCHEMA_VERSION:
+        raise ValueError(
+            f"the quick-retune shortcut requires schemaVersion "
+            f"{QUICK_RETUNE_MIN_SCHEMA_VERSION}")
+    if quick_retune and target == "plum-audio-roved":
+        raise ValueError("the quick-retune shortcut is available only on standard Plaits")
+
     # Experimental FM (v23). Linear TZFM chooses the modulation law; Fast FM
     # chooses the converter mode. They are intentionally independent. Fast FM
     # disables LEVEL CV for the entire firmware because FM and LEVEL share
@@ -1935,6 +1952,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
         sync_input=1 if sync_input else 0,
         envelope_contour=1 if envelope_contour else 0,
         simplified_pitch_ranges=1 if simplified_pitch_ranges else 0,
+        quick_retune=1 if quick_retune else 0,
         linear_tzfm=1 if linear_tzfm else 0,
         fast_fm=1 if fast_fm else 0,
         user_data_bank_overrides=tuple(user_data_banks),
@@ -2670,6 +2688,7 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_BUILD_ENABLE_ONE_KNOB_ENVELOPE {recipe.envelope_contour}
 #define PLAITS_BUILD_MODEL_CV_OPTION {recipe.model_cv_option}
 #define PLAITS_BUILD_SIMPLIFIED_PITCH_RANGES {recipe.simplified_pitch_ranges}
+#define PLAITS_BUILD_QUICK_RETUNE {recipe.quick_retune}
 #define PLAITS_BUILD_LEVEL_CV_OPTION {recipe.level_cv_option}
 #define PLAITS_BUILD_AUX_OUTPUT_OPTION {recipe.aux_output_option}
 #define PLAITS_BUILD_AUX_SUBOSC_OPTION {recipe.aux_subosc_option}

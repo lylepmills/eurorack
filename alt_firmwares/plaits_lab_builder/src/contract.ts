@@ -37,7 +37,7 @@ export type NormalizedChordTable = {
 // feature gates below use minimums so a newly supported schema cannot get
 // stranded behind an old "10, 11, 12..." whitelist.
 export const minRecipeSchemaVersion = 2;
-export const maxRecipeSchemaVersion = 28;
+export const maxRecipeSchemaVersion = 29;
 const configurationMinSchemaVersion = 4;
 const resourcesMinSchemaVersion = 5;
 const fourBankMinSchemaVersion = 6;       // 32 slots
@@ -61,6 +61,7 @@ const experimentalFmMinSchemaVersion = 23; // independent TZFM law / fast ADC
 const simplifiedPitchRangesMinSchemaVersion = 24;
 const gateArticulationMinSchemaVersion = 27;
 const wavetableWaveLinesMinSchemaVersion = 28;
+const quickRetuneMinSchemaVersion = 29;
 const scaleBankMinSchemaVersion = 16;      // recipe-driven scale bank
 export const levelAutoMinSchemaVersion = 16; // engine-aware LEVEL routing
 const speechBanksMinSchemaVersion = 17;      // selectable/custom Speech LPC banks
@@ -218,7 +219,7 @@ export type NormalizedWaveLinePoint = {
 };
 
 export type NormalizedRecipe = {
-  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28;
+  schemaVersion: 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29;
   target: "mutable-instruments-plaits" | "plum-audio-roved";
   firmware: "rubato-plaits";
   // A null entry is an empty slot (v7 short banks); filled slots are engine ids.
@@ -257,6 +258,9 @@ export type NormalizedRecipe = {
     // Compile the optional one-knob envelope contour. Its runtime one-shot or
     // gated behavior is selected independently by trigResponse.
     envelopeContour?: boolean;
+    // Preview (v29): on standard Plaits, restore right-button + FREQUENCY
+    // retuning while FREQUENCY itself is in octave-switching mode.
+    quickRetune?: boolean;
   };
   initialOptions: {
     lockedFrequencyKnob: "octaves" | "decay" | "aux-crossfade" | "macro-4"
@@ -1046,6 +1050,7 @@ function normalizeConfiguration(
     ["linearTzfm", "fastFm"],
     ["simplifiedPitchRanges"],
     ["envelopeContour"],
+    ["quickRetune"],
   ];
   // The index of the cumulative prefix the recipe's keys match exactly, or -1
   // for a shape no released editor ever produced.
@@ -1118,6 +1123,7 @@ function normalizeConfiguration(
   const linearTzfm = preferenceValues.linearTzfm === true;
   const fastFm = preferenceValues.fastFm === true;
   const simplifiedPitchRanges = preferenceValues.simplifiedPitchRanges === true;
+  const quickRetune = preferenceValues.quickRetune === true;
   const legacyContour = optionValues.lockedFrequencyKnob === "triggered-envelope"
     || optionValues.lockedFrequencyKnob === "gated-envelope";
   const envelopeContour = preferenceValues.envelopeContour === true;
@@ -1147,6 +1153,18 @@ function normalizeConfiguration(
     throw new ContractError(
       "unsupported_schema",
       `The simplified pitch-range preference requires recipe schema version ${simplifiedPitchRangesMinSchemaVersion}.`,
+    );
+  }
+  if (quickRetune && Number(candidate.schemaVersion) < quickRetuneMinSchemaVersion) {
+    throw new ContractError(
+      "unsupported_schema",
+      `The quick-retune shortcut requires recipe schema version ${quickRetuneMinSchemaVersion}.`,
+    );
+  }
+  if (quickRetune && candidate.target === "plum-audio-roved") {
+    throw new ContractError(
+      "invalid_recipe",
+      "The quick-retune shortcut is available only on standard Plaits.",
     );
   }
   if ((linearTzfm || fastFm)
@@ -1229,6 +1247,7 @@ function normalizeConfiguration(
       fastFm,
       simplifiedPitchRanges,
       envelopeContour: hasEnvelopeContour,
+      quickRetune,
     },
     initialOptions: {
       // Preserve the two v19 spellings at the private Worker/container boundary.
@@ -1560,7 +1579,8 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     // (v8); a short-bank recipe (a trailing empty slot) stays v7; a candidate that
     // carried v6 resources (even an empty custom-bank list, e.g. a 32-slot recipe)
     // stays v6; else v5.
-    schemaVersion: chordTables.length > maxPreGestureChordTables
+    schemaVersion: configuration.preferences.quickRetune ? 29
+      : chordTables.length > maxPreGestureChordTables
       || (!legacyContour && (
         configuration.preferences.envelopeContour
         || configuration.initialOptions.trigResponse !== "trigger"

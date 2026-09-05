@@ -75,6 +75,22 @@ inline float PrecisionRangeNote(float anchor_note, float transposition) {
   return anchor_note + transposition;
 }
 
+// The original Plaits octave-switching workflow let the player hold the right
+// button and turn FREQUENCY to move the root over the same +/-7-semitone span
+// as an ordinary pitch range. Palette's dedicated precision range superseded
+// the old absolute fine-tune byte, but the direct gesture remains useful. Keep
+// it relative to the persisted root so entering the gesture never discards a
+// tuning established through Coarse -> Fine tuning.
+inline float RootRetuneNote(float anchor_note, float transposition) {
+  const float note = anchor_note + transposition * 7.0f;
+  // tuned_root_q8 is the persistent source of truth. Clamp the live value to
+  // the same representable interval so repeated gestures cannot sound one note
+  // and restore a different, saturated note after a power cycle.
+  const float minimum = -128.0f;
+  const float maximum = 32767.0f / 256.0f;
+  return note < minimum ? minimum : note > maximum ? maximum : note;
+}
+
 // Chooses the manual pitch that becomes the octave-switching root.
 //
 // The range selector is a hidden parameter on HARMONICS, so it sweeps: to

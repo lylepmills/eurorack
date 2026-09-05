@@ -239,6 +239,25 @@ int main() {
   CHECK(Near(PrecisionRangeNote(60.25f, 0.0f), 60.25f));
   CHECK(Near(PrecisionRangeNote(60.25f, 1.0f), 61.25f));
 
+  // The right-button + FREQUENCY shortcut is a broad, relative retune around
+  // the persisted root. The octave currently being sounded is deliberately
+  // absent from this math, so editing from (say) root + two octaves cannot bake
+  // that octave into the saved tuning.
+  CHECK(Near(RootRetuneNote(60.25f, -1.0f), 53.25f));
+  CHECK(Near(RootRetuneNote(60.25f, 0.0f), 60.25f));
+  CHECK(Near(RootRetuneNote(60.25f, 1.0f), 67.25f));
+  CHECK(Near(RootRetuneNote(-127.0f, -1.0f), -128.0f));
+  CHECK(Near(RootRetuneNote(127.0f, 1.0f), 32767.0f / 256.0f));
+
+  EndpointCatchUp retune;
+  retune.Init(0.5f, 0.8f);
+  CHECK(Near(RootRetuneNote(60.0f,
+      2.0f * retune.Process(0.8f) - 1.0f), 60.0f));
+  const float retuned_down = RootRetuneNote(
+      60.0f, 2.0f * retune.Process(0.7f) - 1.0f);
+  CHECK(retuned_down < 60.0f);
+  CHECK(retuned_down > 53.0f);
+
   // Changing roles starts from noon without a pitch jump. Movement beyond the
   // ordinary Plaits pickup threshold changes the virtual control immediately,
   // and reaching an endpoint completes pickup so subsequent tracking is direct.

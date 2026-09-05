@@ -49,15 +49,19 @@ test("the hardware smoke carries Speech plus the Terrain and Wavetable release b
     /slots:\s*\[\s*reference\(waveTerrain\),\s*reference\(wavetable\),\s*reference\(originalSpeech\),\s*reference\(speechSounds\),\s*reference\(lpcWords\),/s,
   );
   assert.match(smoke, /assert\.equal\(terrainBank\.length, 16/);
-  assert.match(smoke, /wavetableBank:\s*\{ mirrored: true, entries: wavetableBank \}/);
+  assert.match(smoke, /const sharedWaveLibrary = \[/);
+  assert.match(smoke, /wavetableBank:\s*\{[\s\S]*entries:\s*sharedWaveLibrary/);
+  assert.match(smoke, /chords:\s*sequenceWaveLine\(15\)/);
+  assert.match(smoke, /braids:\s*sequenceWaveLine\(33\)/);
   assert.match(smoke, /"native"/);
 });
 
-test("the hardware smoke exercises schema 27 gate articulation and both chord-table banks", () => {
-  assert.match(smoke, /schemaVersion:\s*27/);
+test("the hardware smoke exercises schema 29 Quick Retune, gate articulation, and both chord-table banks", () => {
+  assert.match(smoke, /schemaVersion:\s*29/);
   assert.match(smoke, /engine\.id === "chords"/);
   assert.match(smoke, /reference\(chords\)/);
   assert.match(smoke, /envelopeContour:\s*true/);
+  assert.match(smoke, /quickRetune:\s*true/);
   assert.match(smoke, /lockedFrequencyKnob:\s*"envelope-contour"/);
   assert.match(smoke, /trigResponse:\s*"velocity-gate"/);
   assert.match(smoke, /assert\.equal\(canaryChordTables\.length, 16/);

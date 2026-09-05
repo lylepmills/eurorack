@@ -212,7 +212,13 @@ class Ui {
   int ui_task_;
   int option_index_;
 
-  float data_transfer_progress_;
+  // Data transfer and the held-button quick-retune gesture cannot be active
+  // together. Sharing this slot keeps the optional gesture at zero RAM cost
+  // and preserves Ui's layout in builds where it is compiled out.
+  union {
+    float data_transfer_progress_;
+    float root_retune_control_;
+  };
   float transposition_;
   float octave_;
   float tuned_root_note_;
