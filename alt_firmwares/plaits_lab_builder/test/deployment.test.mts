@@ -49,7 +49,10 @@ test("the hardware smoke carries Speech plus the Terrain and Wavetable release b
     /slots:\s*\[\s*reference\(waveTerrain\),\s*reference\(wavetable\),\s*reference\(originalSpeech\),\s*reference\(speechSounds\),\s*reference\(lpcWords\),/s,
   );
   assert.match(smoke, /assert\.equal\(terrainBank\.length, 16/);
-  assert.match(smoke, /wavetableBank:\s*\{ mirrored: true, entries: wavetableBank \}/);
+  assert.match(smoke, /const sharedWaveLibrary = \[/);
+  assert.match(smoke, /wavetableBank:\s*\{[\s\S]*entries:\s*sharedWaveLibrary/);
+  assert.match(smoke, /chords:\s*sequenceWaveLine\(15\)/);
+  assert.match(smoke, /braids:\s*sequenceWaveLine\(33\)/);
   assert.match(smoke, /"native"/);
 });
 
