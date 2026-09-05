@@ -122,7 +122,7 @@
 #endif
 
 // Restore Plaits' right-button + FREQUENCY retune gesture while FREQUENCY is
-// in octave-switching mode. This preview capability is build-time-only: when
+// in octave-switching mode. This capability is build-time-only: when
 // disabled, every branch is preprocessed away and the stock gesture map and
 // flash footprint remain unchanged.
 #ifndef PLAITS_BUILD_QUICK_RETUNE

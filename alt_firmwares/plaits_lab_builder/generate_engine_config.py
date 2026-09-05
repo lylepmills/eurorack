@@ -266,7 +266,7 @@ class BuildRecipe:
     # stored setting, so it stays out of the options profile-id fold.
     simplified_pitch_ranges: int = 0
     # v29: restore the standard-panel right-button + FREQUENCY retune shortcut
-    # while FREQUENCY itself is selecting octaves. Build-time preview only.
+    # while FREQUENCY itself is selecting octaves. Compile-time capability only.
     quick_retune: int = 0
     # v23: independent experimental FM capabilities. Neither is a saved runtime
     # option, so neither belongs in the options profile-id fold.

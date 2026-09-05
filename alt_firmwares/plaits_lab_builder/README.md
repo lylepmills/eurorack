@@ -1,7 +1,7 @@
 # Plaits Palette firmware build service
 
 This directory contains the approved-engine backend for Plaits Palette. It accepts
-legacy recipes and manifests through schema 28 containing 24 or 32 versioned
+legacy recipes and manifests through schema 29 containing 24 or 32 versioned
 engine references, firmware preferences and starting options, and bounded
 chord-table/custom-FM/scale-bank/Speech-bank/custom-model resources. Schema 15 can target either Mutable
 Instruments Plaits or Plum Audio Ro'Ved and adds the color-blind bank display.
@@ -120,13 +120,10 @@ range, not a second tuning store. It is completely compiled out when disabled.
 Ro'Ved cannot enable it because its clickable-knob panel has a different gesture
 map.
 
-Schema 26 introduced recipe-driven scale banks, automatic
-LEVEL routing, selectable/custom LPC Speech banks of up to 32 words, text and
-recording encoders, source/engine audio previews, unpatched-attenuverter modes,
-and the triggered and gated FREQUENCY contours. It also includes schema 20's
-replaceable FM banks and schema 21's experimental Sync In, now controlled by
-schema 22's explicit opt-in preference, plus schema 23's independent Linear
-TZFM and Fast FM options and schema 24's simplified FREQUENCY range selector.
+Schema 25 adds Natural Speech and its word-bank encoder. Schema 26 adds shared
+custom Wavetable banks. Schema 27 adds four-way articulation, sixteen chord
+tables, Ro'Ved gestures, and Acid. Schema 28 promotes Wavetable resources into
+a shared Wave Tables library with per-engine routes.
 
 ## Editable local source builds
 
@@ -889,7 +886,7 @@ and Step unpatched-attenuverter modes; schema 17's selectable stock LPC banks,
 custom text/recording-derived Speech banks, source/engine previews; and the
 earlier recipe-driven scale banks and automatic LEVEL routing. The generalized
 schema-inheritance hardening from `5b2b077` is also live: current production
-source `bdf148346885` descends from that commit, so future supported schemas
+source `1d227a049e3c` descends from that commit, so future supported schemas
 inherit older feature shapes without another version-list edit.
 
 Schema 28 promotes the Wavetable resource into one shared Wave Tables library.
@@ -1059,8 +1056,25 @@ Three things about this rollout are worth carrying forward:
 The website flash meter's Sync In rows are maintained by
 `sync_flash_sweep.py` here (run `--all` inside the builder container to
 re-derive the whole table; `sync_anchor_probe.py` re-measures just the
-24-model reference palette the anchor is pinned to). Re-measuring them the
-day after this rollout found two rows a month stale — `harmonic` 1,968 B high
+24-model reference palette the anchor is pinned to). The builder image starts
+`container_server.py` through its default `ENTRYPOINT`, so one-off Python tools
+must override that entrypoint; appending a script name after the image without
+the override passes it to the server instead. For example, from the checkout
+being measured:
+
+```sh
+touch plaits/resources.cc
+docker run --rm --platform linux/amd64 \
+  -v "$PWD":/work -v "$PWD":/workspace -w /work \
+  -v /path/to/eurorack/stmlib:/work/stmlib:ro \
+  -v /path/to/eurorack/stmlib:/workspace/stmlib:ro \
+  -v /path/to/eurorack/stm_audio_bootloader:/workspace/stm_audio_bootloader:ro \
+  --entrypoint python3 plaits-lab-builder:<tag> \
+  /work/alt_firmwares/plaits_lab_builder/sync_anchor_probe.py
+```
+
+Re-measuring those rows the day after an earlier rollout found two rows a month
+stale — `harmonic` 1,968 B high
 and `swarm` 560 B high, against a base 1,088 B low — because the sweep as
 originally written could not measure any engine the base palette already
 carried: adding it produced a duplicate slot, which collapses, so the arms
