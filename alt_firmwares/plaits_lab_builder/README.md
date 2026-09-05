@@ -858,7 +858,7 @@ revision before building — a tag that disagrees with the source inside it is
 the failure the `development` sentinel exists to catch, caught earlier.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-bdf148346885` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-1d227a049e3c` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a new
 image, use `wrangler containers info <application-id>` and wait until
@@ -872,7 +872,9 @@ attached and answering. Do not infer from the deploy succeeding either —
 staging application can temporarily return "no Container instance available"
 while its image is starting; the bounded staging smoke retries that response.
 
-Schema 28 is live. It retains schema 27's independent Trigger / Gate / Velocity
+Schema 29 is live. It adds the off-by-default standard-Plaits Quick Retune
+shortcut described above and retains schema 28's shared Wave Tables library.
+It also retains schema 27's independent Trigger / Gate / Velocity
 Trigger / Velocity Gate articulation and two eight-table chord banks. That release
 adds the Acid community engine and retains schema 26's custom Wavetable banks,
 schema 25's Natural Speech engine, schema 24's shared Wave Terrain banks and
@@ -992,6 +994,21 @@ target.
 | September 2, 2026 (schema 28 shared Wave Tables library and per-engine wave routes) | `bdf148346885` | `rev-bdf148346885` |
 | September 2, 2026 (Acid native hard sync) | `06d11c08e05e` | `rev-06d11c08e05e` |
 | September 3, 2026 (catalog copy release: OUT/AUX stereo sentences, spelling, credits, Analog Clap; no firmware change — stock and Speech gate builds byte-identical to `06d11c08e05e`) | `f92cf0698662` | `rev-f92cf0698662` |
+| September 5, 2026 (schema 29 optional Quick Retune shortcut, manual contract 23) | `1d227a049e3c` | `rev-1d227a049e3c` |
+
+The schema-29 Quick Retune production canary compiled fresh as build
+`c5532afdc7dc295b0345435f187d1398f5d973b1ed9168ca50f67db973c91e5f`:
+183,584 B text, 48 B data, and 22,544 B BSS. Its binary SHA-256 was
+`a3e150867fecae99e7546d6391232967ee2b3f19ed0fa6d0fb1e7ef7c9e25cad`;
+the 14,457,836-byte updater WAV SHA-256 was
+`fd8e82665df13811049ca2eaa6be68c8f5f6949267b73e6dcff6cf908229641c`,
+and its generated field guide SHA-256 was
+`a94df079e828979593748d9c26bd8896c9a4a9065ca02cb74cf921a2c11c0a0a`.
+The compiler stamped `1d227a049e3c` after both staging and production pools
+had settled on the immutable image. The release also re-measured the stock
+flash anchor at 228,628 B and the Sync In reference delta at 18,128 B, both
+unchanged. No physical flash/play test was available for this release; the
+gesture remains an Advanced opt-in until that hardware audition is completed.
 
 The schema-28 shared-wave production canary compiled fresh as build
 `e114ffb89814dc91dd8faeff3b8eb46354130497f79ce9267f7e0b8b9185f94a`:
