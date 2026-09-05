@@ -580,11 +580,23 @@ void Ui::UpdateLEDs() {
           const bool show_locked_octave = ShowLockedOctave(
               contextual_control_target_ == CONTEXTUAL_CONTROL_OCTAVE,
               pots_[POTS_ADC_CHANNEL_HARMONICS_POT].editing_hidden_parameter());
+#if PLAITS_BUILD_QUICK_RETUNE
+          const bool show_root_retune =
+              pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].editing_hidden_parameter();
+#endif
           const int octave = show_locked_octave
               ? (locked_octave_ == 8 ? PITCH_RANGE_HIGH : locked_octave_ + 1)
               : PitchRangeFromControl(octave_);
           for (int i = 0; i < 8; ++i) {
             LedColor color = LED_COLOR_OFF;
+#if PLAITS_BUILD_QUICK_RETUNE
+            if (show_root_retune) {
+              // Match the dedicated Fine tuning range: breathing all eight
+              // lights says the root is moving, rather than falsely showing
+              // the frozen octave selection while FREQUENCY has another job.
+              color = pwm_counter < triangle ? LED_COLOR_YELLOW : LED_COLOR_OFF;
+            } else
+#endif
             if (octave == 0) {
               color = i == (triangle >> 1) ? LED_COLOR_OFF : LED_COLOR_YELLOW;
             } else if (octave == PITCH_RANGE_HIGH) {
@@ -886,7 +898,27 @@ void Ui::ReadSwitches() {
           LockHarmonicsPotForContext(false);
         }
         if (switches_.just_pressed(Switch(1))) {
+#if PLAITS_BUILD_QUICK_RETUNE
+          // Restore the stock-panel shortcut: while octave switching is the
+          // active range, right button + FREQUENCY retunes the persisted root
+          // without making the player leave and re-enter the range. Anchor on
+          // the root itself, not patch_->note, so the currently selected octave
+          // is never folded into the saved tuning.
+          // The normal locked-FREQUENCY assignment is irrelevant here: the
+          // held layer temporarily borrows FREQUENCY for root tuning, while
+          // right button + MORPH retains its independent octave control.
+          if (PitchRangeFromControl(octave_) == PITCH_RANGE_OCTAVES) {
+            root_retune_control_ = 0.5f * transposition_ + 0.5f;
+            precision_anchor_note_ = tuned_root_note_;
+            precision_catch_up_.Init(0.5f, root_retune_control_);
+            pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].Lock(
+                &root_retune_control_);
+          } else {
+            pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].Lock();
+          }
+#else
           pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].Lock();
+#endif
           pots_[POTS_ADC_CHANNEL_HARMONICS_POT].Lock();
           pots_[POTS_ADC_CHANNEL_FM_ATTENUVERTER].Lock();
           // Once FREQUENCY is assigned to the fourth macro, aux crossfade, or
@@ -943,6 +975,10 @@ void Ui::ReadSwitches() {
     case UI_MODE_DISPLAY_OCTAVE:
       for (int i = 0; i < SWITCH_LAST; ++i) {
         if (switches_.released(Switch(i))) {
+#if PLAITS_BUILD_QUICK_RETUNE
+          const bool save_root_retune =
+              pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].editing_hidden_parameter();
+#endif
           const bool save_contextual_control =
               contextual_control_target_ == CONTEXTUAL_CONTROL_CHORD_TABLE
                   ? pots_[POTS_ADC_CHANNEL_HARMONICS_POT].editing_hidden_parameter()
@@ -956,7 +992,11 @@ void Ui::ReadSwitches() {
           contextual_control_target_ = CONTEXTUAL_CONTROL_NONE;
           press_time_[i] = 0;
           mode_ = UI_MODE_NORMAL;
-          if (save_contextual_control) {
+          if (save_contextual_control
+#if PLAITS_BUILD_QUICK_RETUNE
+              || save_root_retune
+#endif
+          ) {
             SaveState();
           }
         }
@@ -1116,6 +1156,13 @@ void Ui::ProcessPotsHiddenParameters() {
   for (int i = 0; i < POTS_ADC_CHANNEL_LAST; ++i) {
     pots_[i].ProcessUIRate();
   }
+#if PLAITS_BUILD_QUICK_RETUNE
+  if (pots_[POTS_ADC_CHANNEL_FREQUENCY_POT].editing_hidden_parameter()) {
+    const float control = precision_catch_up_.Process(root_retune_control_);
+    tuned_root_note_ = RootRetuneNote(
+        precision_anchor_note_, 2.0f * control - 1.0f);
+  }
+#endif
   if (contextual_control_target_ == CONTEXTUAL_CONTROL_OCTAVE &&
       pots_[kLockedOctavePot].editing_hidden_parameter()) {
     locked_octave_ = static_cast<uint8_t>(

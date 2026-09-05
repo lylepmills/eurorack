@@ -30,8 +30,9 @@ PUBLIC_CATALOG_PATH = BUILDER_DIR.parent / "plaits_lab_catalog/public_catalog.js
 # special LED order for four-way TRIG articulation; the Worker went to 22 with
 # that prose while this constant was left at 21, which under-declared what the
 # renderer prints without breaking anything, since a Worker ahead of the
-# requirement is the safe direction.
-MANUAL_CONTRACT = 22
+# requirement is the safe direction. 23 conditionally documents the standard
+# Plaits panel's build-time quick-retune shortcut.
+MANUAL_CONTRACT = 23
 BANKS = (
     {"id": "green", "name": "GREEN", "start": 0, "color": "#4F9868"},
     {"id": "red", "name": "RED", "start": 8, "color": "#C6534B"},
@@ -386,6 +387,7 @@ def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]
         "lockedFrequencyPotOption": build.locked_frequency_pot_option,
         "trigResponseOption": build.trig_response_option,
         "envelopeContour": build.envelope_contour == 1,
+        "quickRetune": build.quick_retune == 1,
         "modelCVOption": build.model_cv_option,
     }
 
@@ -854,6 +856,10 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         "seven yellow lights with the selected position dark.<br/>" +
         "<br/>".join(chord_table_lines)
     )
+    quick_retune_note = (
+        " Already in octave switching? Hold the right button and turn FREQUENCY to retune the saved root up to seven semitones without leaving the range, regardless of the Locked frequency knob setting. The selected octave stays separate; release the button to save and return FREQUENCY to its normal assignment."
+        if document.get("quickRetune") and not roved else ""
+    )
     fine_tuning = (
         "Press and hold HARMONICS, then turn it to choose the frequency range. Fine tuning is the position after octave switching and before the high-frequency range; all eight model lights pulse together. "
         "Release HARMONICS, then turn FREQUENCY to tune one semitone above or below the current manual pitch. The pitch starts where it was, responds as soon as you turn, and saves automatically two seconds after you stop. "
@@ -862,6 +868,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         "Hold the right button and turn HARMONICS to choose the frequency range. Fine tuning is the position after octave switching and before the high-frequency range; all eight model lights pulse together. "
         "Release the button, then turn FREQUENCY to tune one semitone above or below the current manual pitch. The pitch starts where it was, responds as soon as you turn, and saves automatically two seconds after you stop. "
         "That saved pitch becomes the root used by octave switching and remains after power cycles. Patched V/OCT and FM are not folded into the saved tuning."
+        f"{quick_retune_note}"
     )
     linear_tzfm = bool(document.get("linearTzfm"))
     fast_fm = bool(document.get("fastFm"))

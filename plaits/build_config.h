@@ -121,6 +121,14 @@
 #define PLAITS_BUILD_SIMPLIFIED_PITCH_RANGES 0
 #endif
 
+// Restore Plaits' right-button + FREQUENCY retune gesture while FREQUENCY is
+// in octave-switching mode. This preview capability is build-time-only: when
+// disabled, every branch is preprocessed away and the stock gesture map and
+// flash footprint remain unchanged.
+#ifndef PLAITS_BUILD_QUICK_RETUNE
+#define PLAITS_BUILD_QUICK_RETUNE 0
+#endif
+
 #ifndef PLAITS_BUILD_LEVEL_CV_OPTION
 #define PLAITS_BUILD_LEVEL_CV_OPTION 0
 #endif

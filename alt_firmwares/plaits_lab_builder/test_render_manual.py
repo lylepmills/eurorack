@@ -200,6 +200,39 @@ class RenderManualTest(unittest.TestCase):
             self.assertIn("Elements-derived Envelope contour", printed)
             self.assertIn("rising-edge voltage", printed)
 
+    @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
+    def test_quick_retune_build_alone_prints_the_shortcut(self) -> None:
+        recipe = self.calibration_recipe(False)
+        recipe["schemaVersion"] = 29
+        recipe["preferences"] = {
+            "navigationMode": "linear",
+            "calibration": False,
+            "colorBlindMode": False,
+            "replaceableFmBanks": False,
+            "syncInput": False,
+            "linearTzfm": False,
+            "fastFm": False,
+            "simplifiedPitchRanges": False,
+            "envelopeContour": False,
+            "quickRetune": True,
+        }
+        recipe["initialOptions"]["attenuverterMode"] = "stock"
+        recipe["initialOptions"]["trigResponse"] = "trigger"
+        recipe["initialOptions"]["lockedFrequencyKnob"] = "macro-4"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            enabled_output = Path(temp_dir) / "quick-retune.pdf"
+            render_pdf(manual_document(recipe), enabled_output)
+            enabled = pdf_strings(enabled_output).replace(")(", " ")
+            self.assertIn("Already in octave switching", enabled)
+            self.assertIn("regardless of the Locked frequency knob setting", enabled)
+            self.assertIn("return FREQUENCY to its normal assignment", enabled)
+
+            recipe["preferences"]["quickRetune"] = False
+            disabled_output = Path(temp_dir) / "no-quick-retune.pdf"
+            render_pdf(manual_document(recipe), disabled_output)
+            disabled = pdf_strings(disabled_output).replace(")(", " ")
+            self.assertNotIn("Already in octave switching", disabled)
+
     def short_bank_recipe(self) -> dict:
         # v7 short bank: green full (8), red partly empty (3 + 5 empty), amber
         # full (8). The Worker normalizes filled slots to bare IDs interleaved
@@ -488,12 +521,15 @@ class RenderManualTest(unittest.TestCase):
             self.assertIn("FINE TUNING", printed)
             self.assertIn("Hold the right button and turn HARMONICS", printed)
             self.assertIn("saves automatically two seconds after you stop", printed)
+            self.assertIn("Release the button, then turn FREQUENCY", printed)
+            self.assertNotIn("The selected octave stays separate", printed)
 
             roved = Path(temp_dir) / "roved-controls.pdf"
             render_pdf(manual_document(self.roved_recipe()), roved)
             roved_printed = pdf_strings(roved).replace(")(", " ")
             self.assertIn("Press and hold HARMONICS", roved_printed)
             self.assertNotIn("Hold the right button and turn HARMONICS", roved_printed)
+            self.assertNotIn("Hold the right button and turn FREQUENCY", roved_printed)
 
     def roved_recipe(self, calibration: bool = False) -> dict:
         recipe = self.calibration_recipe(calibration)

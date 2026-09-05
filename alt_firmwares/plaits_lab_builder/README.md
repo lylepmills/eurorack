@@ -109,6 +109,17 @@ in either direction. Leave it off for LFO use or one-gesture octave jumps.
 Note the option is NOT experimental and is not in the Experimental section: it
 changes which selector positions exist, not what any of them do.
 
+Schema 29 adds `quickRetune`, an off-by-default Advanced option for the standard
+Plaits panel. Whenever the pitch range is octave switching, hold the right model
+button and turn FREQUENCY to move the saved root up to seven semitones without
+leaving the range, regardless of the Locked frequency knob setting. The current
+octave remains separate, release saves the new root, and FREQUENCY catches up to
+its normal assignment without a jump. This is a
+compatibility shortcut into the same persisted root as the dedicated Fine tuning
+range, not a second tuning store. It is completely compiled out when disabled.
+Ro'Ved cannot enable it because its clickable-knob panel has a different gesture
+map.
+
 Schema 26 introduced recipe-driven scale banks, automatic
 LEVEL routing, selectable/custom LPC Speech banks of up to 32 words, text and
 recording encoders, source/engine audio previews, unpatched-attenuverter modes,
@@ -582,14 +593,13 @@ revision under test rather than treating either set as an expected value.
 The production Worker, queues, R2 bucket, Durable Objects, and compiler
 Container are managed by `wrangler.jsonc`. Before each firmware-source rollout:
 
-> **The schema-27 percussion release image `37c608fa2a69` carries
-> `PLAITS_MANUAL_CONTRACT=22` in both environment blocks.** Preserve that value
-> when promoting it to production: the Ro'Ved Field Guide's navigation and
-> locked-octave prose changed with this firmware and its renderer ships in the
-> same immutable image. Contract 22 also invalidates the schema-27 staging PDF
-> cached before LIGHT 4's special LED order was documented. The combined image
-> also carries the Acid community engine and was promoted only after the
-> schema-27 physical-module validation. See the contract notes above.
+> **Draft rollout note:** restoring right button + FREQUENCY raises the manual
+> contract to 23. The currently deployed schema-27 image `37c608fa2a69` carries
+> contract 22 and must not be reused for this source. Before promotion, build a
+> new immutable image containing the shortcut and its Field Guide copy, set its
+> source revision and image ID here, and preserve `PLAITS_MANUAL_CONTRACT=23` in
+> both environment blocks. Contract 23 also retains contract 22's invalidation
+> of the staging PDF cached before LIGHT 4's special LED order was documented.
 >
 > You do not have to remember the contract value: `pnpm run deploy` runs
 > `contract:check`, which refuses any deploy whose `PLAITS_MANUAL_CONTRACT` is
