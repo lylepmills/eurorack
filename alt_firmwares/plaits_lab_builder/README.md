@@ -144,12 +144,12 @@ with a one-byte-offset arena, while an aligned control rendered successfully.
 The post-link check now rejects that layout regardless of the recipe's engines
 or custom resources. The aligned, release-shaped v6 terrain canary then passed
 on physical Plaits hardware: saved Wave Terrain selection and the fourth-control
-TWIST assignment survived repeated power cycles; all 16 factory, native, and
-prebaked terrains swept without frozen/repeated audio buffers; TIMBRE, MORPH,
-HARMONICS, and TWIST remained responsive; and navigation into and out of Wave
-Terrain continued to produce audio. Near-silent positions during the TWIST
-sweep occurred symmetrically with the terrain geometry and recovered normally,
-not as CPU stalls.
+assignment (then labelled MACRO, now TWIST) survived repeated power cycles; all
+16 factory, native, and prebaked terrains swept without frozen/repeated audio
+buffers; TIMBRE, MORPH, HARMONICS, and the fourth control remained responsive;
+and navigation into and out of Wave Terrain continued to produce audio.
+Near-silent positions during the fourth-control sweep occurred symmetrically
+with the terrain geometry and recovered normally, not as CPU stalls.
 
 The exact schema-24 release gate used staging build
 `b20070a737e3aeb915bb7fd91c9222af6bd8d9fa9985671951a2db34cf597119`,
@@ -449,8 +449,9 @@ six-op slot "Custom 6-Op FM Bank" in the bank map and the model reference,
 subtitled with the bank's own name; contract 10 adds the recipe's scale order).
 Contract 13 clarifies LIGHT 8's Default/CCW/CW behavior. It shipped with the
 six-voice wavetable optimization image, so cached guides receive that
-prose-only correction from the matching renderer. Contract 14 standardizes the
-fourth synthesis control's user-facing name as TWIST and adds the precision
+prose-only correction from the matching renderer. Contract 14 standardized the
+fourth synthesis control's user-facing name as MACRO (renamed to TWIST by
+contract 24, below) and adds the precision
 fine-tuning range to the at-module reference. Its renderer and tests are landed,
 but the Worker remains on contract 13 until the next builder-image rollout: that
 rollout must bump `PLAITS_MANUAL_CONTRACT` to 14 together with the immutable
@@ -601,20 +602,13 @@ revision under test rather than treating either set as an expected value.
 The production Worker, queues, R2 bucket, Durable Objects, and compiler
 Container are managed by `wrangler.jsonc`. Before each firmware-source rollout:
 
-> **Draft rollout note:** restoring right button + FREQUENCY raises the manual
-> contract to 23. The currently deployed schema-27 image `37c608fa2a69` carries
-> contract 22 and must not be reused for this source. Before promotion, build a
-> new immutable image containing the shortcut and its Field Guide copy, set its
-> source revision and image ID here, and preserve `PLAITS_MANUAL_CONTRACT=23` in
-> both environment blocks. Contract 23 also retains contract 22's invalidation
-> of the staging PDF cached before LIGHT 4's special LED order was documented.
->
-> You do not have to remember the contract value: `pnpm run deploy` runs
+> You do not have to remember the manual-contract value: `pnpm run deploy` runs
 > `contract:check`, which refuses any deploy whose `PLAITS_MANUAL_CONTRACT` is
 > below the `MANUAL_CONTRACT` that `render_manual.py` declares **at the commit
 > named by `PLAITS_SOURCE_REVISION`**, and names the value to set. Run
 > `pnpm run contract:check` by hand at any point to see where a deployment
-> stands.
+> stands. (The contract-23 Quick Retune draft note that used to sit here shipped
+> on September 5, 2026 at `rev-1d227a049e3c`; see the rollout table.)
 
 1. Compute and set a new immutable `PLAITS_SOURCE_REVISION`.
 2. Build and push the matching container image tag. **Pass the revision as a
