@@ -19,7 +19,7 @@ The frame format is NSH1, 23 bytes, as produced by the WORLD-vocoder encoder
     5-22  lar0..lar17     int8 log-area-ratios, value / 127 * 7.0
 
 Per-bank mean tract shapes are DERIVED here rather than accepted from the
-client: MACRO interpolates each frame toward its bank's mean, so a mean that
+client: TWIST interpolates each frame toward its bank's mean, so a mean that
 disagreed with the frames would quietly mistune the articulation control,
 and it is computable from the frames themselves.
 """

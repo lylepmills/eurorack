@@ -6,7 +6,7 @@ voices spaced by equal scale-degree spans and played through Braids' 33-wave
 `mini_wave_line`.
 
 WTx6 is deliberately separate from Scale Stack. HARMONICS controls the span,
-TIMBRE controls voice spread, MORPH scans the wavetable, and MACRO selects the
+TIMBRE controls voice spread, MORPH scans the wavetable, and TWIST selects the
 scale. The table position no longer drags the ensemble detune with it, and the
 classical engine keeps its original four-wave MORPH mapping.
 

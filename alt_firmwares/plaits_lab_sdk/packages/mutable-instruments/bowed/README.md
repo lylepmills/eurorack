@@ -10,7 +10,7 @@ the body biquad transfer verbatim; only the output stage is re-derived,
 because that interpolator is an upsampler rather than a filter and copying it
 literally would land 1.6 dB darker than the hardware.
 
-MORPH and MACRO are new — Braids welds the nut reflection to −1.0 and the body
+MORPH and TWIST are new — Braids welds the nut reflection to −1.0 and the body
 resonance to one constant.
 
 The delay lines stay int8 at Braids' own lengths, 1024 + 4096. Braids
@@ -34,7 +34,7 @@ MIDI 4, where both sides do fold.
 `python3 ab_engine.py packages/mutable-instruments/bowed --bands`. Sixteen
 cases sweep both ends of both Braids axes, four notes, a re-strike and the
 octave fold, with MORPH pinned at 1.0 — that, not the detent, is where the
-port's nut gain equals Braids' welded −1.0 — and MACRO at its detent.
+port's nut gain equals Braids' welded −1.0 — and TWIST at its detent.
 
 Note that the case ids `pressure-hard` and `pressure-light` read off
 `parameter_0`'s magnitude and are therefore backwards against the physical

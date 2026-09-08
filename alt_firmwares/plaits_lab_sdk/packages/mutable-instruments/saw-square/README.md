@@ -29,7 +29,7 @@ entirely.
 Plaits' own Virtual Analog engine (the compiled `VA_VARIANT 2`) already mixes
 a variable square and a variable saw — but as two INDEPENDENT oscillators:
 TIMBRE sets the square's pulse width, MORPH sets the saw's on an unrelated
-tent-shaped curve, and MACRO balances them, with hard sync and a HARMONICS
+tent-shaped curve, and TWIST balances them, with hard sync and a HARMONICS
 detune layered on top. Saw Square is the smaller, coupled instrument Braids
 actually built: ONE knob morphing a complementary pulse-width pair — open the
 saw as the square closes, or the reverse — which Virtual Analog's independent
@@ -46,7 +46,7 @@ centre the offset is zero (exactly Braids); off centre, the two waveforms'
 discontinuities land at different points of the cycle, which detuning (what
 Virtual Analog offers instead) does not produce.
 
-MACRO reveals the 148/256 attenuation as a range, from silent to unattenuated,
+TWIST reveals the 148/256 attenuation as a range, from silent to unattenuated,
 stock at Braids' fixed ratio. The module bakes that balance in and never lets
 the player move it.
 

@@ -35,7 +35,7 @@ module exactly.
   Sweeping either way fades one pulse out, leaving just the sharp positive
   click or just the low negative thump. The module hardwires both pulses at
   unity; this balance is not reachable on it.
-- **Punch** (MACRO) scales the self-brightening dynamic filter modulation
+- **Punch** (TWIST) scales the self-brightening dynamic filter modulation
   around Braids' one hardcoded amount: 0.5 reproduces the module's fixed punch
   exactly, 0 turns it off (a plain, undriven resonant filter), 1 pushes it to
   4x. Braids never varies this at all — it's a single hardcoded call.

@@ -44,15 +44,15 @@ root puts a voice at 6.875 Hz, essentially on the corner: energy below 20 Hz
 fell from 12.73 % of the module's total to 8.48 % of the port's, −2.9 dB
 absolute, and `saw-low-dc` failed its guide tolerance at −1.16 dB AC RMS. It now
 reads −0.63 dB and passes. What the blocker was actually for — the DC a narrow
-pulse carries at the top of MACRO — is now subtracted in closed form inside the
+pulse carries at the top of TWIST — is now subtracted in closed form inside the
 voice loop, where it is exactly `square_amount × (1 − 2·pw)`. That term is
-bit-exactly zero at `pw = 0.5`, which is the whole lower half of MACRO and so
+bit-exactly zero at `pw = 0.5`, which is the whole lower half of TWIST and so
 everything Braids can reach, and zero again through saw, triangle and sine. The
 A/B is byte-identical with the correction present and with no correction at all;
 the health gate's narrow-pulse scenario goes from 0.2662 DC unfiltered to
 −0.00086.
 
-MACRO's range is minimum-equals-stock, not bidirectional: a pulse of duty *d*
+TWIST's range is minimum-equals-stock, not bidirectional: a pulse of duty *d*
 and one of duty *1−d* have identical harmonic magnitudes, so a bidirectional
 range would be a knob whose halves are spectral mirror images at half the
 resolution. It is inert in the sine region, stated rather than papered over.
@@ -79,9 +79,9 @@ audible; the first is loudest at the setting people actually leave the knobs on.
   the blocker as well, worth +0.3 dB at an A0 root and +0.9 dB at a C0, and
   nothing above A1. Expect more cone movement, and more DC into whatever follows
   the module.
-* **Narrow-pulse MACRO no longer thumps.** Above the detent the sound is
+* **Narrow-pulse TWIST no longer thumps.** Above the detent the sound is
   unchanged, but the offset is now removed exactly rather than chased by a
-  7.6 Hz filter, so a fast MACRO move no longer produces a settling thump.
+  7.6 Hz filter, so a fast TWIST move no longer produces a settling thump.
 
 **One open deviation remains, and one known residual.**
 

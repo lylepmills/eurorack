@@ -106,7 +106,7 @@ can is a different instrument from a shaken one, and for a while it was only
 reachable by turning TIMBRE fully down, because the continuous injection ran
 underneath a patched trigger and buried the one-shot.
 
-MORPH and MACRO are upstream's own decay and object-count controls, and both of
+MORPH and TWIST are upstream's own decay and object-count controls, and both of
 his mappings already put the measured value at the detent — `nObjects = 2 *
 norm * baseObjects + 1.1` is exactly `baseObjects` at 0.5.
 

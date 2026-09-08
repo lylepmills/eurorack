@@ -32,7 +32,7 @@ filter (filter 1 the least, filters 2 and 3 the most), because that's what
 Braids' three different jitter formulas actually do; the asymmetry is kept,
 not smoothed over. MORPH is new: Chord width scales the three fixed
 intervals from unison, through the module's own voicing at noon, to double
-the spread. MACRO is new: Decay reshapes the burst envelope's fixed rate
+the spread. TWIST is new: Decay reshapes the burst envelope's fixed rate
 from a short tick, through the module's own length at noon, to a long
 bloom.
 

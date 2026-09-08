@@ -30,7 +30,7 @@ ways round. That is a genuine wart, and it is Braids' own.
 Confirmed in the source: `out += svf_bp[i] * amplitudes[0] >> 17` reads
 `amplitudes[0]`, not `amplitudes[i]`, and column 0 of the amplitude table is
 16384 in all 25 rows — so 100 of the 125 amplitude entries have been dead since
-2013 and every formant is voiced flat. MACRO restores them, with the detent
+2013 and every formant is voiced flat. TWIST restores them, with the detent
 reproducing hardware exactly. Those amplitudes are **linear** with 16384 as
 unity, not semitone attenuations, so the tilt is a linear interpolation between
 flat and true.
@@ -82,7 +82,7 @@ share used a clipped preview WAV, so that split is no longer quoted.
 Braids axes, two interior grid nodes, an off-node point, a sweep along each
 axis, six octaves of pitch (notes 21 to 93), a triggered case, and the two
 points that looked worst before the measurement harness was corrected. Every
-case is at the stock exciter — HARMONICS 0.0, MACRO at the detent — because
+case is at the stock exciter — HARMONICS 0.0, TWIST at the detent — because
 neither of those axes exists in Braids.
 
 | metric | corrected linear A/B |
@@ -156,10 +156,10 @@ staying equal to `out_gain` is a defensible choice *at that operating point*
 rather than a guess.
 
 **Those are eight points, and the number does not survive the grid they sit in.**
-Measured at the same stock exciter and the same MACRO detent over notes 21 to 93
+Measured at the same stock exciter and the same TWIST detent over notes 21 to 93
 against the full vowel × register grid — 2025 points — AUX against OUT runs
 
-| span (stock exciter, MACRO detent) | AUX − OUT |
+| span (stock exciter, TWIST detent) | AUX − OUT |
 | --- | --- |
 | the eight fitted positions | −0.68 … +0.68 dB |
 | note 45, whole vowel × register grid | −0.73 … +0.06 dB |
@@ -181,21 +181,21 @@ ends of the pitch spread: **+3.1 dB at note 21**, **−3.9 dB at note 93**.
 
 Two further axes widen it, both measured over the same note × grid. **HARMONICS**
 darkens AUX faster than OUT: at full breath AUX runs −6.45 … −3.60 dB against
-OUT, always under it. **MACRO** at full tilt costs OUT several dB — attenuating
+OUT, always under it. **TWIST** at full tilt costs OUT several dB — attenuating
 formants 2–5 is the point of the control — while leaving AUX untouched, so at
-MACRO 1.0 AUX is hotter *everywhere*: +1.18 dB at its closest, **+20.7 dB** at
-note 93 / TIMBRE 1.00 / MORPH 0.00. Over the whole HARMONICS × MACRO × note ×
+TWIST 1.0 AUX is hotter *everywhere*: +1.18 dB at its closest, **+20.7 dB** at
+note 93 / TIMBRE 1.00 / MORPH 0.00. Over the whole HARMONICS × TWIST × note ×
 grid plane the two span **−13.2 dB to +20.8 dB**.
 
 **Stereo AUX** re-sums the same five taps under the table's weighting reversed,
 so it leans on the upper formants. As shipped this was **bit-identical to OUT at
-the MACRO detent** — not merely close: the weights were `1 + (raw − 1) · tilt`,
+the TWIST detent** — not merely close: the weights were `1 + (raw − 1) · tilt`,
 `ApplyMacro(0.0f, −0.5f, 1.0f, 0.5f)` returns exactly `0.0f`, so every weight
 was exactly `1.0f`, and reversing five identical unit weights is the identity.
-`voice.cc` defaults MACRO to 0.5, so the stereo mode collapsed to mono for any
+`voice.cc` defaults TWIST to 0.5, so the stereo mode collapsed to mono for any
 user who had not moved that knob.
 
-The reversal is now applied at full strength and **does not track MACRO**, with
+The reversal is now applied at full strength and **does not track TWIST**, with
 a fixed makeup (`kVowelFofStereoMakeup`) because reversing the table puts its F5
 entry on the F1 tap and F1 carries most of the bank's energy. Measured at the
 detent over the same eight fitted positions: L/R within **±1.66 dB** at a
@@ -206,14 +206,14 @@ is not worth the aux output.
 
 **±1.7 dB at 0.45–0.83 is those eight positions, not the grid, and the
 difference runs both ways.** R is the bank under a *fixed* weighting while L
-follows MACRO and the note, so:
+follows TWIST and the note, so:
 
 | span | L/R balance | channel correlation |
 | --- | --- | --- |
-| the eight fitted positions, MACRO detent | −1.64 … +1.66 dB | 0.45–0.83 |
-| notes 21–93 × whole grid, MACRO detent | **−4.90 … +4.01 dB** | **0.32–0.996** |
-| notes 21–93 × whole grid, MACRO 1.0 | **−0.83 … +24.0 dB** | −0.40 … +0.93 |
-| the whole HARMONICS × MACRO × note × grid plane | **−8.1 … +25.2 dB** | −0.40 … 0.996 |
+| the eight fitted positions, TWIST detent | −1.64 … +1.66 dB | 0.45–0.83 |
+| notes 21–93 × whole grid, TWIST detent | **−4.90 … +4.01 dB** | **0.32–0.996** |
+| notes 21–93 × whole grid, TWIST 1.0 | **−0.83 … +24.0 dB** | −0.40 … +0.93 |
+| the whole HARMONICS × TWIST × note × grid plane | **−8.1 … +25.2 dB** | −0.40 … 0.996 |
 
 At the detent the extremes are note 21 / TIMBRE 1.00 / MORPH 1.00 (−4.90 dB) and
 note 90 / TIMBRE 0.00 / MORPH 1.00 (+4.01 dB) — a wider image than ±1.7 dB
@@ -223,7 +223,7 @@ two weightings pick out very nearly the same signal (0.996) and the width
 quietly goes away. It is not the bit-identical mono of the pre-fix version, but
 it is mono to the ear, and it is reachable at the detent.
 
-**Off the detent it stops being a pair at all.** At MACRO 1.0 full tilt leaves
+**Off the detent it stops being a pair at all.** At TWIST 1.0 full tilt leaves
 OUT almost nothing while R is untouched, so R runs hotter than L over 98% of the
 grid — median **+5.4 dB**, 28% of it past +10 dB, and only 41 of 2025 points on
 the other side of level at all (worst −0.83 dB). It reaches **+24.0 dB** at note
@@ -231,7 +231,7 @@ the other side of level at all (worst −0.83 dB). It reaches **+24.0 dB** at no
 HARMONICS 0.25, TIMBRE 0.56, MORPH 0.50). Correlation goes **negative** up there
 too, −0.40 at note 93 / TIMBRE 0.125 / MORPH 0.75 where the imbalance is
 +13.8 dB, so the channels are partly out of phase as well as lopsided. A stereo
-AUX at full MACRO is a hard-panned image by construction. Turning MACRO up is a
+AUX at full TWIST is a hard-panned image by construction. Turning TWIST up is a
 formant-balance control on OUT and a **panner** on the stereo pair, and that is
 worth knowing before it is discovered by surprise.
 

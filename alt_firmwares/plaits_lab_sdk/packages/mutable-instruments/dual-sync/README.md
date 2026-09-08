@@ -23,7 +23,7 @@ question is what is actually left. Reading
 `(timbre - 0.5)^2 * 4 * 48`, which is flat zero for the whole lower half of the
 knob and tops out at 48 semitones; the same knob also sets the square's pulse
 width and its gain; the saw partner is not synced at all; and nothing anywhere
-crossfades master against slave — MACRO there balances the square against a
+crossfades master against slave — TWIST there balances the square against a
 variable saw.
 
 Dual Sync gives the interval its own knob across the full 63.99 semitones, holds
@@ -49,7 +49,7 @@ balance together while COLOR does nothing, and that renders as a perfectly
 believable sync sweep. `tests/ab.json` measures both ends of the balance on
 both shapes for exactly that reason.
 
-MACRO is the one axis the module has no concept of: it moves where in its own
+TWIST is the one axis the module has no concept of: it moves where in its own
 cycle the slave restarts on each sync pulse. Braids always restarts it at zero
 (`analog_oscillator.cc:262-264`, `:325-327`), and `ApplyMacro` at noon returns
 that value exactly, so every A/B case leaves it there.
@@ -107,7 +107,7 @@ Braids pins its output at 0.75 of full scale in int16; the port applies the
 same 0.75 but cannot pin its peak there, because polyBLEP overshoot and the
 decimator's ringing sit on top of the naive waveform. The peak is a narrow
 function of Interval, so it has to be swept finely — at 0.005 steps it reaches
-1.015 with MACRO at noon, already past full scale on the plane Braids itself
+1.015 with TWIST at noon, already past full scale on the plane Braids itself
 can reach, and 1.237 once Reset moves off noon. So the engine declares negative
 gains and takes the limiter path.
 

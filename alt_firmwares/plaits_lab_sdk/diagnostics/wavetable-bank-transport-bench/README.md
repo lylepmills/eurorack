@@ -4,7 +4,7 @@ Temporary physical-module diagnostic for the Plaits Palette wavetable work.
 It exercises the intended variable-bank HARMONICS transport with duplicated
 mirror endpoints. Every bank has a distinct equation-generated spectrum.
 
-MACRO selects one of six configurations:
+TWIST selects one of six configurations:
 
 1. one bank, mirrored;
 2. two banks, mirrored;

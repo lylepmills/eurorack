@@ -105,7 +105,7 @@ Braids gives each model two knobs and they do different jobs in each:
 
 HARMONICS selects the model. TIMBRE and MORPH carry Braids' two axes.
 
-MACRO is the only added one: **Snap**, the curve of the scan crossfade. At the
+TWIST is the only added one: **Snap**, the curve of the scan crossfade. At the
 detent it is the identity and the engine is the module exactly, which is what
 keeps all 24 A/B cases comparable. Turned up, the crossfade is pulled to
 whichever end it is nearer, so the scan steps from whole wave to whole wave the

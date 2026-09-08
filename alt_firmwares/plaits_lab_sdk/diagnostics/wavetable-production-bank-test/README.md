@@ -3,7 +3,7 @@
 This gate builds the normal recipe-generated `WavetableEngine` with one
 test-only parameter sequencer compiled into that engine. It therefore covers
 the generated resource, factory/sample/native dispatch, bank crossfades,
-mirrored and one-way HARMONICS transport, TIMBRE, MORPH, MACRO, Voice, and the
+mirrored and one-way HARMONICS transport, TIMBRE, MORPH, TWIST, Voice, and the
 hardware DAC path. The older transport diagnostic remains useful for isolated
 CPU/path experiments, but it does not substitute for this integration gate.
 
@@ -39,7 +39,7 @@ model slot saved in the module's settings could not bypass the gate.
 - Mirrored mixed 8: all four profiles traversed 1.0--2.3 kHz of crossing-rate
   range without clipping. Start/end harmonic-spectrum similarity was
   0.866--0.999 and crossing-rate drift was 4.5--8.4%, confirming the return
-  path at four notes and four TIMBRE/MORPH/MACRO combinations.
+  path at four notes and four TIMBRE/MORPH/TWIST combinations.
 - One-way custom 16: all four profiles traversed 1.4--4.4 kHz without clipping.
   The neutral scan's direction correlation was +0.994; its start/end spectrum
   similarity was 0.105 with 80.6% crossing-rate separation, confirming that

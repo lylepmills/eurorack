@@ -144,10 +144,10 @@ with a one-byte-offset arena, while an aligned control rendered successfully.
 The post-link check now rejects that layout regardless of the recipe's engines
 or custom resources. The aligned, release-shaped v6 terrain canary then passed
 on physical Plaits hardware: saved Wave Terrain selection and the fourth-control
-MACRO assignment survived repeated power cycles; all 16 factory, native, and
+TWIST assignment survived repeated power cycles; all 16 factory, native, and
 prebaked terrains swept without frozen/repeated audio buffers; TIMBRE, MORPH,
-HARMONICS, and MACRO remained responsive; and navigation into and out of Wave
-Terrain continued to produce audio. Near-silent positions during the MACRO
+HARMONICS, and TWIST remained responsive; and navigation into and out of Wave
+Terrain continued to produce audio. Near-silent positions during the TWIST
 sweep occurred symmetrically with the terrain geometry and recovered normally,
 not as CPU stalls.
 
@@ -450,7 +450,7 @@ subtitled with the bank's own name; contract 10 adds the recipe's scale order).
 Contract 13 clarifies LIGHT 8's Default/CCW/CW behavior. It shipped with the
 six-voice wavetable optimization image, so cached guides receive that
 prose-only correction from the matching renderer. Contract 14 standardizes the
-fourth synthesis control's user-facing name as MACRO and adds the precision
+fourth synthesis control's user-facing name as TWIST and adds the precision
 fine-tuning range to the at-module reference. Its renderer and tests are landed,
 but the Worker remains on contract 13 until the next builder-image rollout: that
 rollout must bump `PLAITS_MANUAL_CONTRACT` to 14 together with the immutable
@@ -475,6 +475,17 @@ schema-27 image `8f97241069cc`, whose rollout carried the Worker to 22 (21's
 Ro'Ved prose plus 22's LIGHT 4 LED order). Never deploy a contract bump by
 itself — until that image was live, the production container still rendered the
 old Ro'Ved prose.
+
+Contract 24 renames the fourth synthesis control from MACRO to TWIST on every
+page the guide prints it — the panel labels, the "TWIST (fourth control)"
+option-menu value for the locked FREQUENCY knob and the MODEL input, the
+locked-FREQUENCY prose, and the scale-bank and wavetable pages — matching the
+website and the Palette hardware plan (renamed 2026-09-08 because "macro" reads
+as a one-knob-drives-many meta-control on a panel). The catalog and manual key
+stays `macro`, so no recipe, digest, or firmware byte moves; only the prose
+does. Like contract 14 this is a display-name change, so it ships with the
+image that carries the renderer and bumps `PLAITS_MANUAL_CONTRACT` to 24 in the
+same rollout.
 
 Since contract 21 this is enforced rather than remembered. `render_manual.py`
 declares `MANUAL_CONTRACT`, the lowest contract that describes what it prints;

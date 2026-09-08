@@ -118,11 +118,11 @@ raised to the eighth power (`additive_engine.cc:81-91`), so it has compact
 support and is exactly zero past `1/slope` partials, where Braids' Lorentzian
 skirt falls as `1/d²`; its slew is a float `ONE_POLE` (`:103`) with no gate;
 its ripple control can place many peaks across the series (`:141`) where Braids
-has exactly two at a fixed relation; and its MACRO is an odd/even balance
+has exactly two at a fixed relation; and its TWIST is an odd/even balance
 (`:149-154`).
 
 Rendered side by side at a pairing stated in full — note 45, 3 s, both at
-TIMBRE 0.5 and MACRO 0.5, each with its bump at its widest (Harmonics at Colour
+TIMBRE 0.5 and TWIST 0.5, each with its bump at its widest (Harmonics at Colour
 0.5, the neighbour at MORPH 0.0 and HARMONICS 0.0 so its ripple is off), then
 level-matched — the two differ by 4.65 dB energy-weighted. The difference is
 not in the formant: the 640–1280 Hz octave carrying 70% of the energy differs

@@ -9,7 +9,7 @@ shift is applied BEFORE the make-up, so the DC term is `1.625 * 2047 / 32768`;
 re-deriving it as `2047/16384 * 0.5` lands 4.2 dB low and makes the HARMONICS
 sweep pump.
 
-MORPH and MACRO are new. MACRO tilts the notch plateau, and at its top the
+MORPH and TWIST are new. TWIST tilts the notch plateau, and at its top the
 value step at the notch edge cancels entirely — leaving a pure slope
 discontinuity, which is why the engine carries integrated BLEP as well as
 value BLEP. The `bend-high` scenario pins that corner at a high note.

@@ -27,7 +27,7 @@ the six-partial harmonics level, and the crossfade between two differently
 ring-modulated noise voices. Unlike bell, COLOR never touches pitch here —
 DRUM's six partial ratios are completely fixed, which is what MORPH's Spread
 spends its axis on instead: scaling all six together, unison at 0, the
-module's own voicing at noon, double at 1. MACRO's Decay spread is copied
+module's own voicing at noon, double at 1. TWIST's Decay spread is copied
 directly from struck-bell's identical control — TIMBRE can only slide every
 partial's decay together, this reshapes how far they diverge from each
 other, from uniform to 4x the module's own spread.

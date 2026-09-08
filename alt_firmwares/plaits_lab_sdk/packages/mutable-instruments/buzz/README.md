@@ -73,7 +73,7 @@ paying a sin-over-sin per sample, eight times over between two oscillators and
 
 ## The fourth macro
 
-MACRO widens HARMONICS' detune reach past the module's own sub-semitone
+TWIST widens HARMONICS' detune reach past the module's own sub-semitone
 ceiling, with a detent at noon that reproduces the ceiling to within a third
 of a cent (the module's own offset is a 128-step staircase ending at 99.22
 cents; the port's is continuous and ends at 100.00 — see the declared

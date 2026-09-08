@@ -40,7 +40,7 @@
   },
   {
     "id": "reach",
-    "name": "MACRO widening the detune to a full octave apart",
+    "name": "TWIST widening the detune to a full octave apart",
     "durationSeconds": 3,
     "note": 48,
     "triggerHz": 0,

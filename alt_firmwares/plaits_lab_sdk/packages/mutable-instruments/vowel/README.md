@@ -66,7 +66,7 @@ The two new ones:
 * **Spread** (HARMONICS) scales formants 2 and 3 against formant 1, ×0.5 to ×2.
   Braids scales all three together, so the spacing between them is fixed by
   whichever frame you are on. This reaches vowels that are not in the table.
-* **Grain** (MACRO) is the length of the per-period ramp, ×0.2 to ×3. Braids
+* **Grain** (TWIST) is the length of the per-period ramp, ×0.2 to ×3. Braids
   welds it to exactly one period. Short, the burst ends early and the formant
   rings tighter and brighter; long, the ramp is still open when the period
   restarts, and the reset becomes an edge.

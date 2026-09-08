@@ -53,7 +53,7 @@ Braids gives each model two knobs, and they do different jobs in each:
 | TWNQ | resonance up *and* output gain down, one knob doing both | the second peak, ±64 semitones |
 | CLKN | the loop length of the random sequence | 2 to 32 quantization levels |
 
-HARMONICS selects the model. TIMBRE and MORPH carry Braids' two axes. MACRO is
+HARMONICS selects the model. TIMBRE and MORPH carry Braids' two axes. TWIST is
 the only added one: Drive, the gain into that overdrive shaper. NOIS and TWNQ
 are already inside it at unity, so their detent is the module exactly and the
 knob works in both directions; CLKN has no shaper in Braids, so its detent

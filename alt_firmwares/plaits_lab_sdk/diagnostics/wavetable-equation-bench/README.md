@@ -145,7 +145,7 @@ python3 alt_firmwares/plaits_lab_sdk/diagnostics/wavetable-equation-bench/build_
 ```
 
 The probe ignores panel and CV controls, measures all 17 cases at note 48 and
-centred TIMBRE/MORPH/MACRO, and repeats every 105.5 seconds. Record at least
+centred TIMBRE/MORPH/TWIST, and repeats every 105.5 seconds. Record at least
 211 seconds from AUX to guarantee one complete pass.
 
 Decode a mono 16-bit PCM capture with:

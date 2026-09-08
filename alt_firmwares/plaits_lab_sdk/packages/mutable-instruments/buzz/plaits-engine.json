@@ -22,7 +22,7 @@
     {
       "id": "harmonics",
       "label": "Detune",
-      "description": "Detunes the second voice from unison, within whatever reach MACRO sets."
+      "description": "Detunes the second voice from unison, within whatever reach TWIST sets."
     },
     {
       "id": "timbre",

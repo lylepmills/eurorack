@@ -6,7 +6,7 @@ scale-degree chord construction from `diatonic-chord`, played through Braids'
 33-wave `mini_wave_line`.
 
 WTCH is deliberately separate from Diatonic Chord. HARMONICS still selects the
-chord, TIMBRE controls voice spread, MORPH scans the wavetable, and MACRO selects
+chord, TIMBRE controls voice spread, MORPH scans the wavetable, and TWIST selects
 the scale. No axis has two musically significant jobs, and the classical engine
 keeps its original four-wave MORPH spacing.
 

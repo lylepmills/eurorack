@@ -20,7 +20,7 @@ chord that stays a thirteenth chord wherever you play it.
 
 ## Controls
 
-HARMONICS is the span, 1–16 scale degrees. MACRO picks the scale from the same
+HARMONICS is the span, 1–16 scale degrees. TWIST picks the scale from the same
 sixteen `diatonic-chord` uses — and it matters more here, because the span counts
 in whatever the scale's degrees are: span 2 is a third in major and a fourth in
 pentatonic.

@@ -14,9 +14,9 @@ a **V**. Fully down gives an equal blend with the sub two octaves below,
 below. The sub is loudest at both ends, and Braids never lets it exceed an
 equal blend.
 
-MACRO is new — Braids welds the sub to a plain square and this narrows its
+TWIST is new — Braids welds the sub to a plain square and this narrows its
 pulse. The detent and everything above it are Braids (ApplyMacro's maximum
-equals its stock value); turning MACRO down from noon narrows the sub toward
+equals its stock value); turning TWIST down from noon narrows the sub toward
 12% pulse width, which Braids cannot do.
 
 AUX carries the sub on its own at full level rather than scaled by the blend,
@@ -107,13 +107,13 @@ HARMONICS.
    now. The old 7.6 Hz corner sat *on* the two-octave sub rather than below it,
    so low subs used to lose level and phase and now keep both — note 24 with
    MORPH fully down went from −1.11 dB AC RMS against Braids to −0.01 dB. AUX
-   gets the same correction, and gets **most** of it with MACRO at its detent
-   or above, not with MACRO turned down: a DC blocker only ever took the
+   gets the same correction, and gets **most** of it with TWIST at its detent
+   or above, not with TWIST turned down: a DC blocker only ever took the
    fundamental, and a 50% square puts more of its energy there than a 12% one
    does, so narrowing the sub *shrinks* the correction. Measured on AUX with
    MORPH fully down, new against old, in dB:
 
-   | | MACRO 0.0 | MACRO 0.25 | MACRO ≥ 0.5 |
+   | | TWIST 0.0 | TWIST 0.25 | TWIST ≥ 0.5 |
    | --- | --- | --- | --- |
    | **note 21** | +1.24 | +2.38 | +2.72 |
    | **note 24** | +0.96 | +1.85 | +2.18 |
@@ -229,8 +229,8 @@ cannot hide a waveform regression.
 - **A trigger does nothing**, matching `MacroOscillator::Strike()`, which
   touches only the digital oscillator. `square-timbre-max-retrigger` renders
   both sides at 2 Hz and measures the same numbers as the untriggered case.
-- **HARMONICS and MACRO are the port's own axes.** Braids switches models with
-  a discrete menu, so only HARMONICS 0.0 and 1.0 are A/B-able; MACRO's stock
+- **HARMONICS and TWIST are the port's own axes.** Braids switches models with
+  a discrete menu, so only HARMONICS 0.0 and 1.0 are A/B-able; TWIST's stock
   plateau (detent and above) is Braids and the rest is new. **AUX** did not
   exist in Braids' SUB models either — it is manufactured as the bare sub.
 - **Braids' shape-change re-Init is not reproduced.** `AnalogOscillator::Render`

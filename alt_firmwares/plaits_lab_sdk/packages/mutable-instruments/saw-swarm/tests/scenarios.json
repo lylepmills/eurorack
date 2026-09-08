@@ -40,7 +40,7 @@
   },
   {
     "id": "resonance",
-    "name": "MACRO from calm to a resonant peak",
+    "name": "TWIST from calm to a resonant peak",
     "durationSeconds": 3,
     "note": 45,
     "triggerHz": 0,

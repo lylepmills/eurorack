@@ -130,12 +130,12 @@ a positive-biased range.
 | HARMONICS | Embouchure | Braids' COLOR: the jet/bore split of one fixed loop length, 18.75% to 30.86% jet. Moves the embouchure without moving the pitch. |
 | TIMBRE | Air | Braids' TIMBRE: breath turbulence, 51.3% depth down to 1.3%. Runs backwards, as the module's does. |
 | MORPH | Blow | Breath pressure, welded at twice the excitation envelope in Braids. |
-| MACRO | Body | An offset on the note index Braids uses to pick the reflection filter's corner, which Braids gives no knob at all. |
+| TWIST | Body | An offset on the note index Braids uses to pick the reflection filter's corner, which Braids gives no knob at all. |
 
 Blow and Body are the two Braids does not have, and both are stock at noon.
 Neither is what the Plaits neighbour spends its knobs on: reed-pipe puts breath
 pressure on TIMBRE, reed stiffness on MORPH and the reflection coefficient on
-MACRO, and has no jet and no note-tracking body filter. Note that BLOWN's body
+TWIST, and has no jet and no note-tracking body filter. Note that BLOWN's body
 filter is an *output* filter, never fed back — the same table does a different
 job here, inside the loop.
 

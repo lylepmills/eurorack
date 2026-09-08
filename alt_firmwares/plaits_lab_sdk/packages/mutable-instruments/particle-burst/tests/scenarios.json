@@ -40,7 +40,7 @@
   },
   {
     "id": "decay",
-    "name": "MACRO: a tick through the module's length to a bloom",
+    "name": "TWIST: a tick through the module's length to a bloom",
     "durationSeconds": 3,
     "note": 48,
     "triggerHz": 0,

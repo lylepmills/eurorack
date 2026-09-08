@@ -54,10 +54,10 @@ restarts `t` — at 1024, not 0, because three of the four expressions gate on
 `t >> 10` and are exactly silent below it. That offset is read off the
 expressions, not chosen.
 
-## MACRO is the mask width
+## TWIST is the mask width
 
 Every expression ends in `& 0xFF`, read as a signed byte. That 8 is the only
-arbitrary constant in a bytebeat, so MACRO opens it: 2 bits at the bottom (a
+arbitrary constant in a bytebeat, so TWIST opens it: 2 bits at the bottom (a
 squared-off two-level stream), 12 at the top (higher bits of the expression leak
 in and it turns wilder and drops in register). Stock 8 sits exactly at the
 detent.

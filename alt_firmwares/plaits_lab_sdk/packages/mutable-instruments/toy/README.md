@@ -12,7 +12,7 @@ MORPH is new: it crossfades the hold clock from Braids' free-running rate to
 one that tracks the played note, so the crush artefacts lock to the pitch
 instead of beating against it. The two coincide exactly at MIDI 60.
 
-The two added macros do not share one Braids-reproducing position. MACRO sits
+The two added macros do not share one Braids-reproducing position. TWIST sits
 at the usual 0.5 detent, but MORPH has to be at **0.0**, not 0.5 — Braids'
 hold clock never tracks the note, and only morph 0 collapses the crossfade
 onto it. `tests/ab.json` holds them there.

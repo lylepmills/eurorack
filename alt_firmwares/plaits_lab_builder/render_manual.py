@@ -31,8 +31,11 @@ PUBLIC_CATALOG_PATH = BUILDER_DIR.parent / "plaits_lab_catalog/public_catalog.js
 # that prose while this constant was left at 21, which under-declared what the
 # renderer prints without breaking anything, since a Worker ahead of the
 # requirement is the safe direction. 23 conditionally documents the standard
-# Plaits panel's build-time quick-retune shortcut.
-MANUAL_CONTRACT = 23
+# Plaits panel's build-time quick-retune shortcut. 24 renames the fourth
+# synthesis control from MACRO to TWIST everywhere the guide prints it (panel
+# labels, the option-menu value names, the locked-FREQUENCY prose, the scale
+# and wavetable pages); the catalog key stays `macro`.
+MANUAL_CONTRACT = 24
 BANKS = (
     {"id": "green", "name": "GREEN", "start": 0, "color": "#4F9868"},
     {"id": "red", "name": "RED", "start": 8, "color": "#C6534B"},
@@ -44,7 +47,7 @@ ACCESSIBLE_BANK_NAMES = ("BRIGHTEST", "BRIGHT", "DIM", "DIMMEST")
 ACCESSIBLE_BANK_LEVELS = ("100%", "50%", "25%", "12.5%")
 ACCESSIBLE_BANK_COLOR = "#687069"
 CONTROL_IDS = ("harmonics", "timbre", "morph", "macro")
-PANEL_LABELS = ("HARMONICS", "TIMBRE", "MORPH", "MACRO")
+PANEL_LABELS = ("HARMONICS", "TIMBRE", "MORPH", "TWIST")
 FACTORY_TERRAIN_NAMES = (
     "Asymmetric Saddle",
     "Pinched Crossing",
@@ -76,12 +79,12 @@ MENU_LIGHTS = (
         "Sine", "Sine, -1 octave", "Sine, -2 octaves",
     )),
     ("FREQUENCY knob", (
-        "Octaves", "MACRO (fourth control)", "Aux crossfade", "LPG decay",
+        "Octaves", "TWIST (fourth control)", "Aux crossfade", "LPG decay",
         "Envelope contour",
     )),
     ("TRIG response", ("Trigger", "Gate", "Velocity trigger", "Velocity gate")),
     ("MODEL input", (
-        "Model select", "MACRO (fourth control)", "Aux crossfade",
+        "Model select", "TWIST (fourth control)", "Aux crossfade",
         "LPG colour (VCFA->VCA)", "Sync In (experimental)",
     )),
     ("LEVEL input", ("Level", "LPG decay", "Auto: decay or velocity")),
@@ -774,11 +777,11 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         fourth_control = (
             "Press the HARMONICS knob down, keep holding it, and turn until the model LEDs blink; this selects the octave-switching frequency range. "
             "Click TIMBRE + FREQUENCY together to open the alternate-firmware options menu. Click TIMBRE to walk forward to LIGHT 3, then click HARMONICS once, until it uses medium brightness. "
-            "Click TIMBRE + FREQUENCY again to exit. The FREQUENCY knob now controls the selected model's MACRO, its fourth synthesis control; for Mutable Instruments models, noon preserves the original sound."
+            "Click TIMBRE + FREQUENCY again to exit. The FREQUENCY knob now controls the selected model's TWIST, its fourth synthesis control; for Mutable Instruments models, noon preserves the original sound."
             if roved else
             "Hold the right button and turn HARMONICS until the model LEDs blink; this selects the octave-switching frequency range. "
             "Short-press both model buttons to open the alternate-firmware options menu. Use the left button to walk to LIGHT 3, then press the right button once, until it uses medium brightness. "
-            "Press both buttons again to exit. The FREQUENCY knob now controls the selected model's MACRO, its fourth synthesis control; for Mutable Instruments models, noon preserves the original sound."
+            "Press both buttons again to exit. The FREQUENCY knob now controls the selected model's TWIST, its fourth synthesis control; for Mutable Instruments models, noon preserves the original sound."
         )
         options_intro = (
             "Click TIMBRE + FREQUENCY together to enter or exit the options menu. All eight lights are the menu: "
@@ -793,11 +796,11 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         fourth_control = (
             "Press the HARMONICS knob down, keep holding it, and turn until the model LEDs blink yellow; this selects the octave-switching frequency range. "
             "Click TIMBRE + FREQUENCY together to open the alternate-firmware options menu. Click TIMBRE to walk forward to LIGHT 3, then click HARMONICS once, until it turns red. "
-            "Click TIMBRE + FREQUENCY again to exit. The FREQUENCY knob now controls the selected model's MACRO, its fourth synthesis control; for Mutable Instruments models, noon preserves the original sound."
+            "Click TIMBRE + FREQUENCY again to exit. The FREQUENCY knob now controls the selected model's TWIST, its fourth synthesis control; for Mutable Instruments models, noon preserves the original sound."
             if roved else
             "Hold the right button and turn HARMONICS until the model LEDs blink yellow; this selects the octave-switching frequency range. "
             "Short-press both model buttons to open the alternate-firmware options menu. Use the left button to walk to LIGHT 3, then press the right button once, until it turns red. "
-            "Press both buttons again to exit. The FREQUENCY knob now controls the selected model's MACRO, its fourth synthesis control; for Mutable Instruments models, noon preserves the original sound."
+            "Press both buttons again to exit. The FREQUENCY knob now controls the selected model's TWIST, its fourth synthesis control; for Mutable Instruments models, noon preserves the original sound."
         )
         options_intro = (
             "Click TIMBRE + FREQUENCY together to enter or exit the options menu. All eight lights are the menu: "
@@ -923,7 +926,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         Spacer(1, 0.18 * inch),
         Table(
             [[
-                Paragraph("MACRO", table_header_style),
+                Paragraph("TWIST", table_header_style),
                 Paragraph(fourth_control, small_style),
             ]],
             colWidths=[1.1 * inch, 5.2 * inch],
@@ -1057,7 +1060,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
 
     if document["scaleBank"]:
         scale_rows: list[list[Any]] = [[
-            Paragraph("MACRO", table_header_style),
+            Paragraph("TWIST", table_header_style),
             Paragraph("SCALE", table_header_style),
         ]]
         for index, name in enumerate(document["scaleBank"], start=1):
@@ -1084,7 +1087,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
             Paragraph("Scale bank", section_style),
             Paragraph(
                 "Diatonic Chord and Scale Stack use the same scale bank. "
-                "Turn MACRO from left to right to move through these scales in order.",
+                "Turn TWIST from left to right to move through these scales in order.",
                 intro_style,
             ),
             scale_table,
@@ -1168,7 +1171,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         if routes.get("wavetable"):
             route_copy.append(
                 f"In Wavetable, HARMONICS {transport}, interpolating between adjacent banks; "
-                "TIMBRE and MORPH move through each bank's 8 × 8 wave field, and MACRO phase-warps the result.")
+                "TIMBRE and MORPH move through each bank's 8 × 8 wave field, and TWIST phase-warps the result.")
         if routes.get("chords"):
             route_copy.append(
                 "Chords crossfades through this build's saved 15-wave ribbon in the upper part of MORPH.")
@@ -1188,7 +1191,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         else:
             intro = (
                 f"HARMONICS {transport}, interpolating between adjacent banks. "
-                "TIMBRE and MORPH move through each bank's 8 × 8 wave field; MACRO phase-warps the result."
+                "TIMBRE and MORPH move through each bank's 8 × 8 wave field; TWIST phase-warps the result."
             )
         story.extend([
             PageBreak(),

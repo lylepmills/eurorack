@@ -15,9 +15,9 @@ Braids' own block is 24 samples at 96 kHz and Plaits' `kBlockSize` is 12 at
 
 What separates this from `reed-pipe` and `loopback`: the comb pitch is
 decoupled ±64 semitones from the note, the feedback is genuinely **bipolar**,
-and the exciter is band-limited. MORPH and MACRO are new.
+and the exciter is band-limited. MORPH and TWIST are new.
 
-**MORPH 0, not MORPH noon, is the module.** MACRO has a detent and 0.5 is
+**MORPH 0, not MORPH noon, is the module.** TWIST has a detent and 0.5 is
 Braids' flat loop; MORPH has none, and Braids' saw exciter sits at MORPH 0.
 Noon gives a half-square at 37.5% duty, which the module cannot make — a
 measurable distance away, not a nuance (`morph-noon-not-stock` pins it at
@@ -27,7 +27,7 @@ measurable distance away, not a nuance (`morph-noon-not-stock` pins it at
 the output is `0.5*dry` plus one echo — a fully audible FIR comb. Resonance
 runs from inverted, through that, to ringing.
 
-The bright half of MACRO needed care. The in-loop shelf has an HF gain of
+The bright half of TWIST needed care. The in-loop shelf has an HF gain of
 `1 - 0.788*tilt`, reaching 1.473 at the extreme, so a fixed pre-scale leaves
 net HF loop gain above unity and the comb self-oscillates well below the
 HARMONICS setting that should do it. The feedback is divided by the actual
@@ -94,10 +94,10 @@ corrected. `H(z) = (1 - tilt) + tilt*L(z)` is exactly 1 at DC for any tilt and
 `1 - 0.788*tilt` at Nyquist, so after the reciprocal HF compensation already in
 the code the loop's peak gain is just `|feedback|` — which `WarpResonance` now
 caps at 0.998779. The bound was therefore never a backstop, and on the damping
-half it was binding: at HARMONICS 1 it cut feedback to 0.625 at MACRO 0,
+half it was binding: at HARMONICS 1 it cut feedback to 0.625 at TWIST 0,
 removing 4.08 dB of resonance range for no stability reason. **This is the one
 change on this list a user will hear away from the Braids axes**: the damping
-half of MACRO is now considerably more resonant at high HARMONICS.
+half of TWIST is now considerably more resonant at high HARMONICS.
 
 **A sixth clamp, found by the verification pass the same day.** Braids pins its
 own `pitch_` to `[0, kHighestNote]` in `DigitalOscillator::Render`
@@ -158,5 +158,5 @@ governs these cases.
   count and returns 0, which its own indexing then reads as a full-line
   8,192-tap delay. That undefined behaviour is reproduced only in effect: the
   port clamps to its own full line, 4,096 taps, the same 85.33 ms.
-- MORPH and MACRO are not on the module at all; only their detent positions
-  (MORPH 0, MACRO 0.5) are A/B-able.
+- MORPH and TWIST are not on the module at all; only their detent positions
+  (MORPH 0, TWIST 0.5) are A/B-able.

@@ -46,7 +46,7 @@ position (0.5) reproducing the module exactly.
   two-partial tone the module cannot make on its own; 1 isolates the snap
   (AUX already exposes this alone, so this reaches the same material
   through OUT without patching AUX).
-- **Spread** (MACRO) scales the two tonal resonators' fixed source offsets
+- **Spread** (TWIST) scales the two tonal resonators' fixed source offsets
   (`+12`/`+24`) around Braids' own hardwired 1x: 0.5 reproduces the module's
   own voicing exactly, 0 collapses both into unison an octave below the
   played note, 1 doubles the offsets so the two sit two octaves apart. The
@@ -119,7 +119,7 @@ reproduce; it is not a spectral-shape error (0.67 dB spectrum on that case).
 CPU: `qemu/estimate.py --sweep` first measured this engine at 87-128% of the
 module's budget — the three `sinf` calls needed to retune each resonator,
 one per sample, dominated the cost even though Braids itself only retunes
-them once per `RenderSnare()` call. Reading Spread (MACRO) at block rate
+them once per `RenderSnare()` call. Reading Spread (TWIST) at block rate
 instead of interpolating it per sample — matching Braids' own once-per-call
 retuning, and costing nothing audible since a hand-turned macro stepping at
 Plaits' sub-millisecond block rate is inaudible — cut that to 42-62%. The

@@ -5,8 +5,8 @@ sines, through a saturating shaper.
 
 The DSP is Emilie Gillet's `DigitalOscillator::RenderTripleRingMod`. HARMONICS
 detunes the first modulator and TIMBRE the second, which is Braids' TIMBRE and
-COLOR in that order. MORPH and MACRO are new — MORPH fades the two modulators
-in from a bare carrier, MACRO drives the shaper. MACRO has a detent and the
+COLOR in that order. MORPH and TWIST are new — MORPH fades the two modulators
+in from a bare carrier, TWIST drives the shaper. TWIST has a detent and the
 drive is 1.0 there, so it is Braids' shaper at noon; MORPH has no detent, and
 the module's sound is at the **top** of MORPH, not its middle — at MORPH 0.5
 the modulators are running at half depth.

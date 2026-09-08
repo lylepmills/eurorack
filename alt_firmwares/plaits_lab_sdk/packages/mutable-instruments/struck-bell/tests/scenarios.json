@@ -40,7 +40,7 @@
   },
   {
     "id": "decay-spread",
-    "name": "MACRO: uniform decay through the module's own spread to exaggerated",
+    "name": "TWIST: uniform decay through the module's own spread to exaggerated",
     "durationSeconds": 6,
     "note": 65,
     "triggerHz": 0.8,

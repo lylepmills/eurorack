@@ -86,7 +86,7 @@ class ValidationTests(unittest.TestCase):
 
 
 class MeanTractTests(unittest.TestCase):
-    """MACRO interpolates each frame toward its bank's mean tract, so the
+    """TWIST interpolates each frame toward its bank's mean tract, so the
     mean is derived here rather than trusted from the client."""
 
     def test_mean_is_derived_from_the_frames(self):

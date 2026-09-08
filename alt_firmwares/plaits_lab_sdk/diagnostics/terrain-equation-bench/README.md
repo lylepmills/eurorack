@@ -107,7 +107,7 @@ python3 alt_firmwares/plaits_lab_sdk/plaits_lab.py build \
 ```
 
 MAIN remains the terrain audio. AUX's probe tone reports CPU usage precisely;
-the LED meter remains the overload-safe reading. Set TIMBRE, MORPH and MACRO to
+the LED meter remains the overload-safe reading. Set TIMBRE, MORPH and TWIST to
 noon, note to 48, then visit the HARMONICS centres above. Repeat the worst cases
 at path and pitch extremes.
 
@@ -120,7 +120,7 @@ python3 alt_firmwares/plaits_lab_sdk/diagnostics/terrain-equation-bench/build_au
   --output /tmp/terrain-equation-autosweep.wav
 ```
 
-It ignores the panel and CV inputs, fixes note, TIMBRE, MORPH and MACRO to the
+It ignores the panel and CV inputs, fixes note, TIMBRE, MORPH and TWIST to the
 same exact nominal values, and measures cases 0 through 18 in order. Each case
 gets a 1.5-second low-cost settling gap followed by a 4-second measurement. A
 unique 12-second low-cost gap marks the loop boundary. One loop is 116.5

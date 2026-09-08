@@ -28,7 +28,7 @@ what the port's spare macros are spent on:
 | TIMBRE | Formant 1 | Braids' TIMBRE. Absolute pitch, MIDI 0–127.99. |
 | HARMONICS | Formant 2 | Braids' COLOR. Absolute pitch, MIDI 0–127.99, set independently of formant 1. |
 | MORPH | Window | The bell's attack fraction. Noon is Braids' 1/16 exactly; the ends run to 1/256 and to a symmetric half-and-half. |
-| MACRO | Balance | The formant amplitude ratio. Noon is Braids' 2:1 exactly; the ends are either formant alone. |
+| TWIST | Balance | The formant amplitude ratio. Noon is Braids' 2:1 exactly; the ends are either formant alone. |
 
 The pedestal is exactly the sum of the two formant amplitudes, which is what
 keeps the windowed grain unipolar — it never crosses below zero, so the window
@@ -44,7 +44,7 @@ sine formant each, so what Braids has and Granular Formant does not looked like
 just (a) an absolute rather than ratio second formant and (b) the 2:1 balance.
 The reinstatement condition was an A/B with TIMBRE at the same absolute formant
 pitch, HARMONICS at the f2/f1 ratio, MORPH in the shape-branch-1 region near
-breakpoint 0.0625, and MACRO at full carrier bleed. That comparison was run. It
+breakpoint 0.0625, and TWIST at full carrier bleed. That comparison was run. It
 does not all go one way.
 
 Solving those four settings exactly — breakpoint 0.0625 needs

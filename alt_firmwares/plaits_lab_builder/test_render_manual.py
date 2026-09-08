@@ -78,7 +78,7 @@ class RenderManualTest(unittest.TestCase):
         self.assertEqual(
             MENU_LIGHTS[2][1],
             (
-                "Octaves", "MACRO (fourth control)", "Aux crossfade", "LPG decay",
+                "Octaves", "TWIST (fourth control)", "Aux crossfade", "LPG decay",
                 "Envelope contour",
             ),
         )
@@ -514,8 +514,8 @@ class RenderManualTest(unittest.TestCase):
             standard = Path(temp_dir) / "standard-controls.pdf"
             render_pdf(manual_document(self.calibration_recipe(False)), standard)
             printed = pdf_strings(standard).replace(")(", " ")
-            self.assertIn("MACRO", printed)
-            self.assertIn(r"MACRO \(fourth control\)", printed)
+            self.assertIn("TWIST", printed)
+            self.assertIn(r"TWIST \(fourth control\)", printed)
             self.assertNotIn("FOURTH CONTROL", printed)
             self.assertNotIn("Fourth macro", printed)
             self.assertIn("FINE TUNING", printed)

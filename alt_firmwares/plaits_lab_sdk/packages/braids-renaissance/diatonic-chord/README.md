@@ -25,7 +25,7 @@ That is the entire argument for the slot. If you want a fixed voicing, use
 ## Controls
 
 HARMONICS steps sixteen chord shapes (triads, sixths, sevenths, ninths,
-elevenths, thirteenths, and the suspended block). MACRO picks the scale from
+elevenths, thirteenths, and the suspended block). TWIST picks the scale from
 sixteen: major, natural minor, dorian, mixolydian, harmonic minor, melodic
 minor, major pentatonic, whole tone, blues minor, Japanese, Gamelan, Gypsy,
 Arabian, Bhairav, Bairagi, and Yaman. The final three retain Braids' original

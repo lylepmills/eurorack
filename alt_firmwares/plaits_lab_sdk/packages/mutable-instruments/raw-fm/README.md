@@ -10,7 +10,7 @@ Three of four knobs are the same axes. What genuinely differs: unfiltered
 full-bandwidth feedback with no one-pole on the path; no oversampling, where
 `two-op-fm` runs 4×; a linear index law where `two-op-fm` squares it; WTFM's
 chaotic frequency feedback, which `two-op-fm` cannot reach at all; the
-modulator on AUX; and MACRO as feedback depth.
+modulator on AUX; and TWIST as feedback depth.
 
 **It aliases more than `two-op-fm`, and that is the point rather than an
 oversight.** Émilie's own milder engine runs 4× oversampling and a 0.05

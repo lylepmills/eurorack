@@ -41,7 +41,7 @@ spread are the two new ones:
   its position in the table — the module's amplitudes are a hardcoded array
   no parameter ever touches, so there is no way on Braids to make the strike
   itself brighter or darker. Applied only at the strike, not continuously.
-- **Decay spread (MACRO)** reshapes how much faster the high partials decay
+- **Decay spread (TWIST)** reshapes how much faster the high partials decay
   than the low ones, around the ensemble's mean rate — TIMBRE can only slide
   all eleven together between the two fixed tables, never change how far
   apart they are. Stock (noon) is the module's own spread exactly.

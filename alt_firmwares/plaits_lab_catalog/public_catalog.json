@@ -2147,7 +2147,7 @@
       "documentationDigest": "sha256:9ac7de1ab424a80b6d428fc2cda164f40b60b095d1e3f54da0b38b676f3a5e92",
       "manual": {
         "controls": {
-          "harmonics": "Detunes the second voice from unison, within whatever reach MACRO sets.",
+          "harmonics": "Detunes the second voice from unison, within whatever reach TWIST sets.",
           "timbre": "Sweeps harmonic count upward from a bare sine to the fullest stack the module holds for that note.",
           "morph": "Offsets the second voice's harmonic content away from the first, zero at noon.",
           "macro": "Widens the detune past the module's own sub-semitone ceiling, up to an octave apart."
