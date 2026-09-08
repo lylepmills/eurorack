@@ -866,7 +866,7 @@ revision before building — a tag that disagrees with the source inside it is
 the failure the `development` sentinel exists to catch, caught earlier.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-1d227a049e3c` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-379b4e8f4d7c` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a new
 image, use `wrangler containers info <application-id>` and wait until
@@ -1003,6 +1003,7 @@ target.
 | September 2, 2026 (Acid native hard sync) | `06d11c08e05e` | `rev-06d11c08e05e` |
 | September 3, 2026 (catalog copy release: OUT/AUX stereo sentences, spelling, credits, Analog Clap; no firmware change — stock and Speech gate builds byte-identical to `06d11c08e05e`) | `f92cf0698662` | `rev-f92cf0698662` |
 | September 5, 2026 (schema 29 optional Quick Retune shortcut, manual contract 23) | `1d227a049e3c` | `rev-1d227a049e3c` |
+| September 8, 2026 (field guide: fourth control renamed MACRO → TWIST, manual contract 24) | `379b4e8f4d7c` | `rev-379b4e8f4d7c` |
 
 The schema-29 Quick Retune production canary compiled fresh as build
 `c5532afdc7dc295b0345435f187d1398f5d973b1ed9168ca50f67db973c91e5f`:
@@ -1017,6 +1018,41 @@ had settled on the immutable image. The release also re-measured the stock
 flash anchor at 228,628 B and the Sync In reference delta at 18,128 B, both
 unchanged. No physical flash/play test was available for this release; the
 gesture remains an Advanced opt-in until that hardware audition is completed.
+
+The September 8 TWIST rename shipped at `rev-379b4e8f4d7c` with manual
+contract 24. It is a documentation-only rollout: the fourth synthesis control
+is printed as TWIST instead of MACRO throughout the field guide (renderer,
+option-menu value names, locked-FREQUENCY prose, scale and wavetable pages),
+Buzz's manual sentence and the SDK docs use the new word, and the website was
+renamed in the same window. No firmware source changed between `1d227a049e3c`
+and this revision (the only diffs under `plaits/` and the config generator are
+comments), so the compiled bytes are unchanged by construction and no physical
+flash/play test was repeated. Local verification of the pushed image compiled
+`mixed_build_request.json` to 202,500 B text / 80 B data / 28,284 B BSS,
+stamped `379b4e8f4d7c`, and rendered a 29,204-byte guide under contract 24
+with 28 TWIST occurrences and no MACRO; `sync_anchor_probe.py` re-measured the
+24-model reference palette at 204,852 B off / 222,980 B on (the unchanged
+18,128 B Sync In delta) and the builder-default recipe at 204,772 B text / 80 B
+data. Staging gate build
+`040543cae5287b1c3b1645c5793f53d19d4e070b3caf28b3a8bcb54fe948efbc` passed
+`smoke:staging` compiler-stamped; its 14,457,836-byte WAV has SHA-256
+`80a44607e7ee37530e141268882439e547f08dad932f0bc39d243fd854a1cfbd` and its
+field guide (SHA-256
+`b79597ef2e8d84906f858cfd623361473faf930ea08c32ea1be460b25f13805e`) prints
+TWIST 14 times and MACRO never. Production promoted after the pool settled with
+two healthy instances and no active, starting, scheduling, or failed instances;
+the production canary compiled the default recipe fresh as build
+`ee81971bcdcdbbf3ded026c023ba36ffe4889f7b3b730029e6f11a63097946cc`
+(84,596 B text, 64 B data, 20,268 B BSS; binary SHA-256
+`7c151e3f8962178786777dc55c784520e71912f0bbcb08fcf0ae780a2ea03f02`;
+6,827,948-byte WAV SHA-256
+`30f59e3b78d8e905f6dbc8da9284ad7000b9b60d3e6b761fe4caba0af51ba0a6`), stamped
+`379b4e8f4d7c`, and its 11,623-byte production field guide (SHA-256
+`86c5f071109c93f1968f09c15c6509b2355e937d3a69975359db644a3daf5ff2`) reads TWIST
+8 times with no MACRO. The Speech encoder singleton was rotated to
+`speech-encoder-v22` after the pool settled, and a single `/v1/health` probe
+then reported pool, encoder, and Worker all at `379b4e8f4d7c`.
+`rev-1d227a049e3c` remains the immediate rollback image.
 
 The schema-28 shared-wave production canary compiled fresh as build
 `e114ffb89814dc91dd8faeff3b8eb46354130497f79ce9267f7e0b8b9185f94a`:
