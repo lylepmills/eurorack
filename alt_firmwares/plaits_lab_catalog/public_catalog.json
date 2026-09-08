@@ -2144,7 +2144,7 @@
       ],
       "version": "1.0.0",
       "digest": "sha256:b087e91c82adc261ef2586b3fa8d680f633c145b012459ab1ec9b1da8d6ad595",
-      "documentationDigest": "sha256:9ac7de1ab424a80b6d428fc2cda164f40b60b095d1e3f54da0b38b676f3a5e92",
+      "documentationDigest": "sha256:c128db9b5395a7e2ed0cb205c35faf0e10cc2713e0a38c3e824e3adfebd3c111",
       "manual": {
         "controls": {
           "harmonics": "Detunes the second voice from unison, within whatever reach TWIST sets.",
