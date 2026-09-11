@@ -29,9 +29,47 @@
 #ifndef PLAITS_DSP_ENVELOPE_H_
 #define PLAITS_DSP_ENVELOPE_H_
 
+#include <algorithm>
+#include <cmath>
+
 #include "stmlib/stmlib.h"
 
 namespace plaits {
+
+// COLOUR folds around its centre. The left half runs from the stock low pass
+// gate (fully counter-clockwise) up to a plain VCA, the right half from that
+// VCA on to a high pass gate. The VCA point is a small flat detent (5% of the
+// travel) rather than a single knob position, so it can be found by hand and
+// a CV sweep rests there without dithering between the two gate flavours.
+//
+// The two halves meet without a seam: at hf == 1 the gate's bleed is exactly 1
+// whatever the vactrol state, so the filter contributes nothing to the output
+// and swapping its response there changes no sample.
+const float kLpgColourDetent = 0.05f;
+
+// A fully open high pass gate passes the whole band, so its floor sits well
+// below the low pass law's 0.003 (which is a cutoff there, not a floor).
+const float kLpgHighPassFloor = 0.0005f;
+
+// The VCA-likeness (the stock firmware's hf term) at a folded COLOUR position.
+inline float LpgColourToHf(float colour) {
+  const float distance = fabsf(2.0f * colour - 1.0f);
+  const float filter = std::max(distance - kLpgColourDetent, 0.0f) /
+      (1.0f - kLpgColourDetent);
+  return 1.0f - filter;
+}
+
+inline bool LpgColourIsHighPass(float colour) {
+  return colour > 0.5f;
+}
+
+// The stored COLOUR byte from firmware that ran the old, unfolded law maps
+// onto the left half so an updated module keeps the sound it was saved with.
+// With a 5% detent the left half spans 0.475 of the travel, so the old byte
+// scales by 0.475 (122/256, within a step); integer math keeps it small.
+inline uint8_t MigrateLpgColourByte(uint8_t old_colour) {
+  return static_cast<uint8_t>((old_colour * 122 + 128) >> 8);
+}
 
 class LPGEnvelope {
  public:
@@ -44,6 +82,11 @@ class LPGEnvelope {
     frequency_ = 0.5f;
     hf_bleed_ = 0.0f;
     ramp_up_ = false;
+    high_pass_ = false;
+  }
+  
+  inline void set_high_pass(bool high_pass) {
+    high_pass_ = high_pass;
   }
   
   inline void Trigger() {
@@ -83,13 +126,23 @@ class LPGEnvelope {
     vactrol_state_ += vactrol_coefficient * vactrol_error;
     
     gain_ = vactrol_state_;
-    frequency_ = 0.003f + 0.3f * vactrol_state_4 + hf * 0.04f;
+    if (high_pass_) {
+      // Mirror of the low pass law: the passband shrinks by the same amount
+      // as the vactrol closes, but from the bottom up, so a decaying note
+      // thins to a click instead of dulling to a thump. COLOUR keeps some of
+      // the band open at the ceiling the way it lifts the floor below.
+      frequency_ = kLpgHighPassFloor +
+          (0.3f - hf * 0.04f) * (1.0f - vactrol_state_4);
+    } else {
+      frequency_ = 0.003f + 0.3f * vactrol_state_4 + hf * 0.04f;
+    }
     hf_bleed_ = (tail_2 + (1.0f - tail_2) * hf) * hf * hf;
   }
   
   inline float gain() const { return gain_; }
   inline float frequency() const { return frequency_; }
   inline float hf_bleed() const { return hf_bleed_; }
+  inline bool high_pass() const { return high_pass_; }
   
  private:
   float vactrol_state_;
@@ -97,6 +150,7 @@ class LPGEnvelope {
   float frequency_;
   float hf_bleed_;
   bool ramp_up_;
+  bool high_pass_;
   
   DISALLOW_COPY_AND_ASSIGN(LPGEnvelope);
 };

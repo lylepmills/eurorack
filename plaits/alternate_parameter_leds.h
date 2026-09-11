@@ -5,6 +5,8 @@
 #ifndef PLAITS_ALTERNATE_PARAMETER_LEDS_H_
 #define PLAITS_ALTERNATE_PARAMETER_LEDS_H_
 
+#include "plaits/dsp/envelope.h"
+
 namespace plaits {
 
 // Stock Plaits presents its LED column top-to-bottom, while Ro'Ved presents
@@ -31,6 +33,22 @@ inline int OrderedLedIndex(int step, bool roved_panel) {
 // on Plaits, while this display mirrors an ordered list shown top-to-bottom.
 inline int ChordTableLedIndex(int position) {
   return position;
+}
+
+// The hidden COLOUR display shows how much filter is in the gate, not where
+// the knob sits: the low pass half fills its four lights from segment 0 up,
+// the high pass half fills them from segment 3 down, and the VCA detent in the
+// middle leaves them dark. Every static picture is then distinct (one light at
+// the bottom versus one at the top), and the panel reads it with no hue, which
+// the colour-blind build needs. Returns the fill (0..1) of one segment, in the
+// same 0.25-per-light convention as the decay bar next to it.
+inline float LpgColourSegmentFill(float colour, int segment) {
+  const float filter = 1.0f - LpgColourToHf(colour);
+  const int from_end = LpgColourIsHighPass(colour) ? 3 - segment : segment;
+  float fill = filter * 4.0f - static_cast<float>(from_end);
+  if (fill < 0.0f) fill = 0.0f;
+  if (fill > 1.0f) fill = 1.0f;
+  return fill;
 }
 
 // TRIG response is a two-by-two cross product rather than a three-colour

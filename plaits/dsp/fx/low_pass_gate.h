@@ -24,7 +24,8 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Approximative low pass gate.
+// Approximative low pass gate, with a high pass response for the far half of
+// COLOUR (see LpgColourToHf in dsp/envelope.h).
 
 #ifndef PLAITS_DSP_FX_LOW_PASS_GATE_H_
 #define PLAITS_DSP_FX_LOW_PASS_GATE_H_
@@ -47,18 +48,25 @@ class LowPassGate {
     filter_.Init();
   }
   
+  // The state variable filter computes its low and high pass outputs from the
+  // same integrator step, so one loop serves both gate responses: the response
+  // only picks which output the bleed crossfades against.
   void Process(
       float gain,
       float frequency,
       float hf_bleed,
+      bool high_pass,
       float* in_out,
       size_t size) {
     stmlib::ParameterInterpolator gain_modulation(&previous_gain_, gain, size);
     filter_.set_f_q<stmlib::FREQUENCY_DIRTY>(frequency, 0.4f);
     while (size--) {
       const float s = *in_out * gain_modulation.Next();
-      const float lp = filter_.Process<stmlib::FILTER_MODE_LOW_PASS>(s);
-      *in_out++ = lp + (s - lp) * hf_bleed;
+      float lp, hp;
+      filter_.Process<stmlib::FILTER_MODE_LOW_PASS, stmlib::FILTER_MODE_HIGH_PASS>(
+          s, &lp, &hp);
+      const float filtered = high_pass ? hp : lp;
+      *in_out++ = filtered + (s - filtered) * hf_bleed;
     }
   }
   
@@ -66,6 +74,7 @@ class LowPassGate {
       float gain,
       float frequency,
       float hf_bleed,
+      bool high_pass,
       float* in,
       short* out,
       size_t size,
@@ -74,8 +83,12 @@ class LowPassGate {
     filter_.set_f_q<stmlib::FREQUENCY_DIRTY>(frequency, 0.4f);
     while (size--) {
       const float s = *in++ * gain_modulation.Next();
-      const float lp = filter_.Process<stmlib::FILTER_MODE_LOW_PASS>(s);
-      *out = stmlib::Clip16(1 + static_cast<int32_t>(lp + (s - lp) * hf_bleed));
+      float lp, hp;
+      filter_.Process<stmlib::FILTER_MODE_LOW_PASS, stmlib::FILTER_MODE_HIGH_PASS>(
+          s, &lp, &hp);
+      const float filtered = high_pass ? hp : lp;
+      *out = stmlib::Clip16(
+          1 + static_cast<int32_t>(filtered + (s - filtered) * hf_bleed));
       out += stride;
     }
   }

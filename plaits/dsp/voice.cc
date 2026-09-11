@@ -827,9 +827,13 @@ void Voice::Render(
       (!level_patched && !modulations.trigger_patched);
   bool aux_lpg_bypass = lpg_bypass || (patch.aux_is_subosc() && !use_aux_crossfade);
   
-  // Compute LPG parameters.
+  // Compute LPG parameters. COLOUR is folded: low pass gate on its left half,
+  // plain VCA across the centre detent, high pass gate on its right half (see
+  // LpgColourToHf). Everything below keys off the VCA-likeness, so the decay
+  // tail and the cutoff nudge mirror on the two sides.
   if (!lpg_bypass) {
-    const float hf = patch_lpg_colour;
+    const float hf = LpgColourToHf(patch_lpg_colour);
+    lpg_envelope_.set_high_pass(LpgColourIsHighPass(patch_lpg_colour));
     const float decay_tail = (20.0f * kBlockSize) / kSampleRate *
         SemitonesToRatio(-72.0f * patch_decay + 12.0f * hf) - short_decay;
     
@@ -882,6 +886,7 @@ void Voice::Render(
       lpg_envelope_.gain(),
       lpg_envelope_.frequency(),
       lpg_envelope_.hf_bleed(),
+      lpg_envelope_.high_pass(),
       out_buffer_,
       &frames->out,
       size,
@@ -894,6 +899,7 @@ void Voice::Render(
       lpg_envelope_.gain(),
       lpg_envelope_.frequency(),
       lpg_envelope_.hf_bleed(),
+      lpg_envelope_.high_pass(),
       aux_buffer_,
       &frames->aux,
       size,
