@@ -35,7 +35,7 @@ PUBLIC_CATALOG_PATH = BUILDER_DIR.parent / "plaits_lab_catalog/public_catalog.js
 # synthesis control from MACRO to TWIST everywhere the guide prints it (panel
 # labels, the option-menu value names, the locked-FREQUENCY prose, the scale
 # and wavetable pages); the catalog key stays `macro`.
-MANUAL_CONTRACT = 24
+MANUAL_CONTRACT = 25
 BANKS = (
     {"id": "green", "name": "GREEN", "start": 0, "color": "#4F9868"},
     {"id": "red", "name": "RED", "start": 8, "color": "#C6534B"},
@@ -85,7 +85,7 @@ MENU_LIGHTS = (
     ("TRIG response", ("Trigger", "Gate", "Velocity trigger", "Velocity gate")),
     ("MODEL input", (
         "Model select", "TWIST (fourth control)", "Aux crossfade",
-        "LPG colour (VCFA->VCA)", "Sync In (experimental)",
+        "LPG colour (LPG->VCA->HPG)", "Sync In (experimental)",
     )),
     ("LEVEL input", ("Level", "LPG decay", "Auto: decay or velocity")),
     ("Hold on trigger", ("Off (live CV)", "Sample & hold")),

@@ -1721,6 +1721,130 @@ void TestLPGAttackDecay() {
   }
 }
 
+// COLOUR folds around a VCA centre: low pass gate on the left half, high pass
+// gate on the right. The checks below pin the fold itself, the seam (the two
+// halves must meet without a sample changing), the spectral direction of the
+// two responses, and the one-shot migration of a byte saved under the old law.
+static void RenderColourNote(float colour, float* out, size_t size) {
+  BufferAllocator allocator(ram_block, 16384);
+  Voice v;
+  v.Init(&allocator);
+
+  Patch patch;
+  Modulations modulations;
+  memset(&patch, 0, sizeof(patch));
+  memset(&modulations, 0, sizeof(modulations));
+  patch.engine = 8;  // Virtual Analog: an ordinary outer-LPG engine.
+  patch.note = 36.0f;
+  patch.harmonics = 0.5f;
+  patch.timbre = 0.5f;
+  patch.morph = 0.5f;
+  patch.decay = 0.3f;
+  patch.lpg_colour = colour;
+  modulations.trigger_patched = true;
+  modulations.level = 1.0f;
+
+  for (size_t i = 0; i < size; i += kAudioBlockSize) {
+    modulations.trigger = i == 0 ? 1.0f : 0.0f;
+    Voice::Frame frames[kAudioBlockSize];
+    v.Render(patch, modulations, frames, kAudioBlockSize);
+    for (size_t j = 0; j < kAudioBlockSize; ++j) {
+      out[i + j] = static_cast<float>(frames[j].out);
+    }
+  }
+}
+
+// Energy below ~150 Hz, as a share of the total: a one-pole low pass over the
+// rendered signal, then mean square. Higher means more bass got through.
+static float BassShare(const float* x, size_t size) {
+  float lp = 0.0f;
+  double low = 0.0;
+  double total = 0.0;
+  const float coefficient = 150.0f / kSampleRate * 6.2832f;
+  for (size_t i = 0; i < size; ++i) {
+    lp += (x[i] - lp) * coefficient;
+    low += lp * lp;
+    total += x[i] * x[i];
+  }
+  return total > 0.0 ? static_cast<float>(low / total) : 0.0f;
+}
+
+void ValidateLpgColourFold() {
+  bool ok = true;
+
+  // The fold: pure gate at either end, exactly VCA across the centre detent.
+  ok &= fabsf(LpgColourToHf(0.0f) - 0.0f) < 1e-6f;
+  ok &= fabsf(LpgColourToHf(1.0f) - 0.0f) < 1e-6f;
+  ok &= fabsf(LpgColourToHf(0.5f) - 1.0f) < 1e-6f;
+  ok &= fabsf(LpgColourToHf(0.5f - 0.024f) - 1.0f) < 1e-6f;
+  ok &= fabsf(LpgColourToHf(0.5f + 0.024f) - 1.0f) < 1e-6f;
+  ok &= LpgColourToHf(0.5f - 0.03f) < 1.0f;
+  ok &= LpgColourToHf(0.5f + 0.03f) < 1.0f;
+  ok &= fabsf(LpgColourToHf(0.25f) - LpgColourToHf(0.75f)) < 1e-6f;
+  ok &= !LpgColourIsHighPass(0.49f);
+  ok &= LpgColourIsHighPass(0.51f);
+  if (!ok) {
+    fprintf(stderr, "COLOUR fold is not the documented LPG->VCA->HPG law\n");
+    exit(1);
+  }
+
+  // The seam: with the bleed pinned at 1 either response is a bare VCA, so a
+  // note rendered just below and just above the centre is the same signal.
+  const size_t size = kAudioBlockSize * 400;
+  float* left = new float[size];
+  float* right = new float[size];
+  RenderColourNote(0.5f - 0.02f, left, size);
+  RenderColourNote(0.5f + 0.02f, right, size);
+  int max_difference = 0;
+  for (size_t i = 0; i < size; ++i) {
+    int d = static_cast<int>(fabsf(left[i] - right[i]));
+    if (d > max_difference) max_difference = d;
+  }
+  if (max_difference > 1) {
+    fprintf(stderr,
+            "Crossing the COLOUR centre changed the output by %d LSB\n",
+            max_difference);
+    exit(1);
+  }
+
+  // The direction: at matching distance from the centre the high pass side
+  // must pass less bass than the low pass side, and than the plain VCA.
+  float* vca = new float[size];
+  RenderColourNote(0.5f, vca, size);
+  RenderColourNote(0.15f, left, size);
+  RenderColourNote(0.85f, right, size);
+  const float bass_lp = BassShare(left, size);
+  const float bass_vca = BassShare(vca, size);
+  const float bass_hp = BassShare(right, size);
+  if (!(bass_hp < bass_vca && bass_vca < bass_lp)) {
+    fprintf(stderr,
+            "COLOUR responses out of order: LPG %.4f, VCA %.4f, HPG %.4f\n",
+            bass_lp, bass_vca, bass_hp);
+    exit(1);
+  }
+  delete[] left;
+  delete[] right;
+  delete[] vca;
+
+  // The migration: a byte saved under the old whole-travel law lands on the
+  // left half at the position that reproduces its VCA-likeness.
+  ok = MigrateLpgColourByte(0) == 0;
+  for (int old_colour = 0; old_colour < 256; ++old_colour) {
+    const float old_hf = static_cast<float>(old_colour) / 256.0f;
+    const uint8_t migrated = MigrateLpgColourByte(
+        static_cast<uint8_t>(old_colour));
+    const float new_hf = LpgColourToHf(static_cast<float>(migrated) / 256.0f);
+    ok &= !LpgColourIsHighPass(static_cast<float>(migrated) / 256.0f);
+    ok &= fabsf(new_hf - old_hf) < 2.5f / 256.0f;
+  }
+  if (!ok) {
+    fprintf(stderr, "Old-law COLOUR bytes do not migrate onto the LPG half\n");
+    exit(1);
+  }
+  printf("COLOUR fold: LPG -> VCA -> HPG validated (bass share LPG %.3f, VCA %.3f, HPG %.3f)\n",
+         bass_lp, bass_vca, bass_hp);
+}
+
 void TestLimiterGlitch() {
   WavWriter wav_writer(2, kSampleRate, 50);
   wav_writer.Open("plaits_limiter_glitch.wav");
@@ -4690,5 +4814,7 @@ int main(void) {
   printf("Validating audio-rate FM recovery...\n");
   ValidateAudioRateFmRecovery();
   ValidateFmCapabilityPolicy();
+  printf("Validating folded COLOUR (LPG -> VCA -> HPG)...\n");
+  ValidateLpgColourFold();
   TestExperimentalEngines();
 }

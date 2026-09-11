@@ -284,7 +284,8 @@ void Ui::LoadState() {
 void Ui::SaveState() {
   State* state = settings_->mutable_state();
   state->engine = static_cast<uint8_t>(
-      (patch_->engine & 0x1f) | (patch_->attenuverter_mode << 5));
+      (patch_->engine & 0x1f) | (patch_->attenuverter_mode << 5) |
+      kLpgColourFoldedFlag);
   state->lpg_colour = static_cast<uint8_t>(patch_->lpg_colour * 256.0f);
   state->decay = static_cast<uint8_t>(patch_->decay * 256.0f);
   state->octave = static_cast<uint8_t>(octave_ * 256.0f);
@@ -495,15 +496,17 @@ void Ui::UpdateLEDs() {
     case UI_MODE_DISPLAY_ALTERNATE_PARAMETERS:
       {
         for (int parameter = 0; parameter < 2; ++parameter) {
-          float value = parameter == 0
-              ? patch_->lpg_colour
-              : patch_->decay;
-          value -= 0.001f;
+          float value = patch_->decay - 0.001f;
           for (int i = 0; i < 4; ++i) {
+            // COLOUR folds around a VCA centre, so its bar is drawn by the
+            // panel helper; DECAY keeps the plain bottom-up fill.
+            const float fill = parameter == 0
+                ? LpgColourSegmentFill(patch_->lpg_colour, i)
+                : value * 4.0f;
             leds_.set(
                 AlternateParameterLedIndex(
                     parameter, i, PLAITS_ROVED_PANEL != 0),
-                value * 64.0f > pwm_counter ? LED_COLOR_YELLOW : LED_COLOR_OFF);
+                fill * 16.0f > pwm_counter ? LED_COLOR_YELLOW : LED_COLOR_OFF);
             value -= 0.25f;
           }
         }

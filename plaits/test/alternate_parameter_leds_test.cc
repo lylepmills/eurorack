@@ -12,6 +12,7 @@
 
 using plaits::AlternateParameterLedIndex;
 using plaits::ChordTableLedIndex;
+using plaits::LpgColourSegmentFill;
 using plaits::OrderedLedIndex;
 using plaits::ShowLockedOctave;
 using plaits::TrigResponseLedValue;
@@ -54,6 +55,35 @@ int main() {
   const int trig_response_led_values[] = { 0, 1, 3, 4 };
   for (int option = 0; option < 4; ++option) {
     assert(TrigResponseLedValue(option) == trig_response_led_values[option]);
+  }
+
+  // The folded COLOUR bar shows filter amount from either end: the low pass
+  // half climbs from segment 0, the high pass half from segment 3, and the
+  // VCA detent in the middle is dark. No two knob positions share a picture.
+  for (int segment = 0; segment < 4; ++segment) {
+    assert(LpgColourSegmentFill(0.0f, segment) == 1.0f);
+    assert(LpgColourSegmentFill(1.0f, segment) == 1.0f);
+    assert(LpgColourSegmentFill(0.5f, segment) == 0.0f);
+    assert(LpgColourSegmentFill(0.48f, segment) == 0.0f);
+    assert(LpgColourSegmentFill(0.52f, segment) == 0.0f);
+  }
+  // A quarter of the way out on the low pass side lights only segment 0 ...
+  assert(LpgColourSegmentFill(0.5f - 0.475f * 0.3f, 0) > 0.0f);
+  assert(LpgColourSegmentFill(0.5f - 0.475f * 0.3f, 1) == 0.0f);
+  assert(LpgColourSegmentFill(0.5f - 0.475f * 0.3f, 3) == 0.0f);
+  // ... and the same distance on the high pass side lights only segment 3.
+  assert(LpgColourSegmentFill(0.5f + 0.475f * 0.3f, 3) > 0.0f);
+  assert(LpgColourSegmentFill(0.5f + 0.475f * 0.3f, 2) == 0.0f);
+  assert(LpgColourSegmentFill(0.5f + 0.475f * 0.3f, 0) == 0.0f);
+  // Fill grows monotonically away from the centre on both sides.
+  for (int step = 1; step < 50; ++step) {
+    const float d = 0.5f * step / 50.0f;
+    for (int segment = 0; segment < 4; ++segment) {
+      assert(LpgColourSegmentFill(0.5f - d, segment) >=
+          LpgColourSegmentFill(0.5f - d + 0.01f, segment));
+      assert(LpgColourSegmentFill(0.5f + d, segment) >=
+          LpgColourSegmentFill(0.5f + d - 0.01f, segment));
+    }
   }
 
   // Preparing the locked-octave shortcut must not mask a simultaneous

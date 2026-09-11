@@ -488,6 +488,14 @@ does. Like contract 14 this is a display-name change, so it ships with the
 image that carries the renderer and bumps `PLAITS_MANUAL_CONTRACT` to 24 in the
 same rollout.
 
+Contract 25 accompanies the folded COLOUR law in the firmware: the hidden
+COLOUR control now runs low pass gate, plain VCA (a 5% detent at the centre),
+high pass gate across its travel, so the MODEL-input option-menu value reads
+"LPG colour (LPG->VCA->HPG)" instead of "LPG colour (VCFA->VCA)". Unlike 14 and
+24 this is not display-only — the firmware behind it changes — so it ships with
+the image built from the commit carrying `plaits/dsp/envelope.h`'s fold, never
+ahead of it.
+
 Since contract 21 this is enforced rather than remembered. `render_manual.py`
 declares `MANUAL_CONTRACT`, the lowest contract that describes what it prints;
 raise it in the same commit that changes the guide's layout or prose.
