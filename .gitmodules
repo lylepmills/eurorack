@@ -13,3 +13,7 @@
 [submodule "avr_audio_bootloader"]
 	path = avr_audio_bootloader
 	url = https://github.com/pichenettes/avr-audio-bootloader.git
+[submodule "alt_firmwares/palette_seed3/libDaisy"]
+	path = alt_firmwares/palette_seed3/libDaisy
+	url = https://github.com/electro-smith/libDaisy.git
+	branch = seed3-updates
