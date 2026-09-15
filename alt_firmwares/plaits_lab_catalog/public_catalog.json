@@ -3662,7 +3662,7 @@
         "Mono: rim-weighted upper modes and dry slap. Stereo: the right membrane pickup."
       ],
       "version": "1.0.0",
-      "digest": "sha256:7414698f9652092d33a83a553f635093fd8ed185610663f29c0336797b070c37",
+      "digest": "sha256:232107bd79d67f3c7135c0c572432b2ff3b04e2d8674f4210b1a7566900e6cc7",
       "documentationDigest": "sha256:224c5930a754f115cf5c938681fe56fbf44b5df394822a87cc502830e959ed76",
       "manual": {
         "controls": {
@@ -3704,7 +3704,7 @@
         "Mono: the clean oscillators and attack transient. Stereo: the right crossed circuit and independent spark."
       ],
       "version": "1.0.0",
-      "digest": "sha256:40c5c2c6be235663c6974e8660cc4812729d257c34bfa8dfadb8f8ffe36aeb6d",
+      "digest": "sha256:a5b5a47b84400c337047206c80089d69dce838f1164424bee64129800850e203",
       "documentationDigest": "sha256:92c6d5e20eee4d5d36d8e7ce34611b88519ecdff4755addb7d22f9a6e78798ec",
       "manual": {
         "controls": {
@@ -3747,7 +3747,7 @@
         "Mono: upper modes and dry metal strike. Stereo: the right modal pickup."
       ],
       "version": "1.0.0",
-      "digest": "sha256:3e4894bebf688ef5d3407fea36c39b38b54268cd7018ddd7502dad91efef82b1",
+      "digest": "sha256:d8dcd270f3dc63d48e717858e92acfbf91708aac2f6dbf45788ead2ee770a73e",
       "documentationDigest": "sha256:879984b407439825a987b735a59a29b360910c06af758f5d58bc136136e46b9e",
       "manual": {
         "controls": {
@@ -4017,7 +4017,7 @@
         "chord-bank"
       ],
       "version": "1.0.0",
-      "digest": "sha256:e1f66ce99f07e10971e3e1c0d70d594122ef9b5f2f2656be14d17b64b6e11926",
+      "digest": "sha256:a75ee365792386d2cb04a71be69657129c159fb6ea9bd3a25c8b44646ce4e90a",
       "documentationDigest": "sha256:30a4a96dc394e68957730d47c0131727dc1b5d3ae4b56ec287b7b2faea2a8058",
       "manual": {
         "controls": {
@@ -4063,7 +4063,7 @@
         "color": "#009a98"
       },
       "version": "1.0.0",
-      "digest": "sha256:dd6c501714bccf529cacfdbf0d2d1a5be6c871b55c0514dff41ae9191ac5dd9e",
+      "digest": "sha256:ce9fd9a6a1c164508b2f4f6a59df649a6df3e762586d6ebdc128fb6db9419740",
       "documentationDigest": "sha256:abacb52cd74a8d71ccefa1b97bac67ea8ebeb9381fe48c0be79a1151956db668",
       "manual": {
         "controls": {
@@ -4145,7 +4145,8 @@
       "vowel-fof",
       "raw-fm",
       "shakers",
-      "freshets-formant"
+      "freshets-formant",
+      "circuit-zaps"
     ]
   },
   "presets": {
