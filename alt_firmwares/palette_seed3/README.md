@@ -57,7 +57,8 @@ cd alt_firmwares/palette_seed3
 The additional source-scoped modes affect Saw Comb's exciter, Hi-hat's metallic
 oscillators and BubbleTime's ringing tones. Speech words/filters remain forward;
 voiced excitation supports signed phase. Tapfield and Attractor stay ineligible.
-Speech listening approval and board timing remain release gates.
+Lyle approved all six speech auditions on 2026-09-15; keep all speech paths.
+Physical board timing remains a release gate.
 The F373 build rejects this flag, and the public Plaits catalog is unchanged.
 `FwVoice::linear_tzfm_capable()` reports this target's eligibility; `Render`
 accepts an optional 12-frame offset buffer in cycles per 48 kHz sample.

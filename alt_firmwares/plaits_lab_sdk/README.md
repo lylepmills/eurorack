@@ -386,12 +386,12 @@ Use a host C++11-or-newer compiler for this regression. Its baseline hashes
 should match with the option off/on; the normal host parity suite also covers
 Wave Terrain's bank-backed rendering. Tapfield and Attractor remain ineligible. The 15-engine second expansion uses
 source-scoped TZFM for Saw Comb, Hi-hat and BubbleTime; speech words and filters
-remain forward. Qualify speech by listening and Seed3 by physical timing before
-release. Set `EngineParameters::frequency_offset_is_linear=false` when an
+remain forward. Lyle approved all six speech auditions on 2026-09-15; keep all
+speech paths. Qualify Seed3 by physical timing before release. Set `EngineParameters::frequency_offset_is_linear=false` when an
 extended host sends exponential FM through the offset buffer.
 
 Validation on 2026-09-15: the normal pinned-container host suite passes; the
 experimental firmware WAV builds. The legacy stock-layout link overflows flash
 by 23,328 bytes both here and on untouched `33626a0`. The signed host regression
 passes with both policies, including identical unmodulated hashes, and all four
-Seed3 images cross-compile. Physical board timing/listening remains unmeasured.
+Seed3 images cross-compile. Physical board timing remains unmeasured.
