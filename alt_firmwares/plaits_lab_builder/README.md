@@ -860,7 +860,7 @@ revision before building — a tag that disagrees with the source inside it is
 the failure the `development` sentinel exists to catch, caught earlier.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-379b4e8f4d7c` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-5f0e897e3de6` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a new
 image, use `wrangler containers info <application-id>` and wait until
@@ -891,7 +891,7 @@ and Step unpatched-attenuverter modes; schema 17's selectable stock LPC banks,
 custom text/recording-derived Speech banks, source/engine previews; and the
 earlier recipe-driven scale banks and automatic LEVEL routing. The generalized
 schema-inheritance hardening from `5b2b077` is also live: current production
-source `1d227a049e3c` descends from that commit, so future supported schemas
+source `5f0e897e3de6` descends from that commit, so future supported schemas
 inherit older feature shapes without another version-list edit.
 
 Schema 28 promotes the Wavetable resource into one shared Wave Tables library.
@@ -998,6 +998,27 @@ target.
 | September 3, 2026 (catalog copy release: OUT/AUX stereo sentences, spelling, credits, Analog Clap; no firmware change — stock and Speech gate builds byte-identical to `06d11c08e05e`) | `f92cf0698662` | `rev-f92cf0698662` |
 | September 5, 2026 (schema 29 optional Quick Retune shortcut, manual contract 23) | `1d227a049e3c` | `rev-1d227a049e3c` |
 | September 8, 2026 (field guide: fourth control renamed MACRO → TWIST, manual contract 24) | `379b4e8f4d7c` | `rev-379b4e8f4d7c` |
+| September 15, 2026 (Circuit Zaps qualified for Fast FM) | `5f0e897e3de6` | `rev-5f0e897e3de6` |
+
+The September 15 Circuit Zaps Fast FM release passed both the autonomous
+group-15 diagnostic and a product-firmware audition. The exact staged product
+build was
+`447b7f13643108275a9a44b175c56f0ca249eca104ee679bd874290f75ac27ea`;
+its 14,146,412-byte updater WAV has SHA-256
+`d87a6a9db451e02ae45bd0a4cdd9e85bdf432925b306418500d8d7b8219d4f19`.
+On hardware, 48 ES-8-triggered hits produced clean MAIN and AUX output with no
+dropouts or clipped samples. A direct Core Audio FM probe shifted the measured
+fundamental from about 66 Hz to 106 Hz at +1 V and 48 Hz at -1 V; 1 kHz and
+5 kHz probes added energy at their respective modulation bands on both outputs.
+Production then compiled release-gate build
+`c4f7447b7eb8ffba7b7e71ca5ff48d11428e9dc4969e6f98841b02859e890099`,
+compiler-stamped `5f0e897e3de6`. Its 14,457,836-byte WAV has SHA-256
+`3572623cebd1cd122dfd1598b6bfb88d7fb40585457e9fb607a37c32f7f1f5b4`;
+the matching field guide has SHA-256
+`b79597ef2e8d84906f858cfd623361473faf930ea08c32ea1be460b25f13805e`.
+The Speech singleton was rotated to `speech-encoder-v23`; `/v1/health` then
+reported the Worker, pool, and singleton all at `5f0e897e3de6` with both match
+checks true. `rev-379b4e8f4d7c` is the immediate rollback image.
 
 The schema-29 Quick Retune production canary compiled fresh as build
 `c5532afdc7dc295b0345435f187d1398f5d973b1ed9168ca50f67db973c91e5f`:
