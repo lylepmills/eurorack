@@ -22,6 +22,7 @@ class CircuitZapsEngine : public Engine {
       size_t size,
       bool* already_enveloped);
   virtual bool stereo_capable() const { return true; }
+  virtual bool fast_fm_capable() const { return true; }
 
  private:
   float phase_a_;

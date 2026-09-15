@@ -49,7 +49,7 @@ through-zero FM, clockwise remains regular exponential FM, and the center is
 off. Models without a meaningful signed oscillator direction keep their stock
 bipolar exponential FM law. `fastFm` dedicates the shared fast converter to a
 continuous 50 kHz FM stream; that makes LEVEL CV unavailable throughout the
-build, including while a non-qualified model is selected. The 34 models that
+build, including while a non-qualified model is selected. The 35 models that
 passed the hardware headroom and transport tests consume the fast stream;
 every other model retains its normal control-rate exponential FM, sampled from
 the same converter. Either option can be selected alone or together. The
@@ -698,7 +698,7 @@ SHA-256 is
 
 Schema 23 shipped on August 12 at `rev-de96c9d9f22b`, adding independent,
 opt-in Linear TZFM and Fast FM preferences plus the FM Heaven preset. Catalog
-qualification enables Linear TZFM for 29 models and Fast FM for 34; unsupported
+qualification enables Linear TZFM for 29 models and Fast FM for 35; unsupported
 models retain their ordinary control-rate exponential FM. Fast FM dedicates the
 shared converter to a continuous 50 kHz FM stream, so LEVEL CV is unavailable
 throughout a Fast-FM build. The final FM Heaven firmware passed the physical

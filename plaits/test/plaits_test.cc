@@ -4569,6 +4569,7 @@ void ValidateFmCapabilityPolicy() {
     &particle_burst,
     &saw_comb,
     &shakers,
+    &circuit_zaps,
   };
   for (size_t i = 0; i < sizeof(fast_engines) / sizeof(fast_engines[0]);
        ++i) {
@@ -4645,7 +4646,6 @@ void ValidateFmCapabilityPolicy() {
     &zxpulse48k,
     &acid,
     &skins,
-    &circuit_zaps,
     &metalwork,
   };
   for (size_t i = 0;

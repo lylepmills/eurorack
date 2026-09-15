@@ -1,6 +1,6 @@
-// Private qualification registry for post-August-11 engines with implemented
-// positive-frequency per-sample pitch paths. No engine in this file is
-// product-qualified by this build.
+// Qualification registry for post-August-11 engines with implemented
+// positive-frequency per-sample pitch paths. It stays intact as the
+// reproducible benchmark even after an individual engine is product-qualified.
 #ifndef PLAITS_DSP_ENGINE_CONFIG_H_
 #define PLAITS_DSP_ENGINE_CONFIG_H_
 
