@@ -66,6 +66,11 @@ class ChordEngine : public Engine {
   }
 #endif
 
+#if PLAITS_BUILD_EXTENDED_TZFM
+  // Qualified separately from the stock Plaits catalog's CPU policy.
+  virtual bool linear_tzfm_capable() const { return true; }
+#endif
+
  private:
   void ComputeRegistration(float registration, float* amplitudes);
   int ComputeChordInversion(

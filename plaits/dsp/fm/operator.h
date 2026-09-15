@@ -32,6 +32,7 @@
 #include <algorithm>
 
 #include "plaits/dsp/oscillator/sine_oscillator.h"
+#include "plaits/dsp/extended_tzfm.h"
 
 #include "stmlib/dsp/dsp.h"
 
@@ -89,7 +90,12 @@ void RenderOperators(
 
   const float scale = 1.0f / float(size);
   for (int i = 0; i < n; ++i) {
+#if PLAITS_BUILD_EXTENDED_TZFM
+    frequency[i] = static_cast<uint32_t>(static_cast<int64_t>(
+        TzfmLimit(f[i], 0.5f) * 4294967296.0));
+#else
     frequency[i] = static_cast<uint32_t>(std::min(f[i], 0.5f) * 4294967296.0f);
+#endif
     phase[i] = ops[i].phase;
     amplitude[i] = ops[i].amplitude;
     amplitude_increment[i] = (std::min(a[i], 4.0f) - amplitude[i]) * scale;

@@ -31,6 +31,7 @@
 #define PLAITS_DSP_OSCILLATOR_GRAINLET_OSCILLATOR_H_
 
 #include "stmlib/dsp/dsp.h"
+#include "plaits/dsp/extended_tzfm.h"
 #include "stmlib/dsp/parameter_interpolator.h"
 #include "stmlib/dsp/polyblep.h"
 
@@ -184,10 +185,11 @@ class GrainletOscillator {
       next_sample = 0.0f;
     
       float f0 = carrier_frequency_modulation.Next();
-      const float f1 = formant_frequency_modulation.Next();
+      float f1 = formant_frequency_modulation.Next();
       if (carrier_frequency_offset) {
         f0 += *carrier_frequency_offset++;
-        CONSTRAIN(f0, 1.0e-7f, kMaxFrequency * 0.5f);
+        CONSTRAIN(f0, PLAITS_BUILD_EXTENDED_TZFM ? -kMaxFrequency * 0.5f : 1.0e-7f, kMaxFrequency * 0.5f);
+        if (PLAITS_BUILD_EXTENDED_TZFM && f0 < 0.0f) f1 = -f1;
       }
 
       if (process_hard_sync) {
@@ -202,19 +204,20 @@ class GrainletOscillator {
       }
     
       carrier_phase_ += f0;
-      reset = carrier_phase_ >= 1.0f;
+      reset = carrier_phase_ >= 1.0f || (PLAITS_BUILD_EXTENDED_TZFM && carrier_phase_ < 0.0f);
       
       if (reset) {
-        carrier_phase_ -= 1.0f;
-        reset_time = carrier_phase_ / f0;
+        const bool reverse = PLAITS_BUILD_EXTENDED_TZFM && f0 < 0.0f;
+        carrier_phase_ += reverse ? 1.0f : -1.0f;
+        reset_time = (carrier_phase_ - (reverse ? 1.0f : 0.0f)) / f0;
         float before = Grainlet(
-            1.0f,
+            reverse ? 0.0f : 1.0f,
             formant_phase_ + (1.0f - reset_time) * f1,
             carrier_shape_modulation.subsample(1.0f - reset_time),
             carrier_bleed_modulation.subsample(1.0f - reset_time));
 
         float after = Grainlet(
-            0.0f,
+            reverse ? 1.0f : 0.0f,
             0.0f,
             carrier_shape_modulation.subsample(1.0f),
             carrier_bleed_modulation.subsample(1.0f));
@@ -223,8 +226,10 @@ class GrainletOscillator {
         this_sample += discontinuity * stmlib::ThisBlepSample(reset_time);
         next_sample += discontinuity * stmlib::NextBlepSample(reset_time);
         formant_phase_ = reset_time * f1;
+        if (PLAITS_BUILD_EXTENDED_TZFM) formant_phase_ = TzfmWrap(formant_phase_);
       } else {
         formant_phase_ += f1;
+        if (PLAITS_BUILD_EXTENDED_TZFM && formant_phase_ < 0.0f) formant_phase_ += 1.0f;
         if (formant_phase_ >= 1.0f) {
           formant_phase_ -= 1.0f;
         }
@@ -274,7 +279,8 @@ class GrainletOscillator {
       float shape,
       float bleed) {
     float carrier = Carrier(carrier_phase, shape);
-    float formant = Sine(formant_phase);
+    float formant = Sine(PLAITS_BUILD_EXTENDED_TZFM && formant_phase < 0.0f
+        ? TzfmWrap(formant_phase) : formant_phase);
     return carrier * (formant + bleed) / (1.0f + bleed);
   }
 

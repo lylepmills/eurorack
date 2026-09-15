@@ -137,6 +137,7 @@ class FwVoice {
   int engine_index() const { return engine_index_; }
   plaits::Engine* engine() const { return engine_; }
   bool stereo_capable() const { return engine_ && engine_->stereo_capable(); }
+  bool linear_tzfm_capable() const { return engine_ && engine_->linear_tzfm_capable(); }
 
   void NoteOn(float note, float velocity) {
     note_ = note;
@@ -151,7 +152,8 @@ class FwVoice {
   // Renders ONE 12-frame block. `render_cycles` receives the DWT cycles
   // spent inside Engine::Render alone (the number the plan asks for).
   void Render(const VoiceParams& vp, float* out, float* aux,
-              uint32_t (*cycles)(), uint32_t* render_cycles) {
+              uint32_t (*cycles)(), uint32_t* render_cycles,
+              const float* frequency_offset = nullptr) {
     const std::size_t size = kBlockSize;
     if (!engine_) {
       for (std::size_t i = 0; i < size; ++i) { out[i] = 0.0f; aux[i] = 0.0f; }
@@ -160,6 +162,7 @@ class FwVoice {
     const EngineDesc& d = kEngines[engine_index_];
     plaits::EngineParameters p;
     p.note = note_;
+    p.frequency_offset = linear_tzfm_capable() ? frequency_offset : nullptr;
     p.harmonics = vp.harmonics;
     p.timbre = vp.timbre;
     p.morph = vp.morph;

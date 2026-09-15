@@ -92,21 +92,25 @@ void CircuitZapsEngine::Render(
   const float drive = 1.2f + 7.0f * charge;
 
   for (size_t i = 0; i < size; ++i) {
-#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
-    float sample_base = base;
+    float frequency_a = min(0.235f, base * sweep_ratio_);
+    float frequency_b = min(0.235f, frequency_a * ratio);
+#if PLAITS_BUILD_EXTENDED_TZFM
     if (parameters.frequency_offset) {
-      sample_base += parameters.frequency_offset[i];
-      CONSTRAIN(sample_base, 1.0e-7f, 0.12f);
+      frequency_a = TzfmLimit((base + parameters.frequency_offset[i]) * sweep_ratio_, 0.235f);
+      frequency_b = TzfmLimit(frequency_a * ratio, 0.235f);
     }
-    const float frequency_a = min(0.235f, sample_base * sweep_ratio_);
-#else
-    const float frequency_a = min(0.235f, base * sweep_ratio_);
+#elif PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      float sample_base = base + parameters.frequency_offset[i];
+      CONSTRAIN(sample_base, 1.0e-7f, 0.12f);
+      frequency_a = min(0.235f, sample_base * sweep_ratio_);
+      frequency_b = min(0.235f, frequency_a * ratio);
+    }
 #endif
-    const float frequency_b = min(0.235f, frequency_a * ratio);
     phase_a_ += frequency_a;
-    phase_a_ -= static_cast<int>(phase_a_);
+    phase_a_ = TzfmWrap(phase_a_);
     phase_b_ += frequency_b;
-    phase_b_ -= static_cast<int>(phase_b_);
+    phase_b_ = TzfmWrap(phase_b_);
 
     const float sine = SineNoWrap(phase_a_);
     const float partner = 0.68f * SineNoWrap(phase_b_) +

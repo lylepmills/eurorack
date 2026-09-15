@@ -199,11 +199,11 @@ void ScannedEngine::Render(
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
     if (parameters.frequency_offset) {
       frequency += parameters.frequency_offset[i];
-      CONSTRAIN(frequency, 0.0f, 0.24f);
+      CONSTRAIN(frequency, PLAITS_BUILD_EXTENDED_TZFM ? -0.24f : 0.0f, 0.24f);
     }
 #endif
     scan_phase_ += frequency;
-    scan_phase_ -= static_cast<int>(scan_phase_);
+    scan_phase_ = TzfmWrap(scan_phase_);
     // Phase distortion of the scan path makes TIMBRE audible even between
     // excitations, while remaining continuous at the waveform boundary.
     float warped_phase = scan_phase_ + 0.22f * structure * Sine(scan_phase_);

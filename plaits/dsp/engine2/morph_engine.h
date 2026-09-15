@@ -294,6 +294,11 @@ class MorphEngine : public Engine {
       bool* already_enveloped);
   virtual bool stereo_capable() const { return PLAITS_STEREO_MORPH; }
 
+#if PLAITS_BUILD_EXTENDED_TZFM
+  // Qualified separately from the stock Plaits catalog's CPU policy.
+  virtual bool linear_tzfm_capable() const { return true; }
+#endif
+
  private:
   inline float Decimate(const float* history) const;
 

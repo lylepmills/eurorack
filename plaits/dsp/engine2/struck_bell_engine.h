@@ -369,6 +369,11 @@ class StruckBellEngine : public Engine {
       bool* already_enveloped);
   virtual bool stereo_capable() const { return PLAITS_STEREO_STRUCK_BELL; }
 
+#if PLAITS_BUILD_EXTENDED_TZFM
+  // Qualified separately from the stock Plaits catalog's CPU policy.
+  virtual bool linear_tzfm_capable() const { return true; }
+#endif
+
  private:
   // Braids' own int32 Q15 amplitude counter (digital_oscillator.h:134), not
   // a normalised float -- see AMPLITUDE STATE above.

@@ -110,7 +110,7 @@ void FreshetsFormantEngine::Render(
   const float shape = ApplyMacro(2.0f, 0.0f, 3.9999f, parameters.macro);
 
   float f0 = NoteToFrequency(parameters.note);
-  CONSTRAIN(f0, 0.0f, 0.25f);
+  CONSTRAIN(f0, PLAITS_BUILD_EXTENDED_TZFM ? -0.25f : 0.0f, 0.25f);
 
   // Tides increments the driver and THEN zeroes it on the gate, so the synced
   // sample sits at phase 0. 
@@ -128,7 +128,7 @@ void FreshetsFormantEngine::Render(
 
   float lp_ratio = std::min(smoothness * 2.0f, 1.0f);
   lp_ratio *= lp_ratio * lp_ratio;
-  float base_lp_coefficient = f0 * 0.5f;
+  float base_lp_coefficient = (PLAITS_BUILD_EXTENDED_TZFM ? fabsf(f0) : f0) * 0.5f;
   base_lp_coefficient += (1.0f - base_lp_coefficient) * lp_ratio;
 
   for (size_t i = 0; i < size; ++i) {
@@ -136,7 +136,7 @@ void FreshetsFormantEngine::Render(
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
     if (parameters.frequency_offset) {
       f0 += parameters.frequency_offset[i];
-      CONSTRAIN(f0, 0.0f, 0.25f);
+      CONSTRAIN(f0, PLAITS_BUILD_EXTENDED_TZFM ? -0.25f : 0.0f, 0.25f);
     }
 #endif
     const float ratio = ratio_mod.Next();
@@ -146,7 +146,7 @@ void FreshetsFormantEngine::Render(
     float lp_coefficient = base_lp_coefficient;
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
     if (parameters.frequency_offset) {
-      lp_coefficient = f0 * 0.5f;
+      lp_coefficient = (PLAITS_BUILD_EXTENDED_TZFM ? fabsf(f0) : f0) * 0.5f;
       lp_coefficient += (1.0f - lp_coefficient) * lp_ratio;
     }
 #endif
@@ -157,14 +157,21 @@ void FreshetsFormantEngine::Render(
     if (i == 0 && sync_driver) {
       driver_phase_ = 0.0f;   // after the increment, as Tides does it
     }
-    if (driver_phase_ >= 1.0f) {
-      driver_phase_ -= 1.0f;
+    if (driver_phase_ >= 1.0f || (PLAITS_BUILD_EXTENDED_TZFM && driver_phase_ < 0.0f)) {
+      driver_phase_ = TzfmWrap(driver_phase_);
       sub_state_ = !sub_state_;
-      RetriggerSerge(&env_phase_, pw);
-      RetriggerSerge(&env_phase_r_, pw);
+      if (PLAITS_BUILD_EXTENDED_TZFM && f0 < 0.0f) {
+        float a = 1.0f - env_phase_, b = 1.0f - env_phase_r_;
+        RetriggerSerge(&a, 1.0f - pw); RetriggerSerge(&b, 1.0f - pw);
+        env_phase_ = 1.0f - a; env_phase_r_ = 1.0f - b;
+      } else {
+        RetriggerSerge(&env_phase_, pw);
+        RetriggerSerge(&env_phase_r_, pw);
+      }
     }
 
     env_phase_ += formant_freq;
+    if (PLAITS_BUILD_EXTENDED_TZFM && env_phase_ < 0.0f) env_phase_ = 0.0f;
     if (env_phase_ > 1.0f) {
       env_phase_ = 1.0f;  // Clamp rather than wrap: this is an AD, not a cycle.
     }
@@ -172,6 +179,7 @@ void FreshetsFormantEngine::Render(
     // Advanced unconditionally: one add and one compare is cheaper than a branch
     // in the unrolled hot loop, and in mono nothing reads it.
     env_phase_r_ += formant_freq * (1.0f + kStereoDetune);
+    if (PLAITS_BUILD_EXTENDED_TZFM && env_phase_r_ < 0.0f) env_phase_r_ = 0.0f;
     if (env_phase_r_ > 1.0f) {
       env_phase_r_ = 1.0f;
     }

@@ -90,6 +90,9 @@ class Voice {
     normalized_velocity_ = 10.0f;
     
     dirty_ = true;
+#if PLAITS_BUILD_EXTENDED_TZFM
+    frequency_offset_ = 0.0f;
+#endif
     carrier_timbre_.Init();
   }
 
@@ -136,6 +139,9 @@ class Voice {
     return true;
   }
   
+#if PLAITS_BUILD_EXTENDED_TZFM
+  void set_frequency_offset(float offset) { frequency_offset_ = offset; }
+#endif
   inline float op_level(int i) const {
     return level_[i];
   }
@@ -230,7 +236,14 @@ class Voice {
     for (int i = 0; i < num_operators; ++i) {
       const Patch::Operator& op = patch_->op[i];
       
-      f[i] = ratios_[i] * (ratios_[i] < 0.0f ? -one_hz_ : f0);
+      // Fixed-Hz DX operators remain fixed; ratio operators follow the signed root.
+      f[i] = ratios_[i] * (ratios_[i] < 0.0f ? -one_hz_ :
+#if PLAITS_BUILD_EXTENDED_TZFM
+          f0 + frequency_offset_
+#else
+          f0
+#endif
+      );
       if (algorithms_->is_modulator(patch_->algorithm, i)) {
         f[i] *= modulator_ratio;
       }
@@ -284,6 +297,9 @@ class Voice {
   }
   
  private:
+#if PLAITS_BUILD_EXTENDED_TZFM
+  float frequency_offset_;
+#endif
   CarrierTimbre<num_operators> carrier_timbre_;
   const Algorithms<num_operators>* algorithms_;
   float sample_rate_;

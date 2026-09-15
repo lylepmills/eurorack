@@ -248,6 +248,11 @@ class WaveParaphonicEngine : public Engine {
       bool* already_enveloped);
   virtual bool stereo_capable() const { return PLAITS_STEREO_WAVE_PARAPHONIC; }
 
+#if PLAITS_BUILD_EXTENDED_TZFM
+  // Qualified separately from the stock Plaits catalog's CPU policy.
+  virtual bool linear_tzfm_capable() const { return true; }
+#endif
+
  private:
   ChordBank chords_;
   float phase_[kWaveParaphonicNumVoices];

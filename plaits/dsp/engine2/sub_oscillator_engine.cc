@@ -147,7 +147,7 @@ void SubOscillatorEngine::Render(
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
     if (parameters.frequency_offset) {
       f += parameters.frequency_offset[i];
-      CONSTRAIN(f, 0.0f, kMaxFrequency);
+      CONSTRAIN(f, PLAITS_BUILD_EXTENDED_TZFM ? -kMaxFrequency : 0.0f, kMaxFrequency);
     }
 #endif
     const float pw_square = pw_square_modulation.Next();
@@ -159,6 +159,17 @@ void SubOscillatorEngine::Render(
     // The main oscillator. One phase, two naive waveforms, three
     // discontinuities: the square's rising edge at pw_square, the saw's
     // downward jump at pw_saw, and the wrap, which cuts both.
+#if PLAITS_BUILD_EXTENDED_TZFM
+    if (parameters.frequency_offset) {
+      TzfmEdge(phase_, phase_ + f, previous_pw_square_, pw_square, 1.0f, 0.0f, &this_square, &next_square);
+      TzfmEdge(phase_, phase_ + f, previous_pw_saw_, pw_saw, -1.0f, 0.0f, &this_saw, &next_saw);
+      TzfmEdge(phase_, phase_ + f, 0.0f, 0.0f, -1.0f, 0.0f, &this_square, &next_square);
+      TzfmEdge(phase_, phase_ + f, 0.0f, 0.0f, -1.0f, 0.0f, &this_saw, &next_saw);
+      phase_ = TzfmWrap(phase_ + f);
+      high_square_ = phase_ >= pw_square; high_saw_ = phase_ >= pw_saw;
+    } else
+#endif
+    {
     phase_ += f;
     while (true) {
       if (!high_square_ && phase_ >= pw_square) {
@@ -194,6 +205,7 @@ void SubOscillatorEngine::Render(
       }
       break;
     }
+    }
     // RenderSquare's naive sample, in a 0..1 domain (scaled to +-1 below).
     next_square += phase_ < pw_square ? 0.0f : 1.0f;
     // RenderVariableSaw's naive sample: `(phase >> 18) + ((phase - pw) >> 18)`
@@ -206,6 +218,14 @@ void SubOscillatorEngine::Render(
 
     // The sub: a plain square at its own frequency, Braids' `set_parameter(0)`
     // widened into MACRO's range.
+#if PLAITS_BUILD_EXTENDED_TZFM
+    if (parameters.frequency_offset) {
+      TzfmEdge(phase_sub_, phase_sub_ + f_sub, previous_pw_sub_, pw_sub, 1.0f, 0.0f, &this_sub, &next_sub);
+      TzfmEdge(phase_sub_, phase_sub_ + f_sub, 0.0f, 0.0f, -1.0f, 0.0f, &this_sub, &next_sub);
+      phase_sub_ = TzfmWrap(phase_sub_ + f_sub); high_sub_ = phase_sub_ >= pw_sub;
+    } else
+#endif
+    {
     phase_sub_ += f_sub;
     while (true) {
       if (!high_sub_ && phase_sub_ >= pw_sub) {
@@ -227,6 +247,7 @@ void SubOscillatorEngine::Render(
         continue;
       }
       break;
+    }
     }
     next_sub += phase_sub_ < pw_sub ? 0.0f : 1.0f;
     previous_pw_sub_ = pw_sub;

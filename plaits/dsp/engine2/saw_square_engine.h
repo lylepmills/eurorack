@@ -177,6 +177,11 @@ class SawSquareEngine : public Engine {
       bool* already_enveloped);
   virtual bool stereo_capable() const { return PLAITS_STEREO_SAW_SQUARE; }
 
+#if PLAITS_BUILD_EXTENDED_TZFM
+  // Qualified separately from the stock Plaits catalog's CPU policy.
+  virtual bool linear_tzfm_capable() const { return true; }
+#endif
+
  private:
   // The saw. Its own hand-rolled polyBLEP state (Braids' RenderVariableSaw is
   // not the same waveform as Plaits' own VariableSawOscillator -- see the

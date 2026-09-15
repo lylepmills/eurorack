@@ -42,10 +42,12 @@ const float kUndertowVoicePan[kNumUndertowVoices] = {
 };
 
 inline float WrapPhase(float phase) {
-  if (phase >= 1.0f) {
-    phase -= 1.0f;
-  }
+#if PLAITS_BUILD_EXTENDED_TZFM
+  return TzfmWrap(phase);
+#else
+  if (phase >= 1.0f) phase -= 1.0f;
   return phase;
+#endif
 }
 
 // Two-point polynomial BLEP for the discontinuities of the saw and pulse
@@ -81,28 +83,41 @@ inline float BandlimitedSawPulseWave(
     float previous_pulse_width,
     bool wrapped,
     bool* pulse_high,
-    float* next_blep) {
+    float* next_blep,
+    bool signed_fm) {
   const float saw = 2.0f * phase - 1.0f;
   float this_blep = *next_blep;
   *next_blep = 0.0f;
 
-  if (wrapped) {
-    const float t = phase / frequency;
-    // Saw falls by 2 at wrap while pulse rises by 2.
-    const float discontinuity = -2.0f + 4.0f * mix;
-    this_blep += discontinuity * ThisBlepSample(t);
-    *next_blep += discontinuity * NextBlepSample(t);
-    *pulse_high = true;
-  }
+#if PLAITS_BUILD_EXTENDED_TZFM
+  if (signed_fm) {
+    const float start = TzfmWrap(phase - frequency);
+    TzfmEdge(start, start + frequency, 0.0f, 0.0f,
+        -2.0f + 4.0f * mix, 0.0f, &this_blep, next_blep);
+    TzfmEdge(start, start + frequency, previous_pulse_width, pulse_width,
+        -2.0f * mix, 0.0f, &this_blep, next_blep);
+    *pulse_high = phase < pulse_width;
+  } else
+#endif
+  {
+    if (wrapped) {
+      const float t = phase / frequency;
+      // Saw falls by 2 at wrap while pulse rises by 2.
+      const float discontinuity = -2.0f + 4.0f * mix;
+      this_blep += discontinuity * ThisBlepSample(t);
+      *next_blep += discontinuity * NextBlepSample(t);
+      *pulse_high = true;
+    }
 
-  if (*pulse_high && phase >= pulse_width) {
-    const float denominator = \
-        previous_pulse_width - pulse_width + frequency;
-    const float t = (phase - pulse_width) / denominator;
-    const float discontinuity = -2.0f * mix;
-    this_blep += discontinuity * ThisBlepSample(t);
-    *next_blep += discontinuity * NextBlepSample(t);
-    *pulse_high = false;
+    if (*pulse_high && phase >= pulse_width) {
+      const float denominator = \
+          previous_pulse_width - pulse_width + frequency;
+      const float t = (phase - pulse_width) / denominator;
+      const float discontinuity = -2.0f * mix;
+      this_blep += discontinuity * ThisBlepSample(t);
+      *next_blep += discontinuity * NextBlepSample(t);
+      *pulse_high = false;
+    }
   }
   const float pulse = *pulse_high ? 1.0f : -1.0f;
   return saw + (pulse - saw) * mix + this_blep;
@@ -137,14 +152,14 @@ __attribute__((noinline)) void RenderTriangleSawBlock(
       if (root_frequency_offset) {
         instantaneous_frequency +=
             root_frequency_offset[i] * frequency_scale[voice];
-        CONSTRAIN(instantaneous_frequency, 0.000001f, 0.24f);
+        CONSTRAIN(instantaneous_frequency, PLAITS_BUILD_EXTENDED_TZFM ? -0.24f : 0.000001f, 0.24f);
       }
 #endif
       main_amplitude[voice] += main_increment[voice];
       aux_amplitude[voice] += aux_increment[voice];
       phase[voice] = WrapPhase(phase[voice] + instantaneous_frequency);
       const float sample = TriangleSawWave(
-          phase[voice], instantaneous_frequency, wave_mix);
+          phase[voice], (PLAITS_BUILD_EXTENDED_TZFM ? fabsf(instantaneous_frequency) : instantaneous_frequency), wave_mix);
       out_sum += sample * main_amplitude[voice];
       aux_sum += sample * aux_amplitude[voice];
     }
@@ -189,7 +204,7 @@ __attribute__((noinline)) void RenderSawPulseBlock(
       if (root_frequency_offset) {
         instantaneous_frequency +=
             root_frequency_offset[i] * frequency_scale[voice];
-        CONSTRAIN(instantaneous_frequency, 0.000001f, 0.24f);
+        CONSTRAIN(instantaneous_frequency, PLAITS_BUILD_EXTENDED_TZFM ? -0.24f : 0.000001f, 0.24f);
       }
 #endif
       main_amplitude[voice] += main_increment[voice];
@@ -200,7 +215,7 @@ __attribute__((noinline)) void RenderSawPulseBlock(
       // The raw width never exceeds 0.5 and frequency is capped below 0.25,
       // so only the lower anti-aliasing bound can become active.
       const float voice_pulse_width = max(
-          pulse_width, 2.0f * instantaneous_frequency);
+          pulse_width, 2.0f * (PLAITS_BUILD_EXTENDED_TZFM ? fabsf(instantaneous_frequency) : instantaneous_frequency));
       if (entering_pulse && i == begin) {
         pulse_high[voice] = phase[voice] < voice_pulse_width;
         pulse_width_state[voice] = voice_pulse_width;
@@ -214,7 +229,7 @@ __attribute__((noinline)) void RenderSawPulseBlock(
           pulse_width_state[voice],
           wrapped,
           &pulse_high[voice],
-          &next_blep[voice]);
+          &next_blep[voice], root_frequency_offset != NULL);
       pulse_width_state[voice] = voice_pulse_width;
       out_sum += sample * main_amplitude[voice];
       aux_sum += sample * aux_amplitude[voice];
@@ -227,14 +242,14 @@ __attribute__((noinline)) void RenderSawPulseBlock(
       if (root_frequency_offset) {
         instantaneous_frequency +=
             root_frequency_offset[i] * frequency_scale[voice];
-        CONSTRAIN(instantaneous_frequency, 0.000001f, 0.24f);
+        CONSTRAIN(instantaneous_frequency, PLAITS_BUILD_EXTENDED_TZFM ? -0.24f : 0.000001f, 0.24f);
       }
 #endif
       main_amplitude[voice] += main_increment[voice];
       aux_amplitude[voice] += aux_increment[voice];
       phase[voice] = WrapPhase(phase[voice] + instantaneous_frequency);
       const float voice_pulse_width = max(
-          pulse_width, 2.0f * instantaneous_frequency);
+          pulse_width, 2.0f * (PLAITS_BUILD_EXTENDED_TZFM ? fabsf(instantaneous_frequency) : instantaneous_frequency));
       const float saw = 2.0f * phase[voice] - 1.0f;
       const float pulse = phase[voice] < voice_pulse_width ? 1.0f : -1.0f;
       const float sample = saw + (pulse - saw) * wave_mix;

@@ -109,7 +109,7 @@ void MetalworkEngine::Render(
   }
 
   for (size_t i = 0; i < size; ++i) {
-#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM && !PLAITS_BUILD_EXTENDED_TZFM
     float sample_base = base;
     if (parameters.frequency_offset) {
       sample_base += parameters.frequency_offset[i];
@@ -119,18 +119,27 @@ void MetalworkEngine::Render(
     float full = 0.0f;
     float upper = 0.0f;
     for (int j = 0; j < kMetalworkNumModes; ++j) {
-#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+      float increment_a = frequency_a[j];
+      float increment_b = frequency_b[j];
+#if PLAITS_BUILD_EXTENDED_TZFM
+      if (parameters.frequency_offset) {
+        increment_a = TzfmLimit(
+            (base + parameters.frequency_offset[i]) * (frequency_a[j] / base), 0.235f);
+        increment_b = TzfmLimit(
+            (base + parameters.frequency_offset[i]) * (frequency_b[j] / base), 0.235f);
+      }
+#elif PLAITS_BUILD_FREQUENCY_OFFSET_FM
       if (parameters.frequency_offset) {
         const float ratio = kMetalRatios[object_][j];
-        frequency_a[j] = min(0.235f, sample_base * ratio);
-        frequency_b[j] = min(0.235f, sample_base * ratio *
+        increment_a = min(0.235f, sample_base * ratio);
+        increment_b = min(0.235f, sample_base * ratio *
             (1.0f + beating * (1.0f + 0.3f * j)));
       }
 #endif
-      phase_a_[j] += frequency_a[j];
-      phase_a_[j] -= static_cast<int>(phase_a_[j]);
-      phase_b_[j] += frequency_b[j];
-      phase_b_[j] -= static_cast<int>(phase_b_[j]);
+      phase_a_[j] += increment_a;
+      phase_a_[j] = TzfmWrap(phase_a_[j]);
+      phase_b_[j] += increment_b;
+      phase_b_[j] = TzfmWrap(phase_b_[j]);
       const float pair = 0.5f * amplitude_[j] *
           (SineNoWrap(phase_a_[j]) + SineNoWrap(phase_b_[j]));
       full += pair;

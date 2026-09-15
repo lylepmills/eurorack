@@ -225,7 +225,7 @@ void AnalogPercussionEngine::Render(
     float twin_increment = twin_increment_;
     if (parameters.frequency_offset) {
       fundamental_increment = f0 + parameters.frequency_offset[i];
-      CONSTRAIN(fundamental_increment, 1.0e-7f, 0.49f);
+      CONSTRAIN(fundamental_increment, PLAITS_BUILD_EXTENDED_TZFM ? -0.49f : 1.0e-7f, 0.49f);
       overtone_increment = fundamental_increment * ratio;
       sub_increment = fundamental_increment * kPercussionSubRatio;
       twin_increment = fundamental_increment *
@@ -233,11 +233,11 @@ void AnalogPercussionEngine::Render(
     }
 
     phase_[0] += fundamental_increment;
-    phase_[0] -= static_cast<float>(static_cast<int>(phase_[0]));
+    phase_[0] = TzfmWrap(phase_[0]);
     phase_[1] += overtone_increment;
-    phase_[1] -= static_cast<float>(static_cast<int>(phase_[1]));
+    phase_[1] = TzfmWrap(phase_[1]);
     sub_phase_ += sub_increment;
-    sub_phase_ -= static_cast<float>(static_cast<int>(sub_phase_));
+    sub_phase_ = TzfmWrap(sub_phase_);
 
     mode_env_[0] *= mode_decay_[0];
     mode_env_[1] *= mode_decay_[1];
@@ -272,7 +272,7 @@ void AnalogPercussionEngine::Render(
       // The fundamental and its detuned twin are panned against each other, so
       // the pure voices have width too;
       twin_phase_ += twin_increment;
-      twin_phase_ -= static_cast<float>(static_cast<int>(twin_phase_));
+      twin_phase_ = TzfmWrap(twin_phase_);
       // Shaped like the fundamental it copies — an unshaped twin next to a
       // squared fundamental is the same oscillator arriving two different ways.
       const float twin =

@@ -30,6 +30,7 @@
 #define PLAITS_DSP_ENGINE_ENGINE_H_
 
 #include "plaits/dsp/dsp.h"
+#include "plaits/dsp/extended_tzfm.h"
 
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/dsp/units.h"
@@ -55,7 +56,7 @@
 
 #ifndef PLAITS_BUILD_FREQUENCY_OFFSET_FM
 #define PLAITS_BUILD_FREQUENCY_OFFSET_FM \
-    (PLAITS_BUILD_LINEAR_TZFM || PLAITS_BUILD_FAST_FM)
+    (PLAITS_BUILD_LINEAR_TZFM || PLAITS_BUILD_FAST_FM || PLAITS_BUILD_EXTENDED_TZFM)
 #endif
 
 #ifndef PLAITS_FM_DIAGNOSTIC_FORCE_FAST_FM

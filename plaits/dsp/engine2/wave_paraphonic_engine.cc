@@ -339,11 +339,12 @@ void WaveParaphonicEngine::Render(
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
       if (p.frequency_offset) {
         increment = max(
-            0.0f, increment + p.frequency_offset[frequency_sample] *
+            PLAITS_BUILD_EXTENDED_TZFM ? -0.49f : 0.0f, increment + p.frequency_offset[frequency_sample] *
                 frequency_offset_ratio[i]);
       }
 #endif
-      float phase = phase_[i] + increment;
+      float phase = phase_[i] + (PLAITS_BUILD_EXTENDED_TZFM ? TzfmLimit(increment, 0.49f) : increment);
+      if (PLAITS_BUILD_EXTENDED_TZFM && phase < 0.0f) phase += 1.0f;
       if (phase >= 1.0f) {
         phase -= 1.0f;
       }

@@ -17,6 +17,11 @@
 #include <cstring>
 
 #include "fw_voice.h"
+#include "plaits/dsp/oscillator/sine_oscillator.h"
+
+#ifndef PALETTE_TZFM_BENCH
+#define PALETTE_TZFM_BENCH 0
+#endif
 
 #ifndef PALETTE_VARIANT
 #define PALETTE_VARIANT "unknown"
@@ -100,12 +105,21 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
   }
 
   for (size_t sub = 0; sub < size / kBlockSize; ++sub) {
+    float fm[kBlockSize];
+#if PALETTE_TZFM_BENCH
+    static float fm_phase = 0.0f;
+    for (size_t i = 0; i < kBlockSize; ++i) {
+      fm_phase = plaits::TzfmWrap(fm_phase + 997.0f / kSampleRate);
+      fm[i] = 2000.0f / kSampleRate * plaits::Sine(fm_phase);
+    }
+#endif
     float mix_l[kBlockSize] = {0};
     float mix_r[kBlockSize] = {0};
     for (int v = 0; v < n; ++v) {
       float o[kBlockSize], a[kBlockSize];
       uint32_t r = 0;
-      g_voices[v].Render(g_params, o, a, Cycles, &r);
+      g_voices[v].Render(g_params, o, a, Cycles, &r,
+          PALETTE_TZFM_BENCH ? fm : nullptr);
       render += r;
       if (r > render_max) render_max = r;
       const bool stereo = g_params.stereo && g_voices[v].stereo_capable();
@@ -211,6 +225,8 @@ int main(void) {
                (unsigned long) kMaxEngineSize, (unsigned long) kArenaBytes);
 
 #if !PALETTE_SKIP_BENCH
+  hw.PrintLine("# extended_tzfm=%d tzfm_bench=%d (2000 Hz depth, 997 Hz modulator)",
+      PLAITS_BUILD_EXTENDED_TZFM, PALETTE_TZFM_BENCH);
   hw.PrintLine("# columns: variant,set,engine,voices,stereo,render_cyc_per_voice_block,render_max_cyc,cb_mean_cyc,cb_max_cyc,cb_mean_pct_x100,cb_max_pct_x100,callbacks");
   const uint32_t t_start = System::GetNow();
   RunBenchRow(-1, 0);                    // empty-callback baseline

@@ -212,7 +212,7 @@ void GranularCloudEngine::Render(
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
     if (parameters.frequency_offset) {
       const float instantaneous_increment = max(
-          0.0f, base_increment + parameters.frequency_offset[sample_index]);
+          PLAITS_BUILD_EXTENDED_TZFM ? -0.49f : 0.0f, base_increment + parameters.frequency_offset[sample_index]);
       pitch_ratio = instantaneous_increment / max(base_increment, 1e-7f);
     }
 #endif
@@ -231,7 +231,8 @@ void GranularCloudEngine::Render(
 
     for (int i = 0; i < kGranularCloudNumGrains; ++i) {
       Grain* g = &grain_[i];
-      g->phase += g->phase_increment * pitch_ratio;
+      g->phase += PLAITS_BUILD_EXTENDED_TZFM ? TzfmLimit(g->phase_increment * pitch_ratio, 0.49f) : g->phase_increment * pitch_ratio;
+      if (PLAITS_BUILD_EXTENDED_TZFM && g->phase < 0.0f) g->phase += 1.0f;
       if (g->phase >= 1.0f) {
         g->phase -= 1.0f;
       }
@@ -255,7 +256,8 @@ void GranularCloudEngine::Render(
     // module's ceiling rather than a limiter doing work.
     CONSTRAIN(mono, -1.0f, 1.0f);
 
-    aux_phase_ += base_increment * pitch_ratio;
+    aux_phase_ += PLAITS_BUILD_EXTENDED_TZFM ? TzfmLimit(base_increment * pitch_ratio, 0.49f) : base_increment * pitch_ratio;
+    if (PLAITS_BUILD_EXTENDED_TZFM && aux_phase_ < 0.0f) aux_phase_ += 1.0f;
     if (aux_phase_ >= 1.0f) {
       aux_phase_ -= 1.0f;
     }

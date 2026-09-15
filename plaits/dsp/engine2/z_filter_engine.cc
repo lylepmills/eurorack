@@ -191,7 +191,7 @@ void ZFilterEngine::Render(
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
     if (parameters.frequency_offset) {
       f0 += parameters.frequency_offset[i] * 0.5f;
-      CONSTRAIN(f0, 0.0f, 0.249f);
+      CONSTRAIN(f0, PLAITS_BUILD_EXTENDED_TZFM ? -0.249f : 0.0f, 0.249f);
     }
 #endif
     float out_sub[2];
@@ -202,11 +202,13 @@ void ZFilterEngine::Render(
       if (parameters.frequency_offset) {
         mod_increment +=
             parameters.frequency_offset[i] * 0.5f * modulator_ratio;
-        CONSTRAIN(mod_increment, 0.0f, 0.499f);
+        CONSTRAIN(mod_increment, PLAITS_BUILD_EXTENDED_TZFM ? -0.499f : 0.0f, 0.499f);
       }
 #endif
 
       phase_ += f0;
+      const bool signed_wrap = phase_ < 0.0f || phase_ >= 1.0f;
+      if (PLAITS_BUILD_EXTENDED_TZFM && phase_ < 0.0f) phase_ += 1.0f;
       if (phase_ >= 1.0f) {
         phase_ -= 1.0f;
       }
@@ -216,7 +218,8 @@ void ZFilterEngine::Render(
       // so both half-cycles). f0 can never exceed 0.125 at this rate, so no
       // crossing is ever skipped.
       const bool half_cycle = half != previous_half_;
-      const bool cycle_start = half_cycle && !half;
+      const bool cycle_start = PLAITS_BUILD_EXTENDED_TZFM && parameters.frequency_offset
+          ? signed_wrap : half_cycle && !half;
       previous_half_ = half;
 
       // Braids leans on uint32 phase wrapping. In float the phase has to be
@@ -225,10 +228,12 @@ void ZFilterEngine::Render(
       // the end of lut_sine. One subtract suffices -- the increment is clamped
       // well below 1.0 -- and Sine() wraps again internally as a backstop.
       modulator_phase_ += mod_increment;
+      if (PLAITS_BUILD_EXTENDED_TZFM && modulator_phase_ < 0.0f) modulator_phase_ += 1.0f;
       if (modulator_phase_ >= 1.0f) {
         modulator_phase_ -= 1.0f;
       }
       square_phase_ += mod_increment;
+      if (PLAITS_BUILD_EXTENDED_TZFM && square_phase_ < 0.0f) square_phase_ += 1.0f;
       if (square_phase_ >= 1.0f) {
         square_phase_ -= 1.0f;
       }
@@ -280,8 +285,13 @@ void ZFilterEngine::Render(
       // rails. Run it in floats and the accumulator simply never gets there.
       const uint16_t double_saw_fixed =
           static_cast<uint16_t>(double_saw * 65535.0f);
+#if PLAITS_BUILD_EXTENDED_TZFM
+      const int32_t integrator_gain = (mod_increment < 0.0f ? -1 : 1) *
+          static_cast<int32_t>(static_cast<uint16_t>(static_cast<uint32_t>(fabsf(mod_increment) * 262144.0f)));
+#else
       const uint16_t integrator_gain =
           static_cast<uint16_t>(mod_increment * 262144.0f);
+#endif
       const int32_t square_carrier = BraidsSineFixed(square_phase_);
 
       int32_t pulse_fixed =

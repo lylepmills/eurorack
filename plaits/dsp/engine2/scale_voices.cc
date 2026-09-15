@@ -239,17 +239,18 @@ void ScaleVoiceBank::RenderFrequencyOffset(
     for (int v = 0; v < num_voices; ++v) {
       float f = frequency[v] +
           root_frequency_offset[i] * frequency_ratio[v];
-      if (f > kScaleVoicesMaxVoiceFrequency) {
+      if ((PLAITS_BUILD_EXTENDED_TZFM ? fabsf(f) : f) > kScaleVoicesMaxVoiceFrequency) {
         continue;
       }
-      if (f < 1.0e-7f) {
+      if (!PLAITS_BUILD_EXTENDED_TZFM && f < 1.0e-7f) {
         f = 1.0e-7f;
       }
       phase_[v] += f;
+      if (PLAITS_BUILD_EXTENDED_TZFM && phase_[v] < 0.0f) phase_[v] += 1.0f;
       if (phase_[v] >= 1.0f) {
         phase_[v] -= 1.0f;
       }
-      float sample = Waveform(phase_[v], f, waveform);
+      float sample = Waveform(phase_[v], (PLAITS_BUILD_EXTENDED_TZFM ? fabsf(f) : f), waveform);
       if (fold_amount > 0.0f) {
         const float folded = Sine(1.0f + sample * fold_drive * 0.25f);
         sample += (folded - sample) * fold_amount;

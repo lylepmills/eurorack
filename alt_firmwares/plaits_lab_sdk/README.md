@@ -365,3 +365,30 @@ docker build --platform linux/amd64 -t plaits-lab-builder:local -f Dockerfile.pl
 cache, so it takes a while — but only the first time.)
 
 See `RFC.md` for the contract and trust-boundary decisions.
+
+## Palette host / Seed3 TZFM policy
+
+`PLAITS_BUILD_EXTENDED_TZFM=1` adds signed oscillator/carrier paths for 32
+higher-compute Palette engines (61 total). Its default is 0 and F373 builds
+reject 1: do not change the Plaits catalog's `fmCapabilities` for these engines.
+The separate `fast_fm_capable()` hardware qualification remains unchanged.
+The added classes declare their extended-only capability beside their engine
+methods; `plaits/test/extended_tzfm_test.cc` lists the exact IDs and checks both
+policies, reverse phase/sync behavior, zero crossings, connection changes and
+all factory DX patches. Run it in separate build roots:
+
+```sh
+make -f plaits/test/makefile extended-tzfm-test BUILD_ROOT=build/tz-on/ CXXFLAGS=-DPLAITS_BUILD_EXTENDED_TZFM=1
+make -f plaits/test/makefile extended-tzfm-test BUILD_ROOT=build/tz-off/ CXXFLAGS=-DPLAITS_BUILD_EXTENDED_TZFM=0
+```
+
+Use a host C++11-or-newer compiler for this regression. Its baseline hashes
+should match with the option off/on; the normal host parity suite also covers
+Wave Terrain's bank-backed rendering. Keep the experimental/partial candidates
+ineligible until their behavior is agreed and implemented.
+
+Validation on 2026-09-15: the normal pinned-container host suite passes; the
+experimental firmware WAV builds. The legacy stock-layout link overflows flash
+by 23,328 bytes both here and on untouched `33626a0`. The signed host regression
+passes with both policies, including identical unmodulated hashes, and all four
+Seed3 images cross-compile. Physical board timing/listening remains unmeasured.

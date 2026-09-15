@@ -409,26 +409,32 @@ void VowelEngine::Render(
           parameters.frequency_offset[i] * 0.5f * 4294967296.0f;
       CONSTRAIN(
           modulated_increment,
-          0.0f,
+          PLAITS_BUILD_EXTENDED_TZFM ? -static_cast<float>(kVowelMaxFormantIncrement) : 0.0f,
           static_cast<float>(kVowelMaxFormantIncrement));
+#if PLAITS_BUILD_EXTENDED_TZFM
+      phase_increment = static_cast<uint32_t>(static_cast<int64_t>(modulated_increment));
+#else
       phase_increment = static_cast<uint32_t>(modulated_increment);
+#endif
     }
 #endif
     for (int t = 0; t < kVowelOversampling; ++t) {
+      const uint32_t before_phase = phase_;
+      const bool reverse = PLAITS_BUILD_EXTENDED_TZFM && (phase_increment & 0x80000000u);
       phase_ += phase_increment;
 
-      formant_phase_[0] += increment_l[0];
-      formant_phase_[1] += increment_l[1];
-      formant_phase_[2] += increment_l[2];
+      formant_phase_[0] += reverse ? 0u - increment_l[0] : increment_l[0];
+      formant_phase_[1] += reverse ? 0u - increment_l[1] : increment_l[1];
+      formant_phase_[2] += reverse ? 0u - increment_l[2] : increment_l[2];
       int stack = ReadFormant(formant_phase_[0], amplitude_0) +
           ReadFormant(formant_phase_[1], amplitude_1) +
           ReadSquareFormant(formant_phase_[2], amplitude_2);
 
       int stack_r = 0;
       if (stereo) {
-        formant_phase_r_[0] += increment_r[0];
-        formant_phase_r_[1] += increment_r[1];
-        formant_phase_r_[2] += increment_r[2];
+        formant_phase_r_[0] += reverse ? 0u - increment_r[0] : increment_r[0];
+        formant_phase_r_[1] += reverse ? 0u - increment_r[1] : increment_r[1];
+        formant_phase_r_[2] += reverse ? 0u - increment_r[2] : increment_r[2];
         stack_r = ReadFormant(formant_phase_r_[0], amplitude_0) +
             ReadFormant(formant_phase_r_[1], amplitude_1) +
             ReadSquareFormant(formant_phase_r_[2], amplitude_2);
@@ -447,8 +453,10 @@ void VowelEngine::Render(
       // The RNG is drawn every sample whether or not the jitter is armed, so
       // that the port's sequence stays in step with the module's.
       const int32_t phase_noise = NextRandomSample() * noise_;
-      if (static_cast<uint32_t>(phase_ + static_cast<uint32_t>(phase_noise)) <
-          phase_increment_) {
+      const bool wrapped = parameters.frequency_offset && PLAITS_BUILD_EXTENDED_TZFM
+          ? (reverse ? phase_ > before_phase : phase_ < before_phase)
+          : static_cast<uint32_t>(phase_ + static_cast<uint32_t>(phase_noise)) < phase_increment_;
+      if (wrapped) {
         formant_phase_[0] = 0;
         formant_phase_[1] = 0;
         formant_phase_[2] = 0;

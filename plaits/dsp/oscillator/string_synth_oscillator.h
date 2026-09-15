@@ -39,6 +39,7 @@
 #define PLAITS_DSP_OSCILLATOR_STRING_SYNTH_OSCILLATOR_H_
 
 #include <algorithm>
+#include "plaits/dsp/extended_tzfm.h"
 
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/dsp/parameter_interpolator.h"
@@ -70,7 +71,8 @@ class StringSynthOscillator {
       float* out,
       size_t size,
       const float* root_frequency_offset = NULL,
-      float frequency_offset_scale = 0.0f) {
+      float frequency_offset_scale = 0.0f,
+      bool signed_fm = false) {
     frequency *= 8.0f;
     frequency_offset_scale *= 8.0f;
     
@@ -78,9 +80,12 @@ class StringSynthOscillator {
     // down: Instead of playing the 1st harmonic of a 8kHz wave, we play the
     // second harmonic of a 4kHz wave.
     size_t shift = 0;
-    while (frequency > 0.5f) {
+    while ((PLAITS_BUILD_EXTENDED_TZFM ? fabsf(frequency) : frequency) > 0.5f) {
       shift += 2;
       frequency *= 0.5f;
+#if PLAITS_BUILD_EXTENDED_TZFM
+      frequency_offset_scale *= 0.5f;
+#endif
     }
     // Frequency is just too high.
     if (shift >= 8) {
@@ -122,34 +127,57 @@ class StringSynthOscillator {
       float frequency = fm.Next();
       if (root_frequency_offset) {
         frequency += *root_frequency_offset++ * frequency_offset_scale;
-        CONSTRAIN(frequency, 1.0e-7f, 0.5f);
+        CONSTRAIN(frequency, PLAITS_BUILD_EXTENDED_TZFM ? -0.5f : 1.0e-7f, 0.5f);
       }
       const float saw_8_gain = saw_8_gain_modulation.Next();
       const float saw_4_gain = saw_4_gain_modulation.Next();
       const float saw_2_gain = saw_2_gain_modulation.Next();
       const float saw_1_gain = saw_1_gain_modulation.Next();
 
-      phase += frequency;
-      int next_segment = static_cast<int>(phase);
-      if (next_segment != segment) {
-        float discontinuity = 0.0f;
-        if (next_segment == 8) {
-          phase -= 8.0f;
-          next_segment -= 8;
-          discontinuity -= saw_8_gain;
+      int next_segment;
+#if PLAITS_BUILD_EXTENDED_TZFM
+      if (root_frequency_offset || signed_fm || frequency < 0.0f) {
+        const float old_phase = phase;
+        phase += frequency;
+        const int crossed = frequency >= 0.0f ? int(floorf(phase)) : int(floorf(old_phase));
+        if (int(floorf(phase)) != int(floorf(old_phase))) {
+          float jump = -saw_1_gain;
+          if ((crossed & 1) == 0) jump -= saw_2_gain;
+          if ((crossed & 3) == 0) jump -= saw_4_gain;
+          if ((crossed & 7) == 0) jump -= saw_8_gain;
+          const float time = (phase - crossed) / frequency;
+          if (frequency < 0.0f) jump = -jump;
+          this_sample += stmlib::ThisBlepSample(time) * jump;
+          next_sample += stmlib::NextBlepSample(time) * jump;
         }
-        if ((next_segment & 3) == 0) {
-          discontinuity -= saw_4_gain;
-        }
-        if ((next_segment & 1) == 0) {
-          discontinuity -= saw_2_gain;
-        }
-        discontinuity -= saw_1_gain;
-        if (discontinuity != 0.0f) {
-          float fraction = phase - static_cast<float>(next_segment);
-          float t = fraction / frequency;
-          this_sample += stmlib::ThisBlepSample(t) * discontinuity;
-          next_sample += stmlib::NextBlepSample(t) * discontinuity;
+        if (phase < 0.0f) phase += 8.0f;
+        if (phase >= 8.0f) phase -= 8.0f;
+        next_segment = static_cast<int>(phase);
+      } else
+#endif
+      {
+        phase += frequency;
+        next_segment = static_cast<int>(phase);
+        if (next_segment != segment) {
+          float discontinuity = 0.0f;
+          if (next_segment == 8) {
+            phase -= 8.0f;
+            next_segment -= 8;
+            discontinuity -= saw_8_gain;
+          }
+          if ((next_segment & 3) == 0) {
+            discontinuity -= saw_4_gain;
+          }
+          if ((next_segment & 1) == 0) {
+            discontinuity -= saw_2_gain;
+          }
+          discontinuity -= saw_1_gain;
+          if (discontinuity != 0.0f) {
+            float fraction = phase - static_cast<float>(next_segment);
+            float t = fraction / frequency;
+            this_sample += stmlib::ThisBlepSample(t) * discontinuity;
+            next_sample += stmlib::NextBlepSample(t) * discontinuity;
+          }
         }
       }
       segment = next_segment;

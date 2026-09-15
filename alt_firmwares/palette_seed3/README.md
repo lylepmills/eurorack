@@ -50,6 +50,26 @@ cd alt_firmwares/palette_seed3
 `build.sh` refuses to build if `generated/` is stale against the catalog
 (`tools/gen_engine_table.py --check`); re-run the generator after a catalog change.
 
+## Signed through-zero FM
+
+`PALETTE_EXTENDED_TZFM` defaults ON and compiles the shared engines with
+`PLAITS_BUILD_EXTENDED_TZFM=1`: 61 eligible engines rather than Plaits' 29.
+The F373 build rejects this flag, and the public Plaits catalog is unchanged.
+`FwVoice::linear_tzfm_capable()` reports this target's eligibility; `Render`
+accepts an optional 12-frame offset buffer in cycles per 48 kHz sample.
+
+For the same CPU sweep under signed FM:
+
+```sh
+./build.sh -DPALETTE_TZFM_BENCH=ON
+```
+
+This supplies a 997 Hz sine at 2000 Hz depth only to eligible engines; the serial
+header identifies the mode. Set `-DPALETTE_TZFM_BENCH=OFF` for the original sweep.
+`-DPALETTE_EXTENDED_TZFM=OFF` restores the original eligibility for comparison.
+Cross-compilation and host stability tests are not a board timing qualification:
+measure the real FM input path and sustainable voice counts before release.
+
 ## Flash (Seed3, on-board USB-C)
 
 1. Once per board: hold BOOT, tap RESET, release → `./flash.sh boot` (Daisy

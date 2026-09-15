@@ -114,20 +114,20 @@ void StringMachineEngine::Render(
     }
     for (size_t sample = 0; sample < size; ++sample) {
       float instantaneous_f0 = max(
-          1e-7f, f0 + parameters.frequency_offset[sample] * 0.998f);
+          PLAITS_BUILD_EXTENDED_TZFM ? -0.49f : 1e-7f, f0 + parameters.frequency_offset[sample] * 0.998f);
       instantaneous_f0 = min(instantaneous_f0, 0.49f);
       for (int note = 0; note < kChordNumNotes; ++note) {
         const float note_f0 = instantaneous_f0 * chord_ratio[note];
-        float divide_down_gain = 4.0f - note_f0 * 32.0f;
+        float divide_down_gain = 4.0f - (PLAITS_BUILD_EXTENDED_TZFM ? fabsf(note_f0) : note_f0) * 32.0f;
         CONSTRAIN(divide_down_gain, 0.0f, 1.0f);
         divide_down_voice_[note].Render(
             note_f0,
             harmonics,
             0.25f * divide_down_gain,
             (note & 1 ? aux : out) + sample,
-            1);
+            1, NULL, 0.0f, PLAITS_BUILD_EXTENDED_TZFM);
       }
-      const float cutoff = instantaneous_f0 * cutoff_ratio;
+      const float cutoff = (PLAITS_BUILD_EXTENDED_TZFM ? fabsf(instantaneous_f0) : instantaneous_f0) * cutoff_ratio;
       svf_[0].set_f_q<FREQUENCY_DIRTY>(cutoff, 1.0f);
       svf_[1].set_f_q<FREQUENCY_DIRTY>(cutoff * 1.5f, 1.0f);
       const float l = svf_[0].Process<FILTER_MODE_LOW_PASS>(out[sample]);
@@ -140,7 +140,7 @@ void StringMachineEngine::Render(
   {
     for (int note = 0; note < kChordNumNotes; ++note) {
       const float note_f0 = f0 * chords_.ratio(note);
-      float divide_down_gain = 4.0f - note_f0 * 32.0f;
+      float divide_down_gain = 4.0f - (PLAITS_BUILD_EXTENDED_TZFM ? fabsf(note_f0) : note_f0) * 32.0f;
       CONSTRAIN(divide_down_gain, 0.0f, 1.0f);
       divide_down_voice_[note].Render(
           note_f0,

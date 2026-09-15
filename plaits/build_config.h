@@ -211,6 +211,11 @@
 #define PLAITS_BUILD_LINEAR_TZFM 0
 #endif
 
+// Higher-compute Palette targets only. Never selected by Plaits recipes.
+#ifndef PLAITS_BUILD_EXTENDED_TZFM
+#define PLAITS_BUILD_EXTENDED_TZFM 0
+#endif
+
 // Digitize FM continuously at the SDADC's 50 kHz fast rate and resample it to
 // the 47.872 kHz synthesis clock. Fast mode improves both exponential FM and,
 // when enabled above, linear TZFM on engines whose CPU budget permits it. The
@@ -236,7 +241,7 @@
 // preferences so all four combinations compile cleanly.
 #ifndef PLAITS_BUILD_FREQUENCY_OFFSET_FM
 #define PLAITS_BUILD_FREQUENCY_OFFSET_FM \
-    (PLAITS_BUILD_LINEAR_TZFM || PLAITS_BUILD_FAST_FM)
+    (PLAITS_BUILD_LINEAR_TZFM || PLAITS_BUILD_FAST_FM || PLAITS_BUILD_EXTENDED_TZFM)
 #endif
 
 // Qualification builds can distinguish the three latched audio-input fault

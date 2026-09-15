@@ -286,7 +286,7 @@ void MorphEngine::Render(
       f += parameters.frequency_offset[i] /
           static_cast<float>(kMorphOversampling);
       CONSTRAIN(
-          f, 0.0f,
+          f, PLAITS_BUILD_EXTENDED_TZFM ? -0.25f / static_cast<float>(kMorphOversampling) : 0.0f,
           0.25f / static_cast<float>(kMorphOversampling));
     }
 #endif
@@ -301,6 +301,15 @@ void MorphEngine::Render(
       float this_sample = next_sample;
       next_sample = 0.0f;
 
+#if PLAITS_BUILD_EXTENDED_TZFM
+    if (parameters.frequency_offset) {
+      const float start = phase_, end = start + f;
+      TzfmEdge(start, end, previous_pw_, pw, 2.0f * w_square, 0.0f, &this_sample, &next_sample);
+      TzfmEdge(start, end, 0.0f, 0.0f, -2.0f * (w_saw + w_square), 0.0f, &this_sample, &next_sample);
+      phase_ = TzfmWrap(end); high_ = phase_ >= pw;
+    } else
+#endif
+    {
       phase_ += f;
 
       if (!high_ && phase_ >= pw) {
@@ -334,6 +343,7 @@ void MorphEngine::Render(
         high_ = false;
       }
 
+    }
       // Braids' triangle is itself 2x oversampled and box-averaged
       // (analog_oscillator.cc:441-451), so it is evaluated at the half-step
       // and the step and the pair averaged, exactly as written there. The
@@ -343,6 +353,7 @@ void MorphEngine::Render(
       if (half_phase < 0.0f) {
         half_phase += 1.0f;
       }
+      if (PLAITS_BUILD_EXTENDED_TZFM && half_phase >= 1.0f) half_phase -= 1.0f;
       const float triangle =
           0.5f * (Triangle(half_phase) + Triangle(phase_));
 

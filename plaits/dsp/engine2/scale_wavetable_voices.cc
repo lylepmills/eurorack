@@ -278,13 +278,14 @@ void ScaleVoiceBank::RenderWavetableFrequencyOffset(
     for (int v = 0; v < num_voices; ++v) {
       float f = frequency[v] +
           root_frequency_offset[i] * frequency_ratio[v];
-      if (f > kScaleVoicesMaxVoiceFrequency) {
+      if ((PLAITS_BUILD_EXTENDED_TZFM ? fabsf(f) : f) > kScaleVoicesMaxVoiceFrequency) {
         continue;
       }
-      if (f < 1.0e-7f) {
+      if (!PLAITS_BUILD_EXTENDED_TZFM && f < 1.0e-7f) {
         f = 1.0e-7f;
       }
       phase_[v] += f;
+      if (PLAITS_BUILD_EXTENDED_TZFM && phase_[v] < 0.0f) phase_[v] += 1.0f;
       if (phase_[v] >= 1.0f) {
         phase_[v] -= 1.0f;
       }

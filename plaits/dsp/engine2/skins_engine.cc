@@ -92,7 +92,7 @@ void SkinsEngine::Render(
   const float strike_decay = DecayCoefficient(0.0015f + 0.006f * position);
 
   float mode_frequency[kSkinsNumModes];
-#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM && !PLAITS_BUILD_EXTENDED_TZFM
   float mode_ratio[kSkinsNumModes];
 #endif
   float mode_decay[kSkinsNumModes];
@@ -100,7 +100,7 @@ void SkinsEngine::Render(
     const float ratio = kOpenRatios[i] +
         (kLoadedRatios[i] - kOpenRatios[i]) * shape;
     mode_frequency[i] = min(0.235f, base_frequency * ratio);
-#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM && !PLAITS_BUILD_EXTENDED_TZFM
     mode_ratio[i] = ratio;
 #endif
     const float mode = static_cast<float>(i) /
@@ -111,7 +111,7 @@ void SkinsEngine::Render(
   }
 
   for (size_t i = 0; i < size; ++i) {
-#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM && !PLAITS_BUILD_EXTENDED_TZFM
     float sample_base_frequency = base_frequency;
     if (parameters.frequency_offset) {
       sample_base_frequency += parameters.frequency_offset[i];
@@ -121,15 +121,19 @@ void SkinsEngine::Render(
     float body = 0.0f;
     float edge = 0.0f;
     for (int j = 0; j < kSkinsNumModes; ++j) {
-#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
-      const float frequency = parameters.frequency_offset
-          ? min(0.235f, sample_base_frequency * mode_ratio[j])
-          : mode_frequency[j];
-      phase_[j] += min(0.245f, frequency * bend_ratio_);
-#else
-      phase_[j] += min(0.245f, mode_frequency[j] * bend_ratio_);
+      float increment = min(0.245f, mode_frequency[j] * bend_ratio_);
+#if PLAITS_BUILD_EXTENDED_TZFM
+      if (parameters.frequency_offset) {
+        increment = TzfmLimit((base_frequency + parameters.frequency_offset[i]) *
+            (mode_frequency[j] / base_frequency) * bend_ratio_, 0.245f);
+      }
+#elif PLAITS_BUILD_FREQUENCY_OFFSET_FM
+      if (parameters.frequency_offset) {
+        increment = min(0.245f, min(0.235f, sample_base_frequency * mode_ratio[j]) * bend_ratio_);
+      }
 #endif
-      phase_[j] -= static_cast<int>(phase_[j]);
+      phase_[j] += increment;
+      phase_[j] = TzfmWrap(phase_[j]);
       const float mode_sample = amplitude_[j] * SineNoWrap(phase_[j]);
       body += mode_sample;
       if (j >= 2) {

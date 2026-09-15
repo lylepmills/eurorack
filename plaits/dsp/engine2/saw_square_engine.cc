@@ -135,7 +135,7 @@ void SawSquareEngine::Render(
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
     if (parameters.frequency_offset) {
       f += parameters.frequency_offset[i];
-      CONSTRAIN(f, 0.0f, 0.25f);
+      CONSTRAIN(f, PLAITS_BUILD_EXTENDED_TZFM ? -0.25f : 0.0f, 0.25f);
     }
 #endif
     const float pw_saw = pw_saw_modulation.Next();
@@ -147,6 +147,14 @@ void SawSquareEngine::Render(
     // exact naive waveform RenderVariableSaw's `phase_ >> 18` and
     // `(phase_ - pw) >> 18` terms sum to (see the header comment; the closed
     // form is independent of Braids' internal BLEP scaling).
+#if PLAITS_BUILD_EXTENDED_TZFM
+    if (parameters.frequency_offset) {
+      TzfmEdge(phase_, phase_ + f, previous_pw_saw_, pw_saw, -1.0f, 0.0f, &this_sample_saw, &next_sample_saw);
+      TzfmEdge(phase_, phase_ + f, 0.0f, 0.0f, -1.0f, 0.0f, &this_sample_saw, &next_sample_saw);
+      phase_ = TzfmWrap(phase_ + f); high_saw_ = phase_ >= pw_saw;
+    } else
+#endif
+    {
     phase_ += f;
     while (true) {
       if (!high_saw_) {
@@ -171,6 +179,7 @@ void SawSquareEngine::Render(
         high_saw_ = false;
       }
     }
+    }
     next_sample_saw += (phase_ < pw_saw)
         ? (2.0f * phase_ - pw_saw)
         : (2.0f * phase_ - pw_saw - 1.0f);
@@ -179,6 +188,14 @@ void SawSquareEngine::Render(
     // The square: the plain two-level pulse (analog_oscillator.cc:188-272),
     // accumulated in a 0..1 internal domain and mapped to +-1 below, matching
     // the convention VariableShapeOscillator's own square mode uses.
+#if PLAITS_BUILD_EXTENDED_TZFM
+    if (parameters.frequency_offset) {
+      TzfmEdge(phase_square_, phase_square_ + f, previous_pw_square_, pw_square, 1.0f, 0.0f, &this_sample_square, &next_sample_square);
+      TzfmEdge(phase_square_, phase_square_ + f, 0.0f, 0.0f, -1.0f, 0.0f, &this_sample_square, &next_sample_square);
+      phase_square_ = TzfmWrap(phase_square_ + f); high_square_ = phase_square_ >= pw_square;
+    } else
+#endif
+    {
     phase_square_ += f;
     while (true) {
       if (!high_square_) {
@@ -203,6 +220,7 @@ void SawSquareEngine::Render(
         next_sample_square -= NextBlepSample(t);
         high_square_ = false;
       }
+    }
     }
     next_sample_square += (phase_square_ < pw_square) ? 0.0f : 1.0f;
     previous_pw_square_ = pw_square;

@@ -142,11 +142,12 @@ void GlissonEngine::Render(
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
         if (parameters.frequency_offset) {
           fundamental += parameters.frequency_offset[j];
-          fundamental = max(0.0f, fundamental);
+          fundamental = PLAITS_BUILD_EXTENDED_TZFM ? TzfmLimit(fundamental, 0.49f) : max(0.0f, fundamental);
         }
 #endif
-        g->phase += LimitFrequency(fundamental * ratio);
-        g->phase -= static_cast<int>(g->phase);
+        g->phase += (PLAITS_BUILD_EXTENDED_TZFM && fundamental < 0.0f
+            ? -LimitFrequency(-fundamental * ratio) : LimitFrequency(fundamental * ratio));
+        g->phase = TzfmWrap(g->phase);
 
         const float envelope = 4.0f * g->envelope_phase * \
             (1.0f - g->envelope_phase);
@@ -185,13 +186,16 @@ void GlissonEngine::Render(
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
         if (parameters.frequency_offset) {
           fundamental += parameters.frequency_offset[j];
-          fundamental = max(0.0f, fundamental);
+          fundamental = PLAITS_BUILD_EXTENDED_TZFM ? TzfmLimit(fundamental, 0.49f) : max(0.0f, fundamental);
         }
 #endif
-        g->phase += LimitFrequency(fundamental * ratio);
-        g->phase -= static_cast<int>(g->phase);
-        g->aux_phase += LimitFrequency(fundamental * reverse_ratio);
-        g->aux_phase -= static_cast<int>(g->aux_phase);
+        g->phase += (PLAITS_BUILD_EXTENDED_TZFM && fundamental < 0.0f
+            ? -LimitFrequency(-fundamental * ratio) : LimitFrequency(fundamental * ratio));
+        g->phase = TzfmWrap(g->phase);
+        g->aux_phase += PLAITS_BUILD_EXTENDED_TZFM
+            ? TzfmLimit(fundamental * reverse_ratio, 0.22f)
+            : LimitFrequency(fundamental * reverse_ratio);
+        g->aux_phase = TzfmWrap(g->aux_phase);
 
         // A parabolic grain window avoids a third interpolated sine lookup
         // for every grain and sample. The remaining oscillator phases are

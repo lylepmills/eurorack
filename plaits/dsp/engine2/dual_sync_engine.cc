@@ -174,8 +174,8 @@ void DualSyncEngine::Render(
           float(kDualSyncOversampling);
       mf += root_offset;
       sf += root_offset * slave_offset_ratio;
-      CONSTRAIN(mf, 0.0f, internal_ceiling);
-      CONSTRAIN(sf, 0.0f, internal_ceiling);
+      CONSTRAIN(mf, PLAITS_BUILD_EXTENDED_TZFM ? -internal_ceiling : 0.0f, internal_ceiling);
+      CONSTRAIN(sf, PLAITS_BUILD_EXTENDED_TZFM ? -internal_ceiling : 0.0f, internal_ceiling);
     }
 #endif
     const float balance = balance_modulation.Next();
@@ -197,6 +197,15 @@ void DualSyncEngine::Render(
       master_next = 0.0f;
       slave_next = 0.0f;
 
+#if PLAITS_BUILD_EXTENDED_TZFM
+    if (parameters.frequency_offset) {
+      TzfmSyncStep(mf, sf, square_amount, saw_amount, reset_phase,
+          &master_phase_, &slave_phase_, &master_this, &master_next, &slave_this, &slave_next);
+      master_high_ = master_phase_ >= kDualSyncPulseWidth;
+      slave_high_ = slave_phase_ >= kDualSyncPulseWidth;
+    } else
+#endif
+    {
       // --- master -------------------------------------------------------
       // Renders its own audio and emits the sync pulse on its wrap, which is
       // what analog_oscillator.cc:232-238 writes into sync_out.
@@ -280,6 +289,7 @@ void DualSyncEngine::Render(
       }
       slave_next += NaiveShape(slave_phase_, square_amount, saw_amount);
 
+    }
       // --- 2x -> 1x -----------------------------------------------------
       master_history_[decimator_write_] = 2.0f * master_this - 1.0f;
       slave_history_[decimator_write_] = 2.0f * slave_this - 1.0f;

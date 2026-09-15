@@ -344,6 +344,11 @@ class SubOscillatorEngine : public Engine {
   }
 #endif
 
+#if PLAITS_BUILD_EXTENDED_TZFM
+  // Qualified separately from the stock Plaits catalog's CPU policy.
+  virtual bool linear_tzfm_capable() const { return true; }
+#endif
+
  private:
   // Both main waveforms run off ONE phase: Braids' two SUB models are the same
   // oscillator with a different render function, so the HARMONICS crossfade

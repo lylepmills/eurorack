@@ -54,6 +54,14 @@ class FMVoice {
   void Init(fm::Algorithms<6>* algorithms, float sample_rate);
   void LoadPatch(const fm::Patch* patch);
   void Render(float* buffer, size_t size);
+#if PLAITS_BUILD_EXTENDED_TZFM
+  void RenderSigned(float* buffer, float offset) {
+    if (!patch_) return;
+    voice_.set_frequency_offset(offset);
+    voice_.Render(parameters_, buffer, 1);
+    voice_.set_frequency_offset(0.0f);
+  }
+#endif
 #ifdef TEST
   void set_carrier_timbre_enabled(bool enabled) {
     voice_.set_carrier_timbre_enabled(enabled);
@@ -126,6 +134,11 @@ class SixOpEngine : public Engine {
   }
 #endif
   
+#if PLAITS_BUILD_EXTENDED_TZFM
+  // Qualified separately from the stock Plaits catalog's CPU policy.
+  virtual bool linear_tzfm_capable() const { return true; }
+#endif
+
  private:
 #if defined(__clang__)
 #define SIX_OP_RENDER_ATTRIBUTES __attribute__((noinline))

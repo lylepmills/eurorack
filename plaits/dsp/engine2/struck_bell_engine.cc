@@ -212,10 +212,13 @@ void StruckBellEngine::Render(
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
       if (parameters.frequency_offset) {
         const float instantaneous_root = max(
-            1e-7f, root_frequency + parameters.frequency_offset[s]);
-        const float increment = instantaneous_root * increment_ratio[i];
-        increment_sin[i] = Sine(increment);
-        increment_cos[i] = Sine(increment + 0.25f);
+            PLAITS_BUILD_EXTENDED_TZFM ? -0.49f : 1e-7f,
+            root_frequency + parameters.frequency_offset[s]);
+        const float increment = PLAITS_BUILD_EXTENDED_TZFM
+            ? TzfmLimit(instantaneous_root * increment_ratio[i], 0.49f)
+            : instantaneous_root * increment_ratio[i];
+        increment_sin[i] = Sine(PLAITS_BUILD_EXTENDED_TZFM ? TzfmWrap(increment) : increment);
+        increment_cos[i] = Sine(PLAITS_BUILD_EXTENDED_TZFM ? TzfmWrap(increment + 0.25f) : increment + 0.25f);
         const float rotation_norm = 1.0f / Sqrt(
             increment_sin[i] * increment_sin[i] +
             increment_cos[i] * increment_cos[i]);

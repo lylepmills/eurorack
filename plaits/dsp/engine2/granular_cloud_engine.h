@@ -304,6 +304,11 @@ class GranularCloudEngine : public Engine {
   }
 #endif
 
+#if PLAITS_BUILD_EXTENDED_TZFM
+  // Qualified separately from the stock Plaits catalog's CPU policy.
+  virtual bool linear_tzfm_capable() const { return true; }
+#endif
+
  private:
   void ScheduleGrains(int timbre_code, int color_code, uint32_t spawn_threshold,
       float base_increment);

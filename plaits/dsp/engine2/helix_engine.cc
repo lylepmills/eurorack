@@ -93,7 +93,7 @@ void HelixEngine::Reset() {
 
 void HelixEngine::Render(const EngineParameters& parameters, float* out,
     float* aux, size_t size, bool* already_enveloped) {
-#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM && !PLAITS_BUILD_EXTENDED_TZFM
   if (parameters.frequency_offset) {
     EngineParameters sample_parameters = parameters;
     sample_parameters.frequency_offset = NULL;
@@ -129,6 +129,50 @@ void HelixEngine::Render(const EngineParameters& parameters, float* out,
   const float inv_octaves = 1.0f / static_cast<float>(kHelixOctaves);
 
   const bool stereo = parameters.stereo;
+
+#if PLAITS_BUILD_EXTENDED_TZFM
+  if (parameters.frequency_offset) {
+    *already_enveloped = false;
+    const float fold_depth = 0.25f + parameters.morph * 1.7507f;
+    for (size_t s = 0; s < size; ++s) {
+      float sum = 0.0f, left = 0.0f, right = 0.0f, weight = 0.0f;
+      weight_half_[0] = weight_half_[1] = 0.0f;
+      for (int idx = 0; idx < kHelixOctaves * kChordNumNotes; ++idx) {
+        float p = idx / kChordNumNotes + shift_ + pitch_class[idx % kChordNumNotes];
+        if (p >= kHelixOctaves) p -= kHelixOctaves;
+        const float increment = (f0 + parameters.frequency_offset[s]) * Exp2(p);
+        float gain = 0.0f;
+        const float rc = 0.5f - 0.5f * Sine(p * inv_octaves + 0.25f);
+        if (rc > 1.0e-4f) gain = Power(rc, peak);
+        gain *= std::min(1.0f, std::max(0.0f,
+            (kNyquistLimit - fabsf(increment)) * kInvNyquistFade));
+        const float inc = TzfmLimit(increment, kNyquistLimit);
+        const float sn = Sine(TzfmWrap(inc)), cs = Sine(TzfmWrap(inc + 0.25f));
+        const float norm = 1.0f / sqrtf(sn * sn + cs * cs);
+        const float x = osc_x_[idx], y = osc_y_[idx];
+        osc_x_[idx] = (x * cs - y * sn) * norm;
+        osc_y_[idx] = (x * sn + y * cs) * norm;
+        gain_[idx] = gain; sin_w_[idx] = sn; cos_w_[idx] = cs;
+        pan_l_[idx] = Sine(p * inv_octaves * 0.25f + 0.25f);
+        pan_r_[idx] = Sine(p * inv_octaves * 0.25f);
+        const float value = gain * osc_y_[idx];
+        sum += value; left += value * pan_l_[idx]; right += value * pan_r_[idx];
+        weight += gain;
+        weight_half_[idx / ((kHelixOctaves * kChordNumNotes) / 2)] += gain;
+      }
+      const float inv = 1.0f / std::max(weight, 1.0e-3f);
+      inv_w_ = inv;
+      const float l = (stereo ? left : sum) * inv;
+      const float r = right * inv;
+      out[s] = 0.6f * (l + parameters.morph * (Sine(l * fold_depth + 4.0f) - l));
+      aux[s] = stereo ? 0.6f * (r + parameters.morph * (Sine(r * fold_depth + 4.0f) - r)) : 0.6f * l;
+      shift_ += shift_inc;
+      if (shift_ >= kHelixOctaves) shift_ -= kHelixOctaves;
+      if (shift_ < 0.0f) shift_ += kHelixOctaves;
+    }
+    return;
+  }
+#endif
 
   // PER-BLOCK voice setup. A voice's window gain and frequency depend only on
   // its position p on the helix, and the glide moves p by at most ~3.5e-4

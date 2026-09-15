@@ -122,7 +122,7 @@ void CSawEngine::Render(
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
     if (parameters.frequency_offset) {
       f += parameters.frequency_offset[i];
-      CONSTRAIN(f, 0.0f, 0.25f);
+      CONSTRAIN(f, PLAITS_BUILD_EXTENDED_TZFM ? -0.25f : 0.0f, 0.25f);
     }
 #endif
     const float pw = pwm.Next();
@@ -134,6 +134,32 @@ void CSawEngine::Render(
     const float slope_in = BendSegmentSlope(0.0f, bend);
     const float slope_out = BendSegmentSlope(1.0f, bend);
 
+#if PLAITS_BUILD_EXTENDED_TZFM
+    if (parameters.frequency_offset) {
+      const float start = phase_, end = start + f;
+      const bool wrap = end < 0.0f || end >= 1.0f;
+      if (wrap) { depth_ = target_depth; depth_aux_ = target_depth_aux; }
+      const float plateau = tilt * (pw - depth_) / pw;
+      TzfmEdge(start, end, previous_pw_, pw, (pw - depth_) * (1.0f - tilt),
+          slope_in - plateau, &this_sample, &next_sample);
+      TzfmEdge(start, end, 0.0f, 0.0f, depth_ - 1.0f,
+          plateau - slope_out, &this_sample, &next_sample);
+      if (stereo) {
+        const float plateau_aux = tilt * (pw - depth_aux_) / pw;
+        TzfmEdge(start, end, previous_pw_, pw, (pw - depth_aux_) * (1.0f - tilt),
+            BendSegmentSlope(0.0f, bend + kCSawStereoBend) - plateau_aux,
+            &this_sample_aux, &next_sample_aux);
+        TzfmEdge(start, end, 0.0f, 0.0f, depth_aux_ - 1.0f,
+            plateau_aux - BendSegmentSlope(1.0f, bend + kCSawStereoBend),
+            &this_sample_aux, &next_sample_aux);
+      } else {
+        TzfmEdge(start, end, previous_pw_, pw, kCSawPulseStep, 0.0f, &this_sample_aux, &next_sample_aux);
+        TzfmEdge(start, end, 0.0f, 0.0f, -kCSawPulseStep, 0.0f, &this_sample_aux, &next_sample_aux);
+      }
+      phase_ = TzfmWrap(end); high_ = phase_ >= pw;
+    } else
+#endif
+    {
     phase_ += f;
 
     if (!high_ && phase_ >= pw) {
@@ -213,6 +239,7 @@ void CSawEngine::Render(
       high_ = false;
     }
 
+    }
     // Naive waveform: a tilted plateau up to pw, then the bent segment.
     float naive;
     float naive_aux;

@@ -197,7 +197,7 @@ void SixOpEngine::Render(
     float* aux,
     size_t size,
     bool* already_enveloped) {
-#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM && !PLAITS_BUILD_EXTENDED_TZFM
   if (parameters.frequency_offset) {
     EngineParameters sample_parameters = parameters;
     sample_parameters.frequency_offset = NULL;
@@ -263,6 +263,44 @@ void SixOpEngine::Render(
     }
   }
 
+#if PLAITS_BUILD_EXTENDED_TZFM
+  if (parameters.frequency_offset) {
+    // Render both live voices at the CURRENT sample. The Plaits staggered
+    // two-block renderer cannot consume a waveform that changes each sample.
+    const bool drone = parameters.trigger & TRIGGER_UNPATCHED;
+    const bool stereo = PLAITS_STEREO_SIX_OP && parameters.stereo;
+    const float darkness = (0.5f - parameters.macro) * 2.0f;
+    const float coefficient = 1.0f - darkness * 0.92f;
+    for (size_t s = 0; s < size; ++s) {
+      float left = 0.0f, right = 0.0f;
+      for (int v = 0; v < (drone ? 1 : kNumSixOpVoices); ++v) {
+        float sample[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+        voice_[v].RenderSigned(sample, parameters.frequency_offset[s]);
+        const float l = !stereo ? 1.0f : drone ? kSixOpCenterPan : kSixOpPanLeft[v];
+        const float r = !stereo ? 1.0f : drone ? kSixOpCenterPan : kSixOpPanRight[v];
+        left += sample[0] * l * 0.25f;
+        right += sample[0] * r * 0.25f;
+      }
+      left = SixOpSoftClip(left);
+      right = SixOpSoftClip(right);
+      if (parameters.macro < 0.5f) {
+        ONE_POLE(post_filter_, left, coefficient);
+        ONE_POLE(post_filter_right_, right, coefficient);
+        left = post_filter_; right = post_filter_right_;
+      } else {
+        post_filter_ = left; post_filter_right_ = right;
+        if ((!stereo || drone) && parameters.macro > 0.5f) {
+          const float drive = (parameters.macro - 0.5f) * 2.0f;
+          left += (SoftLimit(left * 3.0f) - left) * drive;
+          right += (SoftLimit(right * 3.0f) - right) * drive;
+        }
+      }
+      out[s] = left; aux[s] = right;
+    }
+    fill(acc_buffer_, acc_buffer_ + kMaxBlockSize * kNumSixOpVoices, 0.0f);
+    return;
+  }
+#endif
   if (parameters.trigger & TRIGGER_UNPATCHED) {
     // Render the single sustained voice at the native block size. The old
     // staggered path rendered 2 * size samples every other block while also

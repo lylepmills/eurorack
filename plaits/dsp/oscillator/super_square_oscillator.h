@@ -32,6 +32,7 @@
 #define PLAITS_DSP_OSCILLATOR_SUPERSQUARE_OSCILLATOR_H_
 
 #include "stmlib/dsp/dsp.h"
+#include "plaits/dsp/extended_tzfm.h"
 #include "stmlib/dsp/parameter_interpolator.h"
 #include "stmlib/dsp/polyblep.h"
 
@@ -96,10 +97,20 @@ class SuperSquareOscillator {
             *root_frequency_offset++ * frequency_offset_scale;
         master_frequency += voice_offset;
         slave_frequency += voice_offset * slave_ratio;
-        CONSTRAIN(master_frequency, 1.0e-7f, kMaxFrequency);
-        CONSTRAIN(slave_frequency, 1.0e-7f, kMaxFrequency);
+        CONSTRAIN(master_frequency, PLAITS_BUILD_EXTENDED_TZFM ? -kMaxFrequency : 1.0e-7f, kMaxFrequency);
+        CONSTRAIN(slave_frequency, PLAITS_BUILD_EXTENDED_TZFM ? -kMaxFrequency : 1.0e-7f, kMaxFrequency);
       }
 
+#if PLAITS_BUILD_EXTENDED_TZFM
+      if (root_frequency_offset) {
+        float unused_now = 0.0f, unused_next = 0.0f;
+        TzfmSyncStep(master_frequency, slave_frequency, 1.0f, 0.0f, 0.0f,
+            &master_phase_, &slave_phase_, &unused_now, &unused_next, &this_sample, &next_sample);
+        high_ = slave_phase_ >= 0.5f;
+        *out++ = 2.0f * this_sample - 1.0f;
+        continue;
+      }
+#endif
       master_phase_ += master_frequency;
       if (master_phase_ >= 1.0f) {
         master_phase_ -= 1.0f;

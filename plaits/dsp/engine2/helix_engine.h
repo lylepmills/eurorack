@@ -36,6 +36,11 @@ class HelixEngine : public Engine {
     }
   }
 
+#if PLAITS_BUILD_EXTENDED_TZFM
+  // Qualified separately from the stock Plaits catalog's CPU policy.
+  virtual bool linear_tzfm_capable() const { return true; }
+#endif
+
  private:
   ChordBank chords_;
   // Each voice is a rotating unit vector rather than a phase into a table: see

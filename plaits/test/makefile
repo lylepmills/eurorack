@@ -187,3 +187,10 @@ clean:
 	rm $(BUILD_DIR)*.*
 
 include $(DEP_FILE)
+
+# Run with CXXFLAGS=-DPLAITS_BUILD_EXTENDED_TZFM=1 and a separate BUILD_ROOT.
+$(BUILD_DIR)extended_tzfm_test.o: CXXFLAGS += -std=c++11
+EXTENDED_TZFM_OBJS = $(filter-out $(BUILD_DIR)plaits_test.o,$(OBJS)) $(BUILD_DIR)extended_tzfm_test.o
+extended-tzfm-test: $(EXTENDED_TZFM_OBJS)
+	g++ -g -O2 -o $(BUILD_DIR)extended_tzfm_test $(EXTENDED_TZFM_OBJS) $(HOST_LINK_FLAGS) $(CXXFLAGS) -lm
+	$(BUILD_DIR)extended_tzfm_test

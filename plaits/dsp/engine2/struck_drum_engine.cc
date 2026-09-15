@@ -299,11 +299,15 @@ void StruckDrumEngine::Render(
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
       if (parameters.frequency_offset) {
         const float instantaneous_root = max(
-            1e-7f, root_frequency + parameters.frequency_offset[s]);
-        sample_increment = instantaneous_root * increment_ratio[i];
+            PLAITS_BUILD_EXTENDED_TZFM ? -0.49f : 1e-7f,
+            root_frequency + parameters.frequency_offset[s]);
+        sample_increment = PLAITS_BUILD_EXTENDED_TZFM
+            ? TzfmLimit(instantaneous_root * increment_ratio[i], 0.49f)
+            : instantaneous_root * increment_ratio[i];
       }
 #endif
       phase_[i] += sample_increment;
+      if (PLAITS_BUILD_EXTENDED_TZFM && phase_[i] < 0.0f) phase_[i] += 1.0f;
       if (phase_[i] >= 1.0f) {
         phase_[i] -= 1.0f;
       }
