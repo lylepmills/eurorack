@@ -53,7 +53,11 @@ cd alt_firmwares/palette_seed3
 ## Signed through-zero FM
 
 `PALETTE_EXTENDED_TZFM` defaults ON and compiles the shared engines with
-`PLAITS_BUILD_EXTENDED_TZFM=1`: 61 eligible engines rather than Plaits' 29.
+`PLAITS_BUILD_EXTENDED_TZFM=1`: 76 eligible engines rather than Plaits' 29.
+The additional source-scoped modes affect Saw Comb's exciter, Hi-hat's metallic
+oscillators and BubbleTime's ringing tones. Speech words/filters remain forward;
+voiced excitation supports signed phase. Tapfield and Attractor stay ineligible.
+Speech listening approval and board timing remain release gates.
 The F373 build rejects this flag, and the public Plaits catalog is unchanged.
 `FwVoice::linear_tzfm_capable()` reports this target's eligibility; `Render`
 accepts an optional 12-frame offset buffer in cycles per 48 kHz sample.

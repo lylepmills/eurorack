@@ -60,8 +60,12 @@ void LPCSpeechEngine::Render(
     float* aux,
     size_t size,
     bool* already_enveloped) {
+#if PLAITS_BUILD_EXTENDED_TZFM
+  const float* signed_fm = parameters.extended_tzfm_active()
+      ? static_cast<const float*>(parameters.frequency_offset) : NULL;
+#endif
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
-  if (parameters.frequency_offset) {
+  if (parameters.frequency_offset && !parameters.extended_tzfm_active()) {
     EngineParameters sample_parameters = parameters;
     sample_parameters.frequency_offset = NULL;
     const float base_frequency = NoteToFrequency(parameters.note);
@@ -103,7 +107,11 @@ void LPCSpeechEngine::Render(
       replay_prosody ? parameters.accent : 1.0f,
       aux,
       out,
-      size);
+      size
+#if PLAITS_BUILD_EXTENDED_TZFM
+        , signed_fm
+#endif
+        );
 
   if (PLAITS_STEREO_LPC_SPEECH && parameters.stereo) {
     float voice_l, voice_r, secondary_l, secondary_r;

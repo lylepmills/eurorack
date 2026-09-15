@@ -33,6 +33,7 @@
 
 #include <algorithm>
 
+#include "plaits/dsp/extended_tzfm.h"
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/dsp/filter.h"
 #include "stmlib/dsp/parameter_interpolator.h"
@@ -60,7 +61,7 @@ class SquareNoise {
       float* temp_1,
       float* temp_2,
       float* out,
-      size_t size) {
+      size_t size, float signed_scale = 1.0f, bool signed_fm = false) {
     const float ratios[6] = {
         // Nominal f0: 414 Hz
         1.0f, 1.304f, 1.466f, 1.787f, 1.932f, 2.536f
@@ -71,7 +72,8 @@ class SquareNoise {
     for (int i = 0; i < 6; ++i) {
       float f = f0 * (1.0f + (ratios[i] - 1.0f) * spread);
       if (f >= 0.499f) f = 0.499f;
-      increment[i] = static_cast<uint32_t>(f * 4294967296.0f);
+      increment[i] = signed_fm ? TzfmIncrement(f * signed_scale)
+          : static_cast<uint32_t>(f * 4294967296.0f);
       phase[i] = phase_[i];
     }
 
@@ -120,7 +122,7 @@ class RingModNoise {
       float* temp_1,
       float* temp_2,
       float* out,
-      size_t size) {
+      size_t size, float signed_scale = 1.0f, bool signed_fm = false) {
     const float ratio = f0 / (0.01f + f0);
     const float f1a = 200.0f / kSampleRate * ratio;
     const float f1b_stock = 7530.0f / kSampleRate * ratio;
@@ -136,7 +138,7 @@ class RingModNoise {
     std::fill(&out[0], &out[size], 0.0f);
     
     for (int i = 0; i < 3; ++i) {
-      RenderPair(&oscillator_[2 * i], f[i], temp_1, temp_2, out, size);
+      RenderPair(&oscillator_[2 * i], f[i], temp_1, temp_2, out, size, signed_scale, signed_fm);
     }
   }
 
@@ -147,7 +149,22 @@ class RingModNoise {
       float* temp_1,
       float* temp_2,
       float* out,
-      size_t size) {
+      size_t size, float signed_scale, bool signed_fm) {
+#if PLAITS_BUILD_EXTENDED_TZFM
+    if (signed_fm) {
+      const float offset[2] = {
+          TzfmLimit(f[0] * signed_scale, 0.49f) - f[0],
+          TzfmLimit(f[1] * signed_scale, 0.49f) - f[1] };
+      for (size_t n = 0; n < size; ++n) {
+        osc[0].RenderLinearFm<OSCILLATOR_SHAPE_SQUARE>(
+            f[0], 0.5f, &offset[0], temp_1 + n, 1);
+        osc[1].RenderLinearFm<OSCILLATOR_SHAPE_SAW>(
+            f[1], 0.5f, &offset[1], temp_2 + n, 1);
+        out[n] += temp_1[n] * temp_2[n];
+      }
+      return;
+    }
+#endif
     osc[0].Render<OSCILLATOR_SHAPE_SQUARE>(f[0], 0.5f, temp_1, size);
     osc[1].Render<OSCILLATOR_SHAPE_SAW>(f[1], 0.5f, temp_2, size);
     while (size--) {
@@ -208,7 +225,7 @@ class HiHat {
       float* temp_1,
       float* temp_2,
       float* out,
-      size_t size) {
+      size_t size, float signed_scale = 1.0f, bool signed_fm = false) {
     const float envelope_decay = 1.0f - 0.003f * stmlib::SemitonesToRatio(
         -decay * 84.0f);
     const float cut_decay = 1.0f - 0.0025f * stmlib::SemitonesToRatio(
@@ -220,7 +237,7 @@ class HiHat {
 
     // Render the metallic noise.
     metallic_noise_.Render(
-        2.0f * f0, metallic_spread, temp_1, temp_2, out, size);
+        2.0f * f0, metallic_spread, temp_1, temp_2, out, size, signed_scale, signed_fm);
 
     // Apply BPF on the metallic noise.
     float cutoff = 150.0f / kSampleRate * stmlib::SemitonesToRatio(

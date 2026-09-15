@@ -398,6 +398,9 @@ class CymbalEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
+#if PLAITS_BUILD_EXTENDED_TZFM
+  virtual bool linear_tzfm_capable() const { return true; }
+#endif
   virtual bool stereo_capable() const { return PLAITS_STEREO_CYMBAL; }
 #if PLAITS_BUILD_ENABLE_SYNC_INPUT
   virtual void HardSync() {

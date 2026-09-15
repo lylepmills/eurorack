@@ -327,6 +327,9 @@ class QuestionMarkEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
+#if PLAITS_BUILD_EXTENDED_TZFM
+  virtual bool linear_tzfm_capable() const { return true; }
+#endif
   virtual bool stereo_capable() const { return PLAITS_STEREO_QUESTION_MARK; }
   virtual bool fast_fm_capable() const { return true; }
 

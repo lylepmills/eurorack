@@ -22,6 +22,12 @@ void GendyEngine::Init(BufferAllocator* allocator) {
 
 void GendyEngine::Reset() {
   phase_ = 0.0f;
+#if PLAITS_BUILD_EXTENDED_TZFM
+  travel_phase_ = 0.0f;
+  signed_active_ = false;
+  transition_[0] = transition_[1] = 0.0f;
+  previous_output_[0] = previous_output_[1] = 0.0f;
+#endif
   segment_ = 0;
   num_breakpoints_ = 0;
 }
@@ -49,6 +55,12 @@ void GendyEngine::Randomize(int num_breakpoints) {
   }
   UpdateBoundaries();
   phase_ = 0.0f;
+#if PLAITS_BUILD_EXTENDED_TZFM
+  travel_phase_ = 0.0f;
+  signed_active_ = false;
+  transition_[0] = transition_[1] = 0.0f;
+  previous_output_[0] = previous_output_[1] = 0.0f;
+#endif
   segment_ = 0;
 }
 
@@ -110,15 +122,32 @@ void GendyEngine::Render(
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
     if (parameters.frequency_offset) {
       f += parameters.frequency_offset[i];
-      CONSTRAIN(f, 0.0f, 0.24f);
+      CONSTRAIN(f, parameters.extended_tzfm_active() ? -0.24f : 0.0f, 0.24f);
     }
 #endif
-    phase_ += f;
-    if (phase_ >= 1.0f) {
-      phase_ -= 1.0f;
+    bool cycle;
+#if PLAITS_BUILD_EXTENDED_TZFM
+    if (parameters.extended_tzfm_active()) {
+      if (!signed_active_) travel_phase_ = phase_;
+      signed_active_ = true;
+      cycle = TzfmClock(fabsf(f), &travel_phase_) != 0;
+      phase_ = TzfmWrap(phase_ + f);
+    } else {
+      signed_active_ = false;
+#else
+    {
+#endif
+      phase_ += f;
+      cycle = phase_ >= 1.0f;
+      if (cycle) phase_ -= 1.0f;
+    }
+    if (cycle) {
       Mutate(amplitude_step, duration_step);
       segment_ = 0;
     }
+#if PLAITS_BUILD_EXTENDED_TZFM
+    if (parameters.extended_tzfm_active()) segment_ = 0;
+#endif
     while (segment_ < num_breakpoints_ - 1 &&
         phase_ >= boundary_[segment_]) {
       ++segment_;
@@ -177,6 +206,22 @@ void GendyEngine::Render(
     } else {
       aux[i] = stepped * 0.65f;
     }
+#if PLAITS_BUILD_EXTENDED_TZFM
+    if (parameters.extended_tzfm_active()) {
+      if (cycle && phase_ > fabsf(f)) {
+        transition_[0] = previous_output_[0] - out[i];
+        transition_[1] = previous_output_[1] - aux[i];
+      }
+      out[i] += transition_[0];
+      aux[i] += transition_[1];
+      transition_[0] *= 0.75f;
+      transition_[1] *= 0.75f;
+    } else {
+      transition_[0] = transition_[1] = 0.0f;
+    }
+    previous_output_[0] = out[i];
+    previous_output_[1] = aux[i];
+#endif
   }
 }
 

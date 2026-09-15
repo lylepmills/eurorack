@@ -167,6 +167,11 @@ void BubbleTimeEngine::Reset() {
   a_c_ = b_c_ = 1.0f;
   a_s_ = b_s_ = 0.0f;
   resonator_r_ = 0.99f;
+#if PLAITS_BUILD_EXTENDED_TZFM
+  a_pitch_ = 0.0f;
+  a_interval_ = 1.0f;
+  signed_active_ = false;
+#endif
   excite_remaining_ = 0;
   excite_amp_ = 0.0f;
   excite_left_ = excite_right_ = 0.70710678f;
@@ -550,6 +555,10 @@ void BubbleTimeEngine::Render(
         ++bucket;
       }
       float a_freq = f_pitch * chord_ratios[bucket];
+#if PLAITS_BUILD_EXTENDED_TZFM
+      a_pitch_ = a_freq;
+      a_interval_ = chord_ratios[bucket];
+#endif
       CONSTRAIN(a_freq, 0.0f, 0.45f);
       a_c_ = resonator_r_ * Sine(a_freq + 0.25f);
       a_s_ = resonator_r_ * Sine(a_freq);
@@ -587,6 +596,24 @@ void BubbleTimeEngine::Render(
       --excite_remaining_;
     }
 
+#if PLAITS_BUILD_EXTENDED_TZFM
+    if (parameters.frequency_offset || signed_active_) {
+      // Oscillator phase alone follows FM. The necklace, gates, damping and
+      // strike envelopes retain their forward, base-note clocks.
+      const float ratio = parameters.frequency_offset
+          ? 1.0f + parameters.frequency_offset[i] /
+              std::max(1.0e-7f, NoteToFrequency(parameters.note)) : 1.0f;
+      const float fa = TzfmLimit(parameters.frequency_offset
+          ? f_pitch * a_interval_ * ratio : a_pitch_, 0.45f);
+      const float fb = TzfmLimit(f_pitch *
+          SemitonesToRatio(kBaseIntervals[base_interval_]) * ratio, 0.45f);
+      a_c_ = r * Sine(TzfmWrap(fa + 0.25f));
+      a_s_ = r * Sine(TzfmWrap(fa));
+      b_c_ = r * Sine(TzfmWrap(fb + 0.25f));
+      b_s_ = r * Sine(TzfmWrap(fb));
+      signed_active_ = parameters.frequency_offset != NULL;
+    }
+#endif
     // Ping resonators: complex one-pole rotations.
     float t = a_re_;
     a_re_ = a_c_ * a_re_ - a_s_ * a_im_;

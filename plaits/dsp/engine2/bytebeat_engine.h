@@ -93,6 +93,9 @@ class BytebeatEngine : public Engine {
       size_t size,
       bool* already_enveloped);
   // Pattern A: the stream against its own sub-octave.
+#if PLAITS_BUILD_EXTENDED_TZFM
+  virtual bool linear_tzfm_capable() const { return true; }
+#endif
   virtual bool stereo_capable() const { return true; }
 
  private:

@@ -189,6 +189,7 @@ clean:
 include $(DEP_FILE)
 
 # Run with CXXFLAGS=-DPLAITS_BUILD_EXTENDED_TZFM=1 and a separate BUILD_ROOT.
+$(BUILD_DIR)extended_tzfm_test.o: $(wildcard plaits/dsp/engine/*.h plaits/dsp/engine2/*.h) plaits/dsp/extended_tzfm.h
 $(BUILD_DIR)extended_tzfm_test.o: CXXFLAGS += -std=c++11
 EXTENDED_TZFM_OBJS = $(filter-out $(BUILD_DIR)plaits_test.o,$(OBJS)) $(BUILD_DIR)extended_tzfm_test.o
 extended-tzfm-test: $(EXTENDED_TZFM_OBJS)

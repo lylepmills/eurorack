@@ -160,6 +160,9 @@ void ZxPhase48kEngine::Render(
   // Two octaves below panel pitch: XOR interference reads high (hardware
   // pass, 2026-08-14). Pitch is read per block with no smoothing — audio
   // into V/OCT is block-rate-sampled exponential FM, on purpose.
+#if PLAITS_BUILD_EXTENDED_TZFM
+  const float fm_scale = 0.25f * SemitonesToRatio(kick_);
+#endif
   float dt1 = NoteToFrequency(parameters.note - 24.0f + kick_);
   kick_ *= 0.9835f;  // ~15 ms fall
   if (kick_ < 0.05f) {
@@ -171,8 +174,8 @@ void ZxPhase48kEngine::Render(
     dt2 *= kNoiseClockRatio;
   }
   CONSTRAIN(dt2, 0.0f, 0.24f);
-  const uint32_t increment1 = static_cast<uint32_t>(dt1 * kTwo30);
-  const uint32_t increment2 = static_cast<uint32_t>(dt2 * kTwo30);
+  uint32_t increment1 = static_cast<uint32_t>(dt1 * kTwo30);
+  uint32_t increment2 = static_cast<uint32_t>(dt2 * kTwo30);
 
   // macro CW: the GHOST parasite carrier (the CCW half is the kick-slide,
   // handled above — CLEAN retired in v3 for musicality).
@@ -181,6 +184,17 @@ void ZxPhase48kEngine::Render(
       : 0u;
 
   for (size_t i = 0; i < size; ++i) {
+    bool reverse2 = false;
+#if PLAITS_BUILD_EXTENDED_TZFM
+    if (parameters.frequency_offset) {
+      const float f1 = TzfmLimit(dt1 + parameters.frequency_offset[i] * fm_scale, 0.2f);
+      const float f2 = TzfmLimit(f1 * SemitonesToRatio(detune_semitones) *
+          (noise_mode_ ? kNoiseClockRatio : 1.0f), 0.24f);
+      increment1 = TzfmIncrement(f1 * 0.25f);
+      increment2 = TzfmIncrement(f2 * 0.25f);
+      reverse2 = f2 < 0.0f;
+    }
+#endif
     if (tick_.Next() && sweep_on) {
       ++sweep_count_;
       if ((sweep_count_ % static_cast<uint32_t>(sweep_period)) == 0) {
@@ -203,7 +217,11 @@ void ZxPhase48kEngine::Render(
       phase1_ += increment1;
       const uint32_t previous2 = phase2_;
       phase2_ += increment2;
-      if (phase2_ < previous2) {
+      if (reverse2 && phase2_ > previous2) {
+        // The seed's unused sixteenth bit is discarded on the first step;
+        // the audible 15-bit sequence has an exact inverse.
+        lfsr_ = TzfmLfsrReverse(lfsr_);
+      } else if (!reverse2 && phase2_ < previous2) {
         const uint16_t feedback = (lfsr_ ^ (lfsr_ >> 1)) & 1u;
         lfsr_ = static_cast<uint16_t>((lfsr_ >> 1) | (feedback << 14));
       }

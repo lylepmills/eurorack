@@ -70,6 +70,10 @@ void HiHatEngine::Render(
       float instantaneous_f0 = max(
           1e-7f, f0 + parameters.frequency_offset[sample]);
       instantaneous_f0 = min(instantaneous_f0, 0.49f);
+      const bool signed_fm = parameters.extended_tzfm_active();
+      const float signed_scale = signed_fm
+          ? 1.0f + parameters.frequency_offset[sample] / std::max(1.0e-7f, f0) : 1.0f;
+      if (signed_fm) instantaneous_f0 = f0;
       hi_hat_1_.Render(
           sustain,
           trigger && sample == 0,
@@ -82,7 +86,7 @@ void HiHatEngine::Render(
           temp_buffer_ + sample,
           temp_buffer_ + kMaxBlockSize + sample,
           out + sample,
-          1);
+          1, signed_scale, signed_fm);
       hi_hat_2_.Render(
           sustain,
           trigger && sample == 0,
@@ -95,7 +99,7 @@ void HiHatEngine::Render(
           temp_buffer_ + sample,
           temp_buffer_ + kMaxBlockSize + sample,
           aux + sample,
-          1);
+          1, signed_scale, signed_fm);
     }
     if ((PLAITS_STEREO_ANALOG_HI_HAT && parameters.stereo)) {
       float faithful_left, faithful_right;

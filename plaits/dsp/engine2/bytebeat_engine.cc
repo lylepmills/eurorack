@@ -127,7 +127,7 @@ void BytebeatEngine::Render(
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
     if (parameters.frequency_offset) {
       float modulated_frequency = f0 + parameters.frequency_offset[i];
-      CONSTRAIN(modulated_frequency, 0.0f, 0.25f);
+      CONSTRAIN(modulated_frequency, PLAITS_BUILD_EXTENDED_TZFM ? -0.25f : 0.0f, 0.25f);
       main_increment = modulated_frequency * kBytebeatTicksPerCycle;
       secondary_increment = main_increment * kBytebeatAuxRatio;
     }
@@ -135,6 +135,13 @@ void BytebeatEngine::Render(
     // Fractional tick advance. Below 1.0 this holds the previous value -- the
     // zero-order hold that gives a bytebeat its stair-stepped character -- and
     // above it, ticks are skipped.
+#if PLAITS_BUILD_EXTENDED_TZFM
+    if (parameters.frequency_offset) {
+      t_ += static_cast<uint32_t>(TzfmClock(main_increment, &tick_phase_));
+      aux_t_ += static_cast<uint32_t>(TzfmClock(secondary_increment, &aux_tick_phase_));
+    } else
+#endif
+    {
     tick_phase_ += main_increment;
     while (tick_phase_ >= 1.0f) {
       tick_phase_ -= 1.0f;
@@ -144,6 +151,7 @@ void BytebeatEngine::Render(
     while (aux_tick_phase_ >= 1.0f) {
       aux_tick_phase_ -= 1.0f;
       ++aux_t_;
+    }
     }
 
     const float sample = MaskedSample(

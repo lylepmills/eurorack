@@ -12,6 +12,7 @@
 #define PLAITS_DSP_ENGINE2_PULSE_CORE_H_
 
 #include "plaits/dsp/dsp.h"
+#include "plaits/dsp/extended_tzfm.h"
 
 namespace plaits {
 namespace pulse {
@@ -53,6 +54,17 @@ class PinChannel {
     return naive + PolyBlep(t, dt) - PolyBlep(tf, dt);
   }
 
+#if PLAITS_BUILD_EXTENDED_TZFM
+  inline float NextSigned(float dt, float duty, float* naive_out) {
+    phase_ = TzfmWrap(phase_ + dt);
+    const float naive = phase_ < duty ? 1.0f - duty : -duty;
+    *naive_out = naive;
+    const float speed = fabsf(dt);
+    if (speed < 1.0e-9f) return naive;
+    return naive + PolyBlep(phase_, speed) -
+        PolyBlep(TzfmWrap(phase_ - duty), speed);
+  }
+#endif
   inline float phase() const { return phase_; }
 
  private:

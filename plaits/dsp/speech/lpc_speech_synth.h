@@ -67,7 +67,11 @@ class LPCSpeechSynth {
       float pitch_shift,
       float* excitation,
       float* output,
-      size_t size);
+      size_t size
+#if PLAITS_BUILD_EXTENDED_TZFM
+      , float frequency_offset = 0.0f, bool signed_fm = false
+#endif
+      );
   
   void PlayFrame(const Frame* frames, float frame, bool interpolate) {
     MAKE_INTEGRAL_FRACTIONAL(frame);

@@ -134,6 +134,10 @@ void NaturalSpeechEngine::Reset() {
   smooth_countdown_ = 0;
   for (int b = 0; b < kBands; ++b) UpdateBandWeights(b);
   period_phase_ = 0.0f;
+#if PLAITS_BUILD_EXTENDED_TZFM
+  signed_phase_ = travel_phase_ = fm_integral_ = 0.0f;
+  signed_active_ = false;
+#endif
   period_samples_ = kInternalRate / kRegisterHz;
   wavelet_pos_ = 64;
   period_amp_ = 0.0f;
@@ -258,7 +262,11 @@ void NaturalSpeechEngine::DecodeFrame(int frame_index, float gamma) {
   gain_target_ *= comp;
 }
 
-float NaturalSpeechEngine::InternalTick(float f0_phase_inc, float* whisper) {
+float NaturalSpeechEngine::InternalTick(float f0_phase_inc, float* whisper
+#if PLAITS_BUILD_EXTENDED_TZFM
+    , float frequency_offset, bool signed_fm
+#endif
+    ) {
   // Parameter smoothing, decimated (see kSmoothDecimation). The band
   // crossfade weights are cached here too: they are pure functions of v_,
   // so recomputing their square roots every tick was the single most
@@ -292,6 +300,41 @@ float NaturalSpeechEngine::InternalTick(float f0_phase_inc, float* whisper) {
 
   // Pulse train with per-period jitter/shimmer.
   float pulse = 0.0f;
+#if PLAITS_BUILD_EXTENDED_TZFM
+  if (signed_fm) {
+    if (!signed_active_) {
+      signed_phase_ = TzfmWrap(period_phase_ / period_samples_);
+      travel_phase_ = signed_phase_;
+    }
+    signed_active_ = true;
+    if (voiced_ && gain_target_ > 0.0f) {
+      const float prosody = SemitonesToRatio(f0_st_ * prosody_now_ + flutter);
+      const float f = TzfmLimit((f0_phase_inc + frequency_offset) *
+          prosody * jitter_mul_, 0.3f);
+      signed_phase_ = TzfmWrap(signed_phase_ + f);
+      if (TzfmClock(fabsf(f), &travel_phase_) || period_amp_ == 0.0f) {
+        jitter_mul_ = 1.0f + kJitter * Gauss();
+        const float nominal = std::max(30.0f / kInternalRate,
+            std::min(0.3f, f0_phase_inc * prosody * jitter_mul_));
+        period_samples_ = 1.0f / nominal;
+        period_amp_ = Sqrt(period_samples_) *
+            SemitonesToRatio(kShimmerDb * Gauss() * 1.9931569f);
+      }
+      const float position = signed_phase_ * period_samples_;
+      const int index = static_cast<int>(position);
+      if (index < 63) {
+        pulse = (data::kWavelet[index] +
+            (data::kWavelet[index + 1] - data::kWavelet[index]) *
+            (position - index)) * period_amp_;
+      }
+      period_phase_ = position;
+      wavelet_pos_ = std::min(64, index + 1);
+    }
+  } else {
+    signed_active_ = false;
+#else
+  {
+#endif
   if (voiced_ && gain_target_ > 0.0f) {
     period_phase_ += 1.0f;
     if (period_phase_ >= period_samples_) {
@@ -311,6 +354,7 @@ float NaturalSpeechEngine::InternalTick(float f0_phase_inc, float* whisper) {
   }
   if (wavelet_pos_ < 64) {
     pulse = data::kWavelet[wavelet_pos_++] * period_amp_;
+  }
   }
 
   // Full-band pulse minus each band's unvoiced fraction, plus band noise.
@@ -401,7 +445,9 @@ void NaturalSpeechEngine::Render(
   const float pitch_shift =
       frequency / (rate_ratio * kRegisterHz / kCorrectedSampleRate);
   float f0_phase_inc = (kRegisterHz / kInternalRate) * pitch_shift;
-  CONSTRAIN(f0_phase_inc, 0.0f, 0.35f);
+  if (!(PLAITS_BUILD_EXTENDED_TZFM && parameters.frequency_offset)) {
+    CONSTRAIN(f0_phase_inc, 0.0f, 0.35f);
+  }
 
   // MACRO: articulation depth about the bank's mean tract. 0 = every frame
   // collapses onto the mean (one sustained neutral vowel -- a true mumble),
@@ -468,9 +514,20 @@ void NaturalSpeechEngine::Render(
       data::kFrameRateHz * speed / (kInternalRate * rate_ratio);
 
   for (size_t n = 0; n < size; ++n) {
+#if PLAITS_BUILD_EXTENDED_TZFM
+    float tick_offset = 0.0f;
+    const float offset = parameters.frequency_offset ? parameters.frequency_offset[n] : 0.0f;
+    if (!parameters.frequency_offset) fm_integral_ = 0.0f;
+    fm_integral_ += offset;
+#endif
     clock_phase_ += rate;
     if (clock_phase_ >= 1.0f) {
       clock_phase_ -= 1.0f;
+#if PLAITS_BUILD_EXTENDED_TZFM
+      const float remainder = clock_phase_ / rate;
+      tick_offset = fm_integral_ - offset * remainder;
+      fm_integral_ = offset * remainder;
+#endif
       sample_[0] = next_sample_[0];
       sample_[1] = next_sample_[1];
 
@@ -496,7 +553,11 @@ void NaturalSpeechEngine::Render(
       }
 
       float whisper = 0.0f;
-      next_sample_[0] = InternalTick(f0_phase_inc, &whisper) * kOutputGain;
+      next_sample_[0] = InternalTick(f0_phase_inc, &whisper
+#if PLAITS_BUILD_EXTENDED_TZFM
+          , tick_offset, parameters.frequency_offset != NULL
+#endif
+          ) * kOutputGain;
       next_sample_[1] = whisper * kOutputGain;
     }
     out[n] = sample_[0] + (next_sample_[0] - sample_[0]) * clock_phase_;

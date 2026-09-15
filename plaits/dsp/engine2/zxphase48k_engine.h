@@ -30,6 +30,9 @@ class ZxPhase48kEngine : public Engine {
   void LoadUserData(const uint8_t* user_data) { }
   void Render(const EngineParameters& parameters, float* out, float* aux,
       size_t size, bool* already_enveloped);
+#if PLAITS_BUILD_EXTENDED_TZFM
+  virtual bool linear_tzfm_capable() const { return true; }
+#endif
   virtual bool stereo_capable() const { return PLAITS_STEREO_ZXPHASE48K; }
 
  private:

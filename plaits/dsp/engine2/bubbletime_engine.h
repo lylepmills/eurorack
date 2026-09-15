@@ -47,6 +47,9 @@ class BubbleTimeEngine : public Engine {
   void LoadUserData(const uint8_t* user_data) { }
   void Render(const EngineParameters& parameters, float* out, float* aux,
       size_t size, bool* already_enveloped);
+#if PLAITS_BUILD_EXTENDED_TZFM
+  virtual bool linear_tzfm_capable() const { return true; }
+#endif
   virtual bool stereo_capable() const { return PLAITS_STEREO_BUBBLETIME; }
 
  private:
@@ -93,6 +96,10 @@ class BubbleTimeEngine : public Engine {
   float a_right_re_, a_right_im_;
   float b_right_re_, b_right_im_;
   float resonator_r_;
+#if PLAITS_BUILD_EXTENDED_TZFM
+  float a_pitch_, a_interval_;
+  bool signed_active_;
+#endif
   // Strike excitation ramp: injection spread over ~1 ms so OUT carries a
   // percussive attack, not a wideband click.
   int excite_remaining_;

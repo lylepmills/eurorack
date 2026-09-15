@@ -134,12 +134,22 @@ void LockstepEngine::Render(
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
     if (parameters.frequency_offset) {
       reference_frequency += parameters.frequency_offset[i];
-      CONSTRAIN(reference_frequency, 0.0f, reference_ceiling);
+      CONSTRAIN(reference_frequency, parameters.extended_tzfm_active() ? -reference_ceiling : 0.0f, reference_ceiling);
     }
 #endif
     const float target_frequency = reference_frequency * ratio;
-    const float capture_min = target_frequency * capture_min_ratio;
-    const float capture_max = target_frequency * capture_max_ratio;
+    float capture_min = target_frequency * capture_min_ratio;
+    float capture_max = target_frequency * capture_max_ratio;
+#if PLAITS_BUILD_EXTENDED_TZFM
+    if (parameters.extended_tzfm_active()) {
+      // Signed centre with a finite capture width through zero. The controller
+      // and its damping advance in wall time, allowing real acquisition lag.
+      const float width = std::max(base_target_frequency * 0.05f,
+          fabsf(target_frequency)) * (capture_max_ratio - 1.0f);
+      capture_min = std::max(-0.45f, target_frequency - width);
+      capture_max = std::min(0.45f, target_frequency + width);
+    }
+#endif
     reference_phase_ = Wrap(reference_phase_ + reference_frequency);
 
     // A sinusoidal detector has a soft, ambiguous capture region; a wrapped
@@ -160,6 +170,12 @@ void LockstepEngine::Render(
         (target_frequency - follower_frequency_);
     CONSTRAIN(follower_frequency_, capture_min, capture_max);
 
+#if PLAITS_BUILD_EXTENDED_TZFM
+    if (parameters.extended_tzfm_active()) {
+      follower_phase_ = Wrap(follower_phase_ + TzfmLimit(
+          follower_frequency_ + proportional_gain * detector, 0.49f));
+    } else
+#endif
     follower_phase_ = Wrap(
         follower_phase_ + follower_frequency_ + \
         proportional_gain * detector);

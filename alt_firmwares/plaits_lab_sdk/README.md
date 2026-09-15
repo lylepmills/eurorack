@@ -368,8 +368,8 @@ See `RFC.md` for the contract and trust-boundary decisions.
 
 ## Palette host / Seed3 TZFM policy
 
-`PLAITS_BUILD_EXTENDED_TZFM=1` adds signed oscillator/carrier paths for 32
-higher-compute Palette engines (61 total). Its default is 0 and F373 builds
+`PLAITS_BUILD_EXTENDED_TZFM=1` adds signed oscillator/carrier paths for 47
+higher-compute Palette engines (76 total). Its default is 0 and F373 builds
 reject 1: do not change the Plaits catalog's `fmCapabilities` for these engines.
 The separate `fast_fm_capable()` hardware qualification remains unchanged.
 The added classes declare their extended-only capability beside their engine
@@ -384,8 +384,11 @@ make -f plaits/test/makefile extended-tzfm-test BUILD_ROOT=build/tz-off/ CXXFLAG
 
 Use a host C++11-or-newer compiler for this regression. Its baseline hashes
 should match with the option off/on; the normal host parity suite also covers
-Wave Terrain's bank-backed rendering. Keep the experimental/partial candidates
-ineligible until their behavior is agreed and implemented.
+Wave Terrain's bank-backed rendering. Tapfield and Attractor remain ineligible. The 15-engine second expansion uses
+source-scoped TZFM for Saw Comb, Hi-hat and BubbleTime; speech words and filters
+remain forward. Qualify speech by listening and Seed3 by physical timing before
+release. Set `EngineParameters::frequency_offset_is_linear=false` when an
+extended host sends exponential FM through the offset buffer.
 
 Validation on 2026-09-15: the normal pinned-container host suite passes; the
 experimental firmware WAV builds. The legacy stock-layout link overflows flash

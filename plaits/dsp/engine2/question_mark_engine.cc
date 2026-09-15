@@ -311,11 +311,12 @@ void QuestionMarkEngine::Render(
     if (parameters.frequency_offset) {
       modulated_increment += parameters.frequency_offset[i] * 0.5f;
       CONSTRAIN(
-          modulated_increment, 0.0f, maximum_increment_per_substep);
+          modulated_increment, parameters.extended_tzfm_active() ? -maximum_increment_per_substep : 0.0f, maximum_increment_per_substep);
     }
 #endif
-    const uint32_t increment = static_cast<uint32_t>(
-        modulated_increment * 4294967296.0f);
+    const uint32_t increment = PLAITS_BUILD_EXTENDED_TZFM && parameters.frequency_offset
+        ? TzfmIncrement(modulated_increment)
+        : static_cast<uint32_t>(modulated_increment * 4294967296.0f);
     int32_t accumulator = 0;
     int32_t accumulator_aux = 0;
 

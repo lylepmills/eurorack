@@ -218,6 +218,25 @@ void ZxPulse48kEngine::Render(
         }
       }
     }
+#if PLAITS_BUILD_EXTENDED_TZFM
+    if (parameters.frequency_offset) {
+      float left = 0.0f, right = 0.0f;
+      const float signed_ratio = 1.0f + parameters.frequency_offset[i] /
+          std::max(1.0e-7f, NoteToFrequency(parameters.note));
+      for (int v = 0; v < n; ++v) {
+        const float f = TzfmLimit(dts[v] * signed_ratio, kMaxDt);
+        const float pin_width = dts[v] > 0.0f ? duties[v] / dts[v] : 0.0f;
+        const float duty = ClampDuty(pin_width * fabsf(f), fabsf(f));
+        float naive;
+        const float clean = amps[v] * channels_[v].NextSigned(f, duty, &naive);
+        left += stereo ? clean * left_gain[v] : clean;
+        right += stereo ? clean * right_gain[v] : amps[v] * naive;
+      }
+      out[i] = left;
+      aux[i] = right;
+      continue;
+    }
+#endif
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
     float frequency_scale = 1.0f;
     if (parameters.frequency_offset) {

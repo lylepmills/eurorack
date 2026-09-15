@@ -37,6 +37,8 @@
 #include "plaits/dsp/oscillator/oscillator.h"
 #include "plaits/resources.h"
 
+#include "plaits/dsp/extended_tzfm.h"
+
 namespace plaits {
 
 using namespace std;
@@ -116,7 +118,11 @@ void SAMSpeechSynth::Render(
     float formant_shift,
     float* excitation,
     float* output,
-    size_t size) {
+    size_t size
+#if PLAITS_BUILD_EXTENDED_TZFM
+    , const float* frequency_offset
+#endif
+    ) {
   if (frequency >= 0.0625f) {
     frequency = 0.0625f;
   }
@@ -147,6 +153,35 @@ void SAMSpeechSynth::Render(
   while (size--) {
     float pulse_this_sample = pulse_next_sample;
     pulse_next_sample = 0.0f;
+#if PLAITS_BUILD_EXTENDED_TZFM
+    if (frequency_offset) {
+      const float f = TzfmLimit(fm.Next() + *frequency_offset++, 0.0625f);
+      const float start = phase_;
+      const float end = start + f;
+      phase_ = TzfmWrap(end);
+      TzfmEdge(start, end, 0.0f, 0.0f, -1.0f, 0.0f,
+          &pulse_this_sample, &pulse_next_sample);
+      if (end >= 1.0f || end < 0.0f) {
+        const float elapsed = ((f > 0.0f ? 1.0f : 0.0f) - start) / f;
+        const float remaining = 1.0f - elapsed;
+        for (int j = 0; j < kSAMNumFormants; ++j)
+          formant_phase_[j] = static_cast<uint32_t>(
+              remaining * static_cast<float>(formant_frequency[j]));
+      } else {
+        for (int j = 0; j < kSAMNumFormants; ++j)
+          formant_phase_[j] += formant_frequency[j];
+      }
+      pulse_next_sample += phase_;
+      const float d = pulse_this_sample - 0.5f - pulse_lp_;
+      pulse_lp_ += min(16.0f * fabsf(f), 1.0f) * d;
+      *excitation++ = d;
+      float s = 0.0f;
+      for (int j = 0; j < kSAMNumFormants; ++j)
+        s += SineRaw(formant_phase_[j]) * formant_amplitude[j];
+      *output++ = s * (1.0f - phase_);
+      continue;
+    }
+#endif
     const float frequency = fm.Next();
     phase_ += frequency;
   

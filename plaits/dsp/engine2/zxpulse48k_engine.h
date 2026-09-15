@@ -31,6 +31,9 @@ class ZxPulse48kEngine : public Engine {
   void Init(stmlib::BufferAllocator* allocator);
   void Reset();
   void LoadUserData(const uint8_t* user_data) { }
+#if PLAITS_BUILD_EXTENDED_TZFM
+  virtual bool linear_tzfm_capable() const { return true; }
+#endif
   virtual bool stereo_capable() const { return PLAITS_STEREO_ZXPULSE48K; }
   void Render(const EngineParameters& parameters, float* out, float* aux,
       size_t size, bool* already_enveloped);

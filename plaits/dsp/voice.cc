@@ -494,6 +494,9 @@ void Voice::Render(
   p.stereo = stereo_render;
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
   p.frequency_offset = use_frequency_offset ? frequency_offset : NULL;
+#if PLAITS_BUILD_EXTENDED_TZFM
+  p.frequency_offset_is_linear = use_linear_tzfm;
+#endif
 #else
   p.frequency_offset = NULL;
 #endif

@@ -30,6 +30,7 @@
 #define PLAITS_DSP_SPEECH_LPC_SPEECH_SYNTH_CONTROLLER_H_
 
 #include "plaits/dsp/speech/lpc_speech_synth.h"
+#include "plaits/dsp/extended_tzfm.h"
 
 #include "stmlib/utils/buffer_allocator.h"
 
@@ -223,10 +224,17 @@ class LPCSpeechSynthController {
       float gain,
       float* excitation,
       float* output,
-      size_t size);
+      size_t size
+#if PLAITS_BUILD_EXTENDED_TZFM
+      , const float* frequency_offset = NULL
+#endif
+      );
   
  private:
   float clock_phase_;
+#if PLAITS_BUILD_EXTENDED_TZFM
+  float fm_integral_;
+#endif
   float sample_[2];
   float next_sample_[2];
   float gain_;

@@ -42,6 +42,9 @@ class NaturalSpeechEngine : public Engine {
   // OUT/AUX become a true L/R pair when the build enables it. Both paths
   // appear in both channels (see Render), so this widens the voice rather
   // than splitting it, and a mono sum does not cancel.
+#if PLAITS_BUILD_EXTENDED_TZFM
+  virtual bool linear_tzfm_capable() const { return true; }
+#endif
   virtual bool stereo_capable() const { return PLAITS_STEREO_NATURAL_SPEECH; }
 
  private:
@@ -63,7 +66,11 @@ class NaturalSpeechEngine : public Engine {
   void DesignBands();
   void DecodeFrame(int frame_index, float gamma);
   void UpdateBandWeights(int band);
-  float InternalTick(float f0_phase_inc, float* whisper);
+  float InternalTick(float f0_phase_inc, float* whisper
+#if PLAITS_BUILD_EXTENDED_TZFM
+      , float frequency_offset = 0.0f, bool signed_fm = false
+#endif
+      );
 
   // Frame targets (decoded).
   float k_target_[kOrder];
@@ -94,6 +101,10 @@ class NaturalSpeechEngine : public Engine {
   Biquad pulse_lp_[kBands - 1];
   Biquad noise_lp_[kBands - 1];
   float noise_cal_[kBands];
+#if PLAITS_BUILD_EXTENDED_TZFM
+  float signed_phase_, travel_phase_, fm_integral_;
+  bool signed_active_;
+#endif
   float period_phase_;      // in internal samples of the current period
   float period_samples_;
   int wavelet_pos_;

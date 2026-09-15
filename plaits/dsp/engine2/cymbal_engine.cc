@@ -194,12 +194,16 @@ void CymbalEngine::Render(
         float sample_increment = increment[p];
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
         if (parameters.frequency_offset) {
-          sample_increment = std::max(
-              0.0f, increment[p] + parameters.frequency_offset[i] *
-                  increment_offset_scale[p]);
+          const float f = increment[p] + parameters.frequency_offset[i] *
+              increment_offset_scale[p];
+          sample_increment = PLAITS_BUILD_EXTENDED_TZFM
+              ? TzfmLimit(f, 0.98f) : std::max(0.0f, f);
         }
 #endif
         partial_phase[p] += sample_increment * 0.5f;
+#if PLAITS_BUILD_EXTENDED_TZFM
+        if (parameters.frequency_offset) partial_phase[p] = TzfmWrap(partial_phase[p]);
+#endif
         if (partial_phase[p] >= 1.0f) {
           partial_phase[p] -= 1.0f;
         }
@@ -232,15 +236,25 @@ void CymbalEngine::Render(
         float sample_noise_clock_increment = noise_clock_increment;
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
         if (parameters.frequency_offset) {
-          sample_noise_clock_increment = std::max(
-              0.0f, noise_clock_increment + parameters.frequency_offset[i] *
-                  noise_clock_offset_scale);
+          const float f = noise_clock_increment + parameters.frequency_offset[i] *
+              noise_clock_offset_scale;
+          sample_noise_clock_increment = PLAITS_BUILD_EXTENDED_TZFM
+              ? TzfmLimit(f, 256.0f) : std::max(0.0f, f);
         }
 #endif
+#if PLAITS_BUILD_EXTENDED_TZFM
+        if (parameters.frequency_offset) {
+          const int ticks = TzfmClock(sample_noise_clock_increment * 0.5f,
+              &noise_clock[channel]);
+          rng_state[channel] = TzfmLcgAdvance(rng_state[channel], ticks);
+        } else
+#endif
+        {
         noise_clock[channel] += sample_noise_clock_increment * 0.5f;
         while (noise_clock[channel] >= 1.0f) {
           noise_clock[channel] -= 1.0f;
           rng_state[channel] = rng_state[channel] * 1664525u + 1013904223u;
+        }
         }
         // digital_oscillator.cc:2507: the TOP 16 bits of the LCG word, held
         // between wraps, re-centred and normalized.

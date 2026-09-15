@@ -164,6 +164,9 @@ class SawCombEngine : public Engine {
       size_t size,
       bool* already_enveloped);
   // Pattern A: two comb taps a fifth apart on one line.
+#if PLAITS_BUILD_EXTENDED_TZFM
+  virtual bool linear_tzfm_capable() const { return true; }
+#endif
   virtual bool stereo_capable() const { return true; }
   virtual bool fast_fm_capable() const { return true; }
 #if PLAITS_BUILD_ENABLE_SYNC_INPUT

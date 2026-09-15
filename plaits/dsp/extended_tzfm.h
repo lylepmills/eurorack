@@ -3,6 +3,7 @@
 #ifndef PLAITS_DSP_EXTENDED_TZFM_H_
 #define PLAITS_DSP_EXTENDED_TZFM_H_
 #include <cmath>
+#include <stdint.h>
 #include <algorithm>
 #include "stmlib/dsp/polyblep.h"
 #ifndef PLAITS_BUILD_EXTENDED_TZFM
@@ -21,6 +22,36 @@ inline float TzfmWrap(float phase) {
 }
 inline float TzfmLimit(float f, float ceiling) {
   return std::max(-ceiling, std::min(ceiling, f));
+}
+inline uint32_t TzfmIncrement(float f) {
+  return static_cast<uint32_t>(static_cast<int32_t>(
+      TzfmLimit(f, 0.499999f) * 4294967296.0f));
+}
+inline int TzfmClock(float delta, float* phase) {
+  const float position = *phase + delta;
+  const int ticks = static_cast<int>(floorf(position));
+  *phase = position - ticks;
+  return ticks;
+}
+inline uint16_t TzfmLfsrForward(uint16_t state) {
+  return (state >> 1) | (((state ^ (state >> 1)) & 1u) << 14);
+}
+inline uint16_t TzfmLfsrReverse(uint16_t state) {
+  return ((state << 1) & 0x7fffu) | (((state >> 14) ^ state) & 1u);
+}
+// Affine jump in O(log ticks), including reverse time; bounded even at high
+// noise-clock ratios. All arithmetic deliberately wraps modulo 2^32.
+inline uint32_t TzfmLcgAdvance(uint32_t state, int ticks) {
+  uint32_t a = ticks < 0 ? 4276115653u : 1664525u;
+  uint32_t b = ticks < 0 ? 0u - 4276115653u * 1013904223u : 1013904223u;
+  unsigned n = ticks < 0 ? static_cast<unsigned>(-ticks) : ticks;
+  while (n) {
+    if (n & 1u) state = a * state + b;
+    b *= a + 1u;
+    a *= a;
+    n >>= 1;
+  }
+  return state;
 }
 // A value/slope discontinuity at a moving phase boundary. The unwrapped
 // segment is shorter than one cycle. Both directions use the same time-domain

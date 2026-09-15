@@ -32,6 +32,9 @@ class GendyEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
+#if PLAITS_BUILD_EXTENDED_TZFM
+  virtual bool linear_tzfm_capable() const { return true; }
+#endif
   virtual bool stereo_capable() const { return PLAITS_STEREO_GENDY; }
   virtual bool fast_fm_capable() const { return true; }
 
@@ -45,6 +48,11 @@ class GendyEngine : public Engine {
   float duration_[kMaxGendyBreakpoints];
   float boundary_[kMaxGendyBreakpoints];
   float phase_;
+#if PLAITS_BUILD_EXTENDED_TZFM
+  float travel_phase_;
+  bool signed_active_;
+  float transition_[2], previous_output_[2];
+#endif
   int segment_;
   int num_breakpoints_;
 

@@ -133,6 +133,9 @@ struct EngineParameters {
 #if PLAITS_BUILD_ENABLE_SYNC_INPUT
         hard_sync(0),
 #endif
+#if PLAITS_BUILD_EXTENDED_TZFM
+        frequency_offset_is_linear(true),
+#endif
         frequency_offset(NULL),
         stereo(false) { }
 
@@ -170,6 +173,17 @@ struct EngineParameters {
   // experimental FM option is compiled, this wrapper is a compile-time null
   // pointer. That lets every engine's optional branch disappear under -Os
   // instead of charging ordinary palettes for unreachable audio-rate code.
+#if PLAITS_BUILD_EXTENDED_TZFM
+  // Hosts set false for exponential FM; direct signed-DSP callers default true.
+  bool frequency_offset_is_linear;
+#endif
+  bool extended_tzfm_active() const {
+#if PLAITS_BUILD_EXTENDED_TZFM
+    return frequency_offset && frequency_offset_is_linear;
+#else
+    return false;
+#endif
+  }
   class FrequencyOffset {
    public:
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
@@ -373,6 +387,8 @@ inline void RenderEngineWithHardSync(
   }
   engine->HardSync();
   segment.trigger = TRIGGER_RISING_EDGE;
+  segment.frequency_offset = parameters.frequency_offset
+      ? static_cast<const float*>(parameters.frequency_offset) + edge : NULL;
   engine->Render(
       segment,
       out + edge,

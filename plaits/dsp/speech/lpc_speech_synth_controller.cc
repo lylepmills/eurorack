@@ -35,6 +35,8 @@
 
 #include "plaits/dsp/oscillator/oscillator.h"
 
+#include "plaits/dsp/extended_tzfm.h"
+
 namespace plaits {
 
 using namespace std;
@@ -275,6 +277,9 @@ void LPCSpeechSynthController::Init(LPCSpeechSynthWordBank* word_bank) {
   word_bank_ = word_bank;
   
   clock_phase_ = 0.0f;
+#if PLAITS_BUILD_EXTENDED_TZFM
+  fm_integral_ = 0.0f;
+#endif
   playback_frame_ = -1;
   last_playback_frame_ = -1;
   remaining_frame_samples_ = 0;
@@ -299,7 +304,11 @@ void LPCSpeechSynthController::Render(
     float gain,
     float* excitation,
     float* output,
-    size_t size) {
+    size_t size
+#if PLAITS_BUILD_EXTENDED_TZFM
+    , const float* frequency_offset
+#endif
+    ) {
   const float rate_ratio = SemitonesToRatio((formant_shift - 0.5f) * 36.0f);
   const float rate = rate_ratio / 6.0f;
   
@@ -382,17 +391,31 @@ void LPCSpeechSynthController::Render(
     copy(&next_sample_[0], &next_sample_[2], &this_sample[0]);
     fill(&next_sample_[0], &next_sample_[2], 0.0f);
     
+#if PLAITS_BUILD_EXTENDED_TZFM
+    float tick_offset = 0.0f;
+    const float offset = frequency_offset ? *frequency_offset++ : 0.0f;
+    if (!frequency_offset) fm_integral_ = 0.0f;
+    fm_integral_ += offset;
+#endif
     clock_phase_ += rate;
     if (clock_phase_ >= 1.0f) {
       clock_phase_ -= 1.0f;
       float reset_time = clock_phase_ / rate;
+#if PLAITS_BUILD_EXTENDED_TZFM
+      tick_offset = fm_integral_ - offset * reset_time;
+      fm_integral_ = offset * reset_time;
+#endif
       float new_sample[2];
       
       synth_.Render(
           prosody_amount,
           pitch_shift,
           &new_sample[0],
-          &new_sample[1], 1);
+          &new_sample[1], 1
+#if PLAITS_BUILD_EXTENDED_TZFM
+          , tick_offset, frequency_offset != NULL
+#endif
+          );
       
       float discontinuity[2] = {
         new_sample[0] - sample_[0],

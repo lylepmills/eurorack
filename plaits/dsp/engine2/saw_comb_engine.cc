@@ -207,7 +207,7 @@ void SawCombEngine::Render(
     float sample_delay = delay;
     float sample_delay_aux = delay_aux;
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
-    if (parameters.frequency_offset) {
+    if (parameters.frequency_offset && !parameters.extended_tzfm_active()) {
       float root_frequency = frequency + parameters.frequency_offset[i];
       if (root_frequency < 1.0e-7f) {
         root_frequency = 1.0e-7f;

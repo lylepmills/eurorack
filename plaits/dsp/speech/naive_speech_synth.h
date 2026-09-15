@@ -56,7 +56,11 @@ class NaiveSpeechSynth {
       float* temp,
       float* excitation,
       float* output,
-      size_t size);
+      size_t size
+#if PLAITS_BUILD_EXTENDED_TZFM
+      , const float* frequency_offset = NULL
+#endif
+      );
 
  private:
   struct Formant {

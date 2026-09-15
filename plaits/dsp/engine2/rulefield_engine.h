@@ -32,6 +32,9 @@ class RulefieldEngine : public Engine {
       float* aux,
       size_t size,
       bool* already_enveloped);
+#if PLAITS_BUILD_EXTENDED_TZFM
+  virtual bool linear_tzfm_capable() const { return true; }
+#endif
   virtual bool stereo_capable() const { return PLAITS_STEREO_RULEFIELD; }
   virtual bool fast_fm_capable() const { return true; }
 
@@ -55,6 +58,10 @@ class RulefieldEngine : public Engine {
   float edge_density_;
   float activity_density_;
   float phase_;
+#if PLAITS_BUILD_EXTENDED_TZFM
+  float travel_phase_;
+  bool signed_active_;
+#endif
   float evolution_phase_;
 
   DISALLOW_COPY_AND_ASSIGN(RulefieldEngine);

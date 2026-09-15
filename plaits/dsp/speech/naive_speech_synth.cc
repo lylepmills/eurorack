@@ -37,6 +37,8 @@
 
 #include "plaits/resources.h"
 
+#include "plaits/dsp/extended_tzfm.h"
+
 namespace plaits {
 
 using namespace std;
@@ -101,7 +103,11 @@ void NaiveSpeechSynth::Render(
     float* temp,
     float* excitation,
     float* output,
-    size_t size) {
+    size_t size
+#if PLAITS_BUILD_EXTENDED_TZFM
+    , const float* frequency_offset
+#endif
+    ) {
   if (click) {
     click_duration_ = kSampleRate * 0.05f;
   }
@@ -112,6 +118,16 @@ void NaiveSpeechSynth::Render(
   }
   
   // Generate excitation signal (glottal pulse).
+#if PLAITS_BUILD_EXTENDED_TZFM
+  if (frequency_offset) {
+    const float click_ratio = click_duration_ ? 0.5f : 1.0f;
+    for (size_t i = 0; i < size; ++i) {
+      const float offset = frequency_offset[i] * click_ratio;
+      pulse_.RenderLinearFm<OSCILLATOR_SHAPE_IMPULSE_TRAIN>(
+          frequency, 0.5f, &offset, excitation + i, 1);
+    }
+  } else
+#endif
   pulse_.Render<OSCILLATOR_SHAPE_IMPULSE_TRAIN>(
       frequency, 0.5f, excitation, size);
   pulse_coloration_.Process<FILTER_MODE_BAND_PASS>(

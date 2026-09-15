@@ -35,6 +35,8 @@
 #include "plaits/dsp/oscillator/oscillator.h"
 #include "plaits/resources.h"
 
+#include "plaits/dsp/extended_tzfm.h"
+
 namespace plaits {
 
 using namespace std;
@@ -58,15 +60,29 @@ void LPCSpeechSynth::Render(
     float pitch_shift,
     float* excitation,
     float* output,
-    size_t size) {
+    size_t size
+#if PLAITS_BUILD_EXTENDED_TZFM
+    , float frequency_offset, bool signed_fm
+#endif
+    ) {
   const float base_f0 = kLPCSpeechSynthDefaultF0 / 8000.0f;
   float d = frequency_ - base_f0;
   float f = (base_f0 + d * prosody_amount) * pitch_shift;
   CONSTRAIN(f, 0.0f, 0.5f);
+#if PLAITS_BUILD_EXTENDED_TZFM
+  const float nominal_f = std::max(f, 1.0e-6f);
+  if (signed_fm) {
+    f = TzfmLimit((base_f0 + d * prosody_amount) * pitch_shift + frequency_offset *
+        (base_f0 + d * prosody_amount) / base_f0, 0.49f);
+  }
+#endif
   
   float next_sample = next_sample_;
   while (size--) {
     phase_ += f;
+#if PLAITS_BUILD_EXTENDED_TZFM
+    if (signed_fm) phase_ = TzfmWrap(phase_);
+#endif
     
     float this_sample = next_sample;
     next_sample = 0.0f;
@@ -91,6 +107,23 @@ void LPCSpeechSynth::Render(
     
     float e[11];
     e[10] = Random::GetSample() > 0 ? noise_energy_ : -noise_energy_;
+#if PLAITS_BUILD_EXTENDED_TZFM
+    if (signed_fm) {
+      this_sample = 0.0f;
+      const float position = phase_ * (32.0f / nominal_f);
+      const int index = static_cast<int>(std::min(position,
+          static_cast<float>(LUT_LPC_EXCITATION_PULSE_SIZE)));
+      if (index < LUT_LPC_EXCITATION_PULSE_SIZE - 1) {
+        const float a = lut_lpc_excitation_pulse[index];
+        const float b = lut_lpc_excitation_pulse[index + 1];
+        this_sample = (a + (b - a) * (position - index)) *
+            (1.0f / 128.0f) * pulse_energy_;
+      }
+      // Preserve a valid continuation if the FM cable disappears mid-chirp.
+      excitation_pulse_sample_index_ = std::min(index + 32,
+          static_cast<int>(LUT_LPC_EXCITATION_PULSE_SIZE));
+    } else
+#endif
     if (excitation_pulse_sample_index_ < LUT_LPC_EXCITATION_PULSE_SIZE) {
       int8_t s = lut_lpc_excitation_pulse[excitation_pulse_sample_index_];
       next_sample += static_cast<float>(s) / 128.0f * pulse_energy_;

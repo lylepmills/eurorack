@@ -39,6 +39,10 @@ void RulefieldEngine::Reset() {
   rule_ = 30;
   generation_ = 0u;
   phase_ = 0.0f;
+#if PLAITS_BUILD_EXTENDED_TZFM
+  travel_phase_ = 0.0f;
+  signed_active_ = false;
+#endif
   evolution_phase_ = 0.0f;
   Seed();
 }
@@ -129,6 +133,10 @@ void RulefieldEngine::Render(
   if (parameters.trigger & TRIGGER_RISING_EDGE) {
     Seed();
     phase_ = 0.0f;
+#if PLAITS_BUILD_EXTENDED_TZFM
+  travel_phase_ = 0.0f;
+  signed_active_ = false;
+#endif
     evolution_phase_ = 0.0f;
   }
 
@@ -141,12 +149,26 @@ void RulefieldEngine::Render(
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
     if (parameters.frequency_offset) {
       frequency += parameters.frequency_offset[i];
-      CONSTRAIN(frequency, 0.0f, 0.24f);
+      CONSTRAIN(frequency, parameters.extended_tzfm_active() ? -0.24f : 0.0f, 0.24f);
     }
 #endif
-    phase_ += frequency;
-    if (phase_ >= 1.0f) {
-      phase_ -= 1.0f;
+    bool cycle;
+#if PLAITS_BUILD_EXTENDED_TZFM
+    if (parameters.extended_tzfm_active()) {
+      if (!signed_active_) travel_phase_ = phase_;
+      signed_active_ = true;
+      cycle = TzfmClock(fabsf(frequency), &travel_phase_) != 0;
+      phase_ = TzfmWrap(phase_ + frequency);
+    } else {
+      signed_active_ = false;
+#else
+    {
+#endif
+      phase_ += frequency;
+      cycle = phase_ >= 1.0f;
+      if (cycle) phase_ -= 1.0f;
+    }
+    if (cycle) {
       evolution_phase_ += evolution_rate;
       int iterations = 0;
       while (evolution_phase_ >= 1.0f && iterations < 8) {
