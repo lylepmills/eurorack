@@ -71,7 +71,9 @@ void AdditiveEngine::UpdateAmplitudes(
     float bumps,
     float* amplitudes,
     const int* harmonic_indices,
-    size_t num_harmonics) {
+    size_t num_harmonics,
+    float odd_gain,
+    float even_gain) {
   const float n = (static_cast<float>(num_harmonics) - 1.0f);
   const float margin = (1.0f / slope - 1.0f) / (1.0f + bumps);
   const float center = centroid * (n + margin) - 0.5f * margin;
@@ -92,6 +94,11 @@ void AdditiveEngine::UpdateAmplitudes(
     gain *= gain;
     
     int j = harmonic_indices[i];
+
+    // The odd/even tilt scales the TARGET amplitude, never the smoothed state
+    // below: amplitudes[] is the one-pole's memory, so tilting it in place fed
+    // the gain back through the filter on every block.
+    gain *= (j & 1) ? even_gain : odd_gain;
     
     // Warning about the following line: this is not a proper LP filter because
     // of the normalization. But in spite of its strange working, this line
@@ -140,20 +147,19 @@ void AdditiveEngine::Render(
   const float raw_slope = (1.0f - 0.6f * raw_bumps) * parameters.morph;
   const float slope = 0.01f + 1.99f * raw_slope * raw_slope * raw_slope;
   const float bumps = 16.0f * raw_bumps * raw_bumps;
+  const float odd_gain = ApplyMacro(
+      1.0f, 1.5f, 0.5f, parameters.macro);
+  const float even_gain = ApplyMacro(
+      1.0f, 0.5f, 1.5f, parameters.macro);
   UpdateAmplitudes(
       centroid,
       slope,
       bumps,
       &amplitudes_[0],
       integer_harmonics,
-      24);
-  const float odd_gain = ApplyMacro(
-      1.0f, 1.5f, 0.5f, parameters.macro);
-  const float even_gain = ApplyMacro(
-      1.0f, 0.5f, 1.5f, parameters.macro);
-  for (int i = 0; i < 24; ++i) {
-    amplitudes_[i] *= (i & 1) ? even_gain : odd_gain;
-  }
+      24,
+      odd_gain,
+      even_gain);
 
   const uint32_t hard_sync = PLAITS_HARD_SYNC_EVENTS(parameters);
 

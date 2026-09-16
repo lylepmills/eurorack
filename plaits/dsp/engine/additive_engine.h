@@ -70,7 +70,9 @@ class AdditiveEngine : public Engine {
       float bumps,
       float* amplitudes,
       const int* harmonic_indices,
-      size_t num_harmonics);
+      size_t num_harmonics,
+      float odd_gain = 1.0f,
+      float even_gain = 1.0f);
 
   HarmonicOscillator<kHarmonicBatchSize> harmonic_oscillator_[kNumHarmonicOscillators];
 
