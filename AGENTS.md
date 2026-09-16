@@ -64,5 +64,30 @@ docker run --rm --platform linux/amd64 \
   -v "$PWD":/workspace -w /workspace \
   mutable-eurorack-dev:local \
   bash -lc 'make -f plaits/makefile BUILD_ROOT=build/stock/ \
-    PROJECT_CONFIGURATION=-DPLAITS_STOCK_ENGINE_LAYOUT -j2 wav'
+    PROJECT_CONFIGURATION=-DPLAITS_STOCK_ENGINE_LAYOUT \
+    PLAITS_STEREO_ALL=0 -j2 wav'
 ```
+
+`PLAITS_STEREO_ALL=0` on the stock layout is required, not optional, and it is
+not a workaround for a regression. Per-engine stereo defaults to ON
+(`plaits/dsp/engine/stereo_config.h`), so a bare `make` compiles the stereo
+render path of all 24 engines — about 23 KB that only a stereo recipe can
+reach. The stock palette (three DX7 banks, Wave Terrain, Speech) is the
+flash-tightest one the builder offers and does not have that to spare, so a
+bare stock build fails to link with `region FLASH overflowed by ~23 KB`. That
+is a real budget result, not a broken tree: the hosted builder reaches the same
+verdict for an all-stereo stock recipe and reports it to the user as
+`flash_budget_exceeded` ("Remove an engine, disable per-engine stereo, …").
+For a mono recipe the builder passes `PLAITS_STEREO_<X>=0` for every engine
+(`_stereo_disable_flags` in `alt_firmwares/plaits_lab_builder/container_server.py`),
+and `PLAITS_STEREO_ALL=0` is the local shorthand that emits the identical
+per-object flags. Measured at `611657d`: stock links at 228,484 of 229,376
+bytes (892 spare) and passes `validate_local_build.py`; experimental links
+all-stereo at 227,108 (2,268 spare).
+
+So the two commands cover different ground on purpose — experimental proves a
+change still links with every stereo path compiled in, stock proves it links in
+the legacy engine registry against a nearly full flash. Both must pass. If the
+stock build overflows by roughly 23 KB, check for a missing `PLAITS_STEREO_ALL=0`
+before looking for a size regression; if it overflows by a few hundred bytes,
+the change really did cost more flash than the stock palette had left.

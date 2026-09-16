@@ -151,6 +151,15 @@ endif
 # just two variants (on/off) and the default (all-stereo) build's warm ccache is
 # untouched (no flag is added when the value is 1/unset). <MACRO>:<object> pairs;
 # the three DX7 banks share six_op_engine, hence SIX_OP.
+#
+# PLAITS_STEREO_ALL=0 disables every engine's stereo at once. It is a
+# convenience for local mono builds — the flash-tightest palettes only link
+# in mono, and spelling out fifty PLAITS_STEREO_<X>=0 vars by hand is
+# error-prone (see AGENTS.md "Required validation"). It emits exactly the same
+# per-object -D flags as the explicit form, so ccache keys are unchanged and
+# the hosted builder, which always passes the per-engine vars, is unaffected.
+# A per-engine PLAITS_STEREO_<X>=1 does NOT override it; this is an all-mono
+# switch, not a default.
 PLAITS_STEREO_MODELS = \
   VIRTUAL_ANALOG:virtual_analog_engine WAVESHAPING:waveshaping_engine \
   VIRTUAL_ANALOG_DUAL:virtual_analog_dual_engine \
@@ -177,7 +186,7 @@ PLAITS_STEREO_MODELS = \
   BUBBLETIME:bubbletime_engine ZXPHASE48K:zxphase48k_engine \
   ZXPULSE48K:zxpulse48k_engine ACID:acid_engine
 define _plaits_stereo_rule
-$(BUILD_DIR)$(word 2,$(subst :, ,$(1))).o: CPPFLAGS += $$(if $$(filter 0,$$(PLAITS_STEREO_$(word 1,$(subst :, ,$(1))))),-DPLAITS_STEREO_$(word 1,$(subst :, ,$(1)))=0)
+$(BUILD_DIR)$(word 2,$(subst :, ,$(1))).o: CPPFLAGS += $$(if $$(filter 0,$$(PLAITS_STEREO_$(word 1,$(subst :, ,$(1)))) $$(PLAITS_STEREO_ALL)),-DPLAITS_STEREO_$(word 1,$(subst :, ,$(1)))=0)
 endef
 $(foreach _m,$(PLAITS_STEREO_MODELS),$(eval $(call _plaits_stereo_rule,$(_m))))
 
