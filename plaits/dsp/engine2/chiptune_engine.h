@@ -63,6 +63,13 @@ class ChiptuneEngine : public Engine {
   virtual bool stereo_capable() const { return PLAITS_STEREO_CHIPTUNE; }
 
   inline void set_envelope_shape(float envelope_shape) {
+    if (envelope_shape_ == NO_ENVELOPE && envelope_shape != NO_ENVELOPE) {
+      // Start at the requested bass-envelope mix, not a fully open bass.
+      // Otherwise the smoothing ramp produces a short note on every idle
+      // voice when entering triggered mode, even before its first clock.
+      aux_envelope_amount_ = envelope_shape * 20.0f;
+      CONSTRAIN(aux_envelope_amount_, 0.0f, 1.0f);
+    }
     envelope_shape_ = envelope_shape;
   }
   
