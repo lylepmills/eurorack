@@ -350,6 +350,10 @@ void LPCSpeechSynthController::Render(
   // scanning intentionally remain continuous.
   if (bank >= 0 && !free_running && playback_frame_ == -1) {
     gain = 0.0f;
+    // Vowel scanning can leave the interpolator at unity while the outer
+    // LPG is closed. Entering a triggered word bank bypasses that LPG, so
+    // the old gain must not leak through as a one-block fade to silence.
+    gain_ = 0.0f;
   }
 
   if (playback_frame_ == -1 && remaining_frame_samples_ == 0) {
