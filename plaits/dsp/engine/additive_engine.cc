@@ -147,10 +147,14 @@ void AdditiveEngine::Render(
   const float raw_slope = (1.0f - 0.6f * raw_bumps) * parameters.morph;
   const float slope = 0.01f + 1.99f * raw_slope * raw_slope * raw_slope;
   const float bumps = 16.0f * raw_bumps * raw_bumps;
+  // The 2.25/0.25 extremes are deliberately wider than a stock-value macro's
+  // usual +/-50%: the tilt used to be applied to the one-pole's state and so
+  // settled at roughly the square of its nominal ratio, and this range keeps
+  // the depth people already have in their fingers now that it applies once.
   const float odd_gain = ApplyMacro(
-      1.0f, 1.5f, 0.5f, parameters.macro);
+      1.0f, 2.25f, 0.25f, parameters.macro);
   const float even_gain = ApplyMacro(
-      1.0f, 0.5f, 1.5f, parameters.macro);
+      1.0f, 0.25f, 2.25f, parameters.macro);
   UpdateAmplitudes(
       centroid,
       slope,
