@@ -392,7 +392,8 @@ int main() {
   tzfm_count += terrain.linear_tzfm_capable();
   fast_count += terrain.fast_fm_capable();
   Check(tzfm_count == (PLAITS_BUILD_EXTENDED_TZFM ? 76 : 29), "catalog", "TZFM target count");
-  Check(fast_count == 34, "catalog", "Plaits Fast FM qualification must stay unchanged");
+  // 34 at the time this suite was written, plus Circuit Zaps (010025d).
+  Check(fast_count == 35, "catalog", "Plaits Fast FM qualification must stay unchanged");
   TestSignedPrimitives();
   Check(!TapfieldEngine().linear_tzfm_capable(), "tapfield", "corruption is not reversible");
   Check(!AttractorEngine().linear_tzfm_capable(), "attractor", "negative time reverses damping");
