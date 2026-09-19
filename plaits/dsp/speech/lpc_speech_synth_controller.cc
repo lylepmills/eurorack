@@ -315,6 +315,7 @@ void LPCSpeechSynthController::Render(
     if (reset_everything) {
       playback_frame_ = -1;
       last_playback_frame_ = -1;
+      if (!free_running) remaining_frame_samples_ = 0;
     }
   }
   
@@ -343,6 +344,14 @@ void LPCSpeechSynthController::Render(
     remaining_frame_samples_ = 0;
   }
   
+  // Word banks with a patched trigger must wait for an utterance. The idle
+  // scan frame is otherwise audible on every unused polyphonic voice, and
+  // again whenever a bank change resets playback. Vowels and unpatched
+  // scanning intentionally remain continuous.
+  if (bank >= 0 && !free_running && playback_frame_ == -1) {
+    gain = 0.0f;
+  }
+
   if (playback_frame_ == -1 && remaining_frame_samples_ == 0) {
     synth_.PlayFrame(
         frames,
