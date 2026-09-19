@@ -224,6 +224,21 @@ void BrassEngine::Render(
         - 2.0f * kBrassLipZeta * sample_lip_w * lip_v_;
     lip_x_ += lip_v_;
 
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    if (parameters.frequency_offset) {
+      // Audio-rate stiffness changes can pump the lip oscillator even though
+      // the flow opening below is bounded. Bound the mechanical state at the
+      // same closed/open stops, and stop velocity travelling into a stop.
+      // Otherwise its hidden displacement can overflow and poison the bore.
+      if (lip_x_ < -rest_opening) {
+        lip_x_ = -rest_opening;
+        if (lip_v_ < 0.0f) lip_v_ = 0.0f;
+      } else if (lip_x_ > kBrassMaxOpening - rest_opening) {
+        lip_x_ = kBrassMaxOpening - rest_opening;
+        if (lip_v_ > 0.0f) lip_v_ = 0.0f;
+      }
+    }
+#endif
     float opening = rest_opening + lip_x_;
     if (opening < 0.0f) {
       // Lips closed: no flow, and they stop rather than keep travelling.
