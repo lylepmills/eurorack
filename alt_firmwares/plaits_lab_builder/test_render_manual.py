@@ -233,6 +233,45 @@ class RenderManualTest(unittest.TestCase):
             disabled = pdf_strings(disabled_output).replace(")(", " ")
             self.assertNotIn("Already in octave switching", disabled)
 
+    @unittest.skipUnless(HAS_REPORTLAB, "ReportLab is installed in the builder image and bundled document runtime")
+    def test_high_pass_gate_build_alone_prints_the_folded_colour(self) -> None:
+        recipe = self.calibration_recipe(False)
+        recipe["schemaVersion"] = 30
+        recipe["preferences"] = {
+            "navigationMode": "linear",
+            "calibration": False,
+            "colorBlindMode": False,
+            "replaceableFmBanks": False,
+            "syncInput": False,
+            "linearTzfm": False,
+            "fastFm": False,
+            "simplifiedPitchRanges": False,
+            "envelopeContour": False,
+            "quickRetune": False,
+            "highPassGate": True,
+        }
+        recipe["initialOptions"]["attenuverterMode"] = "stock"
+        recipe["initialOptions"]["trigResponse"] = "trigger"
+        recipe["initialOptions"]["lockedFrequencyKnob"] = "macro-4"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            enabled_output = Path(temp_dir) / "high-pass-gate.pdf"
+            render_pdf(manual_document(recipe), enabled_output)
+            enabled = pdf_strings(enabled_output).replace(")(", " ")
+            # ReportLab's text stream escapes ">" so the arrows do not survive
+            # extraction; the option label is checked by its distinctive end.
+            self.assertIn("HPG", enabled)
+            self.assertNotIn("VCFA", enabled)
+            self.assertIn("folds the hidden COLOUR control", enabled)
+            self.assertIn("high pass side from the other", enabled)
+
+            recipe["preferences"]["highPassGate"] = False
+            disabled_output = Path(temp_dir) / "no-high-pass-gate.pdf"
+            render_pdf(manual_document(recipe), disabled_output)
+            disabled = pdf_strings(disabled_output).replace(")(", " ")
+            self.assertIn("VCFA", disabled)
+            self.assertNotIn("HPG", disabled)
+            self.assertNotIn("folds the hidden COLOUR control", disabled)
+
     def short_bank_recipe(self) -> dict:
         # v7 short bank: green full (8), red partly empty (3 + 5 empty), amber
         # full (8). The Worker normalizes filled slots to bare IDs interleaved

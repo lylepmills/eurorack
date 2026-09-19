@@ -24,8 +24,10 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Approximative low pass gate, with a high pass response for the far half of
-// COLOUR (see LpgColourToHf in dsp/envelope.h).
+// Approximative low pass gate. With PLAITS_BUILD_HIGH_PASS_GATE it also offers
+// a high pass response, for the far half of COLOUR (see LpgColourToHf in
+// dsp/envelope.h); without it the high_pass argument is ignored and the loop
+// is the stock one.
 
 #ifndef PLAITS_DSP_FX_LOW_PASS_GATE_H_
 #define PLAITS_DSP_FX_LOW_PASS_GATE_H_
@@ -35,6 +37,7 @@
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/dsp/filter.h"
 #include "stmlib/dsp/parameter_interpolator.h"
+#include "plaits/build_config.h"
 
 namespace plaits {
   
@@ -62,10 +65,7 @@ class LowPassGate {
     filter_.set_f_q<stmlib::FREQUENCY_DIRTY>(frequency, 0.4f);
     while (size--) {
       const float s = *in_out * gain_modulation.Next();
-      float lp, hp;
-      filter_.Process<stmlib::FILTER_MODE_LOW_PASS, stmlib::FILTER_MODE_HIGH_PASS>(
-          s, &lp, &hp);
-      const float filtered = high_pass ? hp : lp;
+      const float filtered = Filter(s, high_pass);
       *in_out++ = filtered + (s - filtered) * hf_bleed;
     }
   }
@@ -83,10 +83,7 @@ class LowPassGate {
     filter_.set_f_q<stmlib::FREQUENCY_DIRTY>(frequency, 0.4f);
     while (size--) {
       const float s = *in++ * gain_modulation.Next();
-      float lp, hp;
-      filter_.Process<stmlib::FILTER_MODE_LOW_PASS, stmlib::FILTER_MODE_HIGH_PASS>(
-          s, &lp, &hp);
-      const float filtered = high_pass ? hp : lp;
+      const float filtered = Filter(s, high_pass);
       *out = stmlib::Clip16(
           1 + static_cast<int32_t>(filtered + (s - filtered) * hf_bleed));
       out += stride;
@@ -94,6 +91,18 @@ class LowPassGate {
   }
   
  private:
+  inline float Filter(float s, bool high_pass) {
+#if PLAITS_BUILD_HIGH_PASS_GATE
+    float lp, hp;
+    filter_.Process<stmlib::FILTER_MODE_LOW_PASS, stmlib::FILTER_MODE_HIGH_PASS>(
+        s, &lp, &hp);
+    return high_pass ? hp : lp;
+#else
+    (void)high_pass;
+    return filter_.Process<stmlib::FILTER_MODE_LOW_PASS>(s);
+#endif  // PLAITS_BUILD_HIGH_PASS_GATE
+  }
+  
   float previous_gain_;
   stmlib::Svf filter_;
   

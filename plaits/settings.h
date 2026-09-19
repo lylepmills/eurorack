@@ -52,11 +52,12 @@ struct PersistentData {
 };
 
 // Bit 7 of State::engine (bits 0-4 are the slot, 5-6 the attenuverter mode)
-// records that lpg_colour was saved under the folded COLOUR law, where the
-// left half of the knob is the low pass gate and the right half a high pass
-// gate. A state without it came from firmware whose whole travel was the low
-// pass gate, and is remapped once so the module keeps the sound it was saved
-// with. Kept in a spare bit so State does not grow and reset every setting.
+// records that lpg_colour was saved by a PLAITS_BUILD_HIGH_PASS_GATE build,
+// under the folded COLOUR law where the left half of the knob is the low pass
+// gate and the right half a high pass gate. When the flag disagrees with the
+// running build the byte is remapped once at boot (either way), so a module
+// moved between the two builds keeps the sound it was saved with. Kept in a
+// spare bit so State does not grow and reset every setting.
 const uint8_t kLpgColourFoldedFlag = 0x80;
 
 struct State {

@@ -687,6 +687,7 @@ test("every historical preference shape still loads, and nothing else does", asy
     ["simplifiedPitchRanges"],
     ["envelopeContour"],
     ["quickRetune"],
+    ["highPassGate"],
   ];
 
   const cumulative: string[] = [];
@@ -700,7 +701,7 @@ test("every historical preference shape still loads, and nothing else does", asy
     // Present flags read false; absent ones must not invent a value either.
     for (const key of ["calibration", "colorBlindMode", "replaceableFmBanks",
       "syncInput", "linearTzfm", "fastFm", "simplifiedPitchRanges",
-      "envelopeContour", "quickRetune"]) {
+      "envelopeContour", "quickRetune", "highPassGate"]) {
       assert.equal(
         normalized.preferences[key as "calibration"], false,
         `${key} should be false for the {${cumulative.join(",")}} shape`,
@@ -1262,6 +1263,76 @@ test("Ro'Ved is a schema-15 hardware target and changes build/manual identity", 
   const identity = { sourceRevision: "source", toolchain: "toolchain", contract: "15" };
   assert.notEqual(await computeBuildKey(plaits, identity), await computeBuildKey(roved, identity));
   assert.notEqual(await computeManualKey(plaits, "8"), await computeManualKey(roved, "8"));
+});
+
+test("the high pass gate is a schema-30 preference on either panel with its own field guide", async () => {
+  const publicCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_catalog/public_catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const chordCatalog = JSON.parse(await readFile(
+    new URL("../../plaits_lab_chord_tables/catalog.json", import.meta.url),
+    "utf8",
+  ));
+  const engines = new Map<string, any>(
+    publicCatalog.engines.map((engine: { id: string }) => [engine.id, engine]),
+  );
+  const recipe = structuredClone(fixture);
+  recipe.schemaVersion = 30;
+  recipe.slots = fixture.slots.map((engineId: string) => {
+    const engine = engines.get(engineId);
+    return {
+      engine: engineId,
+      package: engine.packageId,
+      version: engine.version,
+      digest: engine.digest,
+    };
+  });
+  recipe.preferences = {
+    navigationMode: "linear",
+    calibration: false,
+    colorBlindMode: false,
+    replaceableFmBanks: false,
+    syncInput: false,
+    linearTzfm: false,
+    fastFm: false,
+    simplifiedPitchRanges: false,
+    envelopeContour: false,
+    quickRetune: false,
+    highPassGate: true,
+  };
+  recipe.initialOptions = {
+    lockedFrequencyKnob: "octaves",
+    modelInput: "model",
+    levelInput: "level",
+    auxOutput: "alternate-model",
+    suboscillatorOctave: 0,
+    chordTable: "original",
+    holdOnTrigger: false,
+    attenuverterMode: "stock",
+    trigResponse: "trigger",
+  };
+  recipe.resources = { chordTables: chordCatalog.tables };
+
+  const folded = normalizeRecipe(recipe);
+  assert.equal(folded.schemaVersion, 30);
+  assert.equal(folded.preferences.highPassGate, true);
+  // Not a panel gesture: Ro'Ved may carry it.
+  const roved = normalizeRecipe({ ...recipe, target: "plum-audio-roved" });
+  assert.equal(roved.preferences.highPassGate, true);
+  // The key set is closed per schema, so a v29 recipe cannot smuggle it in.
+  assert.throws(
+    () => normalizeRecipe({ ...recipe, schemaVersion: 29 }),
+    (error: { code?: string }) => error.code === "unsupported_schema",
+  );
+  // The guide prints a different LIGHT 5 value and an extra paragraph, so the
+  // two builds must never share a cached PDF.
+  const unfolded = normalizeRecipe({
+    ...recipe,
+    preferences: { ...recipe.preferences, highPassGate: false },
+  });
+  assert.equal(unfolded.preferences.highPassGate, false);
+  assert.notEqual(await computeManualKey(folded, "25"), await computeManualKey(unfolded, "25"));
 });
 
 test("the color-blind bank display is baked, version-gated, and type-checked", async () => {

@@ -1851,6 +1851,24 @@ void ValidateLpgColourFold() {
     fprintf(stderr, "Old-law COLOUR bytes do not migrate onto the LPG half\n");
     exit(1);
   }
+
+  // And back: a module returning to a build without the fold gets its left
+  // half stretched over the whole travel again, within the quantization the
+  // forward step spent (two old steps per folded step), while the detent and
+  // the high pass side land on the unfolded law's VCA end.
+  for (int old_colour = 0; old_colour < 256; ++old_colour) {
+    const int round_trip = UnmigrateLpgColourByte(
+        MigrateLpgColourByte(static_cast<uint8_t>(old_colour)));
+    ok &= abs(round_trip - old_colour) <= 2;
+  }
+  ok &= UnmigrateLpgColourByte(128) == 255;
+  ok &= UnmigrateLpgColourByte(200) == 255;
+  ok &= UnmigrateLpgColourByte(255) == 255;
+  ok &= UnmigrateLpgColourByte(0) == 0;
+  if (!ok) {
+    fprintf(stderr, "Folded COLOUR bytes do not migrate back onto the old law\n");
+    exit(1);
+  }
   printf("COLOUR fold: LPG -> VCA -> HPG validated (bass share LPG %.3f, VCA %.3f, HPG %.3f)\n",
          bass_lp, bass_vca, bass_hp);
 }

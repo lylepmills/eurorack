@@ -827,13 +827,18 @@ void Voice::Render(
       (!level_patched && !modulations.trigger_patched);
   bool aux_lpg_bypass = lpg_bypass || (patch.aux_is_subosc() && !use_aux_crossfade);
   
-  // Compute LPG parameters. COLOUR is folded: low pass gate on its left half,
-  // plain VCA across the centre detent, high pass gate on its right half (see
-  // LpgColourToHf). Everything below keys off the VCA-likeness, so the decay
-  // tail and the cutoff nudge mirror on the two sides.
+  // Compute LPG parameters. In a PLAITS_BUILD_HIGH_PASS_GATE build COLOUR is
+  // folded: low pass gate on its left half, plain VCA across the centre
+  // detent, high pass gate on its right half (see LpgColourToHf). Everything
+  // below keys off the VCA-likeness, so the decay tail and the cutoff nudge
+  // mirror on the two sides.
   if (!lpg_bypass) {
+#if PLAITS_BUILD_HIGH_PASS_GATE
     const float hf = LpgColourToHf(patch_lpg_colour);
     lpg_envelope_.set_high_pass(LpgColourIsHighPass(patch_lpg_colour));
+#else
+    const float hf = patch_lpg_colour;
+#endif  // PLAITS_BUILD_HIGH_PASS_GATE
     const float decay_tail = (20.0f * kBlockSize) / kSampleRate *
         SemitonesToRatio(-72.0f * patch_decay + 12.0f * hf) - short_decay;
     

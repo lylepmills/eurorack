@@ -129,6 +129,16 @@
 #define PLAITS_BUILD_QUICK_RETUNE 0
 #endif
 
+// Fold the hidden COLOUR control: low pass gate on its left half, a plain VCA
+// across a 5% detent at the centre, a high pass gate on its right half (see
+// LpgColourToHf in dsp/envelope.h). Build-time-only: when disabled the whole
+// COLOUR travel is the stock low pass gate, the gate keeps its single-output
+// filter loop, and a COLOUR byte saved under the fold is remapped back once at
+// boot, so a module moved between the two builds keeps the sound it had.
+#ifndef PLAITS_BUILD_HIGH_PASS_GATE
+#define PLAITS_BUILD_HIGH_PASS_GATE 0
+#endif
+
 #ifndef PLAITS_BUILD_LEVEL_CV_OPTION
 #define PLAITS_BUILD_LEVEL_CV_OPTION 0
 #endif

@@ -125,6 +125,23 @@ custom Wavetable banks. Schema 27 adds four-way articulation, sixteen chord
 tables, Ro'Ved gestures, and Acid. Schema 28 promotes Wavetable resources into
 a shared Wave Tables library with per-engine routes.
 
+Schema 30 adds `highPassGate`, an off-by-default Advanced option on either
+panel. It folds the hidden COLOUR control: the left half stays the stock low
+pass gate, a 5% flat detent at the centre is a plain VCA, and the right half is
+a high pass gate whose notes thin to a click as they decay. The seam is free:
+the gate's bleed is exactly 1 at the VCA point for every vactrol state, so
+swapping the state variable filter's low pass output for its high pass output
+there changes no sample. The four COLOUR lights then show filter amount from
+either end (low pass from one, high pass from the other, dark at the VCA
+centre), and the MODEL-input "LPG colour" CV sweeps the whole three-way range.
+It is an option rather than always-on precisely because it changes what an
+existing knob does; a build without it keeps the stock COLOUR law byte for
+byte in the gate loop, and the firmware remaps a saved COLOUR byte at boot in
+whichever direction the module moved (flagged in the spare bit 7 of the engine
+byte), so switching the option never changes the sound a module was saved with.
+Measured cost with arm-none-eabi GCC 13 on the stock layout: +224 B text when
+enabled; the reverse migration every unfolded build carries is +48 B.
+
 ## Editable local source builds
 
 `export_recipe_source.py` turns a saved browser configuration into the generated
@@ -488,13 +505,15 @@ does. Like contract 14 this is a display-name change, so it ships with the
 image that carries the renderer and bumps `PLAITS_MANUAL_CONTRACT` to 24 in the
 same rollout.
 
-Contract 25 accompanies the folded COLOUR law in the firmware: the hidden
-COLOUR control now runs low pass gate, plain VCA (a 5% detent at the centre),
-high pass gate across its travel, so the MODEL-input option-menu value reads
-"LPG colour (LPG->VCA->HPG)" instead of "LPG colour (VCFA->VCA)". Unlike 14 and
-24 this is not display-only — the firmware behind it changes — so it ships with
-the image built from the commit carrying `plaits/dsp/envelope.h`'s fold, never
-ahead of it.
+Contract 25 accompanies the schema-30 `highPassGate` option: on a build that
+carries it, LIGHT 5's value prints "LPG colour (LPG->VCA->HPG)" instead of
+"LPG colour (VCFA->VCA)" and the options page gains a paragraph on the folded
+COLOUR control and its two-ended light bar; a build without the option renders
+exactly as before. `computeManualKey` folds the `highPassGate` flag, so the two
+guides cache separately. Unlike 14 and 24 this is
+not display-only — the firmware behind it changes — so it ships with the image
+built from the commit carrying `plaits/dsp/envelope.h`'s fold, never ahead of
+it.
 
 Since contract 21 this is enforced rather than remembered. `render_manual.py`
 declares `MANUAL_CONTRACT`, the lowest contract that describes what it prints;

@@ -85,7 +85,7 @@ MENU_LIGHTS = (
     ("TRIG response", ("Trigger", "Gate", "Velocity trigger", "Velocity gate")),
     ("MODEL input", (
         "Model select", "TWIST (fourth control)", "Aux crossfade",
-        "LPG colour (LPG->VCA->HPG)", "Sync In (experimental)",
+        "LPG colour (VCFA->VCA)", "Sync In (experimental)",
     )),
     ("LEVEL input", ("Level", "LPG decay", "Auto: decay or velocity")),
     ("Hold on trigger", ("Off (live CV)", "Sample & hold")),
@@ -100,6 +100,19 @@ ATTENUVERTER_OPTIONS_NOTE = (
     "restrained movement close to the knob setting and CW selects broader, farther-reaching movement; both directions are "
     "bipolar. Moving farther from center increases the range, and in Drift also the speed. Patched CV and each model's "
     "dedicated attenuverter behavior always take priority. "
+)
+
+# Printed in place of LIGHT 5's stock "LPG colour" value on a build with the
+# folded COLOUR control, so the guide and the module in front of the reader
+# agree on what the CV sweeps.
+HIGH_PASS_GATE_MODEL_INPUT_VALUE = "LPG colour (LPG->VCA->HPG)"
+
+HIGH_PASS_GATE_NOTE = (
+    "This build folds the hidden COLOUR control (hold a model button and turn TIMBRE). "
+    "Its left half is the familiar low pass gate, its centre is a plain VCA with a small flat spot so it can be found by hand, "
+    "and its right half is a high pass gate, whose notes thin to a click as they decay instead of dulling. "
+    "The four COLOUR lights show how much filter is in the gate rather than where the knob sits: the low pass side fills from one end, "
+    "the high pass side from the other, and the VCA centre is dark. LIGHT 5's LPG colour setting sends MODEL CV across the same three-way range. "
 )
 
 SYNC_INPUT_OPTIONS_NOTE = (
@@ -391,6 +404,7 @@ def manual_document(recipe: Any, build_key: str | None = None) -> dict[str, Any]
         "trigResponseOption": build.trig_response_option,
         "envelopeContour": build.envelope_contour == 1,
         "quickRetune": build.quick_retune == 1,
+        "highPassGate": build.high_pass_gate == 1,
         "modelCVOption": build.model_cv_option,
     }
 
@@ -744,6 +758,11 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
             # Sync detection and engine reset paths are recipe-scoped for flash.
             # Guides for ordinary builds keep the original four settings.
             meanings = meanings[:4]
+        if light_index == 4 and document.get("highPassGate"):
+            meanings = tuple(
+                HIGH_PASS_GATE_MODEL_INPUT_VALUE if value == 3 else meaning
+                for value, meaning in enumerate(meanings)
+            )
         state_indices = (
             TRIG_RESPONSE_LED_STATE_INDICES
             if light_index == 3 else range(len(meanings))
@@ -822,6 +841,9 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         SYNC_INPUT_OPTIONS_NOTE
         if document.get("modelCVOption", 0) == 4 else ""
     )
+    high_pass_gate_note = (
+        HIGH_PASS_GATE_NOTE if document.get("highPassGate") else ""
+    )
     options_note = (
         "LIGHT 4 chooses Trigger, Gate, Velocity trigger, or Velocity gate response. "
         "LIGHT 2 stays dark, and the light navigation skips it, unless LIGHT 1 is set to a suboscillator — it has nothing to act on otherwise. "
@@ -829,6 +851,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         "LIGHT 6's LPG-decay and Auto settings apply only when TRIG is patched. "
         f"{contour_options_note}"
         f"{sync_input_options_note}"
+        f"{high_pass_gate_note}"
         "Auto sends LEVEL to LPG decay on ordinary oscillator models, but keeps LEVEL as velocity/accent on models with their own envelope. "
         f"{ATTENUVERTER_OPTIONS_NOTE}"
         "Outside the menu, click FREQUENCY/TIMBRE for previous/next model and "
@@ -839,6 +862,7 @@ def render_pdf(document: dict[str, Any], output: Path) -> None:
         "LIGHT 3 applies in octave-switching (frequency-locked) mode. Whenever LIGHT 3 is not Octaves, hold the right button and turn MORPH to change octaves. "
         f"{contour_options_note}"
         f"{sync_input_options_note}"
+        f"{high_pass_gate_note}"
         "LIGHT 6's LPG-decay and Auto settings apply only when TRIG is patched. "
         "Auto sends LEVEL to LPG decay on ordinary oscillator models, but keeps LEVEL as velocity/accent on models with their own envelope. "
         f"{ATTENUVERTER_OPTIONS_NOTE}"

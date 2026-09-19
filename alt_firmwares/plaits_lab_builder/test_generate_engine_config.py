@@ -1427,6 +1427,45 @@ class GenerateEngineConfigTest(unittest.TestCase):
             validate_recipe(disabled).options_profile_id,
         )
 
+    def high_pass_gate_recipe(self, slots: list) -> dict:
+        recipe = self.quick_retune_recipe(slots)
+        recipe["schemaVersion"] = 30
+        recipe["preferences"].update({
+            "quickRetune": False,
+            "highPassGate": True,
+        })
+        return recipe
+
+    def test_high_pass_gate_is_off_by_default_and_compiles_only_when_selected(self) -> None:
+        slots = ["virtual-analog"] * 24
+        default_config = render_config(validate_recipe(self.v12_recipe(slots, [])))
+        enabled_config = render_config(validate_recipe(self.high_pass_gate_recipe(slots)))
+        self.assertIn("#define PLAITS_BUILD_HIGH_PASS_GATE 0", default_config)
+        self.assertIn("#define PLAITS_BUILD_HIGH_PASS_GATE 1", enabled_config)
+
+    def test_high_pass_gate_requires_v30_and_allows_roved(self) -> None:
+        slots = ["virtual-analog"] * 24
+        too_old = self.high_pass_gate_recipe(slots)
+        too_old["schemaVersion"] = 29
+        with self.assertRaisesRegex(ValueError, "schemaVersion 30"):
+            validate_recipe(too_old)
+
+        # Unlike quick retune the fold is not a panel gesture, so Ro'Ved may
+        # opt in: its COLOUR bar goes through the same per-panel LED map.
+        roved = self.high_pass_gate_recipe(slots)
+        roved["target"] = "plum-audio-roved"
+        self.assertEqual(validate_recipe(roved).high_pass_gate, 1)
+
+    def test_high_pass_gate_does_not_disturb_the_options_profile(self) -> None:
+        slots = ["virtual-analog"] * 24
+        enabled = self.high_pass_gate_recipe(slots)
+        disabled = self.high_pass_gate_recipe(slots)
+        disabled["preferences"]["highPassGate"] = False
+        self.assertEqual(
+            validate_recipe(enabled).options_profile_id,
+            validate_recipe(disabled).options_profile_id,
+        )
+
     def test_experimental_fm_preferences_are_independent_v23_flags(self) -> None:
         slots = ["waveshaping", "two-op-fm", "vowel-fof"] + ["virtual-analog"] * 21
         for linear_tzfm, fast_fm in product((False, True), repeat=2):

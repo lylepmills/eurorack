@@ -62,7 +62,7 @@ assert PACKED_BANK_SIZE % FLASH_PAGE_SIZE == 0
 # versions so adding a schema at the ceiling does not require extending a trail
 # of "10, 11, 12..." whitelists in the build container.
 MIN_RECIPE_SCHEMA_VERSION = 2
-MAX_RECIPE_SCHEMA_VERSION = 29
+MAX_RECIPE_SCHEMA_VERSION = 30
 CONFIGURATION_MIN_SCHEMA_VERSION = 4
 RESOURCES_MIN_SCHEMA_VERSION = 5
 FOUR_BANK_MIN_SCHEMA_VERSION = 6
@@ -112,6 +112,11 @@ SYNC_INPUT_PREFERENCE_MIN_SCHEMA_VERSION = 22
 SIMPLIFIED_PITCH_RANGES_MIN_SCHEMA_VERSION = 24
 GATE_ARTICULATION_MIN_SCHEMA_VERSION = 27
 QUICK_RETUNE_MIN_SCHEMA_VERSION = 29
+# v30: fold the hidden COLOUR control into low pass gate -> VCA -> high pass
+# gate. Compile-time only; a build without it keeps the stock COLOUR law and
+# the firmware remaps a saved COLOUR byte at boot in whichever direction the
+# module moved, so the option changes no persisted state's meaning.
+HIGH_PASS_GATE_MIN_SCHEMA_VERSION = 30
 
 # v25: Natural Speech word banks. The engine's demo banks are a compile-time
 # fallback, so a recipe carrying its own REPLACES them wholesale rather than
@@ -138,6 +143,7 @@ PREFERENCE_TIERS = (
     ("simplifiedPitchRanges",),
     ("envelopeContour",),
     ("quickRetune",),
+    ("highPassGate",),
 )
 
 # The starting-option tiers, same scheme and same reasoning as PREFERENCE_TIERS:
@@ -268,6 +274,9 @@ class BuildRecipe:
     # v29: restore the standard-panel right-button + FREQUENCY retune shortcut
     # while FREQUENCY itself is selecting octaves. Compile-time capability only.
     quick_retune: int = 0
+    # v30: 1 folds COLOUR into LPG -> VCA -> HPG. Compile-time capability only,
+    # and like the two above it stays out of the options profile-id fold.
+    high_pass_gate: int = 0
     # v23: independent experimental FM capabilities. Neither is a saved runtime
     # option, so neither belongs in the options profile-id fold.
     linear_tzfm: int = 0
@@ -1911,6 +1920,16 @@ def validate_recipe(value: Any) -> BuildRecipe:
     if quick_retune and target == "plum-audio-roved":
         raise ValueError("the quick-retune shortcut is available only on standard Plaits")
 
+    # High pass gate (v30). Panel-independent: the folded COLOUR bar is drawn
+    # through the same per-panel LED map as the stock one.
+    high_pass_gate = bool(preferences.get("highPassGate", False))
+    if not isinstance(preferences.get("highPassGate", False), bool):
+        raise ValueError("recipe contains an unsupported firmware option")
+    if high_pass_gate and schema_version < HIGH_PASS_GATE_MIN_SCHEMA_VERSION:
+        raise ValueError(
+            f"the high pass gate requires schemaVersion "
+            f"{HIGH_PASS_GATE_MIN_SCHEMA_VERSION}")
+
     # Experimental FM (v23). Linear TZFM chooses the modulation law; Fast FM
     # chooses the converter mode. They are intentionally independent. Fast FM
     # disables LEVEL CV for the entire firmware because FM and LEVEL share
@@ -1953,6 +1972,7 @@ def validate_recipe(value: Any) -> BuildRecipe:
         envelope_contour=1 if envelope_contour else 0,
         simplified_pitch_ranges=1 if simplified_pitch_ranges else 0,
         quick_retune=1 if quick_retune else 0,
+        high_pass_gate=1 if high_pass_gate else 0,
         linear_tzfm=1 if linear_tzfm else 0,
         fast_fm=1 if fast_fm else 0,
         user_data_bank_overrides=tuple(user_data_banks),
@@ -2689,6 +2709,7 @@ def render_config(recipe: BuildRecipe) -> str:
 #define PLAITS_BUILD_MODEL_CV_OPTION {recipe.model_cv_option}
 #define PLAITS_BUILD_SIMPLIFIED_PITCH_RANGES {recipe.simplified_pitch_ranges}
 #define PLAITS_BUILD_QUICK_RETUNE {recipe.quick_retune}
+#define PLAITS_BUILD_HIGH_PASS_GATE {recipe.high_pass_gate}
 #define PLAITS_BUILD_LEVEL_CV_OPTION {recipe.level_cv_option}
 #define PLAITS_BUILD_AUX_OUTPUT_OPTION {recipe.aux_output_option}
 #define PLAITS_BUILD_AUX_SUBOSC_OPTION {recipe.aux_subosc_option}

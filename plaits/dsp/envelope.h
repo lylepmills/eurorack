@@ -33,18 +33,23 @@
 #include <cmath>
 
 #include "stmlib/stmlib.h"
+#include "plaits/build_config.h"
 
 namespace plaits {
 
-// COLOUR folds around its centre. The left half runs from the stock low pass
-// gate (fully counter-clockwise) up to a plain VCA, the right half from that
-// VCA on to a high pass gate. The VCA point is a small flat detent (5% of the
-// travel) rather than a single knob position, so it can be found by hand and
-// a CV sweep rests there without dithering between the two gate flavours.
+// With PLAITS_BUILD_HIGH_PASS_GATE, COLOUR folds around its centre. The left
+// half runs from the stock low pass gate (fully counter-clockwise) up to a
+// plain VCA, the right half from that VCA on to a high pass gate. The VCA point
+// is a small flat detent (5% of the travel) rather than a single knob position,
+// so it can be found by hand and a CV sweep rests there without dithering
+// between the two gate flavours.
 //
 // The two halves meet without a seam: at hf == 1 the gate's bleed is exactly 1
 // whatever the vactrol state, so the filter contributes nothing to the output
 // and swapping its response there changes no sample.
+//
+// The helpers below are plain inline functions, so a build without the fold
+// pays nothing for them; only their call sites are gated.
 const float kLpgColourDetent = 0.05f;
 
 // A fully open high pass gate passes the whole band, so its floor sits well
@@ -63,12 +68,21 @@ inline bool LpgColourIsHighPass(float colour) {
   return colour > 0.5f;
 }
 
-// The stored COLOUR byte from firmware that ran the old, unfolded law maps
-// onto the left half so an updated module keeps the sound it was saved with.
-// With a 5% detent the left half spans 0.475 of the travel, so the old byte
-// scales by 0.475 (122/256, within a step); integer math keeps it small.
-inline uint8_t MigrateLpgColourByte(uint8_t old_colour) {
-  return static_cast<uint8_t>((old_colour * 122 + 128) >> 8);
+// The stored COLOUR byte from a build without the fold maps onto the left half
+// so a module moving to a folded build keeps the sound it was saved with. With
+// a 5% detent the left half spans 0.475 of the travel, so the byte scales by
+// 0.475 (122/256, within a step); integer math keeps it small.
+inline uint8_t MigrateLpgColourByte(uint8_t unfolded_colour) {
+  return static_cast<uint8_t>((unfolded_colour * 122 + 128) >> 8);
+}
+
+// The reverse, for a module moving from a folded build back to one without
+// the fold: the left half stretches back over the whole travel. A byte on the
+// detent or the high pass side has no unfolded equivalent; it lands on the
+// unfolded law's plain VCA, the nearest sound the old law can make.
+inline uint8_t UnmigrateLpgColourByte(uint8_t folded_colour) {
+  const uint32_t unfolded = (folded_colour * 256u + 61u) / 122u;
+  return static_cast<uint8_t>(unfolded > 255u ? 255u : unfolded);
 }
 
 class LPGEnvelope {
@@ -126,6 +140,7 @@ class LPGEnvelope {
     vactrol_state_ += vactrol_coefficient * vactrol_error;
     
     gain_ = vactrol_state_;
+#if PLAITS_BUILD_HIGH_PASS_GATE
     if (high_pass_) {
       // Mirror of the low pass law: the passband shrinks by the same amount
       // as the vactrol closes, but from the bottom up, so a decaying note
@@ -133,7 +148,9 @@ class LPGEnvelope {
       // the band open at the ceiling the way it lifts the floor below.
       frequency_ = kLpgHighPassFloor +
           (0.3f - hf * 0.04f) * (1.0f - vactrol_state_4);
-    } else {
+    } else
+#endif  // PLAITS_BUILD_HIGH_PASS_GATE
+    {
       frequency_ = 0.003f + 0.3f * vactrol_state_4 + hf * 0.04f;
     }
     hf_bleed_ = (tail_2 + (1.0f - tail_2) * hf) * hf * hf;

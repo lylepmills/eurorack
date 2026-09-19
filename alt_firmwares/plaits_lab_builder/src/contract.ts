@@ -37,7 +37,7 @@ export type NormalizedChordTable = {
 // feature gates below use minimums so a newly supported schema cannot get
 // stranded behind an old "10, 11, 12..." whitelist.
 export const minRecipeSchemaVersion = 2;
-export const maxRecipeSchemaVersion = 29;
+export const maxRecipeSchemaVersion = 30;
 const configurationMinSchemaVersion = 4;
 const resourcesMinSchemaVersion = 5;
 const fourBankMinSchemaVersion = 6;       // 32 slots
@@ -62,6 +62,7 @@ const simplifiedPitchRangesMinSchemaVersion = 24;
 const gateArticulationMinSchemaVersion = 27;
 const wavetableWaveLinesMinSchemaVersion = 28;
 const quickRetuneMinSchemaVersion = 29;
+const highPassGateMinSchemaVersion = 30;   // folded COLOUR: LPG -> VCA -> HPG
 const scaleBankMinSchemaVersion = 16;      // recipe-driven scale bank
 export const levelAutoMinSchemaVersion = 16; // engine-aware LEVEL routing
 const speechBanksMinSchemaVersion = 17;      // selectable/custom Speech LPC banks
@@ -261,6 +262,10 @@ export type NormalizedRecipe = {
     // Preview (v29): on standard Plaits, restore right-button + FREQUENCY
     // retuning while FREQUENCY itself is in octave-switching mode.
     quickRetune?: boolean;
+    // v30: fold the hidden COLOUR control into low pass gate -> plain VCA ->
+    // high pass gate. Off by default; a build without it keeps the stock
+    // COLOUR law, and the firmware remaps a saved COLOUR either way at boot.
+    highPassGate?: boolean;
   };
   initialOptions: {
     lockedFrequencyKnob: "octaves" | "decay" | "aux-crossfade" | "macro-4"
@@ -1051,6 +1056,7 @@ function normalizeConfiguration(
     ["simplifiedPitchRanges"],
     ["envelopeContour"],
     ["quickRetune"],
+    ["highPassGate"],
   ];
   // The index of the cumulative prefix the recipe's keys match exactly, or -1
   // for a shape no released editor ever produced.
@@ -1124,6 +1130,7 @@ function normalizeConfiguration(
   const fastFm = preferenceValues.fastFm === true;
   const simplifiedPitchRanges = preferenceValues.simplifiedPitchRanges === true;
   const quickRetune = preferenceValues.quickRetune === true;
+  const highPassGate = preferenceValues.highPassGate === true;
   const legacyContour = optionValues.lockedFrequencyKnob === "triggered-envelope"
     || optionValues.lockedFrequencyKnob === "gated-envelope";
   const envelopeContour = preferenceValues.envelopeContour === true;
@@ -1165,6 +1172,12 @@ function normalizeConfiguration(
     throw new ContractError(
       "invalid_recipe",
       "The quick-retune shortcut is available only on standard Plaits.",
+    );
+  }
+  if (highPassGate && Number(candidate.schemaVersion) < highPassGateMinSchemaVersion) {
+    throw new ContractError(
+      "unsupported_schema",
+      `The high pass gate requires recipe schema version ${highPassGateMinSchemaVersion}.`,
     );
   }
   if ((linearTzfm || fastFm)
@@ -1248,6 +1261,7 @@ function normalizeConfiguration(
       simplifiedPitchRanges,
       envelopeContour: hasEnvelopeContour,
       quickRetune,
+      highPassGate,
     },
     initialOptions: {
       // Preserve the two v19 spellings at the private Worker/container boundary.
@@ -1579,7 +1593,8 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
     // (v8); a short-bank recipe (a trailing empty slot) stays v7; a candidate that
     // carried v6 resources (even an empty custom-bank list, e.g. a 32-slot recipe)
     // stays v6; else v5.
-    schemaVersion: configuration.preferences.quickRetune ? 29
+    schemaVersion: configuration.preferences.highPassGate ? 30
+      : configuration.preferences.quickRetune ? 29
       : chordTables.length > maxPreGestureChordTables
       || (!legacyContour && (
         configuration.preferences.envelopeContour
@@ -1713,6 +1728,9 @@ export async function computeManualKey(
     colorBlindMode: recipe.preferences.colorBlindMode,
     linearTzfm: recipe.preferences.linearTzfm,
     fastFm: recipe.preferences.fastFm,
+    // A folded-COLOUR build renames LIGHT 5's LPG colour value and adds the
+    // hidden-control paragraph.
+    highPassGate: recipe.preferences.highPassGate,
     // A non-Octaves starting assignment adds the locked-octave shortcut callout.
     lockedFrequencyKnob: recipe.initialOptions.lockedFrequencyKnob,
     // A Sync-enabled guide adds the fifth MODEL-input setting and its warning.

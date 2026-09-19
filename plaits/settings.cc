@@ -95,9 +95,11 @@ bool Settings::Init() {
   InitState();
   
   bool success = chunk_storage_.Init(&persistent_data_, &state_);
-  // Read before the build defaults touch the engine byte: a saved COLOUR from
-  // the unfolded law is remapped exactly once, whatever else this boot applies.
-  bool colour_folded = (state_.engine & kLpgColourFoldedFlag) != 0;
+  // Read before the build defaults touch the engine byte: a COLOUR saved under
+  // the other law is remapped exactly once, whatever else this boot applies.
+  const bool colour_folded = (state_.engine & kLpgColourFoldedFlag) != 0;
+  const bool remap_colour = success
+      && colour_folded != (PLAITS_BUILD_HIGH_PASS_GATE != 0);
 
   bool fresh_install = ConsumeInstallMarker();
   uint32_t saved_options_profile_id = state_.options_profile_id_low |
@@ -117,11 +119,14 @@ bool Settings::Init() {
   int attenuverter_mode = (state_.engine >> 5) & 0x03;
   CONSTRAIN(saved_engine, 0, PLAITS_ENGINE_COUNT - 1);
   CONSTRAIN(attenuverter_mode, 0, 2);
-  if (success && !colour_folded) {
-    state_.lpg_colour = MigrateLpgColourByte(state_.lpg_colour);
+  if (remap_colour) {
+    state_.lpg_colour = PLAITS_BUILD_HIGH_PASS_GATE
+        ? MigrateLpgColourByte(state_.lpg_colour)
+        : UnmigrateLpgColourByte(state_.lpg_colour);
   }
   state_.engine = static_cast<uint8_t>(
-      saved_engine | (attenuverter_mode << 5) | kLpgColourFoldedFlag);
+      saved_engine | (attenuverter_mode << 5) |
+      (PLAITS_BUILD_HIGH_PASS_GATE ? kLpgColourFoldedFlag : 0));
   CONSTRAIN(
       state_.locked_frequency_pot_option,
       0,
@@ -138,7 +143,7 @@ bool Settings::Init() {
   CONSTRAIN(state_.hold_on_trigger_option, 0, 1);
   CONSTRAIN(state_.locked_octave, 0, 8);
 
-  if (apply_build_options || (success && !colour_folded)) {
+  if (apply_build_options || remap_colour) {
     SaveState();
   }
 
@@ -182,7 +187,7 @@ void Settings::InitPersistentData() {
 
 void Settings::InitState() {
   // base firmware
-  state_.engine = 8 | kLpgColourFoldedFlag;
+  state_.engine = 8 | (PLAITS_BUILD_HIGH_PASS_GATE ? kLpgColourFoldedFlag : 0);
   state_.lpg_colour = 0;
   state_.decay = 128;
   state_.octave = 255;
