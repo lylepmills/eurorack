@@ -104,8 +104,18 @@ void FMEngine::RenderInternal(
   // gesture over +/-1 semitone (+/-2.5%); QUANTIZED keeps the full +/-12 and
   // snaps to whole semitones, so every position is a musical interval from the
   // chosen ratio and noon captures +/-2.08%.
+  // NARROW's half-span, in semitones. Overridable so the span can be chosen by
+  // ear rather than argued about: the shipped ratio table already contains
+  // 0.5, 1 and 2 multiplied by 2^(16/1200), i.e. three entries whose only
+  // purpose is to sit 16 cents off unison, the fifth and the octave for slow
+  // beating -- so the magnitude Emilie reached for here is tens of cents, not
+  // a semitone.
+#ifndef PLAITS_TWIST_FM_NARROW_SEMITONES
+#define PLAITS_TWIST_FM_NARROW_SEMITONES 1.0f
+#endif
   const float ratio = TwistSpanAroundSemitones(
-      twist_tuning_, parameters.macro, stock_ratio, 12.0f, 1.0f);
+      twist_tuning_, parameters.macro, stock_ratio, 12.0f,
+      PLAITS_TWIST_FM_NARROW_SEMITONES);
   
   float modulator_note = note + ratio;
   float target_modulator_frequency = NoteToFrequency(modulator_note);
