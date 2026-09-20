@@ -255,8 +255,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 0.8,
-        "auxGain": 0.8
+        "outGain": 0.436,
+        "auxGain": 0.436
       }
     },
     {
@@ -298,8 +298,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 0.8,
-        "auxGain": 0.8
+        "outGain": 0.35,
+        "auxGain": 0.35
       }
     },
     {
@@ -652,8 +652,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": -0.7,
-        "auxGain": 0.8
+        "outGain": -0.84,
+        "auxGain": 0.96
       }
     },
     {
@@ -1444,8 +1444,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 0.8,
-        "auxGain": 0.8
+        "outGain": 1.425,
+        "auxGain": 1.425
       }
     },
     {
@@ -1482,8 +1482,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 0.9,
-        "auxGain": 0.9
+        "outGain": 1.311,
+        "auxGain": 1.311
       }
     },
     {
@@ -1520,8 +1520,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 0.8,
-        "auxGain": 0.8
+        "outGain": 0.95,
+        "auxGain": 0.95
       }
     },
     {
@@ -1597,8 +1597,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 0.9,
-        "auxGain": 0.9
+        "outGain": 1.104,
+        "auxGain": 1.104
       }
     },
     {
@@ -1635,8 +1635,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 0.8,
-        "auxGain": 0.8
+        "outGain": 0.53,
+        "auxGain": 0.53
       }
     },
     {
@@ -1673,8 +1673,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 0.8,
-        "auxGain": 0.8
+        "outGain": 0.364,
+        "auxGain": 0.364
       }
     },
     {
@@ -1749,8 +1749,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 0.7,
-        "auxGain": 0.7
+        "outGain": 0.93,
+        "auxGain": 0.93
       }
     },
     {
@@ -1787,8 +1787,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 0.7,
-        "auxGain": 0.7
+        "outGain": 0.511,
+        "auxGain": 0.511
       }
     },
     {
@@ -1825,8 +1825,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 0.8,
-        "auxGain": 0.8
+        "outGain": 1.113,
+        "auxGain": 1.113
       }
     },
     {
@@ -1863,8 +1863,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 0.7,
-        "auxGain": 0.7
+        "outGain": 1.246,
+        "auxGain": 1.246
       }
     },
     {
@@ -1901,8 +1901,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 0.8,
-        "auxGain": 0.8
+        "outGain": 1.129,
+        "auxGain": 1.129
       }
     },
     {
@@ -1939,8 +1939,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 0.7,
-        "auxGain": 0.7
+        "outGain": 0.467,
+        "auxGain": 0.467
       }
     },
     {
@@ -1977,8 +1977,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 0.7,
-        "auxGain": 0.7
+        "outGain": 1.0,
+        "auxGain": 1.0
       }
     },
     {
@@ -2015,8 +2015,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 0.7,
-        "auxGain": 0.7
+        "outGain": 0.891,
+        "auxGain": 0.891
       }
     },
     {
@@ -2053,8 +2053,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 0.8,
-        "auxGain": 0.8
+        "outGain": 1.059,
+        "auxGain": 1.059
       }
     },
     {
@@ -2091,8 +2091,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": -0.85,
-        "auxGain": -0.85
+        "outGain": -0.56,
+        "auxGain": -0.56
       }
     },
     {
@@ -2129,8 +2129,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 0.73,
-        "auxGain": 0.73
+        "outGain": 0.493,
+        "auxGain": 0.493
       }
     },
     {
@@ -2205,8 +2205,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": -0.7,
-        "auxGain": -0.7
+        "outGain": -0.512,
+        "auxGain": -0.512
       }
     },
     {
@@ -2244,8 +2244,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 0.8,
-        "auxGain": 0.8
+        "outGain": 0.591,
+        "auxGain": 0.591
       }
     },
     {
@@ -2282,8 +2282,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": -0.9,
-        "auxGain": -0.9
+        "outGain": -0.618,
+        "auxGain": -0.618
       }
     },
     {
@@ -2321,8 +2321,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 0.8,
-        "auxGain": 0.5
+        "outGain": 1.103,
+        "auxGain": 0.689
       }
     },
     {
@@ -2359,8 +2359,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": -0.45,
-        "auxGain": -0.45
+        "outGain": -0.375,
+        "auxGain": -0.375
       }
     },
     {
@@ -2397,8 +2397,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 0.8,
-        "auxGain": 0.8
+        "outGain": 0.704,
+        "auxGain": 0.704
       }
     },
     {
@@ -2474,8 +2474,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 0.8,
-        "auxGain": 0.8
+        "outGain": 1.029,
+        "auxGain": 1.029
       }
     },
     {
@@ -2513,8 +2513,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": -0.7,
-        "auxGain": -0.7
+        "outGain": -1.201,
+        "auxGain": -1.201
       }
     },
     {
@@ -2551,8 +2551,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": -0.7,
-        "auxGain": -1.25
+        "outGain": -0.877,
+        "auxGain": -1.566
       }
     },
     {
@@ -2627,8 +2627,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": -0.8,
-        "auxGain": -0.8
+        "outGain": -0.694,
+        "auxGain": -0.694
       }
     },
     {
@@ -2666,8 +2666,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 1.0,
-        "auxGain": 1.0
+        "outGain": 1.537,
+        "auxGain": 1.537
       }
     },
     {
@@ -2704,8 +2704,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": -0.8,
-        "auxGain": -0.8
+        "outGain": -2.23,
+        "auxGain": -2.23
       }
     },
     {
@@ -2744,8 +2744,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": true,
-        "outGain": 1.0,
-        "auxGain": 1.0
+        "outGain": 1.325,
+        "auxGain": 1.325
       }
     },
     {
@@ -2784,8 +2784,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": true,
-        "outGain": 1.0,
-        "auxGain": 1.0
+        "outGain": 1.243,
+        "auxGain": 1.243
       }
     },
     {
@@ -2902,8 +2902,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 1.0,
-        "auxGain": 1.0
+        "outGain": 1.206,
+        "auxGain": 1.206
       }
     },
     {
@@ -2940,8 +2940,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": -1.0,
-        "auxGain": -1.0
+        "outGain": -0.614,
+        "auxGain": -0.614
       }
     },
     {
@@ -2978,8 +2978,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 0.8,
-        "auxGain": 0.8
+        "outGain": 1.278,
+        "auxGain": 1.278
       },
       "sharedModules": [
         "chord-bank"
@@ -3058,8 +3058,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": -0.7,
-        "auxGain": -0.7
+        "outGain": -1.327,
+        "auxGain": -1.327
       }
     },
     {
@@ -3096,8 +3096,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": -0.85,
-        "auxGain": -0.85
+        "outGain": -2.993,
+        "auxGain": -2.993
       }
     },
     {
@@ -3134,8 +3134,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": -0.45,
-        "auxGain": -0.45
+        "outGain": -0.593,
+        "auxGain": -0.593
       }
     },
     {
@@ -3172,8 +3172,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": -0.55,
-        "auxGain": -0.5
+        "outGain": -0.768,
+        "auxGain": -0.698
       }
     },
     {
@@ -3210,8 +3210,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": -0.85,
-        "auxGain": -0.85
+        "outGain": -0.547,
+        "auxGain": -0.547
       }
     },
     {
@@ -3249,8 +3249,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": -3.8,
-        "auxGain": -3.8
+        "outGain": -3.045,
+        "auxGain": -3.045
       }
     },
     {
@@ -3326,8 +3326,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": -0.6,
-        "auxGain": -0.6
+        "outGain": -0.774,
+        "auxGain": -0.774
       }
     },
     {
@@ -3365,8 +3365,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": -0.9,
-        "auxGain": -0.9
+        "outGain": -0.653,
+        "auxGain": -0.653
       }
     },
     {
@@ -3406,8 +3406,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": -0.65,
-        "auxGain": -0.65
+        "outGain": -1.213,
+        "auxGain": -1.213
       }
     },
     {
@@ -3447,8 +3447,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": -0.6,
-        "auxGain": -0.6
+        "outGain": -1.148,
+        "auxGain": -1.148
       }
     },
     {
@@ -3573,8 +3573,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": true,
-        "outGain": 0.8,
-        "auxGain": 0.8
+        "outGain": 1.0,
+        "auxGain": 1.0
       }
     },
     {
@@ -3613,8 +3613,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": -1.0,
-        "auxGain": 0.8
+        "outGain": -2.087,
+        "auxGain": 1.67
       }
     },
     {
@@ -3697,8 +3697,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": true,
-        "outGain": 0.9,
-        "auxGain": 0.9
+        "outGain": 1.438,
+        "auxGain": 1.438
       }
     },
     {
@@ -3737,8 +3737,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": true,
-        "outGain": 1.0,
-        "auxGain": 1.0
+        "outGain": 0.88,
+        "auxGain": 0.88
       }
     },
     {
@@ -3778,8 +3778,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": true,
-        "outGain": 1.0,
-        "auxGain": 1.0
+        "outGain": 2.545,
+        "auxGain": 2.545
       }
     },
     {
@@ -3819,8 +3819,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": true,
-        "outGain": 0.8,
-        "auxGain": 0.8
+        "outGain": 1.062,
+        "auxGain": 1.062
       },
       "artwork": {
         "color": "#009a98"
@@ -3866,8 +3866,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": true,
-        "outGain": 0.8,
-        "auxGain": 0.8
+        "outGain": 1.013,
+        "auxGain": 1.013
       },
       "artwork": {
         "color": "#009a98"
@@ -3910,8 +3910,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 0.9,
-        "auxGain": 0.55
+        "outGain": 1.4,
+        "auxGain": 0.856
       },
       "artwork": {
         "color": "#009a98"
@@ -4037,8 +4037,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 0.8,
-        "auxGain": 0.8
+        "outGain": 1.824,
+        "auxGain": 1.824
       },
       "sharedModules": [
         "chord-bank"
@@ -4081,8 +4081,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 0.9,
-        "auxGain": 0.9
+        "outGain": 0.631,
+        "auxGain": 0.631
       },
       "artwork": {
         "color": "#009a98"
