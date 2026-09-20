@@ -270,11 +270,11 @@ void WaveParaphonicEngine::Render(
   const int fan = static_cast<int>((p.morph - 0.5f) * 2.0f *
       kWaveParaphonicMaxFan * 32767.0f);
 
-  const float spread = ApplyMacro(
-      1.0f,
-      kWaveParaphonicMinSpread,
-      kWaveParaphonicMaxSpread,
-      p.macro);
+  const float spread = TwistIntervalScale(
+      twist_tuning_,
+      p.macro,
+      kWaveParaphonicNarrowSpread,
+      kWaveParaphonicSpreadStep);
 
   WaveTap tap[kWaveParaphonicNumVoices];
   float target_frequency[kWaveParaphonicNumVoices];

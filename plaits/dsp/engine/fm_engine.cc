@@ -98,21 +98,14 @@ void FMEngine::RenderInternal(
       parameters.harmonics,
       128.0f);
   // HARMONICS quantizes the carrier:modulator ratio through
-  // lut_fm_frequency_quantizer; MACRO then detunes continuously around it. A
-  // +/-12 semitone span is an octave of detune, so the quantized ratio only
-  // survives within +/-0.21% of the knob's travel. +/-1 semitone keeps the
-  // documented gesture -- detune around the selected ratio -- and puts the
-  // in-tune window at +/-2.5%, which a hand can actually hold.
-#if PLAITS_BUILD_TWIST_TUNING_RANGE
-  const float kMacroDetuneSemitones = 1.0f;
-#else
-  const float kMacroDetuneSemitones = 12.0f;
-#endif
-  const float ratio = ApplyMacro(
-      stock_ratio,
-      stock_ratio - kMacroDetuneSemitones,
-      stock_ratio + kMacroDetuneSemitones,
-      parameters.macro);
+  // lut_fm_frequency_quantizer; MACRO then detunes around it. STOCK's +/-12
+  // semitones is an octave of continuous detune, so the chosen ratio survives
+  // only within +/-0.21% of the knob's travel. NARROW keeps the documented
+  // gesture over +/-1 semitone (+/-2.5%); QUANTIZED keeps the full +/-12 and
+  // snaps to whole semitones, so every position is a musical interval from the
+  // chosen ratio and noon captures +/-2.08%.
+  const float ratio = stock_ratio + TwistSemitoneOffset(
+      twist_tuning_, parameters.macro, 12.0f, 1.0f);
   
   float modulator_note = note + ratio;
   float target_modulator_frequency = NoteToFrequency(modulator_note);

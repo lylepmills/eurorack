@@ -95,20 +95,14 @@ void VirtualAnalogDualEngine::Render(
   // which is a chorus/beating width rather than a retuning, and widens the
   // in-tune window to +/-2.9% (fifth) and +/-1.7% (octave).
   //
-  // NOTE the cost: the shipped span reaches unison at MACRO 0 and double width
-  // at 1, and the narrowed span reaches neither. See engine_macro notes.
-#if PLAITS_BUILD_TWIST_TUNING_RANGE
-  const float kMacroSpreadSpan = 0.125f;
-#else
-  const float kMacroSpreadSpan = 1.0f;
-#endif
-  // With kMacroSpreadSpan == 1.0f this is exactly `macro * 2.0f`, so the
-  // shipped build is unchanged.
-  const float spread_scale = ApplyMacro(
-      1.0f,
-      1.0f - kMacroSpreadSpan,
-      1.0f + kMacroSpreadSpan,
-      parameters.macro);
+  // STOCK scales the interval x0 .. x2, so anything off the exact midpoint
+  // multiplies a chosen interval by something other than one: a fifth holds to
+  // +/-5 cents only within +/-0.36% of the travel. NARROW trims by +/-12.5%
+  // instead (+/-2.86%) but can no longer reach the unison at 0 or the doubled
+  // width at 1. QUANTIZED keeps both endpoints and steps the scale by a
+  // quarter, which puts x1 exactly at noon with a +/-6.25% capture.
+  const float spread_scale = TwistIntervalScale(
+      twist_tuning_, parameters.macro, 0.125f, 0.25f);
   const float auxiliary_detune =
       ComputeDetuning(parameters.harmonics) * spread_scale;
   const float primary_f = NoteToFrequency(parameters.note);

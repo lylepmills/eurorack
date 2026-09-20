@@ -282,9 +282,18 @@
 // knob at all. (The CV path is unaffected: Voice::Render centres macro at
 // exactly 0.5f and adds the CV, so an unpatched or 0 V input is already exact.)
 //
-// 1 narrows those five spans to a fine trim the whole knob can express, leaving
-// the ApplyMacro contract and every other engine untouched. 0 is the shipped
-// behavior and is bit-identical to a build without this flag.
+// This selects the DEFAULT span for those five; twist_tuning.h defines the
+// modes and each engine instance can be overridden by a generated config
+// calling set_twist_tuning(), so one firmware can carry the same engine more
+// than once for an A/B.
+//
+//   0  STOCK      shipped behavior, bit-identical to a build without this flag
+//   1  NARROW     the same continuous curve over a fine-trim span
+//   2  QUANTIZED  the shipped span, snapped to musical steps
+//
+// Every mode returns the module's own value at MACRO 0.5 bit for bit; only the
+// travel either side of noon differs. The ApplyMacro contract and the other
+// ~90 engines are untouched in all three.
 #ifndef PLAITS_BUILD_TWIST_TUNING_RANGE
 #define PLAITS_BUILD_TWIST_TUNING_RANGE 0
 #endif

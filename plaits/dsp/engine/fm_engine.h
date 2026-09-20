@@ -34,13 +34,21 @@
 #define PLAITS_DSP_ENGINE_FM_ENGINE_H_
 
 #include "plaits/dsp/engine/engine.h"
+#include "plaits/dsp/engine/twist_tuning.h"
 
 namespace plaits {
   
 class FMEngine : public Engine {
  public:
-  FMEngine() { }
+  FMEngine() : twist_tuning_(kDefaultTwistTuning) { }
   ~FMEngine() { }
+
+  // Which TWIST span this INSTANCE uses. Registration runs before Voice::Init
+  // (voice.cc calls PLAITS_REGISTER_ENGINES and only then Init on each
+  // registered engine), and neither Init() nor Reset() touches this, so a
+  // generated config can register the same engine class more than once and
+  // give each copy a different span.
+  void set_twist_tuning(TwistTuning mode) { twist_tuning_ = mode; }
   
   virtual void Init(stmlib::BufferAllocator* allocator);
   virtual void Reset();
@@ -79,6 +87,8 @@ class FMEngine : public Engine {
   float sub_fir_;
   float carrier_fir_;
   
+  TwistTuning twist_tuning_;
+
   DISALLOW_COPY_AND_ASSIGN(FMEngine);
 };
 

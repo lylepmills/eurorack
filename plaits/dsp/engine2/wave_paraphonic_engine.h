@@ -207,6 +207,7 @@
 #include "plaits/build_config.h"
 #include "plaits/dsp/chords/chord_bank.h"
 #include "plaits/dsp/engine/engine.h"
+#include "plaits/dsp/engine/twist_tuning.h"
 
 namespace plaits {
 
@@ -225,21 +226,14 @@ const int kWaveParaphonicStep = 1024;
 const float kWaveParaphonicMaxFan = 0.15f;
 
 // The loaded table is verbatim at Spread 1.0. Zero collapses the chord to a
-// unison; 2.0 doubles every interval in log-pitch space. That full span means
-// only the exact midpoint plays the table in tune -- a twelve-semitone entry
-// holds to +/-5 cents within +/-0.21% of the knob's travel -- so the narrowed
-// span trims every interval by +/-12.5% instead, widening that window to
-// +/-1.7%.
-//
-// NOTE the cost: the shipped span's unison collapse at 0 and doubled chord at
-// 1 are both unreachable once narrowed.
-#if PLAITS_BUILD_TWIST_TUNING_RANGE
-const float kWaveParaphonicMinSpread = 0.875f;
-const float kWaveParaphonicMaxSpread = 1.125f;
-#else
-const float kWaveParaphonicMinSpread = 0.0f;
-const float kWaveParaphonicMaxSpread = 2.0f;
-#endif
+// unison; 2.0 doubles every interval in log-pitch space. STOCK's full span
+// means only the exact midpoint plays the table in tune -- a twelve-semitone
+// entry holds to +/-5 cents within +/-0.21% of the travel. NARROW trims every
+// interval by +/-12.5% instead (+/-1.67%) but reaches neither endpoint;
+// QUANTIZED keeps both and steps the scale by a quarter, so the table plays
+// verbatim across +/-6.25% of the travel around noon.
+const float kWaveParaphonicNarrowSpread = 0.125f;
+const float kWaveParaphonicSpreadStep = 0.25f;
 
 // Equal-power pan positions, root centred. Only read in a stereo build.
 const float kWaveParaphonicPan[kWaveParaphonicNumVoices] = {
@@ -248,8 +242,15 @@ const float kWaveParaphonicPan[kWaveParaphonicNumVoices] = {
 
 class WaveParaphonicEngine : public Engine {
  public:
-  WaveParaphonicEngine() { }
+  WaveParaphonicEngine() : twist_tuning_(kDefaultTwistTuning) { }
   ~WaveParaphonicEngine() { }
+
+  // Which TWIST span this INSTANCE uses. Registration runs before Voice::Init
+  // (voice.cc calls PLAITS_REGISTER_ENGINES and only then Init on each
+  // registered engine), and neither Init() nor Reset() touches this, so a
+  // generated config can register the same engine class more than once and
+  // give each copy a different span.
+  void set_twist_tuning(TwistTuning mode) { twist_tuning_ = mode; }
 
   virtual void Init(stmlib::BufferAllocator* allocator);
   virtual void Reset();
@@ -275,6 +276,8 @@ class WaveParaphonicEngine : public Engine {
   // consumed inside Render, so the four Random::GetWord() draws happen once,
   // just before the first sample they affect.
   bool strike_;
+
+  TwistTuning twist_tuning_;
 
   DISALLOW_COPY_AND_ASSIGN(WaveParaphonicEngine);
 };

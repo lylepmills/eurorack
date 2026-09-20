@@ -36,13 +36,24 @@ static void WriteWav(const std::string& path, const std::vector<float>& l) {
 }
 
 // One engine, one TWIST position, `secs` of sustained tone.
+#ifndef TWIST_CONTROL_BUILD
+template <typename E> static void SetMode(E* e, int mode) {
+  e->set_twist_tuning(static_cast<TwistTuning>(mode));
+}
+#else
+// The pristine-master control has no per-instance mode; it is stock by
+// definition, so the renderer must not try to set one.
+template <typename E> static void SetMode(E*, int) { }
+#endif
+
 template <typename E>
 static void RenderOne(const char* name, float harmonics, float timbre,
                       float morph, float macro, float note,
-                      std::vector<float>* acc, float secs) {
+                      std::vector<float>* acc, float secs, int mode) {
   static uint8_t mem[64 * 1024];
   stmlib::BufferAllocator alloc(mem, sizeof(mem));
   E engine;
+  SetMode(&engine, mode);
   engine.Init(&alloc);
   engine.Reset();
   EngineParameters p;
@@ -62,6 +73,7 @@ static void RenderOne(const char* name, float harmonics, float timbre,
 int main(int argc, char** argv) {
   const char* dir = argc > 1 ? argv[1] : ".";
   const char* tag = argc > 2 ? argv[2] : "x";
+  const int mode = argc > 3 ? atoi(argv[3]) : 0;
   // A knob sweep: five positions across the travel, 1.2 s each, so the tuning
   // drift is audible as you walk away from centre.
   const float pos[] = { 0.5f, 0.55f, 0.6f, 0.75f, 1.0f };
@@ -70,23 +82,23 @@ int main(int argc, char** argv) {
 
   { std::vector<float> a;
     // HARMONICS 0.55 lands on a quantized non-unison ratio.
-    for (int i=0;i<kN;++i) RenderOne<FMEngine>("fm",0.55f,0.45f,0.2f,pos[i],note,&a,1.2f);
+    for (int i=0;i<kN;++i) RenderOne<FMEngine>("fm",0.55f,0.45f,0.2f,pos[i],note,&a,1.2f,mode);
     WriteWav(std::string(dir)+"/two-op-fm."+tag+".wav", a); }
 
   { std::vector<float> a;
-    for (int i=0;i<kN;++i) RenderOne<VirtualAnalogDualEngine>("vad",0.62f,0.4f,0.4f,pos[i],note,&a,1.2f);
+    for (int i=0;i<kN;++i) RenderOne<VirtualAnalogDualEngine>("vad",0.62f,0.4f,0.4f,pos[i],note,&a,1.2f,mode);
     WriteWav(std::string(dir)+"/virtual-analog-dual."+tag+".wav", a); }
 
   { std::vector<float> a;
-    for (int i=0;i<kN;++i) RenderOne<VirtualAnalogCrossfadeEngine>("vax",0.62f,0.4f,0.4f,pos[i],note,&a,1.2f);
+    for (int i=0;i<kN;++i) RenderOne<VirtualAnalogCrossfadeEngine>("vax",0.62f,0.4f,0.4f,pos[i],note,&a,1.2f,mode);
     WriteWav(std::string(dir)+"/virtual-analog-crossfade."+tag+".wav", a); }
 
   { std::vector<float> a;
-    for (int i=0;i<kN;++i) RenderOne<PhaseDistortionEngine>("pd",0.55f,0.5f,0.3f,pos[i],note,&a,1.2f);
+    for (int i=0;i<kN;++i) RenderOne<PhaseDistortionEngine>("pd",0.55f,0.5f,0.3f,pos[i],note,&a,1.2f,mode);
     WriteWav(std::string(dir)+"/phase-distortion."+tag+".wav", a); }
 
   { std::vector<float> a;
-    for (int i=0;i<kN;++i) RenderOne<WaveParaphonicEngine>("wp",0.35f,0.4f,0.5f,pos[i],note,&a,1.2f);
+    for (int i=0;i<kN;++i) RenderOne<WaveParaphonicEngine>("wp",0.35f,0.4f,0.5f,pos[i],note,&a,1.2f,mode);
     WriteWav(std::string(dir)+"/wave-paraphonic."+tag+".wav", a); }
 
   printf("wrote %s/*.%s.wav\n", dir, tag);

@@ -60,23 +60,30 @@ void PhaseDistortionEngine::Render(
     bool* already_enveloped) {
   const float f0 = 0.5f * NoteToFrequency(parameters.note);
   // MACRO moves the modulator ratio an octave either side of the ratio
-  // HARMONICS quantized. The endpoints are musical, but everything between
-  // them is not, and unison survives only within +/-0.14% of the knob's
-  // travel. The narrowed span is +/-1 semitone, an in-tune window of +/-2.5%.
+  // HARMONICS quantized. STOCK's endpoints are musical but everything between
+  // them is not, and unison survives only within +/-0.14% of the travel.
+  // NARROW is +/-1 semitone (+/-2.43%) and gives the octaves up entirely.
   //
-  // NOTE the cost: the shipped span's octave-down and octave-up endpoints are
-  // a real timbral move that the narrowed span cannot reach at all. Of the
-  // five engines this flag touches, this is the one where quantizing MACRO's
-  // output to the same ratio table HARMONICS uses is probably the better fix.
-#if PLAITS_BUILD_TWIST_TUNING_RANGE
-  const float kMacroRatioMin = 0.94387431f;  // one semitone down
-  const float kMacroRatioMax = 1.05946309f;  // one semitone up
-#else
-  const float kMacroRatioMin = 0.5f;         // one octave down
-  const float kMacroRatioMax = 2.0f;         // one octave up
-#endif
-  const float modulator_octave = ApplyMacro(
-      1.0f, kMacroRatioMin, kMacroRatioMax, parameters.macro);
+  // QUANTIZED snaps STOCK'S OWN CURVE to whole semitones rather than
+  // re-deriving it: the shipped mapping is linear in the RATIO, not in pitch,
+  // so a semitone-linear sweep would be a different control. Converting to
+  // semitones, rounding, and converting back keeps x0.5 / x1 / x2 exactly
+  // where they are and makes every position in between a musical interval,
+  // with a +/-1.46% capture at noon. The log is the engine.h polynomial rather
+  // than libm's log2f, which is accurate to ~0.002 semitones -- three orders
+  // of margin against a half-semitone rounding decision.
+  float modulator_octave;
+  if (twist_tuning_ == TWIST_TUNING_NARROW) {
+    modulator_octave = ApplyMacro(
+        1.0f, 0.94387431f, 1.05946309f, parameters.macro);
+  } else {
+    const float stock_ratio_scale = ApplyMacro(
+        1.0f, 0.5f, 2.0f, parameters.macro);
+    modulator_octave = twist_tuning_ == TWIST_TUNING_QUANTIZED
+        ? stmlib::SemitonesToRatio(QuantizeToStep(
+              FrequencyRatioToSemitones(stock_ratio_scale), 1.0f))
+        : stock_ratio_scale;
+  }
   const float modulator_f = min(
       0.25f,
       f0 * modulator_octave * SemitonesToRatio(Interpolate(
