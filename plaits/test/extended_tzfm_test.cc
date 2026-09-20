@@ -26,6 +26,7 @@
 #include "plaits/dsp/engine/virtual_analog_crossfade_engine.h"
 #include "plaits/dsp/engine/virtual_analog_dual_engine.h"
 #include "plaits/dsp/engine/virtual_analog_engine.h"
+#include "plaits/dsp/engine/virtual_analog_variant_engine.h"
 #include "plaits/dsp/engine/waveshaping_engine.h"
 #include "plaits/dsp/engine/wavetable_engine.h"
 #include "plaits/dsp/engine2/acid_engine.h"
@@ -294,6 +295,7 @@ int main() {
   Test<VirtualAnalogEngine>("virtual-analog", -1, false);
   Test<VirtualAnalogDualEngine>("virtual-analog-dual", -1, false);
   Test<VirtualAnalogCrossfadeEngine>("virtual-analog-crossfade", -1, false);
+  Test<VirtualAnalogVariantEngine>("virtual-analog-variant", -1, true);
   Test<WaveshapingEngine>("waveshaping", -1, false);
   Test<FMEngine>("two-op-fm", -1, false);
   Test<GrainEngine>("granular-formant", -1, true);
@@ -391,9 +393,17 @@ int main() {
   WaveTerrainEngine terrain;
   tzfm_count += terrain.linear_tzfm_capable();
   fast_count += terrain.fast_fm_capable();
-  Check(tzfm_count == (PLAITS_BUILD_EXTENDED_TZFM ? 76 : 29), "catalog", "TZFM target count");
-  // 34 at the time this suite was written, plus Circuit Zaps (010025d).
-  Check(fast_count == 35, "catalog", "Plaits Fast FM qualification must stay unchanged");
+  // Printed so a future bump can be attributed from the run itself rather than
+  // re-derived from the diff.
+  printf("catalog counts: tzfm=%d fast=%d\n", tzfm_count, fast_count);
+  // 76/29, plus Virtual Analog Variant, which declares linear TZFM
+  // unconditionally as both its parents do and passes the strict through-zero
+  // checks above (signed_difference well past the 0.01 floor, and FM reverses
+  // phase rather than rectifying).
+  Check(tzfm_count == (PLAITS_BUILD_EXTENDED_TZFM ? 77 : 30), "catalog", "TZFM target count");
+  // 34 at the time this suite was written, plus Circuit Zaps (010025d), plus
+  // Virtual Analog Variant.
+  Check(fast_count == 36, "catalog", "Plaits Fast FM qualification must stay unchanged");
   TestSignedPrimitives();
   Check(!TapfieldEngine().linear_tzfm_capable(), "tapfield", "corruption is not reversible");
   Check(!AttractorEngine().linear_tzfm_capable(), "attractor", "negative time reverses damping");

@@ -80,6 +80,7 @@ CC_FILES       = algorithms.cc \
 		user_data_receiver.cc \
 		virtual_analog_crossfade_engine.cc \
 		virtual_analog_dual_engine.cc \
+		virtual_analog_variant_engine.cc \
 		virtual_analog_engine.cc \
 		virtual_analog_vcf_engine.cc \
 		voice.cc \

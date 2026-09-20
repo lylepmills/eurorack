@@ -138,9 +138,40 @@ void VirtualAnalogVariantEngine::Render(
   const bool stereo =
       PLAITS_STEREO_VIRTUAL_ANALOG_VARIANT && parameters.stereo;
 
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  // Every oscillator is a fixed ratio of the primary, so one signed offset
+  // stream scales into four. Scaling rather than adding is what keeps the
+  // intervals intact under modulation -- an offset added equally would
+  // collapse them toward unison as it grew.
+  // Filled only when there is modulation. RenderLinearFm falls back to the
+  // plain Render() path only when BOTH of its pointers are null, so every one
+  // of these must be passed as NULL when unfilled -- handing it an untouched
+  // buffer makes it read uninitialised stack instead.
+  float auxiliary_frequency_offset[kMaxBlockSize];
+  float sync_frequency_offset[kMaxBlockSize];
+  float aux_sync_frequency_offset[kMaxBlockSize];
+  const float* frequency_offset = parameters.frequency_offset;
+  if (frequency_offset) {
+    const float inverse_primary =
+        1.0f / (primary_f > 1.0e-9f ? primary_f : 1.0e-9f);
+    const float auxiliary_ratio = auxiliary_f * inverse_primary;
+    const float sync_ratio = sync_f * inverse_primary;
+    const float aux_sync_ratio = aux_sync_f * inverse_primary;
+    for (size_t i = 0; i < size; ++i) {
+      const float offset = frequency_offset[i];
+      auxiliary_frequency_offset[i] = offset * auxiliary_ratio;
+      sync_frequency_offset[i] = offset * sync_ratio;
+      aux_sync_frequency_offset[i] = offset * aux_sync_ratio;
+    }
+  }
+  primary_.RenderLinearFm(
+      primary_f, primary_pw, primary_shape, frequency_offset, out, size,
+      PLAITS_HARD_SYNC_EVENTS(parameters));
+#else
   primary_.Render(
       primary_f, primary_pw, primary_shape, out, size,
       PLAITS_HARD_SYNC_EVENTS(parameters));
+#endif
 
   // Only one secondary treatment can be audible at a time, so only one of
   // these two oscillators is ever worth rendering. That keeps the engine at
@@ -150,9 +181,17 @@ void VirtualAnalogVariantEngine::Render(
       squashed_xmod_amount * (2.0f - squashed_xmod_amount),
       size);
   if (xmod_amount > 0.0f) {
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    sync_.RenderLinearFm<true, false>(
+        primary_f, sync_f, secondary_pw, secondary_shape, 0.0f,
+        frequency_offset,
+        frequency_offset ? sync_frequency_offset : NULL, temp_buffer_, size,
+        PLAITS_HARD_SYNC_EVENTS(parameters));
+#else
     sync_.Render(
         primary_f, sync_f, secondary_pw, secondary_shape, temp_buffer_, size,
         PLAITS_HARD_SYNC_EVENTS(parameters));
+#endif
     for (size_t i = 0; i < size; ++i) {
       out[i] += (temp_buffer_[i] - out[i]) * xmod_amount_modulation.Next();
     }
@@ -168,9 +207,16 @@ void VirtualAnalogVariantEngine::Render(
       &auxiliary_amount_, auxiliary_amount, size);
   const bool need_auxiliary = auxiliary_amount > 0.0f || auxiliary_amount_ > 0.0f;
   if (need_auxiliary || stereo) {
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+    auxiliary_.RenderLinearFm(
+        auxiliary_f, secondary_pw, secondary_shape,
+        frequency_offset ? auxiliary_frequency_offset : NULL,
+        temp_buffer_, size, PLAITS_HARD_SYNC_EVENTS(parameters));
+#else
     auxiliary_.Render(
         auxiliary_f, secondary_pw, secondary_shape, temp_buffer_, size,
         PLAITS_HARD_SYNC_EVENTS(parameters));
+#endif
   }
 
   if (stereo) {
@@ -189,16 +235,37 @@ void VirtualAnalogVariantEngine::Render(
   }
 
   // Mono AUX is Dual's: the primary against a hard-synced secondary, 50/50.
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  aux_sync_.RenderLinearFm<true, false>(
+      primary_f, aux_sync_f, secondary_pw, secondary_shape, 0.0f,
+      frequency_offset,
+      frequency_offset ? aux_sync_frequency_offset : NULL, aux, size,
+      PLAITS_HARD_SYNC_EVENTS(parameters));
+#else
   aux_sync_.Render(
       primary_f, aux_sync_f, secondary_pw, secondary_shape, aux, size,
       PLAITS_HARD_SYNC_EVENTS(parameters));
+#endif
 
-  for (size_t i = 0; i < size; ++i) {
-    const float primary = out[i];
-    const float blended =
-        primary + (temp_buffer_[i] - primary) * auxiliary_amount_modulation.Next();
-    aux[i] = (aux[i] + primary) * 0.5f;
-    out[i] = blended;
+  if (need_auxiliary) {
+    for (size_t i = 0; i < size; ++i) {
+      const float primary = out[i];
+      out[i] = primary +
+          (temp_buffer_[i] - primary) * auxiliary_amount_modulation.Next();
+      aux[i] = (aux[i] + primary) * 0.5f;
+    }
+  } else {
+    // Neither secondary was rendered this block, so temp_buffer_ holds nothing
+    // this engine wrote -- uninitialised on the first block, another engine's
+    // audio afterwards, since the allocator hands out a shared pool. It must
+    // not be READ at all here. Multiplying it by a zero amount is NOT a safe
+    // substitute: an Inf or NaN survives the multiply and poisons the output.
+    // (This was a latent hazard found while chasing a nondeterministic audio
+    // hash, not its cause -- that was the unfilled offset buffers above.)
+    for (size_t i = 0; i < size; ++i) {
+      auxiliary_amount_modulation.Next();
+      aux[i] = (aux[i] + out[i]) * 0.5f;
+    }
   }
 }
 

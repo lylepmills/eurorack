@@ -86,14 +86,13 @@ class VirtualAnalogVariantEngine : public Engine {
 #if PLAITS_BUILD_ENABLE_SYNC_INPUT
   virtual bool hard_sync_capable() const { return true; }
 #endif
-  // Both parents declare linear TZFM and Fast FM. This engine does not yet:
-  // the standing intake policy wants every engine reviewed for them before it
-  // enters the catalog, and that review has not happened for this control
-  // layout. A deliberate rejection is a valid outcome of that review, but so
-  // is qualifying -- either way it is a decision to take with measurements,
-  // not one to inherit by copying a parent's declaration.
-  virtual bool linear_tzfm_capable() const { return false; }
-  virtual bool fast_fm_capable() const { return false; }
+  // Qualified, not inherited: every oscillator here runs through
+  // RenderLinearFm with the signed offset scaled by its own ratio to the
+  // primary, and extended_tzfm_test exercises the strict through-zero checks
+  // (negative frequency must not be clamped, and FM must reverse phase rather
+  // than rectify) that both parents are exempt from.
+  virtual bool linear_tzfm_capable() const { return true; }
+  virtual bool fast_fm_capable() const { return true; }
 
  private:
   float ComputeDetuning(float detune) const;
