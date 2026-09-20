@@ -12,8 +12,6 @@
 #include "plaits/dsp/engine/fm_engine.h"
 #include "plaits/dsp/engine/virtual_analog_dual_engine.h"
 #include "plaits/dsp/engine/virtual_analog_crossfade_engine.h"
-#include "plaits/dsp/engine2/phase_distortion_engine.h"
-#include "plaits/dsp/engine2/wave_paraphonic_engine.h"
 
 using namespace plaits;
 
@@ -128,16 +126,10 @@ int main(int argc, char** argv) {
     WriteWav(std::string(dir)+"/virtual-analog-dual."+tag+".wav", a); }
 
   { std::vector<float> a;
-    RenderOne<VirtualAnalogCrossfadeEngine>("vax",0.62f,0.4f,0.4f,note,&a,kSweepSeconds,mode);
+    RenderOne<VirtualAnalogCrossfadeEngine>("vax",0.62f,0.0f,0.4f,note,&a,kSweepSeconds,mode);
     WriteWav(std::string(dir)+"/virtual-analog-crossfade."+tag+".wav", a); }
 
-  { std::vector<float> a;
-    RenderOne<PhaseDistortionEngine>("pd",0.55f,0.5f,0.3f,note,&a,kSweepSeconds,mode);
-    WriteWav(std::string(dir)+"/phase-distortion."+tag+".wav", a); }
 
-  { std::vector<float> a;
-    RenderOne<WaveParaphonicEngine>("wp",0.35f,0.4f,0.5f,note,&a,kSweepSeconds,mode);
-    WriteWav(std::string(dir)+"/wave-paraphonic."+tag+".wav", a); }
 
   printf("wrote %s/*.%s.wav\n", dir, tag);
   return 0;

@@ -38,22 +38,14 @@
 #define PLAITS_DSP_ENGINE_PHASE_DISTORTION_ENGINE_H_
 
 #include "plaits/dsp/engine/engine.h"
-#include "plaits/dsp/engine/twist_tuning.h"
 #include "plaits/dsp/oscillator/variable_shape_oscillator.h"
 
 namespace plaits {
   
 class PhaseDistortionEngine : public Engine {
  public:
-  PhaseDistortionEngine() : twist_tuning_(kDefaultTwistTuning) { }
+  PhaseDistortionEngine() { }
   ~PhaseDistortionEngine() { }
-
-  // Which TWIST span this INSTANCE uses. Registration runs before Voice::Init
-  // (voice.cc calls PLAITS_REGISTER_ENGINES and only then Init on each
-  // registered engine), and neither Init() nor Reset() touches this, so a
-  // generated config can register the same engine class more than once and
-  // give each copy a different span.
-  void set_twist_tuning(TwistTuning mode) { twist_tuning_ = mode; }
   
   virtual void Init(stmlib::BufferAllocator* allocator);
   virtual void Reset();
@@ -79,8 +71,6 @@ class PhaseDistortionEngine : public Engine {
   VariableShapeOscillator modulator_;
   float* temp_buffer_;
   
-  TwistTuning twist_tuning_;
-
   DISALLOW_COPY_AND_ASSIGN(PhaseDistortionEngine);
 };
 
