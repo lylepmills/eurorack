@@ -254,7 +254,7 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:10e1c132e7b0981317933a78e4e04a6af9a8f93a077c4a692ccec31680c01d39",
+      "digest": "sha256:5d8ed54b8fa12ed00f77a84500c4198bfd63775a6ff7d6b3d1d12932341331ab",
       "documentationDigest": "sha256:29ff46962c624c5d756f01114b76b1a89bb1405b0cf4396e271ccbb16957a5c1",
       "manual": {
         "controls": {
@@ -389,7 +389,7 @@
         "chord-bank"
       ],
       "version": "1.0.0",
-      "digest": "sha256:4fcf4c5b7924f9748b4e52e41fb2975375cdd1f9bdebbfcc13dfc6efb61cf076",
+      "digest": "sha256:de62148f33148ace6fe2e79b28d661b9b478b03a9220474bdee6eba4065b6425",
       "documentationDigest": "sha256:80d07cb2b3e4cae4610d0288f25d777674eec98d35ae384a50d99660a1fee32c",
       "manual": {
         "controls": {
@@ -433,7 +433,7 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:c5daa39ab23c9627b6ecb9926257b4c99e6772eb3e90958c87530b79f3ae4fb3",
+      "digest": "sha256:23b413f16f6fdab25e5a8bfce0f33ad24e2845b333e527a77d124e38d0fc79b0",
       "documentationDigest": "sha256:c4950b3c470fa914813b41693376f8a13ab0d0dc3fe0f2bc5ebf442392dcf31d",
       "manual": {
         "controls": {
@@ -480,7 +480,7 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:a4daafe9978d7b341ecae0ec32430d1ddb3da31274addd9534c77540b685ed6b",
+      "digest": "sha256:fe12e4e4062f573bc1f28e48bacf5d70ee25697879858a876b6eddc1c0cd09e0",
       "documentationDigest": "sha256:1e167ec409d6a66d944e01debc46740c619dfcd708403718930116903f1a4854",
       "manual": {
         "controls": {
@@ -526,7 +526,7 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:6ec1959c3804743d5d876ff5ee96b423efd28ddca587c6ca4e6533bac3be86b1",
+      "digest": "sha256:4d6012700cc152d03be33096392eff8a6a4be824955e0b62fc5443464f407aa8",
       "documentationDigest": "sha256:25a13ab99dee33cb4d5d750bafaeb6f98bff8c7ef74e61dcf2a9cc2b63b888ea",
       "manual": {
         "controls": {
@@ -885,7 +885,7 @@
         "tone": "red"
       },
       "version": "1.0.0",
-      "digest": "sha256:0a5e78899fc674aebd17f9283de4ee78344d5c25da068fcd6d984c9d6670b7bf",
+      "digest": "sha256:3c5bb3e989596874816dc3f30e8a9ac2701070e9eb0fc174858ccc767f60a1d6",
       "documentationDigest": "sha256:344ca6272fba253fa380188d03ce1c60f22446863fbb58708a9e9a69b06b45cf",
       "manual": {
         "controls": {
@@ -1022,7 +1022,7 @@
         "fm-core"
       ],
       "version": "1.0.0",
-      "digest": "sha256:3b3f7ef36e7a531897f243127cad11a7783f1883c683b9227b979721cf9fee52",
+      "digest": "sha256:1ab872816ff76c950c15145150bb541c8443fac53a6578098e839628b3bab267",
       "documentationDigest": "sha256:5ebab97ab34e9cba9de05474d30b1b25df8c75da587ceb492543b0231b63d79b",
       "manual": {
         "controls": {
@@ -1071,7 +1071,7 @@
         "fm-core"
       ],
       "version": "1.0.0",
-      "digest": "sha256:7264a45223e660818da660e79f8a1fc63b2eba1715e3427c5b5c023e7ce5fc07",
+      "digest": "sha256:38c42149dc1927cd125342ea00d68bb5244d3e031f73a35d777cdb501f27e73c",
       "documentationDigest": "sha256:2e862986408f2e40486f862aebdd389de5ef914a6277bec746f0958642cb788f",
       "manual": {
         "controls": {
@@ -1120,7 +1120,7 @@
         "fm-core"
       ],
       "version": "1.0.0",
-      "digest": "sha256:0809b304ac72121e8704779394aeb21b7e817989ba0e2c9e2e5ac7e78d9c793d",
+      "digest": "sha256:976b2a342bcb6375abffe35c67f3f32e457e1bf3a06da673d16189602c740c24",
       "documentationDigest": "sha256:3b32f1799ab38b374c1d1524da37f86cbbad51b4cba91b7332f34f0d45868a34",
       "manual": {
         "controls": {
@@ -1213,7 +1213,7 @@
         "chord-bank"
       ],
       "version": "1.0.0",
-      "digest": "sha256:c2e98ada7c30c5f4af6144c457df46be850c5ed87a8cece639e4c017344e3caf",
+      "digest": "sha256:e47400e9f7cba27e12baa86e88faa2a3ce47e2f6d6397107eff167f9860f4d03",
       "documentationDigest": "sha256:280a414deb2a1d27eb1d7b5aec6a552ed16c60bf93c1d9bf5364e510883ccd43",
       "manual": {
         "controls": {
@@ -1261,7 +1261,7 @@
         "chord-bank"
       ],
       "version": "1.0.0",
-      "digest": "sha256:d97f21901ee6e9f9063c415578ea954b64ec82ac58013258874021330ae93a3b",
+      "digest": "sha256:65856f0d4126ade79b108add56629f0b18122390181f03688839079bc3193605",
       "documentationDigest": "sha256:3428ef64647bef3ad0eaa19418f4c93cb39755d19804139072ca9307083d956f",
       "manual": {
         "controls": {
@@ -1301,7 +1301,7 @@
         "Mono: a whisper, the same tract driven by noise alone. Stereo: the right channel of the widened pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:a25c8da57250666317d3fccfa792fd92675a193d84e94c393919f925c149292d",
+      "digest": "sha256:ba4b533f7b5533b3febe4f545f64609dd9c471b82871a54c409e1a36da50ca1d",
       "documentationDigest": "sha256:7ab10c5900c9e576dae362da660ae4498a04d2f23100a293697d3a6d22b78b5d",
       "manual": {
         "controls": {
@@ -1341,7 +1341,7 @@
         "Mono: counter-moving chirps. Stereo: selected chirps moving through the right channel."
       ],
       "version": "1.0.0",
-      "digest": "sha256:ae46263a973fadf6541e8865815897effdea6cb6920f88eec8f6bdff47241c8b",
+      "digest": "sha256:efa6400034928b4afeb40f164a71e380805767f106e925031c0ee3ff006fe20e",
       "documentationDigest": "sha256:eff93fc32651914a7167ddf03a8dfb2efdf505f22df38d51e06974bc0f88ff96",
       "manual": {
         "controls": {
@@ -1381,7 +1381,7 @@
         "Mono: raw stepped waveform. Stereo: an antipodal readout of the same evolving breakpoints."
       ],
       "version": "1.0.0",
-      "digest": "sha256:de23e76aff5cd1198312e66cd814ec071d4cce4004832fe228c8fd94bc5d671b",
+      "digest": "sha256:4dcab7d991dccac03285ea3eb1d02f20778930262e3545e011a8a7128376f3fa",
       "documentationDigest": "sha256:adfa2678afdc3ba7fe1e2af911b94619a1e99c39269ea70e834fded3f1517ba7",
       "manual": {
         "controls": {
@@ -1421,7 +1421,7 @@
         "Mono: spatial derivative. Stereo: a second pickup one quarter of the scan span away."
       ],
       "version": "1.0.0",
-      "digest": "sha256:776ac4f04eee9cdd39c9ce48d45d9eaba66e761ff15a26d3299149ff78a2aa36",
+      "digest": "sha256:312760c78b320c4a76639624e78b86077955d4f0de7a8e39b681caed27dee391",
       "documentationDigest": "sha256:fd47cf061a3eacb30644ca0f2993dc5f4e208bf56ab84188615bfd0060a201c6",
       "manual": {
         "controls": {
@@ -1542,7 +1542,7 @@
         "Mono: acquisition charge-pump and phase error. Stereo: right blend of the follower and reference oscillators."
       ],
       "version": "1.0.0",
-      "digest": "sha256:1dbb0a3da4cde1f19bd007261a5d56eda691935e1c80cf3bce90c99c3b7832b1",
+      "digest": "sha256:68d80c2430a03c9e89ca082df7e7ce367e23633ee30cd85161854f452b7b295b",
       "documentationDigest": "sha256:2733940a7ad58fe6af698c30213ceeda8900d2aeb1fd5a8a7db713e28c061f5d",
       "manual": {
         "controls": {
@@ -1742,7 +1742,7 @@
         "Mono: hollow alternating lattice without the anchor. Stereo: right spread of the registered mixture."
       ],
       "version": "1.0.0",
-      "digest": "sha256:99a5a29dcedc54a4a1adfa91aa90409b7e63a91f9c0b30b6b79a21539cb2bae1",
+      "digest": "sha256:8d3d3350d65fcbac647516f08f1058e3220671bf47de41571788f37cb919c3fd",
       "documentationDigest": "sha256:ab7c1e2d07ec6db1be9428197603ed5bd255904a5cda9ee0facabaad29f3c6ad",
       "manual": {
         "controls": {
@@ -1862,7 +1862,7 @@
         "Mono: inter-generation activity. Stereo: antipodal spatial read of the cell-to-edge blend."
       ],
       "version": "1.0.0",
-      "digest": "sha256:1d18ffdc7cc31474e83b5b495c6a3a744b361e03553552adc5b53b6babeb2d10",
+      "digest": "sha256:9f69259769e9d9effa9ffef35d6972bf4845dcd93fd64c2a44022d9f15bb30dc",
       "documentationDigest": "sha256:1f0c993d42b437f65a893f4abab56eba66a11dd10297d8c5b4d2a8c43f93a4cc",
       "manual": {
         "controls": {
@@ -1942,7 +1942,7 @@
         "Its complement, so LP pairs with HP and PK with BP. The stereo toggle does not change this fixed model pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:d70190882a2fd892dab74f46244e251b1e1dfee37af6cfd9bfe064271e7e5576",
+      "digest": "sha256:513c1be0958a3df519a2695d7c15f14423eb7bda2869c6f070e6747a3af8ea16",
       "documentationDigest": "sha256:a6fe44d473317600014aa58912d4523b21935f5e6b65a8f520b0f291bab7c8bd",
       "manual": {
         "controls": {
@@ -2022,7 +2022,7 @@
         "Mono: a variable-width pulse. Stereo: a second notched saw on the right, with mirrored depth and an offset bend."
       ],
       "version": "1.0.0",
-      "digest": "sha256:3c1e8e6733747c2be6051397f7632dfe242ea0cab8a19f9017759145113d92c7",
+      "digest": "sha256:b055dcfe3085ab6fc45f374f50c6addf867c5dd11723a428874af390831ab71b",
       "documentationDigest": "sha256:c5ad8bdaec9c60d9489b825b0350d9fcc073ba231a19bc65495f05957db7833f",
       "manual": {
         "controls": {
@@ -2183,7 +2183,7 @@
         "Mono: the complementary master/slave crossfade. Stereo: the same sound with a small rightward balance offset."
       ],
       "version": "1.0.0",
-      "digest": "sha256:c53fec4239b32da5169d67561e099b547b8978f378b5ca7726c0453ad3d5230a",
+      "digest": "sha256:a501c34ec243fbf0b25878793d31a416e0d97417fd23cca89b35356b67727139",
       "documentationDigest": "sha256:b761b66503c30342d73c89a06fe6f32d9b344c7cee2d02d91e7fcef464d1b8ab",
       "manual": {
         "controls": {
@@ -2224,7 +2224,7 @@
         "Mono: the cloud's amplitude on one steady tone at the played pitch. Stereo: the right side of the four-grain pan spread."
       ],
       "version": "1.0.0",
-      "digest": "sha256:e6d9493b7cc8e3acb5a47de46709563679d08bef7bc01a06e759a9efd019e932",
+      "digest": "sha256:120ef5024aef95df5ba2ebbb49a33ce3378053e9a58b17009703efccfab0e297",
       "documentationDigest": "sha256:8fdc9e172a6428d072d3598d2f9d22913abce10e8faa1b25c7fb228a785b4b0d",
       "manual": {
         "controls": {
@@ -2264,7 +2264,7 @@
         "Mono: the dry morph oscillator. Stereo: the processed voice at the higher Fuzz offset on the right."
       ],
       "version": "1.0.0",
-      "digest": "sha256:b59f6bd5e57ea0e3eed38d5a013792b0b8dfeadd1bb391a7fbf388afccc649de",
+      "digest": "sha256:cd2067916e9925fbdef1765f01434073fd3823c21c5964432d394df5e8121218",
       "documentationDigest": "sha256:48b331f57210b99632c8a9766c75e98dc0eef4b4f4494d7943db6207b52509c4",
       "manual": {
         "controls": {
@@ -2385,7 +2385,7 @@
         "Mono: the complementary saw/square crossfade. Stereo: the same pair with a small rightward blend offset."
       ],
       "version": "1.0.0",
-      "digest": "sha256:ad04ba72220871d223b2ea3e2a1df96f426598ecd350b2fafc6374ac00fb042d",
+      "digest": "sha256:e1f7ba6b502235d9812241666b63b7619969bcc171366fcfb8c87899b1f80547",
       "documentationDigest": "sha256:a1a5ef7507cf0cd39f3b81ddcaa3786361350901d398a4cb1afdd1749107d65d",
       "manual": {
         "controls": {
@@ -2466,7 +2466,7 @@
         "Mono: the clean stack ahead of the overdrive. Stereo: the shaped stack with a small upward formant shift on the right."
       ],
       "version": "1.0.0",
-      "digest": "sha256:d1d45155355b1048a5b9bc31634e269c8d4590b4fe4f137f93710116aa750290",
+      "digest": "sha256:2c23e22b062fb758ae570e6b89722cbea745ea0e2141cd60c7425847676b2417",
       "documentationDigest": "sha256:3c9e4a5a3ca9b5228d5a6393770d3b1bc452a478b47c819c07e5f797db2d1146",
       "manual": {
         "controls": {
@@ -2669,7 +2669,7 @@
         "Mono: the five highest partials alone, a bright fast-decaying companion voice. Stereo: a magnitude-matched phase-rotated copy of the full bell, widening the same eleven partials without retuning them."
       ],
       "version": "1.0.0",
-      "digest": "sha256:ae6df023756f3530befa1b821224965ad3b7ac7cb06d4c4641979877302bf647",
+      "digest": "sha256:2525709c3a7ce3ddb5cd13a9fff846107fa515a4217857ddf959350626e26249",
       "documentationDigest": "sha256:999d0d723662b5d2d0e18f1fceaccbfe5cc736172cd9d4b91a1892f3e6a9e839",
       "manual": {
         "controls": {
@@ -2711,7 +2711,7 @@
         "Mono: the two noise-ring-modulated partials alone, without the direct tone or the harmonics sum. Stereo: a second, independently-filtered noise realization for the right channel, sharing the same tonal partials as the left."
       ],
       "version": "1.0.0",
-      "digest": "sha256:da02983eaf38de2f1f912a96a005907c225949b2a53832744594a47b1910bf97",
+      "digest": "sha256:c54704d32fea08a7f0019d9e8bc5c1b93a03bd3713fee3527737d81c5f73fa05",
       "documentationDigest": "sha256:6cc152d8d4474949df039e6fa49429cdfafb75e617cf6a4d7b2d17957843edfd",
       "manual": {
         "controls": {
@@ -2835,7 +2835,7 @@
         "Mono: the complementary crossfade, always favoring the side MAIN does not. Stereo: a second, independent raw-noise stream and a small opposing offset on Color."
       ],
       "version": "1.0.0",
-      "digest": "sha256:807e6eea97490c266cf6a5371fe9335d5c3875c4946d723b8938b715cc7c4751",
+      "digest": "sha256:edd5c8e1ea070200ec4a70855f518831da60c7411fd24b9446458ca669a1534c",
       "documentationDigest": "sha256:75a5d9765d30b1df47b8c462cfd32ce5c8b15afbe507e84f96640eb4d2258f89",
       "manual": {
         "controls": {
@@ -2918,7 +2918,7 @@
         "chord-bank"
       ],
       "version": "1.0.0",
-      "digest": "sha256:77cebfcafb7438f77603cabd7de328d4755e09bbb2b7d7df305b4ddc3b2ca4b1",
+      "digest": "sha256:58709ec80ed86fc68ab46d3d756d54f8590fbfef6070aac20af61aa5a82cef9d",
       "documentationDigest": "sha256:f53e50e8f1398223576cf7f65144b51b27f58f3953f9b09938513005fe1882b4",
       "manual": {
         "controls": {
@@ -2999,7 +2999,7 @@
         "Mono: the keyed carrier alone, before the bed and the distortion. Stereo: a second full transmission whose noise draws come from an independent generator, so the tone stays centered and the bed opens out."
       ],
       "version": "1.0.0",
-      "digest": "sha256:489bc0e319059237b37bcaeeceec478e8cfa028586ce49ee43af31eb610c10b6",
+      "digest": "sha256:d6609463dbfe000685bb6e68c6c0b20065bf7121c50f2679f7bfd2e88e2ec6e1",
       "documentationDigest": "sha256:0e00eabcd9acb9e1e50f13f9a78ed6eaabfafc6d2607094af2788792ec9309d6",
       "manual": {
         "controls": {
@@ -3079,7 +3079,7 @@
         "The sub oscillator alone, at full level. The stereo toggle does not change this fixed main/sub pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:816ba74c23d3f552e0b56c6774c737b6acfceed8ced2840a306e639b71754aa4",
+      "digest": "sha256:a87b4500534a843671c77bb30464f63aa318a8f600f56d467dc283cb4e82a797",
       "documentationDigest": "sha256:75951823f94aaddc58084a2e9e8f102d973a8a766a0f678eef72f983f0ec3a34",
       "manual": {
         "controls": {
@@ -3159,7 +3159,7 @@
         "Second comb tap a fifth below the main one. The stereo toggle does not change this fixed two-tap pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:bb87e5702fbc6e836c128e34b532eda84c0a8b61875d93588bee026ac38ba707",
+      "digest": "sha256:fc44fc027d81c3029b26ae4622d729268f89a36f1fd1289ea44cc8522b915a7e",
       "documentationDigest": "sha256:0906814a14531cc504adb93d90c6e7ff31088f86ce3eb85a9d6d80eececa5c04",
       "manual": {
         "controls": {
@@ -3320,7 +3320,7 @@
         "Same expression at half the tick rate; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:a6efca7aef9a2803ca412f7d164fddef37b10f30d498e989f9fcf5e58ae71514",
+      "digest": "sha256:fb7ca85d8b7cbcb18f7d2d5f51d7acebdd8f93341690cd7e12177c9de68ffb9f",
       "documentationDigest": "sha256:bd2fc8f84eac42f95de7db567857146909304557fd235e01420a36c82262d9f0",
       "manual": {
         "controls": {
@@ -3362,7 +3362,7 @@
         "Root voice; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:189fc8654fa2adcefb14425b4517c0cff17d06b087be02b939bd3842a9a6cebf",
+      "digest": "sha256:11dddc7722919afffd24f471b93f4ab0fc2a69dc6fad9e4044681af4f5f70829",
       "documentationDigest": "sha256:ef45cd9b1b797ccf250bae08e9ecf22b3768aaa9f145af201b564238f1f49d0d",
       "manual": {
         "controls": {
@@ -3404,7 +3404,7 @@
         "Root voice; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:e0e179b85f66d47315bf769d2b58028075bcefa1df8fead925287322a3d2226b",
+      "digest": "sha256:87faf9414433c69e27fb8589fb005e694a28798cab119d1461925c804505a7c2",
       "documentationDigest": "sha256:eb37d954a490fa032bdcf67f7e81a2576b503c6d000e1872561cdf9430cb9548",
       "manual": {
         "controls": {
@@ -3447,7 +3447,7 @@
         "Root voice; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:4595325747e0bb9cebc56d1d3138fc85fad91702ff403c78e6d09ec2c3feeddb",
+      "digest": "sha256:47aabbb7025b26de3c785b3e77bbcf0602d906030025f5de25b16eb936396940",
       "documentationDigest": "sha256:5a0c3c76ca9f53c9fac7af92c97075e2dfdc426cc042934c8603d41b0bf6f7ba",
       "manual": {
         "controls": {
@@ -3490,7 +3490,7 @@
         "Root voice; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:b5cdd68416cc6e40b4c0691c546b93c8ceccd21f2741c5011230da1eaf4b32da",
+      "digest": "sha256:c09cd1a23b47df34131d8e499420359006d8dd9cf56832f0e45eba59d02dd71a",
       "documentationDigest": "sha256:d4be06fdc2414a0373f5fbb28a28628b23990f94a670088aa340685d4f66fae7",
       "manual": {
         "controls": {
@@ -3574,7 +3574,7 @@
         "Valve flow that drives the bore; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:d5bd416b28409864ca63e59875c36613d47c2c6f99b15595f4129a966eb0df3c",
+      "digest": "sha256:bd635a10300d69ccce9fc6099561507fd019b172143586bf46cf53e4fea71299",
       "documentationDigest": "sha256:c0fa3899d6930a09346e0f0b0608bc42dcbf261e3fa56066a59be95026dc9237",
       "manual": {
         "controls": {
@@ -3620,7 +3620,7 @@
         "color": "#5796E4"
       },
       "version": "1.0.0",
-      "digest": "sha256:70482ec3d92d0a8dc33d1580f0db98095b8a743c50fe8471dd94c867305ed537",
+      "digest": "sha256:a6693fca233b6c62893b09d16f6ffd6885be67a981ac90ff06706dd82d45d0c2",
       "documentationDigest": "sha256:1d09323253c57adf115ad3f73e0e4b3d639c4e0dfddab2283747d4941a55a2e6",
       "manual": {
         "controls": {
@@ -3662,7 +3662,7 @@
         "Mono: rim-weighted upper modes and dry slap. Stereo: the right membrane pickup."
       ],
       "version": "1.0.0",
-      "digest": "sha256:232107bd79d67f3c7135c0c572432b2ff3b04e2d8674f4210b1a7566900e6cc7",
+      "digest": "sha256:7a2e3d3f027cda37dbd09513b7870fb3c916f40f69399113cb77adf9f76b248d",
       "documentationDigest": "sha256:224c5930a754f115cf5c938681fe56fbf44b5df394822a87cc502830e959ed76",
       "manual": {
         "controls": {
@@ -3704,7 +3704,7 @@
         "Mono: the clean oscillators and attack transient. Stereo: the right crossed circuit and independent spark."
       ],
       "version": "1.0.0",
-      "digest": "sha256:a5b5a47b84400c337047206c80089d69dce838f1164424bee64129800850e203",
+      "digest": "sha256:0711ddf87425970e2e615347c42cd6651efd562712cb1bfa597ee0cf69b4615d",
       "documentationDigest": "sha256:92c6d5e20eee4d5d36d8e7ce34611b88519ecdff4755addb7d22f9a6e78798ec",
       "manual": {
         "controls": {
@@ -3747,7 +3747,7 @@
         "Mono: upper modes and dry metal strike. Stereo: the right modal pickup."
       ],
       "version": "1.0.0",
-      "digest": "sha256:d8dcd270f3dc63d48e717858e92acfbf91708aac2f6dbf45788ead2ee770a73e",
+      "digest": "sha256:c929cafefe06f7c030f80b9ab8570c4b6557e042d0feb8b3a98c71337ff88d6f",
       "documentationDigest": "sha256:879984b407439825a987b735a59a29b360910c06af758f5d58bc136136e46b9e",
       "manual": {
         "controls": {
@@ -3842,7 +3842,7 @@
         "color": "#009a98"
       },
       "version": "1.0.0",
-      "digest": "sha256:c8d34dbbe796500c69e7838b56990074ee971b2377d1da06189a72dde988e14a",
+      "digest": "sha256:540228d56ac4295f7e12f1f07c58751d019c3952027c9e6e236837e4b0ee0de4",
       "documentationDigest": "sha256:5d4adf54503186191252981e63cd45a2422196d14dc409d2df505273f5c79766",
       "manual": {
         "controls": {
@@ -3887,7 +3887,7 @@
         "color": "#009a98"
       },
       "version": "1.0.0",
-      "digest": "sha256:975d1ab2603bacf22a2b94146dbc6eb6865ac972b91147a11bd71a64941cf6d0",
+      "digest": "sha256:aafc0773c44746a0860f5d5bb41ea34fffca41aaed9e3220161946f836ccafe0",
       "documentationDigest": "sha256:36c585082ea98186b8ba5f4dbd6193cd92e194d513bda50e3820cb7a0d6020e0",
       "manual": {
         "controls": {
@@ -3932,7 +3932,7 @@
         "chord-bank"
       ],
       "version": "1.0.0",
-      "digest": "sha256:0b898904058d922afd7d66d28fc622c56508cc9f96c7413b2a5cf951d4a9fb6d",
+      "digest": "sha256:35ffd6b4f62ed04d57dbee5bbe23ccc88b07c22afdd40c44451815bdfad6e912",
       "documentationDigest": "sha256:e063f01302c58102957234f0106e5f72b06ba9cc26a87db6d1015cb3d1e8e738",
       "manual": {
         "controls": {
@@ -3973,7 +3973,7 @@
         "Mono: oscillator 2 solo. Stereo: longer phase-rotated right channel derived from the same boolean bus."
       ],
       "version": "1.0.0",
-      "digest": "sha256:fb0d6afcab7cacf11b995b40e9a3e9b0d8b478c4d8c7270b1a86b4dc84bcfcda",
+      "digest": "sha256:b71f8aac846716c805a3e338d9783c817d71997f1062b4c832a19a6a035fb0ab",
       "documentationDigest": "sha256:604d8e79ee1cf5b35af170af9690fbae331fe0f4d7de671a26e3eade042f0030",
       "manual": {
         "controls": {
@@ -4017,7 +4017,7 @@
         "chord-bank"
       ],
       "version": "1.0.0",
-      "digest": "sha256:a75ee365792386d2cb04a71be69657129c159fb6ea9bd3a25c8b44646ce4e90a",
+      "digest": "sha256:597ca62c8270081a4ac438cc3c0233b4e8a18ca0f7d6f4c5ffa0f4d1380bbb7a",
       "documentationDigest": "sha256:30a4a96dc394e68957730d47c0131727dc1b5d3ae4b56ec287b7b2faea2a8058",
       "manual": {
         "controls": {
@@ -4063,7 +4063,7 @@
         "color": "#009a98"
       },
       "version": "1.0.0",
-      "digest": "sha256:ce9fd9a6a1c164508b2f4f6a59df649a6df3e762586d6ebdc128fb6db9419740",
+      "digest": "sha256:f26749af784bf4a0cf1055735f53858e49fc3acb3d86de2796fce6c54a63b4d2",
       "documentationDigest": "sha256:abacb52cd74a8d71ccefa1b97bac67ea8ebeb9381fe48c0be79a1151956db668",
       "manual": {
         "controls": {
