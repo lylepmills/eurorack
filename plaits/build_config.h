@@ -261,6 +261,34 @@
 #define PLAITS_BUILD_OPTIONS_PROFILE_ID 0x3fc790u
 #endif
 
+// TWIST (the fourth synthesis macro) tuning range.
+//
+// ApplyMacro's contract is that the midpoint is exactly neutral and the halves
+// reach useful extremes. On most engines the macro moves a continuous timbre --
+// drive, resonance, decay, spread -- where noon is merely the stock value and
+// any other setting is a valid sound. On five engines it instead scales or
+// offsets a PITCH interval the player has already chosen as musical, and there
+// noon is the only in-tune setting:
+//
+//   two-op-fm                 ratio +/- 12 semitones
+//   virtual-analog-dual       selected interval x 0 .. x 2
+//   virtual-analog-crossfade  selected interval x 0 .. x 2
+//   phase-distortion          modulator ratio x 0.5 .. x 2
+//   wave-paraphonic           every table interval x 0 .. x 2
+//
+// With those spans, holding the chosen tuning to +/- 5 cents needs the pot
+// within 0.14%-0.36% of its travel -- under a degree of rotation on the panel
+// -- so in practice the macro detunes the engine whenever it is assigned to the
+// knob at all. (The CV path is unaffected: Voice::Render centres macro at
+// exactly 0.5f and adds the CV, so an unpatched or 0 V input is already exact.)
+//
+// 1 narrows those five spans to a fine trim the whole knob can express, leaving
+// the ApplyMacro contract and every other engine untouched. 0 is the shipped
+// behavior and is bit-identical to a build without this flag.
+#ifndef PLAITS_BUILD_TWIST_TUNING_RANGE
+#define PLAITS_BUILD_TWIST_TUNING_RANGE 0
+#endif
+
 #ifndef PLAITS_BUILD_ATTENUVERTER_MODE
 #define PLAITS_BUILD_ATTENUVERTER_MODE 0
 #endif

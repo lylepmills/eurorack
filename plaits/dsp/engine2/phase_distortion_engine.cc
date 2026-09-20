@@ -59,8 +59,24 @@ void PhaseDistortionEngine::Render(
     size_t size,
     bool* already_enveloped) {
   const float f0 = 0.5f * NoteToFrequency(parameters.note);
+  // MACRO moves the modulator ratio an octave either side of the ratio
+  // HARMONICS quantized. The endpoints are musical, but everything between
+  // them is not, and unison survives only within +/-0.14% of the knob's
+  // travel. The narrowed span is +/-1 semitone, an in-tune window of +/-2.5%.
+  //
+  // NOTE the cost: the shipped span's octave-down and octave-up endpoints are
+  // a real timbral move that the narrowed span cannot reach at all. Of the
+  // five engines this flag touches, this is the one where quantizing MACRO's
+  // output to the same ratio table HARMONICS uses is probably the better fix.
+#if PLAITS_BUILD_TWIST_TUNING_RANGE
+  const float kMacroRatioMin = 0.94387431f;  // one semitone down
+  const float kMacroRatioMax = 1.05946309f;  // one semitone up
+#else
+  const float kMacroRatioMin = 0.5f;         // one octave down
+  const float kMacroRatioMax = 2.0f;         // one octave up
+#endif
   const float modulator_octave = ApplyMacro(
-      1.0f, 0.5f, 2.0f, parameters.macro);
+      1.0f, kMacroRatioMin, kMacroRatioMax, parameters.macro);
   const float modulator_f = min(
       0.25f,
       f0 * modulator_octave * SemitonesToRatio(Interpolate(

@@ -204,6 +204,7 @@
 #ifndef PLAITS_DSP_ENGINE2_WAVE_PARAPHONIC_ENGINE_H_
 #define PLAITS_DSP_ENGINE2_WAVE_PARAPHONIC_ENGINE_H_
 
+#include "plaits/build_config.h"
 #include "plaits/dsp/chords/chord_bank.h"
 #include "plaits/dsp/engine/engine.h"
 
@@ -224,9 +225,21 @@ const int kWaveParaphonicStep = 1024;
 const float kWaveParaphonicMaxFan = 0.15f;
 
 // The loaded table is verbatim at Spread 1.0. Zero collapses the chord to a
-// unison; 2.0 doubles every interval in log-pitch space.
+// unison; 2.0 doubles every interval in log-pitch space. That full span means
+// only the exact midpoint plays the table in tune -- a twelve-semitone entry
+// holds to +/-5 cents within +/-0.21% of the knob's travel -- so the narrowed
+// span trims every interval by +/-12.5% instead, widening that window to
+// +/-1.7%.
+//
+// NOTE the cost: the shipped span's unison collapse at 0 and doubled chord at
+// 1 are both unreachable once narrowed.
+#if PLAITS_BUILD_TWIST_TUNING_RANGE
+const float kWaveParaphonicMinSpread = 0.875f;
+const float kWaveParaphonicMaxSpread = 1.125f;
+#else
 const float kWaveParaphonicMinSpread = 0.0f;
 const float kWaveParaphonicMaxSpread = 2.0f;
+#endif
 
 // Equal-power pan positions, root centred. Only read in a stereo build.
 const float kWaveParaphonicPan[kWaveParaphonicNumVoices] = {

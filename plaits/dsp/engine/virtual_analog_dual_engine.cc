@@ -87,8 +87,30 @@ void VirtualAnalogDualEngine::Render(
 
   // MACRO 0.5 is exactly Emilie's original interval spread. Scaling the signed
   // result preserves the centre/unison point and every contour in the lookup.
+  // Scaling the signed detuning preserves the centre/unison point and every
+  // contour in the lookup, but a x0..x2 span means any setting off the exact
+  // midpoint multiplies a chosen interval by something other than one: a fifth
+  // holds to +/-5 cents only within +/-0.36% of the knob's travel, an octave
+  // within +/-0.21%. The narrowed span trims the interval by +/-12.5% instead,
+  // which is a chorus/beating width rather than a retuning, and widens the
+  // in-tune window to +/-2.9% (fifth) and +/-1.7% (octave).
+  //
+  // NOTE the cost: the shipped span reaches unison at MACRO 0 and double width
+  // at 1, and the narrowed span reaches neither. See engine_macro notes.
+#if PLAITS_BUILD_TWIST_TUNING_RANGE
+  const float kMacroSpreadSpan = 0.125f;
+#else
+  const float kMacroSpreadSpan = 1.0f;
+#endif
+  // With kMacroSpreadSpan == 1.0f this is exactly `macro * 2.0f`, so the
+  // shipped build is unchanged.
+  const float spread_scale = ApplyMacro(
+      1.0f,
+      1.0f - kMacroSpreadSpan,
+      1.0f + kMacroSpreadSpan,
+      parameters.macro);
   const float auxiliary_detune =
-      ComputeDetuning(parameters.harmonics) * parameters.macro * 2.0f;
+      ComputeDetuning(parameters.harmonics) * spread_scale;
   const float primary_f = NoteToFrequency(parameters.note);
   const float auxiliary_f = NoteToFrequency(
       parameters.note + auxiliary_detune);
