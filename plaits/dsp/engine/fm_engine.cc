@@ -104,8 +104,8 @@ void FMEngine::RenderInternal(
   // gesture over +/-1 semitone (+/-2.5%); QUANTIZED keeps the full +/-12 and
   // snaps to whole semitones, so every position is a musical interval from the
   // chosen ratio and noon captures +/-2.08%.
-  const float ratio = stock_ratio + TwistSemitoneOffset(
-      twist_tuning_, parameters.macro, 12.0f, 1.0f);
+  const float ratio = TwistSpanAroundSemitones(
+      twist_tuning_, parameters.macro, stock_ratio, 12.0f, 1.0f);
   
   float modulator_note = note + ratio;
   float target_modulator_frequency = NoteToFrequency(modulator_note);

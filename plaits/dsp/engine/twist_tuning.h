@@ -79,22 +79,34 @@ inline float TwistIntervalScale(
   }
 }
 
-// For a macro that OFFSETS a pitch by a signed number of semitones, zero at
-// noon. The quantized mode keeps the shipped span and snaps to whole
-// semitones, so every position is a musical interval from the chosen one.
-inline float TwistSemitoneOffset(
+// For a macro that moves a pitch a signed number of semitones either side of
+// `centre`, which the module's own value puts at noon. The quantized mode
+// keeps the shipped span and snaps to whole semitones, so every position is a
+// musical interval from the chosen one.
+//
+// STOCK evaluates ApplyMacro AROUND the centre rather than adding an offset to
+// it. The two are the same number in exact arithmetic and NOT the same float:
+// (centre - span) + span * 2m rounds differently from centre + (span * 2m -
+// span). Sampling a few knob positions can easily miss the difference -- five
+// positions did -- but a continuous sweep finds it within an ulp and the
+// rendered audio then differs. Keep this expression identical to the one the
+// engine shipped with.
+inline float TwistSpanAroundSemitones(
     TwistTuning mode,
     float macro,
+    float centre,
     float stock_span,
     float narrow_span) {
   switch (mode) {
     case TWIST_TUNING_NARROW:
-      return ApplyMacro(0.0f, -narrow_span, narrow_span, macro);
+      return ApplyMacro(
+          centre, centre - narrow_span, centre + narrow_span, macro);
     case TWIST_TUNING_QUANTIZED:
-      return QuantizeToStep(
+      return centre + QuantizeToStep(
           ApplyMacro(0.0f, -stock_span, stock_span, macro), 1.0f);
     default:
-      return ApplyMacro(0.0f, -stock_span, stock_span, macro);
+      return ApplyMacro(
+          centre, centre - stock_span, centre + stock_span, macro);
   }
 }
 
