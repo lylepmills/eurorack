@@ -630,6 +630,15 @@ Container are managed by `wrangler.jsonc`. Before each firmware-source rollout:
      registry.cloudflare.com/<account-id>/plaits-lab-build-service-firmwarebuilder:rev-<revision>
    ```
 
+   `<account-wrangler>` means THIS package's pinned wrangler
+   (`node_modules/.bin/wrangler`, after `pnpm install`), not whatever `npx
+   wrangler` resolves to. On 2026-09-19 a push on 4.135.0 uploaded for 69
+   minutes and then died with `401 Unauthorized` from a registry blob HEAD,
+   leaving no tag behind; the identical push on the pinned 4.110.0 succeeded in
+   minutes. `pnpm run deploy` needs those same node_modules for another reason
+   — without them the Worker bundle fails with `Could not resolve
+   "@cloudflare/containers"` before anything ships.
+
    Confirm with `curl -sD - -o /dev/null localhost:<port>/build/<key> | grep
    Source-Revision` against the image before pushing; `development` there means
    the build arg was missed. (Local `plaits-lab-builder:local` images are built
