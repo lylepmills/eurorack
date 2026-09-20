@@ -104,12 +104,16 @@ void FMEngine::RenderInternal(
   // gesture over +/-1 semitone (+/-2.5%); QUANTIZED keeps the full +/-12 and
   // snaps to whole semitones, so every position is a musical interval from the
   // chosen ratio and noon captures +/-2.08%.
-  // NARROW's half-span, in semitones. Overridable so the span can be chosen by
-  // ear rather than argued about: the shipped ratio table already contains
-  // 0.5, 1 and 2 multiplied by 2^(16/1200), i.e. three entries whose only
-  // purpose is to sit 16 cents off unison, the fifth and the octave for slow
-  // beating -- so the magnitude Emilie reached for here is tens of cents, not
-  // a semitone.
+  // NARROW's half-span, in semitones. CHOSEN BY EAR: Lyle compared +/-100,
+  // +/-50 and +/-16 cents against stock's +/-1200 on 2026-09-20 and kept
+  // +/-100. The tighter spans hold tuning better on paper (+/-5 cent windows
+  // of 5.00% and 15.62% of the knob, against 2.50%) but a semitone is what
+  // still reads as a control rather than a trimmer.
+  //
+  // Kept overridable because the span is an ear judgement and may be revisited;
+  // for context, the shipped ratio table already contains 0.5, 1 and 2 each
+  // multiplied by 2^(16/1200) -- three entries whose only purpose is to sit 16
+  // cents off unison, the fifth and the octave for slow beating.
 #ifndef PLAITS_TWIST_FM_NARROW_SEMITONES
 #define PLAITS_TWIST_FM_NARROW_SEMITONES 1.0f
 #endif
