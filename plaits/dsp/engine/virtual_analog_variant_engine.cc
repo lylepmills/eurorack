@@ -152,8 +152,18 @@ void VirtualAnalogVariantEngine::Render(
 
   // SHAPE_SPREAD mirrors the secondary's departure onto the primary, so TWIST
   // still does something where only the primary is sounding.
+  // How far the PRIMARY follows TWIST, as a fraction of how far the secondary
+  // moves. At 1.0 the two mirror exactly, which makes TWIST a full shape swap
+  // rather than a spread -- the primary travels the whole range too, so TWIST
+  // and TIMBRE end up fighting over the same sound. Lower values keep TWIST
+  // audible where only the primary sounds while leaving TIMBRE in charge of it.
+#ifndef PLAITS_VA_VARIANT_SPREAD_PRIMARY_RATIO
+#define PLAITS_VA_VARIANT_SPREAD_PRIMARY_RATIO 1.0f
+#endif
   const float primary_control = remedy_ == VARIANT_REMEDY_SHAPE_SPREAD
-      ? ApplyMacro(parameters.timbre, 0.0f, 1.0f, 1.0f - parameters.macro)
+      ? ApplyMacro(parameters.timbre, 0.0f, 1.0f,
+            0.5f + (0.5f - parameters.macro) *
+                PLAITS_VA_VARIANT_SPREAD_PRIMARY_RATIO)
       : parameters.timbre;
   float primary_shape, primary_pw;
   ShapeAndPulseWidth(primary_control, &primary_shape, &primary_pw);
