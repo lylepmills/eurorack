@@ -19,8 +19,20 @@
 
 #include "stmlib/dsp/units.h"
 
-#include "plaits/build_config.h"
 #include "plaits/dsp/engine/engine.h"
+
+// Deliberately does NOT include plaits/build_config.h, even though it reads one
+// of its macros. Engine HEADERS include this file, and a generated recipe
+// config defines PLAITS_ENGINE_COUNT / PLAITS_BANK_SIZES / PLAITS_ENGINE_ROWS
+// AFTER its engine includes. Anything that drags build_config.h into that
+// include chain therefore lets its #ifndef defaults win first, and the
+// recipe's real values then collide with them -- caught here as
+// -Werror=macro-redefined against every recipe the hosted builder emits, not
+// just a hand-written config. engine.h is careful about this for the same
+// reason; default the one macro locally instead.
+#ifndef PLAITS_BUILD_TWIST_TUNING_RANGE
+#define PLAITS_BUILD_TWIST_TUNING_RANGE 0
+#endif
 
 namespace plaits {
 

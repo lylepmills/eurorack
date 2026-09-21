@@ -36,9 +36,9 @@
 // Voice::Render pins macro to exactly 0.5 and all three banks are identical by
 // construction -- which is itself worth hearing once as a control.
 //
-// Build:
-//   make -f plaits/makefile \
-//     ENGINE_CONFIG=alt_firmwares/research/twist_tuning_range/twist_ab_engine_config.h
+// Build (one line -- a // comment must not end in a backslash, which would
+// continue it onto the next line and trip -Werror=comment):
+//   make -f plaits/makefile ENGINE_CONFIG=alt_firmwares/research/twist_tuning_range/twist_ab_engine_config.h
 
 #ifndef PLAITS_DSP_ENGINE_CONFIG_H_
 #define PLAITS_DSP_ENGINE_CONFIG_H_
