@@ -111,8 +111,11 @@ void VirtualAnalogVariantEngine::Render(
   // setting. ApplyMacro anchors the midpoint on TIMBRE and interpolates to
   // each end of the shape range instead, so the whole travel is live wherever
   // TIMBRE sits, and noon is still exactly matched.
-  const float secondary_control = ApplyMacro(
-      parameters.timbre, 0.0f, 1.0f, parameters.macro);
+  // PULSE_WIDTH hands TWIST a different job, so the secondary shape has to
+  // fall back to sharing the primary's, exactly as Crossfade does.
+  const float secondary_control = remedy_ == VARIANT_REMEDY_PULSE_WIDTH
+      ? parameters.timbre
+      : ApplyMacro(parameters.timbre, 0.0f, 1.0f, parameters.macro);
 #endif
 
   // Crossfade's trajectory, unchanged: below noon the detuned secondary fades
@@ -160,6 +163,12 @@ void VirtualAnalogVariantEngine::Render(
   ShapeAndPulseWidth(primary_control, &primary_shape, &primary_pw);
   float secondary_shape, secondary_pw;
   ShapeAndPulseWidth(secondary_control, &secondary_shape, &secondary_pw);
+
+  if (remedy_ == VARIANT_REMEDY_PULSE_WIDTH) {
+    // Noon returns the coupled value untouched, so Crossfade is exact there.
+    primary_pw = ApplyMacro(primary_pw, 0.5f, 0.99f, parameters.macro);
+    secondary_pw = ApplyMacro(secondary_pw, 0.5f, 0.99f, parameters.macro);
+  }
 
   const bool stereo =
       PLAITS_STEREO_VIRTUAL_ANALOG_VARIANT && parameters.stereo;

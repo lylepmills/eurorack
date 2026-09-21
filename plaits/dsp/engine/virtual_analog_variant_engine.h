@@ -62,8 +62,12 @@
 #endif
 
 // Default follow ratio for SHAPE_SPREAD; see set_spread_primary_ratio.
+// 0.5 chosen by ear on hardware (Lyle, 2026-09-21): at 1.0 TWIST swaps the two
+// shapes outright and TIMBRE stops owning the primary; below about 0.25 it
+// stops being audible at the dry point, which is the whole point of the
+// remedy.
 #ifndef PLAITS_VA_VARIANT_SPREAD_PRIMARY_RATIO
-#define PLAITS_VA_VARIANT_SPREAD_PRIMARY_RATIO 1.0f
+#define PLAITS_VA_VARIANT_SPREAD_PRIMARY_RATIO 0.5f
 #endif
 
 #ifndef PLAITS_STEREO_VIRTUAL_ANALOG_VARIANT
@@ -103,7 +107,30 @@ enum VariantRemedy {
   // is ever inert. The endpoints become Dual's OUT and Dual's AUX. Costs
   // Crossfade's dry and full-sync ends outright, and both secondaries now
   // render every block, so it is the only remedy that also costs CPU.
-  VARIANT_REMEDY_NO_DRY
+  VARIANT_REMEDY_NO_DRY,
+  // A different job for TWIST entirely: PULSE WIDTH, decoupled from waveshape.
+  //
+  // ShapeAndPulseWidth makes the two SEQUENTIAL -- waveshape sweeps across the
+  // lower two thirds of its control with pulse width pinned at 0.5, then pulse
+  // width opens across the top third with waveshape pinned at 1. Both parents
+  // inherit that, so neither can produce a narrow pulse at a triangle-ish
+  // shape. This remedy separates them, which is territory no engine in the
+  // family currently reaches, and pulse width measures LOUDER than waveshape
+  // (0.71-0.81 RMS against 0.35-0.48), so it is unmistakably not TIMBRE.
+  //
+  // The price is the merge itself. TWIST is the only free dimension, so giving
+  // it pulse width displaces the independent SECONDARY SHAPE -- which is
+  // Dual's entire distinguishing feature. Both oscillators then share one
+  // shape, as they do in Crossfade, and the engine stops being a superset of
+  // Dual: it becomes Crossfade plus independent pulse width. Dual would have
+  // to stay in the catalog rather than being absorbed.
+  //
+  // Noon still returns the coupled pulse width exactly, so Crossfade is
+  // reproduced there. Below noon the control is flat wherever the coupled
+  // value is already 0.5 -- there is nothing below a symmetric pulse -- so the
+  // lower half only does something at high TIMBRE. That is honest rather than
+  // fixable.
+  VARIANT_REMEDY_PULSE_WIDTH
 };
 
 class VirtualAnalogVariantEngine : public Engine {
