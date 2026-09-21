@@ -93,7 +93,18 @@ int main() {
   for (int n = 0; n < 3; ++n) for (int h = 0; h < 4; ++h)
       for (int t = 0; t < 4; ++t) for (int j = 0; j < 4; ++j) {
     Settings du = { harms[h], shapes[t], shapes[j], 0.5f, notes[n], false };
-    const float macro = 0.5f + (shapes[j] - shapes[t]) * 0.5f;
+    // Invert ApplyMacro(timbre, 0, 1, macro) to place the secondary shape on
+    // dual's MORPH. The midpoint is TIMBRE itself, so each half is a plain
+    // linear solve; the degenerate ends (timbre 0 or 1) collapse one half.
+    const float primary = shapes[t], target = shapes[j];
+    float macro;
+    if (target < primary) {
+      macro = primary > 0.0f ? 0.5f * (target / primary) : 0.0f;
+    } else {
+      macro = primary < 1.0f
+          ? 0.5f + 0.5f * ((target - primary) / (1.0f - primary))
+          : 0.5f;
+    }
     Settings vv = { harms[h], shapes[t], 0.0f, macro, notes[n], false };
     Run<VirtualAnalogDualEngine>(du, a_out, a_aux);
     Run<VirtualAnalogVariantEngine>(vv, b_out, b_aux);

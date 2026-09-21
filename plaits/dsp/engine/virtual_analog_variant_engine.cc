@@ -102,9 +102,16 @@ void VirtualAnalogVariantEngine::Render(
   // TWIST spreads the secondary's shape away from the primary's. At exactly
   // noon the two match, which is Crossfade's shared-shape behaviour and makes
   // the unassigned default a complete engine rather than a slice of one.
-  float secondary_control =
-      parameters.timbre + (parameters.macro - 0.5f) * 2.0f;
-  CONSTRAIN(secondary_control, 0.0f, 1.0f);
+  //
+  // ApplyMacro, not `timbre + (macro - 0.5) * 2` clamped into range. The
+  // offset form wastes HALF the knob: with TIMBRE at noon it clamps below
+  // MACRO 0.25 and above 0.75, and the live window slides with TIMBRE rather
+  // than staying put. Measured at 10 of 20 steps live at every TIMBRE
+  // setting. ApplyMacro anchors the midpoint on TIMBRE and interpolates to
+  // each end of the shape range instead, so the whole travel is live wherever
+  // TIMBRE sits, and noon is still exactly matched.
+  const float secondary_control = ApplyMacro(
+      parameters.timbre, 0.0f, 1.0f, parameters.macro);
 #endif
 
   // Crossfade's trajectory, unchanged: below noon the detuned secondary fades
