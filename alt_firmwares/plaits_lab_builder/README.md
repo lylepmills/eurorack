@@ -1080,6 +1080,22 @@ the production canary compiled the default recipe fresh as build
 then reported pool, encoder, and Worker all at `379b4e8f4d7c`.
 `rev-1d227a049e3c` remains the immediate rollback image.
 
+The September 21 catalog rebalance shipped at `rev-43f87fccad5a` with no
+firmware source change: 57 non-stock engines' out/aux gains moved to the stock
+median K-weighted loudness, the 24 stock models untouched. Both flash anchors
+were re-measured inside the image (stock-24 rebuilt at exactly 228,564 B; the
+Sync In reference palette 16 B larger in both arms, attributed to the three
+moved engines it carries, with the 18,160 B delta preserved). The staging gate
+build `1678f22c5dcc2353f734463cea2c8dacc0f0bd1bbc382fc5c3d550631cd8296c`
+compiled fresh, stamped `43f87fccad5a`; its 14,457,836-byte WAV has SHA-256
+`4d5ba5f2d539575f4eca4265f843fe1fba7f817da5bab8713eba3b91a72bb16a` and its field guide rendered under contract 24. The
+production pool then settled healthy on the image (health reported pool,
+Speech singleton, and Worker all at `43f87fccad5a` without rotating
+`speech-encoder-v23`), the website pin moved in the same window, and the
+production canary build
+`4af9f4853fc8c9dcd2ed00955d2908c3e13da8f6cfe38778229a306a8395ce8e` succeeded.
+`rev-29803d1c2b28` is the immediate rollback image.
+
 The schema-28 shared-wave production canary compiled fresh as build
 `e114ffb89814dc91dd8faeff3b8eb46354130497f79ce9267f7e0b8b9185f94a`:
 166,608 B text, 48 B data, and 22,608 B BSS. Its binary SHA-256 was
