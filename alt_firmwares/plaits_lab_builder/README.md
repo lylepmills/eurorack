@@ -1008,6 +1008,8 @@ target.
 | September 5, 2026 (schema 29 optional Quick Retune shortcut, manual contract 23) | `1d227a049e3c` | `rev-1d227a049e3c` |
 | September 8, 2026 (field guide: fourth control renamed MACRO → TWIST, manual contract 24) | `379b4e8f4d7c` | `rev-379b4e8f4d7c` |
 | September 15, 2026 (Circuit Zaps qualified for Fast FM) | `5f0e897e3de6` | `rev-5f0e897e3de6` |
+| September 19, 2026 (Harmonic Oscillator TWIST fix; four DSP fixes upstreamed from Palette: brass lip travel, string excitation, speech word banks, chiptune envelope; target-gated TZFM work inert for Plaits) | `29803d1c2b28` | `rev-29803d1c2b28` |
+| September 21, 2026 (catalog rebalance: 57 non-stock engines' out/aux gains moved to the stock median K-weighted loudness; the 24 stock models untouched; no firmware source change) | `43f87fccad5a` | `rev-43f87fccad5a` |
 
 The September 15 Circuit Zaps Fast FM release passed both the autonomous
 group-15 diagnostic and a product-firmware audition. The exact staged product
