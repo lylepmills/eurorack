@@ -65,6 +65,7 @@ void VirtualAnalogVariantEngine::Init(BufferAllocator* allocator) {
   auxiliary_amount_ = 0.0f;
   xmod_amount_ = 0.0f;
   temp_buffer_ = allocator->Allocate<float>(kMaxBlockSize);
+  secondary_buffer_ = allocator->Allocate<float>(kMaxBlockSize);
 }
 
 void VirtualAnalogVariantEngine::Reset() {
@@ -117,10 +118,22 @@ void VirtualAnalogVariantEngine::Render(
   // Crossfade's trajectory, unchanged: below noon the detuned secondary fades
   // in against the primary, above it the primary crossfades into hard sync.
   // The two halves are mutually exclusive, which the render below exploits.
-  float auxiliary_amount = max(0.5f - trajectory, 0.0f) * 2.0f;
-  auxiliary_amount *= auxiliary_amount * 0.5f;
-
-  const float xmod_amount = max(trajectory - 0.5f, 0.0f) * 2.0f;
+  float auxiliary_amount;
+  float xmod_amount;
+  if (remedy_ == VARIANT_REMEDY_NO_DRY) {
+    // The primary never leaves, so these stop being "how much secondary" and
+    // become "which secondary": the whole travel crossfades detuned to synced.
+    auxiliary_amount = 0.5f;
+    xmod_amount = trajectory;
+  } else {
+    auxiliary_amount = max(0.5f - trajectory, 0.0f) * 2.0f;
+    if (remedy_ == VARIANT_REMEDY_LINEAR_FADE) {
+      auxiliary_amount *= 0.5f;
+    } else {
+      auxiliary_amount *= auxiliary_amount * 0.5f;
+    }
+    xmod_amount = max(trajectory - 0.5f, 0.0f) * 2.0f;
+  }
   const float squashed_xmod_amount = xmod_amount * (2.0f - xmod_amount);
 
   // HARMONICS alone sets the interval. Neither parent's MACRO scaling survives:
@@ -137,8 +150,13 @@ void VirtualAnalogVariantEngine::Render(
   const float aux_sync_f = NoteToFrequency(
       parameters.note + parameters.harmonics * 48.0f);
 
+  // SHAPE_SPREAD mirrors the secondary's departure onto the primary, so TWIST
+  // still does something where only the primary is sounding.
+  const float primary_control = remedy_ == VARIANT_REMEDY_SHAPE_SPREAD
+      ? ApplyMacro(parameters.timbre, 0.0f, 1.0f, 1.0f - parameters.macro)
+      : parameters.timbre;
   float primary_shape, primary_pw;
-  ShapeAndPulseWidth(parameters.timbre, &primary_shape, &primary_pw);
+  ShapeAndPulseWidth(primary_control, &primary_shape, &primary_pw);
   float secondary_shape, secondary_pw;
   ShapeAndPulseWidth(secondary_control, &secondary_shape, &secondary_pw);
 
@@ -179,6 +197,29 @@ void VirtualAnalogVariantEngine::Render(
       primary_f, primary_pw, primary_shape, out, size,
       PLAITS_HARD_SYNC_EVENTS(parameters));
 #endif
+
+  if (remedy_ == VARIANT_REMEDY_NO_DRY) {
+    // Both secondaries every block -- the mutual exclusivity the other modes
+    // rely on is exactly what this remedy removes. The synced voice uses
+    // Dual's ratio rather than Crossfade's sweep, which is what makes the two
+    // ends land on Dual's OUT and Dual's AUX.
+    auxiliary_.Render(
+        auxiliary_f, secondary_pw, secondary_shape, temp_buffer_, size,
+        PLAITS_HARD_SYNC_EVENTS(parameters));
+    aux_sync_.Render(
+        primary_f, aux_sync_f, secondary_pw, secondary_shape,
+        secondary_buffer_, size, PLAITS_HARD_SYNC_EVENTS(parameters));
+    ParameterInterpolator blend(&xmod_amount_, trajectory, size);
+    for (size_t i = 0; i < size; ++i) {
+      const float primary = out[i];
+      const float t = blend.Next();
+      const float secondary =
+          temp_buffer_[i] + (secondary_buffer_[i] - temp_buffer_[i]) * t;
+      out[i] = (primary + secondary) * 0.5f;
+      aux[i] = (secondary_buffer_[i] + primary) * 0.5f;
+    }
+    return;
+  }
 
   // Only one secondary treatment can be audible at a time, so only one of
   // these two oscillators is ever worth rendering. That keeps the engine at

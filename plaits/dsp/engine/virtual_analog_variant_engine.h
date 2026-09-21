@@ -67,10 +67,48 @@
 
 namespace plaits {
 
+// Remedies for the trajectory's DEAD CENTRE, selectable per instance so one
+// firmware can carry them side by side.
+//
+// The dead centre is inherited, not invented: at the trajectory's dry point
+// there is no second oscillator, so every control that only shapes the second
+// oscillator goes inert. Crossfade measures identically -- HARMONICS moves the
+// output by 0.52480 RMS at the detuned end and EXACTLY 0.00000 at its
+// midpoint. Dual is flat at 0.52480 everywhere, but only because its mix is
+// hard-coded at 50/50 and so has no trajectory to have a dry point in. Giving
+// the trajectory a knob is what buys the superset, and the dead centre is its
+// price. Each remedy below pays for it somewhere else.
+enum VariantRemedy {
+  // Crossfade's trajectory verbatim. Two controls inert at the midpoint --
+  // one worse than Crossfade, where MORPH still shapes the primary there.
+  VARIANT_REMEDY_NONE = 0,
+  // Drop the squaring on the lower half. Emilie squares the detuned fade and
+  // leaves the sync side linear, so the lower half is mush: 12.5% of full
+  // response at a quarter travel, 2.0% at 0.40. This straightens it. Narrows
+  // the dead REGION; the dead POINT stays, and Crossfade's OUT stops being
+  // bit-exact.
+  VARIANT_REMEDY_LINEAR_FADE,
+  // TWIST moves BOTH shapes, in opposite directions about TIMBRE, so it stays
+  // audible at the dry point where only the primary is sounding. Restores
+  // parity with Crossfade (one control live there, not zero). Costs
+  // independent shape placement, so the Dual equivalence weakens.
+  VARIANT_REMEDY_SHAPE_SPREAD,
+  // Remove the dry point entirely: the primary stays at 50% throughout and the
+  // trajectory crossfades the SECONDARY from detuned to hard-synced. Nothing
+  // is ever inert. The endpoints become Dual's OUT and Dual's AUX. Costs
+  // Crossfade's dry and full-sync ends outright, and both secondaries now
+  // render every block, so it is the only remedy that also costs CPU.
+  VARIANT_REMEDY_NO_DRY
+};
+
 class VirtualAnalogVariantEngine : public Engine {
  public:
-  VirtualAnalogVariantEngine() { }
+  VirtualAnalogVariantEngine() : remedy_(VARIANT_REMEDY_NONE) { }
   ~VirtualAnalogVariantEngine() { }
+
+  // Set at registration, which runs before Voice::Init calls Init() on each
+  // engine; neither Init() nor Reset() touches it.
+  void set_remedy(VariantRemedy remedy) { remedy_ = remedy; }
 
   virtual void Init(stmlib::BufferAllocator* allocator);
   virtual void Reset();
@@ -105,6 +143,10 @@ class VirtualAnalogVariantEngine : public Engine {
   float auxiliary_amount_;
   float xmod_amount_;
   float* temp_buffer_;
+  // Only VARIANT_REMEDY_NO_DRY needs both secondaries at once; the others keep
+  // the mutually-exclusive single-buffer path.
+  float* secondary_buffer_;
+  VariantRemedy remedy_;
 
   DISALLOW_COPY_AND_ASSIGN(VirtualAnalogVariantEngine);
 };
