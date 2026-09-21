@@ -17,6 +17,14 @@
 //   row 0  Two-op FM
 //   row 1  Virtual Analog Dual
 //   row 2  Virtual Analog Crossfade
+//   row 3  Virtual Analog Variant -- GREEN BANK ONLY
+//
+// Virtual Analog Variant has no TWIST-span variants to compare, so it sits on
+// a fourth green row rather than in all three banks: green is then "what ships
+// today, plus the engine proposed to replace two of it". Its control map is
+// compile-time (PLAITS_VA_VARIANT_TRAJECTORY_ON_TWIST), so a firmware carries
+// one arrangement; this build has the default -- trajectory on MORPH, shape
+// spread on TWIST.
 //
 // Phase Distortion and Wave Paraphonic were dropped from the experiment on
 // 2026-09-20: Lyle prefers their shipped spans, whose musical endpoints (octave
@@ -47,10 +55,11 @@
 #include "plaits/dsp/engine/fm_engine.h"
 #include "plaits/dsp/engine/virtual_analog_dual_engine.h"
 #include "plaits/dsp/engine/virtual_analog_crossfade_engine.h"
+#include "plaits/dsp/engine/virtual_analog_variant_engine.h"
 
-#define PLAITS_ENGINE_COUNT 9
-#define PLAITS_BANK_SIZES { 3, 3, 3 }
-#define PLAITS_ENGINE_ROWS { 0, 1, 2, 0, 1, 2, 0, 1, 2 }
+#define PLAITS_ENGINE_COUNT 10
+#define PLAITS_BANK_SIZES { 3, 4, 3 }
+#define PLAITS_ENGINE_ROWS { 0, 1, 2, 0, 1, 2, 3, 0, 1, 2 }
 
 #define PLAITS_HAS_SPEECH_ENGINE 0
 #define PLAITS_HAS_LPC_WORDS_ENGINE 0
@@ -71,6 +80,7 @@
   FMEngine fm_engine_stock_; \
   VirtualAnalogDualEngine virtual_analog_dual_engine_stock_; \
   VirtualAnalogCrossfadeEngine virtual_analog_crossfade_engine_stock_; \
+  VirtualAnalogVariantEngine virtual_analog_variant_engine_; \
   FMEngine fm_engine_narrow_; \
   VirtualAnalogDualEngine virtual_analog_dual_engine_narrow_; \
   VirtualAnalogCrossfadeEngine virtual_analog_crossfade_engine_narrow_; \
@@ -94,6 +104,7 @@
   (registry).RegisterInstance(&fm_engine_stock_, false, 0.6f, 0.6f); \
   (registry).RegisterInstance(&virtual_analog_dual_engine_stock_, false, 0.8f, 0.8f); \
   (registry).RegisterInstance(&virtual_analog_crossfade_engine_stock_, false, 0.8f, 0.8f); \
+  (registry).RegisterInstance(&virtual_analog_variant_engine_, false, 0.8f, 0.8f); \
   (registry).RegisterInstance(&fm_engine_narrow_, false, 0.6f, 0.6f); \
   (registry).RegisterInstance(&virtual_analog_dual_engine_narrow_, false, 0.8f, 0.8f); \
   (registry).RegisterInstance(&virtual_analog_crossfade_engine_narrow_, false, 0.8f, 0.8f); \
