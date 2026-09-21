@@ -61,6 +61,11 @@
 #define PLAITS_VA_VARIANT_TRAJECTORY_ON_TWIST 0
 #endif
 
+// Default follow ratio for SHAPE_SPREAD; see set_spread_primary_ratio.
+#ifndef PLAITS_VA_VARIANT_SPREAD_PRIMARY_RATIO
+#define PLAITS_VA_VARIANT_SPREAD_PRIMARY_RATIO 1.0f
+#endif
+
 #ifndef PLAITS_STEREO_VIRTUAL_ANALOG_VARIANT
 #define PLAITS_STEREO_VIRTUAL_ANALOG_VARIANT 1
 #endif
@@ -103,12 +108,20 @@ enum VariantRemedy {
 
 class VirtualAnalogVariantEngine : public Engine {
  public:
-  VirtualAnalogVariantEngine() : remedy_(VARIANT_REMEDY_NONE) { }
+  VirtualAnalogVariantEngine()
+      : remedy_(VARIANT_REMEDY_NONE),
+        spread_primary_ratio_(PLAITS_VA_VARIANT_SPREAD_PRIMARY_RATIO) { }
   ~VirtualAnalogVariantEngine() { }
 
   // Set at registration, which runs before Voice::Init calls Init() on each
   // engine; neither Init() nor Reset() touches it.
   void set_remedy(VariantRemedy remedy) { remedy_ = remedy; }
+
+  // SHAPE_SPREAD only: how far the PRIMARY follows TWIST, as a fraction of the
+  // secondary's travel. Per instance so one firmware can compare ratios.
+  void set_spread_primary_ratio(float ratio) {
+    spread_primary_ratio_ = ratio;
+  }
 
   virtual void Init(stmlib::BufferAllocator* allocator);
   virtual void Reset();
@@ -147,6 +160,7 @@ class VirtualAnalogVariantEngine : public Engine {
   // the mutually-exclusive single-buffer path.
   float* secondary_buffer_;
   VariantRemedy remedy_;
+  float spread_primary_ratio_;
 
   DISALLOW_COPY_AND_ASSIGN(VirtualAnalogVariantEngine);
 };
