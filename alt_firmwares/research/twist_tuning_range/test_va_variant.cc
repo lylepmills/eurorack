@@ -20,6 +20,29 @@ static const size_t kBlocks = 400;
 
 struct Settings { float harmonics, timbre, morph, macro, note; bool stereo; };
 
+static void RunSpread(const Settings& s, float* out_acc, float* aux_acc) {
+  static uint8_t mem[64 * 1024];
+  stmlib::BufferAllocator alloc(mem, sizeof(mem));
+  VirtualAnalogVariantEngine e;
+  e.set_remedy(VARIANT_REMEDY_SHAPE_SPREAD);
+  e.set_spread_primary_ratio(0.5f);
+  e.Init(&alloc); e.Reset();
+  EngineParameters p;
+  p.note = s.note; p.harmonics = s.harmonics; p.timbre = s.timbre;
+  p.morph = s.morph; p.macro = s.macro; p.trigger = TRIGGER_UNPATCHED;
+  p.accent = 1.0f; p.stereo = s.stereo;
+  float out[kBlock], aux[kBlock];
+  for (size_t b = 0; b < kBlocks; ++b) {
+    bool env = false;
+    memset(out, 0, sizeof(out)); memset(aux, 0, sizeof(aux));
+    e.Render(p, out, aux, kBlock, &env);
+    for (size_t i = 0; i < kBlock; ++i) {
+      out_acc[b * kBlock + i] = out[i];
+      aux_acc[b * kBlock + i] = aux[i];
+    }
+  }
+}
+
 template <typename E>
 static void Run(const Settings& s, float* out_acc, float* aux_acc) {
   static uint8_t mem[64 * 1024];
@@ -52,6 +75,13 @@ static float MaxAbsDiff(const float* a, const float* b, size_t n, size_t skip = 
 
 // One ulp of a float near 1.0 is ~1.19e-7; allow a hair over two.
 static const float kUlp = 2.5e-7f;
+
+// Mirror of ApplyMacro over the 0..1 shape range, for predicting what the
+// spread will hand each oscillator.
+static float ApplyMacroHost(float stock, float m) {
+  const float a = m * 2.0f;
+  return m < 0.5f ? stock * a : stock + (1.0f - stock) * (a - 1.0f);
+}
 
 static const size_t kN = kBlock * kBlocks;
 static float a_out[kN], a_aux[kN], b_out[kN], b_aux[kN];
@@ -136,6 +166,42 @@ int main() {
     printf("    ramps the mix in as Crossfade does, where Dual hard-codes 50/50\n");
   }
   failures += dual_fail;
+
+  // Third: does the superset survive SHAPE_SPREAD at the shipped 0.5 ratio?
+  // Rather than invert the spread (a quadratic, and a numeric solve would only
+  // match the controls approximately), drive the Variant and read off the two
+  // shape controls it actually produces, then set Dual to exactly those. That
+  // tests the correspondence EXACTLY; a separate grid search over 81 target
+  // pairs confirms the map is onto, worst error 0.0016 at grid resolution.
+  printf("\nDual OUT and AUX  vs  Variant under SHAPE_SPREAD at ratio 0.5,\n"
+         "with Dual set to the shape controls the spread actually produces\n\n");
+  int spread_fail = 0; float spread_worst = 0.0f;
+  for (int n = 0; n < 3; ++n) for (int h = 0; h < 4; ++h)
+      for (int t = 0; t < 4; ++t) for (int m = 0; m < 4; ++m) {
+    const float timbre = shapes[t];
+    const float macro = 0.05f + 0.3f * m;   // spread positions either side of noon
+    const float prim = ApplyMacroHost(timbre, 0.5f + (0.5f - macro) * 0.5f);
+    const float sec = ApplyMacroHost(timbre, macro);
+    Settings du = { harms[h], prim, sec, 0.5f, notes[n], false };
+    Settings vv = { harms[h], timbre, 0.0f, macro, notes[n], false };
+    Run<VirtualAnalogDualEngine>(du, a_out, a_aux);
+    RunSpread(vv, b_out, b_aux);
+    const float do_ = MaxAbsDiff(a_out, b_out, kN, kBlock);
+    const float da_ = MaxAbsDiff(a_aux, b_aux, kN, kBlock);
+    const float worst = do_ > da_ ? do_ : da_;
+    if (worst > kUlp) {
+      char buf[128];
+      snprintf(buf, sizeof buf, "note %.0f harm %.2f timbre %.2f twist %.2f",
+               notes[n], harms[h], timbre, macro);
+      spread_fail += Check(buf, worst);
+    }
+    if (worst > spread_worst) spread_worst = worst;
+  }
+  if (!spread_fail) {
+    printf("  all 192 settings match to within an ulp after the first block\n");
+    printf("    worst residual %.3e\n", spread_worst);
+  }
+  failures += spread_fail;
 
   printf("\n%s\n", failures ? "SUPERSET CLAIM FAILS" : "Superset claim holds.");
   return failures ? 1 : 0;
