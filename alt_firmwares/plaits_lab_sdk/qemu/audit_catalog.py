@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
 """Resumable parameter-extreme CPU audit for every stereo catalog model.
 
-Each model is measured on the emulated Cortex-M4 in stereo, under both an
-unpatched trigger and periodic patched trigger edges. Results are written after
-every model so a long catalog run can be resumed safely.
+Each model is measured on the emulated Cortex-M4 under both an unpatched
+trigger and periodic patched trigger edges. Results are written after every
+model so a long catalog run can be resumed safely.
+
+--mode picks the output path the voice renders. It defaults to stereo, which
+was once the only mode measured -- but a stereo path is not a superset of the
+mono one. Virtual Analog, for instance, skips its sync oscillator in stereo
+and measured 33% there against 58% in mono. A catalog-wide "no overrun at any
+normal setting" claim needs BOTH runs; take each engine's worse of the two.
 """
 
 from __future__ import annotations
@@ -48,10 +54,13 @@ def stereo_catalog_ids() -> list[str]:
 
 
 def estimate_command(engine_id: str, sweep: str, image: str,
-                     blocks_a: int, blocks_b: int) -> list[str]:
-    return [
-        sys.executable, str(ESTIMATE_PATH), "--builtin", engine_id,
-        "--stereo", "--sweep", sweep, "--trigger", "both", "--json",
+                     blocks_a: int, blocks_b: int,
+                     mode: str = "stereo") -> list[str]:
+    command = [sys.executable, str(ESTIMATE_PATH), "--builtin", engine_id]
+    if mode == "stereo":
+        command.append("--stereo")
+    return command + [
+        "--sweep", sweep, "--trigger", "both", "--json",
         "--quiet", "--image", image,
         "--blocks-a", str(blocks_a), "--blocks-b", str(blocks_b),
     ]
@@ -59,7 +68,8 @@ def estimate_command(engine_id: str, sweep: str, image: str,
 
 def measure(engine_id: str, args: argparse.Namespace) -> dict:
     command = estimate_command(
-        engine_id, args.sweep, args.image, args.blocks_a, args.blocks_b)
+        engine_id, args.sweep, args.image, args.blocks_a, args.blocks_b,
+        args.mode)
     environment = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
     result = subprocess.run(
         command, cwd=REPO_ROOT, text=True, capture_output=True,
@@ -88,7 +98,7 @@ def empty_state(revision: str, args: argparse.Namespace) -> dict:
     return {
         "schemaVersion": 1,
         "sourceRevision": revision,
-        "mode": "stereo",
+        "mode": args.mode,
         "sweep": args.sweep,
         "triggers": ["unpatched", "periodic"],
         "blocks": {"a": args.blocks_a, "b": args.blocks_b},
@@ -101,16 +111,20 @@ def load_state(path: Path, revision: str, args: argparse.Namespace) -> dict:
     if not path.exists():
         return empty_state(revision, args)
     state = json.loads(path.read_text(encoding="utf-8"))
-    expected = (revision, args.sweep, args.blocks_a, args.blocks_b)
+    # Files written before --mode existed are stereo by construction.
+    expected = (revision, args.sweep, args.blocks_a, args.blocks_b, args.mode)
     found = (
         state.get("sourceRevision"), state.get("sweep"),
         state.get("blocks", {}).get("a"), state.get("blocks", {}).get("b"),
+        state.get("mode", "stereo"),
     )
     if found != expected:
         raise SystemExit(
             f"refusing to mix audit workloads in {path}\n"
-            f"  found:    revision={found[0]} sweep={found[1]} blocks={found[2:] }\n"
-            f"  expected: revision={expected[0]} sweep={expected[1]} blocks={expected[2:]}"
+            f"  found:    revision={found[0]} sweep={found[1]} "
+            f"blocks={found[2:4]} mode={found[4]}\n"
+            f"  expected: revision={expected[0]} sweep={expected[1]} "
+            f"blocks={expected[2:4]} mode={expected[4]}"
         )
     return state
 
@@ -147,6 +161,8 @@ def main() -> int:
     parser.add_argument("--engine", action="append", default=[],
                         help="audit only this catalog id (repeatable)")
     parser.add_argument("--sweep", choices=("quick", "extreme"), default="extreme")
+    parser.add_argument("--mode", choices=("stereo", "mono"), default="stereo",
+                        help="output path to measure; run both for a complete audit")
     parser.add_argument("--jobs", type=int, default=2)
     parser.add_argument("--image", default="plaits-lab-builder:local")
     parser.add_argument("--blocks-a", type=int, default=200)
@@ -162,7 +178,8 @@ def main() -> int:
         parser.error("--blocks-b must be greater than --blocks-a")
 
     revision = source_revision()
-    output = args.output or Path(f"/tmp/plaits-stereo-cpu-audit-{revision[:12]}.json")
+    output = args.output or Path(
+        f"/tmp/plaits-{args.mode}-cpu-audit-{revision[:12]}.json")
     available = stereo_catalog_ids()
     unknown = sorted(set(args.engine) - set(available))
     if unknown:
