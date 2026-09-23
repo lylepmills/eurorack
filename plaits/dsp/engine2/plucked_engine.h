@@ -248,6 +248,8 @@
 #ifndef PLAITS_DSP_ENGINE2_PLUCKED_ENGINE_H_
 #define PLAITS_DSP_ENGINE2_PLUCKED_ENGINE_H_
 
+#include "stmlib/dsp/hysteresis_quantizer.h"
+
 #include "plaits/dsp/engine/engine.h"
 #include "plaits/dsp/physical_modelling/delay_line.h"
 
@@ -298,9 +300,33 @@ const float kPluckedMaxStretch = 2.5f;
 // stereo-position idiom.
 extern const float kPluckedPan[kNumPluckVoices];
 
+// What MORPH does to the three round-robin voices. The shipped CONTINUOUS
+// spread offsets voice k by k * spread semitones, which has two problems: the
+// module's own sound (unison) sits in a +/-0.36% window at noon, and equal
+// steps can only ever build SYMMETRIC stacks -- 0/3/6, 0/4/8, 0/3.7/7.4 --
+// never a major or minor triad. The two stepped modes fix both, and are
+// selectable per instance so one firmware can compare them.
+enum PluckedMorph {
+  // Shipped behaviour: continuous +/-7 semitones per round-robin step.
+  PLUCKED_MORPH_CONTINUOUS = 0,
+  // The same k * step structure, with the step snapped to consonant stacks --
+  // fifths and fourths, either direction. Five positions, so unison captures
+  // +/-12.5% of travel instead of +/-0.36%.
+  PLUCKED_MORPH_STACKS,
+  // Voice k plays tone k of a chord shape: unison at noon, open and minor
+  // shapes counter-clockwise, open and major shapes clockwise. Nine positions,
+  // unison captures +/-6.25%. Voice 0 is always the played note, so V/OCT
+  // keeps meaning the root.
+  PLUCKED_MORPH_CHORDS
+};
+
 class PluckedEngine : public Engine {
  public:
-  PluckedEngine() { }
+  PluckedEngine() : morph_mode_(PLUCKED_MORPH_CONTINUOUS) { }
+
+  // Set at registration, which runs before Voice::Init calls Init(); neither
+  // Init() nor Reset() touches it.
+  void set_morph_mode(PluckedMorph mode) { morph_mode_ = mode; }
   ~PluckedEngine() { }
 
   virtual void Init(stmlib::BufferAllocator* allocator);
@@ -321,6 +347,9 @@ class PluckedEngine : public Engine {
 
   int active_voice_;
   float active_offset_semitones_;
+  PluckedMorph morph_mode_;
+  stmlib::HysteresisQuantizer2 stack_quantizer_;
+  stmlib::HysteresisQuantizer2 chord_quantizer_;
   bool ever_struck_;
 
   float loss_frac_;

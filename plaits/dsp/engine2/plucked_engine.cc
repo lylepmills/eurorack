@@ -26,6 +26,31 @@ namespace {
 // The struck period for one voice, clamped to what the fixed-size delay
 // line can hold (SPEC R6: reciprocal of NoteToFrequency, never multiplied
 // by kCorrectedSampleRate).
+// PLUCKED_MORPH_STACKS: the per-voice step, snapped to consonant stacks.
+// Voice k sounds k * step, so these read as 0/-7/-14 (fifths down) through
+// 0/7/14 (fifths up). Held inside the shipped +/-14 semitone reach: the delay
+// line clamps below about 47 Hz, so reaching further down would detune.
+const int kPluckedStackCount = 5;
+const float kPluckedStackStep[kPluckedStackCount] = {
+  -7.0f, -5.0f, 0.0f, 5.0f, 7.0f
+};
+
+// PLUCKED_MORPH_CHORDS: tone k of each shape goes to round-robin voice k.
+// Moving away from noon adds colour: open intervals first, then triads, then
+// sevenths, minor/dark counter-clockwise and major/bright clockwise.
+const int kPluckedChordCount = 9;
+const float kPluckedChord[kPluckedChordCount][kNumPluckVoices] = {
+  { 0.0f, -5.0f, -12.0f },  // fourth down, octave down
+  { 0.0f,  3.0f,  10.0f },  // minor seventh shell
+  { 0.0f,  3.0f,   7.0f },  // minor
+  { 0.0f,  5.0f,   7.0f },  // sus4
+  { 0.0f,  0.0f,   0.0f },  // UNISON -- the module
+  { 0.0f,  7.0f,  12.0f },  // fifth and octave
+  { 0.0f,  4.0f,   7.0f },  // major
+  { 0.0f,  4.0f,  11.0f },  // major seventh shell
+  { 0.0f,  7.0f,  14.0f },  // stacked fifths
+};
+
 inline float PluckedPeriod(float note) {
   float period = 1.0f / NoteToFrequency(note);
   CONSTRAIN(period, kPluckedMinPeriod, kPluckedDelaySize - 4.0f);
@@ -55,6 +80,11 @@ inline float PluckedQuantizedSize(float note) {
 }  // namespace
 
 void PluckedEngine::Init(BufferAllocator* allocator) {
+  // Symmetric, odd step counts put noon exactly on the centre (unison) step.
+  // Hysteresis keeps a knob resting on a boundary from flipping the chord
+  // between strikes.
+  stack_quantizer_.Init(kPluckedStackCount, 0.2f, true);
+  chord_quantizer_.Init(kPluckedChordCount, 0.2f, true);
   for (int v = 0; v < kNumPluckVoices; ++v) {
     delay_line_[v].Init(allocator->Allocate<float>(kPluckedDelaySize));
   }
@@ -126,6 +156,12 @@ void PluckedEngine::Render(
   // MORPH: Spread. Zero at noon reproduces the module (and inharmonic-
   // string) exactly -- every round-robin voice unison with the played note.
   const float spread = (parameters.morph - 0.5f) * 2.0f * kPluckedMaxSpread;
+  // Quantized every block so the hysteresis tracks the knob, read only at a
+  // strike. The CONTINUOUS path touches neither, so it stays bit-identical.
+  const int stack_index = morph_mode_ == PLUCKED_MORPH_STACKS
+      ? stack_quantizer_.Process(parameters.morph) : 0;
+  const int chord_index = morph_mode_ == PLUCKED_MORPH_CHORDS
+      ? chord_quantizer_.Process(parameters.morph) : 0;
 
   // TRIGGER_UNPATCHED has no Braids equivalent (the module always strikes
   // from its own trigger). Without this the engine renders pure SILENCE
@@ -139,7 +175,14 @@ void PluckedEngine::Render(
 
   if (rising_edge || self_strike) {
     active_voice_ = (active_voice_ + 1) % kNumPluckVoices;
-    active_offset_semitones_ = spread * static_cast<float>(active_voice_);
+    if (morph_mode_ == PLUCKED_MORPH_STACKS) {
+      active_offset_semitones_ = kPluckedStackStep[stack_index] *
+          static_cast<float>(active_voice_);
+    } else if (morph_mode_ == PLUCKED_MORPH_CHORDS) {
+      active_offset_semitones_ = kPluckedChord[chord_index][active_voice_];
+    } else {
+      active_offset_semitones_ = spread * static_cast<float>(active_voice_);
+    }
 
     const float struck_period = PluckedPeriod(
         parameters.note + active_offset_semitones_);
