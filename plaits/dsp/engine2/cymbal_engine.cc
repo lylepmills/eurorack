@@ -107,7 +107,12 @@ void CymbalEngine::Render(
 
   // MORPH: Spread. 1.0x (MORPH 0.5) is the module's own voicing
   // (digital_oscillator.cc:2472-2476).
-  const float spread = parameters.morph * kCymbalSpreadMax;
+  // Optionally cubic about noon -- same ends, wider hold on the module's own
+  // voicing. See set_morph_cubic.
+  const float morph_u = 2.0f * parameters.morph - 1.0f;
+  const float spread = morph_cubic_
+      ? kCymbalSpreadMax * (0.5f + 0.5f * morph_u * morph_u * morph_u)
+      : parameters.morph * kCymbalSpreadMax;
 
   float increment[6];
   increment[0] = frequency0;

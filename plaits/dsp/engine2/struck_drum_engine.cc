@@ -257,7 +257,16 @@ void StruckDrumEngine::Render(
 
   // MORPH: Spread, scaling all six fixed partial ratios together -- see THE
   // FOURTH MACRO in the header.
-  const float spread_scale = parameters.morph * 2.0f;
+  //
+  // Linear, the module's own voicing at noon holds its widest partial (24
+  // semitones) to +/-5 cents only within +/-0.10% of the knob's travel, and a
+  // 2% error measured 1.94x the engine's own strike-to-strike variation. The
+  // cubic keeps both ends -- every partial collapsed to the root at 0, double
+  // spread at 1 -- and widens that window to +/-6.4%.
+  const float morph_u = 2.0f * parameters.morph - 1.0f;
+  const float spread_scale = morph_cubic_
+      ? 1.0f + morph_u * morph_u * morph_u
+      : parameters.morph * 2.0f;
   float increment[kNumStruckDrumPartials];
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
   float increment_ratio[kNumStruckDrumPartials];
