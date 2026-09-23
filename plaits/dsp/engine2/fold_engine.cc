@@ -117,10 +117,21 @@ const int16_t kTriFold[257] = {
 // sample becomes a uint16 index, its top 8 bits select the entry and its low 8
 // interpolate toward the next. `x` here is that same input, normalized.
 inline float ReadShaper(const int16_t* table, float x) {
-  float index = (x + 1.0f) * 128.0f;
-  CONSTRAIN(index, 0.0f, 255.999f);
-  const int integral = static_cast<int>(index);
-  const float fractional = index - static_cast<float>(integral);
+  // Saturate the way Braids does, in the integer domain. The float clamp this
+  // replaces -- CONSTRAIN on the table index -- measured 101.6 instructions and
+  // 32 VCMPs per output sample, 19 points of the CPU budget, because it runs
+  // EIGHT times per sample (two folders at 4x oversampling) and PERFORMANCE.md
+  // is explicit that float compares in a loop stall the core. Clip16 is one
+  // SSAT instruction, which is the same saturation Interpolate88 gets for free
+  // from its int16 argument.
+  //
+  // This also moves the fraction from float precision to Braids' own 8 bits,
+  // which is what Interpolate88 uses -- so it is a step TOWARD the module, not
+  // away from it. Measured audio delta against the float version is in the
+  // commit that introduced this.
+  const int32_t u = Clip16(static_cast<int32_t>(x * 32768.0f)) + 32768;
+  const int integral = u >> 8;
+  const float fractional = static_cast<float>(u & 0xff) * (1.0f / 256.0f);
   const float a = static_cast<float>(table[integral]);
   const float b = static_cast<float>(table[integral + 1]);
   return (a + (b - a) * fractional) / 32768.0f;
