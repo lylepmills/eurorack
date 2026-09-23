@@ -79,10 +79,12 @@ const int16_t kViolentOverdrive[257] = {
 // int16 sample becomes a uint16 index, its top 8 bits select the entry and its
 // low 8 interpolate toward the next. `x` here is that same input, normalised.
 inline float ReadShaper(float x) {
-  float index = (x + 1.0f) * 128.0f;
-  CONSTRAIN(index, 0.0f, 255.999f);
-  const int integral = static_cast<int>(index);
-  const float fractional = index - static_cast<float>(integral);
+  // Saturate in the integer domain, as Interpolate88's int16 argument already
+  // does -- one SSAT rather than a pair of float compares that stall the core.
+  // Same change as fold_engine.cc's ReadShaper, for the same reason.
+  const int32_t u = Clip16(static_cast<int32_t>(x * 32768.0f)) + 32768;
+  const int integral = u >> 8;
+  const float fractional = static_cast<float>(u & 0xff) * (1.0f / 256.0f);
   const float a = static_cast<float>(kViolentOverdrive[integral]);
   const float b = static_cast<float>(kViolentOverdrive[integral + 1]);
   return (a + (b - a) * fractional) * (1.0f / 32768.0f);
