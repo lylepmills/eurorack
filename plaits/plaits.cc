@@ -47,6 +47,9 @@
 #if PLAITS_FM_CARRIER_DIAGNOSTIC
 #include "plaits/fm_carrier_diagnostic.h"
 #endif
+#if PLAITS_OVERRUN_SWEEP
+#include "plaits/overrun_sweep.h"
+#endif
 #include "plaits/ui.h"
 #include "plaits/user_data.h"
 #include "plaits/user_data_receiver.h"
@@ -73,6 +76,9 @@ TzfmDiagnostic tzfm_diagnostic;
 #endif
 #if PLAITS_FM_CARRIER_DIAGNOSTIC
 FmCarrierDiagnostic fm_carrier_diagnostic;
+#endif
+#if PLAITS_OVERRUN_SWEEP
+OverrunSweep overrun_sweep;
 #endif
 
 // BufferAllocator returns typed pointers without adjusting their alignment.
@@ -103,6 +109,11 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
 
 #if PLAITS_CPU_PROBE && PLAITS_CPU_PROBE_WHOLE_CALLBACK
   PLAITS_CPU_PROBE_BEGIN
+#endif
+#if PLAITS_OVERRUN_SWEEP
+  // Cost is measured from callback entry: the UI poll, the synthesis and the
+  // late-fill deadline all share the same 12-sample period.
+  overrun_sweep.BeginCallback(audio_dac.EntryLag());
 #endif
 
   IWDG_ReloadCounter();
@@ -140,6 +151,13 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
       ++output;
     }
   }
+#if PLAITS_OVERRUN_SWEEP
+  else if (overrun_sweep.reporting()) {
+    overrun_sweep.WriteReport((Voice::Frame*)(output), size);
+    ui.DisplayDiagnosticResultLatched(
+        overrun_sweep.passed(), overrun_sweep.FailureMask());
+  }
+#endif
 #if PLAITS_TZFM_DIAGNOSTIC
   else if (tzfm_diagnostic.reporting()) {
     ui.SetAudioRateFmNeeded(false);
@@ -152,6 +170,9 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
 #endif
 #if PLAITS_TZFM_DIAGNOSTIC
     tzfm_diagnostic.Prepare(&patch, &modulations, size);
+#endif
+#if PLAITS_OVERRUN_SWEEP
+    overrun_sweep.Prepare(&patch, &modulations);
 #endif
     if (modulations.timbre_patched) {
       PacketDecoderState state = \
@@ -189,6 +210,19 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
     const int previous_engine = voice.active_engine();
     voice.Render(patch, modulations, (Voice::Frame*)(output), size);
     const int active_engine = voice.active_engine();
+#if PLAITS_OVERRUN_SWEEP
+    overrun_sweep.EndRender(size);
+    // Sampled before any of the sweep's own work: this is where production
+    // firmware has finished writing the block.
+    const bool output_late = audio_dac.OutputLate();
+    overrun_sweep.WriteOutputs((Voice::Frame*)(output), size);
+    overrun_sweep.Observe(
+        output_late,
+        audio_dac.late_fills(),
+        audio_dac.double_pending(),
+        voice.active_engine_stereo_capable());
+    ui.DisplayDataTransferProgress(0.125f + 0.875f * overrun_sweep.progress());
+#endif
 #if PLAITS_CPU_PROBE && PLAITS_CPU_PROBE_SECTION_TOTAL
     cpu_probe.SectionEnd(0);
 #endif
@@ -242,6 +276,9 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
 #endif
   }
   
+#if PLAITS_OVERRUN_SWEEP
+  overrun_sweep.EndCallback(size);
+#endif
 #ifdef PROFILE_INTERRUPT
   TOC
 #endif  // PROFILE_INTERRUPT
@@ -272,6 +309,9 @@ void Init() {
 #endif
 #if PLAITS_FM_CARRIER_DIAGNOSTIC
   fm_carrier_diagnostic.Init();
+#endif
+#if PLAITS_OVERRUN_SWEEP
+  overrun_sweep.Init(PLAITS_OVERRUN_SWEEP_GROUP);
 #endif
   audio_dac.Init(48000, kBlockSize);
 

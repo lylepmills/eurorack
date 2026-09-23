@@ -246,6 +246,14 @@ class Voice {
       Frame* frames,
       size_t size);
   inline int active_engine() const { return previous_engine_index_; }
+  // Whether the stereo aux option actually changes the active engine's render
+  // (false for engines without a true stereo path or with their
+  // PLAITS_STEREO_<X> flag off). Lets the overrun sweep skip states identical
+  // to the regular-aux ones.
+  inline bool active_engine_stereo_capable() {
+    return previous_engine_index_ >= 0 &&
+        engines_.get(previous_engine_index_)->stereo_capable();
+  }
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
   inline bool active_engine_supports_linear_tzfm() {
     return previous_engine_index_ >= 0 &&
