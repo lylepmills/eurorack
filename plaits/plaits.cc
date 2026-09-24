@@ -321,5 +321,10 @@ void Init() {
 
 int main(void) {
   Init();
-  while (1) { }
+  while (1) {
+#if PLAITS_OVERRUN_SWEEP
+    // Packet building runs here, in time the audio interrupt leaves idle.
+    overrun_sweep.Poll();
+#endif
+  }
 }

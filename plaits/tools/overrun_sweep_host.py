@@ -302,9 +302,12 @@ def decode_packet(packet: Packet) -> dict:
                 "conditions": conditions, "tails": tails}
     if packet.type == PACKET_END:
         blocks = _u16(p, 1) | (_u16(p, 3) << 16)
-        return {"type": "end", "failure_mask": p[0], "blocks": blocks,
-                "max_sweep_overhead": _u16(p, 5) / 1000.0,
-                "max_entry_lag_frames": _u16(p, 7)}
+        end = {"type": "end", "failure_mask": p[0], "blocks": blocks,
+               "max_sweep_overhead": _u16(p, 5) / 1000.0,
+               "max_entry_lag_frames": _u16(p, 7)}
+        if len(p) >= 11:
+            end["mean_sweep_overhead"] = _u16(p, 9) / 1000.0
+        return end
     return {"type": f"unknown-{packet.type}"}
 
 
@@ -524,8 +527,10 @@ def print_report(report: dict) -> None:
         print(f"!! module restarted {report['restarts']} time(s) during capture")
     if "end" in report:
         end = report["end"]
-        print(f"sweep's own post-render work: max {end['max_sweep_overhead']:.3f}"
-              f" of a period; max entry lag {end['max_entry_lag_frames']} frames")
+        print(f"sweep's own post-render work: mean "
+              f"{end.get('mean_sweep_overhead', float('nan')):.3f}, max "
+              f"{end['max_sweep_overhead']:.3f} of a period; max entry lag "
+              f"{end['max_entry_lag_frames']} frames")
     if "ladder" in report:
         print("\ncalibration ladder (cheap engine + busy-wait to a known load)")
         print("  load   peak   late  late+sweep  host glitches")
@@ -608,30 +613,86 @@ def flash(path: Path, device: str, channel: int, peak: float) -> None:
 
 
 def capture(path: Path, seconds: float, device: str,
-            channels: tuple[int, int] = (1, 2), during=None) -> None:
-    """Record ES-8 inputs; `during()` runs once the stream is live (used to
-    flash the firmware so the capture cannot miss the module's boot)."""
+            channels: tuple[int, int] = (1, 2),
+            firmware: Path | None = None, out_channel: int = 3,
+            peak: float = 0.3) -> None:
+    """Record ES-8 inputs for `seconds` (counted after any firmware plays).
+
+    With `firmware`, one full-duplex stream plays it on `out_channel` while
+    recording, so the capture cannot miss the module's boot. (A separate
+    output stream opened while an input stream is live on the same CoreAudio
+    device fails with AUHAL -10863 and stalls both.)
+    """
     import sounddevice as sd
     import soundfile as sf
 
     dev = find_device(device)
     sr = 48000
     needed = max(channels)
+    playback = np.zeros(0, dtype="float32")
+    if firmware is not None:
+        data, fw_rate = sf.read(str(firmware), dtype="float32", always_2d=True)
+        if fw_rate != sr:
+            raise SystemExit(f"firmware WAV is {fw_rate} Hz, expected {sr}")
+        playback = data[:, 0] * (peak / max(1e-9, float(np.max(np.abs(data)))))
+        print(f"flashing {firmware.name} ({len(playback) / sr:.1f} s) on output "
+              f"{out_channel}, peak {peak:.2f} FS", flush=True)
+    import queue
+    import threading
+
+    cursor = [0]
+    playback_flags = []
+    capture_flags = []
+    pending: "queue.Queue" = queue.Queue()
+    picks = [channels[0] - 1, channels[1] - 1]
+
+    def callback(indata, outdata, frames, _time, status):
+        # Real-time path: copy and hand off only. Disk I/O here causes output
+        # dropouts, and a dropout mid-transfer fails the bootloader's CRC.
+        if status:
+            (playback_flags if cursor[0] < len(playback)
+             else capture_flags).append(str(status))
+        pending.put(indata[:, picks].copy())
+        outdata.fill(0)
+        start = cursor[0]
+        chunk = playback[start:start + frames]
+        outdata[:len(chunk), out_channel - 1] = chunk
+        cursor[0] = start + frames
+
     with sf.SoundFile(str(path), "w", samplerate=sr, channels=2,
                       subtype="PCM_24") as f:
-        def callback(indata, frames, _time, status):
-            if status:
-                print(status, file=sys.stderr)
-            f.write(indata[:, [channels[0] - 1, channels[1] - 1]])
+        stop = threading.Event()
 
-        with sd.InputStream(device=dev, channels=needed, samplerate=sr,
-                            dtype="float32", callback=callback,
-                            blocksize=4096):
-            if during is not None:
-                during()
+        def writer():
+            while not stop.is_set() or not pending.empty():
+                try:
+                    f.write(pending.get(timeout=0.2))
+                except queue.Empty:
+                    pass
+
+        thread = threading.Thread(target=writer, daemon=True)
+        thread.start()
+        with sd.Stream(device=(dev, dev), channels=(needed, out_channel),
+                       samplerate=sr, dtype="float32", callback=callback,
+                       blocksize=1024, latency="high"):
+            while cursor[0] < len(playback):
+                time.sleep(0.5)
+            if firmware is not None:
+                if playback_flags:
+                    print(f"!! {len(playback_flags)} stream dropouts during the "
+                          f"flash (first: {playback_flags[0]}); the transfer "
+                          f"is probably corrupt", flush=True)
+                else:
+                    print("firmware sent cleanly (no stream dropouts); "
+                          "capturing the sweep", flush=True)
             end = time.time() + seconds
             while time.time() < end:
                 time.sleep(min(5.0, max(0.0, end - time.time())))
+        stop.set()
+        thread.join()
+    if capture_flags:
+        print(f"capture stream flags: {len(capture_flags)} "
+              f"(first: {capture_flags[0]})", flush=True)
 
 
 def expected_seconds(manifest: dict, tail_seconds: int) -> float:
@@ -690,12 +751,9 @@ def main() -> None:
             args.out.mkdir(parents=True, exist_ok=True)
             seconds = expected_seconds(manifest, args.tail_seconds) + args.margin
             wav = args.out / "capture.wav"
-            during = None
-            if args.flash:
-                def during():
-                    flash(args.flash, args.device, args.channel, args.peak)
             print(f"capturing {seconds / 60:.1f} min to {wav}", flush=True)
-            capture(wav, seconds, args.device, during=during)
+            capture(wav, seconds, args.device, firmware=args.flash,
+                    out_channel=args.channel, peak=args.peak)
             capture_path = wav
             json_path = args.out / "report.json"
         else:

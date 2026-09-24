@@ -168,6 +168,7 @@ int main(int argc, char** argv) {
                   StereoCapable(patch.engine));
     if (effective + kSweepOverhead > 1.0f) ++late;  // end-of-callback view
     sweep.EndCallback(kBlockSize);
+    sweep.Poll();  // the idle main loop between interrupts
 
     int stale = 0;
     if (output_late) {

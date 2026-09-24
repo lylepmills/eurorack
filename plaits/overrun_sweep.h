@@ -29,6 +29,12 @@
 //      capture. 1330 Hz is 36 samples a cycle: a block replayed from one or
 //      two DMA laps earlier (24 or 48 samples) is a third of a cycle out.
 //
+// Only the pilot, two DMA register reads and O(1) counters run in the audio
+// interrupt. Packet building (CRC, formatting) runs in the idle main loop via
+// Poll(), which the interrupt pre-empts, so the sweep costs production's
+// deadline as little as possible; the mean and peak of what it does cost are
+// reported.
+//
 // A calibration ladder runs first: a cheap engine plus a busy-wait burning a
 // known fraction of the block period (80-120%), so the host can see where the
 // detectors start firing on this module.
@@ -148,7 +154,14 @@ class OverrunSweep {
     PACKET_CONDITIONS = 6
   };
 
-  static const int kVersion = 2;
+  enum Request {
+    REQUEST_NONE,
+    REQUEST_LADDER,   // ladder packet, then engine 0's start
+    REQUEST_ENGINE,   // request_engine_'s results, then the next start
+    REQUEST_FINAL     // the last engine's results, then END
+  };
+
+  static const int kVersion = 3;
   static const int kBlocksPerSecond = 3989;  // 47872.34 Hz / 12
   static const int kParamStates = 81;       // H, T, M, TWIST at 0 / .5 / 1
   static const int kPitches = 5;
@@ -234,7 +247,36 @@ class OverrunSweep {
     total_blocks_ = 0;
     max_overhead_ = 0;
     max_entry_lag_ = 0;
+    overhead_sum_ = 0;
+    overhead_count_ = 0;
+    settings_key_ = -1;
+    request_ = REQUEST_NONE;
+    request_engine_ = 0;
+    final_ = false;
     EnqueueHello();
+  }
+
+  // Idle main loop: builds the packets the interrupt asked for. The interrupt
+  // only sets `request_`; it never touches the queue's producer side while a
+  // request is pending, and it does not start the next engine's measurement
+  // (or the report) until the switch phase -- seconds -- has elapsed.
+  void Poll() {
+    const Request request = request_;
+    if (request == REQUEST_NONE) return;
+    const int engine = request_engine_;
+    if (request == REQUEST_LADDER) {
+      EnqueueLadder();
+    } else {
+      EnqueueEngineResult(engine);
+      EnqueueConditions(engine);
+      ResetConditions();
+    }
+    if (request == REQUEST_FINAL) {
+      EnqueueEnd();
+    } else {
+      EnqueueEngineStart(request == REQUEST_LADDER ? 0 : engine + 1);
+    }
+    request_ = REQUEST_NONE;
   }
 
   bool reporting() const { return phase_ == PHASE_REPORT; }
@@ -283,8 +325,10 @@ class OverrunSweep {
         static_cast<float>(size) * (static_cast<float>(F_CPU) / kSampleRate);
     const uint16_t overhead = UsageCode(
         static_cast<float>(OverrunSweepCycles() - render_end_) / budget);
-    if (overhead > max_overhead_ && phase_ != PHASE_REPORT) {
-      max_overhead_ = overhead;
+    if (phase_ != PHASE_REPORT) {
+      if (overhead > max_overhead_) max_overhead_ = overhead;
+      overhead_sum_ += overhead;
+      ++overhead_count_;
     }
   }
 
@@ -292,8 +336,7 @@ class OverrunSweep {
   // coming block. Runs after Ui::Poll, so the UI's real per-block cost stays
   // in the measurement while its readings are discarded.
   void Prepare(Patch* patch, Modulations* modulations) {
-    Settings s;
-    CurrentSettings(&s);
+    const Settings& s = CurrentSettings();
 
     patch->engine = s.engine;
     patch->note = s.note;
@@ -554,37 +597,48 @@ class OverrunSweep {
     }
   }
 
-  void CurrentSettings(Settings* s) const {
-    s->engine = engine_;
+  // Settings change once per state (every 48 blocks); only the trigger level
+  // moves per block. Cached so the interrupt does not redo the divisions and
+  // random draws each block.
+  const Settings& CurrentSettings() {
+    const int key = (phase_ * 64 + engine_) * 16384 + state_;
+    if (key != settings_key_) {
+      settings_key_ = key;
+      Settings* s = &settings_;
+      s->engine = engine_;
+      switch (phase_) {
+        case PHASE_GRID:
+          GridState(state_, s);
+          break;
+        case PHASE_RANDOM:
+          RandomState(engine_, state_, s);
+          break;
+        case PHASE_TAIL:
+          TailState(state_, s);
+          break;
+        default:
+          // Start, ladder and the switch phase between engines: engine 0 (a
+          // deliberately cheap engine) at rest, so packets go out intact.
+          s->engine = 0;
+          GridState(40, s);  // all four macros centred
+          s->note = 60.0f;
+          break;
+      }
+      if ((phase_ == PHASE_GRID || phase_ == PHASE_RANDOM) &&
+          !stereo_capable_ && s->output == 1) {
+        s->output = 0;  // identical render; see SkipGridState
+      }
+      condition_ = Condition(s->trigger, s->output, s->note);
+    }
+    Settings* s = &settings_;
     s->trigger_high = false;
-    switch (phase_) {
-      case PHASE_GRID:
-        GridState(state_, s);
-        break;
-      case PHASE_RANDOM:
-        RandomState(engine_, state_, s);
-        break;
-      case PHASE_TAIL:
-        TailState(state_, s);
-        break;
-      default:
-        // Start, ladder and the switch phase between engines: engine 0 (a
-        // deliberately cheap engine) at rest, so packets go out intact.
-        s->engine = 0;
-        GridState(40, s);  // all four macros centred
-        s->note = 60.0f;
-        break;
-    }
-    if ((phase_ == PHASE_GRID || phase_ == PHASE_RANDOM) && !stereo_capable_ &&
-        s->output == 1) {
-      s->output = 0;  // identical render; see SkipGridState
-    }
     if (s->trigger == 1) {
       s->trigger_high = block_ >= kStrikeBlock &&
           block_ < kStrikeBlock + kStrikeLength;
     } else if (s->trigger == 2) {
       s->trigger_high = block_ >= kStrikeBlock;
     }
+    return settings_;
   }
 
   void ResetConditions() {
@@ -649,15 +703,7 @@ class OverrunSweep {
       if (late) SaturatingAdd(&tail_case_late_[state_], 1);
       return;
     }
-    Settings s;
-    s.trigger_high = false;
-    if (phase_ == PHASE_GRID) {
-      GridState(state_, &s);
-    } else {
-      RandomState(engine_, state_, &s);
-      if (!stereo_capable_ && s.output == 1) s.output = 0;
-    }
-    const int c = Condition(s.trigger, s.output, s.note);
+    const int c = condition_;
     if (measured && usage > condition_peak_[c]) condition_peak_[c] = usage;
     if (late) SaturatingAdd(&condition_late_[c], 1);
   }
@@ -691,7 +737,8 @@ class OverrunSweep {
           ++state_;
           if (state_ >= kLadderSteps) {
             target_load_ = 0.0f;
-            EnqueueLadder();
+            request_engine_ = 0;
+            request_ = REQUEST_LADDER;
             BeginEngine(0);
           } else {
             target_load_ = LadderLoad(state_);
@@ -700,7 +747,13 @@ class OverrunSweep {
         break;
 
       case PHASE_SWITCH:
-        if (block_ >= kSwitchBlocks) {
+        if (block_ >= kSwitchBlocks && final_) {
+          // The last engine's packets have been built and queued by Poll();
+          // WriteReport waits for them to drain before the report loop.
+          phase_ = PHASE_REPORT;
+          report_item_ = 0;
+          report_gap_ = kSampleRateInt;
+        } else if (block_ >= kSwitchBlocks) {
           phase_ = PHASE_GRID;
           state_ = 0;
           block_ = 0;
@@ -746,15 +799,18 @@ class OverrunSweep {
             ++state_;
           } while (state_ < kTailCases && SkipTailState(state_));
           if (state_ >= kTailCases) {
-            EnqueueEngineResult(engine_);
-            EnqueueConditions(engine_);
+            request_engine_ = engine_;
             if (engine_ + 1 < PLAITS_OVERRUN_SWEEP_ENGINES) {
+              request_ = REQUEST_ENGINE;
               BeginEngine(engine_ + 1);
             } else {
-              EnqueueEnd();
-              phase_ = PHASE_REPORT;
-              report_item_ = 0;
-              report_gap_ = kSampleRateInt;  // samples; queued packets first
+              // Park on the cheap engine while Poll() queues the last
+              // packets, then report.
+              request_ = REQUEST_FINAL;
+              final_ = true;
+              phase_ = PHASE_SWITCH;
+              state_ = 0;
+              block_ = 0;
             }
           }
         }
@@ -771,9 +827,8 @@ class OverrunSweep {
     state_ = 0;
     block_ = 0;
     last_state_late_ = -1;
-    EnqueueEngineStart(engine);
-    // The previous engine's condition table was already queued.
-    ResetConditions();
+    // Poll() queues the start packet and resets the condition table (after
+    // sending the previous engine's) during this switch phase.
   }
 
   // ---- Packets ----
@@ -885,12 +940,14 @@ class OverrunSweep {
 
   void EnqueueEnd() {
     uint16_t crc;
-    BeginPacket(PACKET_END, 9, &crc);
+    BeginPacket(PACKET_END, 11, &crc);
     PushCrc(FailureMask(), &crc);
     Push16(static_cast<uint16_t>(total_blocks_ & 0xffff), &crc);
     Push16(static_cast<uint16_t>(total_blocks_ >> 16), &crc);
     Push16(max_overhead_, &crc);
     Push16(max_entry_lag_, &crc);
+    Push16(static_cast<uint16_t>(
+        overhead_count_ ? overhead_sum_ / overhead_count_ : 0), &crc);
     EndPacket(crc);
   }
 
@@ -1001,8 +1058,8 @@ class OverrunSweep {
   float tone_phase_;
   float bit_phase_;
   uint8_t queue_[kQueueSize];
-  int queue_head_;
-  int queue_tail_;
+  volatile int queue_head_;  // consumer: the interrupt's FSK modulator
+  volatile int queue_tail_;  // producer: Poll() (Init and report: interrupt)
   uint32_t shift_;
   int bits_left_;
   int lead_in_bits_;
@@ -1019,6 +1076,14 @@ class OverrunSweep {
   uint32_t total_blocks_;
   uint16_t max_overhead_;
   uint16_t max_entry_lag_;
+  uint32_t overhead_sum_;
+  uint32_t overhead_count_;
+  Settings settings_;
+  int settings_key_;
+  int condition_;
+  volatile Request request_;
+  volatile int request_engine_;
+  bool final_;
 
   DISALLOW_COPY_AND_ASSIGN(OverrunSweep);
 };
