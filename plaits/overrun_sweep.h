@@ -182,7 +182,9 @@ class OverrunSweep {
   static const int kLadderSteps = 21;       // 80% .. 120% in 2% steps
   static const int kLadderSettleBlocks = kBlocksPerSecond / 5;
   static const int kLadderBlocks = kBlocksPerSecond;
-  static const int kSwitchBlocks = 3 * kBlocksPerSecond;
+  // Long enough for a whole engine's packets (~390 bytes at 1200 baud) to
+  // leave before the next engine can overrun and corrupt them.
+  static const int kSwitchBlocks = 9 * kBlocksPerSecond / 2;
   static const int kQueueSize = 512;
   static const int kBaud = 1200;
   static const int kStatsBytes = 10;

@@ -46,7 +46,7 @@ START_BLOCKS = 2 * BLOCKS_PER_SECOND
 LADDER_STEPS = 21
 LADDER_SETTLE_BLOCKS = BLOCKS_PER_SECOND // 5
 LADDER_BLOCKS = BLOCKS_PER_SECOND
-SWITCH_BLOCKS = 3 * BLOCKS_PER_SECOND
+SWITCH_BLOCKS = 9 * BLOCKS_PER_SECOND // 2
 BAUD = 1200
 MARK_HZ = 2400.0
 SPACE_HZ = 4800.0
@@ -766,7 +766,10 @@ def main() -> None:
                     if args.manifest else None)
         if args.command == "run":
             args.out.mkdir(parents=True, exist_ok=True)
-            seconds = expected_seconds(manifest, args.tail_seconds) + args.margin
+            # Overrunning engines lose callbacks and run slower than their
+            # schedule (up to ~20% in practice), so budget for it.
+            seconds = (expected_seconds(manifest, args.tail_seconds) * 1.2
+                       + args.margin)
             wav = args.out / "capture.wav"
             print(f"capturing {seconds / 60:.1f} min to {wav}", flush=True)
             capture(wav, seconds, args.device, firmware=args.flash,

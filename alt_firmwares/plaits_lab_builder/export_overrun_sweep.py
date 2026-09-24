@@ -26,7 +26,16 @@ import re
 import subprocess
 from pathlib import Path
 
+import copy
+
+from container_server import STEREO_MACROS
 from export_recipe_source import export_recipe_source
+from generate_engine_config import (
+    DEFAULT_CHORD_TABLES,
+    DEFAULT_CONFIGURATION,
+    DEFAULT_SCALE_BANK,
+    MAX_RECIPE_SCHEMA_VERSION,
+)
 
 CATALOG = json.loads((Path(__file__).resolve().parents[1] /
                       "plaits_lab_catalog/catalog.json").read_text())
@@ -52,7 +61,7 @@ def registry_order(engine_config: str, slots: list[str]) -> list[str]:
     """Engine ids in registry order: the amber, green, red rotation, checked
     member by member against the generated registration."""
     names = {e["id"]: e for e in CATALOG["engines"]}
-    engines = slots[16:24] + slots[0:8] + slots[8:16]
+    engines = [s for s in slots[16:24] + slots[0:8] + slots[8:16] if s]
     if len(set(engines)) != len(engines):
         raise ValueError("duplicate slots collapse; registry order would shift")
     members = re.findall(r"\(registry\)\.RegisterInstance\(\s*&(\w+)",
@@ -68,6 +77,10 @@ def main() -> None:
     parser.add_argument("--order", type=Path,
                         help="JSON list of every catalog engine id, riskiest first")
     parser.add_argument("--group", type=int, required=True, help="1-based")
+    parser.add_argument("--stereo", action="store_true",
+                        help="stereo AUX with every engine's stereo path "
+                             "compiled in (a schema-2 recipe compiles the "
+                             "per-engine stereo paths out)")
     parser.add_argument("--engines", nargs="+",
                         help="an explicit follow-up group instead of --order: "
                              "the first id hosts the ladder, so make it cheap")
@@ -92,9 +105,11 @@ def main() -> None:
     free = [i for i in range(GROUP_SIZE) if i != REGISTRY_ZERO_SLOT]
     for slot, engine_id in zip(free, group[1:]):
         slots[slot] = engine_id
-    # A short final group repeats its ladder host; duplicates collapse to one
-    # registry entry.
-    slots = [s if s is not None else group[0] for s in slots]
+    # A short group: the stereo (latest-schema) recipe leaves the spare slots
+    # empty; schema 2 cannot, so it repeats the ladder host, and the registry
+    # check below refuses that because duplicates would shift the order.
+    if not args.stereo:
+        slots = [s if s is not None else group[0] for s in slots]
 
     recipe = {
         "schemaVersion": 2,
@@ -103,6 +118,25 @@ def main() -> None:
         "output": "audio-wav",
         "slots": slots,
     }
+    if args.stereo:
+        # The latest schema, spelled the way the builder's own tests spell it,
+        # with the Experimental features explicitly off.
+        options = copy.deepcopy(DEFAULT_CONFIGURATION["initialOptions"])
+        options.update({"auxOutput": "stereo", "attenuverterMode": "stock",
+                        "trigResponse": "trigger"})
+        recipe.update({
+            "schemaVersion": MAX_RECIPE_SCHEMA_VERSION,
+            "preferences": {
+                "navigationMode": "linear", "calibration": False,
+                "colorBlindMode": False, "replaceableFmBanks": False,
+                "syncInput": False, "linearTzfm": False, "fastFm": False,
+                "simplifiedPitchRanges": False, "envelopeContour": False,
+            },
+            "initialOptions": options,
+            "stereoEngines": sorted({s for s in slots if s in STEREO_MACROS}),
+            "resources": {"chordTables": DEFAULT_CHORD_TABLES,
+                          "scaleBank": DEFAULT_SCALE_BANK},
+        })
     revision = subprocess.check_output(
         ["git", "rev-parse", "HEAD"], text=True).strip()
     dirty = bool(subprocess.check_output(
