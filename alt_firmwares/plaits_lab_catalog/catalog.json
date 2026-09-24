@@ -7,6 +7,7 @@
       "virtual-analog",
       "virtual-analog-dual",
       "virtual-analog-crossfade",
+      "virtual-analog-variant",
       "waveshaping",
       "two-op-fm",
       "harmonic",
@@ -38,6 +39,7 @@
       "virtual-analog",
       "virtual-analog-dual",
       "virtual-analog-crossfade",
+      "virtual-analog-variant",
       "waveshaping",
       "two-op-fm",
       "wavetable",
@@ -78,6 +80,7 @@
       "virtual-analog",
       "virtual-analog-dual",
       "virtual-analog-crossfade",
+      "virtual-analog-variant",
       "waveshaping",
       "two-op-fm",
       "granular-formant",
@@ -3063,6 +3066,44 @@
       }
     },
     {
+      "id": "virtual-analog-variant",
+      "packageId": "mutable-instruments/virtual-analog-variant",
+      "name": "Virtual Analog Variant",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Subtractive",
+      "description": "Emilie Gillet's two alternate virtual-analog designs preserved in the Plaits source, unified: a detuned or hard-synced second oscillator on one trajectory, with independently spread waveshapes.",
+      "tags": [
+        "analog",
+        "oscillator",
+        "sync",
+        "variant"
+      ],
+      "controls": [
+        "Interval",
+        "Waveshape",
+        "Detune to sync",
+        "Shape spread"
+      ],
+      "outputs": [
+        "Mono: the primary with the detuned or hard-synced oscillator, as set by MORPH. Stereo: left channel, a point just below the primary/detuned mix.",
+        "Mono: the primary against a hard-synced oscillator at the HARMONICS ratio, half and half. Stereo: right channel, a point just above the primary/detuned mix."
+      ],
+      "source": {
+        "header": "plaits/dsp/engine/virtual_analog_variant_engine.h",
+        "className": "VirtualAnalogVariantEngine",
+        "member": "virtual_analog_variant_engine_",
+        "files": [
+          "plaits/dsp/engine/virtual_analog_variant_engine.cc"
+        ]
+      },
+      "postProcessing": {
+        "alreadyEnveloped": false,
+        "outGain": 0.8,
+        "auxGain": 0.8
+      }
+    },
+    {
       "id": "bowed",
       "packageId": "mutable-instruments/bowed",
       "name": "Bowed",
@@ -4719,6 +4760,15 @@
         "macro": "The squared distortion on its own, from a clean sum to twice the module's depth."
       },
       "trigger": "Restarts the Morse transmission from its first symbol."
+    },
+    "virtual-analog-variant": {
+      "controls": {
+        "harmonics": "Sets the detuned oscillator's interval: unison at noon, then fifth, octave, octave plus fifth and two octaves, up clockwise and down counterclockwise. Also sets the AUX sync ratio.",
+        "timbre": "Changes both oscillators together from saw through square to narrow pulse.",
+        "morph": "Turning below noon fades in the detuned oscillator; at noon only the primary sounds; turning above noon crossfades the primary into hard sync.",
+        "macro": "Moves the two oscillators' waveshapes apart around the TIMBRE setting, the primary half as far as the secondary; at noon both shapes match."
+      },
+      "trigger": "The oscillator phases free-run; patched TRIG restarts Plaits' shared decay and low-pass-gate envelope."
     },
     "bowed": {
       "controls": {

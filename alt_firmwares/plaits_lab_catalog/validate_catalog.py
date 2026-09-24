@@ -109,6 +109,7 @@ BRAIDS_FIXED_PAIR_ENGINES = {
 AUDITED_REMAINING_METADATA_DIGESTS = {
     "virtual-analog-dual": "sha256:3cf2c0e87174b5379ed9ab943a1b2dc7d9c995453bc103b17ab13f4d175799f9",
     "virtual-analog-crossfade": "sha256:e262651501514c05a20e8a9f633472d3ded280e664f3144c54e57421884a7c2a",
+    "virtual-analog-variant": "sha256:0edb05b9fe705ce51ea2f6344de6de67bb3b9bc65a8db05f894e709bbc49cba0",
     "formant-speech": "sha256:5d8a76de71896ce2e58927317e2f65015a10c03f7f7d55637e0b57cdc24ced21",
     "lpc-speech": "sha256:f671ab3b21119cbaa99103a5ba2d15b363891149be21917dbbc4156fe62fe862",
     "glisson": "sha256:939633e80e2942e22599767bfdeef3b1b422fb06df32224fa2072198be5ee6c3",

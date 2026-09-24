@@ -9,6 +9,7 @@
 #include "plaits/dsp/engine/fm_engine.h"
 #include "plaits/dsp/engine/grain_engine.h"
 #include "plaits/dsp/engine/swarm_engine.h"
+#include "plaits/dsp/engine/virtual_analog_variant_engine.h"
 #include "plaits/dsp/engine/waveshaping_engine.h"
 #include "plaits/dsp/engine/wavetable_engine.h"
 #include "plaits/dsp/engine2/acid_engine.h"
@@ -186,7 +187,9 @@ int main() {
       !TestResetPlacement<plaits::AdditiveEngine>("harmonic") ||
       !TestResetPlacement<plaits::SwarmEngine>("swarm") ||
       !TestResetPlacement<plaits::WaveTerrainEngine>("wave terrain") ||
-      !TestResetPlacement<plaits::AcidEngine>("acid")) {
+      !TestResetPlacement<plaits::AcidEngine>("acid") ||
+      !TestResetPlacement<plaits::VirtualAnalogVariantEngine>(
+          "virtual-analog-variant")) {
     return 1;
   }
   printf("hard_sync_engine_test: all checks passed\n");

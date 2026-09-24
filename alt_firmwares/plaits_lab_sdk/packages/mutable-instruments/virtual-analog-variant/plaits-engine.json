@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "mutable-instruments/virtual-analog-variant",
+  "catalogId": "virtual-analog-variant",
+  "version": "1.0.0",
+  "name": "Virtual Analog Variant",
+  "author": "Emilie Gillet",
+  "origin": "Mutable Instruments",
+  "license": "MIT",
+  "description": "Emilie Gillet's two alternate virtual-analog designs preserved in the Plaits source, unified: a detuned or hard-synced second oscillator on one trajectory, with independently spread waveshapes.",
+  "family": "Subtractive",
+  "tags": [
+    "analog",
+    "oscillator",
+    "sync",
+    "variant"
+  ],
+  "controls": [
+    {
+      "id": "harmonics",
+      "label": "Interval",
+      "description": "Sets the detuned oscillator's interval: unison at noon, then fifth, octave, octave plus fifth and two octaves, up clockwise and down counterclockwise. Also sets the AUX sync ratio."
+    },
+    {
+      "id": "timbre",
+      "label": "Waveshape",
+      "description": "Changes both oscillators together from saw through square to narrow pulse."
+    },
+    {
+      "id": "morph",
+      "label": "Detune to sync",
+      "description": "Turning below noon fades in the detuned oscillator; at noon only the primary sounds; turning above noon crossfades the primary into hard sync."
+    },
+    {
+      "id": "macro",
+      "label": "Shape spread",
+      "description": "Moves the two oscillators' waveshapes apart around the TIMBRE setting, the primary half as far as the secondary; at noon both shapes match."
+    }
+  ],
+  "outputs": {
+    "main": "Mono: the primary with the detuned or hard-synced oscillator, as set by MORPH. Stereo: left channel, a point just below the primary/detuned mix.",
+    "aux": "Mono: the primary against a hard-synced oscillator at the HARMONICS ratio, half and half. Stereo: right channel, a point just above the primary/detuned mix."
+  },
+  "trigger": "The oscillator phases free-run; patched TRIG restarts Plaits' shared decay and low-pass-gate envelope.",
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine/virtual_analog_variant_engine.h",
+    "files": [
+      "plaits/dsp/engine/virtual_analog_variant_engine.cc"
+    ],
+    "className": "VirtualAnalogVariantEngine"
+  },
+  "postProcessing": {
+    "alreadyEnveloped": false,
+    "outGain": 0.8,
+    "auxGain": 0.8
+  },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Mutable Instruments eurorack Plaits source, original VA_VARIANT 0 and 1 unified, with Plaits Palette macro and stereo integration"
+}

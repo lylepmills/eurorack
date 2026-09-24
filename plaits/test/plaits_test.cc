@@ -69,6 +69,7 @@
 #include "plaits/dsp/engine2/six_op_engine.h"
 #include "plaits/dsp/engine2/spectral_spiral_engine.h"
 #include "plaits/dsp/engine2/bowed_engine.h"
+#include "plaits/dsp/engine/virtual_analog_variant_engine.h"
 #include "plaits/dsp/engine2/question_mark_engine.h"
 #include "plaits/dsp/engine2/fluted_engine.h"
 #include "plaits/dsp/engine2/formant_speech_engine.h"
@@ -3924,6 +3925,7 @@ void TestExperimentalEngines() {
   RenderAuditionEngine<CSawEngine>("14-csaw.wav");
   RenderAuditionEngine<RingModEngine>("15-ring-mod.wav");
   RenderAuditionEngine<BowedEngine>("16-bowed.wav");
+  RenderAuditionEngine<VirtualAnalogVariantEngine>("60-virtual-analog-variant.wav");
   RenderAuditionEngine<QuestionMarkEngine>("51-question-mark.wav");
   RenderAuditionEngine<FlutedEngine>("50-fluted.wav");
   RenderAuditionEngine<WaveParaphonicEngine>("49-wave-paraphonic.wav");
@@ -3999,6 +4001,7 @@ void TestExperimentalEngines() {
   ValidateExperimentalEngineExtremes<CSawEngine>();
   ValidateExperimentalEngineExtremes<RingModEngine>();
   ValidateExperimentalEngineExtremes<BowedEngine>();
+  ValidateExperimentalEngineExtremes<VirtualAnalogVariantEngine>();
   ValidateExperimentalEngineExtremes<QuestionMarkEngine>();
   ValidateExperimentalEngineExtremes<FlutedEngine>();
   ValidateExperimentalEngineExtremes<WaveParaphonicEngine>();
@@ -4065,6 +4068,7 @@ void TestExperimentalEngines() {
   ValidateExperimentalControlResponse<CSawEngine>("CSaw");
   ValidateExperimentalControlResponse<RingModEngine>("Ring Mod");
   ValidateExperimentalControlResponse<BowedEngine>("Bowed");
+  ValidateExperimentalControlResponse<VirtualAnalogVariantEngine>("Virtual Analog Variant");
   ValidateExperimentalControlResponse<QuestionMarkEngine>("Question Mark");
   ValidateExperimentalControlResponse<FlutedEngine>("Fluted");
   ValidateExperimentalControlResponse<WaveParaphonicEngine>("Wave Paraphonic");

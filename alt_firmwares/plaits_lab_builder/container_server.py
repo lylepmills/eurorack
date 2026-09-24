@@ -830,6 +830,7 @@ STEREO_MACROS = {
     "virtual-analog": "VIRTUAL_ANALOG",
     "virtual-analog-dual": "VIRTUAL_ANALOG_DUAL",
     "virtual-analog-crossfade": "VIRTUAL_ANALOG_CROSSFADE",
+    "virtual-analog-variant": "VIRTUAL_ANALOG_VARIANT",
     "waveshaping": "WAVESHAPING",
     "two-op-fm": "TWO_OP_FM",
     "granular-formant": "GRANULAR_FORMANT",

@@ -164,6 +164,7 @@ PLAITS_STEREO_MODELS = \
   VIRTUAL_ANALOG:virtual_analog_engine WAVESHAPING:waveshaping_engine \
   VIRTUAL_ANALOG_DUAL:virtual_analog_dual_engine \
   VIRTUAL_ANALOG_CROSSFADE:virtual_analog_crossfade_engine \
+  VIRTUAL_ANALOG_VARIANT:virtual_analog_variant_engine \
   TWO_OP_FM:fm_engine GRANULAR_FORMANT:grain_engine HARMONIC:additive_engine \
   WAVETABLE:wavetable_engine CHORDS:chord_engine SPEECH:speech_engine \
   FORMANT_SPEECH:formant_speech_engine LPC_SPEECH:lpc_speech_engine \

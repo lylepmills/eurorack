@@ -136,7 +136,7 @@ enum VariantRemedy {
 class VirtualAnalogVariantEngine : public Engine {
  public:
   VirtualAnalogVariantEngine()
-      : remedy_(VARIANT_REMEDY_NONE),
+      : remedy_(VARIANT_REMEDY_SHAPE_SPREAD),
         spread_primary_ratio_(PLAITS_VA_VARIANT_SPREAD_PRIMARY_RATIO) { }
   ~VirtualAnalogVariantEngine() { }
 

@@ -43,11 +43,20 @@ static void RunSpread(const Settings& s, float* out_acc, float* aux_acc) {
   }
 }
 
+// The first two sections check the merge under Crossfade's control map
+// verbatim (VARIANT_REMEDY_NONE); the shipped default is SHAPE_SPREAD, which
+// RunSpread and the third section cover.
+template <typename E>
+static void Configure(E&) { }
+static void Configure(VirtualAnalogVariantEngine& e) {
+  e.set_remedy(VARIANT_REMEDY_NONE);
+}
+
 template <typename E>
 static void Run(const Settings& s, float* out_acc, float* aux_acc) {
   static uint8_t mem[64 * 1024];
   stmlib::BufferAllocator alloc(mem, sizeof(mem));
-  E e; e.Init(&alloc); e.Reset();
+  E e; Configure(e); e.Init(&alloc); e.Reset();
   EngineParameters p;
   p.note = s.note; p.harmonics = s.harmonics; p.timbre = s.timbre;
   p.morph = s.morph; p.macro = s.macro; p.trigger = TRIGGER_UNPATCHED;

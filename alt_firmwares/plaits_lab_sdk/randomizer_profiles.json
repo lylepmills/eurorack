@@ -105,6 +105,11 @@
       "timbre": "centered",
       "morph": "broad-texture"
     },
+    "virtual-analog-variant": {
+      "status": "seeded",
+      "timbre": "centered",
+      "morph": "broad-texture"
+    },
     "waveshaping": {
       "status": "seeded",
       "timbre": "balanced",

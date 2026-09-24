@@ -56,6 +56,7 @@
 #include "plaits/dsp/engine2/sideband_engine.h"
 #include "plaits/dsp/engine2/spectral_spiral_engine.h"
 #include "plaits/dsp/engine2/bowed_engine.h"
+#include "plaits/dsp/engine/virtual_analog_variant_engine.h"
 #include "plaits/dsp/engine2/question_mark_engine.h"
 #include "plaits/dsp/engine2/fluted_engine.h"
 #include "plaits/dsp/engine2/formant_speech_engine.h"
@@ -199,6 +200,7 @@ int main() {
   bench<ScannedEngine>("scanned");
   bench<PulsarEngine>("pulsar");
   bench<BowedEngine>("bowed");
+  bench<VirtualAnalogVariantEngine>("virtual-analog-variant");
   bench<QuestionMarkEngine>("question-mark");
   bench<FlutedEngine>("fluted");
   bench<WaveParaphonicEngine>("wave-paraphonic");
