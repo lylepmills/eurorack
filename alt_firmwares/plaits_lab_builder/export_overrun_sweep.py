@@ -65,18 +65,27 @@ def registry_order(engine_config: str, slots: list[str]) -> list[str]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--order", type=Path, required=True,
+    parser.add_argument("--order", type=Path,
                         help="JSON list of every catalog engine id, riskiest first")
     parser.add_argument("--group", type=int, required=True, help="1-based")
+    parser.add_argument("--engines", nargs="+",
+                        help="an explicit follow-up group instead of --order: "
+                             "the first id hosts the ladder, so make it cheap")
     parser.add_argument("output", type=Path)
     args = parser.parse_args()
 
-    order = json.loads(args.order.read_text())
     catalog_ids = {e["id"] for e in CATALOG["engines"]}
-    missing = catalog_ids - set(order)
-    if missing:
-        raise ValueError(f"--order is missing catalog engines: {sorted(missing)}")
-    group = groups([e for e in order if e in catalog_ids])[args.group - 1]
+    if args.engines:
+        unknown = sorted(set(args.engines) - catalog_ids)
+        if unknown or len(args.engines) > GROUP_SIZE:
+            raise ValueError(f"bad --engines (unknown {unknown}, or > {GROUP_SIZE})")
+        group = list(args.engines)
+    else:
+        order = json.loads(args.order.read_text())
+        missing = catalog_ids - set(order)
+        if missing:
+            raise ValueError(f"--order is missing catalog engines: {sorted(missing)}")
+        group = groups([e for e in order if e in catalog_ids])[args.group - 1]
 
     slots = [None] * GROUP_SIZE
     slots[REGISTRY_ZERO_SLOT] = group[0]
