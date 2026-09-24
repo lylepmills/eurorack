@@ -221,7 +221,10 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
         audio_dac.late_fills(),
         audio_dac.double_pending(),
         voice.active_engine_stereo_capable());
-    ui.DisplayDataTransferProgress(0.125f + 0.875f * overrun_sweep.progress());
+    if (overrun_sweep.progress_due()) {
+      ui.DisplayDataTransferProgress(
+          0.125f + 0.875f * overrun_sweep.progress());
+    }
 #endif
 #if PLAITS_CPU_PROBE && PLAITS_CPU_PROBE_SECTION_TOTAL
     cpu_probe.SectionEnd(0);

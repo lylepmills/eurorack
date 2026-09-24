@@ -284,6 +284,8 @@ def decode_packet(packet: Packet) -> dict:
         (result["tail_worst_block"], result["switch_in_peak"],
          result["switch_in_late"], result["double_pending"],
          result["late_with_overhead"]) = struct.unpack_from("<5H", p, 32)
+        if len(p) >= 44:
+            result["dropped_states"] = _u16(p, 42)
         result["switch_in_peak"] /= 1000.0
         return result
     if packet.type == PACKET_CONDITIONS:
@@ -559,6 +561,9 @@ def print_report(report: dict) -> None:
               f"{e['late_with_overhead']:6d} {e['switch_in_late']:6d} "
               f"{'-' if stretch is None else f'{stretch:.3f}':>7} "
               f"{host:6d}  {verdict(e)}")
+        if e.get("dropped_states"):
+            print(f"       {e['dropped_states']} state summaries dropped "
+                  f"(main loop starved: far over budget)")
         if e["grid"]["worst_state"] is not None and e["grid"]["peak"] >= 0.85:
             print(f"       worst grid state: {grid_state(e['grid']['worst_state'])}")
         bad = sorted((c for c in e.get("conditions", []) if c["late"]),

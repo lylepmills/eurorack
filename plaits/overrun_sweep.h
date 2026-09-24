@@ -29,11 +29,14 @@
 //      capture. 1330 Hz is 36 samples a cycle: a block replayed from one or
 //      two DMA laps earlier (24 or 48 samples) is a third of a cycle out.
 //
-// Only the pilot, two DMA register reads and O(1) counters run in the audio
-// interrupt. Packet building (CRC, formatting) runs in the idle main loop via
-// Poll(), which the interrupt pre-empts, so the sweep costs production's
-// deadline as little as possible; the mean and peak of what it does cost are
-// reported.
+// Per block, the audio interrupt only writes the pilot, reads two DMA
+// registers and updates a few integer accumulators. Once per 48-block state it
+// posts a summary to a two-slot mailbox; the idle main loop (Poll(), which the
+// interrupt pre-empts) folds summaries into the results and builds every
+// packet. So the sweep costs production's deadline about as little as it can,
+// and the mean and peak of what it does cost are reported. When an engine is
+// so far over budget that the main loop never runs, summaries that find the
+// mailbox full are dropped and counted.
 //
 // A calibration ladder runs first: a cheap engine plus a busy-wait burning a
 // known fraction of the block period (80-120%), so the host can see where the
@@ -131,6 +134,7 @@ struct OverrunSweepEngineResult {
   uint16_t double_pending;     // both halves due at once (a whole lap behind)
   uint16_t late_with_overhead; // late at the END of the callback, i.e.
                                // including the sweep's own bookkeeping
+  uint16_t dropped_states;     // summaries lost to a starved main loop
 };
 
 class OverrunSweep {
@@ -161,7 +165,7 @@ class OverrunSweep {
     REQUEST_FINAL     // the last engine's results, then END
   };
 
-  static const int kVersion = 3;
+  static const int kVersion = 4;
   static const int kBlocksPerSecond = 3989;  // 47872.34 Hz / 12
   static const int kParamStates = 81;       // H, T, M, TWIST at 0 / .5 / 1
   static const int kPitches = 5;
@@ -182,10 +186,10 @@ class OverrunSweep {
   static const int kLadderSettleBlocks = kBlocksPerSecond / 5;
   static const int kLadderBlocks = kBlocksPerSecond;
   static const int kSwitchBlocks = 3 * kBlocksPerSecond;
-  static const int kQueueSize = 512;
+  static const int kQueueSize = 400;
   static const int kBaud = 1200;
   static const int kStatsBytes = 10;
-  static const int kEngineResultBytes = 2 + 3 * kStatsBytes + 10;
+  static const int kEngineResultBytes = 2 + 3 * kStatsBytes + 12;
   static const int kConditionBytes = 1 + kConditions * 4 + kTailCases * 6;
 
   OverrunSweep() { }
@@ -198,7 +202,6 @@ class OverrunSweep {
     state_ = 0;
     block_ = 0;
     stereo_capable_ = false;
-    stereo_capable_known_ = true;
     for (int i = 0; i < PLAITS_OVERRUN_SWEEP_ENGINES; ++i) {
       OverrunSweepEngineResult& r = results_[i];
       r.stereo_capable = 0;
@@ -210,6 +213,7 @@ class OverrunSweep {
       r.switch_in_late = 0;
       r.double_pending = 0;
       r.late_with_overhead = 0;
+      r.dropped_states = 0;
     }
     for (int i = 0; i < kLadderSteps; ++i) {
       ladder_peak_[i] = 0;
@@ -217,9 +221,6 @@ class OverrunSweep {
       ladder_late_with_overhead_[i] = 0;
     }
     ResetConditions();
-    last_state_late_ = -1;
-    last_late_total_ = 0;
-    last_double_total_ = 0;
     // Pilot: a rotating phasor, a few multiply-adds per sample.
     const float w = 2.0f * 3.14159265f * PilotHz() / kCorrectedSampleRate;
     pilot_cos_ = cosf(w);
@@ -242,14 +243,21 @@ class OverrunSweep {
     report_gap_ = 0;
     callback_start_ = 0;
     render_end_ = 0;
-    usage_ = 0.0f;
     target_load_ = 0.0f;
     total_blocks_ = 0;
-    max_overhead_ = 0;
+    max_overhead_cycles_ = 0;
     max_entry_lag_ = 0;
     overhead_sum_ = 0;
     overhead_count_ = 0;
     settings_key_ = -1;
+    budget_cycles_ = static_cast<uint32_t>(
+        kBlockSize * (static_cast<float>(F_CPU) / kSampleRate));
+    over_ninety_cycles_ = budget_cycles_ * 9 / 10;
+    cycles_ = 0;
+    dac_late_ = dac_double_ = 0;
+    mailbox_[0].valid = mailbox_[1].valid = false;
+    ResetAccumulators();
+    SetLimits();
     request_ = REQUEST_NONE;
     request_engine_ = 0;
     final_ = false;
@@ -261,6 +269,15 @@ class OverrunSweep {
   // request is pending, and it does not start the next engine's measurement
   // (or the report) until the switch phase -- seconds -- has elapsed.
   void Poll() {
+    // Summaries first: the request for an engine's packets is raised in the
+    // same interrupt that posts its last state.
+    for (int i = 0; i < 2; ++i) {
+      if (mailbox_[i].valid) {
+        const StateSummary summary = mailbox_[i];
+        mailbox_[i].valid = false;
+        Fold(summary);
+      }
+    }
     const Request request = request_;
     if (request == REQUEST_NONE) return;
     const int engine = request_engine_;
@@ -289,9 +306,11 @@ class OverrunSweep {
   }
   uint16_t ladder_peak(int i) const { return ladder_peak_[i]; }
   uint16_t ladder_late(int i) const { return ladder_late_[i]; }
-  float last_usage() const { return usage_; }
+  float last_usage() const {
+    return static_cast<float>(cycles_) / static_cast<float>(budget_cycles_);
+  }
   uint16_t condition_late(int c) const { return condition_late_[c]; }
-  uint16_t max_overhead() const { return max_overhead_; }
+  uint16_t max_overhead() const { return Code(max_overhead_cycles_); }
 
   // Called at the very top of the audio callback. `entry_lag` is how many
   // frames the DMA had already played of the other half when the callback
@@ -315,21 +334,17 @@ class OverrunSweep {
       while (OverrunSweepCycles() - callback_start_ < target) { }
     }
     render_end_ = OverrunSweepCycles();
-    usage_ = static_cast<float>(render_end_ - callback_start_) / budget;
+    cycles_ = render_end_ - callback_start_;
   }
 
   // Called last in the callback: how long the sweep's own work after Render
   // took, as a fraction of the period (reported, so its bias is known).
   inline void EndCallback(size_t size) {
-    const float budget =
-        static_cast<float>(size) * (static_cast<float>(F_CPU) / kSampleRate);
-    const uint16_t overhead = UsageCode(
-        static_cast<float>(OverrunSweepCycles() - render_end_) / budget);
-    if (phase_ != PHASE_REPORT) {
-      if (overhead > max_overhead_) max_overhead_ = overhead;
-      overhead_sum_ += overhead;
-      ++overhead_count_;
-    }
+    if (phase_ == PHASE_REPORT) return;
+    const uint32_t overhead = OverrunSweepCycles() - render_end_;
+    if (overhead > max_overhead_cycles_) max_overhead_cycles_ = overhead;
+    overhead_sum_ += overhead;
+    ++overhead_count_;
   }
 
   // Overwrites every synthesis-relevant patch and modulation value for the
@@ -376,43 +391,34 @@ class OverrunSweep {
     modulations->trigger = s.trigger_high ? 1.0f : 0.0f;
   }
 
-  // Called once per callback, after EndRender. `output_late` is the deadline
-  // sampled right after Render (detector 1) and belongs to this block. The
-  // DAC's end-of-callback counters are only updated after the callback
-  // returns, so their deltas describe the previous block; they are kept per
-  // engine only, where a one-block lag does not matter.
-  void Observe(
+  // Called once per callback, after EndRender and WriteOutputs. Integer work
+  // only; `output_late` is the deadline sampled right after Render (detector
+  // 1). The DAC's end-of-callback counters are just stored -- their per-state
+  // deltas are taken when the state ends.
+  inline void Observe(
       bool output_late,
       uint32_t late_total,
       uint32_t double_total,
       bool active_engine_stereo_capable) {
     if (phase_ == PHASE_REPORT) return;
-    const uint32_t late_after = late_total - last_late_total_;
-    const uint32_t doubled = double_total - last_double_total_;
-    last_late_total_ = late_total;
-    last_double_total_ = double_total;
-
-    const uint16_t usage = UsageCode(usage_);
-    switch (phase_) {
-      case PHASE_LADDER:
-        if (block_ >= kLadderSettleBlocks && usage > ladder_peak_[state_]) {
-          ladder_peak_[state_] = usage;
-        }
-        if (output_late) SaturatingAdd(&ladder_late_[state_], 1);
-        SaturatingAdd(&ladder_late_with_overhead_[state_],
-                      late_after + doubled);
-        break;
-      case PHASE_GRID:
-      case PHASE_RANDOM:
-      case PHASE_TAIL:
-        RecordEngineBlock(usage, output_late, late_after, doubled);
-        break;
-      default:
-        break;
+    const uint32_t c = cycles_;
+    if (block_ < settle_limit_) {
+      if (c > acc_settle_peak_) acc_settle_peak_ = c;
+      acc_settle_late_ += output_late;
+    } else {
+      if (c > acc_peak_) {
+        acc_peak_ = c;
+        acc_peak_block_ = block_;
+      }
+      acc_late_ += output_late;
+      acc_over_ninety_ += c >= over_ninety_cycles_;
+      if (block_ >= final_start_ && c > acc_final_peak_) acc_final_peak_ = c;
     }
+    dac_late_ = late_total;
+    dac_double_ = double_total;
     stereo_capable_ = active_engine_stereo_capable;
     ++total_blocks_;
-    Advance();
+    if (++block_ >= block_limit_) EndState();
   }
 
   // OUT: continuous pilot sine (the host's stale-block detector). AUX: the
@@ -451,6 +457,9 @@ class OverrunSweep {
       frames[i].aux = Transmitting() ? FskSample() : 0;
     }
   }
+
+  // The LED progress bar only needs refreshing occasionally.
+  bool progress_due() const { return (total_blocks_ & 255) == 0; }
 
   float progress() const {
     if (phase_ == PHASE_REPORT) return 1.0f;
@@ -653,59 +662,143 @@ class OverrunSweep {
     }
   }
 
-  void RecordEngineBlock(
-      uint16_t usage, bool late, uint32_t late_after, uint32_t doubled) {
-    OverrunSweepEngineResult& r = results_[engine_];
-    SaturatingAdd(&r.late_with_overhead, late_after + doubled);
-    SaturatingAdd(&r.double_pending, doubled);
+  struct StateSummary {
+    uint32_t peak;
+    uint32_t final_peak;
+    uint32_t settle_peak;
+    uint32_t peak_block;
+    uint16_t late;
+    uint16_t settle_late;
+    uint16_t over_ninety;
+    uint16_t dac_late;
+    uint16_t dac_double;
+    uint16_t state;
+    uint8_t phase;
+    uint8_t engine;
+    uint8_t condition;
+    volatile bool valid;
+  };
 
+  uint16_t Code(uint32_t cycles) const {
+    return UsageCode(
+        static_cast<float>(cycles) / static_cast<float>(budget_cycles_));
+  }
+
+  static uint16_t Clamp16(uint32_t value) {
+    return static_cast<uint16_t>(value > 0xffff ? 0xffff : value);
+  }
+
+  void ResetAccumulators() {
+    acc_peak_ = acc_final_peak_ = acc_settle_peak_ = 0;
+    acc_peak_block_ = 0;
+    acc_late_ = acc_settle_late_ = acc_over_ninety_ = 0;
+    dac_late_start_ = dac_late_;
+    dac_double_start_ = dac_double_;
+  }
+
+  void SetLimits() {
+    final_start_ = 0x7fffffff;
+    switch (phase_) {
+      case PHASE_START:
+        block_limit_ = kStartBlocks;
+        settle_limit_ = kStartBlocks;
+        break;
+      case PHASE_LADDER:
+        block_limit_ = kLadderSettleBlocks + kLadderBlocks;
+        settle_limit_ = kLadderSettleBlocks;
+        break;
+      case PHASE_SWITCH:
+        block_limit_ = kSwitchBlocks;
+        settle_limit_ = kSwitchBlocks;
+        break;
+      case PHASE_TAIL:
+        block_limit_ = kTailBlocks;
+        settle_limit_ = kSettleBlocks;
+        final_start_ = kTailBlocks - kBlocksPerSecond;
+        break;
+      default:
+        block_limit_ = kStateBlocks;
+        settle_limit_ = kSettleBlocks;
+        break;
+    }
+  }
+
+  // Interrupt side, once per state: post the accumulators to the mailbox.
+  void PostSummary() {
+    if (phase_ != PHASE_LADDER && phase_ != PHASE_GRID &&
+        phase_ != PHASE_RANDOM && phase_ != PHASE_TAIL) {
+      return;
+    }
+    StateSummary* slot = !mailbox_[0].valid ? &mailbox_[0]
+        : (!mailbox_[1].valid ? &mailbox_[1] : NULL);
+    if (!slot) {
+      // Main loop starved: only an engine far over budget does this.
+      if (phase_ != PHASE_LADDER) {
+        SaturatingAdd(&results_[engine_].dropped_states, 1);
+      }
+      return;
+    }
+    slot->peak = acc_peak_;
+    slot->final_peak = acc_final_peak_;
+    slot->settle_peak = acc_settle_peak_;
+    slot->peak_block = acc_peak_block_;
+    slot->late = Clamp16(acc_late_);
+    slot->settle_late = Clamp16(acc_settle_late_);
+    slot->over_ninety = Clamp16(acc_over_ninety_);
+    slot->dac_late = Clamp16(dac_late_ - dac_late_start_);
+    slot->dac_double = Clamp16(dac_double_ - dac_double_start_);
+    slot->state = static_cast<uint16_t>(state_);
+    slot->phase = static_cast<uint8_t>(phase_);
+    slot->engine = static_cast<uint8_t>(engine_);
+    slot->condition = static_cast<uint8_t>(condition_);
+    slot->valid = true;  // last: publishes the slot to Poll()
+  }
+
+  // Main-loop side: fold one state's summary into the results.
+  void Fold(const StateSummary& m) {
+    const uint16_t peak = Code(m.peak);
+    if (m.phase == PHASE_LADDER) {
+      if (peak > ladder_peak_[m.state]) ladder_peak_[m.state] = peak;
+      SaturatingAdd(&ladder_late_[m.state], m.late + m.settle_late);
+      SaturatingAdd(&ladder_late_with_overhead_[m.state],
+                    m.dac_late + m.dac_double);
+      return;
+    }
+    OverrunSweepEngineResult& r = results_[m.engine];
+    SaturatingAdd(&r.late_with_overhead, m.dac_late + m.dac_double);
+    SaturatingAdd(&r.double_pending, m.dac_double);
+
+    uint32_t late = m.late + m.settle_late;
     // The first blocks after selecting the engine carry the model switch
     // itself (LoadUserData, Reset): normal use, but reported on its own.
-    if (phase_ == PHASE_GRID && state_ == 0 && block_ < kSettleBlocks) {
-      if (usage > r.switch_in_peak) r.switch_in_peak = usage;
-      if (late) SaturatingAdd(&r.switch_in_late, 1);
-      return;
+    if (m.phase == PHASE_GRID && m.state == 0) {
+      r.switch_in_peak = Code(m.settle_peak);
+      SaturatingAdd(&r.switch_in_late, m.settle_late);
+      late = m.late;
     }
-
-    OverrunSweepStats* stats = phase_ == PHASE_GRID
-        ? &r.grid : (phase_ == PHASE_RANDOM ? &r.random : &r.tail);
-    // Settle blocks follow an abrupt jump to new settings -- like a CV step --
-    // so a late settle block counts; only the cost peak skips them.
-    const bool measured = block_ >= kSettleBlocks;
-    if (measured) {
-      if (usage >= 900) SaturatingAdd(&stats->over_ninety, 1);
-      if (usage > stats->peak) {
-        stats->peak = usage;
-        stats->worst_state = static_cast<uint16_t>(state_);
-        if (phase_ == PHASE_TAIL) {
-          r.tail_worst_block = static_cast<uint16_t>(
-              block_ > 0xffff ? 0xffff : block_);
-        }
-      }
+    OverrunSweepStats* stats = m.phase == PHASE_GRID
+        ? &r.grid : (m.phase == PHASE_RANDOM ? &r.random : &r.tail);
+    SaturatingAdd(&stats->over_ninety, m.over_ninety);
+    if (peak > stats->peak) {
+      stats->peak = peak;
+      stats->worst_state = m.state;
+      if (m.phase == PHASE_TAIL) r.tail_worst_block = Clamp16(m.peak_block);
     }
     if (late) {
-      SaturatingAdd(&stats->late, 1);
-      const int key = phase_ * 8192 + state_;
-      if (key != last_state_late_) {
-        last_state_late_ = key;
-        SaturatingAdd(&stats->late_states, 1);
-      }
+      SaturatingAdd(&stats->late, late);
+      SaturatingAdd(&stats->late_states, 1);
     }
-
-    if (phase_ == PHASE_TAIL) {
-      if (measured && usage > tail_case_peak_[state_]) {
-        tail_case_peak_[state_] = usage;
+    if (m.phase == PHASE_TAIL) {
+      if (peak > tail_case_peak_[m.state]) tail_case_peak_[m.state] = peak;
+      const uint16_t final_peak = Code(m.final_peak);
+      if (final_peak > tail_case_final_peak_[m.state]) {
+        tail_case_final_peak_[m.state] = final_peak;
       }
-      if (block_ >= kTailBlocks - kBlocksPerSecond &&
-          usage > tail_case_final_peak_[state_]) {
-        tail_case_final_peak_[state_] = usage;
-      }
-      if (late) SaturatingAdd(&tail_case_late_[state_], 1);
+      SaturatingAdd(&tail_case_late_[m.state], late);
       return;
     }
-    const int c = condition_;
-    if (measured && usage > condition_peak_[c]) condition_peak_[c] = usage;
-    if (late) SaturatingAdd(&condition_late_[c], 1);
+    if (peak > condition_peak_[m.condition]) condition_peak_[m.condition] = peak;
+    SaturatingAdd(&condition_late_[m.condition], late);
   }
 
   // Grid states whose stereo render equals the regular one are skipped
@@ -719,82 +812,66 @@ class OverrunSweep {
     return !stereo_capable_ && index >= 3;
   }
 
-  void Advance() {
-    ++block_;
+  // Runs when a state's blocks are done: post its summary, move on.
+  void EndState() {
+    PostSummary();
     switch (phase_) {
       case PHASE_START:
-        if (block_ >= kStartBlocks) {
-          phase_ = PHASE_LADDER;
-          state_ = 0;
-          block_ = 0;
-          target_load_ = LadderLoad(0);
-        }
+        phase_ = PHASE_LADDER;
+        state_ = 0;
+        target_load_ = LadderLoad(0);
         break;
 
       case PHASE_LADDER:
-        if (block_ >= kLadderSettleBlocks + kLadderBlocks) {
-          block_ = 0;
-          ++state_;
-          if (state_ >= kLadderSteps) {
-            target_load_ = 0.0f;
-            request_engine_ = 0;
-            request_ = REQUEST_LADDER;
-            BeginEngine(0);
-          } else {
-            target_load_ = LadderLoad(state_);
-          }
+        ++state_;
+        if (state_ >= kLadderSteps) {
+          target_load_ = 0.0f;
+          request_engine_ = 0;
+          request_ = REQUEST_LADDER;
+          BeginEngine(0);
+        } else {
+          target_load_ = LadderLoad(state_);
         }
         break;
 
       case PHASE_SWITCH:
-        if (block_ >= kSwitchBlocks && final_) {
+        if (final_) {
           // The last engine's packets have been built and queued by Poll();
           // WriteReport waits for them to drain before the report loop.
           phase_ = PHASE_REPORT;
           report_item_ = 0;
           report_gap_ = kSampleRateInt;
-        } else if (block_ >= kSwitchBlocks) {
+        } else {
           phase_ = PHASE_GRID;
           state_ = 0;
-          block_ = 0;
-          // Latched from the tested engine's first rendered block.
-          stereo_capable_known_ = false;
         }
         break;
 
       case PHASE_GRID:
-        if (!stereo_capable_known_) {
-          // The first grid block rendered the tested engine; its capability
-          // decides which grid states run.
-          stereo_capable_known_ = true;
+        if (state_ == 0) {
+          // State 0 rendered the tested engine; its capability decides which
+          // grid states run.
           results_[engine_].stereo_capable = stereo_capable_ ? 1 : 0;
         }
-        if (block_ >= kStateBlocks) {
-          block_ = 0;
-          do {
-            ++state_;
-          } while (state_ < kGridStates && SkipGridState(state_));
-          if (state_ >= kGridStates) {
-            phase_ = PHASE_RANDOM;
-            state_ = 0;
-          }
+        do {
+          ++state_;
+        } while (state_ < kGridStates && SkipGridState(state_));
+        if (state_ >= kGridStates) {
+          phase_ = PHASE_RANDOM;
+          state_ = 0;
         }
         break;
 
       case PHASE_RANDOM:
-        if (block_ >= kStateBlocks) {
-          block_ = 0;
-          ++state_;
-          if (state_ >= kRandomStates) {
-            phase_ = PHASE_TAIL;
-            state_ = 0;
-          }
+        ++state_;
+        if (state_ >= kRandomStates) {
+          phase_ = PHASE_TAIL;
+          state_ = 0;
         }
         break;
 
       case PHASE_TAIL:
-        if (block_ >= kTailBlocks) {
-          block_ = 0;
+        {
           do {
             ++state_;
           } while (state_ < kTailCases && SkipTailState(state_));
@@ -810,7 +887,6 @@ class OverrunSweep {
               final_ = true;
               phase_ = PHASE_SWITCH;
               state_ = 0;
-              block_ = 0;
             }
           }
         }
@@ -819,14 +895,15 @@ class OverrunSweep {
       default:
         break;
     }
+    block_ = 0;
+    ResetAccumulators();
+    SetLimits();
   }
 
   void BeginEngine(int engine) {
     engine_ = engine;
     phase_ = PHASE_SWITCH;
     state_ = 0;
-    block_ = 0;
-    last_state_late_ = -1;
     // Poll() queues the start packet and resets the condition table (after
     // sending the previous engine's) during this switch phase.
   }
@@ -917,6 +994,7 @@ class OverrunSweep {
     Push16(r.switch_in_late, &crc);
     Push16(r.double_pending, &crc);
     Push16(r.late_with_overhead, &crc);
+    Push16(r.dropped_states, &crc);
     EndPacket(crc);
   }
 
@@ -944,10 +1022,10 @@ class OverrunSweep {
     PushCrc(FailureMask(), &crc);
     Push16(static_cast<uint16_t>(total_blocks_ & 0xffff), &crc);
     Push16(static_cast<uint16_t>(total_blocks_ >> 16), &crc);
-    Push16(max_overhead_, &crc);
+    Push16(Code(max_overhead_cycles_), &crc);
     Push16(max_entry_lag_, &crc);
-    Push16(static_cast<uint16_t>(
-        overhead_count_ ? overhead_sum_ / overhead_count_ : 0), &crc);
+    Push16(Code(static_cast<uint32_t>(
+        overhead_count_ ? overhead_sum_ / overhead_count_ : 0)), &crc);
     EndPacket(crc);
   }
 
@@ -1033,7 +1111,6 @@ class OverrunSweep {
   int state_;
   int block_;
   bool stereo_capable_;
-  bool stereo_capable_known_;
 
   OverrunSweepEngineResult results_[PLAITS_OVERRUN_SWEEP_ENGINES];
   uint16_t ladder_peak_[kLadderSteps];
@@ -1044,9 +1121,6 @@ class OverrunSweep {
   uint16_t tail_case_peak_[kTailCases];
   uint16_t tail_case_late_[kTailCases];
   uint16_t tail_case_final_peak_[kTailCases];
-  int last_state_late_;
-  uint32_t last_late_total_;
-  uint32_t last_double_total_;
 
   float pilot_cos_;
   float pilot_sin_;
@@ -1071,13 +1145,32 @@ class OverrunSweep {
 
   uint32_t callback_start_;
   uint32_t render_end_;
-  float usage_;
+  uint32_t cycles_;
+  uint32_t budget_cycles_;
+  uint32_t over_ninety_cycles_;
   float target_load_;
   uint32_t total_blocks_;
-  uint16_t max_overhead_;
+  uint32_t max_overhead_cycles_;
   uint16_t max_entry_lag_;
-  uint32_t overhead_sum_;
+  uint64_t overhead_sum_;
   uint32_t overhead_count_;
+
+  // Per-state accumulators (interrupt only).
+  int block_limit_;
+  int settle_limit_;
+  int final_start_;
+  uint32_t acc_peak_;
+  uint32_t acc_final_peak_;
+  uint32_t acc_settle_peak_;
+  int acc_peak_block_;
+  uint32_t acc_late_;
+  uint32_t acc_settle_late_;
+  uint32_t acc_over_ninety_;
+  uint32_t dac_late_;
+  uint32_t dac_double_;
+  uint32_t dac_late_start_;
+  uint32_t dac_double_start_;
+  StateSummary mailbox_[2];
   Settings settings_;
   int settings_key_;
   int condition_;
