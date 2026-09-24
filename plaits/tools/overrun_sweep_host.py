@@ -58,6 +58,7 @@ PACKET_ENGINE_START = 3
 PACKET_ENGINE_RESULT = 4
 PACKET_END = 5
 PACKET_CONDITIONS = 6
+PACKET_SETTLE = 7
 
 OUTPUT_NAMES = ["regular", "stereo", "sub-osc"]
 TRIGGER_NAMES = ["unpatched", "triggered", "gated"]
@@ -302,6 +303,10 @@ def decode_packet(packet: Packet) -> dict:
                           "final_second_peak": final / 1000.0})
         return {"type": "conditions", "engine": p[0],
                 "conditions": conditions, "tails": tails}
+    if packet.type == PACKET_SETTLE:
+        return {"type": "settle", "engine": p[0],
+                "settle_peaks": [_u16(p, 1 + 2 * c) / 1000.0
+                                 for c in range(CONDITIONS)]}
     if packet.type == PACKET_END:
         blocks = _u16(p, 1) | (_u16(p, 3) << 16)
         end = {"type": "end", "failure_mask": p[0], "blocks": blocks,
@@ -414,6 +419,7 @@ def build_report(decoded: dict, manifest: dict | None,
     first: dict = {}
     last: dict = {}
     conditions: dict = {}
+    settles: dict = {}
     for p in packets:
         key = (p.type, p.payload[0] if p.type in (
             PACKET_ENGINE_START, PACKET_ENGINE_RESULT) else None)
@@ -421,6 +427,8 @@ def build_report(decoded: dict, manifest: dict | None,
         last[key] = p
         if p.type == PACKET_CONDITIONS:
             conditions.setdefault(p.payload[0], decode_packet(p))
+        if p.type == PACKET_SETTLE:
+            settles.setdefault(p.payload[0], decode_packet(p))
 
     hello = last.get((PACKET_HELLO, None))
     report: dict = {"sample_rate": sr, "packets": len(packets),
@@ -467,6 +475,10 @@ def build_report(decoded: dict, manifest: dict | None,
         if e in conditions:
             entry["conditions"] = conditions[e]["conditions"]
             entry["tails"] = conditions[e]["tails"]
+            if e in settles:
+                for c, peak in zip(entry["conditions"],
+                                   settles[e]["settle_peaks"]):
+                    c["settle_peak"] = peak
         lo, hi = starts[e], starts[e + 1]
         if lo is not None and hi is not None:
             total = sum(n for _, n in durations[e])

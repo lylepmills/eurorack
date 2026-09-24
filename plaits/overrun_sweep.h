@@ -151,7 +151,8 @@ class OverrunSweep {
     PACKET_ENGINE_START = 3,
     PACKET_ENGINE_RESULT = 4,
     PACKET_END = 5,
-    PACKET_CONDITIONS = 6
+    PACKET_CONDITIONS = 6,
+    PACKET_SETTLE = 7
   };
 
   enum Request {
@@ -187,6 +188,7 @@ class OverrunSweep {
   static const int kStatsBytes = 10;
   static const int kEngineResultBytes = 2 + 3 * kStatsBytes + 10;
   static const int kConditionBytes = 1 + kConditions * 4 + kTailCases * 6;
+  static const int kSettleBytes = 1 + kConditions * 2;
 
   OverrunSweep() { }
 
@@ -269,6 +271,7 @@ class OverrunSweep {
     } else {
       EnqueueEngineResult(engine);
       EnqueueConditions(engine);
+      EnqueueSettle(engine);
       ResetConditions();
     }
     if (request == REQUEST_FINAL) {
@@ -648,6 +651,7 @@ class OverrunSweep {
     for (int i = 0; i < kConditions; ++i) {
       condition_late_[i] = 0;
       condition_peak_[i] = 0;
+      condition_settle_peak_[i] = 0;
     }
     for (int i = 0; i < kTailCases; ++i) {
       tail_case_peak_[i] = 0;
@@ -708,6 +712,11 @@ class OverrunSweep {
     }
     const int c = condition_;
     if (measured && usage > condition_peak_[c]) condition_peak_[c] = usage;
+    // The blocks right after a jump to new settings (a CV step) can carry
+    // one-off work -- a new word, a table rebuild -- the peak above skips.
+    if (!measured && usage > condition_settle_peak_[c]) {
+      condition_settle_peak_[c] = usage;
+    }
     if (late) SaturatingAdd(&condition_late_[c], 1);
   }
 
@@ -941,6 +950,16 @@ class OverrunSweep {
     EndPacket(crc);
   }
 
+  void EnqueueSettle(int engine) {
+    uint16_t crc;
+    BeginPacket(PACKET_SETTLE, kSettleBytes, &crc);
+    PushCrc(static_cast<uint8_t>(engine), &crc);
+    for (int i = 0; i < kConditions; ++i) {
+      Push16(condition_settle_peak_[i], &crc);
+    }
+    EndPacket(crc);
+  }
+
   void EnqueueEnd() {
     uint16_t crc;
     BeginPacket(PACKET_END, 11, &crc);
@@ -1044,6 +1063,7 @@ class OverrunSweep {
   uint16_t ladder_late_with_overhead_[kLadderSteps];
   uint16_t condition_peak_[kConditions];
   uint16_t condition_late_[kConditions];
+  uint16_t condition_settle_peak_[kConditions];
   uint16_t tail_case_peak_[kTailCases];
   uint16_t tail_case_late_[kTailCases];
   uint16_t tail_case_final_peak_[kTailCases];
