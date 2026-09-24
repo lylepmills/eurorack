@@ -77,7 +77,7 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:d15d38d767a68cd28499806e2a120b39f90b51f74d4fd607571247f55427395f",
+      "digest": "sha256:d1dfd5b6ba6abf716475b5027725574f5e52fc528d693b8d79c1e24036508e7d",
       "documentationDigest": "sha256:29da22de50e88b987e352041a5fd83d3e89515fee6c802a765a9e7f9c153a055",
       "manual": {
         "controls": {
@@ -122,7 +122,7 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:7b1ad5606f6f32c271211a47d9ca17e266d2754a0ece57358b469738eece53b8",
+      "digest": "sha256:53db57715ab5e9183e8fd148ac7122aca6f4b2c647ac362c8ac9227d1f5baae2",
       "documentationDigest": "sha256:7b3070c69a72cc44e2fc2d5cb7cd30e421a8677ee8326547ef0773d36af84093",
       "manual": {
         "controls": {
@@ -210,7 +210,7 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:8ec57a9ac641d8abd9b0f2703556b50041a83d2c6d0436938f6989708e6edea9",
+      "digest": "sha256:3a402576ca949d68d7c0b31a81565ce352e8f6c1a1c64d5294139c0d49aff814",
       "documentationDigest": "sha256:88a50d2e624e15b03a4ee649bf570e8a3b92f645b710138c6ce06676573a3860",
       "manual": {
         "controls": {
@@ -2102,7 +2102,7 @@
         "Mono: the complementary folder crossfade. Stereo: the same sound with a small rightward blend offset."
       ],
       "version": "1.0.0",
-      "digest": "sha256:8e456bb7ae3735ba1a0d21c6f4eafdc10ea81f289ee13bfd069875cae9d30dd8",
+      "digest": "sha256:4367b8ca51a30ecc3202ddc5345545c8bc7f476c7a7d022c673b79bc1d003e06",
       "documentationDigest": "sha256:b38c0f1af22a6181ad1db966e832490fa95810748498d81d1233d43c2d06dc5e",
       "manual": {
         "controls": {
@@ -2264,7 +2264,7 @@
         "Mono: the dry morph oscillator. Stereo: the processed voice at the higher Fuzz offset on the right."
       ],
       "version": "1.0.0",
-      "digest": "sha256:cd2067916e9925fbdef1765f01434073fd3823c21c5964432d394df5e8121218",
+      "digest": "sha256:02f2d243dda529b9a95430aa98661add8921a7973220da1a2659d0ffb49e4767",
       "documentationDigest": "sha256:48b331f57210b99632c8a9766c75e98dc0eef4b4f4494d7943db6207b52509c4",
       "manual": {
         "controls": {
@@ -2587,7 +2587,7 @@
         "Mono: the raw noise excitation only, silent between strikes. Stereo: dropped in favor of panning each voice to a fixed round-robin position."
       ],
       "version": "1.0.0",
-      "digest": "sha256:d742a2e8cc48858e578f30aaaace524d9160f7b02524905ddf1d057a20a88fd1",
+      "digest": "sha256:ecf3ee8a29195b741b21b62818bb673d23577ef3a3f59ec814393c852901112d",
       "documentationDigest": "sha256:1082d19848134bcb23c39bc832b49b89eb096a9fef29345d4a6dda0a3dfba9c0",
       "manual": {
         "controls": {
@@ -2711,7 +2711,7 @@
         "Mono: the two noise-ring-modulated partials alone, without the direct tone or the harmonics sum. Stereo: a second, independently-filtered noise realization for the right channel, sharing the same tonal partials as the left."
       ],
       "version": "1.0.0",
-      "digest": "sha256:c54704d32fea08a7f0019d9e8bc5c1b93a03bd3713fee3527737d81c5f73fa05",
+      "digest": "sha256:5711027f650d0f65462187f1ead826e264fe075c9a80968e3e9609aad03c04d2",
       "documentationDigest": "sha256:6cc152d8d4474949df039e6fa49429cdfafb75e617cf6a4d7b2d17957843edfd",
       "manual": {
         "controls": {
@@ -2835,7 +2835,7 @@
         "Mono: the complementary crossfade, always favoring the side MAIN does not. Stereo: a second, independent raw-noise stream and a small opposing offset on Color."
       ],
       "version": "1.0.0",
-      "digest": "sha256:edd5c8e1ea070200ec4a70855f518831da60c7411fd24b9446458ca669a1534c",
+      "digest": "sha256:0c63db4424bce9d402da561ca41961a839944746e8ef68d996ca76e32d1b8f22",
       "documentationDigest": "sha256:75a5d9765d30b1df47b8c462cfd32ce5c8b15afbe507e84f96640eb4d2258f89",
       "manual": {
         "controls": {
@@ -3012,6 +3012,46 @@
       },
       "implementation": {
         "className": "QuestionMarkEngine"
+      }
+    },
+    {
+      "id": "virtual-analog-variant",
+      "packageId": "mutable-instruments/virtual-analog-variant",
+      "name": "Virtual Analog Variant",
+      "author": "Emilie Gillet",
+      "origin": "Mutable Instruments",
+      "family": "Subtractive",
+      "description": "Emilie Gillet's two alternate virtual-analog designs preserved in the Plaits source, unified: a detuned or hard-synced second oscillator on one trajectory, with independently spread waveshapes.",
+      "tags": [
+        "analog",
+        "oscillator",
+        "sync",
+        "variant"
+      ],
+      "controls": [
+        "Interval",
+        "Waveshape",
+        "Detune to sync",
+        "Shape spread"
+      ],
+      "outputs": [
+        "Mono: the primary with the detuned or hard-synced oscillator, as set by MORPH. Stereo: left channel, a point just below the primary/detuned mix.",
+        "Mono: the primary against a hard-synced oscillator at the HARMONICS ratio, half and half. Stereo: right channel, a point just above the primary/detuned mix."
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:7cb7996aabfd6ed3909ed769dab66e85be015c30c30c520a718fb4f47f5d68bc",
+      "documentationDigest": "sha256:7abe20fa5700ac2d49f15fc7622c4983d1b256b70867c0e3b88d271265f9d9f4",
+      "manual": {
+        "controls": {
+          "harmonics": "Sets the detuned oscillator's interval: unison at noon, then fifth, octave, octave plus fifth and two octaves, up clockwise and down counterclockwise. Also sets the AUX sync ratio.",
+          "timbre": "Changes both oscillators together from saw through square to narrow pulse.",
+          "morph": "Turning below noon fades in the detuned oscillator; at noon only the primary sounds; turning above noon crossfades the primary into hard sync.",
+          "macro": "Moves the two oscillators' waveshapes apart around the TIMBRE setting, the primary half as far as the secondary; at noon both shapes match."
+        },
+        "trigger": "The oscillator phases free-run; patched TRIG restarts Plaits' shared decay and low-pass-gate envelope."
+      },
+      "implementation": {
+        "className": "VirtualAnalogVariantEngine"
       }
     },
     {
@@ -4084,6 +4124,7 @@
       "virtual-analog",
       "virtual-analog-dual",
       "virtual-analog-crossfade",
+      "virtual-analog-variant",
       "waveshaping",
       "two-op-fm",
       "harmonic",
@@ -4115,6 +4156,7 @@
       "virtual-analog",
       "virtual-analog-dual",
       "virtual-analog-crossfade",
+      "virtual-analog-variant",
       "waveshaping",
       "two-op-fm",
       "wavetable",
