@@ -97,6 +97,7 @@ extern "C" void plaits_threshold_burn() { threshold_ladder.Burn(); }
 static const CheckScene kCheckScenes[PLAITS_SCENE_COUNT] = PLAITS_SCENES;
 SceneCheck<PLAITS_SCENE_COUNT> scene_check;
 extern "C" void plaits_section_mark(int mark) { scene_check.Mark(mark); }
+extern "C" void plaits_ui_task_mark(int task) { scene_check.UiTask(task); }
 #endif
 
 // BufferAllocator returns typed pointers without adjusting their alignment.

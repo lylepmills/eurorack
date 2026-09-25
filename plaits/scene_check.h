@@ -83,6 +83,8 @@ class SceneCheck {
   static const uint8_t kPacketHello = 1;
   static const uint8_t kPacketScene = 9;
   static const uint8_t kPacketSections = 10;
+  static const uint8_t kPacketUiTasks = 11;
+  static const int kUiTasks = 4;
   static const int kSections = SECTION_MARK_COUNT;
 
   SceneCheck() { }
@@ -107,6 +109,10 @@ class SceneCheck {
     }
     for (int k = 0; k < kSections; ++k) mark_[k] = 0;
     stamped_ = 0;
+    ui_task_ = -1;
+    for (int k = 0; k < kUiTasks; ++k) {
+      task_sum_[k] = task_max_[k] = task_count_[k] = 0;
+    }
     fsk_.Init();
     report_scene_ = 0;
     report_gap_ = 0;
@@ -127,6 +133,12 @@ class SceneCheck {
   inline void BeginCallback() {
     start_ = SceneCycles();
     stamped_ = 0;
+    ui_task_ = -1;
+  }
+
+  inline void UiTask(int task) {
+    Mark(SECTION_MARK_UI_TASK);
+    ui_task_ = task;
   }
 
   // A mark not reached this block (the report path skips Voice::Render)
@@ -201,6 +213,13 @@ class SceneCheck {
           const uint32_t section = next - previous;
           s.section_sum[k] += section;
           if (section > s.section_max[k]) s.section_max[k] = section;
+          if (k + 1 == SECTION_MARK_UI_TASK && ui_task_ >= 0 &&
+              ui_task_ < kUiTasks) {
+            // Over every scene: the task's cost doesn't depend on the engine.
+            task_sum_[ui_task_] += section;
+            ++task_count_[ui_task_];
+            if (section > task_max_[ui_task_]) task_max_[ui_task_] = section;
+          }
           previous = next;
         }
       }
@@ -263,6 +282,18 @@ class SceneCheck {
   // peak, switch late, blocks/16. SECTIONS: scene, then mean and max of each
   // section.
   void EnqueueReportItem() {
+    if (report_scene_ == kScenes) {
+      // UI_TASKS: mean and max of each round-robin task, over all scenes.
+      fsk_.BeginPacket(kPacketUiTasks, kUiTasks * 4);
+      for (int k = 0; k < kUiTasks; ++k) {
+        fsk_.Put16(Code(task_count_[k] ? task_sum_[k] / task_count_[k] : 0));
+        fsk_.Put16(Code(task_max_[k]));
+      }
+      fsk_.EndPacket();
+      report_scene_ = 0;
+      report_gap_ = 47872;
+      return;
+    }
     const Stats& s = stats_[report_scene_];
     fsk_.BeginPacket(kPacketSections, 1 + kSections * 4);
     fsk_.Put(static_cast<uint8_t>(report_scene_));
@@ -281,14 +312,15 @@ class SceneCheck {
     fsk_.Put16(s.switch_late);
     fsk_.Put16(static_cast<uint16_t>(s.count / 16));
     fsk_.EndPacket();
-    if (++report_scene_ >= kScenes) {
-      report_scene_ = 0;
-      report_gap_ = 47872;
-    }
+    ++report_scene_;   // kScenes: the UI_TASKS packet, then a pause
   }
 
   uint32_t mark_[kSections];
   uint32_t stamped_;
+  int ui_task_;
+  uint32_t task_sum_[kUiTasks];
+  uint32_t task_max_[kUiTasks];
+  uint32_t task_count_[kUiTasks];
   const CheckScene* scenes_;
   Phase phase_;
   int scene_;

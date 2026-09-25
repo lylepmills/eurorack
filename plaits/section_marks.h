@@ -30,9 +30,14 @@ enum SectionMark {
 
 #if PLAITS_SCENE_CHECK
 extern "C" void plaits_section_mark(int mark);
+// SECTION_MARK_UI_TASK, also naming which of Ui::Poll's four round-robin
+// tasks ran, so the report can time each one.
+extern "C" void plaits_ui_task_mark(int task);
 #define PLAITS_SECTION_MARK(mark) plaits_section_mark(plaits::mark)
+#define PLAITS_UI_TASK_MARK(task) plaits_ui_task_mark(task)
 #else
 #define PLAITS_SECTION_MARK(mark) do { } while (0)
+#define PLAITS_UI_TASK_MARK(task) do { } while (0)
 #endif
 
 #endif  // PLAITS_SECTION_MARKS_H_

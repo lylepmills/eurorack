@@ -62,6 +62,8 @@ PACKET_SETTLE = 7
 PACKET_THRESHOLD = 8
 PACKET_SCENE = 9
 PACKET_SECTIONS = 10
+PACKET_UI_TASKS = 11
+UI_TASK_NAMES = ["UpdateLEDs", "ReadSwitches", "PotsHidden", "DetectNorm"]
 # Scene-check sections, by how many the firmware reports: version 1 split the
 # block in four; version 2 at every mark in plaits/section_marks.h.
 SECTION_NAMES = {
@@ -717,6 +719,8 @@ def scene_report(path: Path, scenes: list[dict], clips: Path | None) -> dict:
         raise SystemExit("capture lacks the HELLO or the scene report")
     t_start = hello[0].burst + SCENE_START_BLOCKS * BLOCK * sr / MODULE_RATE
     t_end = reports[0].burst
+    # Host samples per module sample, if no audio interrupt were ever lost.
+    nominal = sr / MODULE_RATE
     ratio = (t_end - t_start) / (len(scenes) * SCENE_BLOCKS * BLOCK)
     glitches = np.array(decoded["glitches"], dtype=np.int64) + BLOCK // 2
     firmware = {}
@@ -730,6 +734,13 @@ def scene_report(path: Path, scenes: list[dict], clips: Path | None) -> dict:
                 name: {"mean": values[2 * k] / 1000.0,
                        "max": values[2 * k + 1] / 1000.0}
                 for k, name in enumerate(names)}
+    ui_tasks = None
+    for p in packets:
+        if p.type == PACKET_UI_TASKS:
+            values = struct.unpack_from("<8H", p.payload)
+            ui_tasks = {name: {"mean": values[2 * k] / 1000.0,
+                               "max": values[2 * k + 1] / 1000.0}
+                        for k, name in enumerate(UI_TASK_NAMES)}
     for p in reports:
         (scene, _engine, peak, mean, late, switch_peak, switch_late,
          blocks16) = struct.unpack_from("<BBHHHHHH", p.payload)
@@ -738,15 +749,33 @@ def scene_report(path: Path, scenes: list[dict], clips: Path | None) -> dict:
                            "switch_late": switch_late, "blocks": blocks16 * 16}
     if clips:
         clips.mkdir(parents=True, exist_ok=True)
+    # A scene that overruns loses audio interrupts, so it takes longer than
+    # SCENE_BLOCKS in real time and every later scene starts later than a
+    # uniform timeline says. So place each scene at the nominal clock rate:
+    # forward from the start while no earlier scene ran late, else backward
+    # from the report if no later scene did. A scene with overrunning scenes
+    # on both sides can't be placed, and gets no host count or clip.
+    late = [firmware.get(k, {}).get("late", 0) + firmware.get(k, {}).get(
+        "switch_late", 0) for k in range(len(scenes))]
+    scene_span = SCENE_BLOCKS * BLOCK * nominal
     rows = []
     for k, scene in enumerate(scenes):
-        lo = t_start + k * SCENE_BLOCKS * BLOCK * ratio
-        measured = lo + SCENE_SWITCH_BLOCKS * BLOCK * ratio
-        hi = lo + SCENE_BLOCKS * BLOCK * ratio
+        if not any(late[:k]):
+            lo = t_start + k * scene_span
+        elif not any(late[k + 1:]):
+            lo = t_end - (len(scenes) - k) * scene_span
+        else:
+            lo = None
         row = {"scene": k, "label": scene.get("label", str(k)),
                "aux": scene["aux"], **firmware.get(k, {})}
         if k in sections:
             row["sections"] = sections[k]
+        if lo is None:
+            row["unplaced"] = True
+            rows.append(row)
+            continue
+        measured = lo + SCENE_SWITCH_BLOCKS * BLOCK * nominal
+        hi = lo + scene_span
         if scene["aux"] == "subosc-sine":
             row["host_breaks"] = int(np.count_nonzero(
                 (glitches >= measured) & (glitches < hi)))
@@ -757,7 +786,7 @@ def scene_report(path: Path, scenes: list[dict], clips: Path | None) -> dict:
             sf.write(str(clips / name), data, int(sr), subtype="PCM_24")
             row["clip"] = name
         rows.append(row)
-    return {"clock_ratio": ratio, "rows": rows}
+    return {"clock_ratio": ratio, "rows": rows, "ui_tasks": ui_tasks}
 
 
 def print_scenes(report: dict) -> None:
@@ -765,10 +794,16 @@ def print_scenes(report: dict) -> None:
           f"{'host':>6}  model-select peak/late")
     for r in report["rows"]:
         host = r.get("host_breaks")
+        if r.get("unplaced"):
+            host = "?"
         print(f"{r['label'][:28]:28} {r['aux']:12} {r.get('mean', 0):6.3f} "
               f"{r.get('peak', 0):6.3f} {r.get('late', 0):6d} "
-              f"{'  n/a' if host is None else f'{host:6d}'}  "
+              f"{'  n/a' if host is None else f'{host:>6}'}  "
               f"{r.get('switch_peak', 0):.3f}/{r.get('switch_late', 0)}")
+    if report.get("ui_tasks"):
+        print("\nround-robin UI task (Ui::Poll runs one per block), over all scenes")
+        for name, v in report["ui_tasks"].items():
+            print(f"  {name:14} mean {v['mean']:.3f}  max {v['max']:.3f}")
     rows = [r for r in report["rows"] if r.get("sections")]
     if not rows:
         return

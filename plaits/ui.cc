@@ -1320,7 +1320,7 @@ void Ui::Poll() {
       DetectNormalization();
       break;
   }
-  PLAITS_SECTION_MARK(SECTION_MARK_UI_TASK);
+  PLAITS_UI_TASK_MARK(ui_task_);
 
   cv_adc_.Convert();
   pots_adc_.Convert();
