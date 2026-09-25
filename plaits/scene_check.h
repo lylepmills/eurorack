@@ -84,6 +84,8 @@ class SceneCheck {
   static const uint8_t kPacketScene = 9;
   static const uint8_t kPacketSections = 10;
   static const uint8_t kPacketUiTasks = 11;
+  static const uint8_t kPacketProbes = 12;
+  static const int kProbes = 4;
   static const int kUiTasks = 4;
   static const int kSections = SECTION_MARK_COUNT;
 
@@ -113,6 +115,11 @@ class SceneCheck {
     for (int k = 0; k < kUiTasks; ++k) {
       task_sum_[k] = task_max_[k] = task_count_[k] = 0;
     }
+    probes_seen_ = 0;
+    for (int k = 0; k < kProbes; ++k) {
+      probe_sum_[k] = probe_max_[k] = 0;
+      probe_count_[k] = 0;
+    }
     fsk_.Init();
     report_scene_ = 0;
     report_gap_ = 0;
@@ -134,6 +141,14 @@ class SceneCheck {
     start_ = SceneCycles();
     stamped_ = 0;
     ui_task_ = -1;
+    probes_seen_ = 0;
+  }
+
+  inline void Probe(int probe) {
+    if (probe >= 0 && probe < kProbes) {
+      probe_[probe] = SceneCycles();
+      probes_seen_ |= 1u << probe;
+    }
   }
 
   inline void UiTask(int task) {
@@ -213,6 +228,17 @@ class SceneCheck {
           const uint32_t section = next - previous;
           s.section_sum[k] += section;
           if (section > s.section_max[k]) s.section_max[k] = section;
+          if (k + 1 == SECTION_MARK_UI_INPUTS && probes_seen_ == 0xf) {
+            // Probe 0 is timed from the end of this section.
+            uint32_t from = next;
+            for (int q = 0; q < kProbes; ++q) {
+              const uint32_t d = probe_[q] - from;
+              probe_sum_[q] += d;
+              ++probe_count_[q];
+              if (d > probe_max_[q]) probe_max_[q] = d;
+              from = probe_[q];
+            }
+          }
           if (k + 1 == SECTION_MARK_UI_TASK && ui_task_ >= 0 &&
               ui_task_ < kUiTasks) {
             // Over every scene: the task's cost doesn't depend on the engine.
@@ -290,6 +316,13 @@ class SceneCheck {
         fsk_.Put16(Code(task_max_[k]));
       }
       fsk_.EndPacket();
+      // PROBES: mean and max of each probe interval, over all scenes.
+      fsk_.BeginPacket(kPacketProbes, kProbes * 4);
+      for (int k = 0; k < kProbes; ++k) {
+        fsk_.Put16(Code(probe_count_[k] ? probe_sum_[k] / probe_count_[k] : 0));
+        fsk_.Put16(Code(probe_max_[k]));
+      }
+      fsk_.EndPacket();
       report_scene_ = 0;
       report_gap_ = 47872;
       return;
@@ -318,6 +351,11 @@ class SceneCheck {
   uint32_t mark_[kSections];
   uint32_t stamped_;
   int ui_task_;
+  uint32_t probe_[kProbes];
+  uint32_t probes_seen_;
+  uint32_t probe_sum_[kProbes];
+  uint32_t probe_max_[kProbes];
+  uint32_t probe_count_[kProbes];
   uint32_t task_sum_[kUiTasks];
   uint32_t task_max_[kUiTasks];
   uint32_t task_count_[kUiTasks];

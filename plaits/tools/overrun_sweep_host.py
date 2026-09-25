@@ -63,6 +63,7 @@ PACKET_THRESHOLD = 8
 PACKET_SCENE = 9
 PACKET_SECTIONS = 10
 PACKET_UI_TASKS = 11
+PACKET_PROBES = 12
 UI_TASK_NAMES = ["UpdateLEDs", "ReadSwitches", "PotsHidden", "DetectNorm"]
 # Scene-check sections, by how many the firmware reports: version 1 split the
 # block in four; version 2 at every mark in plaits/section_marks.h.
@@ -735,7 +736,13 @@ def scene_report(path: Path, scenes: list[dict], clips: Path | None) -> dict:
                        "max": values[2 * k + 1] / 1000.0}
                 for k, name in enumerate(names)}
     ui_tasks = None
+    probes = None
     for p in packets:
+        if p.type == PACKET_PROBES:
+            count = len(p.payload) // 4
+            values = struct.unpack_from(f"<{2 * count}H", p.payload)
+            probes = [{"mean": values[2 * k] / 1000.0, "max": values[2 * k + 1] / 1000.0}
+                      for k in range(count)]
         if p.type == PACKET_UI_TASKS:
             values = struct.unpack_from("<8H", p.payload)
             ui_tasks = {name: {"mean": values[2 * k] / 1000.0,
@@ -786,7 +793,8 @@ def scene_report(path: Path, scenes: list[dict], clips: Path | None) -> dict:
             sf.write(str(clips / name), data, int(sr), subtype="PCM_24")
             row["clip"] = name
         rows.append(row)
-    return {"clock_ratio": ratio, "rows": rows, "ui_tasks": ui_tasks}
+    return {"clock_ratio": ratio, "rows": rows, "ui_tasks": ui_tasks,
+            "probes": probes}
 
 
 def print_scenes(report: dict) -> None:
@@ -804,6 +812,10 @@ def print_scenes(report: dict) -> None:
         print("\nround-robin UI task (Ui::Poll runs one per block), over all scenes")
         for name, v in report["ui_tasks"].items():
             print(f"  {name:14} mean {v['mean']:.3f}  max {v['max']:.3f}")
+    if report.get("probes"):
+        print("\nprobe intervals (UI inputs -> probe 0, then probe k-1 -> k), all scenes")
+        for k, v in enumerate(report["probes"]):
+            print(f"  interval {k}  mean {v['mean']:.3f}  max {v['max']:.3f}")
     rows = [r for r in report["rows"] if r.get("sections")]
     if not rows:
         return

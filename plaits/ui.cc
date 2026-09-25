@@ -355,8 +355,10 @@ uint32_t Ui::BankToColor(int bank) {
 }
 
 void Ui::UpdateLEDs() {
+  PLAITS_PROBE_MARK(0);
   leds_.Clear();
   ++pwm_counter_;
+  PLAITS_PROBE_MARK(1);
 
 #if PLAITS_BUILD_FAST_FM && PLAITS_INPUT_FAULT_DIAGNOSTICS
   // Qualification-only fault display, latched until reboot. Top to bottom:
@@ -701,7 +703,9 @@ void Ui::UpdateLEDs() {
       break;
 
   }
+  PLAITS_PROBE_MARK(2);
   leds_.Write();
+  PLAITS_PROBE_MARK(3);
 }
 
 void Ui::Navigate(int button) {
