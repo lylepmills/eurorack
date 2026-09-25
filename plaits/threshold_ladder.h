@@ -27,8 +27,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "plaits/diagnostic_fsk.h"
 #include "plaits/dsp/dsp.h"
-#include "plaits/dsp/oscillator/sine_oscillator.h"
 #include "plaits/dsp/voice.h"
 
 #ifndef TEST
@@ -95,18 +95,7 @@ class ThresholdLadder {
         st.late = 0;
       }
     }
-    queue_head_ = queue_tail_ = 0;
-    bits_left_ = 0;
-    shift_ = 0;
-    lead_in_bits_ = kLeadInBits;
-    trail_bits_ = kTrailBits;
-    fsk_active_ = false;
-    current_bit_ = 1;
-    tone_phase_ = 0.0f;
-    bit_phase_ = 0.0f;
-    mark_increment_ = 2400.0f / kCorrectedSampleRate;
-    space_increment_ = 4800.0f / kCorrectedSampleRate;
-    bit_increment_ = static_cast<float>(kBaud) / kCorrectedSampleRate;
+    fsk_.Init();
     report_pass_ = 0;
     report_gap_ = 0;
     EnqueueHello();
@@ -184,13 +173,13 @@ class ThresholdLadder {
   void WriteStart(Voice::Frame* frames, size_t size) {
     if (phase_ != PHASE_START) return;
     for (size_t i = 0; i < size; ++i) {
-      if (Transmitting()) frames[i].aux = FskSample();
+      if (fsk_.transmitting()) frames[i].aux = fsk_.Sample();
     }
   }
 
   void WriteReport(Voice::Frame* frames, size_t size) {
     for (size_t i = 0; i < size; ++i) {
-      if (!Transmitting()) {
+      if (!fsk_.transmitting()) {
         if (report_gap_ > 0) {
           --report_gap_;
         } else {
@@ -198,17 +187,8 @@ class ThresholdLadder {
         }
       }
       frames[i].out = 0;
-      frames[i].aux = Transmitting() ? FskSample() : 0;
+      frames[i].aux = fsk_.transmitting() ? fsk_.Sample() : 0;
     }
-  }
-
-  static uint16_t CrcUpdate(uint16_t crc, uint8_t byte) {
-    crc ^= static_cast<uint16_t>(byte) << 8;
-    for (int i = 0; i < 8; ++i) {
-      crc = (crc & 0x8000) ? static_cast<uint16_t>((crc << 1) ^ 0x1021)
-                           : static_cast<uint16_t>(crc << 1);
-    }
-    return crc;
   }
 
  private:
@@ -218,9 +198,6 @@ class ThresholdLadder {
     uint16_t count;
     uint16_t late;
   };
-
-  static const int kLeadInBits = 24;
-  static const int kTrailBits = 12;
 
   int BlockLimit() const {
     return phase_ == PHASE_START ? kStartBlocks : kStepBlocks;
@@ -257,123 +234,33 @@ class ThresholdLadder {
     return static_cast<uint16_t>(code > 0xffff ? 0xffff : code);
   }
 
-  // ---- Packets (the overrun sweep's framing) ----
-
-  void Push(uint8_t byte) {
-    const int next = (queue_tail_ + 1) % kQueueSize;
-    if (next == queue_head_) return;
-    queue_[queue_tail_] = byte;
-    queue_tail_ = next;
-  }
-
-  void PushCrc(uint8_t byte, uint16_t* crc) {
-    Push(byte);
-    *crc = CrcUpdate(*crc, byte);
-  }
-
-  void Push16(uint16_t value, uint16_t* crc) {
-    PushCrc(static_cast<uint8_t>(value & 0xff), crc);
-    PushCrc(static_cast<uint8_t>(value >> 8), crc);
-  }
-
-  void BeginPacket(uint8_t type, uint8_t length, uint16_t* crc) {
-    Push(0x55);
-    Push(0x55);
-    Push(0x7e);
-    Push(0xa5);
-    *crc = 0xffff;
-    PushCrc(type, crc);
-    PushCrc(length, crc);
-  }
-
-  void EndPacket(uint16_t crc) {
-    Push(static_cast<uint8_t>(crc & 0xff));
-    Push(static_cast<uint8_t>(crc >> 8));
-  }
-
   void EnqueueHello() {
-    uint16_t crc;
-    BeginPacket(kPacketHello, 8, &crc);
-    PushCrc(kVersion, &crc);
-    PushCrc(0xff, &crc);           // group 255: the threshold ladder
-    PushCrc(0, &crc);              // no engines swept
-    PushCrc(kSteps, &crc);
-    Push16(kPasses, &crc);
-    Push16(static_cast<uint16_t>(kStepBlocks), &crc);
-    EndPacket(crc);
+    fsk_.BeginPacket(kPacketHello, 8);
+    fsk_.Put(kVersion);
+    fsk_.Put(0xff);                // group 255: the threshold ladder
+    fsk_.Put(0);                   // no engines swept
+    fsk_.Put(kSteps);
+    fsk_.Put16(kPasses);
+    fsk_.Put16(static_cast<uint16_t>(kStepBlocks));
+    fsk_.EndPacket();
   }
 
   // One packet per pass: pass, then per step target, max, mean, late.
   void EnqueueReportItem() {
-    uint16_t crc;
-    BeginPacket(kPacketThreshold, 1 + kSteps * kStepBytes, &crc);
-    PushCrc(static_cast<uint8_t>(report_pass_), &crc);
+    fsk_.BeginPacket(kPacketThreshold, 1 + kSteps * kStepBytes);
+    fsk_.Put(static_cast<uint8_t>(report_pass_));
     for (int s = 0; s < kSteps; ++s) {
       const Stats& st = stats_[report_pass_][s];
-      Push16(static_cast<uint16_t>(Load(s) * 1000.0f + 0.5f), &crc);
-      Push16(Code(st.max), &crc);
-      Push16(Code(st.count ? st.sum / st.count : 0), &crc);
-      Push16(st.late, &crc);
+      fsk_.Put16(static_cast<uint16_t>(Load(s) * 1000.0f + 0.5f));
+      fsk_.Put16(Code(st.max));
+      fsk_.Put16(Code(st.count ? st.sum / st.count : 0));
+      fsk_.Put16(st.late);
     }
-    EndPacket(crc);
+    fsk_.EndPacket();
     if (++report_pass_ >= kPasses) {
       report_pass_ = 0;
       report_gap_ = 47872;  // a second of silence per pass
     }
-  }
-
-  // ---- FSK modulator: UART framing, idle mark around each burst ----
-
-  bool Transmitting() const {
-    return fsk_active_ || queue_head_ != queue_tail_;
-  }
-
-  short FskSample() {
-    if (!fsk_active_) {
-      fsk_active_ = true;
-      bit_phase_ = 0.0f;
-      LoadNextBit();
-    }
-    tone_phase_ += current_bit_ ? mark_increment_ : space_increment_;
-    if (tone_phase_ >= 1.0f) tone_phase_ -= 1.0f;
-    const short sample = static_cast<short>(Sine(tone_phase_) * 16000.0f);
-    bit_phase_ += bit_increment_;
-    if (bit_phase_ >= 1.0f) {
-      bit_phase_ -= 1.0f;
-      if (!LoadNextBit()) fsk_active_ = false;
-    }
-    return sample;
-  }
-
-  bool LoadNextBit() {
-    if (bits_left_) {
-      current_bit_ = shift_ & 1;
-      shift_ >>= 1;
-      --bits_left_;
-      return true;
-    }
-    if (queue_head_ != queue_tail_) {
-      if (lead_in_bits_) {
-        current_bit_ = 1;
-        --lead_in_bits_;
-        return true;
-      }
-      const uint8_t byte = queue_[queue_head_];
-      queue_head_ = (queue_head_ + 1) % kQueueSize;
-      shift_ = (static_cast<uint32_t>(byte) << 1) | (1u << 9);
-      current_bit_ = shift_ & 1;
-      shift_ >>= 1;
-      bits_left_ = 9;
-      return true;
-    }
-    if (trail_bits_) {
-      current_bit_ = 1;
-      --trail_bits_;
-      return true;
-    }
-    lead_in_bits_ = kLeadInBits;
-    trail_bits_ = kTrailBits;
-    return false;
   }
 
   Phase phase_;
@@ -385,20 +272,7 @@ class ThresholdLadder {
   uint32_t target_;
   Stats stats_[kPasses][kSteps];
 
-  uint8_t queue_[kQueueSize];
-  int queue_head_;
-  int queue_tail_;
-  uint32_t shift_;
-  int bits_left_;
-  int lead_in_bits_;
-  int trail_bits_;
-  bool fsk_active_;
-  int current_bit_;
-  float tone_phase_;
-  float bit_phase_;
-  float mark_increment_;
-  float space_increment_;
-  float bit_increment_;
+  DiagnosticFsk<kQueueSize> fsk_;
   int report_pass_;
   int report_gap_;
 

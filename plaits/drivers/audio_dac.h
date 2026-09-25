@@ -32,8 +32,8 @@
 #include "stmlib/stmlib.h"
 
 // Late-fill instrumentation for the overrun diagnostics (overrun_sweep.h,
-// threshold_ladder.h); compiled out of ordinary firmware.
-#if PLAITS_OVERRUN_SWEEP || PLAITS_THRESHOLD_LADDER
+// threshold_ladder.h, scene_check.h); compiled out of ordinary firmware.
+#if PLAITS_OVERRUN_SWEEP || PLAITS_THRESHOLD_LADDER || PLAITS_SCENE_CHECK
 #define PLAITS_DAC_LATE_PROBE 1
 #else
 #define PLAITS_DAC_LATE_PROBE 0

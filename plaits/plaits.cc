@@ -53,6 +53,11 @@
 #if PLAITS_THRESHOLD_LADDER
 #include "plaits/threshold_ladder.h"
 #endif
+#if PLAITS_SCENE_CHECK
+// PLAITS_SCENE_COUNT and PLAITS_SCENES come from the generated scene table
+// the build force-includes (export_overrun_sweep.py --scenes).
+#include "plaits/scene_check.h"
+#endif
 #include "plaits/ui.h"
 #include "plaits/user_data.h"
 #include "plaits/user_data_receiver.h"
@@ -86,6 +91,10 @@ OverrunSweep overrun_sweep;
 #if PLAITS_THRESHOLD_LADDER
 ThresholdLadder threshold_ladder;
 extern "C" void plaits_threshold_burn() { threshold_ladder.Burn(); }
+#endif
+#if PLAITS_SCENE_CHECK
+static const CheckScene kCheckScenes[PLAITS_SCENE_COUNT] = PLAITS_SCENES;
+SceneCheck<PLAITS_SCENE_COUNT> scene_check;
 #endif
 
 // BufferAllocator returns typed pointers without adjusting their alignment.
@@ -124,6 +133,9 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
 #endif
 #if PLAITS_THRESHOLD_LADDER
   threshold_ladder.BeginCallback();
+#endif
+#if PLAITS_SCENE_CHECK
+  scene_check.BeginCallback();
 #endif
 
   IWDG_ReloadCounter();
@@ -166,6 +178,11 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
     threshold_ladder.WriteReport((Voice::Frame*)(output), size);
   }
 #endif
+#if PLAITS_SCENE_CHECK
+  else if (scene_check.reporting()) {
+    scene_check.WriteReport((Voice::Frame*)(output), size);
+  }
+#endif
 #if PLAITS_OVERRUN_SWEEP
   else if (overrun_sweep.reporting()) {
     overrun_sweep.WriteReport((Voice::Frame*)(output), size);
@@ -191,6 +208,9 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
 #endif
 #if PLAITS_THRESHOLD_LADDER
     threshold_ladder.Prepare(&patch, &modulations);
+#endif
+#if PLAITS_SCENE_CHECK
+    scene_check.Prepare(&patch, &modulations);
 #endif
     if (modulations.timbre_patched) {
       PacketDecoderState state = \
@@ -231,6 +251,10 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
 #if PLAITS_THRESHOLD_LADDER
     threshold_ladder.EndRender(audio_dac.OutputLate());
     threshold_ladder.WriteStart((Voice::Frame*)(output), size);
+#endif
+#if PLAITS_SCENE_CHECK
+    scene_check.EndRender(audio_dac.OutputLate());
+    scene_check.WriteStart((Voice::Frame*)(output), size);
 #endif
 #if PLAITS_OVERRUN_SWEEP
     overrun_sweep.EndRender(size);
@@ -340,6 +364,9 @@ void Init() {
 #endif
 #if PLAITS_THRESHOLD_LADDER
   threshold_ladder.Init();
+#endif
+#if PLAITS_SCENE_CHECK
+  scene_check.Init(kCheckScenes);
 #endif
   audio_dac.Init(48000, kBlockSize);
 

@@ -60,6 +60,7 @@ PACKET_END = 5
 PACKET_CONDITIONS = 6
 PACKET_SETTLE = 7
 PACKET_THRESHOLD = 8
+PACKET_SCENE = 9
 
 OUTPUT_NAMES = ["regular", "stereo", "sub-osc"]
 TRIGGER_NAMES = ["unpatched", "triggered", "gated"]
@@ -685,6 +686,70 @@ def print_threshold(report: dict) -> None:
               f"(measured mean {r['mean']:.3f}, peak {r['peak']:.3f})")
 
 
+# ---- Scene check (plaits/scene_check.h) -------------------------------------
+
+SCENE_BLOCKS = 20 * BLOCKS_PER_SECOND
+SCENE_START_BLOCKS = 3 * BLOCKS_PER_SECOND
+SCENE_SWITCH_BLOCKS = BLOCKS_PER_SECOND // 2
+
+
+def scene_report(path: Path, scenes: list[dict], clips: Path | None) -> dict:
+    """Per scene: the firmware's cost and DMA-late counts, the host's stale-
+    block count on the sub-oscillator sine (mono scenes only: in stereo
+    scenes AUX is the engine's right channel), and an audio clip."""
+    import soundfile as sf
+
+    decoded = decode_capture(path, main_channel=1, aux_channel=1)
+    sr = decoded["sample_rate"]
+    packets = decoded["packets"]
+    hello = [p for p in packets if p.type == PACKET_HELLO]
+    reports = [p for p in packets if p.type == PACKET_SCENE]
+    if not hello or not reports:
+        raise SystemExit("capture lacks the HELLO or the scene report")
+    t_start = hello[0].burst + SCENE_START_BLOCKS * BLOCK * sr / MODULE_RATE
+    t_end = reports[0].burst
+    ratio = (t_end - t_start) / (len(scenes) * SCENE_BLOCKS * BLOCK)
+    glitches = np.array(decoded["glitches"], dtype=np.int64) + BLOCK // 2
+    firmware = {}
+    for p in reports:
+        (scene, _engine, peak, mean, late, switch_peak, switch_late,
+         blocks16) = struct.unpack_from("<BBHHHHHH", p.payload)
+        firmware[scene] = {"peak": peak / 1000.0, "mean": mean / 1000.0,
+                           "late": late, "switch_peak": switch_peak / 1000.0,
+                           "switch_late": switch_late, "blocks": blocks16 * 16}
+    if clips:
+        clips.mkdir(parents=True, exist_ok=True)
+    rows = []
+    for k, scene in enumerate(scenes):
+        lo = t_start + k * SCENE_BLOCKS * BLOCK * ratio
+        measured = lo + SCENE_SWITCH_BLOCKS * BLOCK * ratio
+        hi = lo + SCENE_BLOCKS * BLOCK * ratio
+        row = {"scene": k, "label": scene.get("label", str(k)),
+               "aux": scene["aux"], **firmware.get(k, {})}
+        if scene["aux"] == "subosc-sine":
+            row["host_breaks"] = int(np.count_nonzero(
+                (glitches >= measured) & (glitches < hi)))
+        if clips:
+            data, _ = sf.read(str(path), start=int(measured), stop=int(hi),
+                              dtype="float32", always_2d=True)
+            name = f"{k:02d} {row['label'].replace(',', '').replace(' ', '_')}.wav"
+            sf.write(str(clips / name), data, int(sr), subtype="PCM_24")
+            row["clip"] = name
+        rows.append(row)
+    return {"clock_ratio": ratio, "rows": rows}
+
+
+def print_scenes(report: dict) -> None:
+    print(f"{'scene':28} {'aux':12} {'mean':>6} {'peak':>6} {'late':>6} "
+          f"{'host':>6}  model-select peak/late")
+    for r in report["rows"]:
+        host = r.get("host_breaks")
+        print(f"{r['label'][:28]:28} {r['aux']:12} {r.get('mean', 0):6.3f} "
+              f"{r.get('peak', 0):6.3f} {r.get('late', 0):6d} "
+              f"{'  n/a' if host is None else f'{host:6d}'}  "
+              f"{r.get('switch_peak', 0):.3f}/{r.get('switch_late', 0)}")
+
+
 # ---- ES-8 I/O ---------------------------------------------------------------
 
 def find_device(name: str) -> int:
@@ -828,6 +893,20 @@ def main() -> None:
     p.add_argument("--json", type=Path)
     p.add_argument("--tail-seconds", type=int, default=4)
 
+    p = sub.add_parser("scenes")
+    p.add_argument("capture", type=Path)
+    p.add_argument("--scenes", type=Path, required=True)
+    p.add_argument("--clips", type=Path)
+    p.add_argument("--json", type=Path)
+
+    p = sub.add_parser("scenes-run")
+    p.add_argument("--flash", type=Path, required=True)
+    p.add_argument("--scenes", type=Path, required=True)
+    p.add_argument("--out", type=Path, required=True)
+    p.add_argument("--device", default="ES-8")
+    p.add_argument("--channel", type=int, default=3)
+    p.add_argument("--peak", type=float, default=0.3)
+
     p = sub.add_parser("threshold")
     p.add_argument("capture", type=Path)
     p.add_argument("--json", type=Path)
@@ -854,6 +933,24 @@ def main() -> None:
     args = parser.parse_args()
     if args.command == "flash":
         flash(args.firmware, args.device, args.channel, args.peak)
+    elif args.command in ("scenes", "scenes-run"):
+        scenes = json.loads(args.scenes.read_text())
+        if args.command == "scenes-run":
+            args.out.mkdir(parents=True, exist_ok=True)
+            seconds = ((SCENE_START_BLOCKS + len(scenes) * SCENE_BLOCKS) *
+                       BLOCK / MODULE_RATE * 1.1 + 15.0)
+            wav = args.out / "capture.wav"
+            print(f"capturing {seconds / 60:.1f} min to {wav}", flush=True)
+            capture(wav, seconds, args.device, firmware=args.flash,
+                    out_channel=args.channel, peak=args.peak)
+            capture_path, clips = wav, args.out / "clips"
+            json_path = args.out / "scenes.json"
+        else:
+            capture_path, clips, json_path = args.capture, args.clips, args.json
+        report = scene_report(capture_path, scenes, clips)
+        print_scenes(report)
+        if json_path:
+            json_path.write_text(json.dumps(report, indent=1) + "\n")
     elif args.command in ("threshold", "threshold-run"):
         if args.command == "threshold-run":
             args.out.mkdir(parents=True, exist_ok=True)
