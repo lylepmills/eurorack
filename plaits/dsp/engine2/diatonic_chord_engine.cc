@@ -89,7 +89,7 @@ void DiatonicChordEngine::Render(
   CONSTRAIN(chord, 0, kDiatonicChordNumChords - 1);
 
   float residual = 0.0f;
-  const int root_degree = QuantizeToScale(parameters.note, scale, &residual);
+  const int root_degree = voices_.Quantize(parameters.note, scale, &residual);
 
   float notes[kScaleVoicesMaxVoices];
   int num_voices = 0;

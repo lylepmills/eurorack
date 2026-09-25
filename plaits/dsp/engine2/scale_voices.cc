@@ -72,6 +72,113 @@ inline float Waveform(float phase, float dt, float waveform) {
   }
 }
 
+// The same waveforms with every per-block decision taken out of the sample
+// loop: the knob's region (and so which pair is blended), whether the fold is
+// on, and PolyBLEP's dt <= 0 guard (Render()'s frequencies come from
+// NoteToFrequency and are always positive). Same arithmetic, same order, so
+// the output is bit-identical; the loop used to spend ~30 float compares per
+// voice per sample on these choices (on-module overrun sweep, 2026-09-24).
+inline float PolyBlepPositive(float t, float dt) {
+  if (t < dt) {
+    const float x = t / dt;
+    return x + x - x * x - 1.0f;
+  }
+  if (t > 1.0f - dt) {
+    const float x = (t - 1.0f) / dt;
+    return x * x + x + x + 1.0f;
+  }
+  return 0.0f;
+}
+
+enum WaveRegion {
+  WAVE_REGION_SINE_TRIANGLE,
+  WAVE_REGION_TRIANGLE_SAW,
+  WAVE_REGION_SAW_SQUARE
+};
+
+template <WaveRegion region>
+inline float RegionWaveform(float phase, float dt, float blend) {
+  if (region == WAVE_REGION_SINE_TRIANGLE) {
+    // phase is already in [0, 1): the same table read without the wrap.
+    const float sine = SineNoWrap(phase);
+    return sine + (Triangle(phase) - sine) * blend;
+  } else if (region == WAVE_REGION_TRIANGLE_SAW) {
+    const float triangle = Triangle(phase);
+    const float saw = 2.0f * phase - 1.0f - PolyBlepPositive(phase, dt);
+    return triangle + (saw - triangle) * blend;
+  } else {
+    const float saw = 2.0f * phase - 1.0f - PolyBlepPositive(phase, dt);
+    float other = phase + 0.5f;
+    if (other >= 1.0f) {
+      other -= 1.0f;
+    }
+    const float naive = phase < 0.5f ? 1.0f : -1.0f;
+    const float square =
+        naive + PolyBlepPositive(phase, dt) - PolyBlepPositive(other, dt);
+    return saw + (square - saw) * blend;
+  }
+}
+
+struct ScaleVoiceState {
+  float* phase;
+  float* dc_in;
+  float* dc_out;
+  float* dc_aux_in;
+  float* dc_aux_out;
+};
+
+template <WaveRegion region, bool folding>
+void RenderScaleVoices(
+    const ScaleVoiceState& state,
+    const int* voices,
+    int num_audible,
+    bool root_audible,
+    const float* frequency,
+    float blend,
+    float fold_drive,
+    float fold_amount,
+    float mix,
+    float* out,
+    float* aux,
+    size_t size) {
+  float* phase = state.phase;
+  float dc_in = *state.dc_in;
+  float dc_out = *state.dc_out;
+  float dc_aux_in = *state.dc_aux_in;
+  float dc_aux_out = *state.dc_aux_out;
+  for (size_t i = 0; i < size; ++i) {
+    float mixed = 0.0f;
+    float root = 0.0f;
+    for (int n = 0; n < num_audible; ++n) {
+      const int v = voices[n];
+      phase[v] += frequency[v];
+      if (phase[v] >= 1.0f) {
+        phase[v] -= 1.0f;
+      }
+      float sample = RegionWaveform<region>(phase[v], frequency[v], blend);
+      if (folding) {
+        // See Render(): the +1.0f keeps Sine()'s argument non-negative.
+        const float folded = Sine(1.0f + sample * fold_drive * 0.25f);
+        sample += (folded - sample) * fold_amount;
+      }
+      mixed += sample * mix;
+      if (root_audible && n == 0) {
+        root = sample;
+      }
+    }
+    dc_out = mixed - dc_in + 0.999f * dc_out;
+    dc_in = mixed;
+    out[i] = dc_out;
+    dc_aux_out = root - dc_aux_in + 0.999f * dc_aux_out;
+    dc_aux_in = root;
+    aux[i] = dc_aux_out;
+  }
+  *state.dc_in = dc_in;
+  *state.dc_out = dc_out;
+  *state.dc_aux_in = dc_aux_in;
+  *state.dc_aux_out = dc_aux_out;
+}
+
 }  // namespace
 
 #if PLAITS_SCALE_BANK_COUNT < 1 || PLAITS_SCALE_BANK_COUNT > 16
@@ -118,6 +225,7 @@ int QuantizeToScale(float note, int scale, float* residual) {
 }
 
 void ScaleVoiceBank::Init() {
+  quantized_ = false;
   Reset();
 }
 
@@ -166,44 +274,38 @@ void ScaleVoiceBank::Render(
   // The fold is a sine-region effect, as it was upstream.
   const float fold_amount = max(1.0f - waveform * 3.0f, 0.0f);
 
-  for (size_t i = 0; i < size; ++i) {
-    float mixed = 0.0f;
-    float root = 0.0f;
-    for (int v = 0; v < num_voices; ++v) {
-      if (!audible[v]) {
-        continue;
-      }
-      phase_[v] += frequency[v];
-      if (phase_[v] >= 1.0f) {
-        phase_[v] -= 1.0f;
-      }
-      float sample = Waveform(phase_[v], frequency[v], waveform);
-      if (fold_amount > 0.0f) {
-        // Driving Sine()'s argument past a quarter turn folds. The +1.0f is
-        // load-bearing, not cosmetic: Sine() is documented safe "for phase >=
-        // 0.0f", and `sample` is bipolar, so without the whole-period offset
-        // the negative half of every waveform indexes lut_sine out of bounds.
-        // That reads as a ~5.0 spike on OUT, which is exactly what the
-        // audition gate caught here -- and the same defect the port's earlier
-        // review found in z-filter.
-        const float folded = Sine(1.0f + sample * fold_drive * 0.25f);
-        sample += (folded - sample) * fold_amount;
-      }
-      mixed += sample * mix;
-      if (v == 0) {
-        root = sample;
-      }
+  int voices[kScaleVoicesMaxVoices];
+  int num_audible = 0;
+  for (int v = 0; v < num_voices; ++v) {
+    if (audible[v]) {
+      voices[num_audible++] = v;
     }
-
-    // A narrow-pulse or heavily folded stack carries DC, and the audio-health
-    // gate rejects it.
-    dc_out_ = mixed - dc_in_ + 0.999f * dc_out_;
-    dc_in_ = mixed;
-    out[i] = dc_out_;
-
-    dc_aux_out_ = root - dc_aux_in_ + 0.999f * dc_aux_out_;
-    dc_aux_in_ = root;
-    aux[i] = dc_aux_out_;
+  }
+  const bool root_audible = num_audible > 0 && voices[0] == 0;
+  const ScaleVoiceState state = {
+    phase_, &dc_in_, &dc_out_, &dc_aux_in_, &dc_aux_out_ };
+  // Waveform()'s region choice and blend, taken once per block.
+  const float scaled = waveform * 3.0f;
+  const bool folding = fold_amount > 0.0f;
+  if (scaled < 1.0f) {
+    if (folding) {
+      RenderScaleVoices<WAVE_REGION_SINE_TRIANGLE, true>(
+          state, voices, num_audible, root_audible, frequency, scaled,
+          fold_drive, fold_amount, mix, out, aux, size);
+    } else {
+      RenderScaleVoices<WAVE_REGION_SINE_TRIANGLE, false>(
+          state, voices, num_audible, root_audible, frequency, scaled,
+          fold_drive, fold_amount, mix, out, aux, size);
+    }
+  } else if (scaled < 2.0f) {
+    RenderScaleVoices<WAVE_REGION_TRIANGLE_SAW, false>(
+        state, voices, num_audible, root_audible, frequency, scaled - 1.0f,
+        fold_drive, fold_amount, mix, out, aux, size);
+  } else {
+    RenderScaleVoices<WAVE_REGION_SAW_SQUARE, false>(
+        state, voices, num_audible, root_audible, frequency,
+        min(scaled - 2.0f, 1.0f), fold_drive, fold_amount, mix, out, aux,
+        size);
   }
 }
 

@@ -46,7 +46,7 @@ void ScaleStackEngine::Render(
   CONSTRAIN(span, 1, kScaleStackMaxSpan);
 
   float residual = 0.0f;
-  const int root_degree = QuantizeToScale(parameters.note, scale, &residual);
+  const int root_degree = voices_.Quantize(parameters.note, scale, &residual);
 
   float notes[kScaleVoicesMaxVoices];
   notes[0] = parameters.note;

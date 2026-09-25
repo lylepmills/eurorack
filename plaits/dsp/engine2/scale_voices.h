@@ -101,6 +101,19 @@ class ScaleVoiceBank {
   void Init();
   void Reset();
 
+  // QuantizeToScale(), remembering the last answer: it searches three octaves
+  // of degrees, and a held note asks the same question every block.
+  inline int Quantize(float note, int scale, float* residual) {
+    if (!quantized_ || note != quantized_note_ || scale != quantized_scale_) {
+      quantized_root_ = QuantizeToScale(note, scale, &quantized_residual_);
+      quantized_note_ = note;
+      quantized_scale_ = scale;
+      quantized_ = true;
+    }
+    *residual = quantized_residual_;
+    return quantized_root_;
+  }
+
   // `notes` holds `num_voices` MIDI notes; voice 0 is the root and is the one
   // written to `aux`. `waveform` runs sine -> triangle -> saw -> square;
   // `detune_cents` and `fold` come off TIMBRE.
@@ -150,6 +163,11 @@ class ScaleVoiceBank {
       size_t size);
 
  private:
+  bool quantized_;
+  float quantized_note_;
+  int quantized_scale_;
+  int quantized_root_;
+  float quantized_residual_;
   float phase_[kScaleVoicesMaxVoices];
   float dc_in_;
   float dc_out_;
