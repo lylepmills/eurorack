@@ -7,6 +7,7 @@
 #include "plaits/dsp/engine2/saw_comb_engine.h"
 
 #include <algorithm>
+#include <cstring>
 #include <cmath>
 
 #include "stmlib/dsp/dsp.h"
@@ -69,9 +70,7 @@ void SawCombEngine::Reset() {
   // at the same addresses, so a new engine must not read the previous one's
   // memory (R15).
   if (line_) {
-    for (size_t i = 0; i < kSawCombDelaySize; ++i) {
-      line_[i] = 0;
-    }
+    memset(line_, 0, kSawCombDelaySize * sizeof(line_[0]));
   }
   exciter_.Init();
   write_pointer_ = 0;

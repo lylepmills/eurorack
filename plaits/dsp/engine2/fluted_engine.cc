@@ -8,6 +8,7 @@
 #include "plaits/dsp/engine2/fluted_engine.h"
 
 #include <algorithm>
+#include <cstring>
 #include <cmath>
 
 #include "plaits/build_config.h"
@@ -273,14 +274,10 @@ void FlutedEngine::Reset() {
   // is no resting state to reproduce. The arena is shared, so the lines have
   // to be cleared on every engine switch and not only at Init (SPEC R15).
   if (bore_) {
-    for (size_t i = 0; i < kFlutedBoreLength; ++i) {
-      bore_[i] = 0;
-    }
+    memset(bore_, 0, kFlutedBoreLength * sizeof(bore_[0]));
   }
   if (jet_) {
-    for (size_t i = 0; i < kFlutedJetLength; ++i) {
-      jet_[i] = 0;
-    }
+    memset(jet_, 0, kFlutedJetLength * sizeof(jet_[0]));
   }
   delay_pointer_ = 0;
   lp_state_ = 0;
@@ -325,12 +322,11 @@ void FlutedEngine::Render(
     // flush both lines, clear the reflection one-pole. The delay pointer and
     // the DC blocker's two states are deliberately NOT cleared -- carrying
     // them across a strike is what the module does.
-    for (size_t i = 0; i < kFlutedBoreLength; ++i) {
-      bore_[i] = 0;
-    }
-    for (size_t i = 0; i < kFlutedJetLength; ++i) {
-      jet_[i] = 0;
-    }
+    // memset, not an element loop: the loop ran from flash at ~5 cycles a
+    // byte and turned every strike into a 1.7-block overrun (on-module
+    // overrun sweep, 2026-09-24).
+    memset(bore_, 0, kFlutedBoreLength * sizeof(bore_[0]));
+    memset(jet_, 0, kFlutedJetLength * sizeof(jet_[0]));
     lp_state_ = 0;
     excitation_pointer_ = 0;
     blowing_envelope_ = BlowingEnvelope(excitation_pointer_);

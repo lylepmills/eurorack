@@ -7,6 +7,7 @@
 #include "plaits/dsp/engine2/blown_engine.h"
 
 #include <algorithm>
+#include <cstring>
 
 #include "plaits/build_config.h"
 #include "stmlib/dsp/dsp.h"
@@ -103,9 +104,7 @@ void BlownEngine::Reset() {
   // arena is shared, so the line has to be cleared on every engine switch and
   // not only at Init (SPEC R15).
   if (bore_) {
-    for (size_t i = 0; i < kBlownBoreLength; ++i) {
-      bore_[i] = 0.0f;
-    }
+    memset(bore_, 0, kBlownBoreLength * sizeof(bore_[0]));
   }
   delay_pointer_ = 0;
   lp_state_ = 0.0f;
@@ -151,9 +150,7 @@ void BlownEngine::Render(
     // delay pointer are all deliberately carried across the strike. The port
     // matches that -- clearing them too would start the bore from a state the
     // module never reaches (the saw-swarm finding from wave A, in reverse).
-    for (size_t i = 0; i < kBlownBoreLength; ++i) {
-      bore_[i] = 0.0f;
-    }
+    memset(bore_, 0, kBlownBoreLength * sizeof(bore_[0]));
   }
 
   const bool stereo = PLAITS_STEREO_BLOWN && parameters.stereo;
