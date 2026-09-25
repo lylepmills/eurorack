@@ -31,9 +31,9 @@
 
 #include "stmlib/stmlib.h"
 
+#include "stmlib/dsp/dsp.h"
 #include "stmlib/dsp/filter.h"
 #include "stmlib/dsp/hysteresis_quantizer.h"
-#include "stmlib/dsp/limiter.h"
 #include "stmlib/utils/buffer_allocator.h"
 
 #include "plaits/dsp/engine/engine.h"
@@ -72,7 +72,7 @@ class ChannelPostProcessor {
   }
   
   void Reset() {
-    limiter_.Init();
+    limiter_peak_ = 0.5f;  // stmlib::Limiter::Init()
   }
   
   __attribute__((noinline)) void Process(
@@ -85,29 +85,85 @@ class ChannelPostProcessor {
       short* out,
       size_t size,
       size_t stride) {
-    if (gain < 0.0f) {
-      limiter_.Process(-gain, in, size);
-    }
     const float post_gain = (gain < 0.0f ? 1.0f : gain) * -32767.0f;
+    // A negative gain runs stmlib::Limiter first. It is computed per sample
+    // as the output is written rather than in a pass of its own over `in`.
+    if (gain < 0.0f) {
+      LimitedSource source = { in, -gain, limiter_peak_ };
+      Write(
+          &source,
+          post_gain,
+          bypass_lpg,
+          low_pass_gate_gain,
+          low_pass_gate_frequency,
+          low_pass_gate_hf_bleed,
+          out,
+          size,
+          stride);
+      limiter_peak_ = source.peak;
+    } else {
+      LowPassGate::BufferSource source = { in };
+      Write(
+          &source,
+          post_gain,
+          bypass_lpg,
+          low_pass_gate_gain,
+          low_pass_gate_frequency,
+          low_pass_gate_hf_bleed,
+          out,
+          size,
+          stride);
+    }
+  }
+  
+ private:
+  // stmlib::Limiter::Process, one sample, with the peak follower held by the
+  // caller for the block: through the member, every sample reloaded and
+  // stored it. Same arithmetic, same output.
+  static inline float Limit(float pre_gain, float in, float* peak) {
+    float s = in * pre_gain;
+    SLOPE(*peak, fabsf(s), 0.05f, 0.00002f);
+    float gain = (*peak <= 1.0f ? 1.0f : 1.0f / *peak);
+    return s * gain * 0.8f;
+  }
+
+  struct LimitedSource {
+    const float* in;
+    float pre_gain;
+    float peak;
+    inline float Next() { return Limit(pre_gain, *in++, &peak); }
+  };
+
+  template<typename Source>
+  inline void Write(
+      Source* source,
+      float post_gain,
+      bool bypass_lpg,
+      float low_pass_gate_gain,
+      float low_pass_gate_frequency,
+      float low_pass_gate_hf_bleed,
+      short* out,
+      size_t size,
+      size_t stride) {
     if (!bypass_lpg) {
-      lpg_.Process(
+      lpg_.ProcessSource(
           post_gain * low_pass_gate_gain,
           low_pass_gate_frequency,
           low_pass_gate_hf_bleed,
-          in,
+          source,
           out,
           size,
           stride);
     } else {
       while (size--) {
-        *out = stmlib::Clip16(1 + static_cast<int32_t>(*in++ * post_gain));
+        *out = stmlib::Clip16(
+            1 + static_cast<int32_t>(source->Next() * post_gain));
         out += stride;
       }
     }
   }
-  
- private:
-  stmlib::Limiter limiter_;
+
+  float limiter_peak_;
   LowPassGate lpg_;
   
   DISALLOW_COPY_AND_ASSIGN(ChannelPostProcessor);
