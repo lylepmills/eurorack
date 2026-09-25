@@ -2328,6 +2328,15 @@ void WaveScanEngine::Render(
 
   ParameterInterpolator fm(&frequency_, increment, size);
 
+  // The oscillator phase and the decimator's write position live in locals
+  // for the block: as members, every store to out, aux or the decimator rings
+  // could alias them, so each sub-sample reloaded and re-stored both.
+  float phase = phase_;
+  uint32_t write = decimator_write_;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+  const float* frequency_offset = parameters.frequency_offset;
+#endif
+
   if (model == WAVE_SCAN_MODEL_WAVETABLES) {
     // digital_oscillator.cc:1531. The bank knob only moves when it moves by
     // more than 64 counts, so a slow sweep lags by up to that much.
@@ -2361,21 +2370,21 @@ void WaveScanEngine::Render(
     for (size_t i = 0; i < size; ++i) {
       float step = fm.Next();
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
-      if (parameters.frequency_offset) {
-        step += parameters.frequency_offset[i] * 0.25f;
+      if (frequency_offset) {
+        step += frequency_offset[i] * 0.25f;
         CONSTRAIN(step, -kWaveScanMaxIncrement, kWaveScanMaxIncrement);
       }
 #endif
       float main_accumulator = 0.0f;
       float side_accumulator = 0.0f;
       for (int j = 0; j < 4; ++j) {
-        phase_ += step;
-        if (phase_ >= 1.0f) {
-          phase_ -= 1.0f;
-        } else if (phase_ < 0.0f) {
-          phase_ += 1.0f;
+        phase += step;
+        if (phase >= 1.0f) {
+          phase -= 1.0f;
+        } else if (phase < 0.0f) {
+          phase += 1.0f;
         }
-        const float scaled = phase_ * 128.0f;
+        const float scaled = phase * 128.0f;
         int32_t index = static_cast<int32_t>(scaled);
         const float fraction = scaled - static_cast<float>(index);
 
@@ -2385,13 +2394,13 @@ void WaveScanEngine::Render(
         side_accumulator += Blend(a, b, balance_side);
         if (j & 1) {
           // Braids' `>> 1` box average of each oversampled pair (:1558-1560).
-          Push(main_accumulator * 0.5f, side_accumulator * 0.5f);
+          Push(&write, main_accumulator * 0.5f, side_accumulator * 0.5f);
           main_accumulator = 0.0f;
           side_accumulator = 0.0f;
         }
       }
-      out[i] = Decimate(decimator_main_, decimator_write_);
-      aux[i] = Decimate(decimator_aux_, decimator_write_);
+      out[i] = Decimate(decimator_main_, write);
+      aux[i] = Decimate(decimator_aux_, write);
     }
   } else if (model == WAVE_SCAN_MODEL_MAP) {
     // :1575-1580. `parameter * 15 >> 4` tops out at 30719, so the module's
@@ -2427,21 +2436,21 @@ void WaveScanEngine::Render(
     for (size_t i = 0; i < size; ++i) {
       float step = fm.Next();
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
-      if (parameters.frequency_offset) {
-        step += parameters.frequency_offset[i] * 0.25f;
+      if (frequency_offset) {
+        step += frequency_offset[i] * 0.25f;
         CONSTRAIN(step, -kWaveScanMaxIncrement, kWaveScanMaxIncrement);
       }
 #endif
       float main_accumulator = 0.0f;
       float side_accumulator = 0.0f;
       for (int j = 0; j < 4; ++j) {
-        phase_ += step;
-        if (phase_ >= 1.0f) {
-          phase_ -= 1.0f;
-        } else if (phase_ < 0.0f) {
-          phase_ += 1.0f;
+        phase += step;
+        if (phase >= 1.0f) {
+          phase -= 1.0f;
+        } else if (phase < 0.0f) {
+          phase += 1.0f;
         }
-        const float scaled = phase_ * 128.0f;
+        const float scaled = phase * 128.0f;
         int32_t index = static_cast<int32_t>(scaled);
         const float fraction = scaled - static_cast<float>(index);
 
@@ -2455,13 +2464,13 @@ void WaveScanEngine::Render(
         side_accumulator += Blend(
             Blend(r00, r01, y_side), Blend(r10, r11, y_side), x_side);
         if (j & 1) {
-          Push(main_accumulator * 0.5f, side_accumulator * 0.5f);
+          Push(&write, main_accumulator * 0.5f, side_accumulator * 0.5f);
           main_accumulator = 0.0f;
           side_accumulator = 0.0f;
         }
       }
-      out[i] = Decimate(decimator_main_, decimator_write_);
-      aux[i] = Decimate(decimator_aux_, decimator_write_);
+      out[i] = Decimate(decimator_main_, write);
+      aux[i] = Decimate(decimator_aux_, write);
     }
   } else {
     // :1632. One block of the module's own one-pole, integer shift included:
@@ -2516,15 +2525,15 @@ void WaveScanEngine::Render(
     for (size_t i = 0; i < size; ++i) {
       float step = fm.Next();
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
-      if (parameters.frequency_offset) {
-        step += parameters.frequency_offset[i] * 0.25f;
+      if (frequency_offset) {
+        step += frequency_offset[i] * 0.25f;
         CONSTRAIN(step, -kWaveScanMaxIncrement, kWaveScanMaxIncrement);
       }
 #endif
       float main_accumulator = 0.0f;
       float side_accumulator = 0.0f;
       for (int j = 0; j < 4; ++j) {
-        const float scaled = phase_ * 128.0f;
+        const float scaled = phase * 128.0f;
         int32_t index = static_cast<int32_t>(scaled);
         const float fraction = scaled - static_cast<float>(index);
         const int32_t index_64 = index & ~1;
@@ -2562,25 +2571,27 @@ void WaveScanEngine::Render(
         main_accumulator += Blend(first, second, balance_main);
         side_accumulator += Blend(first, second, balance_side);
         if (j & 1) {
-          Push(main_accumulator * 0.5f, side_accumulator * 0.5f);
+          Push(&write, main_accumulator * 0.5f, side_accumulator * 0.5f);
           main_accumulator = 0.0f;
           side_accumulator = 0.0f;
         }
 
         // Braids advances the phase and the de-zipper AFTER the read
         // (:1656-1666), so the block opens on the previous block's wave.
-        phase_ += step;
-        if (phase_ >= 1.0f) {
-          phase_ -= 1.0f;
-        } else if (phase_ < 0.0f) {
-          phase_ += 1.0f;
+        phase += step;
+        if (phase >= 1.0f) {
+          phase -= 1.0f;
+        } else if (phase < 0.0f) {
+          phase += 1.0f;
         }
         rough_xfade += rough_increment;
       }
-      out[i] = Decimate(decimator_main_, decimator_write_);
-      aux[i] = Decimate(decimator_aux_, decimator_write_);
+      out[i] = Decimate(decimator_main_, write);
+      aux[i] = Decimate(decimator_aux_, write);
     }
   }
+  phase_ = phase;
+  decimator_write_ = write;
 }
 
 }  // namespace plaits

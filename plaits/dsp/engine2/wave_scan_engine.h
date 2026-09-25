@@ -287,13 +287,14 @@ class WaveScanEngine : public Engine {
 #endif
 
  private:
-  inline void Push(float main, float side) {
-    const uint32_t index = decimator_write_ & kWaveScanDecimatorMask;
+  // `write` is Render's local copy of decimator_write_.
+  inline void Push(uint32_t* write, float main, float side) {
+    const uint32_t index = *write & kWaveScanDecimatorMask;
     decimator_main_[index] = main;
     decimator_main_[index + kWaveScanDecimatorSize] = main;
     decimator_aux_[index] = side;
     decimator_aux_[index + kWaveScanDecimatorSize] = side;
-    ++decimator_write_;
+    ++*write;
   }
 
   float phase_;
