@@ -91,7 +91,7 @@ __attribute__((noinline))
 #else
 __attribute__((noinline, optimize("Os")))
 #endif
-static float ApplyVelocityAccent(
+static inline float ApplyVelocityAccent(
     bool velocity_response,
     float velocity,
     bool level_patched,
@@ -759,7 +759,9 @@ void Voice::Render(
 #else
   const EngineRandomizerProfile randomizer_profile = { 0, 0 };
 #endif
-  parameter_randomizer_.Process(
+  // With neither parameter randomized (stock attenuverters, or both jacks
+  // patched) Process neither writes nor advances anything: skip the call.
+  if (randomize_timbre || randomize_morph) parameter_randomizer_.Process(
       static_cast<AttenuverterMode>(patch.attenuverter_mode),
       randomize_timbre,
       randomize_morph,

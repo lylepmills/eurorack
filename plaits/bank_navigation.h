@@ -42,9 +42,13 @@ inline int BankOffset(const uint8_t* bank_sizes, int bank) {
 
 // The bank an engine belongs to.
 inline int BankOfEngine(const uint8_t* bank_sizes, int num_banks, int engine) {
+  // `next` is BankOffset(bank_sizes, bank + 1), kept as a running sum: the
+  // LED refresh calls this twice per UI pass inside the audio interrupt.
   int bank = 0;
-  while (bank + 1 < num_banks && engine >= BankOffset(bank_sizes, bank + 1)) {
+  int next = bank_sizes[0];
+  while (bank + 1 < num_banks && engine >= next) {
     ++bank;
+    next += bank_sizes[bank];
   }
   return bank;
 }

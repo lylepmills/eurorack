@@ -97,18 +97,23 @@ const int Leds::led_map_[8] = {
 };
 
 void Leds::Write() {
-  uint16_t leds_data = 0;
+  // Two bits per LED: 1 if any red bit is set, 2 if any green bit is. Adding
+  // a full channel mask to the masked channel carries into the bit above it
+  // exactly when the channel is non-zero, so each LED is a few ALU operations
+  // rather than two compare-and-branch pairs -- this runs inside the audio
+  // interrupt.
+  uint32_t leds_data = 0;
   for (int i = 0; i < kNumLEDs; ++i) {
-    int j = led_map_[i];
-    leds_data <<= 2;
-    leds_data |= (colors_[j] & LED_COLOR_RED) ? 1 : 0;
-    leds_data |= (colors_[j] & LED_COLOR_GREEN) ? 2 : 0;
+    const uint32_t color = colors_[led_map_[i]];
+    leds_data = (leds_data << 2) |
+        (((color & LED_COLOR_RED) + LED_COLOR_RED) >> 24) |
+        ((((color & LED_COLOR_GREEN) + LED_COLOR_GREEN) >> 15) & 2);
   }
   GPIOF->BSRR = kPinEnable;
   __asm__("nop");
   GPIOF->BRR = kPinEnable;
   __asm__("nop");
-  SPI1->DR = leds_data;
+  SPI1->DR = static_cast<uint16_t>(leds_data);
 }
 
 }  // namespace plaits
