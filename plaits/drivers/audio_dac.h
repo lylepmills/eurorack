@@ -31,6 +31,14 @@
 
 #include "stmlib/stmlib.h"
 
+// Late-fill instrumentation for the overrun diagnostics (overrun_sweep.h,
+// threshold_ladder.h); compiled out of ordinary firmware.
+#if PLAITS_OVERRUN_SWEEP || PLAITS_THRESHOLD_LADDER
+#define PLAITS_DAC_LATE_PROBE 1
+#else
+#define PLAITS_DAC_LATE_PROBE 0
+#endif
+
 namespace plaits {
 
 const size_t kMaxCodecBlockSize = 24;
@@ -54,7 +62,7 @@ class AudioDac {
   
   static AudioDac* GetInstance() { return instance_; }
 
-#if PLAITS_OVERRUN_SWEEP
+#if PLAITS_DAC_LATE_PROBE
   // Overrun-sweep instrumentation (plaits/overrun_sweep.h). A late fill is a
   // refill that finished after the DMA had already entered that half, so the
   // DAC played at least one stale frame. A double-pending entry means both
@@ -80,7 +88,7 @@ class AudioDac {
   FillBufferCallback callback_;
   
   Frame tx_dma_buffer_[kMaxCodecBlockSize * 2];
-#if PLAITS_OVERRUN_SWEEP
+#if PLAITS_DAC_LATE_PROBE
   volatile uint32_t late_fills_;
   volatile uint32_t double_pending_;
   volatile size_t filling_;

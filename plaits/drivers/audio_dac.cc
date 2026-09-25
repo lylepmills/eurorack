@@ -39,7 +39,7 @@ void AudioDac::Init(int sample_rate, size_t block_size) {
   instance_ = this;
   block_size_ = block_size;
   callback_ = NULL;
-#if PLAITS_OVERRUN_SWEEP
+#if PLAITS_DAC_LATE_PROBE
   late_fills_ = 0;
   double_pending_ = 0;
   filling_ = 0;
@@ -117,7 +117,7 @@ void AudioDac::Stop() {
   DMA_Cmd(DMA1_Channel5, DISABLE);
 }
 
-#if PLAITS_OVERRUN_SWEEP
+#if PLAITS_DAC_LATE_PROBE
 bool AudioDac::OutputLate() const {
   // Half 0 is entered at TC, half 1 at HT; the handler cleared both flags on
   // entry. A double-pending entry means half 0 was already being played.
@@ -134,14 +134,14 @@ uint32_t AudioDac::EntryLag() const {
 #endif
 
 void AudioDac::Fill(size_t offset) {
-#if PLAITS_OVERRUN_SWEEP
+#if PLAITS_DAC_LATE_PROBE
   filling_ = offset;
 #endif
   (*callback_)(&tx_dma_buffer_[offset * block_size_], block_size_);
-#if PLAITS_OVERRUN_SWEEP
+#if PLAITS_DAC_LATE_PROBE
   if (offset == 0) entry_double_ = false;
 #endif
-#if PLAITS_OVERRUN_SWEEP
+#if PLAITS_DAC_LATE_PROBE
   // The handler cleared both flags on entry. The DMA enters half 0 at TC and
   // half 1 at HT, so if the flag marking entry into the half just refilled is
   // set again now, the DAC started reading it before this refill finished.
@@ -159,7 +159,7 @@ extern "C" {
 void DMA1_Channel5_IRQHandler(void) {
   uint32_t flags = DMA1->ISR;
   DMA1->IFCR = DMA1_FLAG_TC5 | DMA1_FLAG_HT5;
-#if PLAITS_OVERRUN_SWEEP
+#if PLAITS_DAC_LATE_PROBE
   if ((flags & DMA1_FLAG_HT5) && (flags & DMA1_FLAG_TC5)) {
     // Half 0 is being refilled while the DMA is already inside it.
     plaits::AudioDac::GetInstance()->CountDoublePending();

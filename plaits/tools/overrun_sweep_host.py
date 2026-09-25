@@ -59,6 +59,7 @@ PACKET_ENGINE_RESULT = 4
 PACKET_END = 5
 PACKET_CONDITIONS = 6
 PACKET_SETTLE = 7
+PACKET_THRESHOLD = 8
 
 OUTPUT_NAMES = ["regular", "stereo", "sub-osc"]
 TRIGGER_NAMES = ["unpatched", "triggered", "gated"]
@@ -344,15 +345,28 @@ def pilot_glitches(x: np.ndarray, sr: float, offset: int,
     # Recursion coefficient from the median of per-sample estimates
     # (x[n] + x[n-2]) / 2x[n-1], taken where x[n-1] is well away from zero:
     # exact for a clean sine whatever its frequency, and robust even when half
-    # the blocks are stale (the top of the calibration ladder).
+    # the blocks are stale (the top of the calibration ladder). Estimated per
+    # half second, not per chunk: a chunk can also hold FSK data, whose tones
+    # would otherwise win the median and make the sine read as wrong
+    # everywhere (one long merged "event" instead of real breaks).
     mask = present[1:-1]
     middle = x[1:-1]
     usable = mask & (np.abs(middle) > 0.5 * envelope[1:-1])
-    if np.count_nonzero(usable) < 1024:
+    ratio = np.zeros_like(middle)
+    ratio[usable] = (x[2:] + x[:-2])[usable] / (2.0 * middle[usable])
+    window = max(1024, int(sr / 2))
+    c_local = np.full(len(middle), np.nan)
+    for start in range(0, len(middle), window):
+        sel = usable[start:start + window]
+        if np.count_nonzero(sel) >= 256:
+            c_local[start:start + window] = float(
+                np.median(ratio[start:start + window][sel]))
+    valid = ~np.isnan(c_local)
+    if not np.any(valid):
         return []
-    c_est = float(np.median(
-        (x[2:] + x[:-2])[usable] / (2.0 * middle[usable])))
-    residual = np.abs(x[2:] - 2.0 * c_est * x[1:-1] + x[:-2])
+    c_local[~valid] = 1.0
+    mask = mask & valid
+    residual = np.abs(x[2:] - 2.0 * c_local * x[1:-1] + x[:-2])
     residual /= np.maximum(envelope[1:-1], 1e-6)
     hits = np.flatnonzero((residual > threshold) & mask) + 1
     events: list[int] = []
@@ -601,6 +615,76 @@ def print_report(report: dict) -> None:
         print("\n(no END packet: sweep incomplete or not captured)")
 
 
+# ---- Threshold ladder (plaits/threshold_ladder.h) ---------------------------
+
+THRESHOLD_STEPS = 31
+THRESHOLD_PASSES = 3
+THRESHOLD_STEP_BLOCKS = 3 * BLOCKS_PER_SECOND
+THRESHOLD_SETTLE_BLOCKS = BLOCKS_PER_SECOND // 4
+THRESHOLD_START_BLOCKS = 3 * BLOCKS_PER_SECOND
+
+
+def threshold_report(path: Path) -> dict:
+    """Decode a threshold-ladder capture. Everything is on AUX (input 2):
+    the production sub-oscillator sine during the ladder, FSK before and
+    after it. The ladder's end is the first report burst; its start is the
+    HELLO burst plus the start phase, which also measures the clock ratio."""
+    decoded = decode_capture(path, main_channel=1, aux_channel=1)
+    sr = decoded["sample_rate"]
+    packets = decoded["packets"]
+    hello = [p for p in packets if p.type == PACKET_HELLO]
+    reports = [p for p in packets if p.type == PACKET_THRESHOLD]
+    if not hello or not reports:
+        raise SystemExit("capture lacks the HELLO or the report packets")
+    ladder_blocks = THRESHOLD_STEPS * THRESHOLD_PASSES * THRESHOLD_STEP_BLOCKS
+    t_start = hello[0].burst + THRESHOLD_START_BLOCKS * BLOCK * sr / MODULE_RATE
+    t_end = reports[0].burst
+    ratio = (t_end - t_start) / (ladder_blocks * BLOCK)
+    glitches = np.array(decoded["glitches"], dtype=np.int64) + BLOCK // 2
+    stats = {}
+    for p in packets:
+        if p.type != PACKET_THRESHOLD:
+            continue
+        pass_index = p.payload[0]
+        for k in range(THRESHOLD_STEPS):
+            target, peak, mean, late = struct.unpack_from(
+                "<4H", p.payload, 1 + 8 * k)
+            stats[(pass_index, k)] = (target / 1000.0, peak / 1000.0,
+                                      mean / 1000.0, late)
+    rows = []
+    for pass_index in range(THRESHOLD_PASSES):
+        for k in range(THRESHOLD_STEPS):
+            n = pass_index * THRESHOLD_STEPS + k
+            lo = t_start + n * THRESHOLD_STEP_BLOCKS * BLOCK * ratio
+            measured_lo = lo + THRESHOLD_SETTLE_BLOCKS * BLOCK * ratio
+            hi = lo + THRESHOLD_STEP_BLOCKS * BLOCK * ratio
+            host = int(np.count_nonzero((glitches >= measured_lo) &
+                                        (glitches < hi)))
+            target, peak, mean, late = stats.get((pass_index, k),
+                                                 (0.8 + 0.01 * k, 0, 0, 0))
+            rows.append({"pass": pass_index, "target": round(target, 3),
+                         "peak": peak, "mean": mean, "late": late,
+                         "host_breaks": host})
+    return {"clock_ratio": ratio, "rows": rows}
+
+
+def print_threshold(report: dict) -> None:
+    rows = report["rows"]
+    print("load  | measured cost (mean/peak), DMA-late blocks, host breaks per pass")
+    for k in range(THRESHOLD_STEPS):
+        cells = [r for i, r in enumerate(rows) if i % THRESHOLD_STEPS == k]
+        line = "  ".join(f"{r['mean']:.3f}/{r['peak']:.3f} {r['late']:5d} "
+                         f"{r['host_breaks']:5d}" for r in cells)
+        print(f"{cells[0]['target']:.2f}  | {line}")
+    per_pass = {}
+    for r in rows:
+        if r["host_breaks"] and r["pass"] not in per_pass:
+            per_pass[r["pass"]] = r
+    for p, r in sorted(per_pass.items()):
+        print(f"pass {p}: first host break at target {r['target']:.2f} "
+              f"(measured mean {r['mean']:.3f}, peak {r['peak']:.3f})")
+
+
 # ---- ES-8 I/O ---------------------------------------------------------------
 
 def find_device(name: str) -> int:
@@ -744,6 +828,17 @@ def main() -> None:
     p.add_argument("--json", type=Path)
     p.add_argument("--tail-seconds", type=int, default=4)
 
+    p = sub.add_parser("threshold")
+    p.add_argument("capture", type=Path)
+    p.add_argument("--json", type=Path)
+
+    p = sub.add_parser("threshold-run")
+    p.add_argument("--flash", type=Path, required=True)
+    p.add_argument("--out", type=Path, required=True)
+    p.add_argument("--device", default="ES-8")
+    p.add_argument("--channel", type=int, default=3)
+    p.add_argument("--peak", type=float, default=0.3)
+
     p = sub.add_parser("run")
     p.add_argument("--manifest", type=Path, required=True)
     p.add_argument("--out", type=Path, required=True)
@@ -759,6 +854,23 @@ def main() -> None:
     args = parser.parse_args()
     if args.command == "flash":
         flash(args.firmware, args.device, args.channel, args.peak)
+    elif args.command in ("threshold", "threshold-run"):
+        if args.command == "threshold-run":
+            args.out.mkdir(parents=True, exist_ok=True)
+            seconds = ((THRESHOLD_START_BLOCKS + THRESHOLD_STEPS *
+                        THRESHOLD_PASSES * THRESHOLD_STEP_BLOCKS) * BLOCK /
+                       MODULE_RATE * 1.1 + 20.0)
+            wav = args.out / "capture.wav"
+            print(f"capturing {seconds / 60:.1f} min to {wav}", flush=True)
+            capture(wav, seconds, args.device, firmware=args.flash,
+                    out_channel=args.channel, peak=args.peak)
+            capture_path, json_path = wav, args.out / "threshold.json"
+        else:
+            capture_path, json_path = args.capture, args.json
+        report = threshold_report(capture_path)
+        print_threshold(report)
+        if json_path:
+            json_path.write_text(json.dumps(report, indent=1) + "\n")
     elif args.command == "capture":
         capture(args.output, args.seconds, args.device)
     elif args.command in ("decode", "run"):

@@ -50,6 +50,9 @@
 #if PLAITS_OVERRUN_SWEEP
 #include "plaits/overrun_sweep.h"
 #endif
+#if PLAITS_THRESHOLD_LADDER
+#include "plaits/threshold_ladder.h"
+#endif
 #include "plaits/ui.h"
 #include "plaits/user_data.h"
 #include "plaits/user_data_receiver.h"
@@ -79,6 +82,10 @@ FmCarrierDiagnostic fm_carrier_diagnostic;
 #endif
 #if PLAITS_OVERRUN_SWEEP
 OverrunSweep overrun_sweep;
+#endif
+#if PLAITS_THRESHOLD_LADDER
+ThresholdLadder threshold_ladder;
+extern "C" void plaits_threshold_burn() { threshold_ladder.Burn(); }
 #endif
 
 // BufferAllocator returns typed pointers without adjusting their alignment.
@@ -114,6 +121,9 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
   // Cost is measured from callback entry: the UI poll, the synthesis and the
   // late-fill deadline all share the same 12-sample period.
   overrun_sweep.BeginCallback(audio_dac.EntryLag());
+#endif
+#if PLAITS_THRESHOLD_LADDER
+  threshold_ladder.BeginCallback();
 #endif
 
   IWDG_ReloadCounter();
@@ -151,6 +161,11 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
       ++output;
     }
   }
+#if PLAITS_THRESHOLD_LADDER
+  else if (threshold_ladder.reporting()) {
+    threshold_ladder.WriteReport((Voice::Frame*)(output), size);
+  }
+#endif
 #if PLAITS_OVERRUN_SWEEP
   else if (overrun_sweep.reporting()) {
     overrun_sweep.WriteReport((Voice::Frame*)(output), size);
@@ -173,6 +188,9 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
 #endif
 #if PLAITS_OVERRUN_SWEEP
     overrun_sweep.Prepare(&patch, &modulations);
+#endif
+#if PLAITS_THRESHOLD_LADDER
+    threshold_ladder.Prepare(&patch, &modulations);
 #endif
     if (modulations.timbre_patched) {
       PacketDecoderState state = \
@@ -210,6 +228,10 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
     const int previous_engine = voice.active_engine();
     voice.Render(patch, modulations, (Voice::Frame*)(output), size);
     const int active_engine = voice.active_engine();
+#if PLAITS_THRESHOLD_LADDER
+    threshold_ladder.EndRender(audio_dac.OutputLate());
+    threshold_ladder.WriteStart((Voice::Frame*)(output), size);
+#endif
 #if PLAITS_OVERRUN_SWEEP
     overrun_sweep.EndRender(size);
     // Sampled before any of the sweep's own work: this is where production
@@ -315,6 +337,9 @@ void Init() {
 #endif
 #if PLAITS_OVERRUN_SWEEP
   overrun_sweep.Init(PLAITS_OVERRUN_SWEEP_GROUP);
+#endif
+#if PLAITS_THRESHOLD_LADDER
+  threshold_ladder.Init();
 #endif
   audio_dac.Init(48000, kBlockSize);
 

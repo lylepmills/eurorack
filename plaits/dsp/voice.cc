@@ -30,6 +30,10 @@
 #include "plaits/dsp/fast_semitone_ratio.h"
 #include "plaits/user_data.h"
 
+#if PLAITS_THRESHOLD_LADDER
+extern "C" void plaits_threshold_burn();
+#endif
+
 namespace plaits {
 
 using namespace std;
@@ -879,6 +883,11 @@ void Voice::Render(
     lpg_envelope_.Init();
   }
   
+#if PLAITS_THRESHOLD_LADDER
+  // Diagnostic load, placed where an engine's own work sits: before the
+  // block is written. See plaits/threshold_ladder.h.
+  plaits_threshold_burn();
+#endif
   out_post_processor_.Process(
       pp_s.out_gain,
       lpg_bypass,

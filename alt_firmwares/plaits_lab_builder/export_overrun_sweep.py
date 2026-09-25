@@ -81,6 +81,9 @@ def main() -> None:
                         help="stereo AUX with every engine's stereo path "
                              "compiled in (a schema-2 recipe compiles the "
                              "per-engine stereo paths out)")
+    parser.add_argument("--threshold", action="store_true",
+                        help="build plaits/threshold_ladder.h instead of the "
+                             "sweep (production signal path, no sweep code)")
     parser.add_argument("--engines", nargs="+",
                         help="an explicit follow-up group instead of --order: "
                              "the first id hosts the ladder, so make it cheap")
@@ -149,9 +152,10 @@ def main() -> None:
     anchor = '  "CC=arm-none-eabi-gcc"'
     if source.count(anchor) != 1:
         raise ValueError("Exporter build template changed; recheck flag injection")
+    flags = ("-DPLAITS_THRESHOLD_LADDER=1" if args.threshold else
+             f"-DPLAITS_OVERRUN_SWEEP=1 -DPLAITS_OVERRUN_SWEEP_GROUP={args.group}")
     defines = (
-        f'  "PROJECT_CONFIGURATION=-DPLAITS_OVERRUN_SWEEP=1 '
-        f'-DPLAITS_OVERRUN_SWEEP_GROUP={args.group}" \\\n'
+        f'  "PROJECT_CONFIGURATION={flags}" \\\n'
         '  RESOURCES= \\\n'
     )
     build.write_text(source.replace(anchor, defines + anchor), encoding="utf-8")
