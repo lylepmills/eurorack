@@ -1,0 +1,1129 @@
+[
+ {
+  "engine": "fluted",
+  "mono": 2.603,
+  "stereo": 2.601,
+  "settle": 0.902,
+  "switch": 2.604,
+  "unpatched": 0.862,
+  "trig": 2.599,
+  "issues": [
+   "mono 2.60",
+   "stereo 2.60",
+   "model-select 2.6"
+  ]
+ },
+ {
+  "engine": "bowed",
+  "mono": 2.459,
+  "stereo": 2.461,
+  "settle": 0.724,
+  "switch": 2.391,
+  "unpatched": 0.631,
+  "trig": 2.456,
+  "issues": [
+   "mono 2.46",
+   "stereo 2.46",
+   "model-select 2.4"
+  ]
+ },
+ {
+  "engine": "diatonic-chord",
+  "mono": 1.499,
+  "stereo": 1.483,
+  "settle": 0,
+  "switch": 0.905,
+  "unpatched": 1.4,
+  "trig": 1.499,
+  "issues": [
+   "mono 1.50",
+   "stereo 1.48"
+  ]
+ },
+ {
+  "engine": "scale-stack",
+  "mono": 1.374,
+  "stereo": 1.371,
+  "settle": 0,
+  "switch": 1.031,
+  "unpatched": 1.295,
+  "trig": 1.37,
+  "issues": [
+   "mono 1.37",
+   "stereo 1.37",
+   "model-select 1.0"
+  ]
+ },
+ {
+  "engine": "saw-swarm",
+  "mono": 1.295,
+  "stereo": 1.313,
+  "settle": 0,
+  "switch": 1.173,
+  "unpatched": 1.214,
+  "trig": 1.292,
+  "issues": [
+   "mono 1.29",
+   "stereo 1.31",
+   "model-select 1.2"
+  ]
+ },
+ {
+  "engine": "scanned",
+  "mono": 1.101,
+  "stereo": 1.274,
+  "settle": 1.137,
+  "switch": 0.717,
+  "unpatched": 0.864,
+  "trig": 1.089,
+  "issues": [
+   "mono 1.10",
+   "stereo 1.27"
+  ]
+ },
+ {
+  "engine": "blown",
+  "mono": 1.175,
+  "stereo": 1.208,
+  "settle": 0.874,
+  "switch": 1.089,
+  "unpatched": 0.761,
+  "trig": 1.156,
+  "issues": [
+   "mono 1.18",
+   "stereo 1.21",
+   "model-select 1.1"
+  ]
+ },
+ {
+  "engine": "modal-resonator",
+  "mono": 1.047,
+  "stereo": 1.196,
+  "settle": 1.197,
+  "switch": 1.027,
+  "unpatched": 1.006,
+  "trig": 0.984,
+  "issues": [
+   "mono 1.05",
+   "stereo 1.20",
+   "model-select 1.0"
+  ]
+ },
+ {
+  "engine": "particle-noise",
+  "mono": 1.104,
+  "stereo": 1.177,
+  "settle": 1.183,
+  "switch": 2.237,
+  "unpatched": 1.008,
+  "trig": 1.102,
+  "issues": [
+   "mono 1.10",
+   "stereo 1.18",
+   "model-select 2.2"
+  ]
+ },
+ {
+  "engine": "fold",
+  "mono": 1.142,
+  "stereo": 1.164,
+  "settle": 0,
+  "switch": 1.054,
+  "unpatched": 1.06,
+  "trig": 1.138,
+  "issues": [
+   "mono 1.14",
+   "stereo 1.16",
+   "model-select 1.1"
+  ]
+ },
+ {
+  "engine": "wave-scan",
+  "mono": 1.124,
+  "stereo": 1.129,
+  "settle": 0,
+  "switch": 0.815,
+  "unpatched": 1.044,
+  "trig": 1.121,
+  "issues": [
+   "mono 1.12",
+   "stereo 1.13"
+  ]
+ },
+ {
+  "engine": "dx7-bank-c",
+  "mono": 1.107,
+  "stereo": 1.076,
+  "settle": 1.089,
+  "switch": 4.184,
+  "unpatched": 0.789,
+  "trig": 1.085,
+  "issues": [
+   "mono 1.11",
+   "stereo 1.08",
+   "model-select 4.2"
+  ]
+ },
+ {
+  "engine": "morph",
+  "mono": 0.955,
+  "stereo": 1.098,
+  "settle": 1.097,
+  "switch": 0.881,
+  "unpatched": 0.878,
+  "trig": 0.954,
+  "issues": [
+   "mono 0.95",
+   "stereo 1.10"
+  ]
+ },
+ {
+  "engine": "dx7-bank-b",
+  "mono": 1.097,
+  "stereo": 1.071,
+  "settle": 1.078,
+  "switch": 4.229,
+  "unpatched": 0.777,
+  "trig": 1.063,
+  "issues": [
+   "mono 1.10",
+   "stereo 1.07",
+   "model-select 4.2"
+  ]
+ },
+ {
+  "engine": "dx7-bank-a",
+  "mono": 1.094,
+  "stereo": 1.066,
+  "settle": 1.089,
+  "switch": 4.195,
+  "unpatched": 0.768,
+  "trig": 1.061,
+  "issues": [
+   "mono 1.09",
+   "stereo 1.07",
+   "model-select 4.2"
+  ]
+ },
+ {
+  "engine": "inharmonic-string",
+  "mono": 1.048,
+  "stereo": 1.081,
+  "settle": 1.087,
+  "switch": 1.45,
+  "unpatched": 1.023,
+  "trig": 1.012,
+  "issues": [
+   "mono 1.05",
+   "stereo 1.08",
+   "model-select 1.4"
+  ]
+ },
+ {
+  "engine": "helix",
+  "mono": 0.879,
+  "stereo": 1.078,
+  "settle": 1.091,
+  "switch": 0.855,
+  "unpatched": 0.796,
+  "trig": 0.875,
+  "issues": [
+   "stereo 1.08"
+  ]
+ },
+ {
+  "engine": "granular-formant",
+  "mono": 1.077,
+  "stereo": 0.781,
+  "settle": 1.052,
+  "switch": 0.796,
+  "unpatched": 0.998,
+  "trig": 1.074,
+  "issues": [
+   "mono 1.08"
+  ]
+ },
+ {
+  "engine": "chords",
+  "mono": 1.047,
+  "stereo": 1.069,
+  "settle": 1.068,
+  "switch": 0.852,
+  "unpatched": 0.967,
+  "trig": 1.043,
+  "issues": [
+   "mono 1.05",
+   "stereo 1.07"
+  ]
+ },
+ {
+  "engine": "glisson",
+  "mono": 1.068,
+  "stereo": 0.926,
+  "settle": 1.071,
+  "switch": 0.432,
+  "unpatched": 0.993,
+  "trig": 1.022,
+  "issues": [
+   "mono 1.07",
+   "stereo 0.93"
+  ]
+ },
+ {
+  "engine": "swarm",
+  "mono": 1.006,
+  "stereo": 1.06,
+  "settle": 1.042,
+  "switch": 0.914,
+  "unpatched": 0.89,
+  "trig": 0.996,
+  "issues": [
+   "mono 1.01",
+   "stereo 1.06"
+  ]
+ },
+ {
+  "engine": "ring-mod",
+  "mono": 0.982,
+  "stereo": 1.059,
+  "settle": 1.057,
+  "switch": 0.793,
+  "unpatched": 0.867,
+  "trig": 0.945,
+  "issues": [
+   "mono 0.98",
+   "stereo 1.06"
+  ]
+ },
+ {
+  "engine": "string-machine",
+  "mono": 1.053,
+  "stereo": 1.054,
+  "settle": 0,
+  "switch": 1.083,
+  "unpatched": 0.975,
+  "trig": 1.041,
+  "issues": [
+   "mono 1.05",
+   "stereo 1.05",
+   "model-select 1.1"
+  ]
+ },
+ {
+  "engine": "harmonic",
+  "mono": 1.05,
+  "stereo": 0.855,
+  "settle": 1.049,
+  "switch": 0.966,
+  "unpatched": 0.959,
+  "trig": 1.035,
+  "issues": [
+   "mono 1.05"
+  ]
+ },
+ {
+  "engine": "phase-distortion",
+  "mono": 1.044,
+  "stereo": 1.041,
+  "settle": 0,
+  "switch": 0.831,
+  "unpatched": 0.965,
+  "trig": 1.04,
+  "issues": [
+   "mono 1.04",
+   "stereo 1.04"
+  ]
+ },
+ {
+  "engine": "brass",
+  "mono": 1.004,
+  "stereo": 1.041,
+  "settle": 0.692,
+  "switch": 0.934,
+  "unpatched": 0.567,
+  "trig": 1.002,
+  "issues": [
+   "mono 1.00",
+   "stereo 1.04"
+  ]
+ },
+ {
+  "engine": "wavetable-chord",
+  "mono": 1.031,
+  "stereo": 1.029,
+  "settle": 0,
+  "switch": 0.749,
+  "unpatched": 0.95,
+  "trig": 1.026,
+  "issues": [
+   "mono 1.03",
+   "stereo 1.03"
+  ]
+ },
+ {
+  "engine": "granular-cloud",
+  "mono": 1.02,
+  "stereo": 1.011,
+  "settle": 0,
+  "switch": 0.924,
+  "unpatched": 0.94,
+  "trig": 1.016,
+  "issues": [
+   "mono 1.02",
+   "stereo 1.01"
+  ]
+ },
+ {
+  "engine": "chiptune",
+  "mono": 1.009,
+  "stereo": 1.004,
+  "settle": 1.01,
+  "switch": 0.871,
+  "unpatched": 0.989,
+  "trig": 0.585,
+  "issues": [
+   "mono 1.01",
+   "stereo 1.00"
+  ]
+ },
+ {
+  "engine": "cymbal",
+  "mono": 0.994,
+  "stereo": 0.996,
+  "settle": 0,
+  "switch": 0.7,
+  "unpatched": 0.694,
+  "trig": 0.774,
+  "issues": [
+   "mono 0.99",
+   "stereo 1.00"
+  ]
+ },
+ {
+  "engine": "dual-sync",
+  "mono": 0.956,
+  "stereo": 0.994,
+  "settle": 0,
+  "switch": 0.875,
+  "unpatched": 0.88,
+  "trig": 0.953,
+  "issues": [
+   "mono 0.96",
+   "stereo 0.99"
+  ]
+ },
+ {
+  "engine": "analog-hi-hat",
+  "mono": 0.985,
+  "stereo": 0.971,
+  "settle": 0.983,
+  "switch": 0.942,
+  "unpatched": 0.939,
+  "trig": 0.947,
+  "issues": [
+   "mono 0.98",
+   "stereo 0.97"
+  ]
+ },
+ {
+  "engine": "triple",
+  "mono": 0.974,
+  "stereo": 0.972,
+  "settle": 0,
+  "switch": 0.683,
+  "unpatched": 0.892,
+  "trig": 0.971,
+  "issues": [
+   "mono 0.97",
+   "stereo 0.97"
+  ]
+ },
+ {
+  "engine": "wave-terrain",
+  "mono": 0.973,
+  "stereo": 0.973,
+  "settle": 0.972,
+  "switch": 0.77,
+  "unpatched": 0.874,
+  "trig": 0.954,
+  "issues": [
+   "mono 0.97",
+   "stereo 0.97"
+  ]
+ },
+ {
+  "engine": "acid",
+  "mono": 0.77,
+  "stereo": 0.969,
+  "settle": 0.93,
+  "switch": 0.67,
+  "unpatched": 0.686,
+  "trig": 0.77,
+  "issues": [
+   "stereo 0.97"
+  ]
+ },
+ {
+  "engine": "natural-speech",
+  "mono": 0.965,
+  "stereo": 0.933,
+  "settle": 0.968,
+  "switch": 0.816,
+  "unpatched": 0.728,
+  "trig": 0.934,
+  "issues": [
+   "mono 0.96",
+   "stereo 0.93"
+  ]
+ },
+ {
+  "engine": "virtual-analog",
+  "mono": 0.962,
+  "stereo": 0.63,
+  "settle": 0.96,
+  "switch": 0.763,
+  "unpatched": 0.878,
+  "trig": 0.954,
+  "issues": [
+   "mono 0.96"
+  ]
+ },
+ {
+  "engine": "struck-drum",
+  "mono": 0.948,
+  "stereo": 0.961,
+  "settle": 0,
+  "switch": 0.812,
+  "unpatched": 0.842,
+  "trig": 0.92,
+  "issues": [
+   "mono 0.95",
+   "stereo 0.96"
+  ]
+ },
+ {
+  "engine": "two-op-fm",
+  "mono": 0.954,
+  "stereo": 0.954,
+  "settle": 0.952,
+  "switch": 0.869,
+  "unpatched": 0.853,
+  "trig": 0.931,
+  "issues": [
+   "mono 0.95",
+   "stereo 0.95"
+  ]
+ },
+ {
+  "engine": "phase-weave",
+  "mono": 0.95,
+  "stereo": 0.931,
+  "settle": 0.934,
+  "switch": 0.856,
+  "unpatched": 0.87,
+  "trig": 0.947,
+  "issues": [
+   "mono 0.95",
+   "stereo 0.93"
+  ]
+ },
+ {
+  "engine": "vowel",
+  "mono": 0.834,
+  "stereo": 0.94,
+  "settle": 0,
+  "switch": 0.788,
+  "unpatched": 0.754,
+  "trig": 0.831,
+  "issues": [
+   "stereo 0.94"
+  ]
+ },
+ {
+  "engine": "wavetable-scale-stack",
+  "mono": 0.935,
+  "stereo": 0.933,
+  "settle": 0,
+  "switch": 0.837,
+  "unpatched": 0.846,
+  "trig": 0.926,
+  "issues": [
+   "mono 0.94",
+   "stereo 0.93"
+  ]
+ },
+ {
+  "engine": "toy",
+  "mono": 0.766,
+  "stereo": 0.93,
+  "settle": 0.929,
+  "switch": 0.64,
+  "unpatched": 0.611,
+  "trig": 0.693,
+  "issues": [
+   "stereo 0.93"
+  ]
+ },
+ {
+  "engine": "skins",
+  "mono": 0.929,
+  "stereo": 0.898,
+  "settle": 0,
+  "switch": 0.893,
+  "unpatched": 0.893,
+  "trig": 0.897,
+  "issues": [
+   "mono 0.93"
+  ]
+ },
+ {
+  "engine": "vosim",
+  "mono": 0.903,
+  "stereo": 0.911,
+  "settle": 0,
+  "switch": 13.04,
+  "unpatched": 0.824,
+  "trig": 0.903,
+  "issues": [
+   "mono 0.90",
+   "stereo 0.91",
+   "model-select 13.0"
+  ]
+ },
+ {
+  "engine": "noise-bank",
+  "mono": 0.91,
+  "stereo": 0.908,
+  "settle": 0,
+  "switch": 0.823,
+  "unpatched": 0.83,
+  "trig": 0.906,
+  "issues": [
+   "mono 0.91",
+   "stereo 0.91"
+  ]
+ },
+ {
+  "engine": "freshets-formant",
+  "mono": 0.776,
+  "stereo": 0.897,
+  "settle": 0.891,
+  "switch": 0.532,
+  "unpatched": 0.695,
+  "trig": 0.773,
+  "issues": []
+ },
+ {
+  "engine": "analog-bass-drum",
+  "mono": 0.896,
+  "stereo": 0.883,
+  "settle": 0.895,
+  "switch": 0.693,
+  "unpatched": 0.706,
+  "trig": 0.864,
+  "issues": []
+ },
+ {
+  "engine": "struck-bell",
+  "mono": 0.89,
+  "stereo": 0.873,
+  "settle": 0,
+  "switch": 0.761,
+  "unpatched": 0.72,
+  "trig": 0.857,
+  "issues": []
+ },
+ {
+  "engine": "wavetable",
+  "mono": 0.886,
+  "stereo": 0.887,
+  "settle": 0.885,
+  "switch": 1.675,
+  "unpatched": 0.779,
+  "trig": 0.857,
+  "issues": [
+   "model-select 1.7"
+  ]
+ },
+ {
+  "engine": "analog-percussion",
+  "mono": 0.784,
+  "stereo": 0.887,
+  "settle": 0.887,
+  "switch": 0.59,
+  "unpatched": 0.737,
+  "trig": 0.742,
+  "issues": []
+ },
+ {
+  "engine": "wave-paraphonic",
+  "mono": 0.882,
+  "stereo": 0.875,
+  "settle": 0,
+  "switch": 0.85,
+  "unpatched": 0.801,
+  "trig": 0.879,
+  "issues": []
+ },
+ {
+  "engine": "virtual-analog-variant",
+  "mono": 0.88,
+  "stereo": 0.744,
+  "settle": 0.901,
+  "switch": 0.581,
+  "unpatched": 0.813,
+  "trig": 0.864,
+  "issues": []
+ },
+ {
+  "engine": "plucked",
+  "mono": 0.787,
+  "stereo": 0.874,
+  "settle": 0.873,
+  "switch": 1.116,
+  "unpatched": 0.705,
+  "trig": 0.781,
+  "issues": [
+   "model-select 1.1"
+  ]
+ },
+ {
+  "engine": "analog-snare",
+  "mono": 0.873,
+  "stereo": 0.861,
+  "settle": 0.874,
+  "switch": 0.837,
+  "unpatched": 0.831,
+  "trig": 0.837,
+  "issues": []
+ },
+ {
+  "engine": "buzz",
+  "mono": 0.873,
+  "stereo": 0.869,
+  "settle": 0,
+  "switch": 0.782,
+  "unpatched": 0.79,
+  "trig": 0.87,
+  "issues": []
+ },
+ {
+  "engine": "vowel-fof",
+  "mono": 0.864,
+  "stereo": 0.869,
+  "settle": 0.868,
+  "switch": 0.776,
+  "unpatched": 0.773,
+  "trig": 0.857,
+  "issues": []
+ },
+ {
+  "engine": "metalwork",
+  "mono": 0.851,
+  "stereo": 0.82,
+  "settle": 0,
+  "switch": 0.816,
+  "unpatched": 0.816,
+  "trig": 0.819,
+  "issues": []
+ },
+ {
+  "engine": "zxpulse48k",
+  "mono": 0.785,
+  "stereo": 0.851,
+  "settle": 0.851,
+  "switch": 0.367,
+  "unpatched": 0.705,
+  "trig": 0.782,
+  "issues": []
+ },
+ {
+  "engine": "z-filter",
+  "mono": 0.85,
+  "stereo": 0.848,
+  "settle": 0,
+  "switch": 0.733,
+  "unpatched": 0.774,
+  "trig": 0.846,
+  "issues": []
+ },
+ {
+  "engine": "undertow",
+  "mono": 0.821,
+  "stereo": 0.844,
+  "settle": 0.843,
+  "switch": 0.749,
+  "unpatched": 0.731,
+  "trig": 0.811,
+  "issues": []
+ },
+ {
+  "engine": "phase-flock",
+  "mono": 0.797,
+  "stereo": 0.844,
+  "settle": 0.839,
+  "switch": 0.733,
+  "unpatched": 0.701,
+  "trig": 0.793,
+  "issues": []
+ },
+ {
+  "engine": "formant-speech",
+  "mono": 0.822,
+  "stereo": 0.844,
+  "settle": 0.835,
+  "switch": 0.727,
+  "unpatched": 0.75,
+  "trig": 0.82,
+  "issues": []
+ },
+ {
+  "engine": "speech",
+  "mono": 0.823,
+  "stereo": 0.838,
+  "settle": 26.637,
+  "switch": 0.751,
+  "unpatched": 0.739,
+  "trig": 0.82,
+  "issues": [
+   "param-jump spike 26.6"
+  ]
+ },
+ {
+  "engine": "bytebeat",
+  "mono": 0.835,
+  "stereo": 0.836,
+  "settle": 0,
+  "switch": 0.417,
+  "unpatched": 0.765,
+  "trig": 0.835,
+  "issues": []
+ },
+ {
+  "engine": "virtual-analog-vcf",
+  "mono": 0.807,
+  "stereo": 0.811,
+  "settle": 0.811,
+  "switch": 0.697,
+  "unpatched": 0.721,
+  "trig": 0.8,
+  "issues": []
+ },
+ {
+  "engine": "filtered-noise",
+  "mono": 0.81,
+  "stereo": 0.741,
+  "settle": 0.822,
+  "switch": 0.726,
+  "unpatched": 0.728,
+  "trig": 0.81,
+  "issues": []
+ },
+ {
+  "engine": "gendy",
+  "mono": 0.679,
+  "stereo": 0.789,
+  "settle": 0.714,
+  "switch": 0.369,
+  "unpatched": 0.602,
+  "trig": 0.679,
+  "issues": []
+ },
+ {
+  "engine": "spectral-spiral",
+  "mono": 0.788,
+  "stereo": 0.786,
+  "settle": 0,
+  "switch": 0.723,
+  "unpatched": 0.705,
+  "trig": 0.785,
+  "issues": []
+ },
+ {
+  "engine": "shakers",
+  "mono": 0.78,
+  "stereo": 0.725,
+  "settle": 0.748,
+  "switch": 0.481,
+  "unpatched": 0.69,
+  "trig": 0.712,
+  "issues": []
+ },
+ {
+  "engine": "zxphase48k",
+  "mono": 0.734,
+  "stereo": 0.772,
+  "settle": 0.769,
+  "switch": 0.537,
+  "unpatched": 0.606,
+  "trig": 0.681,
+  "issues": []
+ },
+ {
+  "engine": "sideband-bank",
+  "mono": 0.756,
+  "stereo": 0.764,
+  "settle": 0.763,
+  "switch": 0.608,
+  "unpatched": 0.674,
+  "trig": 0.752,
+  "issues": []
+ },
+ {
+  "engine": "rulefield",
+  "mono": 0.706,
+  "stereo": 0.764,
+  "settle": 0.775,
+  "switch": 0.428,
+  "unpatched": 0.629,
+  "trig": 0.705,
+  "issues": []
+ },
+ {
+  "engine": "harmonics",
+  "mono": 0.757,
+  "stereo": 0.758,
+  "settle": 0,
+  "switch": 0.671,
+  "unpatched": 0.676,
+  "trig": 0.753,
+  "issues": []
+ },
+ {
+  "engine": "question-mark",
+  "mono": 0.645,
+  "stereo": 0.745,
+  "settle": 0,
+  "switch": 0.562,
+  "unpatched": 0.611,
+  "trig": 0.642,
+  "issues": []
+ },
+ {
+  "engine": "virtual-analog-crossfade",
+  "mono": 0.715,
+  "stereo": 0.733,
+  "settle": 0.734,
+  "switch": 0.562,
+  "unpatched": 0.631,
+  "trig": 0.708,
+  "issues": []
+ },
+ {
+  "engine": "waveshaping",
+  "mono": 0.728,
+  "stereo": 0.697,
+  "settle": 0.727,
+  "switch": 0.642,
+  "unpatched": 0.641,
+  "trig": 0.718,
+  "issues": []
+ },
+ {
+  "engine": "kick",
+  "mono": 0.712,
+  "stereo": 0.686,
+  "settle": 0.725,
+  "switch": 0.678,
+  "unpatched": 0.669,
+  "trig": 0.681,
+  "issues": []
+ },
+ {
+  "engine": "virtual-analog-dual",
+  "mono": 0.711,
+  "stereo": 0.548,
+  "settle": 0.708,
+  "switch": 0.556,
+  "unpatched": 0.629,
+  "trig": 0.706,
+  "issues": []
+ },
+ {
+  "engine": "snare",
+  "mono": 0.676,
+  "stereo": 0.653,
+  "settle": 0.671,
+  "switch": 0.658,
+  "unpatched": 0.635,
+  "trig": 0.646,
+  "issues": []
+ },
+ {
+  "engine": "bubbletime",
+  "mono": 0.609,
+  "stereo": 0.675,
+  "settle": 0.759,
+  "switch": 1.188,
+  "unpatched": 0.501,
+  "trig": 0.594,
+  "issues": [
+   "model-select 1.2"
+  ]
+ },
+ {
+  "engine": "tapfield",
+  "mono": 0.507,
+  "stereo": 0.666,
+  "settle": 0.664,
+  "switch": 0.263,
+  "unpatched": 0.423,
+  "trig": 0.497,
+  "issues": []
+ },
+ {
+  "engine": "attractor",
+  "mono": 0.656,
+  "stereo": 0.656,
+  "settle": 0,
+  "switch": 0.576,
+  "unpatched": 0.576,
+  "trig": 0.654,
+  "issues": []
+ },
+ {
+  "engine": "reed-pipe",
+  "mono": 0.612,
+  "stereo": 0.651,
+  "settle": 0.65,
+  "switch": 0.812,
+  "unpatched": 0.531,
+  "trig": 0.607,
+  "issues": []
+ },
+ {
+  "engine": "saw-comb",
+  "mono": 0.637,
+  "stereo": 0.635,
+  "settle": 0.647,
+  "switch": 1.528,
+  "unpatched": 0.557,
+  "trig": 0.637,
+  "issues": [
+   "model-select 1.5"
+  ]
+ },
+ {
+  "engine": "lpc-speech",
+  "mono": 0.614,
+  "stereo": 0.637,
+  "settle": 26.595,
+  "switch": 7.076,
+  "unpatched": 0.581,
+  "trig": 0.582,
+  "issues": [
+   "param-jump spike 26.6",
+   "model-select 7.1"
+  ]
+ },
+ {
+  "engine": "particle-burst",
+  "mono": 0.48,
+  "stereo": 0.637,
+  "settle": 0.619,
+  "switch": 0.37,
+  "unpatched": 0.402,
+  "trig": 0.477,
+  "issues": []
+ },
+ {
+  "engine": "lockstep",
+  "mono": 0.61,
+  "stereo": 0.606,
+  "settle": 0.609,
+  "switch": 0.53,
+  "unpatched": 0.526,
+  "trig": 0.604,
+  "issues": []
+ },
+ {
+  "engine": "raw-fm",
+  "mono": 0.605,
+  "stereo": 0.605,
+  "settle": 0.603,
+  "switch": 0.525,
+  "unpatched": 0.525,
+  "trig": 0.603,
+  "issues": []
+ },
+ {
+  "engine": "pulsar",
+  "mono": 0.577,
+  "stereo": 0.577,
+  "settle": 0.572,
+  "switch": 0.461,
+  "unpatched": 0.501,
+  "trig": 0.575,
+  "issues": []
+ },
+ {
+  "engine": "clap",
+  "mono": 0.571,
+  "stereo": 0.551,
+  "settle": 0.568,
+  "switch": 0.524,
+  "unpatched": 0.527,
+  "trig": 0.526,
+  "issues": []
+ },
+ {
+  "engine": "digital-modulation",
+  "mono": 0.57,
+  "stereo": 0.539,
+  "settle": 0.57,
+  "switch": 0.487,
+  "unpatched": 0.469,
+  "trig": 0.548,
+  "issues": []
+ },
+ {
+  "engine": "sub-oscillator",
+  "mono": 0.56,
+  "stereo": 0.556,
+  "settle": 0.564,
+  "switch": 0.46,
+  "unpatched": 0.475,
+  "trig": 0.556,
+  "issues": []
+ },
+ {
+  "engine": "loopback",
+  "mono": 0.552,
+  "stereo": 0.555,
+  "settle": 0.554,
+  "switch": 0.472,
+  "unpatched": 0.46,
+  "trig": 0.538,
+  "issues": []
+ },
+ {
+  "engine": "circuit-zaps",
+  "mono": 0.51,
+  "stereo": 0.512,
+  "settle": 0.512,
+  "switch": 0.474,
+  "unpatched": 0.474,
+  "trig": 0.48,
+  "issues": []
+ },
+ {
+  "engine": "saw-square",
+  "mono": 0.426,
+  "stereo": 0.457,
+  "settle": 0,
+  "switch": 0.343,
+  "unpatched": 0.352,
+  "trig": 0.422,
+  "issues": []
+ },
+ {
+  "engine": "csaw",
+  "mono": 0.415,
+  "stereo": 0.412,
+  "settle": 0.415,
+  "switch": 0.322,
+  "unpatched": 0.328,
+  "trig": 0.402,
+  "issues": []
+ }
+]
