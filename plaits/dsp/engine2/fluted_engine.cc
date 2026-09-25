@@ -7,8 +7,9 @@
 
 #include "plaits/dsp/engine2/fluted_engine.h"
 
+#include "plaits/dsp/clear_buffer.h"
+
 #include <algorithm>
-#include <cstring>
 #include <cmath>
 
 #include "plaits/build_config.h"
@@ -274,10 +275,10 @@ void FlutedEngine::Reset() {
   // is no resting state to reproduce. The arena is shared, so the lines have
   // to be cleared on every engine switch and not only at Init (SPEC R15).
   if (bore_) {
-    memset(bore_, 0, kFlutedBoreLength * sizeof(bore_[0]));
+    ClearBuffer(bore_, kFlutedBoreLength * sizeof(bore_[0]));
   }
   if (jet_) {
-    memset(jet_, 0, kFlutedJetLength * sizeof(jet_[0]));
+    ClearBuffer(jet_, kFlutedJetLength * sizeof(jet_[0]));
   }
   delay_pointer_ = 0;
   lp_state_ = 0;
@@ -322,11 +323,10 @@ void FlutedEngine::Render(
     // flush both lines, clear the reflection one-pole. The delay pointer and
     // the DC blocker's two states are deliberately NOT cleared -- carrying
     // them across a strike is what the module does.
-    // memset, not an element loop: the loop ran from flash at ~5 cycles a
-    // byte and turned every strike into a 1.7-block overrun (on-module
-    // overrun sweep, 2026-09-24).
-    memset(bore_, 0, kFlutedBoreLength * sizeof(bore_[0]));
-    memset(jet_, 0, kFlutedJetLength * sizeof(jet_[0]));
+    // Word-wise: an element loop, and newlib-nano's byte-wise memset, both
+    // turned every strike into a multi-block overrun (see clear_buffer.h).
+    ClearBuffer(bore_, kFlutedBoreLength * sizeof(bore_[0]));
+    ClearBuffer(jet_, kFlutedJetLength * sizeof(jet_[0]));
     lp_state_ = 0;
     excitation_pointer_ = 0;
     blowing_envelope_ = BlowingEnvelope(excitation_pointer_);

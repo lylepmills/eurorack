@@ -6,8 +6,9 @@
 
 #include "plaits/dsp/engine2/bowed_engine.h"
 
+#include "plaits/dsp/clear_buffer.h"
+
 #include <algorithm>
-#include <cstring>
 
 #include "plaits/build_config.h"
 #include "stmlib/dsp/dsp.h"
@@ -129,10 +130,10 @@ void BowedEngine::Reset() {
   // Another engine's buffers alias these at the same addresses, so the lines
   // have to be cleared on every engine switch, not just at Init (R15).
   if (bridge_line_) {
-    memset(bridge_line_, 0, kBowedBridgeLength * sizeof(bridge_line_[0]));
+    ClearBuffer(bridge_line_, kBowedBridgeLength * sizeof(bridge_line_[0]));
   }
   if (neck_line_) {
-    memset(neck_line_, 0, kBowedNeckLength * sizeof(neck_line_[0]));
+    ClearBuffer(neck_line_, kBowedNeckLength * sizeof(neck_line_[0]));
   }
   delay_pointer_ = 0;
   excitation_ = 0.0f;

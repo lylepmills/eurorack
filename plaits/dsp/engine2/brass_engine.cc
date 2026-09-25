@@ -6,8 +6,9 @@
 
 #include "plaits/dsp/engine2/brass_engine.h"
 
+#include "plaits/dsp/clear_buffer.h"
+
 #include <algorithm>
-#include <cstring>
 #include <cmath>
 
 #include "stmlib/dsp/dsp.h"
@@ -27,7 +28,7 @@ void BrassEngine::Init(BufferAllocator* allocator) {
 }
 
 void BrassEngine::Reset() {
-  memset(delay_line_, 0, kBrassDelaySize * sizeof(delay_line_[0]));
+  ClearBuffer(delay_line_, kBrassDelaySize * sizeof(delay_line_[0]));
   delay_write_ = 0;
   lip_x_ = 0.0f;
   lip_v_ = 0.0f;
