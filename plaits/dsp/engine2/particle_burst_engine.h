@@ -285,11 +285,12 @@ const float kParticleStockDecay = 64763.0f / 65536.0f;
 const float kParticleMinDecay = 0.90f;
 const float kParticleMaxDecay = 0.9995f;
 
-// 12 * log2(kSampleRate / kCorrectedSampleRate) -- +4.61 cents, the same
-// offset every pitched engine in this alt firmware carries (SPEC R6). See
-// the PITCH CORRECTION header note for the derivation that folds it into a
-// single upfront semitone shift rather than a second frequency domain.
-const float kParticlePitchCorrection = 0.046105f;
+// 12 * log2(kSampleRate / kCorrectedSampleRate) -- +4.61 cents on the module,
+// zero in a build that plays at kSampleRate (kCorrectedPitchOffset, dsp.h) --
+// the same offset every pitched engine in this alt firmware carries (SPEC
+// R6). See the PITCH CORRECTION header note for the derivation that folds it
+// into a single upfront semitone shift rather than a second frequency domain.
+const float kParticlePitchCorrection = kCorrectedPitchOffset;
 
 // Braids' 23-bit trigger test denominator (digital_oscillator.cc:2104,
 // `noise & 0x7fffff`) and the 1024 floor added to TIMBRE-as-parameter_[0]
