@@ -10,7 +10,10 @@
 // sine sub-oscillator, which the host checks for stale blocks the same way as
 // in threshold_ladder.h; in stereo scenes AUX is the engine's right channel,
 // so those are judged by cost against the measured threshold and by ear.
-// Results go out as FSK after the last scene.
+// Results go out as FSK after the last scene, with a per-scene breakdown of
+// where the block's time goes: panel scan (Ui::Poll), Voice setup before the
+// engine, the engine's own Render, and post-processing (sub-oscillator, outer
+// LPG, output) -- from timestamps at those boundaries (Mark()).
 //
 // The scene table comes from a generated header (PLAITS_SCENE_TABLE), written
 // by alt_firmwares/plaits_lab_builder/export_overrun_sweep.py --scenes.
@@ -77,6 +80,8 @@ class SceneCheck {
   static const int kTriggerLength = 4;
   static const uint8_t kPacketHello = 1;
   static const uint8_t kPacketScene = 9;
+  static const uint8_t kPacketSections = 10;
+  static const int kSections = 4;   // ui, voice setup, engine, post
 
   SceneCheck() { }
 
@@ -93,7 +98,12 @@ class SceneCheck {
       Stats& s = stats_[i];
       s.max = s.sum = s.switch_max = 0;
       s.count = s.late = s.switch_late = 0;
+      for (int k = 0; k < kSections; ++k) {
+        s.section_sum[k] = 0;
+        s.section_max[k] = 0;
+      }
     }
+    for (int k = 0; k < 4; ++k) mark_[k] = 0;
     fsk_.Init();
     report_scene_ = 0;
     report_gap_ = 0;
@@ -111,7 +121,13 @@ class SceneCheck {
   int scene() const { return scene_; }
   Phase phase() const { return phase_; }
 
-  inline void BeginCallback() { start_ = SceneCycles(); }
+  inline void BeginCallback() {
+    start_ = SceneCycles();
+    mark_[1] = mark_[2] = mark_[3] = start_;
+  }
+
+  // Section boundaries: 1 after Ui::Poll, 2 before and 3 after the engine.
+  inline void Mark(int section) { mark_[section] = SceneCycles(); }
 
   void Prepare(Patch* patch, Modulations* modulations) {
     // The start phase plays the first scene's engine at rest.
@@ -168,6 +184,14 @@ class SceneCheck {
         s.sum += cycles;
         ++s.count;
         s.late += late;
+        const uint32_t end = start_ + cycles;
+        const uint32_t section[kSections] = {
+          mark_[1] - start_, mark_[2] - mark_[1],
+          mark_[3] - mark_[2], end - mark_[3] };
+        for (int k = 0; k < kSections; ++k) {
+          s.section_sum[k] += section[k];
+          if (section[k] > s.section_max[k]) s.section_max[k] = section[k];
+        }
       }
     }
     if (phase_ == PHASE_REPORT) return;
@@ -214,6 +238,8 @@ class SceneCheck {
     uint32_t count;
     uint16_t late;
     uint16_t switch_late;
+    uint32_t section_sum[kSections];
+    uint32_t section_max[kSections];
   };
 
   uint16_t Code(uint32_t cycles) const {
@@ -222,9 +248,18 @@ class SceneCheck {
     return static_cast<uint16_t>(code > 0xffff ? 0xffff : code);
   }
 
-  // scene, engine, peak, mean, late, switch peak, switch late, blocks/16
+  // Two packets per scene. SCENE: scene, engine, peak, mean, late, switch
+  // peak, switch late, blocks/16. SECTIONS: scene, then mean and max of each
+  // section.
   void EnqueueReportItem() {
     const Stats& s = stats_[report_scene_];
+    fsk_.BeginPacket(kPacketSections, 1 + kSections * 4);
+    fsk_.Put(static_cast<uint8_t>(report_scene_));
+    for (int k = 0; k < kSections; ++k) {
+      fsk_.Put16(Code(s.count ? s.section_sum[k] / s.count : 0));
+      fsk_.Put16(Code(s.section_max[k]));
+    }
+    fsk_.EndPacket();
     fsk_.BeginPacket(kPacketScene, 14);
     fsk_.Put(static_cast<uint8_t>(report_scene_));
     fsk_.Put(static_cast<uint8_t>(scenes_[report_scene_].engine));
@@ -241,6 +276,7 @@ class SceneCheck {
     }
   }
 
+  uint32_t mark_[4];
   const CheckScene* scenes_;
   Phase phase_;
   int scene_;
@@ -248,7 +284,7 @@ class SceneCheck {
   uint32_t start_;
   uint32_t budget_;
   Stats stats_[kScenes];
-  DiagnosticFsk<64> fsk_;
+  DiagnosticFsk<96> fsk_;
   int report_scene_;
   int report_gap_;
 

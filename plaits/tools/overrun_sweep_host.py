@@ -61,6 +61,8 @@ PACKET_CONDITIONS = 6
 PACKET_SETTLE = 7
 PACKET_THRESHOLD = 8
 PACKET_SCENE = 9
+PACKET_SECTIONS = 10
+SECTION_NAMES = ["ui", "voice", "engine", "post"]
 
 OUTPUT_NAMES = ["regular", "stereo", "sub-osc"]
 TRIGGER_NAMES = ["unpatched", "triggered", "gated"]
@@ -711,6 +713,14 @@ def scene_report(path: Path, scenes: list[dict], clips: Path | None) -> dict:
     ratio = (t_end - t_start) / (len(scenes) * SCENE_BLOCKS * BLOCK)
     glitches = np.array(decoded["glitches"], dtype=np.int64) + BLOCK // 2
     firmware = {}
+    sections = {}
+    for p in packets:
+        if p.type == PACKET_SECTIONS:
+            values = struct.unpack_from("<8H", p.payload, 1)
+            sections[p.payload[0]] = {
+                name: {"mean": values[2 * k] / 1000.0,
+                       "max": values[2 * k + 1] / 1000.0}
+                for k, name in enumerate(SECTION_NAMES)}
     for p in reports:
         (scene, _engine, peak, mean, late, switch_peak, switch_late,
          blocks16) = struct.unpack_from("<BBHHHHHH", p.payload)
@@ -726,6 +736,8 @@ def scene_report(path: Path, scenes: list[dict], clips: Path | None) -> dict:
         hi = lo + SCENE_BLOCKS * BLOCK * ratio
         row = {"scene": k, "label": scene.get("label", str(k)),
                "aux": scene["aux"], **firmware.get(k, {})}
+        if k in sections:
+            row["sections"] = sections[k]
         if scene["aux"] == "subosc-sine":
             row["host_breaks"] = int(np.count_nonzero(
                 (glitches >= measured) & (glitches < hi)))
@@ -748,6 +760,14 @@ def print_scenes(report: dict) -> None:
               f"{r.get('peak', 0):6.3f} {r.get('late', 0):6d} "
               f"{'  n/a' if host is None else f'{host:6d}'}  "
               f"{r.get('switch_peak', 0):.3f}/{r.get('switch_late', 0)}")
+    print("\nwhere the time goes (mean / max per block, fraction of the period)")
+    print(f"{'scene':28} " + "  ".join(f"{n:>13}" for n in SECTION_NAMES))
+    for r in report["rows"]:
+        s = r.get("sections")
+        if not s:
+            continue
+        print(f"{r['label'][:28]:28} " + "  ".join(
+            f"{s[n]['mean']:.3f} / {s[n]['max']:.3f}" for n in SECTION_NAMES))
 
 
 # ---- ES-8 I/O ---------------------------------------------------------------

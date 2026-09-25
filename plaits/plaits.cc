@@ -95,6 +95,7 @@ extern "C" void plaits_threshold_burn() { threshold_ladder.Burn(); }
 #if PLAITS_SCENE_CHECK
 static const CheckScene kCheckScenes[PLAITS_SCENE_COUNT] = PLAITS_SCENES;
 SceneCheck<PLAITS_SCENE_COUNT> scene_check;
+extern "C" void plaits_section_mark(int section) { scene_check.Mark(section); }
 #endif
 
 // BufferAllocator returns typed pointers without adjusting their alignment.
@@ -149,6 +150,9 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
   cpu_probe.Begin();
 #endif
   ui.Poll();
+#if PLAITS_SCENE_CHECK
+  scene_check.Mark(1);
+#endif
 #if PLAITS_TZFM_DIAGNOSTIC
   cpu_probe.End(size);
   const float diagnostic_ui_usage = cpu_probe.last_usage();

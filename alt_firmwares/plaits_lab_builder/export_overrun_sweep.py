@@ -72,7 +72,8 @@ def registry_order(engine_config: str, slots: list[str]) -> list[str]:
     return engines
 
 
-AUX_MODES = {"regular": (0, 0), "stereo": (1, 0), "subosc-sine": (2, 3)}
+AUX_MODES = {"regular": (0, 0), "stereo": (1, 0), "subosc-sine": (2, 3),
+             "subosc-square": (2, 1)}
 
 
 def write_scene_table(path: Path, engines: list[str], output: Path) -> None:

@@ -33,6 +33,11 @@
 #if PLAITS_THRESHOLD_LADDER
 extern "C" void plaits_threshold_burn();
 #endif
+#if PLAITS_SCENE_CHECK
+// Diagnostic timestamps (plaits/scene_check.h): 2 before the engine renders,
+// 3 after it.
+extern "C" void plaits_section_mark(int section);
+#endif
 
 namespace plaits {
 
@@ -769,8 +774,14 @@ void Voice::Render(
       &p.morph);
 
   bool already_enveloped = pp_s.already_enveloped;
+#if PLAITS_SCENE_CHECK
+  plaits_section_mark(2);
+#endif
   RenderEngineWithHardSync(
       e, p, out_buffer_, aux_buffer_, size, &already_enveloped);
+#if PLAITS_SCENE_CHECK
+  plaits_section_mark(3);
+#endif
 
 #if PLAITS_HAS_CHIPTUNE_ENGINE
   // Clocked Chiptune bypasses the outer LPG because it owns its note envelope,
