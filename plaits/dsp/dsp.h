@@ -44,7 +44,9 @@ static const float kSampleRate = 48000.0f;
 //
 // That's only 4.6 cts of error, but we care!
 
-static const float kCorrectedSampleRate = 47872.34f;
+// Rack renders Plaits at exactly 48 kHz, so the hardware clock correction
+// does not apply.
+static const float kCorrectedSampleRate = kSampleRate;
 const float a0 = (440.0f / 8.0f) / kCorrectedSampleRate;
 
 const size_t kMaxBlockSize = 24;
