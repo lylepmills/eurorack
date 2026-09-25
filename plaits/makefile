@@ -62,6 +62,9 @@ include stmlib/makefile.inc
 # Optimize control, startup, and callback glue for size while leaving the voice
 # renderer and every synthesis engine at -O2. FillBuffer itself only dispatches
 # to those hot paths, so this recovers flash without slowing their DSP loops.
+# leds.o is deliberately NOT in this list: Leds::Write runs in the audio
+# interrupt on every LED refresh, and its loop at -Os cost ~0.02 of the period
+# on the module (224 bytes buys the -O2 unroll).
 $(BUILD_DIR)plaits.o \
 $(BUILD_DIR)ui.o \
 $(BUILD_DIR)settings.o \
@@ -70,7 +73,6 @@ $(BUILD_DIR)user_data_receiver.o \
 $(BUILD_DIR)audio_dac.o \
 $(BUILD_DIR)cv_adc.o \
 $(BUILD_DIR)firmware_update_adc.o \
-$(BUILD_DIR)leds.o \
 $(BUILD_DIR)pots_adc.o \
 $(BUILD_DIR)switches.o \
 $(BUILD_DIR)debug_port.o \

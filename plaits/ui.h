@@ -261,6 +261,11 @@ class Ui {
   bool ignore_release_[SWITCH_LAST];
 
   int active_engine_;
+  // Banks of the selected and the active engine as last looked up by the LED
+  // refresh (0xff: not yet), which runs inside the audio interrupt and would
+  // otherwise search the bank table twice on every pass.
+  uint8_t led_bank_engine_[2];
+  uint8_t led_bank_[2];
   bool audio_rate_fm_needed_;
   // Per-bank memory for banked navigation: the row last selected in each bank,
   // so changing bank restores it (design "B"). Persisted across power cycles via

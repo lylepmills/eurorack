@@ -180,6 +180,8 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
   fill(&ignore_release_[0], &ignore_release_[SWITCH_LAST], false);
 
   active_engine_ = 0;
+  led_bank_engine_[0] = led_bank_engine_[1] = 0xff;
+  led_bank_[0] = led_bank_[1] = 0;
   audio_rate_fm_needed_ = false;
   pitch_lp_ = 0.0f;
   data_transfer_progress_ = 0.0f;
@@ -477,16 +479,24 @@ void Ui::UpdateLEDs() {
         // (kEngineRows), so an engine in a gapped bank stays on its own LED
         // rather than the compacted position; the bank (hence color) is still
         // derived from the compact index.
-        const int selected_bank =
-            BankOfEngine(kBankSizes, kNumBanks, patch_->engine);
+        if (patch_->engine != led_bank_engine_[0]) {
+          led_bank_engine_[0] = static_cast<uint8_t>(patch_->engine);
+          led_bank_[0] = static_cast<uint8_t>(
+              BankOfEngine(kBankSizes, kNumBanks, patch_->engine));
+        }
+        const int selected_bank = led_bank_[0];
         const int selected_row = kEngineRows[patch_->engine];
         uint32_t selected_color = pwm_counter < triangle
             ? BankToColor(selected_bank)
             : LED_COLOR_OFF;
 
         // With the CV modulation applied
-        const int active_bank =
-            BankOfEngine(kBankSizes, kNumBanks, active_engine_);
+        if (active_engine_ != led_bank_engine_[1]) {
+          led_bank_engine_[1] = static_cast<uint8_t>(active_engine_);
+          led_bank_[1] = static_cast<uint8_t>(
+              BankOfEngine(kBankSizes, kNumBanks, active_engine_));
+        }
+        const int active_bank = led_bank_[1];
         const int active_row = kEngineRows[active_engine_];
         uint32_t active_color = BankToColor(active_bank);
 
