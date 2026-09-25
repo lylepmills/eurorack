@@ -15,6 +15,15 @@ SECTIONS
   .isr_vector : { KEEP(*(.isr_vector)) } > CODE
   .text   : { *(.text*) *(.glue_7*) } > CODE
   .rodata : { *(.rodata*) } > CODE
+  /* Static constructors. The firmware's startup runs these through
+     __libc_init_array; without KEEP, --gc-sections drops them and any table
+     built by a constructor (e.g. Chords' factory wave line) stays zero. */
+  .init_array : {
+    PROVIDE_HIDDEN(__init_array_start = .);
+    KEEP(*(SORT(.init_array.*)))
+    KEEP(*(.init_array))
+    PROVIDE_HIDDEN(__init_array_end = .);
+  } > CODE
   . = ALIGN(4);
   _sidata = .;
 

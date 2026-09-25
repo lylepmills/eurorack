@@ -65,8 +65,9 @@ static void PrintHash() {
 }
 
 int main() {
-  // Constructed here: the bare-metal startup runs no global constructors,
-  // and Voice's engines need theirs (vtables).
+  // A function-local static: constructed (engine vtables) on first use. The
+  // startup runs the objects' static constructors too, which matters for
+  // constructor-built tables such as Chords' factory wave line.
   static Voice voice;
   stmlib::BufferAllocator allocator(shared_buffer, 16384);
   voice.Init(&allocator);

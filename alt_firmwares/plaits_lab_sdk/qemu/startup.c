@@ -1,7 +1,7 @@
 /* Minimal bare-metal startup for the QEMU cost harness. Not a device firmware:
    no clocks, no peripherals, no interrupts -- just enough to reach main() with
-   .data and .bss correct, so the plugin's counts cover the engine and nothing
-   else. SPDX-License-Identifier: MIT */
+   .data, .bss and static constructors done, so the plugin's counts cover the
+   engine and nothing else. SPDX-License-Identifier: MIT */
 #include <stdint.h>
 
 /* Compiled by g++ (the toolchain driver the firmware uses), so the reset entry
@@ -11,6 +11,8 @@ extern "C" {
 #endif
 
 extern uint32_t _sidata, _sdata, _edata, _sbss, _ebss, _estack;
+extern void (*__init_array_start[])(void);
+extern void (*__init_array_end[])(void);
 extern int main(void);
 
 void Reset_Handler(void)
@@ -22,8 +24,15 @@ void Reset_Handler(void)
     *(volatile uint32_t *)0xE000ED88 |= (0xFu << 20);
 
     uint32_t *src = &_sidata, *dst = &_sdata;
+    void (**ctor)(void);
     while (dst < &_edata) *dst++ = *src++;
     for (dst = &_sbss; dst < &_ebss; ) *dst++ = 0;
+    /* Static constructors, as the firmware's startup runs them through
+       __libc_init_array. Skipping them left dynamically initialized tables
+       zero: Chords' factory wave line was all NULL, so its wavetable voices
+       read the vector table and the first bytes of .text as waveform data,
+       and the output changed with every unrelated code change. */
+    for (ctor = __init_array_start; ctor < __init_array_end; ++ctor) (*ctor)();
     main();
     for (;;) { }
 }
