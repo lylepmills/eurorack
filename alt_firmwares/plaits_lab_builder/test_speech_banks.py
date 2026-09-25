@@ -45,6 +45,7 @@ class SpeechBanksTest(unittest.TestCase):
             "voice.o",
             "plaits.o",
             "ui.o",
+            "ui_poll.o",
             "speech_engine.o",
             "lpc_speech_engine.o",
             "lpc_speech_synth_controller.o",

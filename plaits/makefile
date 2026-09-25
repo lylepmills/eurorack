@@ -86,6 +86,13 @@ $(BUILD_DIR)system_stm32f37x.o: CCFLAGS += -Os
 # renderer and engine inner loops untouched.
 $(BUILD_DIR)stm32f37x_%.o: CCFLAGS += -Os
 
+# Stock engines that sit well inside the CPU budget, built for size to fund
+# -O2 where it matters (ui_poll.cc runs every block). Measured before choosing
+# them: QEMU instruction counts +1% (Waveshaping) and +0.6% (Bass Drum) with
+# bit-identical output, against 0.73 and 0.90 worst-case load on the module;
+# together ~2 KB of flash. (Snare was rejected: +18% and different output.)
+$(BUILD_DIR)waveshaping_engine.o $(BUILD_DIR)bass_drum_engine.o: CCFLAGS += -Os
+
 # The hosted builder generates engine_config.h with the recipe's engine registry
 # (PLAITS_ENGINE_MEMBERS, reached through voice.h) and its compile-time option
 # macros (the PLAITS_BUILD_* / PLAITS_ENGINE_COUNT values that build_config.h
@@ -100,7 +107,7 @@ $(BUILD_DIR)stm32f37x_%.o: CCFLAGS += -Os
 # instead of the recipe's. check_config_scope.py enforces that at build time.
 # ENGINE_CONFIG is empty for ordinary firmware builds, which fall back to the
 # checked-in default headers via each unit's own #include.
-RECIPE_CONFIG_OBJS = voice.o plaits.o ui.o settings.o chord_bank.o scale_voices.o scale_wavetable_voices.o pots_adc.o switches.o sync_input.o audio_rate_timer.o cv_adc.o acid_engine.o additive_engine.o analog_percussion_engine.o chord_engine.o grain_engine.o speech_engine.o swarm_engine.o waveshaping_engine.o fm_engine.o vowel_fof_engine.o wavetable_engine.o virtual_analog_engine.o virtual_analog_dual_engine.o virtual_analog_crossfade_engine.o virtual_analog_variant_engine.o virtual_analog_vcf_engine.o wave_terrain_engine.o attractor_engine.o bass_drum_engine.o brass_engine.o blown_engine.o bowed_engine.o buzz_engine.o bytebeat_engine.o chiptune_engine.o circuit_zaps_engine.o clap_engine.o csaw_engine.o cymbal_engine.o diatonic_chord_engine.o digital_modulation_engine.o dual_sync_engine.o fluted_engine.o fold_engine.o formant_speech_engine.o freshets_formant_engine.o gendy_engine.o glisson_engine.o granular_cloud_engine.o harmonics_engine.o helix_engine.o hi_hat_engine.o kick_engine.o lockstep_engine.o loopback_engine.o lpc_speech_engine.o metalwork_engine.o modal_engine.o morph_engine.o noise_engine.o noise_bank_engine.o particle_engine.o particle_burst_engine.o phase_distortion_engine.o phase_flock_engine.o phase_weave_engine.o plucked_engine.o pulsar_engine.o question_mark_engine.o raw_fm_engine.o reed_pipe_engine.o ring_mod_engine.o rulefield_engine.o saw_comb_engine.o saw_square_engine.o saw_swarm_engine.o scale_stack_engine.o scanned_engine.o shakers_engine.o sideband_engine.o six_op_engine.o skins_engine.o snare_drum_engine.o snare_engine.o spectral_spiral_engine.o string_engine.o string_machine_engine.o struck_bell_engine.o struck_drum_engine.o sub_oscillator_engine.o tapfield_engine.o toy_engine.o triple_engine.o undertow_engine.o vosim_engine.o vowel_engine.o wave_paraphonic_engine.o wave_scan_engine.o wavetable_chord_engine.o wavetable_scale_stack_engine.o z_filter_engine.o zxpulse48k_engine.o
+RECIPE_CONFIG_OBJS = voice.o plaits.o ui.o ui_poll.o settings.o chord_bank.o scale_voices.o scale_wavetable_voices.o pots_adc.o switches.o sync_input.o audio_rate_timer.o cv_adc.o acid_engine.o additive_engine.o analog_percussion_engine.o chord_engine.o grain_engine.o speech_engine.o swarm_engine.o waveshaping_engine.o fm_engine.o vowel_fof_engine.o wavetable_engine.o virtual_analog_engine.o virtual_analog_dual_engine.o virtual_analog_crossfade_engine.o virtual_analog_variant_engine.o virtual_analog_vcf_engine.o wave_terrain_engine.o attractor_engine.o bass_drum_engine.o brass_engine.o blown_engine.o bowed_engine.o buzz_engine.o bytebeat_engine.o chiptune_engine.o circuit_zaps_engine.o clap_engine.o csaw_engine.o cymbal_engine.o diatonic_chord_engine.o digital_modulation_engine.o dual_sync_engine.o fluted_engine.o fold_engine.o formant_speech_engine.o freshets_formant_engine.o gendy_engine.o glisson_engine.o granular_cloud_engine.o harmonics_engine.o helix_engine.o hi_hat_engine.o kick_engine.o lockstep_engine.o loopback_engine.o lpc_speech_engine.o metalwork_engine.o modal_engine.o morph_engine.o noise_engine.o noise_bank_engine.o particle_engine.o particle_burst_engine.o phase_distortion_engine.o phase_flock_engine.o phase_weave_engine.o plucked_engine.o pulsar_engine.o question_mark_engine.o raw_fm_engine.o reed_pipe_engine.o ring_mod_engine.o rulefield_engine.o saw_comb_engine.o saw_square_engine.o saw_swarm_engine.o scale_stack_engine.o scanned_engine.o shakers_engine.o sideband_engine.o six_op_engine.o skins_engine.o snare_drum_engine.o snare_engine.o spectral_spiral_engine.o string_engine.o string_machine_engine.o struck_bell_engine.o struck_drum_engine.o sub_oscillator_engine.o tapfield_engine.o toy_engine.o triple_engine.o undertow_engine.o vosim_engine.o vowel_engine.o wave_paraphonic_engine.o wave_scan_engine.o wavetable_chord_engine.o wavetable_scale_stack_engine.o z_filter_engine.o zxpulse48k_engine.o
 RECIPE_CONFIG_TARGETS = $(patsubst %,$(BUILD_DIR)%,$(RECIPE_CONFIG_OBJS))
 ifneq ($(ENGINE_CONFIG),)
 $(RECIPE_CONFIG_TARGETS): CPPFLAGS += -include $(ENGINE_CONFIG)
@@ -130,7 +137,7 @@ endif
 # The split engines both use the shared custom-bank helpers, so their method
 # implementations must see the same value too. Legacy/default palettes keep the
 # stock code footprint by compiling all of these objects with the value 0.
-SPEECH_LAYOUT_OBJS = voice.o plaits.o ui.o speech_engine.o lpc_speech_engine.o lpc_speech_synth_controller.o lpc_speech_synth_phonemes.o
+SPEECH_LAYOUT_OBJS = voice.o plaits.o ui.o ui_poll.o speech_engine.o lpc_speech_engine.o lpc_speech_synth_controller.o lpc_speech_synth_phonemes.o
 ifneq ($(SPEECH_BANKS_ENABLED),)
 $(patsubst %,$(BUILD_DIR)%,$(SPEECH_LAYOUT_OBJS)): CPPFLAGS += -DPLAITS_HAS_CUSTOM_SPEECH_BANKS=$(SPEECH_BANKS_ENABLED)
 endif
