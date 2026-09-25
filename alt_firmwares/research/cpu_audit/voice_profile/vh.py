@@ -31,6 +31,7 @@ ap.add_argument("--m", type=float, default=.5)
 ap.add_argument("--aux", type=int, default=0)
 ap.add_argument("--trig", type=int, default=0)
 ap.add_argument("--profile", action="store_true")
+ap.add_argument("--dump", action="store_true", help="write every frame to <work>/<tag>/vh_frames.raw")
 ap.add_argument("--tag", default="run")
 ap.add_argument("--stock", action="store_true", help="build is the upstream tree (objects in build/plaits)")
 a = ap.parse_args()
@@ -56,9 +57,11 @@ else:
             keep.append(t.replace(str(a.build), "/b"))
 flags = [*estimate.ARCH_FLAGS, *keep]
 cmds = []
-for label, n in (("a", 400), ("b", 1400)):
+for label, n in (("a", 400), ("b", 1400), ("hash", 3000)):
     d = [f"-DVH_BLOCKS={n}", f"-DVH_ENGINE={a.engine}", f"-DVH_NOTE={float(a.note)!r}f", f"-DVH_H={float(a.h)!r}f",
-         f"-DVH_T={float(a.t)!r}f", f"-DVH_M={float(a.m)!r}f", f"-DVH_AUX={a.aux}", f"-DVH_TRIG={a.trig}"]
+         f"-DVH_T={float(a.t)!r}f", f"-DVH_M={float(a.m)!r}f", f"-DVH_AUX={a.aux}", f"-DVH_TRIG={a.trig}",
+         f"-DVH_HASH={1 if label == 'hash' else 0}",
+         f"-DVH_DUMP={1 if (label == 'hash' and a.dump) else 0}"]
     cmds.append(" ".join(shlex.quote(c) for c in ["/usr/local/arm-4.8.3/bin/arm-none-eabi-g++", *flags, *d,
         "-c", "/vh/voice_harness.cc", "-o", f"/out/h_{label}.o"]))
     cmds.append(" ".join(shlex.quote(c) for c in ["/usr/local/arm-4.8.3/bin/arm-none-eabi-g++", *estimate.ARCH_FLAGS,
@@ -78,6 +81,10 @@ plugin = QEMU / "cycles_plugin.so"
 ca, pa = estimate.run_qemu(out / "h_a.elf", plugin)
 cb, pb = estimate.run_qemu(out / "h_b.elf", plugin)
 per_block = (cb[0] - ca[0]) / 1000.0
-print(f"{a.tag}: {per_block:.0f} instructions/block ({per_block / 12:.1f}/sample)")
+h = subprocess.run(["qemu-system-arm", "-M", "mps2-an386", "-cpu", "cortex-m4", "-nographic",
+    "-no-reboot", "-semihosting-config", "enable=on,target=native", "-kernel",
+    str(out / "h_hash.elf")], capture_output=True, text=True, timeout=600, cwd=out)
+digest = next((l.split()[1] for l in (h.stdout + h.stderr).splitlines() if l.startswith("HASH")), "?")
+print(f"{a.tag}: {per_block:.0f} instructions/block ({per_block / 12:.1f}/sample)  output {digest}")
 if a.profile:
     estimate.report_profile(out / "symbols.txt", pa, pb, 1000 * 12)
