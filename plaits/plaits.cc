@@ -58,6 +58,7 @@
 // the build force-includes (export_overrun_sweep.py --scenes).
 #include "plaits/scene_check.h"
 #endif
+#include "plaits/section_marks.h"
 #include "plaits/ui.h"
 #include "plaits/user_data.h"
 #include "plaits/user_data_receiver.h"
@@ -95,7 +96,7 @@ extern "C" void plaits_threshold_burn() { threshold_ladder.Burn(); }
 #if PLAITS_SCENE_CHECK
 static const CheckScene kCheckScenes[PLAITS_SCENE_COUNT] = PLAITS_SCENES;
 SceneCheck<PLAITS_SCENE_COUNT> scene_check;
-extern "C" void plaits_section_mark(int section) { scene_check.Mark(section); }
+extern "C" void plaits_section_mark(int mark) { scene_check.Mark(mark); }
 #endif
 
 // BufferAllocator returns typed pointers without adjusting their alignment.
@@ -150,9 +151,7 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
   cpu_probe.Begin();
 #endif
   ui.Poll();
-#if PLAITS_SCENE_CHECK
-  scene_check.Mark(1);
-#endif
+  PLAITS_SECTION_MARK(SECTION_MARK_UI_END);
 #if PLAITS_TZFM_DIAGNOSTIC
   cpu_probe.End(size);
   const float diagnostic_ui_usage = cpu_probe.last_usage();

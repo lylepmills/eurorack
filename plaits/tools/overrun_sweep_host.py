@@ -62,7 +62,14 @@ PACKET_SETTLE = 7
 PACKET_THRESHOLD = 8
 PACKET_SCENE = 9
 PACKET_SECTIONS = 10
-SECTION_NAMES = ["ui", "voice", "engine", "post"]
+# Scene-check sections, by how many the firmware reports: version 1 split the
+# block in four; version 2 at every mark in plaits/section_marks.h.
+SECTION_NAMES = {
+    4: ["ui", "voice", "engine", "post"],
+    12: ["ui inputs", "ui task", "ui adc/pitch", "prepare", "select",
+         "envelopes", "modulation", "engine", "subosc", "lpg env",
+         "out post", "aux post"],
+}
 
 OUTPUT_NAMES = ["regular", "stereo", "sub-osc"]
 TRIGGER_NAMES = ["unpatched", "triggered", "gated"]
@@ -716,11 +723,13 @@ def scene_report(path: Path, scenes: list[dict], clips: Path | None) -> dict:
     sections = {}
     for p in packets:
         if p.type == PACKET_SECTIONS:
-            values = struct.unpack_from("<8H", p.payload, 1)
+            count = (len(p.payload) - 1) // 4
+            names = SECTION_NAMES.get(count) or [str(k) for k in range(count)]
+            values = struct.unpack_from(f"<{2 * count}H", p.payload, 1)
             sections[p.payload[0]] = {
                 name: {"mean": values[2 * k] / 1000.0,
                        "max": values[2 * k + 1] / 1000.0}
-                for k, name in enumerate(SECTION_NAMES)}
+                for k, name in enumerate(names)}
     for p in reports:
         (scene, _engine, peak, mean, late, switch_peak, switch_late,
          blocks16) = struct.unpack_from("<BBHHHHHH", p.payload)
@@ -760,14 +769,18 @@ def print_scenes(report: dict) -> None:
               f"{r.get('peak', 0):6.3f} {r.get('late', 0):6d} "
               f"{'  n/a' if host is None else f'{host:6d}'}  "
               f"{r.get('switch_peak', 0):.3f}/{r.get('switch_late', 0)}")
-    print("\nwhere the time goes (mean / max per block, fraction of the period)")
-    print(f"{'scene':28} " + "  ".join(f"{n:>13}" for n in SECTION_NAMES))
-    for r in report["rows"]:
-        s = r.get("sections")
-        if not s:
-            continue
-        print(f"{r['label'][:28]:28} " + "  ".join(
-            f"{s[n]['mean']:.3f} / {s[n]['max']:.3f}" for n in SECTION_NAMES))
+    rows = [r for r in report["rows"] if r.get("sections")]
+    if not rows:
+        return
+    names = list(rows[0]["sections"])
+    print("\nwhere the time goes (mean per block, fraction of the period; "
+          "max below)")
+    for stat in ("mean", "max"):
+        print(f"{stat:28} " + " ".join(f"{n[:7]:>7}" for n in names))
+        for r in rows:
+            s = r["sections"]
+            print(f"{r['label'][:28]:28} " + " ".join(
+                f"{s[n][stat]:7.3f}" for n in names))
 
 
 # ---- ES-8 I/O ---------------------------------------------------------------

@@ -27,6 +27,7 @@
 // UI and CV processing ("controller" and "view")
 
 #include "plaits/ui.h"
+#include "plaits/section_marks.h"
 
 #include "plaits/cpu_probe.h"
 
@@ -1270,6 +1271,7 @@ void Ui::Poll() {
     destination[i] = settings_->calibration_data(i).Transform(
         cv_adc_.float_value(CvAdcChannel(i)));
   }
+  PLAITS_SECTION_MARK(SECTION_MARK_UI_INPUTS);
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
   if (!modulations_->frequency_audio_rate) {
     // Slow TZFM and fast-mode fallback engines use the ordinary calibrated FM
@@ -1318,6 +1320,7 @@ void Ui::Poll() {
       DetectNormalization();
       break;
   }
+  PLAITS_SECTION_MARK(SECTION_MARK_UI_TASK);
 
   cv_adc_.Convert();
   pots_adc_.Convert();

@@ -11,9 +11,10 @@
 // in threshold_ladder.h; in stereo scenes AUX is the engine's right channel,
 // so those are judged by cost against the measured threshold and by ear.
 // Results go out as FSK after the last scene, with a per-scene breakdown of
-// where the block's time goes: panel scan (Ui::Poll), Voice setup before the
-// engine, the engine's own Render, and post-processing (sub-oscillator, outer
-// LPG, output) -- from timestamps at those boundaries (Mark()).
+// where the block's time goes, from timestamps at the fixed points listed in
+// plaits/section_marks.h (panel scan, Voice setup, the engine's own Render,
+// sub-oscillator, outer LPG, output). Each timestamp is an out-of-line call,
+// ~10 cycles, and is charged to the section it ends.
 //
 // The scene table comes from a generated header (PLAITS_SCENE_TABLE), written
 // by alt_firmwares/plaits_lab_builder/export_overrun_sweep.py --scenes.
@@ -27,6 +28,7 @@
 #include "plaits/diagnostic_fsk.h"
 #include "plaits/dsp/dsp.h"
 #include "plaits/dsp/voice.h"
+#include "plaits/section_marks.h"
 
 #ifndef TEST
 #include <stm32f37x_conf.h>
@@ -71,7 +73,7 @@ class SceneCheck {
  public:
   enum Phase { PHASE_START, PHASE_SCENES, PHASE_REPORT };
 
-  static const int kVersion = 1;
+  static const int kVersion = 2;   // 2: SECTION_MARK_COUNT sections
   static const int kBlocksPerSecond = 3989;
   static const int kStartBlocks = 3 * kBlocksPerSecond;
   static const int kSceneBlocks = 20 * kBlocksPerSecond;
@@ -81,7 +83,7 @@ class SceneCheck {
   static const uint8_t kPacketHello = 1;
   static const uint8_t kPacketScene = 9;
   static const uint8_t kPacketSections = 10;
-  static const int kSections = 4;   // ui, voice setup, engine, post
+  static const int kSections = SECTION_MARK_COUNT;
 
   SceneCheck() { }
 
@@ -103,7 +105,8 @@ class SceneCheck {
         s.section_max[k] = 0;
       }
     }
-    for (int k = 0; k < 4; ++k) mark_[k] = 0;
+    for (int k = 0; k < kSections; ++k) mark_[k] = 0;
+    stamped_ = 0;
     fsk_.Init();
     report_scene_ = 0;
     report_gap_ = 0;
@@ -123,11 +126,17 @@ class SceneCheck {
 
   inline void BeginCallback() {
     start_ = SceneCycles();
-    mark_[1] = mark_[2] = mark_[3] = start_;
+    stamped_ = 0;
   }
 
-  // Section boundaries: 1 after Ui::Poll, 2 before and 3 after the engine.
-  inline void Mark(int section) { mark_[section] = SceneCycles(); }
+  // A mark not reached this block (the report path skips Voice::Render)
+  // leaves its section empty: EndRender carries the previous stamp forward.
+  inline void Mark(int mark) {
+    if (mark > 0 && mark < kSections) {
+      mark_[mark] = SceneCycles();
+      stamped_ |= 1u << mark;
+    }
+  }
 
   void Prepare(Patch* patch, Modulations* modulations) {
     // The start phase plays the first scene's engine at rest.
@@ -184,13 +193,15 @@ class SceneCheck {
         s.sum += cycles;
         ++s.count;
         s.late += late;
-        const uint32_t end = start_ + cycles;
-        const uint32_t section[kSections] = {
-          mark_[1] - start_, mark_[2] - mark_[1],
-          mark_[3] - mark_[2], end - mark_[3] };
+        uint32_t previous = start_;
         for (int k = 0; k < kSections; ++k) {
-          s.section_sum[k] += section[k];
-          if (section[k] > s.section_max[k]) s.section_max[k] = section[k];
+          const uint32_t next = k + 1 < kSections
+              ? ((stamped_ & (1u << (k + 1))) ? mark_[k + 1] : previous)
+              : start_ + cycles;
+          const uint32_t section = next - previous;
+          s.section_sum[k] += section;
+          if (section > s.section_max[k]) s.section_max[k] = section;
+          previous = next;
         }
       }
     }
@@ -276,7 +287,8 @@ class SceneCheck {
     }
   }
 
-  uint32_t mark_[4];
+  uint32_t mark_[kSections];
+  uint32_t stamped_;
   const CheckScene* scenes_;
   Phase phase_;
   int scene_;

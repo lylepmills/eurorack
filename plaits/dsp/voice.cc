@@ -29,14 +29,10 @@
 #include "plaits/dsp/voice.h"
 #include "plaits/dsp/fast_semitone_ratio.h"
 #include "plaits/user_data.h"
+#include "plaits/section_marks.h"
 
 #if PLAITS_THRESHOLD_LADDER
 extern "C" void plaits_threshold_burn();
-#endif
-#if PLAITS_SCENE_CHECK
-// Diagnostic timestamps (plaits/scene_check.h): 2 before the engine renders,
-// 3 after it.
-extern "C" void plaits_section_mark(int section);
 #endif
 
 namespace plaits {
@@ -150,6 +146,7 @@ void Voice::Render(
     const Modulations& modulations,
     Frame* frames,
     size_t size) {
+  PLAITS_SECTION_MARK(SECTION_MARK_VOICE_ENTRY);
   // Trigger, LPG, internal envelope.
       
   // Delay trigger by 1ms to deal with sequencers or MIDI interfaces whose
@@ -490,6 +487,7 @@ void Voice::Render(
     previous_engine_index_ = engine_index;
     reload_user_data_ = false;
   }
+  PLAITS_SECTION_MARK(SECTION_MARK_ENGINE_SELECTED);
   EngineParameters p;
   p.chord_set_option = patch.chord_set_option;
 #if PLAITS_BUILD_ENABLE_SYNC_INPUT
@@ -606,6 +604,7 @@ void Voice::Render(
 #else
   const bool use_internal_frequency_envelope = use_internal_envelope;
 #endif
+  PLAITS_SECTION_MARK(SECTION_MARK_ENVELOPES);
 
   // Actual synthesis parameters.
   
@@ -774,14 +773,10 @@ void Voice::Render(
       &p.morph);
 
   bool already_enveloped = pp_s.already_enveloped;
-#if PLAITS_SCENE_CHECK
-  plaits_section_mark(2);
-#endif
+  PLAITS_SECTION_MARK(SECTION_MARK_ENGINE_START);
   RenderEngineWithHardSync(
       e, p, out_buffer_, aux_buffer_, size, &already_enveloped);
-#if PLAITS_SCENE_CHECK
-  plaits_section_mark(3);
-#endif
+  PLAITS_SECTION_MARK(SECTION_MARK_ENGINE_END);
 
 #if PLAITS_HAS_CHIPTUNE_ENGINE
   // Clocked Chiptune bypasses the outer LPG because it owns its note envelope,
@@ -841,6 +836,7 @@ void Voice::Render(
     }
   }
   
+  PLAITS_SECTION_MARK(SECTION_MARK_SUBOSC);
   bool lpg_bypass = already_enveloped || \
       (!level_patched && !modulations.trigger_patched);
   bool aux_lpg_bypass = lpg_bypass || (patch.aux_is_subosc() && !use_aux_crossfade);
@@ -893,7 +889,8 @@ void Voice::Render(
   } else {
     lpg_envelope_.Init();
   }
-  
+  PLAITS_SECTION_MARK(SECTION_MARK_LPG_PARAMS);
+
 #if PLAITS_THRESHOLD_LADDER
   // Diagnostic load, placed where an engine's own work sits: before the
   // block is written. See plaits/threshold_ladder.h.
@@ -909,6 +906,7 @@ void Voice::Render(
       &frames->out,
       size,
       2);
+  PLAITS_SECTION_MARK(SECTION_MARK_OUT_WRITTEN);
 
   aux_post_processor_.Process(
       // A stereo pair must leave with the same gain on both channels.
