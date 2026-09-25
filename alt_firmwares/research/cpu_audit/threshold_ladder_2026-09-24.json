@@ -1,0 +1,749 @@
+{
+ "clock_ratio": 1.038197864821218,
+ "rows": [
+  {
+   "pass": 0,
+   "target": 0.8,
+   "peak": 0.836,
+   "mean": 0.836,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 0,
+   "target": 0.81,
+   "peak": 0.846,
+   "mean": 0.846,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 0,
+   "target": 0.82,
+   "peak": 0.856,
+   "mean": 0.856,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 0,
+   "target": 0.83,
+   "peak": 0.866,
+   "mean": 0.866,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 0,
+   "target": 0.84,
+   "peak": 0.876,
+   "mean": 0.876,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 0,
+   "target": 0.85,
+   "peak": 0.886,
+   "mean": 0.886,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 0,
+   "target": 0.86,
+   "peak": 0.896,
+   "mean": 0.896,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 0,
+   "target": 0.87,
+   "peak": 0.906,
+   "mean": 0.906,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 0,
+   "target": 0.88,
+   "peak": 0.916,
+   "mean": 0.916,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 0,
+   "target": 0.89,
+   "peak": 0.926,
+   "mean": 0.926,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 0,
+   "target": 0.9,
+   "peak": 0.936,
+   "mean": 0.936,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 0,
+   "target": 0.91,
+   "peak": 0.946,
+   "mean": 0.946,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 0,
+   "target": 0.92,
+   "peak": 0.956,
+   "mean": 0.956,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 0,
+   "target": 0.93,
+   "peak": 0.966,
+   "mean": 0.966,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 0,
+   "target": 0.94,
+   "peak": 0.976,
+   "mean": 0.976,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 0,
+   "target": 0.95,
+   "peak": 0.986,
+   "mean": 0.986,
+   "late": 0,
+   "host_breaks": 17
+  },
+  {
+   "pass": 0,
+   "target": 0.96,
+   "peak": 0.997,
+   "mean": 0.995,
+   "late": 10965,
+   "host_breaks": 69
+  },
+  {
+   "pass": 0,
+   "target": 0.97,
+   "peak": 1.007,
+   "mean": 1.005,
+   "late": 10970,
+   "host_breaks": 118
+  },
+  {
+   "pass": 0,
+   "target": 0.98,
+   "peak": 1.017,
+   "mean": 1.015,
+   "late": 10970,
+   "host_breaks": 180
+  },
+  {
+   "pass": 0,
+   "target": 0.99,
+   "peak": 1.027,
+   "mean": 1.025,
+   "late": 10970,
+   "host_breaks": 227
+  },
+  {
+   "pass": 0,
+   "target": 1.0,
+   "peak": 1.037,
+   "mean": 1.035,
+   "late": 10970,
+   "host_breaks": 282
+  },
+  {
+   "pass": 0,
+   "target": 1.01,
+   "peak": 1.046,
+   "mean": 1.045,
+   "late": 10970,
+   "host_breaks": 332
+  },
+  {
+   "pass": 0,
+   "target": 1.02,
+   "peak": 1.056,
+   "mean": 1.055,
+   "late": 10970,
+   "host_breaks": 383
+  },
+  {
+   "pass": 0,
+   "target": 1.03,
+   "peak": 1.067,
+   "mean": 1.065,
+   "late": 10970,
+   "host_breaks": 430
+  },
+  {
+   "pass": 0,
+   "target": 1.04,
+   "peak": 1.077,
+   "mean": 1.075,
+   "late": 10970,
+   "host_breaks": 477
+  },
+  {
+   "pass": 0,
+   "target": 1.05,
+   "peak": 1.087,
+   "mean": 1.085,
+   "late": 10970,
+   "host_breaks": 518
+  },
+  {
+   "pass": 0,
+   "target": 1.06,
+   "peak": 1.097,
+   "mean": 1.095,
+   "late": 10970,
+   "host_breaks": 563
+  },
+  {
+   "pass": 0,
+   "target": 1.07,
+   "peak": 1.106,
+   "mean": 1.105,
+   "late": 10970,
+   "host_breaks": 605
+  },
+  {
+   "pass": 0,
+   "target": 1.08,
+   "peak": 1.117,
+   "mean": 1.115,
+   "late": 10970,
+   "host_breaks": 641
+  },
+  {
+   "pass": 0,
+   "target": 1.09,
+   "peak": 1.127,
+   "mean": 1.125,
+   "late": 10970,
+   "host_breaks": 685
+  },
+  {
+   "pass": 0,
+   "target": 1.1,
+   "peak": 1.137,
+   "mean": 1.135,
+   "late": 10970,
+   "host_breaks": 719
+  },
+  {
+   "pass": 1,
+   "target": 0.8,
+   "peak": 0.836,
+   "mean": 0.836,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 1,
+   "target": 0.81,
+   "peak": 0.846,
+   "mean": 0.846,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 1,
+   "target": 0.82,
+   "peak": 0.856,
+   "mean": 0.856,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 1,
+   "target": 0.83,
+   "peak": 0.866,
+   "mean": 0.866,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 1,
+   "target": 0.84,
+   "peak": 0.876,
+   "mean": 0.876,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 1,
+   "target": 0.85,
+   "peak": 0.886,
+   "mean": 0.886,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 1,
+   "target": 0.86,
+   "peak": 0.896,
+   "mean": 0.896,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 1,
+   "target": 0.87,
+   "peak": 0.906,
+   "mean": 0.906,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 1,
+   "target": 0.88,
+   "peak": 0.916,
+   "mean": 0.916,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 1,
+   "target": 0.89,
+   "peak": 0.926,
+   "mean": 0.926,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 1,
+   "target": 0.9,
+   "peak": 0.936,
+   "mean": 0.936,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 1,
+   "target": 0.91,
+   "peak": 0.946,
+   "mean": 0.946,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 1,
+   "target": 0.92,
+   "peak": 0.956,
+   "mean": 0.956,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 1,
+   "target": 0.93,
+   "peak": 0.966,
+   "mean": 0.966,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 1,
+   "target": 0.94,
+   "peak": 0.976,
+   "mean": 0.976,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 1,
+   "target": 0.95,
+   "peak": 0.986,
+   "mean": 0.986,
+   "late": 0,
+   "host_breaks": 21
+  },
+  {
+   "pass": 1,
+   "target": 0.96,
+   "peak": 0.997,
+   "mean": 0.995,
+   "late": 10966,
+   "host_breaks": 62
+  },
+  {
+   "pass": 1,
+   "target": 0.97,
+   "peak": 1.007,
+   "mean": 1.005,
+   "late": 10970,
+   "host_breaks": 124
+  },
+  {
+   "pass": 1,
+   "target": 0.98,
+   "peak": 1.017,
+   "mean": 1.015,
+   "late": 10970,
+   "host_breaks": 173
+  },
+  {
+   "pass": 1,
+   "target": 0.99,
+   "peak": 1.027,
+   "mean": 1.025,
+   "late": 10970,
+   "host_breaks": 221
+  },
+  {
+   "pass": 1,
+   "target": 1.0,
+   "peak": 1.037,
+   "mean": 1.035,
+   "late": 10970,
+   "host_breaks": 277
+  },
+  {
+   "pass": 1,
+   "target": 1.01,
+   "peak": 1.047,
+   "mean": 1.045,
+   "late": 10970,
+   "host_breaks": 328
+  },
+  {
+   "pass": 1,
+   "target": 1.02,
+   "peak": 1.057,
+   "mean": 1.055,
+   "late": 10970,
+   "host_breaks": 383
+  },
+  {
+   "pass": 1,
+   "target": 1.03,
+   "peak": 1.067,
+   "mean": 1.065,
+   "late": 10970,
+   "host_breaks": 433
+  },
+  {
+   "pass": 1,
+   "target": 1.04,
+   "peak": 1.076,
+   "mean": 1.075,
+   "late": 10970,
+   "host_breaks": 475
+  },
+  {
+   "pass": 1,
+   "target": 1.05,
+   "peak": 1.087,
+   "mean": 1.085,
+   "late": 10970,
+   "host_breaks": 519
+  },
+  {
+   "pass": 1,
+   "target": 1.06,
+   "peak": 1.097,
+   "mean": 1.095,
+   "late": 10970,
+   "host_breaks": 557
+  },
+  {
+   "pass": 1,
+   "target": 1.07,
+   "peak": 1.106,
+   "mean": 1.105,
+   "late": 10970,
+   "host_breaks": 598
+  },
+  {
+   "pass": 1,
+   "target": 1.08,
+   "peak": 1.117,
+   "mean": 1.115,
+   "late": 10970,
+   "host_breaks": 639
+  },
+  {
+   "pass": 1,
+   "target": 1.09,
+   "peak": 1.127,
+   "mean": 1.125,
+   "late": 10970,
+   "host_breaks": 677
+  },
+  {
+   "pass": 1,
+   "target": 1.1,
+   "peak": 1.137,
+   "mean": 1.135,
+   "late": 10970,
+   "host_breaks": 718
+  },
+  {
+   "pass": 2,
+   "target": 0.8,
+   "peak": 0.836,
+   "mean": 0.836,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 2,
+   "target": 0.81,
+   "peak": 0.846,
+   "mean": 0.846,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 2,
+   "target": 0.82,
+   "peak": 0.856,
+   "mean": 0.856,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 2,
+   "target": 0.83,
+   "peak": 0.866,
+   "mean": 0.866,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 2,
+   "target": 0.84,
+   "peak": 0.876,
+   "mean": 0.876,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 2,
+   "target": 0.85,
+   "peak": 0.886,
+   "mean": 0.886,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 2,
+   "target": 0.86,
+   "peak": 0.896,
+   "mean": 0.896,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 2,
+   "target": 0.87,
+   "peak": 0.906,
+   "mean": 0.906,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 2,
+   "target": 0.88,
+   "peak": 0.916,
+   "mean": 0.916,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 2,
+   "target": 0.89,
+   "peak": 0.926,
+   "mean": 0.926,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 2,
+   "target": 0.9,
+   "peak": 0.936,
+   "mean": 0.936,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 2,
+   "target": 0.91,
+   "peak": 0.946,
+   "mean": 0.946,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 2,
+   "target": 0.92,
+   "peak": 0.956,
+   "mean": 0.956,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 2,
+   "target": 0.93,
+   "peak": 0.966,
+   "mean": 0.966,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 2,
+   "target": 0.94,
+   "peak": 0.976,
+   "mean": 0.976,
+   "late": 0,
+   "host_breaks": 0
+  },
+  {
+   "pass": 2,
+   "target": 0.95,
+   "peak": 0.986,
+   "mean": 0.986,
+   "late": 0,
+   "host_breaks": 18
+  },
+  {
+   "pass": 2,
+   "target": 0.96,
+   "peak": 0.997,
+   "mean": 0.995,
+   "late": 10968,
+   "host_breaks": 63
+  },
+  {
+   "pass": 2,
+   "target": 0.97,
+   "peak": 1.007,
+   "mean": 1.005,
+   "late": 10970,
+   "host_breaks": 122
+  },
+  {
+   "pass": 2,
+   "target": 0.98,
+   "peak": 1.017,
+   "mean": 1.015,
+   "late": 10970,
+   "host_breaks": 175
+  },
+  {
+   "pass": 2,
+   "target": 0.99,
+   "peak": 1.027,
+   "mean": 1.025,
+   "late": 10970,
+   "host_breaks": 227
+  },
+  {
+   "pass": 2,
+   "target": 1.0,
+   "peak": 1.037,
+   "mean": 1.035,
+   "late": 10970,
+   "host_breaks": 277
+  },
+  {
+   "pass": 2,
+   "target": 1.01,
+   "peak": 1.047,
+   "mean": 1.045,
+   "late": 10970,
+   "host_breaks": 333
+  },
+  {
+   "pass": 2,
+   "target": 1.02,
+   "peak": 1.057,
+   "mean": 1.055,
+   "late": 10970,
+   "host_breaks": 380
+  },
+  {
+   "pass": 2,
+   "target": 1.03,
+   "peak": 1.067,
+   "mean": 1.065,
+   "late": 10970,
+   "host_breaks": 434
+  },
+  {
+   "pass": 2,
+   "target": 1.04,
+   "peak": 1.077,
+   "mean": 1.075,
+   "late": 10970,
+   "host_breaks": 482
+  },
+  {
+   "pass": 2,
+   "target": 1.05,
+   "peak": 1.087,
+   "mean": 1.085,
+   "late": 10970,
+   "host_breaks": 515
+  },
+  {
+   "pass": 2,
+   "target": 1.06,
+   "peak": 1.097,
+   "mean": 1.095,
+   "late": 10970,
+   "host_breaks": 556
+  },
+  {
+   "pass": 2,
+   "target": 1.07,
+   "peak": 1.106,
+   "mean": 1.105,
+   "late": 10970,
+   "host_breaks": 597
+  },
+  {
+   "pass": 2,
+   "target": 1.08,
+   "peak": 1.117,
+   "mean": 1.115,
+   "late": 10970,
+   "host_breaks": 646
+  },
+  {
+   "pass": 2,
+   "target": 1.09,
+   "peak": 1.127,
+   "mean": 1.125,
+   "late": 10970,
+   "host_breaks": 678
+  },
+  {
+   "pass": 2,
+   "target": 1.1,
+   "peak": 1.137,
+   "mean": 1.135,
+   "late": 10970,
+   "host_breaks": 698
+  }
+ ]
+}

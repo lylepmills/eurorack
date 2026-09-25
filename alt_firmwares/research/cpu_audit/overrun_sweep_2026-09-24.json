@@ -173,7 +173,6 @@
   "unpatched": 0.878,
   "trig": 0.954,
   "issues": [
-   "mono 0.95",
    "stereo 1.10"
   ]
  },
@@ -265,8 +264,7 @@
   "unpatched": 0.993,
   "trig": 1.022,
   "issues": [
-   "mono 1.07",
-   "stereo 0.93"
+   "mono 1.07"
   ]
  },
  {
@@ -291,7 +289,6 @@
   "unpatched": 0.867,
   "trig": 0.945,
   "issues": [
-   "mono 0.98",
    "stereo 1.06"
   ]
  },
@@ -408,7 +405,6 @@
   "unpatched": 0.88,
   "trig": 0.953,
   "issues": [
-   "mono 0.96",
    "stereo 0.99"
   ]
  },
@@ -421,8 +417,7 @@
   "unpatched": 0.939,
   "trig": 0.947,
   "issues": [
-   "mono 0.98",
-   "stereo 0.97"
+   "mono 0.98"
   ]
  },
  {
@@ -433,10 +428,7 @@
   "switch": 0.683,
   "unpatched": 0.892,
   "trig": 0.971,
-  "issues": [
-   "mono 0.97",
-   "stereo 0.97"
-  ]
+  "issues": []
  },
  {
   "engine": "wave-terrain",
@@ -446,10 +438,7 @@
   "switch": 0.77,
   "unpatched": 0.874,
   "trig": 0.954,
-  "issues": [
-   "mono 0.97",
-   "stereo 0.97"
-  ]
+  "issues": []
  },
  {
   "engine": "acid",
@@ -459,9 +448,7 @@
   "switch": 0.67,
   "unpatched": 0.686,
   "trig": 0.77,
-  "issues": [
-   "stereo 0.97"
-  ]
+  "issues": []
  },
  {
   "engine": "natural-speech",
@@ -471,10 +458,7 @@
   "switch": 0.816,
   "unpatched": 0.728,
   "trig": 0.934,
-  "issues": [
-   "mono 0.96",
-   "stereo 0.93"
-  ]
+  "issues": []
  },
  {
   "engine": "virtual-analog",
@@ -484,9 +468,7 @@
   "switch": 0.763,
   "unpatched": 0.878,
   "trig": 0.954,
-  "issues": [
-   "mono 0.96"
-  ]
+  "issues": []
  },
  {
   "engine": "struck-drum",
@@ -496,10 +478,7 @@
   "switch": 0.812,
   "unpatched": 0.842,
   "trig": 0.92,
-  "issues": [
-   "mono 0.95",
-   "stereo 0.96"
-  ]
+  "issues": []
  },
  {
   "engine": "two-op-fm",
@@ -509,10 +488,7 @@
   "switch": 0.869,
   "unpatched": 0.853,
   "trig": 0.931,
-  "issues": [
-   "mono 0.95",
-   "stereo 0.95"
-  ]
+  "issues": []
  },
  {
   "engine": "phase-weave",
@@ -522,10 +498,7 @@
   "switch": 0.856,
   "unpatched": 0.87,
   "trig": 0.947,
-  "issues": [
-   "mono 0.95",
-   "stereo 0.93"
-  ]
+  "issues": []
  },
  {
   "engine": "vowel",
@@ -535,9 +508,7 @@
   "switch": 0.788,
   "unpatched": 0.754,
   "trig": 0.831,
-  "issues": [
-   "stereo 0.94"
-  ]
+  "issues": []
  },
  {
   "engine": "wavetable-scale-stack",
@@ -547,10 +518,7 @@
   "switch": 0.837,
   "unpatched": 0.846,
   "trig": 0.926,
-  "issues": [
-   "mono 0.94",
-   "stereo 0.93"
-  ]
+  "issues": []
  },
  {
   "engine": "toy",
@@ -560,9 +528,7 @@
   "switch": 0.64,
   "unpatched": 0.611,
   "trig": 0.693,
-  "issues": [
-   "stereo 0.93"
-  ]
+  "issues": []
  },
  {
   "engine": "skins",
@@ -572,9 +538,7 @@
   "switch": 0.893,
   "unpatched": 0.893,
   "trig": 0.897,
-  "issues": [
-   "mono 0.93"
-  ]
+  "issues": []
  },
  {
   "engine": "vosim",
@@ -585,8 +549,6 @@
   "unpatched": 0.824,
   "trig": 0.903,
   "issues": [
-   "mono 0.90",
-   "stereo 0.91",
    "model-select 13.0"
   ]
  },
@@ -598,10 +560,7 @@
   "switch": 0.823,
   "unpatched": 0.83,
   "trig": 0.906,
-  "issues": [
-   "mono 0.91",
-   "stereo 0.91"
-  ]
+  "issues": []
  },
  {
   "engine": "freshets-formant",

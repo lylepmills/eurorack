@@ -4,7 +4,9 @@ overrun_sweep_host.py). Mono comes from the schema-2 groups (1-5), whose
 recipe compiled every per-engine stereo path out; stereo comes from the
 stereo-compiled groups (6-8) or, for engines whose stereo is always on, from
 groups 1-5. Peaks are cost from interrupt entry to end of render, as a
-fraction of the 12-sample block period; the red line is 0.90. Settle peaks
+fraction of the 12-sample block period. The line is 0.985: where the
+threshold ladder (plaits/threshold_ladder.h) measured production firmware
+starting to play stale data (it was 0.90 until that measurement). Settle peaks
 exist only where the firmware carried them (groups 4-8): 0 means not
 measured, not "no spike".
 """
@@ -12,7 +14,9 @@ import json, sys, os
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'plaits_lab_builder'))
 import container_server as cs
-RED=0.90
+# Measured on production's own signal path (threshold_ladder_2026-09-24.json):
+# no stale output up to a bracket cost of 0.976, first rare breaks at 0.986.
+RED=0.985
 runs={'mono':['run-g1v3','run-g2','run-g3','run-g4'],'extra':['run-g5'],'stereo':['run-g6','run-g7','run-g8']}
 def load(run):
     p = os.path.join(HERE, f'overrun_sweep_2026-09-24_{run[4:]}.json')
