@@ -1,0 +1,263 @@
+{
+ "clock_ratio": 1.0026379907662892,
+ "rows": [
+  {
+   "scene": 0,
+   "label": "Stock VA baseline",
+   "aux": "regular",
+   "peak": 0.715,
+   "mean": 0.687,
+   "late": 0,
+   "switch_peak": 0.715,
+   "switch_late": 0,
+   "blocks": 77776,
+   "sections": {
+    "ui": {
+     "mean": 0.056,
+     "max": 0.064
+    },
+    "voice": {
+     "mean": 0.046,
+     "max": 0.046
+    },
+    "engine": {
+     "mean": 0.554,
+     "max": 0.573
+    },
+    "post": {
+     "mean": 0.031,
+     "max": 0.031
+    }
+   },
+   "clip": "00 Stock_VA_baseline.wav"
+  },
+  {
+   "scene": 1,
+   "label": "Stock VA + TRIG",
+   "aux": "regular",
+   "peak": 0.79,
+   "mean": 0.762,
+   "late": 0,
+   "switch_peak": 0.789,
+   "switch_late": 0,
+   "blocks": 77776,
+   "sections": {
+    "ui": {
+     "mean": 0.056,
+     "max": 0.064
+    },
+    "voice": {
+     "mean": 0.046,
+     "max": 0.047
+    },
+    "engine": {
+     "mean": 0.554,
+     "max": 0.573
+    },
+    "post": {
+     "mean": 0.106,
+     "max": 0.107
+    }
+   },
+   "clip": "01 Stock_VA_+_TRIG.wav"
+  },
+  {
+   "scene": 2,
+   "label": "Stock Modal typical",
+   "aux": "regular",
+   "peak": 0.943,
+   "mean": 0.935,
+   "late": 0,
+   "switch_peak": 0.964,
+   "switch_late": 0,
+   "blocks": 77776,
+   "sections": {
+    "ui": {
+     "mean": 0.056,
+     "max": 0.064
+    },
+    "voice": {
+     "mean": 0.046,
+     "max": 0.046
+    },
+    "engine": {
+     "mean": 0.759,
+     "max": 0.759
+    },
+    "post": {
+     "mean": 0.074,
+     "max": 0.074
+    }
+   },
+   "clip": "02 Stock_Modal_typical.wav"
+  },
+  {
+   "scene": 3,
+   "label": "Stock Modal mono worst",
+   "aux": "regular",
+   "peak": 0.953,
+   "mean": 0.937,
+   "late": 0,
+   "switch_peak": 0.955,
+   "switch_late": 0,
+   "blocks": 77776,
+   "sections": {
+    "ui": {
+     "mean": 0.056,
+     "max": 0.064
+    },
+    "voice": {
+     "mean": 0.046,
+     "max": 0.046
+    },
+    "engine": {
+     "mean": 0.768,
+     "max": 0.768
+    },
+    "post": {
+     "mean": 0.067,
+     "max": 0.074
+    }
+   },
+   "clip": "03 Stock_Modal_mono_worst.wav"
+  },
+  {
+   "scene": 4,
+   "label": "Stock Chords typical + TRIG",
+   "aux": "regular",
+   "peak": 0.952,
+   "mean": 0.934,
+   "late": 0,
+   "switch_peak": 1.129,
+   "switch_late": 0,
+   "blocks": 77776,
+   "sections": {
+    "ui": {
+     "mean": 0.056,
+     "max": 0.064
+    },
+    "voice": {
+     "mean": 0.046,
+     "max": 0.047
+    },
+    "engine": {
+     "mean": 0.725,
+     "max": 0.736
+    },
+    "post": {
+     "mean": 0.106,
+     "max": 0.107
+    }
+   },
+   "clip": "04 Stock_Chords_typical_+_TRIG.wav"
+  },
+  {
+   "scene": 5,
+   "label": "Stock Chords T=1 + TRIG",
+   "aux": "regular",
+   "peak": 0.976,
+   "mean": 0.96,
+   "late": 0,
+   "switch_peak": 0.975,
+   "switch_late": 0,
+   "blocks": 77776,
+   "sections": {
+    "ui": {
+     "mean": 0.056,
+     "max": 0.064
+    },
+    "voice": {
+     "mean": 0.046,
+     "max": 0.047
+    },
+    "engine": {
+     "mean": 0.752,
+     "max": 0.759
+    },
+    "post": {
+     "mean": 0.106,
+     "max": 0.107
+    }
+   },
+   "clip": "05 Stock_Chords_T=1_+_TRIG.wav"
+  },
+  {
+   "scene": 6,
+   "label": "Stock String struck",
+   "aux": "regular",
+   "peak": 0.989,
+   "mean": 0.951,
+   "late": 0,
+   "switch_peak": 1.541,
+   "switch_late": 0,
+   "blocks": 77776,
+   "sections": {
+    "ui": {
+     "mean": 0.056,
+     "max": 0.064
+    },
+    "voice": {
+     "mean": 0.046,
+     "max": 0.047
+    },
+    "engine": {
+     "mean": 0.782,
+     "max": 0.811
+    },
+    "post": {
+     "mean": 0.066,
+     "max": 0.067
+    }
+   },
+   "clip": "06 Stock_String_struck.wav"
+  },
+  {
+   "scene": 7,
+   "label": "Stock Swarm + TRIG",
+   "aux": "regular",
+   "peak": 0.944,
+   "mean": 0.901,
+   "late": 0,
+   "switch_peak": 0.955,
+   "switch_late": 0,
+   "blocks": 77776,
+   "sections": {
+    "ui": {
+     "mean": 0.056,
+     "max": 0.064
+    },
+    "voice": {
+     "mean": 0.046,
+     "max": 0.047
+    },
+    "engine": {
+     "mean": 0.651,
+     "max": 0.684
+    },
+    "post": {
+     "mean": 0.148,
+     "max": 0.151
+    }
+   },
+   "clip": "07 Stock_Swarm_+_TRIG.wav"
+  }
+ ],
+ "ui_tasks": {
+  "UpdateLEDs": {
+   "mean": 0.026,
+   "max": 0.027
+  },
+  "ReadSwitches": {
+   "mean": 0.019,
+   "max": 0.019
+  },
+  "PotsHidden": {
+   "mean": 0.018,
+   "max": 0.018
+  },
+  "DetectNorm": {
+   "mean": 0.013,
+   "max": 0.016
+  }
+ }
+}
