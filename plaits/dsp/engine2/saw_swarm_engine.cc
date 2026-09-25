@@ -38,8 +38,66 @@ inline float SawSwarmFilterMix(float m, float lp, float hp, float bp) {
 // digital_oscillator.cc:228 reads Braids' `ws_moderate_overdrive` table
 // (tanh(2x), braids/resources/waveshapers.py:40). Substituted as the formula
 // per SPEC R4 -- see saw_swarm_engine.h for the measured deviation.
+// tanh(2x) / tanh(2) over x in [-1, 1], 257 points -- Braids' own shaper is a
+// 257-entry table of this curve (braids/resources/waveshapers.py), read with
+// linear interpolation. Replaces a libm tanhf per sample, which was a fifth
+// of this engine's cost (on-module overrun sweep, 2026-09-24); the
+// interpolation error is under 3e-5 of full scale.
+const float kSawSwarmShaperTable[257] = {
+  -1.000000000f, -0.998837472f, -0.997639431f, -0.996404837f, -0.995132622f, -0.993821690f,
+  -0.992470915f, -0.991079144f, -0.989645193f, -0.988167846f, -0.986645859f, -0.985077954f,
+  -0.983462823f, -0.981799124f, -0.980085482f, -0.978320489f, -0.976502704f, -0.974630649f,
+  -0.972702813f, -0.970717649f, -0.968673576f, -0.966568974f, -0.964402188f, -0.962171526f,
+  -0.959875261f, -0.957511626f, -0.955078818f, -0.952574996f, -0.949998281f, -0.947346758f,
+  -0.944618472f, -0.941811432f, -0.938923608f, -0.935952935f, -0.932897309f, -0.929754589f,
+  -0.926522600f, -0.923199130f, -0.919781931f, -0.916268722f, -0.912657187f, -0.908944979f,
+  -0.905129718f, -0.901208993f, -0.897180367f, -0.893041370f, -0.888789511f, -0.884422270f,
+  -0.879937107f, -0.875331461f, -0.870602750f, -0.865748379f, -0.860765737f, -0.855652201f,
+  -0.850405143f, -0.845021926f, -0.839499914f, -0.833836469f, -0.828028960f, -0.822074765f,
+  -0.815971273f, -0.809715892f, -0.803306050f, -0.796739201f, -0.790012829f, -0.783124457f,
+  -0.776071645f, -0.768852004f, -0.761463193f, -0.753902933f, -0.746169006f, -0.738259266f,
+  -0.730171645f, -0.721904156f, -0.713454905f, -0.704822092f, -0.696004023f, -0.686999116f,
+  -0.677805907f, -0.668423056f, -0.658849358f, -0.649083749f, -0.639125311f, -0.628973284f,
+  -0.618627068f, -0.608086236f, -0.597350536f, -0.586419901f, -0.575294456f, -0.563974524f,
+  -0.552460632f, -0.540753518f, -0.528854137f, -0.516763666f, -0.504483510f, -0.492015306f,
+  -0.479360930f, -0.466522495f, -0.453502363f, -0.440303138f, -0.426927677f, -0.413379088f,
+  -0.399660730f, -0.385776214f, -0.371729405f, -0.357524417f, -0.343165615f, -0.328657611f,
+  -0.314005258f, -0.299213652f, -0.284288121f, -0.269234221f, -0.254057734f, -0.238764653f,
+  -0.223361182f, -0.207853720f, -0.192248857f, -0.176553360f, -0.160774166f, -0.144918367f,
+  -0.128993199f, -0.113006030f, -0.096964346f, -0.080875737f, -0.064747885f, -0.048588545f,
+  -0.032405537f, -0.016206724f,  0.000000000f,  0.016206724f,  0.032405537f,  0.048588545f,
+   0.064747885f,  0.080875737f,  0.096964346f,  0.113006030f,  0.128993199f,  0.144918367f,
+   0.160774166f,  0.176553360f,  0.192248857f,  0.207853720f,  0.223361182f,  0.238764653f,
+   0.254057734f,  0.269234221f,  0.284288121f,  0.299213652f,  0.314005258f,  0.328657611f,
+   0.343165615f,  0.357524417f,  0.371729405f,  0.385776214f,  0.399660730f,  0.413379088f,
+   0.426927677f,  0.440303138f,  0.453502363f,  0.466522495f,  0.479360930f,  0.492015306f,
+   0.504483510f,  0.516763666f,  0.528854137f,  0.540753518f,  0.552460632f,  0.563974524f,
+   0.575294456f,  0.586419901f,  0.597350536f,  0.608086236f,  0.618627068f,  0.628973284f,
+   0.639125311f,  0.649083749f,  0.658849358f,  0.668423056f,  0.677805907f,  0.686999116f,
+   0.696004023f,  0.704822092f,  0.713454905f,  0.721904156f,  0.730171645f,  0.738259266f,
+   0.746169006f,  0.753902933f,  0.761463193f,  0.768852004f,  0.776071645f,  0.783124457f,
+   0.790012829f,  0.796739201f,  0.803306050f,  0.809715892f,  0.815971273f,  0.822074765f,
+   0.828028960f,  0.833836469f,  0.839499914f,  0.845021926f,  0.850405143f,  0.855652201f,
+   0.860765737f,  0.865748379f,  0.870602750f,  0.875331461f,  0.879937107f,  0.884422270f,
+   0.888789511f,  0.893041370f,  0.897180367f,  0.901208993f,  0.905129718f,  0.908944979f,
+   0.912657187f,  0.916268722f,  0.919781931f,  0.923199130f,  0.926522600f,  0.929754589f,
+   0.932897309f,  0.935952935f,  0.938923608f,  0.941811432f,  0.944618472f,  0.947346758f,
+   0.949998281f,  0.952574996f,  0.955078818f,  0.957511626f,  0.959875261f,  0.962171526f,
+   0.964402188f,  0.966568974f,  0.968673576f,  0.970717649f,  0.972702813f,  0.974630649f,
+   0.976502704f,  0.978320489f,  0.980085482f,  0.981799124f,  0.983462823f,  0.985077954f,
+   0.986645859f,  0.988167846f,  0.989645193f,  0.991079144f,  0.992470915f,  0.993821690f,
+   0.995132622f,  0.996404837f,  0.997639431f,  0.998837472f,  1.000000000f
+};
+
 inline float SawSwarmShape(float x) {
-  return tanhf(2.0f * x) / kSawSwarmShaperPeak;
+  CONSTRAIN(x, -1.0f, 1.0f);
+  const float position = (x + 1.0f) * 128.0f;
+  int integral = static_cast<int>(position);
+  if (integral > 255) integral = 255;
+  const float fractional = position - static_cast<float>(integral);
+  const float a = kSawSwarmShaperTable[integral];
+  const float b = kSawSwarmShaperTable[integral + 1];
+  return a + (b - a) * fractional;
 }
 
 // Runs one ZDF Svf update and returns its three simultaneous taps. HP and BP
@@ -120,6 +178,10 @@ void SawSwarmEngine::Render(
   for (int i = 0; i < kNumSawSwarmVoices; ++i) {
     const float rank = static_cast<float>(i - 3);
     target_frequency[i] = f0 * SemitonesToRatio(rank * detune_semitones);
+    // Clamped here, per block, so the per-sample path needs no float
+    // compares when there is no FM offset (the interpolated value between
+    // two in-range targets stays in range).
+    CONSTRAIN(target_frequency[i], -0.49f, 0.49f);
   }
 
   // Braids' COLOR: HP filter cutoff, tracking the note with a steeper slope
@@ -143,9 +205,19 @@ void SawSwarmEngine::Render(
       parameters.macro);
 
   ParameterInterpolator freq_mod[kNumSawSwarmVoices];
+  // Each voice's share of an FM offset: invariant across the block, so it is
+  // computed here -- dividing inside the sample loop cost 84 divisions a
+  // block (on-module overrun sweep, 2026-09-24).
+  float offset_ratio[kNumSawSwarmVoices];
+  const float inverse_f0 = 1.0f / (f0 > 1.0e-9f ? f0 : 1.0e-9f);
   for (int i = 0; i < kNumSawSwarmVoices; ++i) {
     freq_mod[i].Init(&frequency_[i], target_frequency[i], size);
+    offset_ratio[i] = target_frequency[i] * inverse_f0;
   }
+  // The filter coefficients stay per sample: computing them once per block
+  // (Braids' own rate) saved only a tenth of the render and moved a COLOR
+  // sweep by -49 dB, where keeping them leaves every scenario within one
+  // 16-bit step of the previous render.
   ParameterInterpolator cutoff_modulation(
       &cutoff_frequency_, target_cutoff_frequency, size);
   ParameterInterpolator resonance_modulation(
@@ -154,6 +226,9 @@ void SawSwarmEngine::Render(
 
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
   size_t sample_index = 0;
+  const bool has_offset = parameters.frequency_offset != NULL;
+#else
+  const bool has_offset = false;
 #endif
   while (size--) {
     const float f_norm = cutoff_modulation.Next();
@@ -173,18 +248,28 @@ void SawSwarmEngine::Render(
 #else
     const float root_offset = 0.0f;
 #endif
-    for (int i = 0; i < kNumSawSwarmVoices; ++i) {
-      const float ratio = target_frequency[i] /
-          (f0 > 1.0e-9f ? f0 : 1.0e-9f);
-      float frequency = freq_mod[i].Next() + root_offset * ratio;
-      CONSTRAIN(frequency, -0.49f, 0.49f);
-      phase_[i] += frequency;
-      if (phase_[i] >= 1.0f) {
-        phase_[i] -= 1.0f;
-      } else if (phase_[i] < 0.0f) {
-        phase_[i] += 1.0f;
+    if (has_offset) {
+      for (int i = 0; i < kNumSawSwarmVoices; ++i) {
+        float frequency = freq_mod[i].Next() + root_offset * offset_ratio[i];
+        CONSTRAIN(frequency, -0.49f, 0.49f);
+        phase_[i] += frequency;
+        if (phase_[i] >= 1.0f) {
+          phase_[i] -= 1.0f;
+        } else if (phase_[i] < 0.0f) {
+          phase_[i] += 1.0f;
+        }
+        sum += 2.0f * phase_[i] - 1.0f;
       }
-      sum += 2.0f * phase_[i] - 1.0f;
+    } else {
+      // No offset: frequencies are in (0, 0.49], so a phase only ever wraps
+      // upward.
+      for (int i = 0; i < kNumSawSwarmVoices; ++i) {
+        phase_[i] += freq_mod[i].Next();
+        if (phase_[i] >= 1.0f) {
+          phase_[i] -= 1.0f;
+        }
+        sum += 2.0f * phase_[i] - 1.0f;
+      }
     }
 
     const float input = SawSwarmShape(sum * kSawSwarmSumGain);
