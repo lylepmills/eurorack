@@ -33,6 +33,7 @@
 
 #include "stmlib/dsp/dsp.h"
 #include "stmlib/dsp/filter.h"
+#include "stmlib/dsp/limiter.h"
 #include "stmlib/dsp/hysteresis_quantizer.h"
 #include "stmlib/utils/buffer_allocator.h"
 
