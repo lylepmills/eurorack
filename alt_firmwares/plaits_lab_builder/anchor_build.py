@@ -20,7 +20,11 @@ from generate_engine_config import DEFAULT_CHORD_TABLES  # noqa: E402
 # release-anchor note: that is the WEBSITE's four default chord tables, a
 # different set, and differencing the two suggested moving the base 80 B in the
 # direction that would make the meter under-report.
-PUBLISHED = 229_124
+# Re-anchored 2026-09-19 at rev-29803d1c2b28 (the Harmonic TWIST fix and four
+# Palette DSP fixes, -560 B) and reproduced exactly inside rev-43f87fccad5a on
+# 2026-09-21. The 229,124 B figure before that held from 1d0de19a4df6 through
+# 5f0e897e3de6.
+PUBLISHED = 228_564
 
 recipe = json.loads(json.dumps(BASE))
 recipe['schemaVersion'] = 10

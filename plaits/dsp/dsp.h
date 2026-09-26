@@ -31,6 +31,10 @@
 
 #include "stmlib/stmlib.h"
 
+#ifdef PLAITS_CORRECTED_SAMPLE_RATE
+#include <cmath>
+#endif
+
 namespace plaits {
   
 static const float kSampleRate = 48000.0f;
@@ -43,9 +47,29 @@ static const float kSampleRate = 48000.0f;
 // Frame clock = Bit clock / 32 = 47872.34 Hz
 //
 // That's only 4.6 cts of error, but we care!
+//
+// A build whose samples really play at some other rate defines
+// PLAITS_CORRECTED_SAMPLE_RATE as that rate. A desktop host that plays the
+// engines at exactly kSampleRate (Palette) defines it as 48000.0f, which
+// removes the correction; left undefined, the module's divider rate applies.
 
+#ifdef PLAITS_CORRECTED_SAMPLE_RATE
+static const float kCorrectedSampleRate = PLAITS_CORRECTED_SAMPLE_RATE;
+#else
 static const float kCorrectedSampleRate = 47872.34f;
+#endif
 const float a0 = (440.0f / 8.0f) / kCorrectedSampleRate;
+
+// 12 * log2(kSampleRate / kCorrectedSampleRate): the semitones a pitch that
+// does NOT go through a0 (a Braids table index, say) adds to agree with the
+// ones that do (SPEC R6). The module keeps the literal, so its firmware gains
+// no libm call; an override computes it, and 48 kHz gives exactly zero.
+#ifdef PLAITS_CORRECTED_SAMPLE_RATE
+static const float kCorrectedPitchOffset =
+    12.0f * std::log2(kSampleRate / kCorrectedSampleRate);
+#else
+static const float kCorrectedPitchOffset = 0.046105f;
+#endif
 
 const size_t kMaxBlockSize = 24;
 const size_t kBlockSize = 12;

@@ -430,13 +430,15 @@ const float kStruckDrumResetPhaseThreshold = 1024.0f;
 // partial starts silent rather than at a value discontinuity).
 const float kStruckDrumStrikePhase = 0.25f;
 
-// 12 * log2(kSampleRate / kCorrectedSampleRate) -- +4.61 cents, the same
-// offset every table-indexed pitch computation in this alt firmware carries
-// (SPEC R6; see particle_burst_engine.h's identical kParticlePitchCorrection
-// for the derivation). Applied ONLY to the noise-cutoff table lookup below,
-// which does not go through `NoteToFrequency` and so does not pick the
-// correction up automatically the way the oscillator partials do.
-const float kStruckDrumPitchCorrection = 0.046105f;
+// 12 * log2(kSampleRate / kCorrectedSampleRate) -- +4.61 cents on the module,
+// zero in a build that plays at kSampleRate (kCorrectedPitchOffset, dsp.h) --
+// the same offset every table-indexed pitch computation in this alt firmware
+// carries (SPEC R6; see particle_burst_engine.h's identical
+// kParticlePitchCorrection for the derivation). Applied ONLY to the
+// noise-cutoff table lookup below, which does not go through
+// `NoteToFrequency` and so does not pick the correction up automatically the
+// way the oscillator partials do.
+const float kStruckDrumPitchCorrection = kCorrectedPitchOffset;
 
 // One Braids call to RenderStruckDrum is ALWAYS kBlockSize = 24 samples at
 // 96 kHz (braids.cc:57,276) = 250 us of wall-clock time, which the decay
