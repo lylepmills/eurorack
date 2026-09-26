@@ -3040,13 +3040,13 @@
       ],
       "version": "1.0.0",
       "digest": "sha256:7cb7996aabfd6ed3909ed769dab66e85be015c30c30c520a718fb4f47f5d68bc",
-      "documentationDigest": "sha256:7abe20fa5700ac2d49f15fc7622c4983d1b256b70867c0e3b88d271265f9d9f4",
+      "documentationDigest": "sha256:7cec67466bb58b0cfa092c1a72ac90a2f2e149554a0def033383d282d1c46034",
       "manual": {
         "controls": {
-          "harmonics": "Sets the detuned oscillator's interval: unison at noon, then fifth, octave, octave plus fifth and two octaves, up clockwise and down counterclockwise. Also sets the AUX sync ratio.",
+          "harmonics": "Detune interval: unison at noon, stepping by fifths and octaves to two octaves up or down. Also sets the AUX sync ratio.",
           "timbre": "Changes both oscillators together from saw through square to narrow pulse.",
-          "morph": "Turning below noon fades in the detuned oscillator; at noon only the primary sounds; turning above noon crossfades the primary into hard sync.",
-          "macro": "Moves the two oscillators' waveshapes apart around the TIMBRE setting, the primary half as far as the secondary; at noon both shapes match."
+          "morph": "Below noon fades in the detuned oscillator; at noon only the primary sounds; above noon crossfades into hard sync.",
+          "macro": "Spreads the two waveshapes around TIMBRE, the primary half as far as the secondary; at noon both match."
         },
         "trigger": "The oscillator phases free-run; patched TRIG restarts Plaits' shared decay and low-pass-gate envelope."
       },
