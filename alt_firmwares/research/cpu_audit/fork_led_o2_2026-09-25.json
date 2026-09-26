@@ -1,0 +1,723 @@
+{
+ "clock_ratio": 1.012561917880242,
+ "rows": [
+  {
+   "scene": 0,
+   "label": "Fork VA baseline",
+   "aux": "regular",
+   "peak": 0.778,
+   "mean": 0.746,
+   "late": 0,
+   "switch_peak": 0.778,
+   "switch_late": 0,
+   "blocks": 77776,
+   "sections": {
+    "ui inputs": {
+     "mean": 0.027,
+     "max": 0.027
+    },
+    "ui task": {
+     "mean": 0.025,
+     "max": 0.034
+    },
+    "ui adc/pitch": {
+     "mean": 0.013,
+     "max": 0.013
+    },
+    "prepare": {
+     "mean": 0.017,
+     "max": 0.017
+    },
+    "select": {
+     "mean": 0.02,
+     "max": 0.02
+    },
+    "envelopes": {
+     "mean": 0.016,
+     "max": 0.016
+    },
+    "modulation": {
+     "mean": 0.017,
+     "max": 0.018
+    },
+    "engine": {
+     "mean": 0.563,
+     "max": 0.587
+    },
+    "subosc": {
+     "mean": 0.004,
+     "max": 0.004
+    },
+    "lpg env": {
+     "mean": 0.005,
+     "max": 0.005
+    },
+    "out post": {
+     "mean": 0.017,
+     "max": 0.017
+    },
+    "aux post": {
+     "mean": 0.022,
+     "max": 0.023
+    }
+   },
+   "clip": "00 Fork_VA_baseline.wav"
+  },
+  {
+   "scene": 1,
+   "label": "Fork VA + TRIG",
+   "aux": "regular",
+   "peak": 0.85,
+   "mean": 0.818,
+   "late": 0,
+   "switch_peak": 0.849,
+   "switch_late": 0,
+   "blocks": 77776,
+   "sections": {
+    "ui inputs": {
+     "mean": 0.027,
+     "max": 0.027
+    },
+    "ui task": {
+     "mean": 0.025,
+     "max": 0.034
+    },
+    "ui adc/pitch": {
+     "mean": 0.013,
+     "max": 0.013
+    },
+    "prepare": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "select": {
+     "mean": 0.021,
+     "max": 0.025
+    },
+    "envelopes": {
+     "mean": 0.016,
+     "max": 0.016
+    },
+    "modulation": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "engine": {
+     "mean": 0.563,
+     "max": 0.586
+    },
+    "subosc": {
+     "mean": 0.004,
+     "max": 0.004
+    },
+    "lpg env": {
+     "mean": 0.02,
+     "max": 0.021
+    },
+    "out post": {
+     "mean": 0.044,
+     "max": 0.044
+    },
+    "aux post": {
+     "mean": 0.049,
+     "max": 0.05
+    }
+   },
+   "clip": "01 Fork_VA_+_TRIG.wav"
+  },
+  {
+   "scene": 2,
+   "label": "Fork Modal typical",
+   "aux": "regular",
+   "peak": 0.975,
+   "mean": 0.965,
+   "late": 11788,
+   "switch_peak": 1.009,
+   "switch_late": 1,
+   "blocks": 77776,
+   "sections": {
+    "ui inputs": {
+     "mean": 0.026,
+     "max": 0.027
+    },
+    "ui task": {
+     "mean": 0.025,
+     "max": 0.034
+    },
+    "ui adc/pitch": {
+     "mean": 0.013,
+     "max": 0.014
+    },
+    "prepare": {
+     "mean": 0.017,
+     "max": 0.017
+    },
+    "select": {
+     "mean": 0.02,
+     "max": 0.021
+    },
+    "envelopes": {
+     "mean": 0.016,
+     "max": 0.016
+    },
+    "modulation": {
+     "mean": 0.017,
+     "max": 0.018
+    },
+    "engine": {
+     "mean": 0.748,
+     "max": 0.748
+    },
+    "subosc": {
+     "mean": 0.004,
+     "max": 0.004
+    },
+    "lpg env": {
+     "mean": 0.004,
+     "max": 0.004
+    },
+    "out post": {
+     "mean": 0.053,
+     "max": 0.053
+    },
+    "aux post": {
+     "mean": 0.022,
+     "max": 0.023
+    }
+   },
+   "clip": "02 Fork_Modal_typical.wav"
+  },
+  {
+   "scene": 3,
+   "label": "Fork Modal mono worst",
+   "aux": "regular",
+   "peak": 0.993,
+   "mean": 0.977,
+   "late": 12180,
+   "switch_peak": 0.994,
+   "switch_late": 114,
+   "blocks": 77776,
+   "sections": {
+    "ui inputs": {
+     "mean": 0.026,
+     "max": 0.027
+    },
+    "ui task": {
+     "mean": 0.025,
+     "max": 0.034
+    },
+    "ui adc/pitch": {
+     "mean": 0.013,
+     "max": 0.014
+    },
+    "prepare": {
+     "mean": 0.017,
+     "max": 0.017
+    },
+    "select": {
+     "mean": 0.02,
+     "max": 0.021
+    },
+    "envelopes": {
+     "mean": 0.016,
+     "max": 0.016
+    },
+    "modulation": {
+     "mean": 0.017,
+     "max": 0.018
+    },
+    "engine": {
+     "mean": 0.766,
+     "max": 0.766
+    },
+    "subosc": {
+     "mean": 0.004,
+     "max": 0.004
+    },
+    "lpg env": {
+     "mean": 0.004,
+     "max": 0.004
+    },
+    "out post": {
+     "mean": 0.047,
+     "max": 0.053
+    },
+    "aux post": {
+     "mean": 0.022,
+     "max": 0.023
+    }
+   },
+   "unplaced": true
+  },
+  {
+   "scene": 4,
+   "label": "Fork Chords typical + TRIG",
+   "aux": "regular",
+   "peak": 0.991,
+   "mean": 0.969,
+   "late": 11978,
+   "switch_peak": 0.988,
+   "switch_late": 7,
+   "blocks": 77776,
+   "sections": {
+    "ui inputs": {
+     "mean": 0.026,
+     "max": 0.027
+    },
+    "ui task": {
+     "mean": 0.025,
+     "max": 0.034
+    },
+    "ui adc/pitch": {
+     "mean": 0.013,
+     "max": 0.014
+    },
+    "prepare": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "select": {
+     "mean": 0.021,
+     "max": 0.025
+    },
+    "envelopes": {
+     "mean": 0.016,
+     "max": 0.016
+    },
+    "modulation": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "engine": {
+     "mean": 0.716,
+     "max": 0.729
+    },
+    "subosc": {
+     "mean": 0.004,
+     "max": 0.004
+    },
+    "lpg env": {
+     "mean": 0.02,
+     "max": 0.021
+    },
+    "out post": {
+     "mean": 0.044,
+     "max": 0.044
+    },
+    "aux post": {
+     "mean": 0.049,
+     "max": 0.05
+    }
+   },
+   "unplaced": true
+  },
+  {
+   "scene": 5,
+   "label": "Fork Chords T=1 + TRIG",
+   "aux": "regular",
+   "peak": 1.025,
+   "mean": 1.006,
+   "late": 12250,
+   "switch_peak": 1.024,
+   "switch_late": 1994,
+   "blocks": 77776,
+   "sections": {
+    "ui inputs": {
+     "mean": 0.026,
+     "max": 0.026
+    },
+    "ui task": {
+     "mean": 0.025,
+     "max": 0.034
+    },
+    "ui adc/pitch": {
+     "mean": 0.013,
+     "max": 0.014
+    },
+    "prepare": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "select": {
+     "mean": 0.021,
+     "max": 0.025
+    },
+    "envelopes": {
+     "mean": 0.016,
+     "max": 0.016
+    },
+    "modulation": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "engine": {
+     "mean": 0.752,
+     "max": 0.762
+    },
+    "subosc": {
+     "mean": 0.004,
+     "max": 0.004
+    },
+    "lpg env": {
+     "mean": 0.02,
+     "max": 0.021
+    },
+    "out post": {
+     "mean": 0.044,
+     "max": 0.044
+    },
+    "aux post": {
+     "mean": 0.049,
+     "max": 0.05
+    }
+   },
+   "unplaced": true
+  },
+  {
+   "scene": 6,
+   "label": "Fork String struck",
+   "aux": "regular",
+   "peak": 0.964,
+   "mean": 0.924,
+   "late": 0,
+   "switch_peak": 1.516,
+   "switch_late": 12,
+   "blocks": 77776,
+   "sections": {
+    "ui inputs": {
+     "mean": 0.027,
+     "max": 0.027
+    },
+    "ui task": {
+     "mean": 0.025,
+     "max": 0.034
+    },
+    "ui adc/pitch": {
+     "mean": 0.013,
+     "max": 0.013
+    },
+    "prepare": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "select": {
+     "mean": 0.021,
+     "max": 0.025
+    },
+    "envelopes": {
+     "mean": 0.016,
+     "max": 0.016
+    },
+    "modulation": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "engine": {
+     "mean": 0.71,
+     "max": 0.737
+    },
+    "subosc": {
+     "mean": 0.004,
+     "max": 0.004
+    },
+    "lpg env": {
+     "mean": 0.004,
+     "max": 0.004
+    },
+    "out post": {
+     "mean": 0.047,
+     "max": 0.047
+    },
+    "aux post": {
+     "mean": 0.022,
+     "max": 0.022
+    }
+   },
+   "clip": "06 Fork_String_struck.wav"
+  },
+  {
+   "scene": 7,
+   "label": "Fork Swarm + TRIG",
+   "aux": "regular",
+   "peak": 0.977,
+   "mean": 0.93,
+   "late": 0,
+   "switch_peak": 0.993,
+   "switch_late": 0,
+   "blocks": 77776,
+   "sections": {
+    "ui inputs": {
+     "mean": 0.027,
+     "max": 0.027
+    },
+    "ui task": {
+     "mean": 0.025,
+     "max": 0.034
+    },
+    "ui adc/pitch": {
+     "mean": 0.013,
+     "max": 0.014
+    },
+    "prepare": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "select": {
+     "mean": 0.021,
+     "max": 0.025
+    },
+    "envelopes": {
+     "mean": 0.016,
+     "max": 0.016
+    },
+    "modulation": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "engine": {
+     "mean": 0.639,
+     "max": 0.671
+    },
+    "subosc": {
+     "mean": 0.004,
+     "max": 0.004
+    },
+    "lpg env": {
+     "mean": 0.02,
+     "max": 0.021
+    },
+    "out post": {
+     "mean": 0.081,
+     "max": 0.083
+    },
+    "aux post": {
+     "mean": 0.049,
+     "max": 0.05
+    }
+   },
+   "clip": "07 Fork_Swarm_+_TRIG.wav"
+  },
+  {
+   "scene": 8,
+   "label": "Fork Waveshaping + TRIG",
+   "aux": "regular",
+   "peak": 0.734,
+   "mean": 0.711,
+   "late": 0,
+   "switch_peak": 0.734,
+   "switch_late": 0,
+   "blocks": 77776,
+   "sections": {
+    "ui inputs": {
+     "mean": 0.027,
+     "max": 0.027
+    },
+    "ui task": {
+     "mean": 0.025,
+     "max": 0.034
+    },
+    "ui adc/pitch": {
+     "mean": 0.013,
+     "max": 0.013
+    },
+    "prepare": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "select": {
+     "mean": 0.021,
+     "max": 0.025
+    },
+    "envelopes": {
+     "mean": 0.016,
+     "max": 0.016
+    },
+    "modulation": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "engine": {
+     "mean": 0.456,
+     "max": 0.466
+    },
+    "subosc": {
+     "mean": 0.004,
+     "max": 0.004
+    },
+    "lpg env": {
+     "mean": 0.02,
+     "max": 0.021
+    },
+    "out post": {
+     "mean": 0.044,
+     "max": 0.044
+    },
+    "aux post": {
+     "mean": 0.049,
+     "max": 0.05
+    }
+   },
+   "clip": "08 Fork_Waveshaping_+_TRIG.wav"
+  },
+  {
+   "scene": 9,
+   "label": "Fork Snare + TRIG",
+   "aux": "regular",
+   "peak": 0.825,
+   "mean": 0.809,
+   "late": 0,
+   "switch_peak": 0.831,
+   "switch_late": 0,
+   "blocks": 77776,
+   "sections": {
+    "ui inputs": {
+     "mean": 0.027,
+     "max": 0.027
+    },
+    "ui task": {
+     "mean": 0.025,
+     "max": 0.034
+    },
+    "ui adc/pitch": {
+     "mean": 0.013,
+     "max": 0.013
+    },
+    "prepare": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "select": {
+     "mean": 0.021,
+     "max": 0.025
+    },
+    "envelopes": {
+     "mean": 0.016,
+     "max": 0.016
+    },
+    "modulation": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "engine": {
+     "mean": 0.624,
+     "max": 0.631
+    },
+    "subosc": {
+     "mean": 0.004,
+     "max": 0.004
+    },
+    "lpg env": {
+     "mean": 0.004,
+     "max": 0.004
+    },
+    "out post": {
+     "mean": 0.017,
+     "max": 0.017
+    },
+    "aux post": {
+     "mean": 0.022,
+     "max": 0.022
+    }
+   },
+   "clip": "09 Fork_Snare_+_TRIG.wav"
+  },
+  {
+   "scene": 10,
+   "label": "Fork Bass drum + TRIG",
+   "aux": "regular",
+   "peak": 0.846,
+   "mean": 0.832,
+   "late": 0,
+   "switch_peak": 0.845,
+   "switch_late": 0,
+   "blocks": 77776,
+   "sections": {
+    "ui inputs": {
+     "mean": 0.027,
+     "max": 0.027
+    },
+    "ui task": {
+     "mean": 0.025,
+     "max": 0.034
+    },
+    "ui adc/pitch": {
+     "mean": 0.013,
+     "max": 0.013
+    },
+    "prepare": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "select": {
+     "mean": 0.021,
+     "max": 0.025
+    },
+    "envelopes": {
+     "mean": 0.016,
+     "max": 0.016
+    },
+    "modulation": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "engine": {
+     "mean": 0.648,
+     "max": 0.652
+    },
+    "subosc": {
+     "mean": 0.004,
+     "max": 0.004
+    },
+    "lpg env": {
+     "mean": 0.004,
+     "max": 0.004
+    },
+    "out post": {
+     "mean": 0.017,
+     "max": 0.017
+    },
+    "aux post": {
+     "mean": 0.022,
+     "max": 0.023
+    }
+   },
+   "clip": "10 Fork_Bass_drum_+_TRIG.wav"
+  }
+ ],
+ "ui_tasks": {
+  "UpdateLEDs": {
+   "mean": 0.034,
+   "max": 0.034
+  },
+  "ReadSwitches": {
+   "mean": 0.019,
+   "max": 0.02
+  },
+  "PotsHidden": {
+   "mean": 0.023,
+   "max": 0.023
+  },
+  "DetectNorm": {
+   "mean": 0.021,
+   "max": 0.028
+  }
+ },
+ "probes": [
+  {
+   "mean": 0.006,
+   "max": 0.006
+  },
+  {
+   "mean": 0.004,
+   "max": 0.004
+  },
+  {
+   "mean": 0.009,
+   "max": 0.009
+  },
+  {
+   "mean": 0.012,
+   "max": 0.012
+  }
+ ]
+}
