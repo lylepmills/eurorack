@@ -2,6 +2,10 @@
   "schemaVersion": 1,
   "sdk": "plaits-engine-cpp-v1",
   "packageVersion": "1.0.0",
+  "retiredEngines": {
+    "virtual-analog-dual": "virtual-analog-variant",
+    "virtual-analog-crossfade": "virtual-analog-variant"
+  },
   "fmCapabilities": {
     "linearTzfm": [
       "virtual-analog",

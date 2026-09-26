@@ -319,6 +319,28 @@ def validate_engine_capability_review(value: Any, engine_ids: set[str]) -> None:
             "and hard-sync review (" + "; ".join(details) + ")")
 
 
+def validate_retired_engines(catalog: dict[str, Any], ids: set[str]) -> None:
+    """retiredEngines maps an engine id being withdrawn to the engine that
+    replaces it. Builds that still name a retired id get the replacement (the
+    builder Worker and generate_engine_config resolve it), and the editor stops
+    offering the retired id once the deployed builder carries the replacement.
+    A retired id may stay in the catalog while that rollout is in flight."""
+    retired = catalog.get("retiredEngines", {})
+    if not isinstance(retired, dict):
+        raise ValueError("retiredEngines must be an object")
+    for old_id, new_id in retired.items():
+        if not isinstance(old_id, str) or not ID_PATTERN.fullmatch(old_id):
+            raise ValueError(f"invalid retired engine ID: {old_id}")
+        if not isinstance(new_id, str) or new_id not in ids:
+            raise ValueError(f"retired engine {old_id} must map to a catalog engine")
+        if new_id == old_id or new_id in retired:
+            raise ValueError(f"retired engine {old_id} must map to a current engine")
+    for name, slots in catalog.get("presets", {}).items():
+        stale = sorted(set(slots) & set(retired)) if isinstance(slots, list) else []
+        if stale:
+            raise ValueError(f"preset {name} names retired engines: {stale}")
+
+
 def validate_catalog(catalog: dict[str, Any]) -> None:
     engines = catalog.get("engines")
     if not isinstance(engines, list) or not engines:
@@ -415,6 +437,8 @@ def validate_catalog(catalog: dict[str, Any]) -> None:
         expected_trigger = AUDITED_STOCK_TRIGGERS.get(engine_id)
         if expected_trigger is not None and trigger != expected_trigger:
             raise ValueError(f"{engine_id} trigger no longer matches the audited behavior")
+
+    validate_retired_engines(catalog, ids)
 
     stock_ids = set(catalog.get("presets", {}).get("stock", []))
     audited_sets = stock_ids | set(AUDITED_BRAIDS_CONTROLS) | set(AUDITED_REMAINING_METADATA_DIGESTS)
@@ -516,6 +540,7 @@ def web_catalog(catalog: dict[str, Any]) -> dict[str, Any]:
             for engine in catalog["engines"]
         ],
         "fmCapabilities": catalog["fmCapabilities"],
+        "retiredEngines": catalog.get("retiredEngines", {}),
         "presets": catalog["presets"],
     }
 

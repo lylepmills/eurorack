@@ -404,6 +404,21 @@ def load_catalog() -> dict[str, Engine]:
 
 
 CATALOG = load_catalog()
+# Engine ids being withdrawn, mapped to the engines that replace them (see
+# validate_catalog.validate_retired_engines). A recipe that still names one
+# builds the replacement, so saved palettes and exported recipes keep working
+# once the retired engine leaves the catalog.
+RETIRED_ENGINES: dict[str, str] = json.loads(
+    CATALOG_PATH.read_text(encoding="utf-8")).get("retiredEngines", {})
+
+
+def resolve_engine_id(engine_id: str) -> str | None:
+    """The catalog engine a recipe's engine id builds, or None if it has none:
+    the id itself while the catalog carries it, else its replacement."""
+    if engine_id in CATALOG:
+        return engine_id
+    replacement = RETIRED_ENGINES.get(engine_id)
+    return replacement if replacement in CATALOG else None
 RANDOMIZER_REGISTRY = json.loads(RANDOMIZER_PROFILES_PATH.read_text(encoding="utf-8"))
 PUBLIC_ENGINES = {
     item["id"]: item
@@ -1347,9 +1362,10 @@ def validate_wavetable_bank(
 
 def normalize_slots(slots: list[Any], schema_version: int) -> list[str | None]:
     if schema_version in (2, 4, 5, 6) and all(isinstance(engine_id, str) for engine_id in slots):
-        if any(engine_id not in CATALOG for engine_id in slots):
+        resolved = [resolve_engine_id(engine_id) for engine_id in slots]
+        if any(engine_id is None for engine_id in resolved):
             raise ValueError("recipe contains an unapproved engine ID")
-        return list(slots)
+        return resolved
 
     # v7+ short-bank recipes carry null entries for empty slots; keep them as None
     # so render_config can size each bank. v5/v6 are always fully filled. (v10 —
@@ -1369,12 +1385,21 @@ def normalize_slots(slots: list[Any], schema_version: int) -> list[str | None]:
             # The Worker contract normalizes every filled slot to a bare engine ID,
             # so a v7 recipe reaches the generator as engine IDs interleaved with
             # None. Validate the ID against the approved catalog, as v5 does.
-            if reference not in CATALOG:
+            resolved = resolve_engine_id(reference)
+            if resolved is None:
                 raise ValueError("recipe contains an unapproved engine ID")
-            normalized.append(reference)
+            normalized.append(resolved)
             continue
         if not isinstance(reference, dict) or not isinstance(reference.get("engine"), str):
             raise ValueError("recipe contains an invalid package reference")
+        if reference["engine"] not in CATALOG:
+            # A retired engine's package no longer exists to pin against: the
+            # reference builds its replacement.
+            resolved = resolve_engine_id(reference["engine"])
+            if resolved is None:
+                raise ValueError("recipe contains an unavailable package version")
+            normalized.append(resolved)
+            continue
         approved = PUBLIC_ENGINES.get(reference["engine"])
         if not approved or any(
             reference.get(key) != approved[approved_key]
@@ -1821,11 +1846,15 @@ def validate_recipe(value: Any) -> BuildRecipe:
                 f"stereoEngines requires schemaVersion "
                 f"{STEREO_ENGINES_MIN_SCHEMA_VERSION} or newer")
         raw = value.get("stereoEngines")
-        if not isinstance(raw, list) or not all(
-            isinstance(engine_id, str) and engine_id in PUBLIC_ENGINES for engine_id in raw
+        resolved = [
+            resolve_engine_id(engine_id) if isinstance(engine_id, str) else None
+            for engine_id in raw
+        ] if isinstance(raw, list) else None
+        if resolved is None or not all(
+            engine_id is not None and engine_id in PUBLIC_ENGINES for engine_id in resolved
         ):
             raise ValueError("stereoEngines must list approved engine ids")
-        stereo_engines = tuple(dict.fromkeys(raw))
+        stereo_engines = tuple(dict.fromkeys(resolved))
     elif schema_version == STEREO_ENGINES_MIN_SCHEMA_VERSION:
         raise ValueError("schemaVersion 10 recipes must carry a stereoEngines list")
 
