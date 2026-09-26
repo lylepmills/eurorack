@@ -4191,6 +4191,10 @@
       "circuit-zaps"
     ]
   },
+  "retiredEngines": {
+    "virtual-analog-dual": "virtual-analog-variant",
+    "virtual-analog-crossfade": "virtual-analog-variant"
+  },
   "presets": {
     "experimental": [
       "virtual-analog",
