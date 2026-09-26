@@ -1,0 +1,533 @@
+diff --git a/plaits/diagnostic_fsk.h b/plaits/diagnostic_fsk.h
+new file mode 100644
+index 00000000..d17d593f
+--- /dev/null
++++ b/plaits/diagnostic_fsk.h
+@@ -0,0 +1,157 @@
++// Copyright 2026 Rubato Audio.
++//
++// The FSK packet transmitter shared by the private diagnostic firmwares
++// (threshold_ladder.h, scene_check.h): 1200-baud UART framing, mark 2400 Hz,
++// space 4800 Hz, packets of 0x55 0x55 0x7e 0xa5 type length payload CRC-16.
++// The same framing as overrun_sweep.h, decoded by
++// plaits/tools/overrun_sweep_host.py.
++
++#ifndef PLAITS_DIAGNOSTIC_FSK_H_
++#define PLAITS_DIAGNOSTIC_FSK_H_
++
++#include <stddef.h>
++#include <stdint.h>
++
++#include "plaits/dsp/dsp.h"
++#include "plaits/dsp/oscillator/sine_oscillator.h"
++
++namespace plaits {
++
++template <int kQueueSize>
++class DiagnosticFsk {
++ public:
++  DiagnosticFsk() { }
++
++  void Init() {
++    queue_head_ = queue_tail_ = 0;
++    bits_left_ = 0;
++    shift_ = 0;
++    lead_in_bits_ = kLeadInBits;
++    trail_bits_ = kTrailBits;
++    active_ = false;
++    current_bit_ = 1;
++    tone_phase_ = 0.0f;
++    bit_phase_ = 0.0f;
++    mark_increment_ = 2400.0f / kCorrectedSampleRate;
++    space_increment_ = 4800.0f / kCorrectedSampleRate;
++    bit_increment_ = 1200.0f / kCorrectedSampleRate;
++  }
++
++  static uint16_t CrcUpdate(uint16_t crc, uint8_t byte) {
++    crc ^= static_cast<uint16_t>(byte) << 8;
++    for (int i = 0; i < 8; ++i) {
++      crc = (crc & 0x8000) ? static_cast<uint16_t>((crc << 1) ^ 0x1021)
++                           : static_cast<uint16_t>(crc << 1);
++    }
++    return crc;
++  }
++
++  void BeginPacket(uint8_t type, uint8_t length) {
++    Push(0x55);
++    Push(0x55);
++    Push(0x7e);
++    Push(0xa5);
++    crc_ = 0xffff;
++    Put(type);
++    Put(length);
++  }
++
++  void Put(uint8_t byte) {
++    Push(byte);
++    crc_ = CrcUpdate(crc_, byte);
++  }
++
++  void Put16(uint16_t value) {
++    Put(static_cast<uint8_t>(value & 0xff));
++    Put(static_cast<uint8_t>(value >> 8));
++  }
++
++  void EndPacket() {
++    const uint16_t crc = crc_;
++    Push(static_cast<uint8_t>(crc & 0xff));
++    Push(static_cast<uint8_t>(crc >> 8));
++  }
++
++  bool transmitting() const {
++    return active_ || queue_head_ != queue_tail_;
++  }
++
++  short Sample() {
++    if (!active_) {
++      active_ = true;
++      bit_phase_ = 0.0f;
++      LoadNextBit();
++    }
++    tone_phase_ += current_bit_ ? mark_increment_ : space_increment_;
++    if (tone_phase_ >= 1.0f) tone_phase_ -= 1.0f;
++    const short sample = static_cast<short>(Sine(tone_phase_) * 16000.0f);
++    bit_phase_ += bit_increment_;
++    if (bit_phase_ >= 1.0f) {
++      bit_phase_ -= 1.0f;
++      if (!LoadNextBit()) active_ = false;
++    }
++    return sample;
++  }
++
++ private:
++  static const int kLeadInBits = 24;
++  static const int kTrailBits = 12;
++
++  void Push(uint8_t byte) {
++    const int next = (queue_tail_ + 1) % kQueueSize;
++    if (next == queue_head_) return;
++    queue_[queue_tail_] = byte;
++    queue_tail_ = next;
++  }
++
++  bool LoadNextBit() {
++    if (bits_left_) {
++      current_bit_ = shift_ & 1;
++      shift_ >>= 1;
++      --bits_left_;
++      return true;
++    }
++    if (queue_head_ != queue_tail_) {
++      if (lead_in_bits_) {
++        current_bit_ = 1;
++        --lead_in_bits_;
++        return true;
++      }
++      const uint8_t byte = queue_[queue_head_];
++      queue_head_ = (queue_head_ + 1) % kQueueSize;
++      shift_ = (static_cast<uint32_t>(byte) << 1) | (1u << 9);
++      current_bit_ = shift_ & 1;
++      shift_ >>= 1;
++      bits_left_ = 9;
++      return true;
++    }
++    if (trail_bits_) {
++      current_bit_ = 1;
++      --trail_bits_;
++      return true;
++    }
++    lead_in_bits_ = kLeadInBits;
++    trail_bits_ = kTrailBits;
++    return false;
++  }
++
++  uint8_t queue_[kQueueSize];
++  int queue_head_;
++  int queue_tail_;
++  uint32_t shift_;
++  int bits_left_;
++  int lead_in_bits_;
++  int trail_bits_;
++  bool active_;
++  int current_bit_;
++  float tone_phase_;
++  float bit_phase_;
++  float mark_increment_;
++  float space_increment_;
++  float bit_increment_;
++  uint16_t crc_;
++};
++
++}  // namespace plaits
++
++#endif  // PLAITS_DIAGNOSTIC_FSK_H_
+diff --git a/plaits/dsp/voice.cc b/plaits/dsp/voice.cc
+index 64771114..1a4a3edb 100644
+--- a/plaits/dsp/voice.cc
++++ b/plaits/dsp/voice.cc
+@@ -27,6 +27,8 @@
+ // Main synthesis voice.
+ 
+ #include "plaits/dsp/voice.h"
++
++extern "C" void plaits_stock_mark(int k);
+ #include "plaits/user_data.h"
+ 
+ namespace plaits {
+@@ -39,9 +41,9 @@ void Voice::Init(BufferAllocator* allocator) {
+ 
+   engines_.RegisterInstance(&virtual_analog_vcf_engine_, false, 1.0f, 1.0f);
+   engines_.RegisterInstance(&phase_distortion_engine_, false, 0.7f, 0.7f);
+-  engines_.RegisterInstance(&six_op_engine_, true, 1.0f, 1.0f);
+-  engines_.RegisterInstance(&six_op_engine_, true, 1.0f, 1.0f);
+-  engines_.RegisterInstance(&six_op_engine_, true, 1.0f, 1.0f);
++  engines_.RegisterInstance(&virtual_analog_vcf_engine_, false, 1.0f, 1.0f);  // six-op dropped: flash
++  engines_.RegisterInstance(&virtual_analog_vcf_engine_, false, 1.0f, 1.0f);  // six-op dropped: flash
++  engines_.RegisterInstance(&virtual_analog_vcf_engine_, false, 1.0f, 1.0f);  // six-op dropped: flash
+   engines_.RegisterInstance(&wave_terrain_engine_, false, 0.7f, 0.7f);
+   engines_.RegisterInstance(&string_machine_engine_, false, 0.8f, 0.8f);
+   engines_.RegisterInstance(&chiptune_engine_, false, 0.5f, 0.5f);
+@@ -225,7 +227,9 @@ void Voice::Render(
+       1.0f);
+ 
+   bool already_enveloped = pp_s.already_enveloped;
++  plaits_stock_mark(2);
+   e->Render(p, out_buffer_, aux_buffer_, size, &already_enveloped);
++  plaits_stock_mark(3);
+   
+   bool lpg_bypass = already_enveloped || \
+       (!modulations.level_patched && !modulations.trigger_patched);
+diff --git a/plaits/dsp/voice.h b/plaits/dsp/voice.h
+index d925d469..68d1ca09 100644
+--- a/plaits/dsp/voice.h
++++ b/plaits/dsp/voice.h
+@@ -222,7 +222,7 @@ class Voice {
+   
+   VirtualAnalogVCFEngine virtual_analog_vcf_engine_;
+   PhaseDistortionEngine phase_distortion_engine_;
+-  SixOpEngine six_op_engine_;
++  // SixOpEngine six_op_engine_;  (dropped for the diagnostic: flash)
+   WaveTerrainEngine wave_terrain_engine_;
+   StringMachineEngine string_machine_engine_;
+   ChiptuneEngine chiptune_engine_;
+diff --git a/plaits/plaits.cc b/plaits/plaits.cc
+index d64f3277..785cadfb 100755
+--- a/plaits/plaits.cc
++++ b/plaits/plaits.cc
+@@ -34,6 +34,7 @@
+ #include "plaits/ui.h"
+ #include "plaits/user_data.h"
+ #include "plaits/user_data_receiver.h"
++#include "plaits/stock_scene_check.h"
+ 
+ using namespace plaits;
+ using namespace stm_audio_bootloader;
+@@ -53,6 +54,24 @@ UserData user_data;
+ UserDataReceiver user_data_receiver;
+ Voice voice;
+ 
++// Stock engine indices (upstream registry): 8 VA, 14 chords, 15 speech,
++// 16 swarm, 19 string, 20 modal.
++static const StockScene kStockScenes[] = {
++  { 8, 0.5f, 0.5f, 0.5f, 60.0f, 0 },    // VA baseline
++  { 8, 0.5f, 0.5f, 0.5f, 60.0f, 1 },    // VA + TRIG
++  { 20, 0.5f, 0.5f, 0.5f, 60.0f, 0 },   // Modal typical
++  { 20, 0.0f, 0.0f, 0.0f, 108.0f, 0 },  // Modal mono worst (fork's corner)
++  { 14, 0.5f, 0.5f, 0.5f, 60.0f, 1 },   // Chords typical + TRIG
++  { 14, 0.5f, 1.0f, 0.5f, 60.0f, 1 },   // Chords, TIMBRE max + TRIG
++  { 19, 0.5f, 0.5f, 0.5f, 48.0f, 1 },   // String struck
++  { 16, 0.5f, 0.5f, 0.5f, 60.0f, 1 },   // Swarm + TRIG
++};
++static const int kStockSceneCount = sizeof(kStockScenes) / sizeof(kStockScenes[0]);
++StockSceneCheck<kStockSceneCount> scene_check;
++extern "C" void plaits_stock_mark(int k) { scene_check.Mark(k); }
++extern "C" void plaits_stock_ui_inputs() { scene_check.UiInputs(); }
++extern "C" void plaits_stock_ui_task(int task) { scene_check.UiTask(task); }
++
+ char shared_buffer[16384];
+ uint32_t test_ramp;
+ 
+@@ -76,9 +95,11 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
+   TIC
+ #endif  // PROFILE_INTERRUPT
+ 
++  scene_check.BeginCallback();
+   IWDG_ReloadCounter();
+   
+   ui.Poll();
++  scene_check.Mark(1);
+   
+   if (test_adc_noise) {
+     static float note_lp = 0.0f;
+@@ -98,7 +119,10 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
+       test_ramp += 8947848;
+       ++output;
+     }
++  } else if (scene_check.reporting()) {
++    scene_check.WriteReport((Voice::Frame*)(output), size);
+   } else {
++    scene_check.Prepare(&patch, &modulations);
+     if (modulations.timbre_patched) {
+       PacketDecoderState state = \
+           user_data_receiver.Process(modulations.timbre);
+@@ -120,6 +144,8 @@ void FillBuffer(AudioDac::Frame* output, size_t size) {
+       }
+     }
+     voice.Render(patch, modulations, (Voice::Frame*)(output), size);
++    scene_check.EndRender();
++    scene_check.WriteStart((Voice::Frame*)(output), size);
+     ui.set_active_engine(voice.active_engine());
+   }
+   
+@@ -162,6 +188,7 @@ void Init() {
+   
+   audio_dac.Init(48000, kBlockSize);
+ 
++  scene_check.Init(kStockScenes);
+   audio_dac.Start(&FillBuffer);
+   IWDG_Enable();
+ }
+diff --git a/plaits/stock_scene_check.h b/plaits/stock_scene_check.h
+new file mode 100644
+index 00000000..d868a0a6
+--- /dev/null
++++ b/plaits/stock_scene_check.h
+@@ -0,0 +1,208 @@
++// Rubato Audio private diagnostic, grafted onto UPSTREAM Plaits (ebe6bbf6):
++// the same fixed-scene cost bracket as the fork's plaits/scene_check.h
++// (interrupt entry to the end of Voice::Render, split at Ui::Poll's end and
++// around the engine's Render, plus Ui::Poll's round-robin task), reported in
++// the same FSK packets, so overrun_sweep_host.py decodes both. Production
++// signal path otherwise untouched. Not for release.
++
++#ifndef PLAITS_STOCK_SCENE_CHECK_H_
++#define PLAITS_STOCK_SCENE_CHECK_H_
++
++#include <stdint.h>
++#include "plaits/diagnostic_fsk.h"
++#include "plaits/dsp/dsp.h"
++#include "plaits/dsp/voice.h"
++#include <stm32f37x_conf.h>
++
++namespace plaits {
++
++struct StockScene {
++  int engine;
++  float harmonics, timbre, morph, note;
++  uint8_t triggered;
++};
++
++template <int kScenes>
++class StockSceneCheck {
++ public:
++  enum Phase { PHASE_START, PHASE_SCENES, PHASE_REPORT };
++  static const int kBlocksPerSecond = 3989;
++  static const int kStartBlocks = 3 * kBlocksPerSecond;
++  static const int kSceneBlocks = 20 * kBlocksPerSecond;
++  static const int kSwitchBlocks = kBlocksPerSecond / 2;
++  static const int kTriggerPeriod = kBlocksPerSecond / 4;
++  static const int kTriggerLength = 4;
++  static const int kSections = 4;
++  static const int kUiTasks = 4;
++
++  void Init(const StockScene* scenes) {
++    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
++    DWT->CYCCNT = 0;
++    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
++    scenes_ = scenes;
++    phase_ = PHASE_START;
++    scene_ = block_ = 0;
++    budget_ = static_cast<uint32_t>(
++        kBlockSize * (static_cast<float>(F_CPU) / kSampleRate));
++    for (int i = 0; i < kScenes; ++i) {
++      Stats& s = stats_[i];
++      s.max = s.sum = s.switch_max = s.count = 0;
++      for (int k = 0; k < kSections; ++k) s.section_sum[k] = s.section_max[k] = 0;
++    }
++    for (int k = 0; k < kUiTasks; ++k) task_sum_[k] = task_max_[k] = task_count_[k] = 0;
++    ui_task_ = -1;
++    fsk_.Init();
++    report_scene_ = report_gap_ = 0;
++    fsk_.BeginPacket(1, 8);
++    fsk_.Put(2); fsk_.Put(0xfe); fsk_.Put(kScenes); fsk_.Put(0);
++    fsk_.Put16(static_cast<uint16_t>(kSceneBlocks / 4));
++    fsk_.Put16(static_cast<uint16_t>(kStartBlocks));
++    fsk_.EndPacket();
++  }
++
++  bool reporting() const { return phase_ == PHASE_REPORT; }
++
++  inline void BeginCallback() {
++    start_ = DWT->CYCCNT;
++    mark_[1] = mark_[2] = mark_[3] = start_;
++    ui_task_ = -1;
++  }
++  inline void Mark(int k) { mark_[k] = DWT->CYCCNT; }
++  inline void UiTask(int task) { task_mark_ = DWT->CYCCNT; ui_task_ = task; }
++  inline void UiInputs() { ui_inputs_ = DWT->CYCCNT; }
++
++  void Prepare(Patch* patch, Modulations* m) {
++    const StockScene& s = scenes_[phase_ == PHASE_SCENES ? scene_ : 0];
++    const bool active = phase_ == PHASE_SCENES;
++    patch->engine = s.engine;
++    patch->note = active ? s.note : 60.0f;
++    patch->harmonics = active ? s.harmonics : 0.5f;
++    patch->timbre = active ? s.timbre : 0.5f;
++    patch->morph = active ? s.morph : 0.5f;
++    patch->frequency_modulation_amount = 0.0f;
++    patch->timbre_modulation_amount = 0.0f;
++    patch->morph_modulation_amount = 0.0f;
++    patch->decay = 0.5f;
++    patch->lpg_colour = 0.5f;
++    m->engine = m->note = m->frequency = m->harmonics = 0.0f;
++    m->timbre = m->morph = m->level = 0.0f;
++    m->frequency_patched = m->timbre_patched = m->morph_patched = false;
++    m->level_patched = false;
++    m->trigger_patched = active && s.triggered;
++    m->trigger = active && s.triggered &&
++        (block_ % kTriggerPeriod) < kTriggerLength ? 1.0f : 0.0f;
++  }
++
++  inline void EndRender() {
++    if (phase_ == PHASE_SCENES) {
++      const uint32_t cycles = DWT->CYCCNT - start_;
++      Stats& s = stats_[scene_];
++      if (block_ < kSwitchBlocks) {
++        if (cycles > s.switch_max) s.switch_max = cycles;
++      } else {
++        if (cycles > s.max) s.max = cycles;
++        s.sum += cycles;
++        ++s.count;
++        const uint32_t section[kSections] = {
++          mark_[1] - start_, mark_[2] - mark_[1], mark_[3] - mark_[2],
++          start_ + cycles - mark_[3] };
++        for (int k = 0; k < kSections; ++k) {
++          s.section_sum[k] += section[k];
++          if (section[k] > s.section_max[k]) s.section_max[k] = section[k];
++        }
++        if (ui_task_ >= 0 && ui_task_ < kUiTasks) {
++          const uint32_t t = task_mark_ - ui_inputs_;
++          task_sum_[ui_task_] += t;
++          ++task_count_[ui_task_];
++          if (t > task_max_[ui_task_]) task_max_[ui_task_] = t;
++        }
++      }
++    }
++    if (phase_ == PHASE_REPORT) return;
++    ++block_;
++    if (phase_ == PHASE_START && block_ >= kStartBlocks) {
++      phase_ = PHASE_SCENES; scene_ = 0; block_ = 0;
++    } else if (phase_ == PHASE_SCENES && block_ >= kSceneBlocks) {
++      block_ = 0;
++      if (++scene_ >= kScenes) { scene_ = kScenes - 1; phase_ = PHASE_REPORT; }
++    }
++  }
++
++  void WriteStart(Voice::Frame* frames, size_t size) {
++    if (phase_ != PHASE_START) return;
++    for (size_t i = 0; i < size; ++i) {
++      if (fsk_.transmitting()) frames[i].aux = fsk_.Sample();
++    }
++  }
++
++  void WriteReport(Voice::Frame* frames, size_t size) {
++    for (size_t i = 0; i < size; ++i) {
++      if (!fsk_.transmitting()) {
++        if (report_gap_ > 0) --report_gap_; else EnqueueReportItem();
++      }
++      frames[i].out = 0;
++      frames[i].aux = fsk_.transmitting() ? fsk_.Sample() : 0;
++    }
++  }
++
++ private:
++  struct Stats {
++    uint32_t max, sum, switch_max, count;
++    uint32_t section_sum[kSections], section_max[kSections];
++  };
++
++  uint16_t Code(uint32_t cycles) const {
++    const uint32_t code = static_cast<uint32_t>(
++        (static_cast<uint64_t>(cycles) * 1000u + budget_ / 2) / budget_);
++    return static_cast<uint16_t>(code > 0xffff ? 0xffff : code);
++  }
++
++  void EnqueueReportItem() {
++    if (report_scene_ == kScenes) {
++      fsk_.BeginPacket(11, kUiTasks * 4);
++      for (int k = 0; k < kUiTasks; ++k) {
++        fsk_.Put16(Code(task_count_[k] ? task_sum_[k] / task_count_[k] : 0));
++        fsk_.Put16(Code(task_max_[k]));
++      }
++      fsk_.EndPacket();
++      report_scene_ = 0;
++      report_gap_ = 47872;
++      return;
++    }
++    const Stats& s = stats_[report_scene_];
++    fsk_.BeginPacket(10, 1 + kSections * 4);
++    fsk_.Put(static_cast<uint8_t>(report_scene_));
++    for (int k = 0; k < kSections; ++k) {
++      fsk_.Put16(Code(s.count ? s.section_sum[k] / s.count : 0));
++      fsk_.Put16(Code(s.section_max[k]));
++    }
++    fsk_.EndPacket();
++    fsk_.BeginPacket(9, 14);
++    fsk_.Put(static_cast<uint8_t>(report_scene_));
++    fsk_.Put(static_cast<uint8_t>(scenes_[report_scene_].engine));
++    fsk_.Put16(Code(s.max));
++    fsk_.Put16(Code(s.count ? s.sum / s.count : 0));
++    fsk_.Put16(0);                        // no DAC late probe upstream
++    fsk_.Put16(Code(s.switch_max));
++    fsk_.Put16(0);
++    fsk_.Put16(static_cast<uint16_t>(s.count / 16));
++    fsk_.EndPacket();
++    ++report_scene_;
++  }
++
++  const StockScene* scenes_;
++  Phase phase_;
++  int scene_, block_;
++  uint32_t start_, budget_;
++  uint32_t mark_[4];
++  uint32_t ui_inputs_, task_mark_;
++  int ui_task_;
++  Stats stats_[kScenes];
++  uint32_t task_sum_[kUiTasks], task_max_[kUiTasks], task_count_[kUiTasks];
++  DiagnosticFsk<96> fsk_;
++  int report_scene_, report_gap_;
++};
++
++}  // namespace plaits
++
++#endif
+diff --git a/plaits/ui.cc b/plaits/ui.cc
+index 31098d1c..5f80347e 100644
+--- a/plaits/ui.cc
++++ b/plaits/ui.cc
+@@ -28,6 +28,9 @@
+ 
+ #include "plaits/ui.h"
+ 
++extern "C" void plaits_stock_ui_inputs();
++extern "C" void plaits_stock_ui_task(int task);
++
+ #include <algorithm>
+ 
+ #include "stmlib/dsp/dsp.h"
+@@ -457,6 +460,7 @@ void Ui::Poll() {
+     destination[i] = settings_->calibration_data(i).Transform(
+         cv_adc_.float_value(CvAdcChannel(i)));
+   }
++  plaits_stock_ui_inputs();
+   
+   ONE_POLE(pitch_lp_, modulations_->note, 0.7f);
+   modulations_->note = pitch_lp_;
+@@ -482,6 +486,7 @@ void Ui::Poll() {
+       DetectNormalization();
+       break;
+   }
++  plaits_stock_ui_task(ui_task_);
+   
+   cv_adc_.Convert();
+   pots_adc_.Convert();

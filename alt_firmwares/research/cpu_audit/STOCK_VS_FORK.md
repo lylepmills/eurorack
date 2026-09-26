@@ -5,8 +5,9 @@ Same module, same ES-8 patch, same eight fixed scenes, same cost bracket
 (DWT, audio interrupt entry to the end of Voice::Render), regular AUX.
 
 - stock_baseline_2026-09-25.json: upstream Mutable Plaits at ebe6bbf6 (the
-  last upstream commit), with only a timing graft (stock_scene_check.h: three
-  marks + the round-robin UI task) and the three 6-op FM slots pointed at
+  last upstream commit), with only a timing graft (stock_baseline_graft.patch,
+  applies to ebe6bbf6 with stmlib at e3bd7c9: three marks + the round-robin UI
+  task; build with `make -f plaits/makefile RESOURCES= wav`) and the three 6-op FM slots pointed at
   another engine so the graft fits in flash. No scene uses FM.
 - fork_matched_2026-09-25.json: this fork at 737b746e, the same engines by
   catalog id, TWIST at its neutral centre, a --stereo recipe (per-engine stereo
