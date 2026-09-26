@@ -4,6 +4,7 @@ import {
   ContractError,
   approvedChordTables,
   approvedEngineIds,
+  retiredEngines,
   computeBuildKey,
   computeManualKey,
   isBuildKey,
@@ -868,6 +869,9 @@ export default {
           deploymentEnvironment: env.DEPLOYMENT_ENVIRONMENT,
           sourceRevision: env.PLAITS_SOURCE_REVISION,
           approvedEngineIds,
+          // Withdrawn ids and their replacements: the editor hides a retired
+          // engine once its replacement is approved here.
+          retiredEngines,
           chordTables: approvedChordTables,
           // userDataBanks: v12 keys banks per slot, so the ceiling is the slot
           // count (32); the flash budget is the real limit the ARM build enforces.

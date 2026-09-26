@@ -4,6 +4,29 @@ import chordCatalog from "../../plaits_lab_chord_tables/catalog.json" with { typ
 export const approvedEngineIds: readonly string[] = catalog.engines.map((engine) => engine.id);
 const approvedEngines = new Map(catalog.engines.map((engine) => [engine.id, engine]));
 const approvedEngineIdSet = new Set<string>(approvedEngineIds);
+
+// Withdrawn engine ids and the engines that replace them (catalog.json
+// retiredEngines). While a retired engine is still approved it builds as
+// itself; once it is removed, a recipe that still names it -- a saved palette,
+// an exported recipe, a stale editor tab -- builds the replacement.
+export const retiredEngines: Readonly<Record<string, string>> =
+  (catalog as { retiredEngines?: Record<string, string> }).retiredEngines ?? {};
+
+// The approved engine a recipe's engine id builds, or undefined if none: the
+// id itself while approved, else its replacement if that is approved.
+export function resolveEngineIdIn(
+  approved: ReadonlySet<string>,
+  retired: Readonly<Record<string, string>>,
+  engineId: string,
+): string | undefined {
+  if (approved.has(engineId)) return engineId;
+  const replacement = Object.hasOwn(retired, engineId) ? retired[engineId] : undefined;
+  return replacement !== undefined && approved.has(replacement) ? replacement : undefined;
+}
+
+export function resolveEngineId(engineId: string): string | undefined {
+  return resolveEngineIdIn(approvedEngineIdSet, retiredEngines, engineId);
+}
 export const maxChordTables = 16;
 const maxPreGestureChordTables = 9;
 // The six states the original LED scheme could show (three colors x
@@ -1298,11 +1321,13 @@ function normalizeStereoEngines(
     throw new ContractError("invalid_recipe", "stereoEngines is only valid with the stereo aux output.");
   }
   const raw = candidate.stereoEngines;
-  if (!Array.isArray(raw)
-      || !raw.every((id) => typeof id === "string" && approvedEngineIdSet.has(id))) {
+  const resolved = Array.isArray(raw)
+    ? raw.map((id) => (typeof id === "string" ? resolveEngineId(id) : undefined))
+    : undefined;
+  if (!resolved || !resolved.every((id): id is string => id !== undefined)) {
     throw new ContractError("invalid_recipe", "stereoEngines must list approved engine ids.");
   }
-  return [...new Set(raw as string[])];
+  return [...new Set(resolved)];
 }
 
 export function normalizeRecipe(value: unknown): NormalizedRecipe {
@@ -1345,10 +1370,11 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
   }
   const slots: (string | null)[] = schemaVersion === 2
     ? candidate.slots.map((id) => {
-        if (typeof id !== "string" || !approvedEngineIdSet.has(id)) {
+        const resolved = typeof id === "string" ? resolveEngineId(id) : undefined;
+        if (resolved === undefined) {
           throw new ContractError("unapproved_engine", "The recipe contains an engine that is not approved for builds.");
         }
-        return id;
+        return resolved;
       })
     : candidate.slots.map((value) => {
         if (value === null) {
@@ -1365,6 +1391,18 @@ export function normalizeRecipe(value: unknown): NormalizedRecipe {
           throw new ContractError("invalid_package", "The recipe contains an invalid package reference.");
         }
         const reference = value as Record<string, unknown>;
+        if (typeof reference.engine === "string" && !approvedEngineIdSet.has(reference.engine)) {
+          // A retired engine's package no longer exists to pin against: the
+          // reference builds its replacement (see retiredEngines above).
+          const replacement = resolveEngineId(reference.engine);
+          if (replacement === undefined
+              || typeof reference.package !== "string"
+              || typeof reference.digest !== "string"
+              || !digestPattern.test(reference.digest)) {
+            throw new ContractError("unapproved_package", "The recipe contains an unavailable package version.");
+          }
+          return replacement;
+        }
         const approved = typeof reference.engine === "string" ? approvedEngines.get(reference.engine) : undefined;
         // Package digests are provenance, not caller-supplied source: the
         // compiler image contains the only code a build can use. Re-pin a stale
