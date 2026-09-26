@@ -93,7 +93,12 @@ $(BUILD_DIR)stm32f37x_%.o: CCFLAGS += -Os
 # them: QEMU instruction counts +1% (Waveshaping) and +0.6% (Bass Drum) with
 # bit-identical output, against 0.73 and 0.90 worst-case load on the module;
 # together ~2 KB of flash. (Snare was rejected: +18% and different output.)
-$(BUILD_DIR)waveshaping_engine.o $(BUILD_DIR)bass_drum_engine.o: CCFLAGS += -Os
+# Wavetable joined them when those two alone left the stock palette 128 B short
+# of room for the calibration procedure: -Os is both ~700 B smaller and 1.7%
+# FEWER instructions per block, with bit-identical output. (Filtered Noise was
+# rejected: +13%. Speech: +4% in its formant mode.)
+$(BUILD_DIR)waveshaping_engine.o $(BUILD_DIR)bass_drum_engine.o \
+$(BUILD_DIR)wavetable_engine.o: CCFLAGS += -Os
 
 # The hosted builder generates engine_config.h with the recipe's engine registry
 # (PLAITS_ENGINE_MEMBERS, reached through voice.h) and its compile-time option
