@@ -81,9 +81,12 @@ verdict for an all-stereo stock recipe and reports it to the user as
 For a mono recipe the builder passes `PLAITS_STEREO_<X>=0` for every engine
 (`_stereo_disable_flags` in `alt_firmwares/plaits_lab_builder/container_server.py`),
 and `PLAITS_STEREO_ALL=0` is the local shorthand that emits the identical
-per-object flags. Measured at `611657d`: stock links at 228,484 of 229,376
-bytes (892 spare) and passes `validate_local_build.py`; experimental links
-all-stereo at 227,108 (2,268 spare).
+per-object flags. Measured at `2f2afee6`: stock links at 228,896 of 229,376
+bytes (480 spare) and passes `validate_local_build.py`; experimental links
+all-stereo at 227,200 (2,176 spare). Where flash goes speed-sensitive code: the
+makefile builds control glue at -Os, but anything the audio interrupt runs
+every block (`ui_poll.cc`, `leds.o`) stays -O2, funded by building Waveshaping
+and Bass Drum at -Os -- see the comments beside those makefile rules.
 
 So the two commands cover different ground on purpose — experimental proves a
 change still links with every stereo path compiled in, stock proves it links in
