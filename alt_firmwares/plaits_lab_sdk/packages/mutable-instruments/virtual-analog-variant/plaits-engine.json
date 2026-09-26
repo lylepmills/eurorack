@@ -21,7 +21,7 @@
     {
       "id": "harmonics",
       "label": "Interval",
-      "description": "Sets the detuned oscillator's interval: unison at noon, then fifth, octave, octave plus fifth and two octaves, up clockwise and down counterclockwise. Also sets the AUX sync ratio."
+      "description": "Detune interval: unison at noon, stepping by fifths and octaves to two octaves up or down. Also sets the AUX sync ratio."
     },
     {
       "id": "timbre",
@@ -31,12 +31,12 @@
     {
       "id": "morph",
       "label": "Detune to sync",
-      "description": "Turning below noon fades in the detuned oscillator; at noon only the primary sounds; turning above noon crossfades the primary into hard sync."
+      "description": "Below noon fades in the detuned oscillator; at noon only the primary sounds; above noon crossfades into hard sync."
     },
     {
       "id": "macro",
       "label": "Shape spread",
-      "description": "Moves the two oscillators' waveshapes apart around the TIMBRE setting, the primary half as far as the secondary; at noon both shapes match."
+      "description": "Spreads the two waveshapes around TIMBRE, the primary half as far as the secondary; at noon both match."
     }
   ],
   "outputs": {
