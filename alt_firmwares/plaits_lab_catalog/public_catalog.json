@@ -2875,7 +2875,7 @@
         "Mono: the adjacent wave, opposite map corner, or other crush endpoint. Stereo: the scan with a small rightward offset."
       ],
       "version": "1.0.0",
-      "digest": "sha256:464926146202f6f67375da59bfea0db8ec37d7a4e34779ba998c5085fb7a5b12",
+      "digest": "sha256:f6425e035c229248eb1b85958c3d0515cda227827526bfedef5371c0cd5079ca",
       "documentationDigest": "sha256:27075802027561171fee70f7919479264c86dd51e309dcec7cd1fe8c4aa606dd",
       "manual": {
         "controls": {
@@ -3038,9 +3038,14 @@
         "Mono: the primary with the detuned or hard-synced oscillator, as set by MORPH. Stereo: left channel, a point just below the primary/detuned mix.",
         "Mono: the primary against a hard-synced oscillator at the HARMONICS ratio, half and half. Stereo: right channel, a point just above the primary/detuned mix."
       ],
+      "artwork": {
+        "icon": "/model-icons/virtual-analog.png",
+        "kind": "official",
+        "tone": "green"
+      },
       "version": "1.0.0",
-      "digest": "sha256:7cb7996aabfd6ed3909ed769dab66e85be015c30c30c520a718fb4f47f5d68bc",
-      "documentationDigest": "sha256:7cec67466bb58b0cfa092c1a72ac90a2f2e149554a0def033383d282d1c46034",
+      "digest": "sha256:1ece2c67e9c6a876539559000f1253b563f2f8f0821c7ba58522b29647a5fddf",
+      "documentationDigest": "sha256:783d134419f4c7a01d56efcd4e30cabe761d218dc2fd4a9a8a67cd8f27abceab",
       "manual": {
         "controls": {
           "harmonics": "Detune interval: unison at noon, stepping by fifths and octaves to two octaves up or down. Also sets the AUX sync ratio.",
