@@ -1,0 +1,31 @@
+{
+  "group": 1,
+  "engines": [
+    "csaw",
+    "wavetable-chord",
+    "granular-cloud",
+    "chiptune",
+    "virtual-analog-variant",
+    "diatonic-chord",
+    "scale-stack",
+    "saw-swarm",
+    "modal-resonator",
+    "scanned",
+    "particle-noise",
+    "fold",
+    "ring-mod",
+    "dx7-bank-a",
+    "morph",
+    "helix",
+    "inharmonic-string",
+    "granular-formant",
+    "glisson",
+    "swarm",
+    "chords",
+    "string-machine",
+    "harmonic",
+    "phase-distortion"
+  ],
+  "sourceRevision": "2d4e56f9d3bb9591c28215212a46f45b791380c9",
+  "sourceDirty": false
+}

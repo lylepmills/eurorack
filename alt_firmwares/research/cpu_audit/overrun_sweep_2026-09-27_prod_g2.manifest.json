@@ -1,0 +1,28 @@
+{
+  "group": 2,
+  "engines": [
+    "saw-square",
+    "particle-burst",
+    "plucked",
+    "saw-comb",
+    "vowel",
+    "wave-scan",
+    "fluted",
+    "blown",
+    "bowed",
+    "brass",
+    "cymbal",
+    "dual-sync",
+    "analog-hi-hat",
+    "triple",
+    "wave-terrain",
+    "acid",
+    "natural-speech",
+    "struck-drum",
+    "two-op-fm",
+    "phase-weave",
+    "virtual-analog"
+  ],
+  "sourceRevision": "2d4e56f9d3bb9591c28215212a46f45b791380c9",
+  "sourceDirty": false
+}
