@@ -1014,7 +1014,38 @@ target.
 | September 26, 2026 (the same release plus Wavetable at -Os, so the stock palette with the calibration procedure fits again) | `ac311b47943c` | `rev-ac311b47943c` (staging only; superseded before production) |
 | September 27, 2026 (the same release plus a single out-of-line ClearBuffer, so the website's Braids preset fits again) | `eafb52569412` | `rev-eafb52569412` (staging only; superseded before production) |
 | September 27, 2026 (the same release plus the factory chord wave line as address constants, so palettes without Chords stop linking two unused 16,896 B wave banks) | `317dd282af0b` | `rev-317dd282af0b` |
-| September 27, 2026 (Wave Scan's phase as a uint32 accumulator: exact LFO-range rates, ~6% fewer instructions; Virtual Analog Variant carries the Virtual Analog symbol) | `4cd0b0a00f91` | `rev-4cd0b0a00f91` (staging; awaiting hardware audition) |
+| September 27, 2026 (Wave Scan's phase as a uint32 accumulator: exact LFO-range rates, ~6% fewer instructions; Virtual Analog Variant carries the Virtual Analog symbol) | `4cd0b0a00f91` | `rev-4cd0b0a00f91` |
+
+The September 27 Wave Scan phase release shipped at `rev-4cd0b0a00f91`. It
+carries two changes:
+- Wave Scan's phase is now a uint32 accumulator (`3ba118af`). In the module's
+  LFO range, rate error falls from up to 19.9 % to 0.28 %, and a 5-cent step no
+  longer jumps the rate by up to 42 %.
+- Virtual Analog Variant carries the Virtual Analog symbol (`4cd0b0a0`,
+  catalog metadata only, folded in from a parallel session).
+
+Checks before production:
+- A local build of the image reported `X-Plaits-Source-Revision:
+  4cd0b0a00f91`.
+- Paired builds of the website's own recipes, production `317dd282af0b`
+  against staging:
+  - stock-24: 228,388 B both (0 B)
+  - stock-24 with Speech swapped for Wave Scan: −48 B
+  - that swap with Linear TZFM on: +32 B
+  - Braids preset: 222,452 → 222,404 B
+- Sync In reference, measured inside the image: 204,580 / 221,684 B, a
+  17,104 B delta, unchanged.
+- `smoke:staging` passed, compiler-stamped (build
+  `55a96567e04a5a5d89f45ad3a65bc4631da169582954b0f6e22bfcec493a8920`).
+
+Lyle approved production on the same day. After the rollout settled,
+`/v1/health` reported the Worker, pool and `speech-encoder-v23` all at
+`4cd0b0a00f91`. Production canary build
+`a9a2a32ca21f0247085e0598686c19937de2b229e1ac19a4cf6bccffc844f5f9` succeeded,
+compiler-stamped (4,336,556-byte WAV, SHA-256
+`32fb27cd525b50527456b7b47332a7b778e2d1680541a1e272777c1280928d09`). The
+website pin and flash re-anchor landed as rubato-audio `5005fcf2`.
+`rev-317dd282af0b` remains the immediate rollback image.
 
 The September 27 CPU-overhead + VA Variant release shipped at
 `rev-317dd282af0b` after three staging-only cuts, each withdrawn for a flash
