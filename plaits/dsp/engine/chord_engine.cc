@@ -117,8 +117,10 @@ inline const int16_t* const* ChordWaveLine() {
   return kChordWaveLine;
 }
 #else
+// Address constants, not FactoryIntegratedWavetable() calls: see
+// PLAITS_FACTORY_WAVE for why a call here links two banks into every build.
 #define WAVE(bank, row, column) \
-  FactoryIntegratedWavetable(bank, row * 8 + column)
+  PLAITS_FACTORY_WAVE(bank, row * 8 + column)
 
 const int16_t* const kFactoryChordWaveLine[] = {
   WAVE(2, 6, 1), WAVE(2, 6, 6), WAVE(2, 6, 4),

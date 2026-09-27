@@ -46,6 +46,34 @@ inline const int16_t* FactoryIntegratedWavetable(int wave) {
   return FactoryIntegratedWavetable(wave / 64, wave & 63);
 }
 
+// The same lookup spelled as an ADDRESS CONSTANT, for namespace-scope tables.
+// A table initialized by calling the functions above is DYNAMICALLY
+// initialized: the compiler emits a static constructor into .init_array, which
+// the linker script KEEPs, so the table and every bank it names link into
+// every build -- whether or not its engine is placed. That silently re-linked
+// two 16,896 B banks into every palette without Chords. An address constant
+// is initialized statically in .rodata, which --gc-sections reclaims together
+// with the banks once nothing reaches the table. `bank` must be a literal 0-2.
+#if PLAITS_WAVETABLE_FACTORY_MASK & 0x01
+#define PLAITS_FACTORY_WAVE_0(frame) \
+  (wav_integrated_waves_1 + (frame) * kIntegratedWavetableStride)
+#else
+#define PLAITS_FACTORY_WAVE_0(frame) NULL
+#endif
+#if PLAITS_WAVETABLE_FACTORY_MASK & 0x02
+#define PLAITS_FACTORY_WAVE_1(frame) \
+  (wav_integrated_waves_2 + (frame) * kIntegratedWavetableStride)
+#else
+#define PLAITS_FACTORY_WAVE_1(frame) NULL
+#endif
+#if PLAITS_WAVETABLE_FACTORY_MASK & 0x04
+#define PLAITS_FACTORY_WAVE_2(frame) \
+  (wav_integrated_waves_3 + (frame) * kIntegratedWavetableStride)
+#else
+#define PLAITS_FACTORY_WAVE_2(frame) NULL
+#endif
+#define PLAITS_FACTORY_WAVE(bank, frame) PLAITS_FACTORY_WAVE_##bank(frame)
+
 }  // namespace plaits
 
 #endif  // PLAITS_DSP_INTEGRATED_WAVETABLE_H_
