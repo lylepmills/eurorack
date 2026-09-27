@@ -9,6 +9,7 @@ import json
 import os
 import re
 import shutil
+import signal
 import struct
 import subprocess
 import sys
@@ -1459,6 +1460,14 @@ class Handler(BaseHTTPRequestHandler):
 def main() -> None:
     BUILD_ROOT.mkdir(parents=True, exist_ok=True)
     server = ThreadingHTTPServer(("0.0.0.0", 8080), Handler)
+    # This process is the container's PID 1, which the kernel exempts from a
+    # signal's default action: without a handler SIGTERM is simply ignored, so
+    # the Worker's sleepAfter stop() never took effect. shutdown() blocks until
+    # serve_forever() returns, so it has to run off the serving thread.
+    signal.signal(
+        signal.SIGTERM,
+        lambda _signum, _frame: threading.Thread(target=server.shutdown, daemon=True).start(),
+    )
     server.serve_forever()
 
 

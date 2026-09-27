@@ -58,6 +58,19 @@ export class FirmwareBuilder extends Container<Env> {
   requiredPorts = [8080];
   sleepAfter = "15m";
   enableInternet = false;
+
+  // The library's default stop() only sends SIGTERM, and images up to and
+  // including rev-4cd0b0a00f91 run container_server.py as PID 1 with no
+  // SIGTERM handler, so the signal was ignored: the named Speech singleton
+  // never slept and held a standard-4 instance (and one of production's two
+  // slots) around the clock, billed for its full 12 GiB. The library only
+  // calls this once no request is in flight, and every Speech result is cached
+  // in R2, so a SIGKILL here loses nothing. Kept as a backstop now that the
+  // server handles SIGTERM itself.
+  override async onActivityExpired(): Promise<void> {
+    if (!this.ctx.container?.running) return;
+    await this.destroy();
+  }
 }
 
 export class BuildJob extends DurableObject<Env> {
