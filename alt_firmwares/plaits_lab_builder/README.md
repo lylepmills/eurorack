@@ -1015,6 +1015,23 @@ target.
 | September 27, 2026 (the same release plus a single out-of-line ClearBuffer, so the website's Braids preset fits again) | `eafb52569412` | `rev-eafb52569412` (staging only; superseded before production) |
 | September 27, 2026 (the same release plus the factory chord wave line as address constants, so palettes without Chords stop linking two unused 16,896 B wave banks) | `317dd282af0b` | `rev-317dd282af0b` |
 
+The September 27 CPU-overhead + VA Variant release shipped at
+`rev-317dd282af0b` after three staging-only cuts, each withdrawn for a flash
+regression that paired production/staging builds of the website's own presets
+caught: `e30f9b721b14` put stock-24 with the calibration procedure 128 B over
+the region (Wavetable joined the -Os list), `ac311b47943c` put the Braids preset
+144 B over (the strike clear became one out-of-line copy), and `eafb52569412`
+predated the wave-bank gc fix. Hardware audition of the staged 24-engine
+recipe (VA Variant, the -Os engines, Chords, Fold, Saw Swarm, Scale Stack and
+the strike-clear physical models) passed. After the production rollout
+settled, one `/v1/health` probe reported the Worker, pool and
+`speech-encoder-v23` all at `317dd282af0b`, so the singleton did not need
+rotating. Production canary build
+`eca98b81afe6e0efc71705eadeb745488d157f976f1806532a493e1310601db1` passed,
+compiler-stamped. VA Dual and VA Crossfade stay approved; the website offers
+VA Variant in their place from this release, and a later builder release
+removes them.
+
 The September 15 Circuit Zaps Fast FM release passed both the autonomous
 group-15 diagnostic and a product-firmware audition. The exact staged product
 build was
