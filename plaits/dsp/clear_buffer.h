@@ -21,7 +21,12 @@ namespace plaits {
 // may_alias: the buffer is later read through its own element type.
 typedef uint32_t __attribute__((__may_alias__)) ClearWord;
 
-inline void ClearBuffer(void* buffer, size_t bytes) {
+// noinline: at -O2 -funroll-loops every call site used to get its own unrolled
+// copy (ten sites across the physical models, ~12 KB on the Braids preset,
+// which then overflowed flash). As an inline function it still has vague
+// linkage, so the linker keeps exactly one out-of-line copy. A strike or engine
+// switch pays one call, which is nothing next to the clear itself.
+inline __attribute__((noinline)) void ClearBuffer(void* buffer, size_t bytes) {
   uint8_t* p = static_cast<uint8_t*>(buffer);
   while (bytes && (reinterpret_cast<uintptr_t>(p) & 3)) {
     *p++ = 0;
