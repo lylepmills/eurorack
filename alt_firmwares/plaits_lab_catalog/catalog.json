@@ -3108,8 +3108,8 @@
       },
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 0.8,
-        "auxGain": 0.8
+        "outGain": 0.337,
+        "auxGain": 0.337
       }
     },
     {
