@@ -2217,6 +2217,24 @@ inline float ReadWaveStep(const uint8_t* wave, int32_t index) {
   return static_cast<float>(wave[index]) * (1.0f / 128.0f) - 1.0f;
 }
 
+// The sample index and interpolation fraction of a uint32 phase: the top 7
+// bits address the 128-sample wave, the next 24 are exact in a float.
+inline int32_t PhaseIndex(uint32_t phase) {
+  return static_cast<int32_t>(phase >> 25);
+}
+
+inline float PhaseFraction(uint32_t phase) {
+  return static_cast<float>((phase >> 1) & 0xffffff) * (1.0f / 16777216.0f);
+}
+
+// A per-sub-sample increment in cycles, as a signed step of the uint32 phase.
+// |increment| <= kWaveScanMaxIncrement = 2^-4, so it fits an int32 with room;
+// a negative (through-zero) step wraps the phase backwards by overflow.
+inline uint32_t PhaseIncrement(float increment) {
+  return static_cast<uint32_t>(
+      static_cast<int32_t>(increment * kWaveScanPhaseScale));
+}
+
 // stmlib::Crossfade over a pair of waves at one phase, and the Mix that takes
 // two already-crossfaded values. Braids' balances are uint16 over 65536 and
 // its Mix spells the complement `65535 - balance`, so its "full" crossfade is
@@ -2280,7 +2298,7 @@ void WaveScanEngine::Init(BufferAllocator* allocator) {
 }
 
 void WaveScanEngine::Reset() {
-  phase_ = 0.0f;
+  phase_ = 0;
   frequency_ = 0.01f;
   // Braids' previous_parameter_ and smoothed_parameter_ are NOT cleared by
   // DigitalOscillator::Init() -- they are zero because the module's oscillator
@@ -2331,7 +2349,7 @@ void WaveScanEngine::Render(
   // The oscillator phase and the decimator's write position live in locals
   // for the block: as members, every store to out, aux or the decimator rings
   // could alias them, so each sub-sample reloaded and re-stored both.
-  float phase = phase_;
+  uint32_t phase = phase_;
   uint32_t write = decimator_write_;
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
   const float* frequency_offset = parameters.frequency_offset;
@@ -2375,18 +2393,13 @@ void WaveScanEngine::Render(
         CONSTRAIN(step, -kWaveScanMaxIncrement, kWaveScanMaxIncrement);
       }
 #endif
+      const uint32_t phase_step = PhaseIncrement(step);
       float main_accumulator = 0.0f;
       float side_accumulator = 0.0f;
       for (int j = 0; j < 4; ++j) {
-        phase += step;
-        if (phase >= 1.0f) {
-          phase -= 1.0f;
-        } else if (phase < 0.0f) {
-          phase += 1.0f;
-        }
-        const float scaled = phase * 128.0f;
-        int32_t index = static_cast<int32_t>(scaled);
-        const float fraction = scaled - static_cast<float>(index);
+        phase += phase_step;
+        const int32_t index = PhaseIndex(phase);
+        const float fraction = PhaseFraction(phase);
 
         const float a = ReadWave(wave_a, index, fraction);
         const float b = ReadWave(wave_b, index, fraction);
@@ -2441,18 +2454,13 @@ void WaveScanEngine::Render(
         CONSTRAIN(step, -kWaveScanMaxIncrement, kWaveScanMaxIncrement);
       }
 #endif
+      const uint32_t phase_step = PhaseIncrement(step);
       float main_accumulator = 0.0f;
       float side_accumulator = 0.0f;
       for (int j = 0; j < 4; ++j) {
-        phase += step;
-        if (phase >= 1.0f) {
-          phase -= 1.0f;
-        } else if (phase < 0.0f) {
-          phase += 1.0f;
-        }
-        const float scaled = phase * 128.0f;
-        int32_t index = static_cast<int32_t>(scaled);
-        const float fraction = scaled - static_cast<float>(index);
+        phase += phase_step;
+        const int32_t index = PhaseIndex(phase);
+        const float fraction = PhaseFraction(phase);
 
         const float r00 = ReadWave(wave_00, index, fraction);
         const float r01 = ReadWave(wave_01, index, fraction);
@@ -2530,12 +2538,12 @@ void WaveScanEngine::Render(
         CONSTRAIN(step, -kWaveScanMaxIncrement, kWaveScanMaxIncrement);
       }
 #endif
+      const uint32_t phase_step = PhaseIncrement(step);
       float main_accumulator = 0.0f;
       float side_accumulator = 0.0f;
       for (int j = 0; j < 4; ++j) {
-        const float scaled = phase * 128.0f;
-        int32_t index = static_cast<int32_t>(scaled);
-        const float fraction = scaled - static_cast<float>(index);
+        const int32_t index = PhaseIndex(phase);
+        const float fraction = PhaseFraction(phase);
         const int32_t index_64 = index & ~1;
         const int32_t index_16 = index & ~7;
 
@@ -2578,12 +2586,7 @@ void WaveScanEngine::Render(
 
         // Braids advances the phase and the de-zipper AFTER the read
         // (:1656-1666), so the block opens on the previous block's wave.
-        phase += step;
-        if (phase >= 1.0f) {
-          phase -= 1.0f;
-        } else if (phase < 0.0f) {
-          phase += 1.0f;
-        }
+        phase += phase_step;
         rough_xfade += rough_increment;
       }
       out[i] = Decimate(decimator_main_, write);

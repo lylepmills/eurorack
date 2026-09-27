@@ -261,6 +261,16 @@ const uint32_t kWaveScanDecimatorMask = 31;
 // to a quarter of Plaits' 0.25-cycle-per-sample ceiling.
 const float kWaveScanMaxIncrement = 0.0625f;
 
+// The phase is Braids' own representation: a uint32 accumulator over one cycle,
+// wrapping by overflow, with the top 7 bits selecting the sample and the next
+// 24 the interpolation. A float phase in [0, 1) rounds every step to the
+// spacing of floats near the phase value, and at 4x oversampling each step
+// is a quarter of Plaits' own. As an LFO that made the achievable rates
+// coarse: at 0.05 Hz a one-cent change could move the rate by up to 11.8%,
+// and the period ran up to 5.9% from the request. In 32-bit fixed point the
+// same step is ~1118 counts, so the rate is exact to about 0.1%.
+const float kWaveScanPhaseScale = 4294967296.0f;
+
 // How far the two stereo sides pull apart on the blend OUT and AUX share.
 // Small on purpose: one step of a wavetable bank is a whole different
 // waveform, so a wide split would make the two sides different sounds rather
@@ -283,7 +293,7 @@ class WaveScanEngine : public Engine {
   virtual bool linear_tzfm_capable() const { return true; }
   virtual bool stereo_capable() const { return PLAITS_STEREO_WAVE_SCAN; }
 #if PLAITS_BUILD_ENABLE_SYNC_INPUT
-  virtual void HardSync() { phase_ = 0.0f; }
+  virtual void HardSync() { phase_ = 0; }
 #endif
 
  private:
@@ -297,7 +307,7 @@ class WaveScanEngine : public Engine {
     ++*write;
   }
 
-  float phase_;
+  uint32_t phase_;
   float frequency_;
 
   // Braids' previous_parameter_[1], the hysteresis-held bank knob.
