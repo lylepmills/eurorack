@@ -1014,6 +1014,7 @@ target.
 | September 26, 2026 (the same release plus Wavetable at -Os, so the stock palette with the calibration procedure fits again) | `ac311b47943c` | `rev-ac311b47943c` (staging only; superseded before production) |
 | September 27, 2026 (the same release plus a single out-of-line ClearBuffer, so the website's Braids preset fits again) | `eafb52569412` | `rev-eafb52569412` (staging only; superseded before production) |
 | September 27, 2026 (the same release plus the factory chord wave line as address constants, so palettes without Chords stop linking two unused 16,896 B wave banks) | `317dd282af0b` | `rev-317dd282af0b` |
+| September 27, 2026 (Wave Scan's phase as a uint32 accumulator: exact LFO-range rates, ~6% fewer instructions; Virtual Analog Variant carries the Virtual Analog symbol) | `4cd0b0a00f91` | `rev-4cd0b0a00f91` (staging; awaiting hardware audition) |
 
 The September 27 CPU-overhead + VA Variant release shipped at
 `rev-317dd282af0b` after three staging-only cuts, each withdrawn for a flash
