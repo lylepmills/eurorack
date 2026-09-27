@@ -1011,7 +1011,8 @@ target.
 | September 19, 2026 (Harmonic Oscillator TWIST fix; four DSP fixes upstreamed from Palette: brass lip travel, string excitation, speech word banks, chiptune envelope; target-gated TZFM work inert for Plaits) | `29803d1c2b28` | `rev-29803d1c2b28` |
 | September 21, 2026 (catalog rebalance: 57 non-stock engines' out/aux gains moved to the stock median K-weighted loudness; the 24 stock models untouched; no firmware source change) | `43f87fccad5a` | `rev-43f87fccad5a` |
 | September 26, 2026 (CPU-overrun fixes: strike clears, Saw Swarm, Scale Stack / Diatonic Chord, Fold, Wave Scan, output stage, UI at -O2 funded by Waveshaping and Bass Drum at -Os; VA Variant added to the catalog; retiredEngines map with Dual and Crossfade still approved) | `e30f9b721b14` | `rev-e30f9b721b14` (staging only; superseded before production) |
-| September 26, 2026 (the same release plus Wavetable at -Os, so the stock palette with the calibration procedure fits again) | `ac311b47943c` | `rev-ac311b47943c` |
+| September 26, 2026 (the same release plus Wavetable at -Os, so the stock palette with the calibration procedure fits again) | `ac311b47943c` | `rev-ac311b47943c` (staging only; superseded before production) |
+| September 27, 2026 (the same release plus a single out-of-line ClearBuffer, so the website's Braids preset fits again) | `eafb52569412` | `rev-eafb52569412` |
 
 The September 15 Circuit Zaps Fast FM release passed both the autonomous
 group-15 diagnostic and a product-firmware audition. The exact staged product
