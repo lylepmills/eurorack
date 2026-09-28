@@ -304,6 +304,44 @@ async function proxySpeechAudio(
   });
 }
 
+// The Speech singleton sleeps after 15 idle minutes, and the first encode on a
+// cold instance measured ~34 s against ~13 s warm (staging, 2026-09-28). The
+// ~20 s gap is container-wide: once any Kokoro encode has run, a Piper voice's
+// first encode is within a second of its second. So the editor calls this as
+// soon as someone opens it, and one fixed Kokoro encode pays the cold cost
+// while they are still typing.
+//
+// Sent straight to the container, NOT through proxySpeechJson: the R2 cache
+// would answer every warm after the first without waking anything. The
+// container's own on-disk job cache makes repeats on an already-warm instance
+// free.
+const SPEECH_WARM_REQUEST = JSON.stringify({
+  format: "rubato.plaits-lpc-word-bank/v1",
+  name: "warm",
+  sourceText: "warm",
+  language: "en-US",
+  entries: [{ word: "warm", spokenAs: "warm" }],
+  synthesis: { voice: "af_heart", pitchContour: "flat-to-natural", referencePitchHz: 100 },
+});
+
+async function warmSpeech(request: Request, env: Env): Promise<Response> {
+  // Separate key from speechRateLimit, so opening the editor never spends one
+  // of the user's real encodes. Best effort: a limited warm just does nothing.
+  const clientIp = request.headers.get("CF-Connecting-IP") ?? "local-development";
+  const { success } = await env.BUILD_RATE_LIMITER.limit({ key: `speech-warm:${clientIp}` });
+  if (!success) return speechResponse(null, { status: 204 });
+  const container = getContainer(env.FIRMWARE_BUILDER, SPEECH_ENCODER_CONTAINER);
+  const response = await container.fetch("http://container/speech/encode", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: SPEECH_WARM_REQUEST,
+  });
+  // Drain the body: the Container library only releases its in-flight count
+  // (and so its sleepAfter timer) once a proxied body has been read to the end.
+  await response.arrayBuffer();
+  return speechResponse(null, { status: response.ok ? 204 : 502 });
+}
+
 function artifactSummary(artifact: R2Object): NonNullable<JobState["artifact"]> {
   return {
     bytes: artifact.size,
@@ -897,6 +935,8 @@ export default {
           },
           buildContract: env.PLAITS_BUILD_CONTRACT,
         });
+      } else if (request.method === "POST" && url.pathname === "/v1/speech/warm") {
+        response = await warmSpeech(request, env);
       } else if (request.method === "POST" && url.pathname === "/v1/speech/segment") {
         response = await proxySpeechJson(request, env, "/speech/segment", {
           cacheNamespace: "segments-v1",

@@ -2416,6 +2416,9 @@ test("every speech route records a decision about its Natural Speech variant", a
     // Splits source text into words. Produces no frames and reads no format,
     // so both engines use it unchanged.
     "/v1/speech/segment": "shared",
+    // Wakes the one Speech container both engines share and returns no bank.
+    // The cold cost it pays is container-wide, not engine-specific.
+    "/v1/speech/warm": "shared",
   };
 
   const bases = [...routes].filter((route) => !route.endsWith("-natural"));
