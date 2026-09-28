@@ -638,6 +638,36 @@ def parse_size(elf_path: Path) -> tuple[int, int, int]:
     return int(fields[0]), int(fields[1]), int(fields[2])
 
 
+def parse_ram_bytes(elf_path: Path) -> int:
+    """Bytes of every section linked at an SRAM address.
+
+    That is .data, .bss and the heap/stack section: what the Berkeley `size`
+    total reports as "bss" plus .data. It comes from the section list rather
+    than the Berkeley columns because `size` files any code placed in .data
+    (a function given section(".data.*") to run from SRAM) under text and then
+    reports data as 0, which would hide that RAM from the check.
+    """
+    result = subprocess.run(
+        [_arm_tool("arm-none-eabi-size"), "-A", str(elf_path)],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    total = 0
+    for line in result.stdout.splitlines():
+        fields = line.split()
+        if len(fields) != 3 or not fields[0].startswith("."):
+            continue
+        try:
+            size, address = int(fields[1]), int(fields[2])
+        except ValueError:
+            continue
+        if 0x20000000 <= address < 0x20000000 + RAM_BUDGET_BYTES:
+            total += size
+    return total
+
+
 # Where the bootloader starts writing, and so where the application image
 # begins (stmlib/makefile.inc BASE_ADDRESS, plaits/bootloader kStartAddress).
 APPLICATION_BASE_ADDRESS = 0x08008000
@@ -751,8 +781,13 @@ def validate_linked_firmware(elf_path: Path, config_text: str) -> dict[str, int]
             "Remove an engine, disable per-engine stereo, or drop a chord table, "
             "then build again.",
         )
-    if bss_bytes + RAM_STACK_RESERVE_BYTES > RAM_BUDGET_BYTES:
-        over = bss_bytes + RAM_STACK_RESERVE_BYTES - RAM_BUDGET_BYTES
+    # .data lives in RAM too (copied there at startup). It is only tens of
+    # bytes today, but a bss-only check would pass a palette whose stack ran
+    # into its data as soon as anything larger landed there -- as an SRAM-
+    # resident code experiment on 2026-09-27 briefly did (816 B).
+    ram_bytes = parse_ram_bytes(elf_path)
+    if ram_bytes + RAM_STACK_RESERVE_BYTES > RAM_BUDGET_BYTES:
+        over = ram_bytes + RAM_STACK_RESERVE_BYTES - RAM_BUDGET_BYTES
         raise BuildError(
             "ram_budget_exceeded",
             f"This palette needs more RAM than Plaits has by {over} bytes. "
@@ -764,6 +799,7 @@ def validate_linked_firmware(elf_path: Path, config_text: str) -> dict[str, int]
         "textBytes": text_bytes,
         "dataBytes": data_bytes,
         "bssBytes": bss_bytes,
+        "ramBytes": ram_bytes,
         "flashBytes": flash_bytes,
         "userDataRegions": region_count,
         "sharedBufferAddress": shared_buffer_address,

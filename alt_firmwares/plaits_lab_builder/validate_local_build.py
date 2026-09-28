@@ -34,7 +34,7 @@ def main() -> int:
     print(
         "Safety checks passed: "
         f"flash {result['flashBytes']} bytes, "
-        f"RAM {result['bssBytes']} bytes + 1024-byte stack reserve, "
+        f"RAM {result['ramBytes']} bytes (data + bss) + 1024-byte stack reserve, "
         f"rewritable user-data regions {result['userDataRegions']}."
     )
     return 0

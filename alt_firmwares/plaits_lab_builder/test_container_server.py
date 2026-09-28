@@ -24,6 +24,7 @@ from container_server import (
     _natural_speech_bank_preview_job_key,
     _speech_job_key,
     _validate_saved_bank_preview_request,
+    parse_ram_bytes,
     _validate_speech_request,
     _write_saved_plan,
     encode_natural_speech_recording,
@@ -89,10 +90,11 @@ class LinkedFirmwareSafetyTest(unittest.TestCase):
 
     @patch("container_server._linked_flash_span", return_value=1200)
     @patch("container_server.parse_size", return_value=(1000, 100, 200))
+    @patch("container_server.parse_ram_bytes", return_value=300)
     @patch("container_server.check_elf")
     @patch("container_server._check_shared_buffer_alignment", return_value=0x20000c98)
     def test_safe_build_checks_user_data_layout(
-        self, alignment, check, _size, _span
+        self, alignment, check, _ram, _size, _span
     ) -> None:
         config = "#define PLAITS_USER_DATA_REGION_COUNT 2\n"
         with tempfile.TemporaryDirectory() as directory:
@@ -113,17 +115,32 @@ class LinkedFirmwareSafetyTest(unittest.TestCase):
         self.assertEqual(raised.exception.code, "flash_budget_exceeded")
 
     @patch("container_server._linked_flash_span", return_value=1000)
-    @patch("container_server.parse_size")
-    def test_ram_overflow_includes_the_stack_reserve(self, size, _span) -> None:
-        size.return_value = (
-            1000,
-            0,
-            RAM_BUDGET_BYTES - RAM_STACK_RESERVE_BYTES + 1,
-        )
+    @patch("container_server.parse_size", return_value=(1000, 0, 0))
+    @patch("container_server.parse_ram_bytes",
+           return_value=RAM_BUDGET_BYTES - RAM_STACK_RESERVE_BYTES + 1)
+    def test_ram_overflow_includes_the_stack_reserve(self, _ram, _size, _span) -> None:
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaises(BuildError) as raised:
                 validate_linked_firmware(self.elf(directory), "")
         self.assertEqual(raised.exception.code, "ram_budget_exceeded")
+
+    @patch("container_server.subprocess.run")
+    def test_ram_bytes_count_every_sram_section(self, run) -> None:
+        # .data is copied into RAM at startup. Code placed there to run from
+        # SRAM makes it large, and the Berkeley `size` columns then file it
+        # under text with data 0, so RAM comes from the section list:
+        # everything linked at an SRAM address.
+        run.return_value.stdout = (
+            "plaits.elf  :\nsection  size  addr\n"
+            ".isr_vector  392  134250496\n"
+            ".text  120000  134250888\n"
+            f".data  864  {0x20000000}\n"
+            f".bss  21344  {0x20000000 + 864}\n"
+            f"._user_heap_stack  1024  {0x20000000 + 864 + 21344}\n"
+            ".ARM.attributes  48  0\n"
+            "Total  143672\n")
+        self.assertEqual(parse_ram_bytes(Path("plaits.elf")), 864 + 21344 + 1024)
+        self.assertEqual(run.call_args.args[0][1:], ["-A", "plaits.elf"])
 
     @patch("container_server.check_elf", side_effect=ValueError("shared page"))
     def test_unsafe_user_data_layout_fails_closed(self, _check) -> None:
@@ -171,9 +188,11 @@ class SharedBufferLayoutTest(unittest.TestCase):
 
     @patch("container_server._linked_flash_span", return_value=1000)
     @patch("container_server.parse_size", return_value=(1000, 0, 20000))
+    @patch("container_server.parse_ram_bytes", return_value=20000)
     @patch("container_server._check_shared_buffer_alignment",
            side_effect=BuildError("unsafe_ram_layout", "misaligned buffer"))
-    def test_gate_applies_even_without_custom_resources(self, alignment, _size, _span):
+    def test_gate_applies_even_without_custom_resources(
+            self, alignment, _ram, _size, _span):
         with tempfile.TemporaryDirectory() as directory:
             elf = Path(directory) / "plaits.elf"
             elf.write_bytes(b"ELF")
