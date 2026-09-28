@@ -318,9 +318,9 @@ async function proxySpeechAudio(
 const SPEECH_WARM_REQUEST = JSON.stringify({
   format: "rubato.plaits-lpc-word-bank/v1",
   name: "warm",
-  sourceText: "warm",
+  sourceText: "warm up now",
   language: "en-US",
-  entries: [{ word: "warm", spokenAs: "warm" }],
+  entries: ["warm", "up", "now"].map((word) => ({ word, spokenAs: word })),
   synthesis: { voice: "af_heart", pitchContour: "flat-to-natural", referencePitchHz: 100 },
 });
 
