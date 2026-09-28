@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import json
 import re
+import struct
 import unittest
 from itertools import product
 from pathlib import Path
@@ -23,6 +24,10 @@ from generate_engine_config import (
 
 
 FIXTURES = Path(__file__).parent
+
+
+def float32(value: float) -> float:
+    return struct.unpack("<f", struct.pack("<f", value))[0]
 
 
 class GenerateEngineConfigTest(unittest.TestCase):
@@ -1066,6 +1071,25 @@ class GenerateEngineConfigTest(unittest.TestCase):
         registrations = config.split("#define PLAITS_REGISTER_ENGINES", 1)[1]
         self.assertLess(registrations.index("&six_op_engine_"), registrations.index("&virtual_analog_engine_"))
         self.assertLess(registrations.index("&virtual_analog_engine_"), registrations.index("&bass_drum_engine_"))
+
+    def test_registration_gains_keep_the_catalog_value(self) -> None:
+        # The gains used to be written with one decimal, so the 2026-09-20
+        # loudness rebalance's three-decimal values reached firmware up to
+        # 1.3 dB off while the previews and Palette used the exact ones.
+        base = self.load("default_recipe.json")
+        for engine_id, engine in CATALOG.items():
+            with self.subTest(engine=engine_id):
+                recipe = json.loads(json.dumps(base))
+                recipe["slots"][0] = engine_id
+                config = render_config(validate_recipe(recipe))
+                match = re.search(
+                    r"RegisterInstance\(&" + re.escape(engine.member)
+                    + r", \w+, ([-0-9.e]+)f, ([-0-9.e]+)f\)",
+                    config,
+                )
+                self.assertIsNotNone(match)
+                self.assertEqual(float32(float(match.group(1))), float32(engine.out_gain))
+                self.assertEqual(float32(float(match.group(2))), float32(engine.aux_gain))
 
     def test_all_virtual_analog_variants_can_coexist(self) -> None:
         recipe = self.load("default_recipe.json")

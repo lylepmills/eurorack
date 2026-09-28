@@ -1999,10 +1999,6 @@ def validate_recipe(value: Any) -> BuildRecipe:
     )
 
 
-def cpp_float(value: float) -> str:
-    return f"{value:.1f}f"
-
-
 def cpp_precise_float(value: float) -> str:
     literal = f"{float(value):.9g}"
     if "." not in literal and "e" not in literal:
@@ -2099,8 +2095,12 @@ def render_config(recipe: BuildRecipe) -> str:
         "(registry).RegisterInstance(&{member}, {enveloped}, {out_gain}, {aux_gain});".format(
             member=item.member,
             enveloped=cpp_bool(item.already_enveloped),
-            out_gain=cpp_float(item.out_gain),
-            aux_gain=cpp_float(item.aux_gain),
+            # Full precision: the catalog's gains are measured values (the
+            # 2026-09-20 loudness rebalance set them to three decimals), and a
+            # one-decimal literal shipped them up to 1.3 dB off in firmware
+            # while the previews and Palette used the exact value.
+            out_gain=cpp_precise_float(item.out_gain),
+            aux_gain=cpp_precise_float(item.aux_gain),
         )
         for item in selected
     )
