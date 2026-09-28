@@ -336,7 +336,9 @@ Two rollout notes worth keeping:
 - **`GET /v1/health` COSTS A PRODUCTION CONTAINER SLOT — never poll it in a
   loop.** The fresh uniquely-named DO that makes the probe trustworthy is a
   real container start, and production runs `max_instances: 2` with
-  `speech-encoder-vN` holding one of them permanently. So health probes
+  `speech-encoder-vN` holding one of them while it is awake (since 76ff9b64
+  it sleeps after 15 min idle, but Speech traffic and every health probe wake
+  it). So health probes
   compete with user builds for the single remaining slot. Polling it during
   the 2026-09-02 Acid rollout exhausted capacity and put real builds into
   `compiler_retry` with "Maximum number of running container instances
@@ -355,6 +357,12 @@ Two rollout notes worth keeping:
   pool advances. The 32-word production rollout caught this safely; the early
   `speech-encoder-v6` probe still enforced 16 words, so production rotated to
   `speech-encoder-v7` only after the new image had `starting == 0`.
+- **Sleeping does not move the singleton to a new image.** Since 76ff9b64 the
+  singleton is destroyed after 15 min idle, but its instance keeps the image it
+  first started on: at `rev-797849cf613d` both environments' `speech-encoder-v23`
+  showed `inactive` in `containers instances` and still answered
+  `/v1/health` from `4cd0b0a00f91` after the pool had moved. Rotate after every
+  image rollout, as a separate Worker-only deploy once `starting == 0`.
 
 The service is split across two isolation layers:
 
@@ -869,7 +877,7 @@ revision before building — a tag that disagrees with the source inside it is
 the failure the `development` sentinel exists to catch, caught earlier.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-5f0e897e3de6` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-797849cf613d` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a new
 image, use `wrangler containers info <application-id>` and wait until
@@ -1015,7 +1023,49 @@ target.
 | September 27, 2026 (the same release plus a single out-of-line ClearBuffer, so the website's Braids preset fits again) | `eafb52569412` | `rev-eafb52569412` (staging only; superseded before production) |
 | September 27, 2026 (the same release plus the factory chord wave line as address constants, so palettes without Chords stop linking two unused 16,896 B wave banks) | `317dd282af0b` | `rev-317dd282af0b` |
 | September 27, 2026 (Wave Scan's phase as a uint32 accumulator: exact LFO-range rates, ~6% fewer instructions; Virtual Analog Variant carries the Virtual Analog symbol) | `4cd0b0a00f91` | `rev-4cd0b0a00f91` |
-| September 28, 2026 (Virtual Analog Variant at the stock median loudness; catalog gains written to firmware at full precision, moving 58 rebalanced engines to their catalog level; idle containers sleep; Speech warm-up route) | `797849cf613d` | `rev-797849cf613d` (staging; awaiting hardware audition) |
+| September 28, 2026 (Virtual Analog Variant at the stock median loudness; catalog gains written to firmware at full precision, moving 58 rebalanced engines to their catalog level; idle containers sleep; Speech warm-up route) | `797849cf613d` | `rev-797849cf613d` |
+
+The September 28 release shipped at `rev-797849cf613d`. It carries:
+- Virtual Analog Variant's out/aux gain, 0.8 -> 0.337 (`72d73c1f`). It joined
+  after the 2026-09-20 rebalance and played 7.5 dB above the engines it
+  replaces; 0.337 puts it at their measured K-weighted loudness.
+- Catalog gains written to firmware at full precision (`797849cf`).
+  `cpp_float` had rounded them to one decimal since the first builder
+  checkpoint, so after the rebalance 58 engines ran -1.34 to +0.92 dB off the
+  catalog (median 0.21 dB) while the previews and Palette used the exact value.
+  Stock gains keep their one-decimal literals: stock-24's generated config is
+  byte-identical.
+- The idle-container sleep (`76ff9b64`, SIGTERM half) and the Speech warm-up
+  route (`51781f4f`, `77e5aded`), which were already live as Worker-only deploys.
+
+Checks before production:
+- A local build of the image reported `sourceRevision 797849cf613d` and exited
+  0 in 1 s on `docker stop -t 8` (the previous image hit the timeout, 137).
+- Paired builds of the website's own recipes, production `4cd0b0a00f91`
+  against staging: stock-24 228,388 B both (0 B); stock-24 with Speech swapped
+  for VA Variant +16 B (the same with Linear TZFM +16 B); Braids preset
+  222,404 -> 222,548 B; Experimental preset 228,340 -> 228,404 B.
+- Sync In reference, measured inside the image: 204,580 / 221,684 B, unchanged.
+- `smoke:staging` passed, compiler-stamped (build
+  `67580bfdc0f7bf02630a75c49f5375af423a851a2bbf311f828d6852449dbdb6`), and
+  `POST /v1/speech/warm` returned 204.
+- A staged audition build (`d8328698eda8...`: four stock references, VA
+  Variant, Dual, Crossfade and the 17 engines the precision fix moved most)
+  went to Lyle for the hardware check; he approved production.
+
+Production went in two deploys: the image under `speech-encoder-v23`, then,
+once `/v1/health` reported `poolMatches: true` with `starting == 0`, the
+`speech-encoder-v24` rotation (the v23 singleton had kept the old image; see
+"Sleeping does not move the singleton to a new image" in the rollout notes). The first health probe after the image
+deploy read `pool: null` because a build and the waking singleton held both
+production slots; the second, minutes later, matched. `/v1/health` then
+reported the Worker, pool and `speech-encoder-v24` all at `797849cf613d`.
+Production canary build
+`6844d46997bb4d02b3edc3ba876bbd17266aa329d685c7d79584c2ecacabba40` succeeded,
+compiler-stamped (14,457,836-byte WAV, SHA-256
+`0166f8ca3be8d0c27d4bb9fe41687b37935c4f5a79c52e47340f22bcd90a45cc`). The website
+pin and flash re-anchor landed as rubato-audio `02cdd3bd`. `rev-4cd0b0a00f91`
+is the immediate rollback image.
 
 The September 27 Wave Scan phase release shipped at `rev-4cd0b0a00f91`. It
 carries two changes:
