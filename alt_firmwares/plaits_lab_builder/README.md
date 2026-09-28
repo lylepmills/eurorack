@@ -1015,6 +1015,7 @@ target.
 | September 27, 2026 (the same release plus a single out-of-line ClearBuffer, so the website's Braids preset fits again) | `eafb52569412` | `rev-eafb52569412` (staging only; superseded before production) |
 | September 27, 2026 (the same release plus the factory chord wave line as address constants, so palettes without Chords stop linking two unused 16,896 B wave banks) | `317dd282af0b` | `rev-317dd282af0b` |
 | September 27, 2026 (Wave Scan's phase as a uint32 accumulator: exact LFO-range rates, ~6% fewer instructions; Virtual Analog Variant carries the Virtual Analog symbol) | `4cd0b0a00f91` | `rev-4cd0b0a00f91` |
+| September 28, 2026 (Virtual Analog Variant at the stock median loudness; catalog gains written to firmware at full precision, moving 58 rebalanced engines to their catalog level; idle containers sleep; Speech warm-up route) | `797849cf613d` | `rev-797849cf613d` (staging; awaiting hardware audition) |
 
 The September 27 Wave Scan phase release shipped at `rev-4cd0b0a00f91`. It
 carries two changes:
