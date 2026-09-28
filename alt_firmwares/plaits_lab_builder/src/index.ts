@@ -16,6 +16,7 @@ import {
 import { deadLetterAction } from "./dead_letter";
 import { corsHeaders } from "./cors";
 import { buildQueueMessage, queuedRecipe, recipeArtifactKey, type BuildMessage } from "./build_queue";
+import { withTransientRetry } from "./transient";
 
 type JobStatus = "queued" | "building" | "succeeded" | "failed";
 
@@ -147,6 +148,19 @@ async function loadQueuedRecipe(message: BuildMessage, env: Env): Promise<Normal
 // the rotation, not just the deploy.
 const SPEECH_ENCODER_CONTAINER = "speech-encoder-v24";
 
+// Retries the Cloudflare storage failures documented as transient (see
+// transient.ts), logging each one so a retry that rescued a user still shows up.
+function retrying<T>(label: string, operation: () => Promise<T>): Promise<T> {
+  return withTransientRetry(operation, {
+    onRetry: (attempt, error) => console.warn(JSON.stringify({
+      message: "transient platform error, retrying",
+      label,
+      attempt,
+      error: error instanceof Error ? error.message : String(error),
+    })),
+  });
+}
+
 async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   return [...new Uint8Array(digest)].map((value) => value.toString(16).padStart(2, "0")).join("");
@@ -250,7 +264,7 @@ async function proxySpeechJson(
     ? `speech/${options.cacheNamespace}/${await sha256Hex(bytes)}.json`
     : null;
   if (cacheKey) {
-    const cached = await env.ARTIFACTS.get(cacheKey);
+    const cached = await retrying("speech cache read", () => env.ARTIFACTS.get(cacheKey));
     if (cached) {
       return speechResponse(cached.body, {
         status: 200,
@@ -261,12 +275,16 @@ async function proxySpeechJson(
   const limited = await speechRateLimit(request, env);
   if (limited) return limited;
   const container = getContainer(env.FIRMWARE_BUILDER, SPEECH_ENCODER_CONTAINER);
-  const response = await container.fetch(`http://container${containerPath}`, {
-    method: "POST",
-    headers: { "Content-Type": request.headers.get("Content-Type") ?? "application/json" },
-    body: bytes,
+  // Every Speech route is a pure function of its body (the container caches
+  // by content), so sending it again after a storage reset is safe.
+  const { response, result } = await retrying("speech encode", async () => {
+    const response = await container.fetch(`http://container${containerPath}`, {
+      method: "POST",
+      headers: { "Content-Type": request.headers.get("Content-Type") ?? "application/json" },
+      body: bytes,
+    });
+    return { response, result: await response.arrayBuffer() };
   });
-  const result = await response.arrayBuffer();
   const contentType = response.headers.get("Content-Type") ?? "application/json; charset=utf-8";
   if (response.ok && cacheKey) {
     await env.ARTIFACTS.put(cacheKey, result, { httpMetadata: { contentType: "application/json" } });
@@ -283,7 +301,7 @@ async function proxySpeechAudio(
   containerPath: string,
   cacheKey: string,
 ): Promise<Response> {
-  const cached = await env.ARTIFACTS.get(cacheKey);
+  const cached = await retrying("speech audio cache read", () => env.ARTIFACTS.get(cacheKey));
   if (cached) {
     return speechResponse(cached.body, {
       status: 200,
@@ -293,8 +311,10 @@ async function proxySpeechAudio(
   const limited = await speechRateLimit(request, env);
   if (limited) return limited;
   const container = getContainer(env.FIRMWARE_BUILDER, SPEECH_ENCODER_CONTAINER);
-  const response = await container.fetch(`http://container${containerPath}`);
-  const result = await response.arrayBuffer();
+  const { response, result } = await retrying("speech audio", async () => {
+    const response = await container.fetch(`http://container${containerPath}`);
+    return { response, result: await response.arrayBuffer() };
+  });
   if (response.ok && response.headers.get("Content-Type") === "audio/wav") {
     await env.ARTIFACTS.put(cacheKey, result, { httpMetadata: { contentType: "audio/wav" } });
   }
@@ -488,7 +508,7 @@ async function createBuild(request: Request, env: Env): Promise<Response> {
 
 async function getStoredBuild(buildId: string, env: Env): Promise<JobState | null> {
   if (!isBuildKey(buildId)) return null;
-  return env.BUILD_JOBS.getByName(buildId).getState();
+  return retrying("build state read", () => env.BUILD_JOBS.getByName(buildId).getState());
 }
 
 async function getBuild(buildId: string, env: Env): Promise<Response> {
@@ -511,7 +531,7 @@ async function downloadFirmware(buildId: string, env: Env): Promise<Response> {
   }
   const output = stateOutput(state);
   const details = outputDetails(output);
-  const artifact = await env.ARTIFACTS.get(artifactKey(state.buildId, output));
+  const artifact = await retrying("firmware download", () => env.ARTIFACTS.get(artifactKey(state.buildId, output)));
   if (!artifact) {
     return json({ error: { code: "artifact_not_found", message: "That firmware artifact is not available." } }, { status: 404 });
   }
@@ -532,7 +552,8 @@ async function downloadManual(buildId: string, env: Env): Promise<Response> {
   if (!state || state.status !== "succeeded" || state.manual?.status !== "ready") {
     return json({ error: { code: "manual_not_found", message: "That field guide is not available." } }, { status: 404 });
   }
-  const manual = await env.ARTIFACTS.get(manualArtifactKey(state.manual.manualKey));
+  const manualKey = state.manual.manualKey;
+  const manual = await retrying("field guide download", () => env.ARTIFACTS.get(manualArtifactKey(manualKey)));
   if (!manual) {
     return json({ error: { code: "manual_not_found", message: "That field guide is not available." } }, { status: 404 });
   }
