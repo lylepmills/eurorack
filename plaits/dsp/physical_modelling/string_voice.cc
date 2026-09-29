@@ -103,7 +103,7 @@ void StringVoice::Render(
     fill(&temp[0], &temp[size], 0.0f);
   }
   
-  excitation_filter_.Process<FILTER_MODE_LOW_PASS>(temp, temp, size);
+  excitation_filter_.ProcessBuffer<FILTER_MODE_LOW_PASS>(temp, temp, size);
   float non_linearity = structure < 0.24f
       ? (structure - 0.24f) * 4.166f
       : (structure > 0.26f ? (structure - 0.26f) * 1.35135f : 0.0f);

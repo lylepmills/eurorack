@@ -54,7 +54,9 @@ void String::Reset() {
   string_.Reset();
   stretch_.Reset();
   iir_damping_filter_.Init();
-  dc_blocker_.Init(1.0f - 20.0f / kSampleRate);
+  // stmlib::DCBlocker::Init().
+  dc_blocker_.x = dc_blocker_.y = 0.0f;
+  dc_blocker_.pole = 1.0f - 20.0f / kSampleRate;
   dispersion_noise_ = 0.0f;
   curved_bridge_ = 0.0f;
   out_sample_[0] = out_sample_[1] = 0.0f;
@@ -143,11 +145,11 @@ void String::ProcessInternal(
     float delay = delay_modulation.Next(); \
     float s = 0.0f; \
     if (non_linearity == STRING_NON_LINEARITY_DISPERSION) { \
-      float noise = Random::GetFloat() - 0.5f; \
-      ONE_POLE(dispersion_noise_, noise, noise_filter) \
-      delay *= 1.0f + dispersion_noise_ * noise_amount; \
+      float noise = random.GetFloat() - 0.5f; \
+      ONE_POLE(dispersion_noise, noise, noise_filter) \
+      delay *= 1.0f + dispersion_noise * noise_amount; \
     } else { \
-      delay *= 1.0f - curved_bridge_ * bridge_curving; \
+      delay *= 1.0f - curved_bridge * bridge_curving; \
     } \
     if (non_linearity == STRING_NON_LINEARITY_DISPERSION) { \
       float ap_delay = delay * stretch_point; \
@@ -165,37 +167,54 @@ void String::ProcessInternal(
     if (non_linearity == STRING_NON_LINEARITY_CURVED_BRIDGE) { \
       float value = fabsf(s) - 0.025f; \
       float sign = s > 0.0f ? 1.0f : -1.5f; \
-      curved_bridge_ = (fabsf(value) + value) * sign; \
+      curved_bridge = (fabsf(value) + value) * sign; \
     } \
     s += *in; \
     CONSTRAIN(s, -20.0f, +20.0f); \
-    dc_blocker_.Process(&s, 1); \
-    s = iir_damping_filter_.Process<FILTER_MODE_LOW_PASS>(s); \
+    s = dc_blocker.Process(s); \
+    s = damping_filter.Process<FILTER_MODE_LOW_PASS>(s); \
     string_.Write(s); \
-    out_sample_[1] = out_sample_[0]; \
-    out_sample_[0] = s; \
+    out_sample_1 = out_sample_0; \
+    out_sample_0 = s; \
   }
+
+  float dispersion_noise = dispersion_noise_;
+  float curved_bridge = curved_bridge_;
+  float out_sample_0 = out_sample_[0];
+  float out_sample_1 = out_sample_[1];
+  float src_phase = src_phase_;
+  CopyableSvf damping_filter = iir_damping_filter_;
+  LocalRandom random;  // see local_random.h
+  DcBlocker dc_blocker = dc_blocker_;
 
   if (src_ratio == 1.0f) {
     // At normal playing pitches every output sample advances the model once.
     // Keep the low-note resampler out of this overwhelmingly common path.
     while (size--) {
       PROCESS_STRING_SAMPLE();
-      *out++ += Crossfade(out_sample_[1], out_sample_[0], src_phase_);
+      *out++ += Crossfade(out_sample_1, out_sample_0, src_phase);
       ++in;
     }
   } else {
     while (size--) {
-      src_phase_ += src_ratio;
-      if (src_phase_ > 1.0f) {
-        src_phase_ -= 1.0f;
+      src_phase += src_ratio;
+      if (src_phase > 1.0f) {
+        src_phase -= 1.0f;
         PROCESS_STRING_SAMPLE();
       }
-      *out++ += Crossfade(out_sample_[1], out_sample_[0], src_phase_);
+      *out++ += Crossfade(out_sample_1, out_sample_0, src_phase);
       ++in;
     }
   }
 #undef PROCESS_STRING_SAMPLE
+  dispersion_noise_ = dispersion_noise;
+  curved_bridge_ = curved_bridge;
+  out_sample_[0] = out_sample_0;
+  out_sample_[1] = out_sample_1;
+  src_phase_ = src_phase;
+  iir_damping_filter_ = damping_filter;
+  dc_blocker_ = dc_blocker;
+  random.Commit();
 }
 
 }  // namespace plaits

@@ -28,6 +28,10 @@
 //
 // OUT: particles through resonant band-pass filters, low-pass colored and
 // diffused. AUX: raw random pulses.
+// alt firmware: at zero diffusion the diffuser is not run (its dry/wet mix
+// would leave the output untouched). Its delay memory then does not advance,
+// so turning diffusion back up first recirculates what it last held, faded in
+// from zero with the amount.
 // alt firmware, stereo mode: each particle is panned to a fixed position
 // spread across the stereo field, both channels get the OUT treatment, the
 // diffuser processes the mono sum and its wet signal is added equally to
@@ -140,10 +144,12 @@ void ParticleEngine::Render(
         out[sample] = post_filter_.Process<FILTER_MODE_LOW_PASS>(out[sample]);
         aux[sample] = right_post_filter_.Process<FILTER_MODE_LOW_PASS>(
             aux[sample]);
-        float mono = (out[sample] + aux[sample]) * kStereoToMonoGain;
-        diffuser_.Process(1.0f, diffuser_time, &mono, 1);
-        out[sample] += diffuser_amount * (mono - out[sample]);
-        aux[sample] += diffuser_amount * (mono - aux[sample]);
+        if (diffuser_amount != 0.0f) {
+          float mono = (out[sample] + aux[sample]) * kStereoToMonoGain;
+          diffuser_.Process(1.0f, diffuser_time, &mono, 1);
+          out[sample] += diffuser_amount * (mono - out[sample]);
+          aux[sample] += diffuser_amount * (mono - aux[sample]);
+        }
       } else {
         for (int particle = 0; particle < kNumParticles; ++particle) {
           particle_[particle].Render(
@@ -159,7 +165,9 @@ void ParticleEngine::Render(
         }
         post_filter_.set_f_q<FREQUENCY_DIRTY>(instantaneous_f0, 0.5f);
         out[sample] = post_filter_.Process<FILTER_MODE_LOW_PASS>(out[sample]);
-        diffuser_.Process(diffuser_amount, diffuser_time, out + sample, 1);
+        if (diffuser_amount != 0.0f) {
+          diffuser_.Process(diffuser_amount, diffuser_time, out + sample, 1);
+        }
       }
     }
     return;
@@ -189,16 +197,19 @@ void ParticleEngine::Render(
 
     // The diffuser is fed with the mono sum, and processed with a wet-only
     // mix so that its output can then be crossfaded - at the mono dry/wet
-    // law - into both channels.
-    float mono[kMaxBlockSize];
-    for (size_t i = 0; i < size; ++i) {
-      mono[i] = (out[i] + aux[i]) * kStereoToMonoGain;
-    }
-    diffuser_.Process(1.0f, 0.5f * diffusion + 0.25f, mono, size);
+    // law - into both channels. At zero diffusion (MORPH past noon at stock
+    // TWIST, or TWIST fully down) it would change nothing: skip it.
     const float amount = 0.8f * diffusion * diffusion;
-    for (size_t i = 0; i < size; ++i) {
-      out[i] += amount * (mono[i] - out[i]);
-      aux[i] += amount * (mono[i] - aux[i]);
+    if (amount != 0.0f) {
+      float mono[kMaxBlockSize];
+      for (size_t i = 0; i < size; ++i) {
+        mono[i] = (out[i] + aux[i]) * kStereoToMonoGain;
+      }
+      diffuser_.Process(1.0f, 0.5f * diffusion + 0.25f, mono, size);
+      for (size_t i = 0; i < size; ++i) {
+        out[i] += amount * (mono[i] - out[i]);
+        aux[i] += amount * (mono[i] - aux[i]);
+      }
     }
     return;
   }
@@ -219,11 +230,12 @@ void ParticleEngine::Render(
   post_filter_.set_f_q<FREQUENCY_DIRTY>(min(f0, 0.49f), 0.5f);
   post_filter_.Process<FILTER_MODE_LOW_PASS>(out, out, size);
 
-  diffuser_.Process(
-      0.8f * diffusion * diffusion,
-      0.5f * diffusion + 0.25f,
-      out,
-      size);
+  // At zero diffusion the diffuser's dry/wet mix leaves `out` untouched, so
+  // it is skipped (see the header comment for the one side effect).
+  const float amount = 0.8f * diffusion * diffusion;
+  if (amount != 0.0f) {
+    diffuser_.Process(amount, 0.5f * diffusion + 0.25f, out, size);
+  }
 }
 
 }  // namespace plaits

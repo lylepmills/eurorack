@@ -32,6 +32,7 @@
 #include "stmlib/dsp/filter.h"
 #include "stmlib/utils/buffer_allocator.h"
 
+#include "plaits/dsp/copyable_svf.h"
 #include "plaits/dsp/physical_modelling/string.h"
 
 namespace plaits {
@@ -57,7 +58,7 @@ class StringVoice {
       size_t size);
   
  private:
-  stmlib::Svf excitation_filter_;
+  CopyableSvf excitation_filter_;  // see copyable_svf.h
   String string_;
   size_t remaining_noise_samples_;
   

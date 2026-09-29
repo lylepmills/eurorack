@@ -36,6 +36,8 @@
 #include "stmlib/dsp/filter.h"
 #include "stmlib/utils/buffer_allocator.h"
 
+#include "plaits/dsp/copyable_svf.h"
+#include "plaits/dsp/local_random.h"
 #include "plaits/dsp/physical_modelling/delay_line.h"
 
 namespace plaits {
@@ -77,8 +79,22 @@ class String {
   DelayLine<float, kDelayLineSize> string_;
   DelayLine<float, kDelayLineSize / 4> stretch_;
   
-  stmlib::Svf iir_damping_filter_;
-  stmlib::DCBlocker dc_blocker_;
+  // stmlib::DCBlocker's arithmetic as a plain struct, and a CopyableSvf for
+  // stmlib::Svf: ProcessInternal runs the per-sample model on local copies of
+  // these and of the floats below. As members they were reloaded and stored
+  // every sample, since the output buffer being written could alias them.
+  struct DcBlocker {
+    inline float Process(float in) {
+      const float old_x = x;
+      x = in;
+      return y = y * pole + x - old_x;
+    }
+    float x;
+    float y;
+    float pole;
+  };
+  CopyableSvf iir_damping_filter_;
+  DcBlocker dc_blocker_;
   
   float delay_;
   float dispersion_noise_;
