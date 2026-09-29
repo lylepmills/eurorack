@@ -881,14 +881,20 @@ that limit. This is a lightweight abuse guard rather than an account or billing
 system; IP addresses are not stored in Durable Objects or attached to firmware
 artifacts.
 
-Image builds run on GitHub Actions (`.github/workflows/plaits-builder-image.yml`,
-manual dispatch with a revision). The local path still works and is documented
-below, but it builds linux/amd64 under QEMU on an Apple Silicon Mac and then
-pushes ~12 GB over a home connection; a runner is natively x86 and sits beside
-the registry. The workflow needs a `CLOUDFLARE_REGISTRY_TOKEN` repository
-secret, and it verifies that the checked-out commit matches the requested
-revision before building — a tag that disagrees with the source inside it is
-the failure the `development` sentinel exists to catch, caught earlier.
+Image builds are meant to run on GitHub Actions
+(`.github/workflows/plaits-builder-image.yml`, manual dispatch with a
+revision): a runner is natively x86 and sits beside the registry. That path
+does not work yet. The workflow needs a `CLOUDFLARE_REGISTRY_TOKEN` repository
+secret that is not set: all six dispatches (2026-09-01 to 09-05) failed, four
+at the registry login with "Password required" and two earlier at checkout,
+and none has run since. Every release since has been built locally, as in step
+2 above. That is cheaper than it sounds when the Mac's Docker cache holds the
+previous image: at `rev-797849cf613d` the build took 3–5 minutes under QEMU,
+and the push with the pinned wrangler uploaded only the changed layers in about
+10 minutes. Once the secret exists, the workflow verifies that the checked-out
+commit matches the requested revision before building — a tag that disagrees
+with the source inside it is the failure the `development` sentinel exists to
+catch, caught earlier.
 
 The production compiler image is
 `plaits-lab-build-service-firmwarebuilder:rev-797849cf613d` (immutable
