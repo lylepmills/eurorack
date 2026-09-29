@@ -159,10 +159,12 @@ void Resonator::ProcessStereo(
   const float odd_left = even_right;
   const float odd_right = even_left;
 
+  // Batches start at mode multiples of kModeBatchSize, so a mode's parity is
+  // its position's parity within the batch: the even modes are summed into
+  // `left` and the odd ones into `right`, and the two sums are panned below.
   float mode_q[kModeBatchSize];
   float mode_f[kModeBatchSize];
-  float mode_a_left[kModeBatchSize];
-  float mode_a_right[kModeBatchSize];
+  float mode_a[kModeBatchSize];
   int batch_counter = 0;
   ResonatorSvf<kModeBatchSize>* batch_processor = &mode_filters_[0];
   for (int i = 0; i < resolution_; ++i) {
@@ -171,21 +173,18 @@ void Resonator::ProcessStereo(
       mode_frequency = 0.499f;
     }
     const float mode_attenuation = 1.0f - mode_frequency * 2.0f;
-    const float mode_amplitude = mode_amplitude_[i] * mode_attenuation;
 
     mode_f[batch_counter] = mode_frequency;
     mode_q[batch_counter] = 1.0f + mode_frequency * q;
-    mode_a_left[batch_counter] = mode_amplitude * ((i & 1) ? odd_left : even_left);
-    mode_a_right[batch_counter] = mode_amplitude * ((i & 1) ? odd_right : even_right);
+    mode_a[batch_counter] = mode_amplitude_[i] * mode_attenuation;
     ++batch_counter;
 
     if (batch_counter == kModeBatchSize) {
       batch_counter = 0;
-      batch_processor->ProcessStereo<FILTER_MODE_BAND_PASS, true>(
+      batch_processor->ProcessEvenOdd<FILTER_MODE_BAND_PASS>(
           mode_f,
           mode_q,
-          mode_a_left,
-          mode_a_right,
+          mode_a,
           in,
           left,
           right,
@@ -203,6 +202,15 @@ void Resonator::ProcessStereo(
     }
     harmonic += f0;
     q *= q_loss;
+  }
+
+  // left and right hold the even- and odd-mode sums (they start at zero: the
+  // voice clears both before rendering). Pan them to the two sides.
+  for (size_t n = 0; n < size; ++n) {
+    const float even = left[n];
+    const float odd = right[n];
+    left[n] = even_left * even + odd_left * odd;
+    right[n] = even_right * even + odd_right * odd;
   }
 }
 

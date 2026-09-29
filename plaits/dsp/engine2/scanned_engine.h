@@ -17,6 +17,10 @@
 namespace plaits {
 
 const int kScannedMasses = 32;
+// ReadPickup wraps mass indices with a mask. (The firmware is C++98, hence
+// stmlib's macro rather than static_assert.)
+STATIC_ASSERT((kScannedMasses & (kScannedMasses - 1)) == 0,
+              scanned_masses_must_be_a_power_of_two);
 
 class ScannedEngine : public Engine {
  public:
@@ -47,7 +51,6 @@ class ScannedEngine : public Engine {
       float nonlinearity,
       bool driven,
       int drive_index);
-  float Scan(const float* data, float phase) const;
   float ReadPickup(
       float phase,
       float timbre,

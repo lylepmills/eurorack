@@ -114,14 +114,6 @@ void ScannedEngine::Step(
   }
 }
 
-float ScannedEngine::Scan(const float* data, float phase) const {
-  const float index = phase * static_cast<float>(kScannedMasses);
-  const int integral = static_cast<int>(index);
-  const float fractional = index - static_cast<float>(integral);
-  const int next = (integral + 1) % kScannedMasses;
-  return data[integral] + (data[next] - data[integral]) * fractional;
-}
-
 // One virtual pickup: the interpolated readout blended toward its own spatial
 // derivative by TIMBRE, then sine-wavefolded by MORPH. Stereo mode reads a
 // second pickup on the same string, a quarter of the scan span away.
@@ -130,19 +122,25 @@ float ScannedEngine::ReadPickup(
     float timbre,
     float fold_amount,
     float* derivative) const {
-  const float sample = Scan(position_, phase);
-  float left_phase = phase - \
-      1.0f / static_cast<float>(kScannedMasses);
-  if (left_phase < 0.0f) {
-    left_phase += 1.0f;
-  }
-  float derivative_phase = phase + \
-      1.0f / static_cast<float>(kScannedMasses);
-  if (derivative_phase >= 1.0f) {
-    derivative_phase -= 1.0f;
-  }
-  const float left = Scan(position_, left_phase);
-  const float right = Scan(position_, derivative_phase);
+  // The pickup and its two neighbours for the spatial derivative sit exactly
+  // one mass apart (a phase step of 1 / kScannedMasses is one index), so all
+  // three interpolations share this index and fractional part: four adjacent
+  // masses and one float-to-int conversion instead of three separately
+  // interpolated reads at phase and phase +- 1 / kScannedMasses (as this did
+  // until 2026-09-28). Identical to them except when a neighbour wraps around
+  // the string end, where the old "+ 1.0f" phase wrap rounded the fraction
+  // differently.
+  const float index = phase * static_cast<float>(kScannedMasses);
+  const int integral = static_cast<int>(index);
+  const float fractional = index - static_cast<float>(integral);
+  const int mask = kScannedMasses - 1;
+  const float before = position_[(integral - 1) & mask];
+  const float here = position_[integral];
+  const float next = position_[(integral + 1) & mask];
+  const float after = position_[(integral + 2) & mask];
+  const float sample = here + (next - here) * fractional;
+  const float left = before + (here - before) * fractional;
+  const float right = next + (after - next) * fractional;
   *derivative = right - left;
   const float gradient = *derivative * 2.25f;
   const float scanned = sample + (gradient - sample) * timbre;
