@@ -399,6 +399,20 @@ and `https://www.rubato.audio`; keep both in the Worker tests and live canary.
 - `POST /v1/speech/segment`, `GET /v1/speech/voice-preview/…`, and
   `GET /v1/speech/stock/…` support language-aware splitting and listening.
   Deterministic text, voice, and stock results are content-addressed in R2.
+- `POST /v1/speech/warm` wakes the Speech singleton and returns 204. It sends a
+  fixed three-word Kokoro encode straight to the container, bypassing the R2
+  cache, which would otherwise answer every warm after the first without waking
+  anything. The editor calls it when the Speech panel opens. The singleton
+  sleeps after 15 idle minutes, and the first encode after that measured ~34 s
+  against ~23 s after a warm. The route has its own rate-limit key, so a warm
+  never spends one of the user's encodes.
+
+Downloads, the build-state read, Speech R2 cache reads, and Speech container
+calls retry Cloudflare's documented transient failures (`src/transient.ts`):
+R2 10001/10043, and Durable Object errors marked `retryable` but not
+`overloaded`. They make up to three attempts, 200 ms then 400 ms apart. Each
+retry logs `transient platform error, retrying`; any other error surfaces
+immediately.
 
 Engine references are resolved to the current approved catalog at request
 normalization. An older digest or compatible semantic version for the same
