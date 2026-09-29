@@ -59,6 +59,12 @@ class ScannedEngine : public Engine {
 
   float position_[kScannedMasses];
   float velocity_[kScannedMasses];
+  // 1 / mass for each mass, for the (inharmonicity, structure) it was computed
+  // for: Step() runs every few blocks at high TWIST, and dividing by all 32
+  // masses there made its blocks the engine's worst.
+  float inverse_mass_[kScannedMasses];
+  float mass_inharmonicity_;
+  float mass_structure_;
   float scan_phase_;
   float physics_phase_;
   bool reset_pending_;

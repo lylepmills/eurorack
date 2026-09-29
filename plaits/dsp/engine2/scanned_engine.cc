@@ -28,17 +28,20 @@ void ScannedEngine::Reset() {
   scan_phase_ = 0.0f;
   physics_phase_ = 0.0f;
   reset_pending_ = true;
+  // No knob is ever negative, so the first Step() computes the masses.
+  mass_inharmonicity_ = mass_structure_ = -1.0f;
 }
 
 void ScannedEngine::Excite(float position, float width, float amount) {
   const float centre = position * static_cast<float>(kScannedMasses);
+  const float half_inverse_width = 0.5f / width;
   float mean = 0.0f;
   for (int i = 0; i < kScannedMasses; ++i) {
     float distance = fabsf(static_cast<float>(i) - centre);
     distance = min(distance, static_cast<float>(kScannedMasses) - distance);
     float pulse = 0.0f;
     if (distance < width) {
-      pulse = 0.5f + 0.5f * Sine(0.25f + 0.5f * distance / width);
+      pulse = 0.5f + 0.5f * Sine(0.25f + distance * half_inverse_width);
     }
     velocity_[i] += pulse * amount;
     mean += pulse * amount;
@@ -56,7 +59,23 @@ void ScannedEngine::Step(
     float nonlinearity,
     bool driven,
     int drive_index) {
+  if (inharmonicity != mass_inharmonicity_ || structure != mass_structure_) {
+    for (int i = 0; i < kScannedMasses; ++i) {
+      // A uniform circular network is translationally symmetric, so moving
+      // the excitation point only changes phase. This fixed irregular mass
+      // profile breaks that symmetry and gives TIMBRE a meaningful spectral
+      // effect.
+      const float mass_profile = static_cast<float>((i * 13) & 31) / 31.0f;
+      const float mass = 1.0f + inharmonicity * 0.45f * (i & 1) + \
+          structure * (0.25f + 1.35f * mass_profile);
+      inverse_mass_[i] = 1.0f / mass;
+    }
+    mass_inharmonicity_ = inharmonicity;
+    mass_structure_ = structure;
+  }
+
   float acceleration[kScannedMasses];
+  float acceleration_mean = 0.0f;
   for (int i = 0; i < kScannedMasses; ++i) {
     const int l1 = (i + kScannedMasses - 1) % kScannedMasses;
     const int r1 = (i + 1) % kScannedMasses;
@@ -66,24 +85,17 @@ void ScannedEngine::Step(
         2.0f * position_[i];
     const float biharmonic = position_[l2] - 4.0f * position_[l1] + \
         6.0f * position_[i] - 4.0f * position_[r1] + position_[r2];
-    // A uniform circular network is translationally symmetric, so moving the
-    // excitation point only changes phase. This fixed irregular mass profile
-    // breaks that symmetry and gives TIMBRE a meaningful spectral effect.
-    const float mass_profile = static_cast<float>((i * 13) & 31) / 31.0f;
-    const float mass = 1.0f + inharmonicity * 0.45f * (i & 1) + \
-        structure * (0.25f + 1.35f * mass_profile);
     acceleration[i] = (0.22f * laplacian - \
-        0.018f * inharmonicity * biharmonic) / mass;
+        0.018f * inharmonicity * biharmonic) * inverse_mass_[i];
     acceleration[i] -= nonlinearity * 0.12f * position_[i] * \
         fabsf(position_[i]);
+    acceleration_mean += acceleration[i];
   }
   if (driven) {
-    acceleration[drive_index] += \
+    const float drive = \
         (Random::GetFloat() - 0.5f) * (0.002f + 0.004f * nonlinearity);
-  }
-  float acceleration_mean = 0.0f;
-  for (int i = 0; i < kScannedMasses; ++i) {
-    acceleration_mean += acceleration[i];
+    acceleration[drive_index] += drive;
+    acceleration_mean += drive;
   }
   acceleration_mean /= static_cast<float>(kScannedMasses);
 

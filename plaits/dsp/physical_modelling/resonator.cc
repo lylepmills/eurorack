@@ -70,6 +70,16 @@ inline float NthHarmonicCompensation(int n, float stiffness) {
   return 1.0f / stretch_factor;
 }
 
+// True when all four modes of a batch are clamped at 0.499. Such modes are
+// scaled by mode_attenuation = 0.002 and all ring on one tone near 21 kHz; at
+// the top of the keyboard they are most of the modes, and filtering them cost
+// about half of Modal's block. Skipping them (and clearing their state, so a
+// mode that comes back below the clamp starts from rest) changes the output
+// by about -39 dB at 20-22 kHz and -60 dB below 16 kHz at note 108.
+static inline bool AllAtNyquist(const float* f) {
+  return f[0] >= 0.499f && f[1] >= 0.499f && f[2] >= 0.499f && f[3] >= 0.499f;
+}
+
 void Resonator::Process(
     float f0,
     float structure,
@@ -108,13 +118,17 @@ void Resonator::Process(
     
     if (batch_counter == kModeBatchSize) {
       batch_counter = 0;
-      batch_processor->Process<FILTER_MODE_BAND_PASS, true>(
-          mode_f,
-          mode_q,
-          mode_a,
-          in,
-          out,
-          size);
+      if (AllAtNyquist(mode_f)) {
+        batch_processor->Init();
+      } else {
+        batch_processor->Process<FILTER_MODE_BAND_PASS, true>(
+            mode_f,
+            mode_q,
+            mode_a,
+            in,
+            out,
+            size);
+      }
       ++batch_processor;
     }
     
@@ -181,14 +195,18 @@ void Resonator::ProcessStereo(
 
     if (batch_counter == kModeBatchSize) {
       batch_counter = 0;
-      batch_processor->ProcessEvenOdd<FILTER_MODE_BAND_PASS>(
-          mode_f,
-          mode_q,
-          mode_a,
-          in,
-          left,
-          right,
-          size);
+      if (AllAtNyquist(mode_f)) {
+        batch_processor->Init();
+      } else {
+        batch_processor->ProcessEvenOdd<FILTER_MODE_BAND_PASS>(
+            mode_f,
+            mode_q,
+            mode_a,
+            in,
+            left,
+            right,
+            size);
+      }
       ++batch_processor;
     }
 
