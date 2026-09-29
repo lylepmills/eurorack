@@ -43,7 +43,14 @@ class ScannedEngine : public Engine {
 #endif
 
  private:
+  // Runs once per strike, so unrolling its loops buys nothing and doubles
+  // its flash.
+#if defined(__clang__)
   void Excite(float position, float width, float amount);
+#else
+  __attribute__((optimize("no-unroll-loops")))
+  void Excite(float position, float width, float amount);
+#endif
   void Step(
       float inharmonicity,
       float structure,

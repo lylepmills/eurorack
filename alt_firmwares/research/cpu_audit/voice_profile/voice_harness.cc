@@ -64,6 +64,10 @@ static void PrintHash() {
   Semihost(0x04, text);
 }
 
+#ifndef VH_TWIST
+#define VH_TWIST 0.5f
+#endif
+
 int main() {
   // A function-local static: constructed (engine vtables) on first use. The
   // startup runs the objects' static constructors too, which matters for
@@ -81,7 +85,7 @@ int main() {
   patch.decay = 0.5f;
   patch.lpg_colour = 0.5f;
 #ifndef VH_STOCK
-  patch.freqlock_param = 0.5f;
+  patch.freqlock_param = VH_TWIST;
   patch.locked_frequency_pot_option = 1;
   patch.aux_output_option = VH_AUX;
   patch.aux_subosc_option = 3;

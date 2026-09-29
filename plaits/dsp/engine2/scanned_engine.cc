@@ -35,16 +35,45 @@ void ScannedEngine::Reset() {
 void ScannedEngine::Excite(float position, float width, float amount) {
   const float centre = position * static_cast<float>(kScannedMasses);
   const float half_inverse_width = 0.5f / width;
-  float mean = 0.0f;
-  for (int i = 0; i < kScannedMasses; ++i) {
-    float distance = fabsf(static_cast<float>(i) - centre);
-    distance = min(distance, static_cast<float>(kScannedMasses) - distance);
-    float pulse = 0.0f;
-    if (distance < width) {
-      pulse = 0.5f + 0.5f * Sine(0.25f + distance * half_inverse_width);
+
+  // Only masses closer than `width` to the centre (around the ring) are
+  // struck; the rest would add zero. Visit a window that covers them --
+  // [floor(centre) - reach, floor(centre) + reach + 1] -- split at the ring
+  // end into at most two runs, visited in ascending index order so the mean
+  // sums the same terms in the same order as a pass over every mass.
+  const int reach = static_cast<int>(width) + 1;
+  const int first = static_cast<int>(
+      centre + static_cast<float>(kScannedMasses)) - kScannedMasses - reach;
+  const int end = first + 2 * reach + 2;
+  int run_begin[2] = { 0, 0 };
+  int run_end[2] = { kScannedMasses, 0 };
+  if (end - first < kScannedMasses) {
+    if (first < 0) {
+      run_end[0] = end;
+      run_begin[1] = first + kScannedMasses;
+      run_end[1] = kScannedMasses;
+    } else if (end > kScannedMasses) {
+      run_end[0] = end - kScannedMasses;
+      run_begin[1] = first;
+      run_end[1] = kScannedMasses;
+    } else {
+      run_begin[0] = first;
+      run_end[0] = end;
     }
-    velocity_[i] += pulse * amount;
-    mean += pulse * amount;
+  }
+
+  float mean = 0.0f;
+  for (int run = 0; run < 2; ++run) {
+    for (int i = run_begin[run]; i < run_end[run]; ++i) {
+      float distance = fabsf(static_cast<float>(i) - centre);
+      distance = min(distance, static_cast<float>(kScannedMasses) - distance);
+      if (distance < width) {
+        const float pulse = 0.5f + 0.5f * Sine(
+            0.25f + distance * half_inverse_width);
+        velocity_[i] += pulse * amount;
+        mean += pulse * amount;
+      }
+    }
   }
   mean /= static_cast<float>(kScannedMasses);
   for (int i = 0; i < kScannedMasses; ++i) {
@@ -74,22 +103,31 @@ void ScannedEngine::Step(
     mass_structure_ = structure;
   }
 
+  // The five neighbours of each mass slide through registers, so each
+  // iteration loads one position instead of five (plus four wrapped index
+  // computations). The arithmetic and its order are unchanged.
+  const float biharmonic_amount = 0.018f * inharmonicity;
+  const float nonlinear_amount = nonlinearity * 0.12f;
+  const int mask = kScannedMasses - 1;
+  float l2 = position_[kScannedMasses - 2];
+  float l1 = position_[kScannedMasses - 1];
+  float here = position_[0];
+  float r1 = position_[1];
   float acceleration[kScannedMasses];
   float acceleration_mean = 0.0f;
   for (int i = 0; i < kScannedMasses; ++i) {
-    const int l1 = (i + kScannedMasses - 1) % kScannedMasses;
-    const int r1 = (i + 1) % kScannedMasses;
-    const int l2 = (i + kScannedMasses - 2) % kScannedMasses;
-    const int r2 = (i + 2) % kScannedMasses;
-    const float laplacian = position_[l1] + position_[r1] - \
-        2.0f * position_[i];
-    const float biharmonic = position_[l2] - 4.0f * position_[l1] + \
-        6.0f * position_[i] - 4.0f * position_[r1] + position_[r2];
-    acceleration[i] = (0.22f * laplacian - \
-        0.018f * inharmonicity * biharmonic) * inverse_mass_[i];
-    acceleration[i] -= nonlinearity * 0.12f * position_[i] * \
-        fabsf(position_[i]);
-    acceleration_mean += acceleration[i];
+    const float r2 = position_[(i + 2) & mask];
+    const float laplacian = l1 + r1 - 2.0f * here;
+    const float biharmonic = l2 - 4.0f * l1 + 6.0f * here - 4.0f * r1 + r2;
+    float a = (0.22f * laplacian - biharmonic_amount * biharmonic) * \
+        inverse_mass_[i];
+    a -= nonlinear_amount * here * fabsf(here);
+    acceleration[i] = a;
+    acceleration_mean += a;
+    l2 = l1;
+    l1 = here;
+    here = r1;
+    r1 = r2;
   }
   if (driven) {
     const float drive = \
