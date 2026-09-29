@@ -68,6 +68,11 @@ static void PrintHash() {
 #define VH_TWIST 0.5f
 #endif
 
+// The block count lives in data, not in an immediate, so the A and B builds
+// (which differ only in it) have byte-identical code: vh.py's per-function
+// profile subtracts their PC histograms address by address.
+static volatile int g_blocks = VH_BLOCKS;
+
 int main() {
   // A function-local static: constructed (engine vtables) on first use. The
   // startup runs the objects' static constructors too, which matters for
@@ -94,7 +99,7 @@ int main() {
 #if VH_DUMP
   DumpOpen();
 #endif
-  for (int i = 0; i < VH_BLOCKS; ++i) {
+  for (int i = 0; i < g_blocks; ++i) {
     modulations.trigger = (VH_TRIG && (i % 997) < 4) ? 1.0f : 0.0f;
     voice.Render(patch, modulations, frames, kBlockSize);
     g_sink += frames[0].out;
