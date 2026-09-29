@@ -716,13 +716,22 @@ def scene_report(path: Path, scenes: list[dict], clips: Path | None) -> dict:
     packets = decoded["packets"]
     hello = [p for p in packets if p.type == PACKET_HELLO]
     reports = [p for p in packets if p.type == PACKET_SCENE]
-    if not hello or not reports:
-        raise SystemExit("capture lacks the HELLO or the scene report")
-    t_start = hello[0].burst + SCENE_START_BLOCKS * BLOCK * sr / MODULE_RATE
+    if not reports:
+        raise SystemExit("capture lacks the scene report")
+    # The firmware's own figures come from the report. The HELLO only anchors
+    # the audio clips: a scene firmware whose first engine overruns at boot
+    # can garble it, so without one, scenes are placed backward from the
+    # report where they can be, and the rest go unplaced.
+    if not hello:
+        print("warning: no HELLO decoded; clips are placed from the report only",
+              flush=True)
+    t_start = (hello[0].burst + SCENE_START_BLOCKS * BLOCK * sr / MODULE_RATE
+               if hello else None)
     t_end = reports[0].burst
     # Host samples per module sample, if no audio interrupt were ever lost.
     nominal = sr / MODULE_RATE
-    ratio = (t_end - t_start) / (len(scenes) * SCENE_BLOCKS * BLOCK)
+    ratio = ((t_end - t_start) / (len(scenes) * SCENE_BLOCKS * BLOCK)
+             if hello else None)
     glitches = np.array(decoded["glitches"], dtype=np.int64) + BLOCK // 2
     firmware = {}
     sections = {}
@@ -767,7 +776,7 @@ def scene_report(path: Path, scenes: list[dict], clips: Path | None) -> dict:
     scene_span = SCENE_BLOCKS * BLOCK * nominal
     rows = []
     for k, scene in enumerate(scenes):
-        if not any(late[:k]):
+        if t_start is not None and not any(late[:k]):
             lo = t_start + k * scene_span
         elif not any(late[k + 1:]):
             lo = t_end - (len(scenes) - k) * scene_span
@@ -983,6 +992,9 @@ def main() -> None:
     p.add_argument("--flash", type=Path, required=True)
     p.add_argument("--scenes", type=Path, required=True)
     p.add_argument("--out", type=Path, required=True)
+    # Scenes that overrun lose interrupts and run longer than their nominal
+    # length, pushing the report past the end of the capture; add headroom.
+    p.add_argument("--extra-seconds", type=float, default=0.0)
     p.add_argument("--device", default="ES-8")
     p.add_argument("--channel", type=int, default=3)
     p.add_argument("--peak", type=float, default=0.3)
@@ -1018,7 +1030,7 @@ def main() -> None:
         if args.command == "scenes-run":
             args.out.mkdir(parents=True, exist_ok=True)
             seconds = ((SCENE_START_BLOCKS + len(scenes) * SCENE_BLOCKS) *
-                       BLOCK / MODULE_RATE * 1.1 + 15.0)
+                       BLOCK / MODULE_RATE * 1.1 + 15.0 + args.extra_seconds)
             wav = args.out / "capture.wav"
             print(f"capturing {seconds / 60:.1f} min to {wav}", flush=True)
             capture(wav, seconds, args.device, firmware=args.flash,
