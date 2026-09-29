@@ -42,7 +42,9 @@ class Particle {
 
   inline void Init() {
     pre_gain_ = 0.0f;
-    filter_.Init();
+    // stmlib::Svf::Init().
+    filter_.set_f_q(0.01f, 100.0f);
+    filter_.state_1 = filter_.state_2 = 0.0f;
   }
   
   inline void Render(
@@ -60,6 +62,8 @@ class Particle {
       u = density;
     }
     bool can_radomize_frequency = true;
+    BandPass filter = filter_;
+    float pre_gain = pre_gain_;
     while (size--) {
       float s = 0.0f;
       if (u <= density) {
@@ -69,16 +73,18 @@ class Particle {
           const float f = std::min(
               stmlib::SemitonesToRatio(spread * u) * frequency,
               0.25f);
-          pre_gain_ = 0.5f / stmlib::Sqrt(q * f * stmlib::Sqrt(density));
-          filter_.set_f_q<stmlib::FREQUENCY_DIRTY>(f, q);
+          pre_gain = 0.5f / stmlib::Sqrt(q * f * stmlib::Sqrt(density));
+          filter.set_f_q(f, q);
           // Keep the cutoff constant for this whole block.
           can_radomize_frequency = false;
         }
       }
       *aux++ += s;
-      *out++ += filter_.Process<stmlib::FILTER_MODE_BAND_PASS>(pre_gain_ * s);
+      *out++ += filter.Process(pre_gain * s);
       u = stmlib::Random::GetFloat();
     }
+    filter_ = filter;
+    pre_gain_ = pre_gain;
   }
 
   // alt firmware: stereo variant - the band-pass filtered particle is
@@ -101,6 +107,8 @@ class Particle {
       u = density;
     }
     bool can_radomize_frequency = true;
+    BandPass filter = filter_;
+    float pre_gain = pre_gain_;
     while (size--) {
       float s = 0.0f;
       if (u <= density) {
@@ -110,23 +118,51 @@ class Particle {
           const float f = std::min(
               stmlib::SemitonesToRatio(spread * u) * frequency,
               0.25f);
-          pre_gain_ = 0.5f / stmlib::Sqrt(q * f * stmlib::Sqrt(density));
-          filter_.set_f_q<stmlib::FREQUENCY_DIRTY>(f, q);
+          pre_gain = 0.5f / stmlib::Sqrt(q * f * stmlib::Sqrt(density));
+          filter.set_f_q(f, q);
           // Keep the cutoff constant for this whole block.
           can_radomize_frequency = false;
         }
       }
-      const float bp = filter_.Process<stmlib::FILTER_MODE_BAND_PASS>(
-          pre_gain_ * s);
+      const float bp = filter.Process(pre_gain * s);
       *left++ += left_gain * bp;
       *right++ += right_gain * bp;
       u = stmlib::Random::GetFloat();
     }
+    filter_ = filter;
+    pre_gain_ = pre_gain;
   }
 
  private:
+  // stmlib::Svf, set up with set_f_q<FREQUENCY_DIRTY> and run as
+  // Process<FILTER_MODE_BAND_PASS>, with the same arithmetic. It is a plain
+  // struct so that the render loops can run on a local copy: held in an Svf
+  // member, every sample reloaded and stored its coefficients and state, since
+  // the buffers being accumulated into could alias them (stmlib's Svf cannot
+  // be copied). pre_gain_ is held in a local for the same reason.
+  struct BandPass {
+    inline void set_f_q(float f, float resonance) {
+      g = stmlib::OnePole::tan<stmlib::FREQUENCY_DIRTY>(f);
+      r = 1.0f / resonance;
+      h = 1.0f / (1.0f + r * g + g * g);
+    }
+    inline float Process(float in) {
+      const float hp = (in - r * state_1 - g * state_1 - state_2) * h;
+      const float bp = g * hp + state_1;
+      state_1 = g * hp + bp;
+      const float lp = g * bp + state_2;
+      state_2 = g * bp + lp;
+      return bp;
+    }
+    float g;
+    float r;
+    float h;
+    float state_1;
+    float state_2;
+  };
+
   float pre_gain_;
-  stmlib::Svf filter_;
+  BandPass filter_;
   
   DISALLOW_COPY_AND_ASSIGN(Particle);
 };

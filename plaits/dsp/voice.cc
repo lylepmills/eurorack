@@ -898,8 +898,18 @@ void Voice::Render(
   // block is written. See plaits/threshold_ladder.h.
   plaits_threshold_burn();
 #endif
+  // A stereo pair leaves with the same gain on both channels. When that gain
+  // is a limiter's (negative), the pair is limited together, linked, and
+  // then written as unlimited.
+  float out_gain = pp_s.out_gain;
+  float aux_gain = stereo_render ? pp_s.out_gain : pp_s.aux_gain;
+  if (stereo_render && out_gain < 0.0f) {
+    out_post_processor_.LimitStereoInPlace(
+        -out_gain, out_buffer_, aux_buffer_, size);
+    out_gain = aux_gain = 1.0f;
+  }
   out_post_processor_.Process(
-      pp_s.out_gain,
+      out_gain,
       lpg_bypass,
       lpg_envelope_.gain(),
       lpg_envelope_.frequency(),
@@ -911,8 +921,7 @@ void Voice::Render(
   PLAITS_SECTION_MARK(SECTION_MARK_OUT_WRITTEN);
 
   aux_post_processor_.Process(
-      // A stereo pair must leave with the same gain on both channels.
-      stereo_render ? pp_s.out_gain : pp_s.aux_gain,
+      aux_gain,
       aux_lpg_bypass,
       lpg_envelope_.gain(),
       lpg_envelope_.frequency(),

@@ -116,7 +116,37 @@ class ChannelPostProcessor {
           stride);
     }
   }
-  
+
+  // A stereo pair's limiter, run once for both channels in place: one peak
+  // follower tracks the louder side and one gain is applied to both, so the
+  // image holds still while limiting (two independent limiters duck each side
+  // on its own). Below the ceiling the output is what two limiters would give;
+  // above it both sides are reduced together. Afterwards the pair goes
+  // through Process() as unlimited (gain 1: the same -32767 scale). Being one
+  // pass instead of two limited ones, it also halves the limiter's per-sample
+  // compares and divides, which on the module cost ~0.03 of the period per
+  // limited channel.
+  // Not unrolled: the peak follower is a sample-to-sample dependent chain, so
+  // unrolling only costs flash (540 B vs ~150 B).
+#if defined(__clang__)
+  __attribute__((noinline)) void LimitStereoInPlace(
+#else
+  __attribute__((noinline, optimize("no-unroll-loops"))) void LimitStereoInPlace(
+#endif
+      float pre_gain, float* left, float* right, size_t size) {
+    float peak = limiter_peak_;
+    while (size--) {
+      const float l = *left * pre_gain;
+      const float r = *right * pre_gain;
+      const float level = std::max(fabsf(l), fabsf(r));
+      SLOPE(peak, level, 0.05f, 0.00002f);
+      const float gain = (peak <= 1.0f ? 1.0f : 1.0f / peak) * 0.8f;
+      *left++ = l * gain;
+      *right++ = r * gain;
+    }
+    limiter_peak_ = peak;
+  }
+
  private:
   // stmlib::Limiter::Process, one sample, with the peak follower held by the
   // caller for the block: through the member, every sample reloaded and
