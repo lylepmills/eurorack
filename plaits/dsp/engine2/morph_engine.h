@@ -300,7 +300,7 @@ class MorphEngine : public Engine {
 #endif
 
  private:
-  inline float Decimate(const float* history) const;
+  inline float Decimate(const float* history, int position) const;
 
   float phase_;
   float frequency_;

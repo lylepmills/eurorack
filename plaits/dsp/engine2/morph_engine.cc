@@ -120,11 +120,12 @@ inline float CutoffCoefficient(float cutoff_note) {
 // (p - 16) -- an EVEN sub-sample, which is what keeps the decimation phase
 // right. Every even tap of a halfband is zero, so only the odd offsets and the
 // centre are summed.
-inline float MorphEngine::Decimate(const float* history) const {
+inline float MorphEngine::Decimate(
+    const float* history, int position) const {
   // Each logical entry is mirrored 32 floats later. Reading from the second
   // copy makes the whole 31-tap window contiguous and removes the wrap mask
   // from all seventeen history positions.
-  const int p = history_position_ + 32;
+  const int p = position + 32;
   return kMorphHalfbandCentre * history[p - 16]
       + kMorphHalfband1 * (history[p - 15] + history[p - 17])
       + kMorphHalfband3 * (history[p - 13] + history[p - 19])
@@ -280,6 +281,17 @@ void MorphEngine::Render(
   ParameterInterpolator fuzz_modulation_aux(&fuzz_aux_, target_fuzz_aux, size);
 
   float next_sample = next_sample_;
+  // The oscillator, filter and DC states run in locals, written back after
+  // the block: as members, every store into history_/history_aux_ could
+  // alias them, so each was reloaded after every sub-sample's writes.
+  float phase = phase_;
+  bool high = high_;
+  float previous_pw = previous_pw_;
+  float lp_state = lp_state_;
+  float lp_state_aux = lp_state_aux_;
+  float dc_input = dc_input_;
+  float dc_input_aux = dc_input_aux_;
+  int history_position = history_position_;
 
   for (size_t i = 0; i < size; ++i) {
     float f = fm.Next();
@@ -305,23 +317,23 @@ void MorphEngine::Render(
 
 #if PLAITS_BUILD_EXTENDED_TZFM
     if (parameters.frequency_offset) {
-      const float start = phase_, end = start + f;
-      TzfmEdge(start, end, previous_pw_, pw, 2.0f * w_square, 0.0f, &this_sample, &next_sample);
+      const float start = phase, end = start + f;
+      TzfmEdge(start, end, previous_pw, pw, 2.0f * w_square, 0.0f, &this_sample, &next_sample);
       TzfmEdge(start, end, 0.0f, 0.0f, -2.0f * (w_saw + w_square), 0.0f, &this_sample, &next_sample);
-      phase_ = TzfmWrap(end); high_ = phase_ >= pw;
+      phase = TzfmWrap(end); high = phase >= pw;
     } else
 #endif
     {
-      phase_ += f;
+      phase += f;
 
-      if (!high_ && phase_ >= pw) {
+      if (!high && phase >= pw) {
         // The square's rising edge. Only the square has one here.
-        float t = (phase_ - pw) / (previous_pw_ - pw + f);
+        float t = (phase - pw) / (previous_pw - pw + f);
         CONSTRAIN(t, 0.0f, 1.0f);
         const float step = 2.0f * w_square;
         this_sample += step * ThisBlepSample(t);
         next_sample += step * NextBlepSample(t);
-        high_ = true;
+        high = true;
       }
       // NOT an `else`: at the top of TIMBRE the pulse is 1.2% of a cycle, so
       // above roughly MIDI 85 it is shorter than one sub-sample and both its
@@ -330,19 +342,19 @@ void MorphEngine::Render(
       // `else if` would drop one edge per cycle and the pulse would have to be
       // floored four times as wide to stay well-posed, costing 10.9 dB of
       // level against the module at MIDI 96.
-      if (phase_ >= 1.0f) {
-        phase_ -= 1.0f;
-        float t = phase_ / f;
+      if (phase >= 1.0f) {
+        phase -= 1.0f;
+        float t = phase / f;
         CONSTRAIN(t, 0.0f, 1.0f);
         // The saw drops from +1 to -1 and, in the same instant, so does the
         // square: just before the wrap the phase is past pw and just after it
-        // is not. One BLEP carries both. `high_` keeps the step from claiming
+        // is not. One BLEP carries both. `high` keeps the step from claiming
         // a fall for a square that never rose, which the pulse-width floor
         // makes unreachable but the chained branches above no longer prove.
-        const float step = -2.0f * (w_saw + (high_ ? w_square : 0.0f));
+        const float step = -2.0f * (w_saw + (high ? w_square : 0.0f));
         this_sample += step * ThisBlepSample(t);
         next_sample += step * NextBlepSample(t);
-        high_ = false;
+        high = false;
       }
 
     }
@@ -351,67 +363,75 @@ void MorphEngine::Render(
       // and the step and the pair averaged, exactly as written there. The
       // triangle carries no value discontinuity, so it needs no BLEP -- and
       // Braids does not band-limit its slope corners either.
-      float half_phase = phase_ - 0.5f * f;
+      float half_phase = phase - 0.5f * f;
       if (half_phase < 0.0f) {
         half_phase += 1.0f;
       }
       if (PLAITS_BUILD_EXTENDED_TZFM && half_phase >= 1.0f) half_phase -= 1.0f;
       const float triangle =
-          0.5f * (Triangle(half_phase) + Triangle(phase_));
+          0.5f * (Triangle(half_phase) + Triangle(phase));
 
-      const float naive = w_saw * (2.0f * phase_ - 1.0f) +
-          w_square * (phase_ < pw ? -1.0f : 1.0f) +
+      const float naive = w_saw * (2.0f * phase - 1.0f) +
+          w_square * (phase < pw ? -1.0f : 1.0f) +
           w_triangle * triangle;
       next_sample += naive;
-      previous_pw_ = pw;
+      previous_pw = pw;
 
       // The morph oscillator, band-limited. Braids filters and fuzzes THIS.
       const float sample = this_sample;
 
       // :117-118 -- the one-pole, with Braids' own clip on the state. The
       // coefficient is the 96 kHz one and the loop runs at 96 kHz.
-      lp_state_ += (sample - lp_state_) * lp_a;
-      CONSTRAIN(lp_state_, -1.0f, 1.0f);
+      lp_state += (sample - lp_state) * lp_a;
+      CONSTRAIN(lp_state, -1.0f, 1.0f);
       // :121-122 -- the shaper reads the filter state, and the result is
       // crossfaded against the DRY pre-filter sample, not against the filtered
       // one. MACRO's drive is the only thing here Braids does not have.
-      const float fuzzed = ReadShaper(lp_state_ * drive);
+      const float fuzzed = ReadShaper(lp_state * drive);
       const float processed = sample + (fuzzed - sample) * fuzz;
-      history_[history_position_] = processed;
-      history_[history_position_ + 32] = history_[history_position_];
+      history_[history_position] = processed;
+      history_[history_position + 32] = history_[history_position];
 
       if (stereo) {
-        lp_state_aux_ += (sample - lp_state_aux_) * lp_a_aux;
-        CONSTRAIN(lp_state_aux_, -1.0f, 1.0f);
-        const float fuzzed_aux = ReadShaper(lp_state_aux_ * drive);
+        lp_state_aux += (sample - lp_state_aux) * lp_a_aux;
+        CONSTRAIN(lp_state_aux, -1.0f, 1.0f);
+        const float fuzzed_aux = ReadShaper(lp_state_aux * drive);
         const float processed_aux =
             sample + (fuzzed_aux - sample) * fuzz_aux;
-        history_aux_[history_position_] = processed_aux;
+        history_aux_[history_position] = processed_aux;
       } else {
         // Mono AUX is the morph oscillator dry: the analog waveform the model
         // is built on, with neither the filter nor the fuzz on it.
-        history_aux_[history_position_] = sample;
+        history_aux_[history_position] = sample;
       }
-      history_aux_[history_position_ + 32] =
-          history_aux_[history_position_];
+      history_aux_[history_position + 32] =
+          history_aux_[history_position];
 
-      history_position_ = (history_position_ + 1) & 31;
+      history_position = (history_position + 1) & 31;
     }
 
-    const float raw = Decimate(history_);
-    const float raw_aux = Decimate(history_aux_);
+    const float raw = Decimate(history_, history_position);
+    const float raw_aux = Decimate(history_aux_, history_position);
 
     // Braids has no DC blocker, and at the top of TIMBRE its pulse carries up
     // to +0.98 of DC into whatever follows. R1 then applies: an engine with a
     // blocker cannot pin its post-blocker peak, so this one registers negative
     // gains and takes the limiter path.
-    ONE_POLE(dc_input_, raw, 0.001f);
-    ONE_POLE(dc_input_aux_, raw_aux, 0.001f);
+    ONE_POLE(dc_input, raw, 0.001f);
+    ONE_POLE(dc_input_aux, raw_aux, 0.001f);
 
-    out[i] = raw - dc_input_;
-    aux[i] = raw_aux - dc_input_aux_;
+    out[i] = raw - dc_input;
+    aux[i] = raw_aux - dc_input_aux;
   }
 
+  phase_ = phase;
+  high_ = high;
+  previous_pw_ = previous_pw;
+  lp_state_ = lp_state;
+  lp_state_aux_ = lp_state_aux;
+  dc_input_ = dc_input;
+  dc_input_aux_ = dc_input_aux;
+  history_position_ = history_position;
   next_sample_ = next_sample;
 }
 
