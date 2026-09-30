@@ -95,13 +95,17 @@ class LowPassGate {
       size_t size,
       size_t stride) {
     stmlib::ParameterInterpolator gain_modulation(&previous_gain_, gain, size);
-    const Coefficients c(frequency);
+    const StateSpace c(frequency, hf_bleed);
     float state_1 = state_1_;
     float state_2 = state_2_;
     while (size--) {
       const float s = source->Next() * gain_modulation.Next();
-      const float lp = c.LowPass(s, &state_1, &state_2);
-      *out = stmlib::Clip16(1 + static_cast<int32_t>(lp + (s - lp) * hf_bleed));
+      const float y = c.y_in * s + c.y_1 * state_1 + c.y_2 * state_2;
+      const float next_1 = c.s1_in * s + c.s1_1 * state_1 + c.s1_2 * state_2;
+      const float next_2 = c.s2_in * s + c.s2_1 * state_1 + c.s2_2 * state_2;
+      state_1 = next_1;
+      state_2 = next_2;
+      *out = stmlib::Clip16(1 + static_cast<int32_t>(y));
       out += stride;
     }
     state_1_ = state_1;
@@ -133,6 +137,43 @@ class LowPassGate {
     float g;
     float r;
     float h;
+  };
+
+  // The same filter and HF bleed as Coefficients::LowPass followed by
+  // lp + (s - lp) * hf_bleed, written as a state-space system: the output and
+  // both new states are each one short sum over (s, state_1, state_2), so
+  // they no longer wait on one another. In the form above every sample was a
+  // chain of about seven dependent multiply-adds, which on the module stalled
+  // the FPU (~2.4 cycles per instruction). The states keep their meaning, so
+  // the two forms can hand over mid-note; the output differs only in rounding.
+  struct StateSpace {
+    StateSpace(float f, float hf_bleed) {
+      const Coefficients c(f);
+      const float gh = c.g * c.h;
+      const float k = c.r + c.g;
+      // hp = h * (s - k * state_1 - state_2)
+      // bp = g * hp + state_1,   state_1' = g * hp + bp
+      // lp = g * bp + state_2,   state_2' = g * bp + lp
+      const float bp_in = gh;
+      const float bp_1 = 1.0f - gh * k;
+      const float bp_2 = -gh;
+      const float lp_in = c.g * bp_in;
+      const float lp_1 = c.g * bp_1;
+      const float lp_2 = 1.0f + c.g * bp_2;
+      s1_in = 2.0f * gh;
+      s1_1 = 1.0f - 2.0f * gh * k;
+      s1_2 = -2.0f * gh;
+      s2_in = lp_in + c.g * bp_in;
+      s2_1 = lp_1 + c.g * bp_1;
+      s2_2 = lp_2 + c.g * bp_2;
+      const float dry = 1.0f - hf_bleed;
+      y_in = hf_bleed + dry * lp_in;
+      y_1 = dry * lp_1;
+      y_2 = dry * lp_2;
+    }
+    float y_in, y_1, y_2;
+    float s1_in, s1_1, s1_2;
+    float s2_in, s2_1, s2_2;
   };
 
   float previous_gain_;

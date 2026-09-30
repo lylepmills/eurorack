@@ -357,6 +357,13 @@ void FoldEngine::Render(
   const float* frequency_offset = NULL;
 #endif
 
+  // The phase and DC-blocker states run in locals: as members, every store to
+  // `out`/`aux` could alias them, so the phase (updated four times a sample)
+  // was reloaded and stored on each use.
+  float phase = phase_;
+  float dc_input = dc_input_;
+  float dc_input_aux = dc_input_aux_;
+
   while (size--) {
     float f = fm.Next();
     if (frequency_offset) {
@@ -382,17 +389,17 @@ void FoldEngine::Render(
 
     const float increment = f * 0.25f;
     for (int j = 0; j < 4; ++j) {
-      phase_ += increment;
-      if (phase_ >= 1.0f) {
-        phase_ -= 1.0f;
-      } else if (phase_ < 0.0f) {
-        phase_ += 1.0f;
+      phase += increment;
+      if (phase >= 1.0f) {
+        phase -= 1.0f;
+      } else if (phase < 0.0f) {
+        phase += 1.0f;
       }
 
       // Braids drives the sine folder from its sine table and the triangle
       // folder from a raw ramp fold, both at full scale before the depth gain.
-      const float sine_source = BraidsSine(phase_) * sine_depth + symmetry;
-      const float tri_source = Triangle(phase_) * tri_depth + symmetry;
+      const float sine_source = BraidsSine(phase) * sine_depth + symmetry;
+      const float tri_source = Triangle(phase) * tri_depth + symmetry;
 
       const float folded_sine = ReadShaper(kSineFoldScaled, sine_source);
       const float folded_tri = ReadShaper(kTriFoldScaled, tri_source);
@@ -411,14 +418,17 @@ void FoldEngine::Render(
     const float raw = downsampler.Read();
     const float raw_aux = downsampler_aux.Read();
 
-    ONE_POLE(dc_input_, raw, 0.001f);
-    ONE_POLE(dc_input_aux_, raw_aux, 0.001f);
-    const float dc_output = raw - dc_input_;
-    const float dc_output_aux = raw_aux - dc_input_aux_;
+    ONE_POLE(dc_input, raw, 0.001f);
+    ONE_POLE(dc_input_aux, raw_aux, 0.001f);
+    const float dc_output = raw - dc_input;
+    const float dc_output_aux = raw_aux - dc_input_aux;
 
     *out++ = dc_output;
     *aux++ = dc_output_aux;
   }
+  phase_ = phase;
+  dc_input_ = dc_input;
+  dc_input_aux_ = dc_input_aux;
 }
 
 }  // namespace plaits
