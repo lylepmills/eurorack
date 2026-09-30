@@ -39,6 +39,8 @@ namespace plaits {
 
 const int kChordNumNotes = 4;
 const int kChordNumVoices = kChordNumNotes + 1;
+// ChordBank::Sort() is a four-input sorting network.
+STATIC_ASSERT(kChordNumNotes == 4, chord_bank_sort_is_for_four_notes);
 
 class ChordBank {
  public:
@@ -59,7 +61,16 @@ class ChordBank {
       }
       sorted_ratios_[i] = r;
     }
-    std::sort(&sorted_ratios_[0], &sorted_ratios_[kChordNumNotes]);
+    // A four-input sorting network. std::sort here went through introsort
+    // and insertion sort (with a memmove) on every call, and Helix calls this
+    // on every block. The sorted order of four floats is unique, so the result
+    // is identical.
+    float* s = sorted_ratios_;
+    CompareSwap(&s[0], &s[1]);
+    CompareSwap(&s[2], &s[3]);
+    CompareSwap(&s[0], &s[2]);
+    CompareSwap(&s[1], &s[3]);
+    CompareSwap(&s[1], &s[2]);
   }
   
   void set_chord(float parameter, uint8_t chord_set_option);
@@ -105,6 +116,14 @@ class ChordBank {
   }
 
  private:
+  static inline void CompareSwap(float* a, float* b) {
+    if (*b < *a) {
+      const float t = *a;
+      *a = *b;
+      *b = t;
+    }
+  }
+
   void UpdateRatios(int chord_index);
 
   stmlib::HysteresisQuantizer2 chord_index_quantizer_;
