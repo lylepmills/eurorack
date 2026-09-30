@@ -1,0 +1,473 @@
+{
+ "clock_ratio": 1.045511175781034,
+ "rows": [
+  {
+   "scene": 0,
+   "label": "Granular Formant + TRIG",
+   "aux": "regular",
+   "peak": 1.049,
+   "mean": 0.974,
+   "late": 11969,
+   "switch_peak": 1.045,
+   "switch_late": 255,
+   "blocks": 77776,
+   "sections": {
+    "ui inputs": {
+     "mean": 0.026,
+     "max": 0.027
+    },
+    "ui task": {
+     "mean": 0.024,
+     "max": 0.034
+    },
+    "ui adc/pitch": {
+     "mean": 0.013,
+     "max": 0.013
+    },
+    "prepare": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "select": {
+     "mean": 0.022,
+     "max": 0.026
+    },
+    "envelopes": {
+     "mean": 0.016,
+     "max": 0.016
+    },
+    "modulation": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "engine": {
+     "mean": 0.728,
+     "max": 0.789
+    },
+    "subosc": {
+     "mean": 0.004,
+     "max": 0.004
+    },
+    "lpg env": {
+     "mean": 0.02,
+     "max": 0.021
+    },
+    "out post": {
+     "mean": 0.04,
+     "max": 0.04
+    },
+    "aux post": {
+     "mean": 0.045,
+     "max": 0.046
+    }
+   }
+  },
+  {
+   "scene": 1,
+   "label": "Harmonic + TRIG",
+   "aux": "regular",
+   "peak": 1.014,
+   "mean": 1.0,
+   "late": 12250,
+   "switch_peak": 1.023,
+   "switch_late": 1994,
+   "blocks": 77776,
+   "sections": {
+    "ui inputs": {
+     "mean": 0.026,
+     "max": 0.026
+    },
+    "ui task": {
+     "mean": 0.024,
+     "max": 0.034
+    },
+    "ui adc/pitch": {
+     "mean": 0.013,
+     "max": 0.013
+    },
+    "prepare": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "select": {
+     "mean": 0.022,
+     "max": 0.026
+    },
+    "envelopes": {
+     "mean": 0.016,
+     "max": 0.016
+    },
+    "modulation": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "engine": {
+     "mean": 0.754,
+     "max": 0.754
+    },
+    "subosc": {
+     "mean": 0.004,
+     "max": 0.004
+    },
+    "lpg env": {
+     "mean": 0.02,
+     "max": 0.021
+    },
+    "out post": {
+     "mean": 0.04,
+     "max": 0.04
+    },
+    "aux post": {
+     "mean": 0.045,
+     "max": 0.046
+    }
+   },
+   "unplaced": true
+  },
+  {
+   "scene": 2,
+   "label": "Chords stereo + TRIG",
+   "aux": "stereo",
+   "peak": 0.9,
+   "mean": 0.881,
+   "late": 0,
+   "switch_peak": 0.997,
+   "switch_late": 7,
+   "blocks": 77776,
+   "sections": {
+    "ui inputs": {
+     "mean": 0.027,
+     "max": 0.027
+    },
+    "ui task": {
+     "mean": 0.024,
+     "max": 0.034
+    },
+    "ui adc/pitch": {
+     "mean": 0.013,
+     "max": 0.013
+    },
+    "prepare": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "select": {
+     "mean": 0.022,
+     "max": 0.026
+    },
+    "envelopes": {
+     "mean": 0.017,
+     "max": 0.017
+    },
+    "modulation": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "engine": {
+     "mean": 0.632,
+     "max": 0.639
+    },
+    "subosc": {
+     "mean": 0.004,
+     "max": 0.004
+    },
+    "lpg env": {
+     "mean": 0.02,
+     "max": 0.021
+    },
+    "out post": {
+     "mean": 0.041,
+     "max": 0.041
+    },
+    "aux post": {
+     "mean": 0.045,
+     "max": 0.046
+    }
+   },
+   "unplaced": true
+  },
+  {
+   "scene": 3,
+   "label": "Morph stereo + TRIG",
+   "aux": "stereo",
+   "peak": 0.997,
+   "mean": 0.982,
+   "late": 12249,
+   "switch_peak": 1.019,
+   "switch_late": 3,
+   "blocks": 77776,
+   "sections": {
+    "ui inputs": {
+     "mean": 0.026,
+     "max": 0.027
+    },
+    "ui task": {
+     "mean": 0.024,
+     "max": 0.034
+    },
+    "ui adc/pitch": {
+     "mean": 0.013,
+     "max": 0.013
+    },
+    "prepare": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "select": {
+     "mean": 0.022,
+     "max": 0.025
+    },
+    "envelopes": {
+     "mean": 0.017,
+     "max": 0.017
+    },
+    "modulation": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "engine": {
+     "mean": 0.684,
+     "max": 0.688
+    },
+    "subosc": {
+     "mean": 0.004,
+     "max": 0.004
+    },
+    "lpg env": {
+     "mean": 0.02,
+     "max": 0.021
+    },
+    "out post": {
+     "mean": 0.09,
+     "max": 0.091
+    },
+    "aux post": {
+     "mean": 0.045,
+     "max": 0.046
+    }
+   },
+   "unplaced": true
+  },
+  {
+   "scene": 4,
+   "label": "Fold stereo + TRIG",
+   "aux": "stereo",
+   "peak": 1.062,
+   "mean": 1.047,
+   "late": 12250,
+   "switch_peak": 1.069,
+   "switch_late": 1994,
+   "blocks": 77776,
+   "sections": {
+    "ui inputs": {
+     "mean": 0.026,
+     "max": 0.026
+    },
+    "ui task": {
+     "mean": 0.024,
+     "max": 0.034
+    },
+    "ui adc/pitch": {
+     "mean": 0.013,
+     "max": 0.013
+    },
+    "prepare": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "select": {
+     "mean": 0.022,
+     "max": 0.025
+    },
+    "envelopes": {
+     "mean": 0.017,
+     "max": 0.017
+    },
+    "modulation": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "engine": {
+     "mean": 0.749,
+     "max": 0.75
+    },
+    "subosc": {
+     "mean": 0.004,
+     "max": 0.004
+    },
+    "lpg env": {
+     "mean": 0.02,
+     "max": 0.021
+    },
+    "out post": {
+     "mean": 0.09,
+     "max": 0.091
+    },
+    "aux post": {
+     "mean": 0.045,
+     "max": 0.046
+    }
+   },
+   "unplaced": true
+  },
+  {
+   "scene": 5,
+   "label": "DX7 + TRIG",
+   "aux": "regular",
+   "peak": 1.044,
+   "mean": 1.008,
+   "late": 12250,
+   "switch_peak": 3.992,
+   "switch_late": 1492,
+   "blocks": 77776,
+   "sections": {
+    "ui inputs": {
+     "mean": 0.026,
+     "max": 0.026
+    },
+    "ui task": {
+     "mean": 0.024,
+     "max": 0.034
+    },
+    "ui adc/pitch": {
+     "mean": 0.013,
+     "max": 0.013
+    },
+    "prepare": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "select": {
+     "mean": 0.022,
+     "max": 0.026
+    },
+    "envelopes": {
+     "mean": 0.016,
+     "max": 0.016
+    },
+    "modulation": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "engine": {
+     "mean": 0.824,
+     "max": 0.849
+    },
+    "subosc": {
+     "mean": 0.004,
+     "max": 0.004
+    },
+    "lpg env": {
+     "mean": 0.004,
+     "max": 0.004
+    },
+    "out post": {
+     "mean": 0.017,
+     "max": 0.018
+    },
+    "aux post": {
+     "mean": 0.022,
+     "max": 0.023
+    }
+   },
+   "unplaced": true
+  },
+  {
+   "scene": 6,
+   "label": "DX7 stereo + TRIG",
+   "aux": "stereo",
+   "peak": 1.048,
+   "mean": 1.011,
+   "late": 12250,
+   "switch_peak": 1.047,
+   "switch_late": 1994,
+   "blocks": 77776,
+   "sections": {
+    "ui inputs": {
+     "mean": 0.026,
+     "max": 0.026
+    },
+    "ui task": {
+     "mean": 0.024,
+     "max": 0.034
+    },
+    "ui adc/pitch": {
+     "mean": 0.013,
+     "max": 0.013
+    },
+    "prepare": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "select": {
+     "mean": 0.022,
+     "max": 0.025
+    },
+    "envelopes": {
+     "mean": 0.017,
+     "max": 0.017
+    },
+    "modulation": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "engine": {
+     "mean": 0.824,
+     "max": 0.848
+    },
+    "subosc": {
+     "mean": 0.004,
+     "max": 0.004
+    },
+    "lpg env": {
+     "mean": 0.004,
+     "max": 0.004
+    },
+    "out post": {
+     "mean": 0.018,
+     "max": 0.018
+    },
+    "aux post": {
+     "mean": 0.022,
+     "max": 0.023
+    }
+   }
+  }
+ ],
+ "ui_tasks": {
+  "UpdateLEDs": {
+   "mean": 0.034,
+   "max": 0.034
+  },
+  "ReadSwitches": {
+   "mean": 0.019,
+   "max": 0.019
+  },
+  "PotsHidden": {
+   "mean": 0.023,
+   "max": 0.023
+  },
+  "DetectNorm": {
+   "mean": 0.021,
+   "max": 0.027
+  }
+ },
+ "probes": [
+  {
+   "mean": 0.006,
+   "max": 0.006
+  },
+  {
+   "mean": 0.004,
+   "max": 0.004
+  },
+  {
+   "mean": 0.009,
+   "max": 0.009
+  },
+  {
+   "mean": 0.012,
+   "max": 0.012
+  }
+ ]
+}
