@@ -127,7 +127,12 @@ struct ScaleVoiceState {
   float* dc_aux_out;
 };
 
+// Not unrolled: each voice's loop is a chain on its phase, and six template
+// copies unrolled cost ~2.3 KB of flash.
 template <WaveRegion region, bool folding>
+#if !defined(__clang__)
+__attribute__((noinline, optimize("no-unroll-loops")))
+#endif
 void RenderScaleVoices(
     const ScaleVoiceState& state,
     const int* voices,
@@ -146,31 +151,46 @@ void RenderScaleVoices(
   float dc_out = *state.dc_out;
   float dc_aux_in = *state.dc_aux_in;
   float dc_aux_out = *state.dc_aux_out;
+  // Voice by voice rather than sample by sample: each voice's phase and
+  // increment then stay in registers for the block. Sample by sample, both
+  // sat behind pointers and were reloaded around every store to out/aux,
+  // which could alias them. The per-sample sums still add the voices in the
+  // same order, so the output is bit-identical.
+  float mixed[kMaxBlockSize];
+  float root[kMaxBlockSize];
   for (size_t i = 0; i < size; ++i) {
-    float mixed = 0.0f;
-    float root = 0.0f;
-    for (int n = 0; n < num_audible; ++n) {
-      const int v = voices[n];
-      phase[v] += frequency[v];
-      if (phase[v] >= 1.0f) {
-        phase[v] -= 1.0f;
+    mixed[i] = 0.0f;
+    root[i] = 0.0f;
+  }
+  for (int n = 0; n < num_audible; ++n) {
+    const int v = voices[n];
+    const float f = frequency[v];
+    float p = phase[v];
+    const bool is_root = root_audible && n == 0;
+    for (size_t i = 0; i < size; ++i) {
+      p += f;
+      if (p >= 1.0f) {
+        p -= 1.0f;
       }
-      float sample = RegionWaveform<region>(phase[v], frequency[v], blend);
+      float sample = RegionWaveform<region>(p, f, blend);
       if (folding) {
         // See Render(): the +1.0f keeps Sine()'s argument non-negative.
         const float folded = Sine(1.0f + sample * fold_drive * 0.25f);
         sample += (folded - sample) * fold_amount;
       }
-      mixed += sample * mix;
-      if (root_audible && n == 0) {
-        root = sample;
+      mixed[i] += sample * mix;
+      if (is_root) {
+        root[i] = sample;
       }
     }
-    dc_out = mixed - dc_in + 0.999f * dc_out;
-    dc_in = mixed;
+    phase[v] = p;
+  }
+  for (size_t i = 0; i < size; ++i) {
+    dc_out = mixed[i] - dc_in + 0.999f * dc_out;
+    dc_in = mixed[i];
     out[i] = dc_out;
-    dc_aux_out = root - dc_aux_in + 0.999f * dc_aux_out;
-    dc_aux_in = root;
+    dc_aux_out = root[i] - dc_aux_in + 0.999f * dc_aux_out;
+    dc_aux_in = root[i];
     aux[i] = dc_aux_out;
   }
   *state.dc_in = dc_in;
