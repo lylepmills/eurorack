@@ -964,6 +964,73 @@ def _natural_speech_object() -> str:
     return entry.member.rstrip("_") + ".o"
 
 
+def _make_and_validate(
+    command: list[str],
+    environment: dict[str, str],
+    build_dir: Path,
+    output: FirmwareOutput,
+    config_text: str,
+) -> tuple[str, Path, Path, dict[str, int]]:
+    """Run the firmware make and the post-link gates; return the log, the
+    artifact and binary paths, and the size summary."""
+    try:
+        result = subprocess.run(
+            command,
+            cwd=WORKSPACE,
+            env=environment,
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            timeout=MAX_BUILD_SECONDS,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise BuildError("build_timeout", "The firmware build exceeded its time limit.") from error
+
+    log = redact_log(result.stdout + "\n" + result.stderr)
+    if result.returncode != 0:
+        classified = classify_link_failure(log)
+        if classified is not None:
+            code, message = classified
+        else:
+            code, message = (
+                "compiler_failed",
+                "The firmware recipe did not compile. This is usually a problem "
+                "on our end rather than your palette — please try again, and "
+                "report it if it persists.",
+            )
+        raise BuildError(code, message, log)
+
+    artifact_dir = build_dir / "plaits"
+    bin_path = artifact_dir / "plaits.bin"
+    elf_path = artifact_dir / "plaits.elf"
+    artifact_path = artifact_dir / ("plaits.wav" if output == "audio-wav" else "plaits.hex")
+    if not artifact_path.is_file() or not bin_path.is_file() or not elf_path.is_file():
+        raise BuildError("invalid_artifact", "The compiler did not produce every required firmware artifact.", log)
+
+    try:
+        safety = validate_linked_firmware(elf_path, config_text)
+    except BuildError as error:
+        if error.code == "unsafe_flash_layout":
+            raise BuildError(
+                "internal_error",
+                "The firmware build produced an unsafe flash layout. This is a "
+                "fault on our end rather than your palette — please report it.",
+                f"{log}\nuser-data region check: {error.detail}",
+            ) from error
+        error.detail = f"{log}\n{error.detail}".rstrip()
+        raise
+    return log, artifact_path, bin_path, safety
+
+
+def _discard_sine_table_link(build_dir: Path) -> None:
+    """Remove what PLAITS_SINE_LUT_IN_RAM changes, so make rebuilds
+    resources.o with the table in flash and relinks every artifact."""
+    artifact_dir = build_dir / "plaits"
+    for name in ("resources.o", "plaits.elf", "plaits.bin", "plaits.hex",
+                 "plaits.wav", "plaits.map", "plaits.size"):
+        (artifact_dir / name).unlink(missing_ok=True)
+
+
 def build_firmware(payload: Any) -> tuple[Path, FirmwareOutput, dict[str, str]]:
     if not isinstance(payload, dict):
         raise BuildError("invalid_request", "The build request must be a JSON object.")
@@ -1068,52 +1135,24 @@ def build_firmware(payload: Any) -> tuple[Path, FirmwareOutput, dict[str, str]]:
         "LC_CTYPE": "C",
         "HOME": str(build_dir),
     }
-    try:
-        result = subprocess.run(
-            command,
-            cwd=WORKSPACE,
-            env=environment,
-            stdin=subprocess.DEVNULL,
-            capture_output=True,
-            text=True,
-            timeout=MAX_BUILD_SECONDS,
-        )
-    except subprocess.TimeoutExpired as error:
-        raise BuildError("build_timeout", "The firmware build exceeded its time limit.") from error
-
-    log = redact_log(result.stdout + "\n" + result.stderr)
-    if result.returncode != 0:
-        classified = classify_link_failure(log)
-        if classified is not None:
-            code, message = classified
-        else:
-            code, message = (
-                "compiler_failed",
-                "The firmware recipe did not compile. This is usually a problem "
-                "on our end rather than your palette — please try again, and "
-                "report it if it persists.",
-            )
-        raise BuildError(code, message, log)
-
-    artifact_dir = build_dir / "plaits"
-    bin_path = artifact_dir / "plaits.bin"
-    elf_path = artifact_dir / "plaits.elf"
-    artifact_path = artifact_dir / ("plaits.wav" if output == "audio-wav" else "plaits.hex")
-    if not artifact_path.is_file() or not bin_path.is_file() or not elf_path.is_file():
-        raise BuildError("invalid_artifact", "The compiler did not produce every required firmware artifact.", log)
-
-    try:
-        safety = validate_linked_firmware(elf_path, config_text)
-    except BuildError as error:
-        if error.code == "unsafe_flash_layout":
-            raise BuildError(
-                "internal_error",
-                "The firmware build produced an unsafe flash layout. This is a "
-                "fault on our end rather than your palette — please report it.",
-                f"{log}\nuser-data region check: {error.detail}",
-            ) from error
-        error.detail = f"{log}\n{error.detail}".rstrip()
-        raise
+    # lut_sine is linked into SRAM when the palette has the RAM for it (see
+    # PLAITS_SINE_LUT_IN_RAM in plaits/makefile: flash reads of the table cost
+    # the engines real time). A palette that then fails the RAM budget is
+    # relinked with the table in flash, so turning this on never rejects a
+    # palette that would otherwise build.
+    sine_in_sram = True
+    while True:
+        attempt = [*command, f"PLAITS_SINE_LUT_IN_RAM={1 if sine_in_sram else 0}"]
+        try:
+            log, artifact_path, bin_path, safety = _make_and_validate(
+                attempt, environment, build_dir, output, config_text)
+            break
+        except BuildError as error:
+            if sine_in_sram and error.code == "ram_budget_exceeded":
+                sine_in_sram = False
+                _discard_sine_table_link(build_dir)
+                continue
+            raise
 
     text_bytes = safety["textBytes"]
     data_bytes = safety["dataBytes"]
@@ -1127,6 +1166,7 @@ def build_firmware(payload: Any) -> tuple[Path, FirmwareOutput, dict[str, str]]:
         "X-Plaits-Source-Revision": SOURCE_REVISION,
         "X-Plaits-Toolchain": TOOLCHAIN_ID,
         "X-Plaits-Build-Contract": BUILD_CONTRACT_VERSION,
+        "X-Plaits-Sine-Table": "sram" if sine_in_sram else "flash",
     }
     metadata[
         "X-Plaits-Wav-Sha256" if output == "audio-wav" else "X-Plaits-Hex-Sha256"

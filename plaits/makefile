@@ -59,6 +59,23 @@ TOOLCHAIN_PATH ?= /usr/local/arm-4.8.3/
 
 include stmlib/makefile.inc
 
+# PLAITS_SINE_LUT_IN_RAM=1 links lut_sine (2564 B) into .data, so startup
+# copies it to SRAM: nearly every engine reads it, and read from flash each
+# lookup costs wait states and stalls instruction fetch (DX7 + TRIG measured
+# 1.044 -> 0.972 of the period; alt_firmwares/research/cpu_audit/
+# sine_ram_ab_2026-09-30_*.json). The table stays
+# const in the generated resources.cc; only its object section is renamed, so
+# the stock linker script places it and .data's initializers still follow
+# .text in flash. The hosted builder turns this on and falls back to 0 when a
+# palette does not have the RAM.
+ifeq ($(PLAITS_SINE_LUT_IN_RAM),1)
+$(BUILD_DIR)resources.o: plaits/resources.cc
+	$(CXX) -c $(CCFLAGS) $(CPPFLAGS) $< -o $@
+	$(OBJCOPY) --rename-section \
+		.rodata._ZN6plaits8lut_sineE=.data._ZN6plaits8lut_sineE,alloc,load,contents,data \
+		$@
+endif
+
 # Optimize control, startup, and callback glue for size while leaving the voice
 # renderer and every synthesis engine at -O2. FillBuffer itself only dispatches
 # to those hot paths, so this recovers flash without slowing their DSP loops.

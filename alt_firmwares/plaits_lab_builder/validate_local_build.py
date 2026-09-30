@@ -26,7 +26,8 @@ def main() -> int:
         print(f"Safety check failed: {error.message}", file=sys.stderr)
         if error.detail:
             print(error.detail, file=sys.stderr)
-        return 1
+        # build.sh relinks with the sine table in flash on this code alone.
+        return 3 if error.code == "ram_budget_exceeded" else 1
     except (OSError, subprocess.SubprocessError, ValueError) as error:
         print(f"Safety check could not run: {error}", file=sys.stderr)
         return 1

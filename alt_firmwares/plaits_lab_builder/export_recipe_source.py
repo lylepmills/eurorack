@@ -123,7 +123,7 @@ def _shell_script(recipe: Any, has_linker_script: bool) -> str:
             _recipe_is_stereo(recipe), recipe.stereo_engines
         )
     )
-    joined = " \\\n  ".join(variables)
+    joined_indented = " \\\n    ".join(variables)
     return f"""#!/bin/sh
 set -eu
 
@@ -146,13 +146,48 @@ esac
 build_root=${{PLAITS_BUILD_ROOT:-$export_dir/build/}}
 jobs=${{PLAITS_JOBS:-4}}
 
-make -C "$repo" -f plaits/makefile \\
-  {joined} \\
-  "-j$jobs" "$target"
+# lut_sine goes to SRAM when the palette has the RAM for it, as the hosted
+# builder does (see PLAITS_SINE_LUT_IN_RAM in plaits/makefile); a palette
+# short of RAM is relinked with it in flash. PLAITS_SINE_LUT_IN_RAM=0 or 1
+# in the environment forces either.
+build() {{
+  make_status=0
+  make -C "$repo" -f plaits/makefile \\
+    {joined_indented} \\
+    "PLAITS_SINE_LUT_IN_RAM=$1" \\
+    "-j$jobs" "$target" > "${{build_root%/}}.make.log" 2>&1 || make_status=$?
+  cat "${{build_root%/}}.make.log"
+  return $make_status
+}}
 
-python3 "$repo/alt_firmwares/plaits_lab_builder/validate_local_build.py" \\
-  "$export_dir/engine_config.h" \\
-  "${{build_root%/}}/plaits/plaits.elf"
+check() {{
+  python3 "$repo/alt_firmwares/plaits_lab_builder/validate_local_build.py" \\
+    "$export_dir/engine_config.h" \\
+    "${{build_root%/}}/plaits/plaits.elf"
+}}
+
+mkdir -p "$build_root"
+sine=${{PLAITS_SINE_LUT_IN_RAM:-auto}}
+if [ "$sine" != auto ]; then
+  build "$sine"
+  check
+  exit 0
+fi
+
+status=0
+build 1 || status=$?
+if [ "$status" -eq 0 ]; then
+  check || status=$?
+  [ "$status" -eq 0 ] && exit 0
+  [ "$status" -eq 3 ] || exit "$status"
+elif ! grep -q "region \\`RAM'" "${{build_root%/}}.make.log"; then
+  exit "$status"
+fi
+
+echo "Not enough RAM for the sine table in SRAM: relinking with it in flash." >&2
+rm -f "${{build_root%/}}/plaits/resources.o" "${{build_root%/}}/plaits/plaits.elf"
+build 0
+check
 """
 
 

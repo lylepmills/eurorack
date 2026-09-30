@@ -17,6 +17,7 @@ from container_server import (
     RAM_BUDGET_BYTES,
     RAM_STACK_RESERVE_BYTES,
     _build_targets,
+    build_firmware,
     _check_shared_buffer_alignment,
     _validate_shared_buffer_layout,
     _concatenate_pcm_wavs,
@@ -494,6 +495,62 @@ class NaturalSpeechRecordingPreviewTest(unittest.TestCase):
     def test_each_word_carries_a_preview_for_every_mode(self) -> None:
         result = self.encode()
         self.assertEqual(set(result["entries"][0]["audio"]), set(self.MODES))
+
+
+class SineTableFallbackTests(unittest.TestCase):
+    """lut_sine is linked into SRAM unless that breaks the RAM budget."""
+
+    def _build(self, results: list) -> tuple[list[list[str]], dict[str, str], Path]:
+        calls: list[list[str]] = []
+        root = Path(tempfile.mkdtemp())
+
+        def fake_make(command, _environment, build_dir, _output, _config):
+            calls.append(list(command))
+            outcome = results[len(calls) - 1]
+            if isinstance(outcome, BuildError):
+                (build_dir / "plaits").mkdir(exist_ok=True)
+                (build_dir / "plaits" / "resources.o").write_bytes(b"sram")
+                raise outcome
+            artifacts = build_dir / "plaits"
+            artifacts.mkdir(exist_ok=True)
+            (artifacts / "plaits.bin").write_bytes(b"bin")
+            (artifacts / "plaits.wav").write_bytes(b"wav")
+            return ("log", artifacts / "plaits.wav", artifacts / "plaits.bin",
+                    {"textBytes": 1, "dataBytes": 2, "bssBytes": 3})
+
+        recipe = json.loads(
+            (Path(__file__).with_name("default_recipe.json")).read_text())
+        with patch("container_server.BUILD_ROOT", root), \
+             patch("container_server._make_and_validate", side_effect=fake_make):
+            _, _, metadata = build_firmware({"buildKey": "a" * 64, "recipe": recipe})
+        return calls, metadata, root / ("a" * 64)
+
+    def test_the_table_goes_to_sram_when_it_fits(self) -> None:
+        calls, metadata, _ = self._build(["ok"])
+        self.assertEqual(len(calls), 1)
+        self.assertIn("PLAITS_SINE_LUT_IN_RAM=1", calls[0])
+        self.assertEqual(metadata["X-Plaits-Sine-Table"], "sram")
+
+    def test_a_palette_short_of_ram_is_relinked_with_the_table_in_flash(self) -> None:
+        calls, metadata, build_dir = self._build(
+            [BuildError("ram_budget_exceeded", "over"), "ok"])
+        self.assertEqual(len(calls), 2)
+        self.assertIn("PLAITS_SINE_LUT_IN_RAM=1", calls[0])
+        self.assertIn("PLAITS_SINE_LUT_IN_RAM=0", calls[1])
+        self.assertNotIn("PLAITS_SINE_LUT_IN_RAM=1", calls[1])
+        self.assertFalse((build_dir / "plaits" / "resources.o").exists())
+        self.assertEqual(metadata["X-Plaits-Sine-Table"], "flash")
+
+    def test_other_failures_are_not_retried(self) -> None:
+        with self.assertRaises(BuildError) as raised:
+            self._build([BuildError("flash_budget_exceeded", "over")])
+        self.assertEqual(raised.exception.code, "flash_budget_exceeded")
+
+    def test_a_palette_over_budget_even_in_flash_still_fails(self) -> None:
+        with self.assertRaises(BuildError) as raised:
+            self._build([BuildError("ram_budget_exceeded", "over"),
+                         BuildError("ram_budget_exceeded", "still over")])
+        self.assertEqual(raised.exception.code, "ram_budget_exceeded")
 
 
 if __name__ == "__main__":
