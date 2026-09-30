@@ -1,0 +1,23 @@
+{
+  "group": 1,
+  "engines": [
+    "csaw",
+    "dx7-bank-a",
+    "morph",
+    "fold",
+    "chords",
+    "wave-scan",
+    "granular-formant",
+    "diatonic-chord",
+    "ring-mod",
+    "phase-distortion",
+    "harmonic",
+    "helix",
+    "glisson",
+    "swarm",
+    "string-machine",
+    "granular-cloud"
+  ],
+  "sourceRevision": "030f27bf8b431a77577baa17614d5b2f7e7199f3",
+  "sourceDirty": false
+}
