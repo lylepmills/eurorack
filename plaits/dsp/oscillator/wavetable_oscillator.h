@@ -50,9 +50,24 @@ class Differentiator {
   }
   
   float Process(float coefficient, float s) {
-    ONE_POLE(lp_, s - previous_, coefficient);
-    previous_ = s;
-    return lp_;
+    return Process(coefficient, s, &lp_, &previous_);
+  }
+
+  // The same, on state the caller holds in locals for a loop (as members, the
+  // state was reloaded and stored around every store to the output buffer).
+  static inline float Process(
+      float coefficient, float s, float* lp, float* previous) {
+    ONE_POLE(*lp, s - *previous, coefficient);
+    *previous = s;
+    return *lp;
+  }
+  inline void state(float* lp, float* previous) const {
+    *lp = lp_;
+    *previous = previous_;
+  }
+  inline void set_state(float lp, float previous) {
+    lp_ = lp;
+    previous_ = previous;
   }
  private:
   float lp_;
@@ -146,6 +161,8 @@ class WavetableOscillator {
     
     float lp = lp_;
     float phase = phase_;
+    float differentiator_lp, differentiator_previous;
+    differentiator_.state(&differentiator_lp, &differentiator_previous);
     while (size--) {
       float f0 = frequency_modulation.Next();
       if (root_frequency_offset) {
@@ -193,12 +210,15 @@ class WavetableOscillator {
         lp = s;
       } else
 #endif
-      s = differentiator_.Process(
+      s = Differentiator::Process(
           cutoff,
-          (x0 + (x1 - x0) * waveform_fractional) * scale);
+          (x0 + (x1 - x0) * waveform_fractional) * scale,
+          &differentiator_lp,
+          &differentiator_previous);
       ONE_POLE(lp, s, cutoff);
       *out++ += amplitude_modulation.Next() * lp;
     }
+    differentiator_.set_state(differentiator_lp, differentiator_previous);
     lp_ = lp;
     phase_ = phase;
   }
