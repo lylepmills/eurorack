@@ -293,11 +293,13 @@ inline float DepthGuard(float note, float threshold, float span) {
 }  // namespace
 
 void FoldEngine::Init(BufferAllocator* allocator) {
-  (void) allocator;
+  shaper_ = allocator->Allocate<float>(2 * 257);
   Reset();
 }
 
 void FoldEngine::Reset() {
+  copy(&kSineFoldScaled[0], &kSineFoldScaled[257], &shaper_[0]);
+  copy(&kTriFoldScaled[0], &kTriFoldScaled[257], &shaper_[257]);
   phase_ = 0.0f;
   frequency_ = 0.01f;
   depth_ = kFoldMinDepth;
@@ -364,6 +366,8 @@ void FoldEngine::Render(
   // The phase and DC-blocker states run in locals: as members, every store to
   // `out`/`aux` could alias them, so the phase (updated four times a sample)
   // was reloaded and stored on each use.
+  const float* sine_shaper = &shaper_[0];
+  const float* tri_shaper = &shaper_[257];
   float phase = phase_;
   float dc_input = dc_input_;
   float dc_input_aux = dc_input_aux_;
@@ -405,8 +409,8 @@ void FoldEngine::Render(
       const float sine_source = BraidsSine(phase) * sine_depth + symmetry;
       const float tri_source = Triangle(phase) * tri_depth + symmetry;
 
-      const float folded_sine = ReadShaper(kSineFoldScaled, sine_source);
-      const float folded_tri = ReadShaper(kTriFoldScaled, tri_source);
+      const float folded_sine = ReadShaper(sine_shaper, sine_source);
+      const float folded_tri = ReadShaper(tri_shaper, tri_source);
 
       downsampler.Accumulate(j, folded_sine +
           (folded_tri - folded_sine) * blend_main);

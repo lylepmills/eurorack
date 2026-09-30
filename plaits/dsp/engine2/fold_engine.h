@@ -129,6 +129,12 @@ class FoldEngine : public Engine {
   float dc_input_;
   float dc_input_aux_;
 
+  // The two shaper tables, copied into the engines' shared RAM arena: read
+  // from flash, each of the eight lookups per output sample paid wait
+  // states. The arena is shared by every engine, so Reset() -- which the
+  // voice calls whenever Fold becomes the active engine -- copies them in.
+  float* shaper_;
+
   DISALLOW_COPY_AND_ASSIGN(FoldEngine);
 };
 
