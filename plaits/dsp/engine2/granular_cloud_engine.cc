@@ -60,13 +60,19 @@ inline float BraidsSine(float phase) {
 //
 // `peak` slides where the window crests. At 0.5 the warp is the identity and
 // this is Braids' window exactly.
-inline float GrainEnvelope(float position, float peak) {
+//
+// `rise` and `fall` are 0.5 / peak and 0.5 / (1 - peak), computed by the
+// caller once per block (or per sample while MORPH moves) instead of dividing
+// here for every grain: a float divide is 14 cycles on the M4 and stalls the
+// FPU, and this ran four of them per sample. Multiplying by the reciprocal
+// differs from the division by at most an ulp of the window.
+inline float GrainEnvelope(float position, float peak, float rise, float fall) {
   if (position >= 1.0f) {
     return 0.0f;
   }
   const float warped = position < peak
-      ? 0.5f * position / peak
-      : 0.5f + 0.5f * (position - peak) / (1.0f - peak);
+      ? position * rise
+      : 0.5f + (position - peak) * fall;
   return 0.5f - 0.5f * Sine(warped + 0.25f);
 }
 
@@ -191,6 +197,11 @@ void GranularCloudEngine::Render(
   const float target_peak = kGranularCloudPeakLate +
       (kGranularCloudPeakEarly - kGranularCloudPeakLate) * morph;
 
+  // Unless MORPH moved, the window's peak is constant over the block, and so
+  // are its reciprocals.
+  const bool peak_moving = target_peak != peak_position_;
+  float rise = 0.5f / target_peak;
+  float fall = 0.5f / (1.0f - target_peak);
   ParameterInterpolator peak_modulation(&peak_position_, target_peak, size);
 
   float pan_left[kGranularCloudNumGrains];
@@ -223,6 +234,10 @@ void GranularCloudEngine::Render(
     --scheduler_countdown_;
 
     const float peak = peak_modulation.Next();
+    if (peak_moving) {
+      rise = 0.5f / peak;
+      fall = 0.5f / (1.0f - peak);
+    }
 
     float mono = 0.0f;
     float left = 0.0f;
@@ -239,7 +254,7 @@ void GranularCloudEngine::Render(
       g->envelope_phase += g->envelope_phase_increment;
 
       const float envelope = GrainEnvelope(
-          static_cast<float>(g->envelope_phase) * inverse_end, peak);
+          static_cast<float>(g->envelope_phase) * inverse_end, peak, rise, fall);
       const float value = BraidsSine(g->phase) * envelope *
           kGranularCloudGrainGain;
 
