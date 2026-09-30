@@ -253,8 +253,14 @@ void HelixEngine::Render(const EngineParameters& parameters, float* out,
         osc_x_[idx] = x * renorm;
         osc_y_[idx] = y * renorm;
         if (stereo) {
+          // Wrap 0..1 so the cloud rotates. Truncation plus one conditional add
+          // is floor() without the library call (floorf is not inlined here),
+          // and for the pos this can see it performs the same subtraction.
           float pos = p * inv_octaves;
-          pos -= std::floor(pos);                  // wrap 0..1 so the cloud rotates
+          pos -= static_cast<float>(static_cast<int32_t>(pos));
+          if (pos < 0.0f) {
+            pos += 1.0f;
+          }
           pan_l_[idx] = Sine(pos * 0.25f + 0.25f);  // cos(pos * pi/2)
           pan_r_[idx] = Sine(pos * 0.25f);          // sin(pos * pi/2)
         }
