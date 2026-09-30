@@ -92,12 +92,12 @@ class StringSynthOscillator {
       return;
     }
     
+    // An explicit loop: std::fill/std::copy of at most seven floats compiled
+    // to library memset/memmove calls, made for every voice on every block.
     float registration[7];
-    std::fill(&registration[0], &registration[shift], 0.0f);
-    std::copy(
-        &unshifted_registration[0],
-        &unshifted_registration[7 - shift],
-        &registration[shift]);
+    for (size_t i = 0; i < 7; ++i) {
+      registration[i] = i < shift ? 0.0f : unshifted_registration[i - shift];
+    }
     
     stmlib::ParameterInterpolator fm(&frequency_, frequency, size);
     stmlib::ParameterInterpolator saw_8_gain_modulation(
