@@ -283,7 +283,7 @@ class Voice {
     for (int i = 0; i < num_operators; ) {
       const typename Algorithms<num_operators>::RenderCall& call = \
           algorithms_->render_call(patch_->algorithm, i);
-      (*call.render_fn)(
+      (*algorithms_->render_fn(call))(
           &operator_[i],
           &f[i],
           &a[i],

@@ -78,11 +78,14 @@ class Algorithms {
     FEEDBACK_SOURCE_FLAG = 0x40,
   };
   
+  // Four bytes: the table holds one per operator for every algorithm (192
+  // for six operators), and with a function pointer and three ints it was
+  // 3 KB of RAM. The renderer is an index into renderers_ instead.
   struct RenderCall {
-    RenderFn render_fn;
-    int n;
-    int input_index;
-    int output_index;
+    uint8_t renderer;
+    uint8_t n;
+    uint8_t input_index;
+    uint8_t output_index;
   };
   
   inline void Init() {
@@ -95,6 +98,10 @@ class Algorithms {
     return render_call_[algorithm][op];
   }
   
+  inline RenderFn render_fn(const RenderCall& call) const {
+    return renderers_[call.renderer].render_fn;
+  }
+
   inline bool is_modulator(int algorithm, int op) const {
     return opcodes_[algorithm][op] & DESTINATION_MASK;
   }
@@ -107,15 +114,16 @@ class Algorithms {
     RenderFn render_fn;
   };
      
-  inline RenderFn GetRenderer(int n, int modulation_source, bool additive) {
+  // The index of the renderer for this chain in renderers_, or -1.
+  inline int GetRenderer(int n, int modulation_source, bool additive) {
     for (const RendererSpecs* r = renderers_; r->n; ++r) {
       if (r->n == n && \
           r->modulation_source == modulation_source && \
           r->additive == additive) {
-        return r->render_fn;
+        return static_cast<int>(r - renderers_);
       }
     }
-    return NULL;
+    return -1;
   }
   
   inline void Compile(int algorithm) {
@@ -160,10 +168,10 @@ class Algorithms {
             }
           }
         }
-        RenderFn fn = GetRenderer(n, modulation_source, additive);
-        if (fn) {
+        const int renderer = GetRenderer(n, modulation_source, additive);
+        if (renderer >= 0) {
           RenderCall* call = &render_call_[algorithm][i];
-          call->render_fn = fn;
+          call->renderer = static_cast<uint8_t>(renderer);
           call->n = n;
           call->input_index = (opcode & SOURCE_MASK) >> 4;
           call->output_index = out_opcode & DESTINATION_MASK;
