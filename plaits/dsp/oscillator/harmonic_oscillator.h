@@ -158,15 +158,22 @@ class HarmonicOscillator {
       frequency = 0.5f;
     }
     
+    // The interpolators take one shared 1 / size: initialised with a size,
+    // each divides by it -- a 14-cycle divide per harmonic per block.
+    // Multiplying by the reciprocal differs from the division by at most an
+    // ulp. (Assigning from a temporary: its destructor stores the unchanged
+    // state back, which is harmless.)
+    const float step = 1.0f / static_cast<float>(size);
     stmlib::ParameterInterpolator am[num_harmonics];
-    stmlib::ParameterInterpolator fm(&frequency_, frequency, size);
-    
+    stmlib::ParameterInterpolator fm(&frequency_, frequency, step);
+
     for (int i = 0; i < num_harmonics; ++i) {
       float f = frequency * static_cast<float>(first_harmonic_index + i);
       if (f >= 0.5f) {
         f = 0.5f;
       }
-      am[i].Init(&amplitude_[i], amplitudes[i] * (1.0f - f * 2.0f), size);
+      am[i] = stmlib::ParameterInterpolator(
+          &amplitude_[i], amplitudes[i] * (1.0f - f * 2.0f), step);
     }
 
     while (size--) {
