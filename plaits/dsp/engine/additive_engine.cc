@@ -185,6 +185,9 @@ void AdditiveEngine::Render(
         f0, frequency_offset, &amplitudes_[0], out, size, hard_sync);
     harmonic_oscillator_[1].RenderLinearFm<13>(
         f0, frequency_offset, &amplitudes_[12], out, size, hard_sync);
+    if (parameters.aux_discarded) {
+      return;
+    }
     UpdateAmplitudes(
         centroid,
         slope,
@@ -213,6 +216,13 @@ void AdditiveEngine::Render(
       f0, &amplitudes_[0], out, size, hard_sync);
   harmonic_oscillator_[1].Render<13>(
       f0, &amplitudes_[12], out, size, hard_sync);
+
+  // AUX is its own 8-harmonic organ bank. When the voice discards AUX it is
+  // neither updated nor rendered (its amplitudes resume smoothly from where
+  // they were).
+  if (parameters.aux_discarded) {
+    return;
+  }
 
   UpdateAmplitudes(
       centroid,

@@ -774,6 +774,9 @@ void Voice::Render(
       &p.timbre,
       &p.morph);
 
+  // The suboscillator below replaces AUX whenever it is selected (the aux
+  // crossfade, if enabled, then mixes OUT with the suboscillator).
+  p.aux_discarded = patch.aux_is_subosc();
   bool already_enveloped = pp_s.already_enveloped;
   PLAITS_SECTION_MARK(SECTION_MARK_ENGINE_START);
   RenderEngineWithHardSync(

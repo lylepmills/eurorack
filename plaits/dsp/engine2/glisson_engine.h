@@ -61,6 +61,19 @@ class GlissonEngine : public Engine {
       float delay,
       bool stereo);
 
+  template<bool render_aux>
+  void RenderMono(
+      const EngineParameters& parameters,
+      int num_grains,
+      float f0,
+      float scatter,
+      float direction,
+      float duration,
+      float gain,
+      float* out,
+      float* aux,
+      size_t size);
+
   Grain grain_[kNumGlissonGrains];
   int num_grains_;
   bool reset_pending_;

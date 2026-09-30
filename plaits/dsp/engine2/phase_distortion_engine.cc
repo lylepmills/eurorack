@@ -71,6 +71,11 @@ void PhaseDistortionEngine::Render(
   const float amount = 8.0f * parameters.timbre * parameters.timbre * \
       (1.0f - modulator_f * 3.8f);
   
+  // AUX is a second, free-running oscillator of its own -- about half the
+  // engine. When the voice discards AUX, it is not rendered (its phase just
+  // pauses; it is free-running, so nothing downstream can tell).
+  const bool render_aux = !parameters.aux_discarded;
+
   // Upsample by 2x
   float* synced = &temp_buffer_[0];
   float* free_running = &temp_buffer_[2 * size];
@@ -97,7 +102,7 @@ void PhaseDistortionEngine::Render(
         modulator_offset,
         synced,
         2 * size);
-    modulator_.RenderLinearFm<false, true>(
+    if (render_aux) modulator_.RenderLinearFm<false, true>(
         f0,
         modulator_f,
         pw,
@@ -111,12 +116,19 @@ void PhaseDistortionEngine::Render(
 #endif
   shaper_.Render<true, true>(
       f0, modulator_f, pw, 0.0f, amount, synced, 2 * size);
-  modulator_.Render<false, true>(
+  if (render_aux) modulator_.Render<false, true>(
       f0, modulator_f, pw, 0.0f, amount, free_running, 2 * size);
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
   }
 #endif
   
+  if (!render_aux) {
+    for (size_t i = 0; i < size; ++i) {
+      out[i] = 0.5f * Sine(*synced++ + 0.25f);
+      out[i] += 0.5f * Sine(*synced++ + 0.25f);
+    }
+    return;
+  }
   for (size_t i = 0; i < size; ++i) {
     // Naive 0.5x downsampling.
     out[i] = 0.5f * Sine(*synced++ + 0.25f);

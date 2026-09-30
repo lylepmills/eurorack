@@ -81,6 +81,77 @@ void GlissonEngine::StartGrain(
   }
 }
 
+// The mono render. Each grain runs on a local copy, written back after its
+// samples: as a member reached through `g`, every store to `out`/`aux` could
+// alias its phases, so they were reloaded and stored every sample. When the
+// voice discards AUX (render_aux false) the reverse-chirp oscillator that
+// only feeds AUX is skipped; its phase pauses, which nothing can hear.
+template<bool render_aux>
+void GlissonEngine::RenderMono(
+    const EngineParameters& parameters,
+    int num_grains,
+    float f0,
+    float scatter,
+    float direction,
+    float duration,
+    float gain,
+    float* out,
+    float* aux,
+    size_t size) {
+  const float macro = parameters.macro;
+  for (int i = 0; i < num_grains; ++i) {
+    Grain grain = grain_[i];
+    Grain* g = &grain;
+    for (size_t j = 0; j < size; ++j) {
+      g->envelope_phase += g->envelope_increment;
+      if (g->envelope_phase >= 1.0f) {
+        StartGrain(g, scatter, direction, duration, 0.0f, false);
+      }
+      if (g->envelope_phase < 0.0f) {
+        continue;
+      }
+
+      float t = g->envelope_phase;
+      // The fourth macro also bends the trajectory: short grains are nearly
+      // linear, long grains linger at their endpoints.
+      const float curved = t * t * (3.0f - 2.0f * t);
+      t += (curved - t) * macro;
+      const float ratio = g->start_ratio + \
+          (g->end_ratio - g->start_ratio) * t;
+      const float reverse_ratio = render_aux ? g->end_ratio + \
+          (g->start_ratio - g->end_ratio) * t : 0.0f;
+
+      float fundamental = f0;
+#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
+      if (parameters.frequency_offset) {
+        fundamental += parameters.frequency_offset[j];
+        fundamental = PLAITS_BUILD_EXTENDED_TZFM ? TzfmLimit(fundamental, 0.49f) : max(0.0f, fundamental);
+      }
+#endif
+      g->phase += (PLAITS_BUILD_EXTENDED_TZFM && fundamental < 0.0f
+          ? -LimitFrequency(-fundamental * ratio) : LimitFrequency(fundamental * ratio));
+      g->phase = TzfmWrap(g->phase);
+      if (render_aux) {
+        g->aux_phase += PLAITS_BUILD_EXTENDED_TZFM
+            ? TzfmLimit(fundamental * reverse_ratio, 0.22f)
+            : LimitFrequency(fundamental * reverse_ratio);
+        g->aux_phase = TzfmWrap(g->aux_phase);
+      }
+
+      // A parabolic grain window avoids a third interpolated sine lookup
+      // for every grain and sample. The remaining oscillator phases are
+      // already wrapped, so the cheaper no-wrap lookup is safe.
+      const float envelope = 4.0f * g->envelope_phase * \
+          (1.0f - g->envelope_phase);
+      out[j] += SineNoWrap(g->phase) * envelope * gain;
+      if (render_aux) {
+        aux[j] += SineNoWrap(g->aux_phase) * envelope * gain;
+      }
+    }
+    grain_[i] = grain;
+  }
+}
+
 void GlissonEngine::Render(
     const EngineParameters& parameters,
     float* out,
@@ -160,52 +231,12 @@ void GlissonEngine::Render(
             (g->end_gain_right - g->start_gain_right) * t);
       }
     }
+  } else if (parameters.aux_discarded) {
+    RenderMono<false>(parameters, num_grains, f0, scatter, direction,
+        duration, gain, out, aux, size);
   } else {
-    for (int i = 0; i < num_grains; ++i) {
-      Grain* g = &grain_[i];
-      for (size_t j = 0; j < size; ++j) {
-        g->envelope_phase += g->envelope_increment;
-        if (g->envelope_phase >= 1.0f) {
-          StartGrain(g, scatter, direction, duration, 0.0f, false);
-        }
-        if (g->envelope_phase < 0.0f) {
-          continue;
-        }
-
-        float t = g->envelope_phase;
-        // The fourth macro also bends the trajectory: short grains are nearly
-        // linear, long grains linger at their endpoints.
-        const float curved = t * t * (3.0f - 2.0f * t);
-        t += (curved - t) * parameters.macro;
-        const float ratio = g->start_ratio + \
-            (g->end_ratio - g->start_ratio) * t;
-        const float reverse_ratio = g->end_ratio + \
-            (g->start_ratio - g->end_ratio) * t;
-
-        float fundamental = f0;
-#if PLAITS_BUILD_FREQUENCY_OFFSET_FM
-        if (parameters.frequency_offset) {
-          fundamental += parameters.frequency_offset[j];
-          fundamental = PLAITS_BUILD_EXTENDED_TZFM ? TzfmLimit(fundamental, 0.49f) : max(0.0f, fundamental);
-        }
-#endif
-        g->phase += (PLAITS_BUILD_EXTENDED_TZFM && fundamental < 0.0f
-            ? -LimitFrequency(-fundamental * ratio) : LimitFrequency(fundamental * ratio));
-        g->phase = TzfmWrap(g->phase);
-        g->aux_phase += PLAITS_BUILD_EXTENDED_TZFM
-            ? TzfmLimit(fundamental * reverse_ratio, 0.22f)
-            : LimitFrequency(fundamental * reverse_ratio);
-        g->aux_phase = TzfmWrap(g->aux_phase);
-
-        // A parabolic grain window avoids a third interpolated sine lookup
-        // for every grain and sample. The remaining oscillator phases are
-        // already wrapped, so the cheaper no-wrap lookup is safe.
-        const float envelope = 4.0f * g->envelope_phase * \
-            (1.0f - g->envelope_phase);
-        out[j] += SineNoWrap(g->phase) * envelope * gain;
-        aux[j] += SineNoWrap(g->aux_phase) * envelope * gain;
-      }
-    }
+    RenderMono<true>(parameters, num_grains, f0, scatter, direction,
+        duration, gain, out, aux, size);
   }
 }
 

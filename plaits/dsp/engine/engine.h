@@ -137,7 +137,8 @@ struct EngineParameters {
         frequency_offset_is_linear(true),
 #endif
         frequency_offset(NULL),
-        stereo(false) { }
+        stereo(false),
+        aux_discarded(false) { }
 
   int trigger;
   float note;
@@ -217,6 +218,11 @@ struct EngineParameters {
   // PLAITS_STEREO_<X> flag off reports stereo_capable() == false, so the voice
   // never sets this true for it and its stereo branch is dead-stripped.
   bool stereo;
+  // True when the voice will overwrite AUX with its suboscillator, so
+  // anything the engine writes there is thrown away. An engine may then skip
+  // work whose only product is AUX; it must still write OUT exactly as it
+  // otherwise would. Engines that ignore the flag lose nothing.
+  bool aux_discarded;
 };
 
 // Equal-power gains for one component of a stereo render.
