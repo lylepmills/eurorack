@@ -202,6 +202,11 @@ class VariableShapeOscillator {
     stmlib::ParameterInterpolator phase_modulation(
         &phase_modulation_, phase_modulation_amount, size);
 
+    // See RenderInternal: the slopes are recomputed only when pw changes.
+    float slope_pw = -1.0f;
+    float slope_up = 0.0f;
+    float slope_down = 0.0f;
+
     while (size--) {
       float master_f = master_fm.Next();
       float slave_f = fm.Next();
@@ -220,8 +225,11 @@ class VariableShapeOscillator {
           std::max(waveshape - 0.5f, 0.0f) * 2.0f;
       const float triangle_amount =
           std::max(1.0f - waveshape * 2.0f, 0.0f);
-      const float slope_up = 1.0f / pw;
-      const float slope_down = 1.0f / (1.0f - pw);
+      if (pw != slope_pw) {
+        slope_up = 1.0f / pw;
+        slope_down = 1.0f / (1.0f - pw);
+        slope_pw = pw;
+      }
 
       bool reset = false;
       if (hard_sync & 1) {
@@ -313,7 +321,25 @@ class VariableShapeOscillator {
         &phase_modulation_, phase_modulation_amount, size);
 
     float next_sample = next_sample_;
-    
+
+    // 1 / pw and 1 / (1 - pw) are two 14-cycle divides that stall the FPU.
+    // They are recomputed only when pw differs from the value they were last
+    // computed for, so a steady pulse width divides once per block and the
+    // results are exactly the per-sample ones. (Comparing against the
+    // interpolator's target would not do: its float steps can leave pw_ an
+    // ulp off the target for good, so the block would never look steady.)
+    float slope_pw = -1.0f;
+    float slope_up = 0.0f;
+    float slope_down = 0.0f;
+
+    // The phases and edge state run in locals, written back after the block:
+    // as members, every store to `out` could alias them, so they were
+    // reloaded and stored on every sample.
+    float master_phase = master_phase_;
+    float slave_phase = slave_phase_;
+    bool high = high_;
+    float previous_pw = previous_pw_;
+
     while (size--) {
       bool reset = false;
       bool transition_during_reset = false;
@@ -330,8 +356,11 @@ class VariableShapeOscillator {
       const float square_amount = std::max(waveshape - 0.5f, 0.0f) * 2.0f;
       const float triangle_amount = std::max(1.0f - waveshape * 2.0f, 0.0f);
       
-      const float slope_up = 1.0f / (pw);
-      const float slope_down = 1.0f / (1.0f - pw);
+      if (pw != slope_pw) {
+        slope_up = 1.0f / pw;
+        slope_down = 1.0f / (1.0f - pw);
+        slope_pw = pw;
+      }
 
       if (process_hard_sync) {
         if (hard_sync & 1) {
@@ -340,7 +369,7 @@ class VariableShapeOscillator {
           // sync, then reset both master and slave phase without touching the
           // parameter interpolators.
           const float value = ComputeNaiveSample(
-              slave_phase_,
+              slave_phase,
               pw,
               slope_up,
               slope_down,
@@ -348,27 +377,27 @@ class VariableShapeOscillator {
               square_amount);
           this_sample -= value * stmlib::ThisBlepSample(1.0f);
           next_sample -= value * stmlib::NextBlepSample(1.0f);
-          master_phase_ = 0.0f;
-          slave_phase_ = 0.0f;
-          high_ = false;
+          master_phase = 0.0f;
+          slave_phase = 0.0f;
+          high = false;
         }
         hard_sync >>= 1;
       }
 
       if (enable_sync) {
-        master_phase_ += master_frequency;
-        if (master_phase_ >= 1.0f) {
-          master_phase_ -= 1.0f;
-          reset_time = master_phase_ / master_frequency;
+        master_phase += master_frequency;
+        if (master_phase >= 1.0f) {
+          master_phase -= 1.0f;
+          reset_time = master_phase / master_frequency;
       
-          float slave_phase_at_reset = slave_phase_ + \
+          float slave_phase_at_reset = slave_phase + \
               (1.0f - reset_time) * slave_frequency;
           reset = true;
           if (slave_phase_at_reset >= 1.0f) {
             slave_phase_at_reset -= 1.0f;
             transition_during_reset = true;
           }
-          if (!high_ && slave_phase_at_reset >= pw) {
+          if (!high && slave_phase_at_reset >= pw) {
             transition_during_reset = true;
           }
           float value = ComputeNaiveSample(
@@ -382,19 +411,19 @@ class VariableShapeOscillator {
           next_sample -= value * stmlib::NextBlepSample(reset_time);
         }
       } else if (output_phase) {
-        master_phase_ += master_frequency;
-        if (master_phase_ >= 1.0f) {
-          master_phase_ -= 1.0f;
+        master_phase += master_frequency;
+        if (master_phase >= 1.0f) {
+          master_phase -= 1.0f;
         }
       }
       
-      slave_phase_ += slave_frequency;
+      slave_phase += slave_frequency;
       while (transition_during_reset || !reset) {
-        if (!high_) {
-          if (slave_phase_ < pw) {
+        if (!high) {
+          if (slave_phase < pw) {
             break;
           }
-          float t = (slave_phase_ - pw) / (previous_pw_ - pw + slave_frequency);
+          float t = (slave_phase - pw) / (previous_pw - pw + slave_frequency);
           float triangle_step = (slope_up + slope_down) * slave_frequency;
           triangle_step *= triangle_amount;
           
@@ -402,15 +431,15 @@ class VariableShapeOscillator {
           next_sample += square_amount * stmlib::NextBlepSample(t);
           this_sample -= triangle_step * stmlib::ThisIntegratedBlepSample(t);
           next_sample -= triangle_step * stmlib::NextIntegratedBlepSample(t);
-          high_ = true;
+          high = true;
         }
       
-        if (high_) {
-          if (slave_phase_ < 1.0f) {
+        if (high) {
+          if (slave_phase < 1.0f) {
             break;
           }
-          slave_phase_ -= 1.0f;
-          float t = slave_phase_ / slave_frequency;
+          slave_phase -= 1.0f;
+          float t = slave_phase / slave_frequency;
           float triangle_step = (slope_up + slope_down) * slave_frequency;
           triangle_step *= triangle_amount;
 
@@ -418,29 +447,29 @@ class VariableShapeOscillator {
           next_sample -= (1.0f - triangle_amount) * stmlib::NextBlepSample(t);
           this_sample += triangle_step * stmlib::ThisIntegratedBlepSample(t);
           next_sample += triangle_step * stmlib::NextIntegratedBlepSample(t);
-          high_ = false;
+          high = false;
         }
       }
     
       if (enable_sync && reset) {
-        slave_phase_ = reset_time * slave_frequency;
-        high_ = false;
+        slave_phase = reset_time * slave_frequency;
+        high = false;
       }
     
       next_sample += ComputeNaiveSample(
-          slave_phase_,
+          slave_phase,
           pw,
           slope_up,
           slope_down,
           triangle_amount,
           square_amount);
-      previous_pw_ = pw;
+      previous_pw = pw;
       
       if (output_phase) {
-        float phasor = master_phase_;
+        float phasor = master_phase;
         if (enable_sync) {
           // A trick to prevent discontinuities when the phase wraps around.
-          const float w = 4.0f * (1.0f - master_phase_) * master_phase_;
+          const float w = 4.0f * (1.0f - master_phase) * master_phase;
           this_sample *= w * (2.0f - w);
           
           // Apply some asymmetry on the main phasor too.
@@ -453,6 +482,10 @@ class VariableShapeOscillator {
       }
     }
     
+    master_phase_ = master_phase;
+    slave_phase_ = slave_phase;
+    high_ = high;
+    previous_pw_ = previous_pw;
     next_sample_ = next_sample;
   }
 
