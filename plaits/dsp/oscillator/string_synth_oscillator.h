@@ -99,23 +99,27 @@ class StringSynthOscillator {
       registration[i] = i < shift ? 0.0f : unshifted_registration[i - shift];
     }
     
-    stmlib::ParameterInterpolator fm(&frequency_, frequency, size);
+    // One shared 1 / size: initialised with a size, each interpolator
+    // divides by it (14 cycles on the M4, five per voice here). The
+    // reciprocal differs from the division by at most an ulp.
+    const float step = 1.0f / static_cast<float>(size);
+    stmlib::ParameterInterpolator fm(&frequency_, frequency, step);
     stmlib::ParameterInterpolator saw_8_gain_modulation(
         &saw_8_gain_,
         (registration[0] + 2.0f * registration[1]) * gain,
-        size);
+        step);
     stmlib::ParameterInterpolator saw_4_gain_modulation(
         &saw_4_gain_,
         (registration[2] - registration[1] + 2.0f * registration[3]) * gain,
-        size);
+        step);
     stmlib::ParameterInterpolator saw_2_gain_modulation(
         &saw_2_gain_,
         (registration[4] - registration[3] + 2.0f * registration[5]) * gain,
-        size);
+        step);
     stmlib::ParameterInterpolator saw_1_gain_modulation(
         &saw_1_gain_,
         (registration[6] - registration[5]) * gain,
-        size);
+        step);
     
     float phase = phase_;
     float next_sample = next_sample_;

@@ -127,18 +127,22 @@ class WavetableOscillator {
       amplitude *= 1.0f / (frequency * 131072.0f);
     }
 
+    // One shared 1 / size: initialised with a size, each interpolator
+    // divides by it (14 cycles on the M4). The reciprocal differs from the
+    // division by at most an ulp.
+    const float step = 1.0f / static_cast<float>(size);
     stmlib::ParameterInterpolator frequency_modulation(
         &frequency_,
         frequency,
-        size);
+        step);
     stmlib::ParameterInterpolator amplitude_modulation(
         &amplitude_,
         amplitude,
-        size);
+        step);
     stmlib::ParameterInterpolator waveform_modulation(
         &waveform_,
         waveform * float(num_waves - 1.0001f),
-        size);
+        step);
     
     float lp = lp_;
     float phase = phase_;
