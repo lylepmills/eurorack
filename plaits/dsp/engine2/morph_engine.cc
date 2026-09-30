@@ -273,12 +273,16 @@ void MorphEngine::Render(
   const float drive = ApplyMacro(
       1.0f, kMorphMinDrive, kMorphMaxDrive, parameters.macro);
 
-  ParameterInterpolator fm(&frequency_, frequency, size);
-  ParameterInterpolator saw_modulation(&saw_, target_saw, size);
-  ParameterInterpolator square_modulation(&square_, target_square, size);
-  ParameterInterpolator pwm(&pw_, target_pw, size);
-  ParameterInterpolator fuzz_modulation(&fuzz_, target_fuzz, size);
-  ParameterInterpolator fuzz_modulation_aux(&fuzz_aux_, target_fuzz_aux, size);
+  // One shared 1 / size: initialised with a size, each interpolator
+  // divides by it (14 cycles on the M4). The reciprocal differs from the
+  // division by at most an ulp.
+  const float step = 1.0f / static_cast<float>(size);
+  ParameterInterpolator fm(&frequency_, frequency, step);
+  ParameterInterpolator saw_modulation(&saw_, target_saw, step);
+  ParameterInterpolator square_modulation(&square_, target_square, step);
+  ParameterInterpolator pwm(&pw_, target_pw, step);
+  ParameterInterpolator fuzz_modulation(&fuzz_, target_fuzz, step);
+  ParameterInterpolator fuzz_modulation_aux(&fuzz_aux_, target_fuzz_aux, step);
 
   float next_sample = next_sample_;
   // The oscillator, filter and DC states run in locals, written back after

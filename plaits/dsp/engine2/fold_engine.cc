@@ -343,11 +343,15 @@ void FoldEngine::Render(
   const float sine_guard = DepthGuard(
       parameters.note, kFoldSineGuardNote, kFoldSineGuardSpan);
 
-  ParameterInterpolator fm(&frequency_, frequency, size);
-  ParameterInterpolator depth_modulation(&depth_, target_depth, size);
-  ParameterInterpolator blend_modulation(&blend_, target_blend, size);
-  ParameterInterpolator symmetry_modulation(&symmetry_, target_symmetry, size);
-  ParameterInterpolator drive_modulation(&drive_, target_drive, size);
+  // One shared 1 / size: initialised with a size, each interpolator
+  // divides by it (14 cycles on the M4). The reciprocal differs from the
+  // division by at most an ulp.
+  const float step = 1.0f / static_cast<float>(size);
+  ParameterInterpolator fm(&frequency_, frequency, step);
+  ParameterInterpolator depth_modulation(&depth_, target_depth, step);
+  ParameterInterpolator blend_modulation(&blend_, target_blend, step);
+  ParameterInterpolator symmetry_modulation(&symmetry_, target_symmetry, step);
+  ParameterInterpolator drive_modulation(&drive_, target_drive, step);
 
   Downsampler downsampler(&downsampler_state_);
   Downsampler downsampler_aux(&downsampler_state_aux_);
