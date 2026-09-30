@@ -64,6 +64,10 @@ static void PrintHash() {
   Semihost(0x04, text);
 }
 
+#ifndef VH_SUBOSC
+#define VH_SUBOSC 3
+#endif
+
 #ifndef VH_TWIST
 #define VH_TWIST 0.5f
 #endif
@@ -93,7 +97,7 @@ int main() {
   patch.freqlock_param = VH_TWIST;
   patch.locked_frequency_pot_option = 1;
   patch.aux_output_option = VH_AUX;
-  patch.aux_subosc_option = 3;
+  patch.aux_subosc_option = VH_SUBOSC;
 #endif
   modulations.trigger_patched = VH_TRIG != 0;
 #if VH_DUMP

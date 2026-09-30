@@ -28,6 +28,7 @@ ap.add_argument("--engine", type=int, default=0)
 ap.add_argument("--note", type=float, default=60)
 ap.add_argument("--h", type=float, default=.5); ap.add_argument("--t", type=float, default=.5)
 ap.add_argument("--m", type=float, default=.5)
+ap.add_argument("--subosc", type=int, default=3, help="aux_subosc_option (the overrun sweep uses 1: square, one octave down)")
 ap.add_argument("--twist", type=float, default=.5, help="TWIST (the fourth macro); 0.5 = neutral")
 ap.add_argument("--aux", type=int, default=0)
 ap.add_argument("--trig", type=int, default=0)
@@ -62,7 +63,7 @@ flags = [*estimate.ARCH_FLAGS, *keep]
 cmds = []
 for label, n in (("a", a.a_blocks), ("b", a.b_blocks), ("hash", 3000)):
     d = [f"-DVH_BLOCKS={n}", f"-DVH_ENGINE={a.engine}", f"-DVH_NOTE={float(a.note)!r}f", f"-DVH_H={float(a.h)!r}f",
-         f"-DVH_T={float(a.t)!r}f", f"-DVH_M={float(a.m)!r}f", f"-DVH_TWIST={float(a.twist)!r}f", f"-DVH_AUX={a.aux}", f"-DVH_TRIG={a.trig}",
+         f"-DVH_T={float(a.t)!r}f", f"-DVH_M={float(a.m)!r}f", f"-DVH_TWIST={float(a.twist)!r}f", f"-DVH_SUBOSC={a.subosc}", f"-DVH_AUX={a.aux}", f"-DVH_TRIG={a.trig}",
          f"-DVH_HASH={1 if label == 'hash' else 0}",
          f"-DVH_DUMP={1 if (label == 'hash' and a.dump) else 0}"]
     cmds.append(" ".join(shlex.quote(c) for c in ["/usr/local/arm-4.8.3/bin/arm-none-eabi-g++", *flags, *d,
