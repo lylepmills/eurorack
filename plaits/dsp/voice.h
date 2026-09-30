@@ -76,7 +76,15 @@ class ChannelPostProcessor {
     limiter_peak_ = 0.5f;  // stmlib::Limiter::Init()
   }
   
+  // Not unrolled: in the state-space low-pass gate each sample's output and
+  // states are short independent sums, so unrolling buys little beyond loop
+  // overhead and cost ~500 B of flash across the gated, bypassed and limited
+  // variants.
+#if defined(__clang__)
   __attribute__((noinline)) void Process(
+#else
+  __attribute__((noinline, optimize("no-unroll-loops"))) void Process(
+#endif
       float gain,
       bool bypass_lpg,
       float low_pass_gate_gain,
