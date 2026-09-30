@@ -124,6 +124,11 @@ class StringSynthOscillator {
     float phase = phase_;
     float next_sample = next_sample_;
     int segment = segment_;
+    // segment & 4, & 6 and & 7 as floats, converted only when the segment
+    // changes rather than three int-to-float conversions per sample.
+    float segment_4 = static_cast<float>(segment & 4);
+    float segment_6 = static_cast<float>(segment & 6);
+    float segment_7 = static_cast<float>(segment & 7);
     while (size--) {
       float this_sample = next_sample;
       next_sample = 0.0f;
@@ -184,12 +189,17 @@ class StringSynthOscillator {
           }
         }
       }
+      if (next_segment != segment) {
+        segment_4 = static_cast<float>(next_segment & 4);
+        segment_6 = static_cast<float>(next_segment & 6);
+        segment_7 = static_cast<float>(next_segment & 7);
+      }
       segment = next_segment;
       
       next_sample += (phase - 4.0f) * saw_8_gain * 0.125f;
-      next_sample += (phase - float(segment & 4) - 2.0f) * saw_4_gain * 0.25f;
-      next_sample += (phase - float(segment & 6) - 1.0f) * saw_2_gain * 0.5f;
-      next_sample += (phase - float(segment & 7) - 0.5f) * saw_1_gain;
+      next_sample += (phase - segment_4 - 2.0f) * saw_4_gain * 0.25f;
+      next_sample += (phase - segment_6 - 1.0f) * saw_2_gain * 0.5f;
+      next_sample += (phase - segment_7 - 0.5f) * saw_1_gain;
       *out++ += 2.0f * this_sample;
     }
     next_sample_ = next_sample;
