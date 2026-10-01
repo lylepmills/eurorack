@@ -298,7 +298,7 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:c6c9a1df8a30355f4baaf4983a7767db40ea0f2fd36db34dff341f43f14932fc",
+      "digest": "sha256:39d6f9219947ed84336f5d03dc9834dfc45f475029fe01a2901ab6ae1b344592",
       "documentationDigest": "sha256:3a859701532734d9b913a4b8c12b5f41e1e7ef3de48ade0c499f67ec8aa07b3c",
       "manual": {
         "controls": {
@@ -658,7 +658,7 @@
         "tone": "red"
       },
       "version": "1.0.0",
-      "digest": "sha256:a2e53a6699cb302a607f62e6a1cc9153fd992244907849b5de183b35940aa9df",
+      "digest": "sha256:a42b63fedddb0ef4ecf6427bfd6bec570f01d4effd048e86e98c9f5e8860920b",
       "documentationDigest": "sha256:777124f848a99a33d6208874e634ad4fd1e02bb256d9b7e6d6bbe54dfddddac8",
       "manual": {
         "controls": {
@@ -974,7 +974,7 @@
         "tone": "amber"
       },
       "version": "1.0.0",
-      "digest": "sha256:1b389bd08b497ab9dd69aa234e6654e02969282c2d2081c3be602ebb83b214f9",
+      "digest": "sha256:432b2457c77c916bdd14ae75dada6bc23f4718358cac923d620eecda2cfa54ee",
       "documentationDigest": "sha256:318fb9bf07e2402c60a0ddbb164a98e1b96f57f8c5c09df04eba7b3504966fbd",
       "manual": {
         "controls": {
@@ -1341,7 +1341,7 @@
         "Mono: counter-moving chirps. Stereo: selected chirps moving through the right channel."
       ],
       "version": "1.0.0",
-      "digest": "sha256:7753cf085b6aa1a0539767e5ccc031693f3f2cd3bec01488ccebef27ecd41116",
+      "digest": "sha256:aa6efa35e49e7797466254e24d0ab49ee4930c8ea14527c5cd1e5fa0b6cdb62a",
       "documentationDigest": "sha256:eff93fc32651914a7167ddf03a8dfb2efdf505f22df38d51e06974bc0f88ff96",
       "manual": {
         "controls": {
@@ -1421,7 +1421,7 @@
         "Mono: spatial derivative. Stereo: a second pickup one quarter of the scan span away."
       ],
       "version": "1.0.0",
-      "digest": "sha256:312760c78b320c4a76639624e78b86077955d4f0de7a8e39b681caed27dee391",
+      "digest": "sha256:dc088505f30fc597ed141f2dfafb35e05d31f2bf228560c574437c4aa0fa501e",
       "documentationDigest": "sha256:fd47cf061a3eacb30644ca0f2993dc5f4e208bf56ab84188615bfd0060a201c6",
       "manual": {
         "controls": {
@@ -2102,7 +2102,7 @@
         "Mono: the complementary folder crossfade. Stereo: the same sound with a small rightward blend offset."
       ],
       "version": "1.0.0",
-      "digest": "sha256:b3af7050a64f6d84ff318d6cb06f6c2060f5308d893b308102e2818069b57795",
+      "digest": "sha256:2bec8927cbd389dcb92c0b18a0d301cc48bf58e0fa05b493d63ce2ba3a6766a5",
       "documentationDigest": "sha256:b38c0f1af22a6181ad1db966e832490fa95810748498d81d1233d43c2d06dc5e",
       "manual": {
         "controls": {
@@ -2224,7 +2224,7 @@
         "Mono: the cloud's amplitude on one steady tone at the played pitch. Stereo: the right side of the four-grain pan spread."
       ],
       "version": "1.0.0",
-      "digest": "sha256:fccf9bcd2f29c59f90c664ebb528f1a293633aabf95d526dac0111b01b253d09",
+      "digest": "sha256:51f457f5f947ed8b1fcf4ea8960ead56445052ff8e3f27df86a3ab180f75e2f6",
       "documentationDigest": "sha256:8fdc9e172a6428d072d3598d2f9d22913abce10e8faa1b25c7fb228a785b4b0d",
       "manual": {
         "controls": {
@@ -2264,7 +2264,7 @@
         "Mono: the dry morph oscillator. Stereo: the processed voice at the higher Fuzz offset on the right."
       ],
       "version": "1.0.0",
-      "digest": "sha256:e739a54ce0b0e351d7a4f34df87520e277a89fe7f9794fbd5d09e043a74e89f6",
+      "digest": "sha256:60901eeab2c31ac5ce6e38cee0622a874b9ba9cc00c22e1b2a76d5d4f9d3f656",
       "documentationDigest": "sha256:48b331f57210b99632c8a9766c75e98dc0eef4b4f4494d7943db6207b52509c4",
       "manual": {
         "controls": {
@@ -3407,7 +3407,7 @@
         "Root voice; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:6535d7ed64ed9cb20ea48fe1ece3b9b90827b7d1f654dda0faf9b4965e271ec6",
+      "digest": "sha256:55d4b3dd0f34efc32727945c72b5b22ca9bf77f2bd27ad70c00e7792a9756af5",
       "documentationDigest": "sha256:ef45cd9b1b797ccf250bae08e9ecf22b3768aaa9f145af201b564238f1f49d0d",
       "manual": {
         "controls": {
@@ -3449,7 +3449,7 @@
         "Root voice; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:8ddb233c79065b9294eedfbd76ed7d919d7bf9429674f1b4743fc2d001accb7c",
+      "digest": "sha256:fcb5478c23d0d0b03a756e51d09e098387091114d9b2b808c83a5d62bdde2ac2",
       "documentationDigest": "sha256:eb37d954a490fa032bdcf67f7e81a2576b503c6d000e1872561cdf9430cb9548",
       "manual": {
         "controls": {
@@ -3492,7 +3492,7 @@
         "Root voice; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:83037a8c9ba8c1c169a224bc9177f354d785ba2754063a86a3f915d8fb7bb30d",
+      "digest": "sha256:4dbb70a0fcd57f955c8e85aebf135f398ff06a7dd61c0f70b94a3ccebb0680a8",
       "documentationDigest": "sha256:5a0c3c76ca9f53c9fac7af92c97075e2dfdc426cc042934c8603d41b0bf6f7ba",
       "manual": {
         "controls": {
@@ -3535,7 +3535,7 @@
         "Root voice; the stereo toggle does not change this fixed MAIN/AUX pair."
       ],
       "version": "1.0.0",
-      "digest": "sha256:8248632e3de648c647966beab36efb43423a22192f6bc06176e3d997731a048b",
+      "digest": "sha256:45cb755aebc77a37df1271dae4fdee8535074e17eef08e2ed2f3bafcb8e6f757",
       "documentationDigest": "sha256:d4be06fdc2414a0373f5fbb28a28628b23990f94a670088aa340685d4f66fae7",
       "manual": {
         "controls": {
@@ -3665,7 +3665,7 @@
         "color": "#5796E4"
       },
       "version": "1.0.0",
-      "digest": "sha256:a6693fca233b6c62893b09d16f6ffd6885be67a981ac90ff06706dd82d45d0c2",
+      "digest": "sha256:dc0c6d9d0caae2cbf19816e1381500c3fb5044106f1a9f90edb675b526b76d28",
       "documentationDigest": "sha256:1d09323253c57adf115ad3f73e0e4b3d639c4e0dfddab2283747d4941a55a2e6",
       "manual": {
         "controls": {
