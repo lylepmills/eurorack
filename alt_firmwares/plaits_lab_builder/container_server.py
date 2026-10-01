@@ -1031,6 +1031,25 @@ def _discard_sine_table_link(build_dir: Path) -> None:
         (artifact_dir / name).unlink(missing_ok=True)
 
 
+# The objects plaits/makefile compiles with -mslow-flash-data when
+# PLAITS_SLOW_FLASH_DATA=1 (test_container_server.py checks the two lists).
+SLOW_FLASH_DATA_OBJECTS = (
+    "voice.o", "particle_engine.o", "modal_engine.o", "modal_voice.o",
+    "resonator.o", "string_engine.o", "string_voice.o", "string.o",
+    "chord_engine.o", "chiptune_engine.o", "six_op_engine.o",
+    "scanned_engine.o",
+)
+
+
+def _discard_slow_flash_data_objects(build_dir: Path) -> None:
+    """Remove the objects PLAITS_SLOW_FLASH_DATA changes, so make recompiles
+    them without the flag and relinks every artifact."""
+    artifact_dir = build_dir / "plaits"
+    for name in (*SLOW_FLASH_DATA_OBJECTS, "plaits.elf", "plaits.bin",
+                 "plaits.hex", "plaits.wav", "plaits.map", "plaits.size"):
+        (artifact_dir / name).unlink(missing_ok=True)
+
+
 def build_firmware(payload: Any) -> tuple[Path, FirmwareOutput, dict[str, str]]:
     if not isinstance(payload, dict):
         raise BuildError("invalid_request", "The build request must be a JSON object.")
@@ -1135,14 +1154,20 @@ def build_firmware(payload: Any) -> tuple[Path, FirmwareOutput, dict[str, str]]:
         "LC_CTYPE": "C",
         "HOME": str(build_dir),
     }
-    # lut_sine is linked into SRAM when the palette has the RAM for it (see
-    # PLAITS_SINE_LUT_IN_RAM in plaits/makefile: flash reads of the table cost
-    # the engines real time). A palette that then fails the RAM budget is
-    # relinked with the table in flash, so turning this on never rejects a
-    # palette that would otherwise build.
+    # Two speed-ups that each spend a budget, tried on and dropped only when
+    # the palette does not fit with them, so neither ever rejects a palette
+    # that would otherwise build (see plaits/makefile):
+    #   - lut_sine linked into SRAM (PLAITS_SINE_LUT_IN_RAM) spends RAM;
+    #   - -mslow-flash-data on the hottest DSP objects (PLAITS_SLOW_FLASH_DATA)
+    #     spends flash.
     sine_in_sram = True
+    slow_flash_data = True
     while True:
-        attempt = [*command, f"PLAITS_SINE_LUT_IN_RAM={1 if sine_in_sram else 0}"]
+        attempt = [
+            *command,
+            f"PLAITS_SINE_LUT_IN_RAM={1 if sine_in_sram else 0}",
+            f"PLAITS_SLOW_FLASH_DATA={1 if slow_flash_data else 0}",
+        ]
         try:
             log, artifact_path, bin_path, safety = _make_and_validate(
                 attempt, environment, build_dir, output, config_text)
@@ -1151,6 +1176,10 @@ def build_firmware(payload: Any) -> tuple[Path, FirmwareOutput, dict[str, str]]:
             if sine_in_sram and error.code == "ram_budget_exceeded":
                 sine_in_sram = False
                 _discard_sine_table_link(build_dir)
+                continue
+            if slow_flash_data and error.code == "flash_budget_exceeded":
+                slow_flash_data = False
+                _discard_slow_flash_data_objects(build_dir)
                 continue
             raise
 
@@ -1167,6 +1196,7 @@ def build_firmware(payload: Any) -> tuple[Path, FirmwareOutput, dict[str, str]]:
         "X-Plaits-Toolchain": TOOLCHAIN_ID,
         "X-Plaits-Build-Contract": BUILD_CONTRACT_VERSION,
         "X-Plaits-Sine-Table": "sram" if sine_in_sram else "flash",
+        "X-Plaits-Slow-Flash-Data": "on" if slow_flash_data else "off",
     }
     metadata[
         "X-Plaits-Wav-Sha256" if output == "audio-wav" else "X-Plaits-Hex-Sha256"

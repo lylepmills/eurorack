@@ -14,6 +14,7 @@ from typing import Any
 
 from container_server import (
     BUILD_CONTRACT_VERSION,
+    SLOW_FLASH_DATA_OBJECTS,
     TOOLCHAIN_ID,
     _declared_region_count,
     _recipe_is_stereo,
@@ -124,6 +125,7 @@ def _shell_script(recipe: Any, has_linker_script: bool) -> str:
         )
     )
     joined_indented = " \\\n    ".join(variables)
+    slow_objects = " ".join(f'"$objects/{name}"' for name in SLOW_FLASH_DATA_OBJECTS)
     return f"""#!/bin/sh
 set -eu
 
@@ -146,15 +148,17 @@ esac
 build_root=${{PLAITS_BUILD_ROOT:-$export_dir/build/}}
 jobs=${{PLAITS_JOBS:-4}}
 
-# lut_sine goes to SRAM when the palette has the RAM for it, as the hosted
-# builder does (see PLAITS_SINE_LUT_IN_RAM in plaits/makefile); a palette
-# short of RAM is relinked with it in flash. PLAITS_SINE_LUT_IN_RAM=0 or 1
-# in the environment forces either.
+# Two speed-ups are tried on and dropped only when the palette does not fit
+# with them, as the hosted builder does (see plaits/makefile): lut_sine in
+# SRAM (PLAITS_SINE_LUT_IN_RAM, spends RAM) and -mslow-flash-data on the
+# hottest DSP objects (PLAITS_SLOW_FLASH_DATA, spends flash). Setting either
+# to 0 or 1 in the environment forces it.
 build() {{
   make_status=0
   make -C "$repo" -f plaits/makefile \\
     {joined_indented} \\
     "PLAITS_SINE_LUT_IN_RAM=$1" \\
+    "PLAITS_SLOW_FLASH_DATA=$2" \\
     "-j$jobs" "$target" > "${{build_root%/}}.make.log" 2>&1 || make_status=$?
   cat "${{build_root%/}}.make.log"
   return $make_status
@@ -167,27 +171,34 @@ check() {{
 }}
 
 mkdir -p "$build_root"
-sine=${{PLAITS_SINE_LUT_IN_RAM:-auto}}
-if [ "$sine" != auto ]; then
-  build "$sine"
-  check
-  exit 0
-fi
-
-status=0
-build 1 || status=$?
-if [ "$status" -eq 0 ]; then
-  check || status=$?
-  [ "$status" -eq 0 ] && exit 0
-  [ "$status" -eq 3 ] || exit "$status"
-elif ! grep -q "region \\`RAM'" "${{build_root%/}}.make.log"; then
-  exit "$status"
-fi
-
-echo "Not enough RAM for the sine table in SRAM: relinking with it in flash." >&2
-rm -f "${{build_root%/}}/plaits/resources.o" "${{build_root%/}}/plaits/plaits.elf"
-build 0
-check
+objects="${{build_root%/}}/plaits"
+sine_mode=${{PLAITS_SINE_LUT_IN_RAM:-auto}}
+flash_mode=${{PLAITS_SLOW_FLASH_DATA:-auto}}
+sine=1; [ "$sine_mode" = auto ] || sine=$sine_mode
+slow=1; [ "$flash_mode" = auto ] || slow=$flash_mode
+while :; do
+  status=0
+  build "$sine" "$slow" || status=$?
+  if [ "$status" -eq 0 ]; then
+    check || status=$?
+    [ "$status" -eq 0 ] && exit 0
+  elif grep -q "region \\`RAM'" "${{build_root%/}}.make.log"; then
+    status=3
+  elif grep -q "region \\`FLASH'" "${{build_root%/}}.make.log"; then
+    status=4
+  fi
+  if [ "$status" -eq 3 ] && [ "$sine_mode" = auto ] && [ "$sine" = 1 ]; then
+    echo "Not enough RAM for the sine table in SRAM: relinking with it in flash." >&2
+    sine=0
+    rm -f "$objects/resources.o" "$objects/plaits.elf"
+  elif [ "$status" -eq 4 ] && [ "$flash_mode" = auto ] && [ "$slow" = 1 ]; then
+    echo "Not enough flash for -mslow-flash-data: rebuilding the hot objects without it." >&2
+    slow=0
+    rm -f {slow_objects} "$objects/plaits.elf"
+  else
+    exit "$status"
+  fi
+done
 """
 
 

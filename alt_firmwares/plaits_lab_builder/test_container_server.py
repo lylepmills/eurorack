@@ -18,6 +18,7 @@ from container_server import (
     RAM_STACK_RESERVE_BYTES,
     _build_targets,
     build_firmware,
+    SLOW_FLASH_DATA_OBJECTS,
     _check_shared_buffer_alignment,
     _validate_shared_buffer_layout,
     _concatenate_pcm_wavs,
@@ -529,7 +530,9 @@ class SineTableFallbackTests(unittest.TestCase):
         calls, metadata, _ = self._build(["ok"])
         self.assertEqual(len(calls), 1)
         self.assertIn("PLAITS_SINE_LUT_IN_RAM=1", calls[0])
+        self.assertIn("PLAITS_SLOW_FLASH_DATA=1", calls[0])
         self.assertEqual(metadata["X-Plaits-Sine-Table"], "sram")
+        self.assertEqual(metadata["X-Plaits-Slow-Flash-Data"], "on")
 
     def test_a_palette_short_of_ram_is_relinked_with_the_table_in_flash(self) -> None:
         calls, metadata, build_dir = self._build(
@@ -543,8 +546,41 @@ class SineTableFallbackTests(unittest.TestCase):
 
     def test_other_failures_are_not_retried(self) -> None:
         with self.assertRaises(BuildError) as raised:
-            self._build([BuildError("flash_budget_exceeded", "over")])
+            self._build([BuildError("compiler_failed", "error")])
+        self.assertEqual(raised.exception.code, "compiler_failed")
+
+    def test_a_palette_over_flash_even_without_the_flag_still_fails(self) -> None:
+        with self.assertRaises(BuildError) as raised:
+            self._build([BuildError("flash_budget_exceeded", "over"),
+                         BuildError("flash_budget_exceeded", "still over")])
         self.assertEqual(raised.exception.code, "flash_budget_exceeded")
+
+    def test_a_palette_short_of_flash_drops_slow_flash_data(self) -> None:
+        calls, metadata, build_dir = self._build(
+            [BuildError("flash_budget_exceeded", "over"), "ok"])
+        self.assertEqual(len(calls), 2)
+        self.assertIn("PLAITS_SLOW_FLASH_DATA=1", calls[0])
+        self.assertIn("PLAITS_SLOW_FLASH_DATA=0", calls[1])
+        self.assertIn("PLAITS_SINE_LUT_IN_RAM=1", calls[1])
+        self.assertEqual(metadata["X-Plaits-Slow-Flash-Data"], "off")
+        self.assertEqual(metadata["X-Plaits-Sine-Table"], "sram")
+
+    def test_ram_and_flash_fallbacks_combine(self) -> None:
+        calls, metadata, _ = self._build([
+            BuildError("ram_budget_exceeded", "over"),
+            BuildError("flash_budget_exceeded", "over"),
+            "ok"])
+        self.assertEqual(len(calls), 3)
+        self.assertIn("PLAITS_SINE_LUT_IN_RAM=0", calls[2])
+        self.assertIn("PLAITS_SLOW_FLASH_DATA=0", calls[2])
+        self.assertEqual(metadata["X-Plaits-Sine-Table"], "flash")
+        self.assertEqual(metadata["X-Plaits-Slow-Flash-Data"], "off")
+
+    def test_the_slow_flash_data_list_matches_the_makefile(self) -> None:
+        makefile = (Path(__file__).resolve().parents[2] / "plaits" / "makefile").read_text()
+        block = makefile.split("PLAITS_SLOW_FLASH_DATA_OBJECTS =", 1)[1].split("\nifeq", 1)[0]
+        listed = block.replace("\\", " ").split()
+        self.assertEqual(sorted(listed), sorted(SLOW_FLASH_DATA_OBJECTS))
 
     def test_a_palette_over_budget_even_in_flash_still_fails(self) -> None:
         with self.assertRaises(BuildError) as raised:

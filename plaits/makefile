@@ -59,6 +59,36 @@ TOOLCHAIN_PATH ?= /usr/local/arm-4.8.3/
 
 include stmlib/makefile.inc
 
+# Constants out of loops. stmlib's CCFLAGS carry -fno-move-loop-invariants,
+# which kept GCC from hoisting loop-invariant work -- above all constant loads
+# -- so every pass of a DSP loop reloaded its constants from flash literal
+# pools: wait states, and a stall on instruction fetch. Hoisting them made
+# every preset smaller (Stock -1.6 KB) and cut QEMU's flash data reads by
+# 16-47% on the engines nearest the CPU line, with identical output.
+CCFLAGS += -fmove-loop-invariants
+
+# PLAITS_SLOW_FLASH_DATA=1 (the default) compiles the hottest DSP objects with
+# -mslow-flash-data: the constants left in their loops are built with
+# movw/movt instead of read from flash. With it on every object, the module
+# ran the engines still over the CPU line 0.04-0.10 lower
+# (slow_flash_ab_2026-09-30_*); this list is those engines plus voice.o, at
+# ~5-10% of each object's size. The hosted builder and build.sh fall back to
+# 0 when a palette does not fit flash with it. Keep this list in sync with
+# SLOW_FLASH_DATA_OBJECTS in alt_firmwares/plaits_lab_builder/container_server.py
+# (test_container_server.py checks the two).
+PLAITS_SLOW_FLASH_DATA ?= 1
+PLAITS_SLOW_FLASH_DATA_OBJECTS = \
+  voice.o particle_engine.o modal_engine.o modal_voice.o resonator.o \
+  string_engine.o string_voice.o string.o chord_engine.o chiptune_engine.o \
+  six_op_engine.o scanned_engine.o
+ifeq ($(PLAITS_SLOW_FLASH_DATA),1)
+$(patsubst %,$(BUILD_DIR)%,$(PLAITS_SLOW_FLASH_DATA_OBJECTS)): \
+  CCFLAGS += -mslow-flash-data
+endif
+
+# Extra compiler flags for experiments; empty in every normal build.
+CCFLAGS += $(PLAITS_EXTRA_CFLAGS)
+
 # PLAITS_SINE_LUT_IN_RAM=1 links lut_sine (2564 B) into .data, so startup
 # copies it to SRAM: nearly every engine reads it, and read from flash each
 # lookup costs wait states and stalls instruction fetch (DX7 + TRIG measured
