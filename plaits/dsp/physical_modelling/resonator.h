@@ -67,8 +67,14 @@ class ResonatorSvf {
     float gains[batch_size];
     for (int i = 0; i < batch_size; ++i) {
       g[i] = stmlib::OnePole::tan<stmlib::FREQUENCY_FAST>(f[i]);
-      r[i] = 1.0f / q[i];
-      h[i] = 1.0f / (1.0f + r[i] * g[i] + g[i] * g[i]);
+      // One divide where there were two (14 cycles each, FPU stalled, for
+      // every mode on every block): with d = q + g + q g^2,
+      // r = 1 / q = d / (q d) and h = 1 / (1 + r g + g^2) = q^2 / (q d).
+      // Same coefficients up to rounding; q >= 1, so q d cannot underflow.
+      const float d = q[i] + g[i] + q[i] * g[i] * g[i];
+      const float inverse = 1.0f / (q[i] * d);
+      r[i] = d * inverse;
+      h[i] = q[i] * q[i] * inverse;
       r_plus_g[i] = r[i] + g[i];
       state_1[i] = state_1_[i];
       state_2[i] = state_2_[i];
@@ -122,8 +128,14 @@ class ResonatorSvf {
     float gains[batch_size];
     for (int i = 0; i < batch_size; ++i) {
       g[i] = stmlib::OnePole::tan<stmlib::FREQUENCY_FAST>(f[i]);
-      r[i] = 1.0f / q[i];
-      h[i] = 1.0f / (1.0f + r[i] * g[i] + g[i] * g[i]);
+      // One divide where there were two (14 cycles each, FPU stalled, for
+      // every mode on every block): with d = q + g + q g^2,
+      // r = 1 / q = d / (q d) and h = 1 / (1 + r g + g^2) = q^2 / (q d).
+      // Same coefficients up to rounding; q >= 1, so q d cannot underflow.
+      const float d = q[i] + g[i] + q[i] * g[i] * g[i];
+      const float inverse = 1.0f / (q[i] * d);
+      r[i] = d * inverse;
+      h[i] = q[i] * q[i] * inverse;
       r_plus_g[i] = r[i] + g[i];
       state_1[i] = state_1_[i];
       state_2[i] = state_2_[i];
