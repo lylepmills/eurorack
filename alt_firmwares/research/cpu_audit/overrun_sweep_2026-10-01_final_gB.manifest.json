@@ -1,0 +1,27 @@
+{
+  "group": 2,
+  "engines": [
+    "saw-square",
+    "wave-scan",
+    "natural-speech",
+    "fluted",
+    "helix",
+    "fold",
+    "harmonic",
+    "wave-terrain",
+    "glisson",
+    "string-machine",
+    "triple",
+    "granular-formant",
+    "scale-stack",
+    "wavetable-scale-stack",
+    "phase-weave",
+    "virtual-analog",
+    "struck-drum",
+    "noise-bank",
+    "granular-cloud",
+    "dual-sync"
+  ],
+  "sourceRevision": "f7c174f2b274cbfc598de7a76e61c6457dc55f4e",
+  "sourceDirty": false
+}
