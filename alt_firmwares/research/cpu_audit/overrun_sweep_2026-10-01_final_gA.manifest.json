@@ -1,0 +1,28 @@
+{
+  "group": 1,
+  "engines": [
+    "csaw",
+    "cymbal",
+    "ring-mod",
+    "analog-hi-hat",
+    "acid",
+    "scanned",
+    "particle-noise",
+    "modal-resonator",
+    "dx7-bank-c",
+    "dx7-bank-b",
+    "inharmonic-string",
+    "chords",
+    "chiptune",
+    "wavetable-chord",
+    "blown",
+    "diatonic-chord",
+    "fluted",
+    "morph",
+    "dx7-bank-a",
+    "phase-distortion",
+    "swarm"
+  ],
+  "sourceRevision": "667e0cb9f21c621cd3d5ec3a990f28c8bafd4183",
+  "sourceDirty": false
+}

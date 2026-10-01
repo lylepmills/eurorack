@@ -80,11 +80,16 @@ PLAITS_SLOW_FLASH_DATA ?= 1
 PLAITS_SLOW_FLASH_DATA_OBJECTS = \
   voice.o particle_engine.o modal_engine.o modal_voice.o resonator.o \
   string_engine.o string_voice.o string.o chord_engine.o chiptune_engine.o \
-  six_op_engine.o scanned_engine.o fluted_engine.o
+  six_op_engine.o scanned_engine.o
 ifeq ($(PLAITS_SLOW_FLASH_DATA),1)
 $(patsubst %,$(BUILD_DIR)%,$(PLAITS_SLOW_FLASH_DATA_OBJECTS)): \
   CCFLAGS += -mslow-flash-data
 endif
+# Fluted is the one engine the hoisting slowed: its strike went 0.953 ->
+# 1.027 of the period on the module (overrun_sweep_2026-10-01_final_g1), and
+# -mslow-flash-data on top only brought it to 0.992 (..._final_gA). It keeps
+# the code it measured 0.953 with: no hoisting, no -mslow-flash-data.
+$(BUILD_DIR)fluted_engine.o: CCFLAGS += -fno-move-loop-invariants
 
 # Extra compiler flags for experiments; empty in every normal build.
 CCFLAGS += $(PLAITS_EXTRA_CFLAGS)
