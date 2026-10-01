@@ -80,7 +80,7 @@ PLAITS_SLOW_FLASH_DATA ?= 1
 PLAITS_SLOW_FLASH_DATA_OBJECTS = \
   voice.o particle_engine.o modal_engine.o modal_voice.o resonator.o \
   string_engine.o string_voice.o string.o chord_engine.o chiptune_engine.o \
-  six_op_engine.o scanned_engine.o
+  six_op_engine.o scanned_engine.o fluted_engine.o
 ifeq ($(PLAITS_SLOW_FLASH_DATA),1)
 $(patsubst %,$(BUILD_DIR)%,$(PLAITS_SLOW_FLASH_DATA_OBJECTS)): \
   CCFLAGS += -mslow-flash-data
