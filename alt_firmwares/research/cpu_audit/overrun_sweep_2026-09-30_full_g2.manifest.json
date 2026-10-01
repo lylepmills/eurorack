@@ -1,0 +1,31 @@
+{
+  "group": 2,
+  "engines": [
+    "saw-square",
+    "noise-bank",
+    "granular-cloud",
+    "analog-bass-drum",
+    "struck-bell",
+    "vowel",
+    "wave-paraphonic",
+    "buzz",
+    "wave-terrain",
+    "wavetable-scale-stack",
+    "helix",
+    "phase-weave",
+    "triple",
+    "fold",
+    "skins",
+    "struck-drum",
+    "two-op-fm",
+    "virtual-analog",
+    "string-machine",
+    "harmonic",
+    "glisson",
+    "scale-stack",
+    "granular-formant",
+    "vosim"
+  ],
+  "sourceRevision": "75648a083d19c5ed2596ca841065b8319d9ffaf5",
+  "sourceDirty": false
+}

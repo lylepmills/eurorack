@@ -1,0 +1,31 @@
+{
+  "group": 3,
+  "engines": [
+    "digital-modulation",
+    "spectral-spiral",
+    "zxpulse48k",
+    "shakers",
+    "freshets-formant",
+    "analog-percussion",
+    "harmonics",
+    "sideband-bank",
+    "analog-snare",
+    "vowel-fof",
+    "wavetable",
+    "plucked",
+    "metalwork",
+    "z-filter",
+    "virtual-analog-variant",
+    "brass",
+    "bytebeat",
+    "speech",
+    "formant-speech",
+    "undertow",
+    "filtered-noise",
+    "virtual-analog-vcf",
+    "phase-flock",
+    "bowed"
+  ],
+  "sourceRevision": "75648a083d19c5ed2596ca841065b8319d9ffaf5",
+  "sourceDirty": false
+}

@@ -1,0 +1,11 @@
+{
+  "group": 5,
+  "engines": [
+    "tapfield",
+    "wave-scan",
+    "natural-speech",
+    "dual-sync"
+  ],
+  "sourceRevision": "75648a083d19c5ed2596ca841065b8319d9ffaf5",
+  "sourceDirty": false
+}

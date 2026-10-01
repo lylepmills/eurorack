@@ -1,0 +1,31 @@
+{
+  "group": 4,
+  "engines": [
+    "sub-oscillator",
+    "particle-burst",
+    "bubbletime",
+    "saw-comb",
+    "pulsar",
+    "clap",
+    "loopback",
+    "circuit-zaps",
+    "question-mark",
+    "waveshaping",
+    "kick",
+    "rulefield",
+    "virtual-analog-crossfade",
+    "virtual-analog-dual",
+    "toy",
+    "saw-swarm",
+    "zxphase48k",
+    "gendy",
+    "snare",
+    "attractor",
+    "lpc-speech",
+    "reed-pipe",
+    "lockstep",
+    "raw-fm"
+  ],
+  "sourceRevision": "75648a083d19c5ed2596ca841065b8319d9ffaf5",
+  "sourceDirty": false
+}
