@@ -897,7 +897,7 @@ with the source inside it is the failure the `development` sentinel exists to
 catch, caught earlier.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-797849cf613d` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-6c8bf17df0df` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a new
 image, use `wrangler containers info <application-id>` and wait until
@@ -1044,6 +1044,49 @@ target.
 | September 27, 2026 (the same release plus the factory chord wave line as address constants, so palettes without Chords stop linking two unused 16,896 B wave banks) | `317dd282af0b` | `rev-317dd282af0b` |
 | September 27, 2026 (Wave Scan's phase as a uint32 accumulator: exact LFO-range rates, ~6% fewer instructions; Virtual Analog Variant carries the Virtual Analog symbol) | `4cd0b0a00f91` | `rev-4cd0b0a00f91` |
 | September 28, 2026 (Virtual Analog Variant at the stock median loudness; catalog gains written to firmware at full precision, moving 58 rebalanced engines to their catalog level; idle containers sleep; Speech warm-up route) | `797849cf613d` | `rev-797849cf613d` |
+| October 2, 2026 (CPU headroom: every catalog engine under the 0.985 overrun line on the module; sine table in SRAM and slow-flash-data on hot objects, each with a builder fallback; loop-invariant hoisting; Speech encoder rotated to v25) | `6c8bf17df0df` | `rev-6c8bf17df0df` |
+
+The October 2 CPU-headroom release shipped at `rev-6c8bf17df0df`. It brings
+every catalog engine under the 0.985 overrun line on the module in normal
+settings (Sync In, Linear TZFM and Fast FM excluded), mono and stereo; the
+module sweeps are `research/cpu_audit/overrun_sweep_2026-10-01_final_g*`. It
+carries:
+- The sine table in SRAM (`PLAITS_SINE_LUT_IN_RAM`) and `-mslow-flash-data` on
+  the hottest objects, each with a builder fallback: a RAM overflow moves the
+  table back to flash, and a flash overflow turns slow-flash-data off. The
+  build response reports which (`X-Plaits-Sine-Table`,
+  `X-Plaits-Slow-Flash-Data`); the public API does not pass them on.
+- Loop-invariant hoisting for the whole firmware (`-fmove-loop-invariants`
+  after stmlib's `-fno-move-loop-invariants`), except Fluted, which regressed
+  under it.
+- Engine work across Modal, Scanned, Particle Noise, Inharmonic String,
+  Chords, DX7, Morph, Fold, Glisson, Harmonic, Phase Distortion, Granular
+  Cloud/Formant and Diatonic Chord, and a state-space TRIG low-pass gate.
+  Engines skip AUX-only work when the sub-oscillator replaces AUX. 13 engine
+  digests moved.
+
+Checks before production:
+- `smoke:staging` passed, compiler-stamped (gate build
+  `649b91963ede3be02ed29d0cb68bdac3df74269e647078b3fc7cf59b95616144`,
+  14,302,124-byte WAV, SHA-256
+  `37d6507a6bbf0208f7d8cb46f1b60142de067934e1033e6a5e2d233d39f96c6f`). Lyle
+  flashed it: the module booted, navigated, played audio and played the custom
+  Speech bank, and he approved production.
+- The website's flash meter was re-measured in full on the staging pool (mono,
+  stereo and Sync In sweeps), because hoisting moved every engine. Stock-24
+  builds at 228,196 B (228,388 B before). Sync In's reference palette, measured
+  inside the image: 204,740 / 224,036 B (+2,192 B on the delta).
+
+Production went in two deploys: the image (Worker `c80d0dc0`), then, once
+`containers info` showed the new image only with `starting == 0` (about 19
+minutes), the `speech-encoder-v25` rotation as a Worker-only deploy (Worker
+`0321eb9d`). One `/v1/health` probe then reported the Worker, pool and
+`speech-encoder-v25` all at `6c8bf17df0df`. Production canary build
+`a05c02e3fa8a7099884a8f9b01d10fd1596d38b6acfd5c4794fb0fceff74e9f3` succeeded,
+compiler-stamped (4,336,556-byte WAV, SHA-256
+`1b61e6df24268c1a7bd363bd108309550dc809a6393830ab05e71c97a053204c`). The website
+pin, flash re-anchor and re-rendered previews landed as rubato-audio
+`aebccc5e`. `rev-797849cf613d` is the immediate rollback image.
 
 The September 28 release shipped at `rev-797849cf613d`. It carries:
 - Virtual Analog Variant's out/aux gain, 0.8 -> 0.337 (`72d73c1f`). It joined
