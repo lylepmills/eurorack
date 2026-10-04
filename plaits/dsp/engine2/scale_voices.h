@@ -43,7 +43,7 @@
 
 namespace plaits {
 
-const int kScaleVoicesMaxDegrees = 7;
+const int kScaleVoicesMaxDegrees = 12;  // Any 12-TET set, up to Chromatic.
 const int kScaleVoicesMaxVoices = 6;
 const int kScaleVoicesUnitsPerSemitone = 128;
 const int kScaleVoicesUnitsPerOctave = 12 * kScaleVoicesUnitsPerSemitone;
