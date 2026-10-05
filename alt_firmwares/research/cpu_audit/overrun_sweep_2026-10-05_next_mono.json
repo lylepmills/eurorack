@@ -1,0 +1,8550 @@
+{
+ "sample_rate": 48000.0,
+ "packets": 154,
+ "hello": {
+  "type": "hello",
+  "version": 3,
+  "group": 1,
+  "engines": 24,
+  "ladder_steps": 21,
+  "grid_states": 3645,
+  "random_states": 400
+ },
+ "restarts": 0,
+ "engines": [
+  {
+   "engine": 0,
+   "name": "csaw",
+   "stereo_capable": false,
+   "grid": {
+    "peak": 0.345,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 1539,
+    "over_ninety_blocks": 0
+   },
+   "random": {
+    "peak": 0.35,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 108,
+    "over_ninety_blocks": 0
+   },
+   "tail": {
+    "peak": 0.341,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 0,
+    "over_ninety_blocks": 0
+   },
+   "tail_worst_block": 2825,
+   "switch_in_peak": 0.28,
+   "switch_in_late": 0,
+   "double_pending": 0,
+   "late_with_overhead": 3,
+   "conditions": [
+    {
+     "condition": "unpatched/regular/note 12",
+     "peak": 0.283,
+     "late": 0,
+     "settle_peak": 0.286
+    },
+    {
+     "condition": "unpatched/regular/note 36",
+     "peak": 0.286,
+     "late": 0,
+     "settle_peak": 0.286
+    },
+    {
+     "condition": "unpatched/regular/note 60",
+     "peak": 0.287,
+     "late": 0,
+     "settle_peak": 0.29
+    },
+    {
+     "condition": "unpatched/regular/note 84",
+     "peak": 0.288,
+     "late": 0,
+     "settle_peak": 0.293
+    },
+    {
+     "condition": "unpatched/regular/note 108",
+     "peak": 0.296,
+     "late": 0,
+     "settle_peak": 0.295
+    },
+    {
+     "condition": "unpatched/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/sub-osc/note 12",
+     "peak": 0.303,
+     "late": 0,
+     "settle_peak": 0.306
+    },
+    {
+     "condition": "unpatched/sub-osc/note 36",
+     "peak": 0.307,
+     "late": 0,
+     "settle_peak": 0.309
+    },
+    {
+     "condition": "unpatched/sub-osc/note 60",
+     "peak": 0.307,
+     "late": 0,
+     "settle_peak": 0.308
+    },
+    {
+     "condition": "unpatched/sub-osc/note 84",
+     "peak": 0.307,
+     "late": 0,
+     "settle_peak": 0.314
+    },
+    {
+     "condition": "unpatched/sub-osc/note 108",
+     "peak": 0.315,
+     "late": 0,
+     "settle_peak": 0.315
+    },
+    {
+     "condition": "triggered/regular/note 12",
+     "peak": 0.34,
+     "late": 0,
+     "settle_peak": 0.343
+    },
+    {
+     "condition": "triggered/regular/note 36",
+     "peak": 0.342,
+     "late": 0,
+     "settle_peak": 0.345
+    },
+    {
+     "condition": "triggered/regular/note 60",
+     "peak": 0.343,
+     "late": 0,
+     "settle_peak": 0.347
+    },
+    {
+     "condition": "triggered/regular/note 84",
+     "peak": 0.343,
+     "late": 0,
+     "settle_peak": 0.348
+    },
+    {
+     "condition": "triggered/regular/note 108",
+     "peak": 0.346,
+     "late": 0,
+     "settle_peak": 0.35
+    },
+    {
+     "condition": "triggered/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/sub-osc/note 12",
+     "peak": 0.342,
+     "late": 0,
+     "settle_peak": 0.343
+    },
+    {
+     "condition": "triggered/sub-osc/note 36",
+     "peak": 0.338,
+     "late": 0,
+     "settle_peak": 0.346
+    },
+    {
+     "condition": "triggered/sub-osc/note 60",
+     "peak": 0.34,
+     "late": 0,
+     "settle_peak": 0.341
+    },
+    {
+     "condition": "triggered/sub-osc/note 84",
+     "peak": 0.342,
+     "late": 0,
+     "settle_peak": 0.348
+    },
+    {
+     "condition": "triggered/sub-osc/note 108",
+     "peak": 0.35,
+     "late": 0,
+     "settle_peak": 0.35
+    },
+    {
+     "condition": "gated/regular/note 12",
+     "peak": 0.339,
+     "late": 0,
+     "settle_peak": 0.341
+    },
+    {
+     "condition": "gated/regular/note 36",
+     "peak": 0.34,
+     "late": 0,
+     "settle_peak": 0.339
+    },
+    {
+     "condition": "gated/regular/note 60",
+     "peak": 0.34,
+     "late": 0,
+     "settle_peak": 0.345
+    },
+    {
+     "condition": "gated/regular/note 84",
+     "peak": 0.342,
+     "late": 0,
+     "settle_peak": 0.345
+    },
+    {
+     "condition": "gated/regular/note 108",
+     "peak": 0.344,
+     "late": 0,
+     "settle_peak": 0.348
+    },
+    {
+     "condition": "gated/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/sub-osc/note 12",
+     "peak": 0.333,
+     "late": 0,
+     "settle_peak": 0.342
+    },
+    {
+     "condition": "gated/sub-osc/note 36",
+     "peak": 0.336,
+     "late": 0,
+     "settle_peak": 0.339
+    },
+    {
+     "condition": "gated/sub-osc/note 60",
+     "peak": 0.337,
+     "late": 0,
+     "settle_peak": 0.341
+    },
+    {
+     "condition": "gated/sub-osc/note 84",
+     "peak": 0.34,
+     "late": 0,
+     "settle_peak": 0.346
+    },
+    {
+     "condition": "gated/sub-osc/note 108",
+     "peak": 0.343,
+     "late": 0,
+     "settle_peak": 0.348
+    }
+   ],
+   "tails": [
+    {
+     "case": 0,
+     "peak": 0.341,
+     "late": 0,
+     "final_second_peak": 0.341
+    },
+    {
+     "case": 1,
+     "peak": 0.341,
+     "late": 0,
+     "final_second_peak": 0.341
+    },
+    {
+     "case": 2,
+     "peak": 0.341,
+     "late": 0,
+     "final_second_peak": 0.341
+    },
+    {
+     "case": 3,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    },
+    {
+     "case": 4,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    },
+    {
+     "case": 5,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    }
+   ],
+   "stretch": 0.9999587538460675,
+   "anchored": true,
+   "host_glitches": {
+    "switch": 26,
+    "grid": 0,
+    "random": 0,
+    "tail": 0
+   }
+  },
+  {
+   "engine": 1,
+   "name": "saw-swarm",
+   "stereo_capable": true,
+   "grid": {
+    "peak": 0.606,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 1621,
+    "over_ninety_blocks": 0
+   },
+   "random": {
+    "peak": 0.606,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 21,
+    "over_ninety_blocks": 0
+   },
+   "tail": {
+    "peak": 0.606,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 3,
+    "over_ninety_blocks": 0
+   },
+   "tail_worst_block": 11,
+   "switch_in_peak": 0.523,
+   "switch_in_late": 0,
+   "double_pending": 0,
+   "late_with_overhead": 0,
+   "conditions": [
+    {
+     "condition": "unpatched/regular/note 12",
+     "peak": 0.53,
+     "late": 0,
+     "settle_peak": 0.53
+    },
+    {
+     "condition": "unpatched/regular/note 36",
+     "peak": 0.541,
+     "late": 0,
+     "settle_peak": 0.541
+    },
+    {
+     "condition": "unpatched/regular/note 60",
+     "peak": 0.541,
+     "late": 0,
+     "settle_peak": 0.541
+    },
+    {
+     "condition": "unpatched/regular/note 84",
+     "peak": 0.541,
+     "late": 0,
+     "settle_peak": 0.541
+    },
+    {
+     "condition": "unpatched/regular/note 108",
+     "peak": 0.541,
+     "late": 0,
+     "settle_peak": 0.54
+    },
+    {
+     "condition": "unpatched/stereo/note 12",
+     "peak": 0.549,
+     "late": 0,
+     "settle_peak": 0.549
+    },
+    {
+     "condition": "unpatched/stereo/note 36",
+     "peak": 0.549,
+     "late": 0,
+     "settle_peak": 0.549
+    },
+    {
+     "condition": "unpatched/stereo/note 60",
+     "peak": 0.549,
+     "late": 0,
+     "settle_peak": 0.549
+    },
+    {
+     "condition": "unpatched/stereo/note 84",
+     "peak": 0.549,
+     "late": 0,
+     "settle_peak": 0.549
+    },
+    {
+     "condition": "unpatched/stereo/note 108",
+     "peak": 0.549,
+     "late": 0,
+     "settle_peak": 0.549
+    },
+    {
+     "condition": "unpatched/sub-osc/note 12",
+     "peak": 0.56,
+     "late": 0,
+     "settle_peak": 0.56
+    },
+    {
+     "condition": "unpatched/sub-osc/note 36",
+     "peak": 0.551,
+     "late": 0,
+     "settle_peak": 0.551
+    },
+    {
+     "condition": "unpatched/sub-osc/note 60",
+     "peak": 0.551,
+     "late": 0,
+     "settle_peak": 0.551
+    },
+    {
+     "condition": "unpatched/sub-osc/note 84",
+     "peak": 0.551,
+     "late": 0,
+     "settle_peak": 0.551
+    },
+    {
+     "condition": "unpatched/sub-osc/note 108",
+     "peak": 0.551,
+     "late": 0,
+     "settle_peak": 0.551
+    },
+    {
+     "condition": "triggered/regular/note 12",
+     "peak": 0.589,
+     "late": 0,
+     "settle_peak": 0.588
+    },
+    {
+     "condition": "triggered/regular/note 36",
+     "peak": 0.596,
+     "late": 0,
+     "settle_peak": 0.593
+    },
+    {
+     "condition": "triggered/regular/note 60",
+     "peak": 0.594,
+     "late": 0,
+     "settle_peak": 0.594
+    },
+    {
+     "condition": "triggered/regular/note 84",
+     "peak": 0.594,
+     "late": 0,
+     "settle_peak": 0.593
+    },
+    {
+     "condition": "triggered/regular/note 108",
+     "peak": 0.594,
+     "late": 0,
+     "settle_peak": 0.593
+    },
+    {
+     "condition": "triggered/stereo/note 12",
+     "peak": 0.606,
+     "late": 0,
+     "settle_peak": 0.605
+    },
+    {
+     "condition": "triggered/stereo/note 36",
+     "peak": 0.606,
+     "late": 0,
+     "settle_peak": 0.604
+    },
+    {
+     "condition": "triggered/stereo/note 60",
+     "peak": 0.606,
+     "late": 0,
+     "settle_peak": 0.604
+    },
+    {
+     "condition": "triggered/stereo/note 84",
+     "peak": 0.605,
+     "late": 0,
+     "settle_peak": 0.604
+    },
+    {
+     "condition": "triggered/stereo/note 108",
+     "peak": 0.605,
+     "late": 0,
+     "settle_peak": 0.604
+    },
+    {
+     "condition": "triggered/sub-osc/note 12",
+     "peak": 0.596,
+     "late": 0,
+     "settle_peak": 0.594
+    },
+    {
+     "condition": "triggered/sub-osc/note 36",
+     "peak": 0.587,
+     "late": 0,
+     "settle_peak": 0.585
+    },
+    {
+     "condition": "triggered/sub-osc/note 60",
+     "peak": 0.586,
+     "late": 0,
+     "settle_peak": 0.585
+    },
+    {
+     "condition": "triggered/sub-osc/note 84",
+     "peak": 0.586,
+     "late": 0,
+     "settle_peak": 0.585
+    },
+    {
+     "condition": "triggered/sub-osc/note 108",
+     "peak": 0.586,
+     "late": 0,
+     "settle_peak": 0.585
+    },
+    {
+     "condition": "gated/regular/note 12",
+     "peak": 0.592,
+     "late": 0,
+     "settle_peak": 0.592
+    },
+    {
+     "condition": "gated/regular/note 36",
+     "peak": 0.592,
+     "late": 0,
+     "settle_peak": 0.592
+    },
+    {
+     "condition": "gated/regular/note 60",
+     "peak": 0.592,
+     "late": 0,
+     "settle_peak": 0.592
+    },
+    {
+     "condition": "gated/regular/note 84",
+     "peak": 0.592,
+     "late": 0,
+     "settle_peak": 0.592
+    },
+    {
+     "condition": "gated/regular/note 108",
+     "peak": 0.592,
+     "late": 0,
+     "settle_peak": 0.592
+    },
+    {
+     "condition": "gated/stereo/note 12",
+     "peak": 0.603,
+     "late": 0,
+     "settle_peak": 0.603
+    },
+    {
+     "condition": "gated/stereo/note 36",
+     "peak": 0.603,
+     "late": 0,
+     "settle_peak": 0.603
+    },
+    {
+     "condition": "gated/stereo/note 60",
+     "peak": 0.603,
+     "late": 0,
+     "settle_peak": 0.603
+    },
+    {
+     "condition": "gated/stereo/note 84",
+     "peak": 0.603,
+     "late": 0,
+     "settle_peak": 0.603
+    },
+    {
+     "condition": "gated/stereo/note 108",
+     "peak": 0.603,
+     "late": 0,
+     "settle_peak": 0.603
+    },
+    {
+     "condition": "gated/sub-osc/note 12",
+     "peak": 0.592,
+     "late": 0,
+     "settle_peak": 0.592
+    },
+    {
+     "condition": "gated/sub-osc/note 36",
+     "peak": 0.583,
+     "late": 0,
+     "settle_peak": 0.583
+    },
+    {
+     "condition": "gated/sub-osc/note 60",
+     "peak": 0.583,
+     "late": 0,
+     "settle_peak": 0.583
+    },
+    {
+     "condition": "gated/sub-osc/note 84",
+     "peak": 0.583,
+     "late": 0,
+     "settle_peak": 0.583
+    },
+    {
+     "condition": "gated/sub-osc/note 108",
+     "peak": 0.583,
+     "late": 0,
+     "settle_peak": 0.583
+    }
+   ],
+   "tails": [
+    {
+     "case": 0,
+     "peak": 0.582,
+     "late": 0,
+     "final_second_peak": 0.58
+    },
+    {
+     "case": 1,
+     "peak": 0.582,
+     "late": 0,
+     "final_second_peak": 0.58
+    },
+    {
+     "case": 2,
+     "peak": 0.58,
+     "late": 0,
+     "final_second_peak": 0.578
+    },
+    {
+     "case": 3,
+     "peak": 0.606,
+     "late": 0,
+     "final_second_peak": 0.604
+    },
+    {
+     "case": 4,
+     "peak": 0.606,
+     "late": 0,
+     "final_second_peak": 0.604
+    },
+    {
+     "case": 5,
+     "peak": 0.604,
+     "late": 0,
+     "final_second_peak": 0.602
+    }
+   ],
+   "stretch": 0.9999737837896672,
+   "anchored": true,
+   "host_glitches": {
+    "switch": 0,
+    "grid": 0,
+    "random": 0,
+    "tail": 0
+   }
+  },
+  {
+   "engine": 2,
+   "name": "scale-stack",
+   "stereo_capable": true,
+   "grid": {
+    "peak": 0.815,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 1559,
+    "over_ninety_blocks": 0
+   },
+   "random": {
+    "peak": 0.815,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 147,
+    "over_ninety_blocks": 0
+   },
+   "tail": {
+    "peak": 0.804,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 3,
+    "over_ninety_blocks": 0
+   },
+   "tail_worst_block": 9,
+   "switch_in_peak": 0.804,
+   "switch_in_late": 0,
+   "double_pending": 0,
+   "late_with_overhead": 0,
+   "conditions": [
+    {
+     "condition": "unpatched/regular/note 12",
+     "peak": 0.752,
+     "late": 0,
+     "settle_peak": 0.821
+    },
+    {
+     "condition": "unpatched/regular/note 36",
+     "peak": 0.752,
+     "late": 0,
+     "settle_peak": 0.821
+    },
+    {
+     "condition": "unpatched/regular/note 60",
+     "peak": 0.752,
+     "late": 0,
+     "settle_peak": 0.821
+    },
+    {
+     "condition": "unpatched/regular/note 84",
+     "peak": 0.756,
+     "late": 0,
+     "settle_peak": 0.82
+    },
+    {
+     "condition": "unpatched/regular/note 108",
+     "peak": 0.763,
+     "late": 0,
+     "settle_peak": 0.815
+    },
+    {
+     "condition": "unpatched/stereo/note 12",
+     "peak": 0.747,
+     "late": 0,
+     "settle_peak": 0.816
+    },
+    {
+     "condition": "unpatched/stereo/note 36",
+     "peak": 0.747,
+     "late": 0,
+     "settle_peak": 0.817
+    },
+    {
+     "condition": "unpatched/stereo/note 60",
+     "peak": 0.747,
+     "late": 0,
+     "settle_peak": 0.815
+    },
+    {
+     "condition": "unpatched/stereo/note 84",
+     "peak": 0.752,
+     "late": 0,
+     "settle_peak": 0.817
+    },
+    {
+     "condition": "unpatched/stereo/note 108",
+     "peak": 0.758,
+     "late": 0,
+     "settle_peak": 0.816
+    },
+    {
+     "condition": "unpatched/sub-osc/note 12",
+     "peak": 0.771,
+     "late": 0,
+     "settle_peak": 0.841
+    },
+    {
+     "condition": "unpatched/sub-osc/note 36",
+     "peak": 0.762,
+     "late": 0,
+     "settle_peak": 0.825
+    },
+    {
+     "condition": "unpatched/sub-osc/note 60",
+     "peak": 0.771,
+     "late": 0,
+     "settle_peak": 0.841
+    },
+    {
+     "condition": "unpatched/sub-osc/note 84",
+     "peak": 0.772,
+     "late": 0,
+     "settle_peak": 0.841
+    },
+    {
+     "condition": "unpatched/sub-osc/note 108",
+     "peak": 0.777,
+     "late": 0,
+     "settle_peak": 0.846
+    },
+    {
+     "condition": "triggered/regular/note 12",
+     "peak": 0.807,
+     "late": 0,
+     "settle_peak": 0.873
+    },
+    {
+     "condition": "triggered/regular/note 36",
+     "peak": 0.807,
+     "late": 0,
+     "settle_peak": 0.873
+    },
+    {
+     "condition": "triggered/regular/note 60",
+     "peak": 0.806,
+     "late": 0,
+     "settle_peak": 0.873
+    },
+    {
+     "condition": "triggered/regular/note 84",
+     "peak": 0.81,
+     "late": 0,
+     "settle_peak": 0.873
+    },
+    {
+     "condition": "triggered/regular/note 108",
+     "peak": 0.815,
+     "late": 0,
+     "settle_peak": 0.87
+    },
+    {
+     "condition": "triggered/stereo/note 12",
+     "peak": 0.805,
+     "late": 0,
+     "settle_peak": 0.865
+    },
+    {
+     "condition": "triggered/stereo/note 36",
+     "peak": 0.805,
+     "late": 0,
+     "settle_peak": 0.872
+    },
+    {
+     "condition": "triggered/stereo/note 60",
+     "peak": 0.804,
+     "late": 0,
+     "settle_peak": 0.872
+    },
+    {
+     "condition": "triggered/stereo/note 84",
+     "peak": 0.809,
+     "late": 0,
+     "settle_peak": 0.871
+    },
+    {
+     "condition": "triggered/stereo/note 108",
+     "peak": 0.813,
+     "late": 0,
+     "settle_peak": 0.877
+    },
+    {
+     "condition": "triggered/sub-osc/note 12",
+     "peak": 0.807,
+     "late": 0,
+     "settle_peak": 0.868
+    },
+    {
+     "condition": "triggered/sub-osc/note 36",
+     "peak": 0.807,
+     "late": 0,
+     "settle_peak": 0.874
+    },
+    {
+     "condition": "triggered/sub-osc/note 60",
+     "peak": 0.807,
+     "late": 0,
+     "settle_peak": 0.875
+    },
+    {
+     "condition": "triggered/sub-osc/note 84",
+     "peak": 0.807,
+     "late": 0,
+     "settle_peak": 0.874
+    },
+    {
+     "condition": "triggered/sub-osc/note 108",
+     "peak": 0.815,
+     "late": 0,
+     "settle_peak": 0.868
+    },
+    {
+     "condition": "gated/regular/note 12",
+     "peak": 0.803,
+     "late": 0,
+     "settle_peak": 0.871
+    },
+    {
+     "condition": "gated/regular/note 36",
+     "peak": 0.803,
+     "late": 0,
+     "settle_peak": 0.865
+    },
+    {
+     "condition": "gated/regular/note 60",
+     "peak": 0.803,
+     "late": 0,
+     "settle_peak": 0.87
+    },
+    {
+     "condition": "gated/regular/note 84",
+     "peak": 0.807,
+     "late": 0,
+     "settle_peak": 0.874
+    },
+    {
+     "condition": "gated/regular/note 108",
+     "peak": 0.813,
+     "late": 0,
+     "settle_peak": 0.866
+    },
+    {
+     "condition": "gated/stereo/note 12",
+     "peak": 0.801,
+     "late": 0,
+     "settle_peak": 0.869
+    },
+    {
+     "condition": "gated/stereo/note 36",
+     "peak": 0.801,
+     "late": 0,
+     "settle_peak": 0.868
+    },
+    {
+     "condition": "gated/stereo/note 60",
+     "peak": 0.801,
+     "late": 0,
+     "settle_peak": 0.869
+    },
+    {
+     "condition": "gated/stereo/note 84",
+     "peak": 0.805,
+     "late": 0,
+     "settle_peak": 0.868
+    },
+    {
+     "condition": "gated/stereo/note 108",
+     "peak": 0.811,
+     "late": 0,
+     "settle_peak": 0.874
+    },
+    {
+     "condition": "gated/sub-osc/note 12",
+     "peak": 0.803,
+     "late": 0,
+     "settle_peak": 0.866
+    },
+    {
+     "condition": "gated/sub-osc/note 36",
+     "peak": 0.803,
+     "late": 0,
+     "settle_peak": 0.873
+    },
+    {
+     "condition": "gated/sub-osc/note 60",
+     "peak": 0.803,
+     "late": 0,
+     "settle_peak": 0.872
+    },
+    {
+     "condition": "gated/sub-osc/note 84",
+     "peak": 0.801,
+     "late": 0,
+     "settle_peak": 0.857
+    },
+    {
+     "condition": "gated/sub-osc/note 108",
+     "peak": 0.808,
+     "late": 0,
+     "settle_peak": 0.872
+    }
+   ],
+   "tails": [
+    {
+     "case": 0,
+     "peak": 0.799,
+     "late": 0,
+     "final_second_peak": 0.797
+    },
+    {
+     "case": 1,
+     "peak": 0.619,
+     "late": 0,
+     "final_second_peak": 0.619
+    },
+    {
+     "case": 2,
+     "peak": 0.786,
+     "late": 0,
+     "final_second_peak": 0.786
+    },
+    {
+     "case": 3,
+     "peak": 0.804,
+     "late": 0,
+     "final_second_peak": 0.802
+    },
+    {
+     "case": 4,
+     "peak": 0.624,
+     "late": 0,
+     "final_second_peak": 0.623
+    },
+    {
+     "case": 5,
+     "peak": 0.785,
+     "late": 0,
+     "final_second_peak": 0.784
+    }
+   ],
+   "stretch": 0.9999737837896672,
+   "anchored": true,
+   "host_glitches": {
+    "switch": 0,
+    "grid": 0,
+    "random": 0,
+    "tail": 0
+   }
+  },
+  {
+   "engine": 3,
+   "name": "diatonic-chord",
+   "stereo_capable": true,
+   "grid": {
+    "peak": 0.81,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 1216,
+    "over_ninety_blocks": 0
+   },
+   "random": {
+    "peak": 0.905,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 326,
+    "over_ninety_blocks": 160
+   },
+   "tail": {
+    "peak": 0.81,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 0,
+    "over_ninety_blocks": 0
+   },
+   "tail_worst_block": 11,
+   "switch_in_peak": 0.712,
+   "switch_in_late": 0,
+   "double_pending": 0,
+   "late_with_overhead": 279,
+   "conditions": [
+    {
+     "condition": "unpatched/regular/note 12",
+     "peak": 0.85,
+     "late": 0,
+     "settle_peak": 0.911
+    },
+    {
+     "condition": "unpatched/regular/note 36",
+     "peak": 0.816,
+     "late": 0,
+     "settle_peak": 0.875
+    },
+    {
+     "condition": "unpatched/regular/note 60",
+     "peak": 0.85,
+     "late": 0,
+     "settle_peak": 0.911
+    },
+    {
+     "condition": "unpatched/regular/note 84",
+     "peak": 0.85,
+     "late": 0,
+     "settle_peak": 0.911
+    },
+    {
+     "condition": "unpatched/regular/note 108",
+     "peak": 0.755,
+     "late": 0,
+     "settle_peak": 0.805
+    },
+    {
+     "condition": "unpatched/stereo/note 12",
+     "peak": 0.819,
+     "late": 0,
+     "settle_peak": 0.878
+    },
+    {
+     "condition": "unpatched/stereo/note 36",
+     "peak": 0.845,
+     "late": 0,
+     "settle_peak": 0.906
+    },
+    {
+     "condition": "unpatched/stereo/note 60",
+     "peak": 0.845,
+     "late": 0,
+     "settle_peak": 0.906
+    },
+    {
+     "condition": "unpatched/stereo/note 84",
+     "peak": 0.751,
+     "late": 0,
+     "settle_peak": 0.811
+    },
+    {
+     "condition": "unpatched/stereo/note 108",
+     "peak": 0.751,
+     "late": 0,
+     "settle_peak": 0.8
+    },
+    {
+     "condition": "unpatched/sub-osc/note 12",
+     "peak": 0.843,
+     "late": 0,
+     "settle_peak": 0.889
+    },
+    {
+     "condition": "unpatched/sub-osc/note 36",
+     "peak": 0.844,
+     "late": 0,
+     "settle_peak": 0.904
+    },
+    {
+     "condition": "unpatched/sub-osc/note 60",
+     "peak": 0.766,
+     "late": 0,
+     "settle_peak": 0.82
+    },
+    {
+     "condition": "unpatched/sub-osc/note 84",
+     "peak": 0.774,
+     "late": 0,
+     "settle_peak": 0.835
+    },
+    {
+     "condition": "unpatched/sub-osc/note 108",
+     "peak": 0.774,
+     "late": 0,
+     "settle_peak": 0.835
+    },
+    {
+     "condition": "triggered/regular/note 12",
+     "peak": 0.81,
+     "late": 0,
+     "settle_peak": 0.809
+    },
+    {
+     "condition": "triggered/regular/note 36",
+     "peak": 0.898,
+     "late": 0,
+     "settle_peak": 0.942
+    },
+    {
+     "condition": "triggered/regular/note 60",
+     "peak": 0.81,
+     "late": 0,
+     "settle_peak": 0.868
+    },
+    {
+     "condition": "triggered/regular/note 84",
+     "peak": 0.886,
+     "late": 0,
+     "settle_peak": 0.94
+    },
+    {
+     "condition": "triggered/regular/note 108",
+     "peak": 0.89,
+     "late": 0,
+     "settle_peak": 0.95
+    },
+    {
+     "condition": "triggered/stereo/note 12",
+     "peak": 0.903,
+     "late": 0,
+     "settle_peak": 0.961
+    },
+    {
+     "condition": "triggered/stereo/note 36",
+     "peak": 0.901,
+     "late": 0,
+     "settle_peak": 0.955
+    },
+    {
+     "condition": "triggered/stereo/note 60",
+     "peak": 0.808,
+     "late": 0,
+     "settle_peak": 0.859
+    },
+    {
+     "condition": "triggered/stereo/note 84",
+     "peak": 0.901,
+     "late": 0,
+     "settle_peak": 0.961
+    },
+    {
+     "condition": "triggered/stereo/note 108",
+     "peak": 0.895,
+     "late": 0,
+     "settle_peak": 0.939
+    },
+    {
+     "condition": "triggered/sub-osc/note 12",
+     "peak": 0.81,
+     "late": 0,
+     "settle_peak": 0.808
+    },
+    {
+     "condition": "triggered/sub-osc/note 36",
+     "peak": 0.905,
+     "late": 0,
+     "settle_peak": 0.964
+    },
+    {
+     "condition": "triggered/sub-osc/note 60",
+     "peak": 0.809,
+     "late": 0,
+     "settle_peak": 0.855
+    },
+    {
+     "condition": "triggered/sub-osc/note 84",
+     "peak": 0.904,
+     "late": 0,
+     "settle_peak": 0.964
+    },
+    {
+     "condition": "triggered/sub-osc/note 108",
+     "peak": 0.904,
+     "late": 0,
+     "settle_peak": 0.951
+    },
+    {
+     "condition": "gated/regular/note 12",
+     "peak": 0.806,
+     "late": 0,
+     "settle_peak": 0.859
+    },
+    {
+     "condition": "gated/regular/note 36",
+     "peak": 0.901,
+     "late": 0,
+     "settle_peak": 0.96
+    },
+    {
+     "condition": "gated/regular/note 60",
+     "peak": 0.901,
+     "late": 0,
+     "settle_peak": 0.961
+    },
+    {
+     "condition": "gated/regular/note 84",
+     "peak": 0.901,
+     "late": 0,
+     "settle_peak": 0.955
+    },
+    {
+     "condition": "gated/regular/note 108",
+     "peak": 0.901,
+     "late": 0,
+     "settle_peak": 0.961
+    },
+    {
+     "condition": "gated/stereo/note 12",
+     "peak": 0.805,
+     "late": 0,
+     "settle_peak": 0.841
+    },
+    {
+     "condition": "gated/stereo/note 36",
+     "peak": 0.874,
+     "late": 0,
+     "settle_peak": 0.933
+    },
+    {
+     "condition": "gated/stereo/note 60",
+     "peak": 0.805,
+     "late": 0,
+     "settle_peak": 0.863
+    },
+    {
+     "condition": "gated/stereo/note 84",
+     "peak": 0.899,
+     "late": 0,
+     "settle_peak": 0.944
+    },
+    {
+     "condition": "gated/stereo/note 108",
+     "peak": 0.805,
+     "late": 0,
+     "settle_peak": 0.804
+    },
+    {
+     "condition": "gated/sub-osc/note 12",
+     "peak": 0.902,
+     "late": 0,
+     "settle_peak": 0.955
+    },
+    {
+     "condition": "gated/sub-osc/note 36",
+     "peak": 0.806,
+     "late": 0,
+     "settle_peak": 0.867
+    },
+    {
+     "condition": "gated/sub-osc/note 60",
+     "peak": 0.806,
+     "late": 0,
+     "settle_peak": 0.867
+    },
+    {
+     "condition": "gated/sub-osc/note 84",
+     "peak": 0.902,
+     "late": 0,
+     "settle_peak": 0.961
+    },
+    {
+     "condition": "gated/sub-osc/note 108",
+     "peak": 0.902,
+     "late": 0,
+     "settle_peak": 0.962
+    }
+   ],
+   "tails": [
+    {
+     "case": 0,
+     "peak": 0.81,
+     "late": 0,
+     "final_second_peak": 0.801
+    },
+    {
+     "case": 1,
+     "peak": 0.621,
+     "late": 0,
+     "final_second_peak": 0.62
+    },
+    {
+     "case": 2,
+     "peak": 0.788,
+     "late": 0,
+     "final_second_peak": 0.787
+    },
+    {
+     "case": 3,
+     "peak": 0.808,
+     "late": 0,
+     "final_second_peak": 0.806
+    },
+    {
+     "case": 4,
+     "peak": 0.626,
+     "late": 0,
+     "final_second_peak": 0.625
+    },
+    {
+     "case": 5,
+     "peak": 0.786,
+     "late": 0,
+     "final_second_peak": 0.785
+    }
+   ],
+   "stretch": 0.9999740537678424,
+   "anchored": true,
+   "host_glitches": {
+    "switch": 0,
+    "grid": 0,
+    "random": 0,
+    "tail": 0
+   }
+  },
+  {
+   "engine": 4,
+   "name": "bowed",
+   "stereo_capable": false,
+   "grid": {
+    "peak": 0.706,
+    "late": 1,
+    "late_states": 1,
+    "worst_state": 1242,
+    "over_ninety_blocks": 0
+   },
+   "random": {
+    "peak": 0.707,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 93,
+    "over_ninety_blocks": 0
+   },
+   "tail": {
+    "peak": 0.705,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 0,
+    "over_ninety_blocks": 0
+   },
+   "tail_worst_block": 8,
+   "switch_in_peak": 0.664,
+   "switch_in_late": 0,
+   "double_pending": 0,
+   "late_with_overhead": 5,
+   "conditions": [
+    {
+     "condition": "unpatched/regular/note 12",
+     "peak": 0.536,
+     "late": 0,
+     "settle_peak": 0.537
+    },
+    {
+     "condition": "unpatched/regular/note 36",
+     "peak": 0.536,
+     "late": 0,
+     "settle_peak": 0.538
+    },
+    {
+     "condition": "unpatched/regular/note 60",
+     "peak": 0.536,
+     "late": 0,
+     "settle_peak": 0.538
+    },
+    {
+     "condition": "unpatched/regular/note 84",
+     "peak": 0.536,
+     "late": 0,
+     "settle_peak": 0.538
+    },
+    {
+     "condition": "unpatched/regular/note 108",
+     "peak": 0.536,
+     "late": 0,
+     "settle_peak": 0.538
+    },
+    {
+     "condition": "unpatched/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/sub-osc/note 12",
+     "peak": 0.554,
+     "late": 0,
+     "settle_peak": 0.551
+    },
+    {
+     "condition": "unpatched/sub-osc/note 36",
+     "peak": 0.555,
+     "late": 0,
+     "settle_peak": 0.558
+    },
+    {
+     "condition": "unpatched/sub-osc/note 60",
+     "peak": 0.555,
+     "late": 0,
+     "settle_peak": 0.558
+    },
+    {
+     "condition": "unpatched/sub-osc/note 84",
+     "peak": 0.555,
+     "late": 0,
+     "settle_peak": 0.558
+    },
+    {
+     "condition": "unpatched/sub-osc/note 108",
+     "peak": 0.555,
+     "late": 0,
+     "settle_peak": 0.558
+    },
+    {
+     "condition": "triggered/regular/note 12",
+     "peak": 0.706,
+     "late": 0,
+     "settle_peak": 0.592
+    },
+    {
+     "condition": "triggered/regular/note 36",
+     "peak": 0.706,
+     "late": 0,
+     "settle_peak": 0.591
+    },
+    {
+     "condition": "triggered/regular/note 60",
+     "peak": 0.706,
+     "late": 0,
+     "settle_peak": 0.592
+    },
+    {
+     "condition": "triggered/regular/note 84",
+     "peak": 0.706,
+     "late": 0,
+     "settle_peak": 0.592
+    },
+    {
+     "condition": "triggered/regular/note 108",
+     "peak": 0.706,
+     "late": 0,
+     "settle_peak": 0.59
+    },
+    {
+     "condition": "triggered/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/sub-osc/note 12",
+     "peak": 0.706,
+     "late": 1,
+     "settle_peak": 0.59
+    },
+    {
+     "condition": "triggered/sub-osc/note 36",
+     "peak": 0.706,
+     "late": 0,
+     "settle_peak": 0.592
+    },
+    {
+     "condition": "triggered/sub-osc/note 60",
+     "peak": 0.707,
+     "late": 0,
+     "settle_peak": 0.587
+    },
+    {
+     "condition": "triggered/sub-osc/note 84",
+     "peak": 0.706,
+     "late": 0,
+     "settle_peak": 0.592
+    },
+    {
+     "condition": "triggered/sub-osc/note 108",
+     "peak": 0.706,
+     "late": 0,
+     "settle_peak": 0.594
+    },
+    {
+     "condition": "gated/regular/note 12",
+     "peak": 0.701,
+     "late": 0,
+     "settle_peak": 0.59
+    },
+    {
+     "condition": "gated/regular/note 36",
+     "peak": 0.701,
+     "late": 0,
+     "settle_peak": 0.585
+    },
+    {
+     "condition": "gated/regular/note 60",
+     "peak": 0.701,
+     "late": 0,
+     "settle_peak": 0.589
+    },
+    {
+     "condition": "gated/regular/note 84",
+     "peak": 0.701,
+     "late": 0,
+     "settle_peak": 0.589
+    },
+    {
+     "condition": "gated/regular/note 108",
+     "peak": 0.701,
+     "late": 0,
+     "settle_peak": 0.588
+    },
+    {
+     "condition": "gated/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/sub-osc/note 12",
+     "peak": 0.702,
+     "late": 0,
+     "settle_peak": 0.59
+    },
+    {
+     "condition": "gated/sub-osc/note 36",
+     "peak": 0.702,
+     "late": 0,
+     "settle_peak": 0.591
+    },
+    {
+     "condition": "gated/sub-osc/note 60",
+     "peak": 0.702,
+     "late": 0,
+     "settle_peak": 0.585
+    },
+    {
+     "condition": "gated/sub-osc/note 84",
+     "peak": 0.702,
+     "late": 0,
+     "settle_peak": 0.585
+    },
+    {
+     "condition": "gated/sub-osc/note 108",
+     "peak": 0.702,
+     "late": 0,
+     "settle_peak": 0.588
+    }
+   ],
+   "tails": [
+    {
+     "case": 0,
+     "peak": 0.705,
+     "late": 0,
+     "final_second_peak": 0.572
+    },
+    {
+     "case": 1,
+     "peak": 0.699,
+     "late": 0,
+     "final_second_peak": 0.572
+    },
+    {
+     "case": 2,
+     "peak": 0.705,
+     "late": 0,
+     "final_second_peak": 0.579
+    },
+    {
+     "case": 3,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    },
+    {
+     "case": 4,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    },
+    {
+     "case": 5,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    }
+   ],
+   "stretch": 0.9999731788108523,
+   "anchored": true,
+   "host_glitches": {
+    "switch": 0,
+    "grid": 0,
+    "random": 0,
+    "tail": 0
+   }
+  },
+  {
+   "engine": 5,
+   "name": "morph",
+   "stereo_capable": true,
+   "grid": {
+    "peak": 0.918,
+    "late": 1387,
+    "late_states": 41,
+    "worst_state": 1867,
+    "over_ninety_blocks": 8825
+   },
+   "random": {
+    "peak": 0.919,
+    "late": 65,
+    "late_states": 6,
+    "worst_state": 69,
+    "over_ninety_blocks": 1154
+   },
+   "tail": {
+    "peak": 0.918,
+    "late": 1,
+    "late_states": 1,
+    "worst_state": 3,
+    "over_ninety_blocks": 17986
+   },
+   "tail_worst_block": 9523,
+   "switch_in_peak": 0.757,
+   "switch_in_late": 0,
+   "double_pending": 0,
+   "late_with_overhead": 38670,
+   "conditions": [
+    {
+     "condition": "unpatched/regular/note 12",
+     "peak": 0.745,
+     "late": 0,
+     "settle_peak": 0.744
+    },
+    {
+     "condition": "unpatched/regular/note 36",
+     "peak": 0.746,
+     "late": 0,
+     "settle_peak": 0.744
+    },
+    {
+     "condition": "unpatched/regular/note 60",
+     "peak": 0.746,
+     "late": 0,
+     "settle_peak": 0.746
+    },
+    {
+     "condition": "unpatched/regular/note 84",
+     "peak": 0.747,
+     "late": 0,
+     "settle_peak": 0.746
+    },
+    {
+     "condition": "unpatched/regular/note 108",
+     "peak": 0.748,
+     "late": 0,
+     "settle_peak": 0.746
+    },
+    {
+     "condition": "unpatched/stereo/note 12",
+     "peak": 0.863,
+     "late": 0,
+     "settle_peak": 0.86
+    },
+    {
+     "condition": "unpatched/stereo/note 36",
+     "peak": 0.863,
+     "late": 0,
+     "settle_peak": 0.86
+    },
+    {
+     "condition": "unpatched/stereo/note 60",
+     "peak": 0.86,
+     "late": 0,
+     "settle_peak": 0.86
+    },
+    {
+     "condition": "unpatched/stereo/note 84",
+     "peak": 0.863,
+     "late": 0,
+     "settle_peak": 0.863
+    },
+    {
+     "condition": "unpatched/stereo/note 108",
+     "peak": 0.862,
+     "late": 0,
+     "settle_peak": 0.863
+    },
+    {
+     "condition": "unpatched/sub-osc/note 12",
+     "peak": 0.764,
+     "late": 0,
+     "settle_peak": 0.765
+    },
+    {
+     "condition": "unpatched/sub-osc/note 36",
+     "peak": 0.765,
+     "late": 0,
+     "settle_peak": 0.764
+    },
+    {
+     "condition": "unpatched/sub-osc/note 60",
+     "peak": 0.766,
+     "late": 0,
+     "settle_peak": 0.765
+    },
+    {
+     "condition": "unpatched/sub-osc/note 84",
+     "peak": 0.768,
+     "late": 0,
+     "settle_peak": 0.766
+    },
+    {
+     "condition": "unpatched/sub-osc/note 108",
+     "peak": 0.766,
+     "late": 0,
+     "settle_peak": 0.765
+    },
+    {
+     "condition": "triggered/regular/note 12",
+     "peak": 0.806,
+     "late": 0,
+     "settle_peak": 0.802
+    },
+    {
+     "condition": "triggered/regular/note 36",
+     "peak": 0.804,
+     "late": 0,
+     "settle_peak": 0.803
+    },
+    {
+     "condition": "triggered/regular/note 60",
+     "peak": 0.804,
+     "late": 0,
+     "settle_peak": 0.803
+    },
+    {
+     "condition": "triggered/regular/note 84",
+     "peak": 0.805,
+     "late": 0,
+     "settle_peak": 0.804
+    },
+    {
+     "condition": "triggered/regular/note 108",
+     "peak": 0.803,
+     "late": 0,
+     "settle_peak": 0.803
+    },
+    {
+     "condition": "triggered/stereo/note 12",
+     "peak": 0.919,
+     "late": 1181,
+     "settle_peak": 0.916
+    },
+    {
+     "condition": "triggered/stereo/note 36",
+     "peak": 0.919,
+     "late": 13,
+     "settle_peak": 0.914
+    },
+    {
+     "condition": "triggered/stereo/note 60",
+     "peak": 0.917,
+     "late": 0,
+     "settle_peak": 0.916
+    },
+    {
+     "condition": "triggered/stereo/note 84",
+     "peak": 0.918,
+     "late": 0,
+     "settle_peak": 0.917
+    },
+    {
+     "condition": "triggered/stereo/note 108",
+     "peak": 0.916,
+     "late": 254,
+     "settle_peak": 0.915
+    },
+    {
+     "condition": "triggered/sub-osc/note 12",
+     "peak": 0.803,
+     "late": 0,
+     "settle_peak": 0.801
+    },
+    {
+     "condition": "triggered/sub-osc/note 36",
+     "peak": 0.803,
+     "late": 0,
+     "settle_peak": 0.799
+    },
+    {
+     "condition": "triggered/sub-osc/note 60",
+     "peak": 0.802,
+     "late": 0,
+     "settle_peak": 0.802
+    },
+    {
+     "condition": "triggered/sub-osc/note 84",
+     "peak": 0.803,
+     "late": 0,
+     "settle_peak": 0.802
+    },
+    {
+     "condition": "triggered/sub-osc/note 108",
+     "peak": 0.802,
+     "late": 0,
+     "settle_peak": 0.8
+    },
+    {
+     "condition": "gated/regular/note 12",
+     "peak": 0.801,
+     "late": 0,
+     "settle_peak": 0.8
+    },
+    {
+     "condition": "gated/regular/note 36",
+     "peak": 0.801,
+     "late": 0,
+     "settle_peak": 0.799
+    },
+    {
+     "condition": "gated/regular/note 60",
+     "peak": 0.803,
+     "late": 0,
+     "settle_peak": 0.8
+    },
+    {
+     "condition": "gated/regular/note 84",
+     "peak": 0.803,
+     "late": 0,
+     "settle_peak": 0.801
+    },
+    {
+     "condition": "gated/regular/note 108",
+     "peak": 0.802,
+     "late": 0,
+     "settle_peak": 0.8
+    },
+    {
+     "condition": "gated/stereo/note 12",
+     "peak": 0.913,
+     "late": 0,
+     "settle_peak": 0.913
+    },
+    {
+     "condition": "gated/stereo/note 36",
+     "peak": 0.915,
+     "late": 0,
+     "settle_peak": 0.916
+    },
+    {
+     "condition": "gated/stereo/note 60",
+     "peak": 0.916,
+     "late": 0,
+     "settle_peak": 0.912
+    },
+    {
+     "condition": "gated/stereo/note 84",
+     "peak": 0.916,
+     "late": 0,
+     "settle_peak": 0.915
+    },
+    {
+     "condition": "gated/stereo/note 108",
+     "peak": 0.914,
+     "late": 4,
+     "settle_peak": 0.913
+    },
+    {
+     "condition": "gated/sub-osc/note 12",
+     "peak": 0.799,
+     "late": 0,
+     "settle_peak": 0.798
+    },
+    {
+     "condition": "gated/sub-osc/note 36",
+     "peak": 0.8,
+     "late": 0,
+     "settle_peak": 0.798
+    },
+    {
+     "condition": "gated/sub-osc/note 60",
+     "peak": 0.802,
+     "late": 0,
+     "settle_peak": 0.8
+    },
+    {
+     "condition": "gated/sub-osc/note 84",
+     "peak": 0.801,
+     "late": 0,
+     "settle_peak": 0.799
+    },
+    {
+     "condition": "gated/sub-osc/note 108",
+     "peak": 0.801,
+     "late": 0,
+     "settle_peak": 0.798
+    }
+   ],
+   "tails": [
+    {
+     "case": 0,
+     "peak": 0.804,
+     "late": 0,
+     "final_second_peak": 0.804
+    },
+    {
+     "case": 1,
+     "peak": 0.804,
+     "late": 0,
+     "final_second_peak": 0.804
+    },
+    {
+     "case": 2,
+     "peak": 0.802,
+     "late": 0,
+     "final_second_peak": 0.801
+    },
+    {
+     "case": 3,
+     "peak": 0.918,
+     "late": 1,
+     "final_second_peak": 0.917
+    },
+    {
+     "case": 4,
+     "peak": 0.918,
+     "late": 0,
+     "final_second_peak": 0.917
+    },
+    {
+     "case": 5,
+     "peak": 0.913,
+     "late": 0,
+     "final_second_peak": 0.912
+    }
+   ],
+   "stretch": 0.9999772935059474,
+   "anchored": true,
+   "host_glitches": {
+    "switch": 0,
+    "grid": 24,
+    "random": 6,
+    "tail": 0
+   }
+  },
+  {
+   "engine": 6,
+   "name": "brass",
+   "stereo_capable": true,
+   "grid": {
+    "peak": 0.848,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 1944,
+    "over_ninety_blocks": 0
+   },
+   "random": {
+    "peak": 0.848,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 137,
+    "over_ninety_blocks": 0
+   },
+   "tail": {
+    "peak": 0.844,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 3,
+    "over_ninety_blocks": 0
+   },
+   "tail_worst_block": 8,
+   "switch_in_peak": 0.774,
+   "switch_in_late": 0,
+   "double_pending": 0,
+   "late_with_overhead": 0,
+   "conditions": [
+    {
+     "condition": "unpatched/regular/note 12",
+     "peak": 0.494,
+     "late": 0,
+     "settle_peak": 0.499
+    },
+    {
+     "condition": "unpatched/regular/note 36",
+     "peak": 0.493,
+     "late": 0,
+     "settle_peak": 0.499
+    },
+    {
+     "condition": "unpatched/regular/note 60",
+     "peak": 0.487,
+     "late": 0,
+     "settle_peak": 0.499
+    },
+    {
+     "condition": "unpatched/regular/note 84",
+     "peak": 0.495,
+     "late": 0,
+     "settle_peak": 0.501
+    },
+    {
+     "condition": "unpatched/regular/note 108",
+     "peak": 0.495,
+     "late": 0,
+     "settle_peak": 0.502
+    },
+    {
+     "condition": "unpatched/stereo/note 12",
+     "peak": 0.516,
+     "late": 0,
+     "settle_peak": 0.527
+    },
+    {
+     "condition": "unpatched/stereo/note 36",
+     "peak": 0.515,
+     "late": 0,
+     "settle_peak": 0.526
+    },
+    {
+     "condition": "unpatched/stereo/note 60",
+     "peak": 0.514,
+     "late": 0,
+     "settle_peak": 0.52
+    },
+    {
+     "condition": "unpatched/stereo/note 84",
+     "peak": 0.517,
+     "late": 0,
+     "settle_peak": 0.525
+    },
+    {
+     "condition": "unpatched/stereo/note 108",
+     "peak": 0.517,
+     "late": 0,
+     "settle_peak": 0.518
+    },
+    {
+     "condition": "unpatched/sub-osc/note 12",
+     "peak": 0.513,
+     "late": 0,
+     "settle_peak": 0.525
+    },
+    {
+     "condition": "unpatched/sub-osc/note 36",
+     "peak": 0.512,
+     "late": 0,
+     "settle_peak": 0.524
+    },
+    {
+     "condition": "unpatched/sub-osc/note 60",
+     "peak": 0.511,
+     "late": 0,
+     "settle_peak": 0.524
+    },
+    {
+     "condition": "unpatched/sub-osc/note 84",
+     "peak": 0.514,
+     "late": 0,
+     "settle_peak": 0.525
+    },
+    {
+     "condition": "unpatched/sub-osc/note 108",
+     "peak": 0.514,
+     "late": 0,
+     "settle_peak": 0.515
+    },
+    {
+     "condition": "triggered/regular/note 12",
+     "peak": 0.823,
+     "late": 0,
+     "settle_peak": 0.56
+    },
+    {
+     "condition": "triggered/regular/note 36",
+     "peak": 0.822,
+     "late": 0,
+     "settle_peak": 0.558
+    },
+    {
+     "condition": "triggered/regular/note 60",
+     "peak": 0.821,
+     "late": 0,
+     "settle_peak": 0.557
+    },
+    {
+     "condition": "triggered/regular/note 84",
+     "peak": 0.824,
+     "late": 0,
+     "settle_peak": 0.56
+    },
+    {
+     "condition": "triggered/regular/note 108",
+     "peak": 0.824,
+     "late": 0,
+     "settle_peak": 0.558
+    },
+    {
+     "condition": "triggered/stereo/note 12",
+     "peak": 0.846,
+     "late": 0,
+     "settle_peak": 0.582
+    },
+    {
+     "condition": "triggered/stereo/note 36",
+     "peak": 0.845,
+     "late": 0,
+     "settle_peak": 0.58
+    },
+    {
+     "condition": "triggered/stereo/note 60",
+     "peak": 0.845,
+     "late": 0,
+     "settle_peak": 0.575
+    },
+    {
+     "condition": "triggered/stereo/note 84",
+     "peak": 0.848,
+     "late": 0,
+     "settle_peak": 0.58
+    },
+    {
+     "condition": "triggered/stereo/note 108",
+     "peak": 0.848,
+     "late": 0,
+     "settle_peak": 0.58
+    },
+    {
+     "condition": "triggered/sub-osc/note 12",
+     "peak": 0.822,
+     "late": 0,
+     "settle_peak": 0.558
+    },
+    {
+     "condition": "triggered/sub-osc/note 36",
+     "peak": 0.821,
+     "late": 0,
+     "settle_peak": 0.552
+    },
+    {
+     "condition": "triggered/sub-osc/note 60",
+     "peak": 0.821,
+     "late": 0,
+     "settle_peak": 0.556
+    },
+    {
+     "condition": "triggered/sub-osc/note 84",
+     "peak": 0.824,
+     "late": 0,
+     "settle_peak": 0.556
+    },
+    {
+     "condition": "triggered/sub-osc/note 108",
+     "peak": 0.824,
+     "late": 0,
+     "settle_peak": 0.557
+    },
+    {
+     "condition": "gated/regular/note 12",
+     "peak": 0.818,
+     "late": 0,
+     "settle_peak": 0.556
+    },
+    {
+     "condition": "gated/regular/note 36",
+     "peak": 0.817,
+     "late": 0,
+     "settle_peak": 0.555
+    },
+    {
+     "condition": "gated/regular/note 60",
+     "peak": 0.817,
+     "late": 0,
+     "settle_peak": 0.55
+    },
+    {
+     "condition": "gated/regular/note 84",
+     "peak": 0.82,
+     "late": 0,
+     "settle_peak": 0.558
+    },
+    {
+     "condition": "gated/regular/note 108",
+     "peak": 0.82,
+     "late": 0,
+     "settle_peak": 0.556
+    },
+    {
+     "condition": "gated/stereo/note 12",
+     "peak": 0.841,
+     "late": 0,
+     "settle_peak": 0.584
+    },
+    {
+     "condition": "gated/stereo/note 36",
+     "peak": 0.84,
+     "late": 0,
+     "settle_peak": 0.579
+    },
+    {
+     "condition": "gated/stereo/note 60",
+     "peak": 0.84,
+     "late": 0,
+     "settle_peak": 0.574
+    },
+    {
+     "condition": "gated/stereo/note 84",
+     "peak": 0.843,
+     "late": 0,
+     "settle_peak": 0.578
+    },
+    {
+     "condition": "gated/stereo/note 108",
+     "peak": 0.843,
+     "late": 0,
+     "settle_peak": 0.579
+    },
+    {
+     "condition": "gated/sub-osc/note 12",
+     "peak": 0.817,
+     "late": 0,
+     "settle_peak": 0.556
+    },
+    {
+     "condition": "gated/sub-osc/note 36",
+     "peak": 0.817,
+     "late": 0,
+     "settle_peak": 0.556
+    },
+    {
+     "condition": "gated/sub-osc/note 60",
+     "peak": 0.816,
+     "late": 0,
+     "settle_peak": 0.55
+    },
+    {
+     "condition": "gated/sub-osc/note 84",
+     "peak": 0.819,
+     "late": 0,
+     "settle_peak": 0.557
+    },
+    {
+     "condition": "gated/sub-osc/note 108",
+     "peak": 0.819,
+     "late": 0,
+     "settle_peak": 0.555
+    }
+   ],
+   "tails": [
+    {
+     "case": 0,
+     "peak": 0.821,
+     "late": 0,
+     "final_second_peak": 0.541
+    },
+    {
+     "case": 1,
+     "peak": 0.814,
+     "late": 0,
+     "final_second_peak": 0.551
+    },
+    {
+     "case": 2,
+     "peak": 0.814,
+     "late": 0,
+     "final_second_peak": 0.551
+    },
+    {
+     "case": 3,
+     "peak": 0.844,
+     "late": 0,
+     "final_second_peak": 0.572
+    },
+    {
+     "case": 4,
+     "peak": 0.844,
+     "late": 0,
+     "final_second_peak": 0.573
+    },
+    {
+     "case": 5,
+     "peak": 0.844,
+     "late": 0,
+     "final_second_peak": 0.573
+    }
+   ],
+   "stretch": 0.9999708140297374,
+   "anchored": true,
+   "host_glitches": {
+    "switch": 0,
+    "grid": 0,
+    "random": 0,
+    "tail": 0
+   }
+  },
+  {
+   "engine": 7,
+   "name": "granular-formant",
+   "stereo_capable": false,
+   "grid": {
+    "peak": 0.899,
+    "late": 8,
+    "late_states": 3,
+    "worst_state": 1594,
+    "over_ninety_blocks": 0
+   },
+   "random": {
+    "peak": 0.875,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 81,
+    "over_ninety_blocks": 0
+   },
+   "tail": {
+    "peak": 0.843,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 1,
+    "over_ninety_blocks": 0
+   },
+   "tail_worst_block": 11383,
+   "switch_in_peak": 0.695,
+   "switch_in_late": 0,
+   "double_pending": 0,
+   "late_with_overhead": 35,
+   "conditions": [
+    {
+     "condition": "unpatched/regular/note 12",
+     "peak": 0.759,
+     "late": 0,
+     "settle_peak": 0.811
+    },
+    {
+     "condition": "unpatched/regular/note 36",
+     "peak": 0.772,
+     "late": 0,
+     "settle_peak": 0.841
+    },
+    {
+     "condition": "unpatched/regular/note 60",
+     "peak": 0.788,
+     "late": 0,
+     "settle_peak": 0.82
+    },
+    {
+     "condition": "unpatched/regular/note 84",
+     "peak": 0.789,
+     "late": 0,
+     "settle_peak": 0.885
+    },
+    {
+     "condition": "unpatched/regular/note 108",
+     "peak": 0.844,
+     "late": 0,
+     "settle_peak": 0.868
+    },
+    {
+     "condition": "unpatched/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/sub-osc/note 12",
+     "peak": 0.792,
+     "late": 2,
+     "settle_peak": 0.792
+    },
+    {
+     "condition": "unpatched/sub-osc/note 36",
+     "peak": 0.804,
+     "late": 0,
+     "settle_peak": 0.839
+    },
+    {
+     "condition": "unpatched/sub-osc/note 60",
+     "peak": 0.804,
+     "late": 0,
+     "settle_peak": 0.84
+    },
+    {
+     "condition": "unpatched/sub-osc/note 84",
+     "peak": 0.808,
+     "late": 0,
+     "settle_peak": 0.891
+    },
+    {
+     "condition": "unpatched/sub-osc/note 108",
+     "peak": 0.863,
+     "late": 0,
+     "settle_peak": 0.871
+    },
+    {
+     "condition": "triggered/regular/note 12",
+     "peak": 0.837,
+     "late": 0,
+     "settle_peak": 0.878
+    },
+    {
+     "condition": "triggered/regular/note 36",
+     "peak": 0.843,
+     "late": 0,
+     "settle_peak": 0.919
+    },
+    {
+     "condition": "triggered/regular/note 60",
+     "peak": 0.839,
+     "late": 0,
+     "settle_peak": 0.935
+    },
+    {
+     "condition": "triggered/regular/note 84",
+     "peak": 0.845,
+     "late": 0,
+     "settle_peak": 0.936
+    },
+    {
+     "condition": "triggered/regular/note 108",
+     "peak": 0.899,
+     "late": 0,
+     "settle_peak": 0.924
+    },
+    {
+     "condition": "triggered/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/sub-osc/note 12",
+     "peak": 0.821,
+     "late": 3,
+     "settle_peak": 0.877
+    },
+    {
+     "condition": "triggered/sub-osc/note 36",
+     "peak": 0.834,
+     "late": 0,
+     "settle_peak": 0.864
+    },
+    {
+     "condition": "triggered/sub-osc/note 60",
+     "peak": 0.842,
+     "late": 0,
+     "settle_peak": 0.879
+    },
+    {
+     "condition": "triggered/sub-osc/note 84",
+     "peak": 0.844,
+     "late": 0,
+     "settle_peak": 0.907
+    },
+    {
+     "condition": "triggered/sub-osc/note 108",
+     "peak": 0.899,
+     "late": 0,
+     "settle_peak": 0.93
+    },
+    {
+     "condition": "gated/regular/note 12",
+     "peak": 0.81,
+     "late": 0,
+     "settle_peak": 0.872
+    },
+    {
+     "condition": "gated/regular/note 36",
+     "peak": 0.841,
+     "late": 0,
+     "settle_peak": 0.871
+    },
+    {
+     "condition": "gated/regular/note 60",
+     "peak": 0.839,
+     "late": 0,
+     "settle_peak": 0.936
+    },
+    {
+     "condition": "gated/regular/note 84",
+     "peak": 0.84,
+     "late": 0,
+     "settle_peak": 0.928
+    },
+    {
+     "condition": "gated/regular/note 108",
+     "peak": 0.898,
+     "late": 0,
+     "settle_peak": 0.924
+    },
+    {
+     "condition": "gated/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/sub-osc/note 12",
+     "peak": 0.815,
+     "late": 3,
+     "settle_peak": 0.812
+    },
+    {
+     "condition": "gated/sub-osc/note 36",
+     "peak": 0.824,
+     "late": 0,
+     "settle_peak": 0.849
+    },
+    {
+     "condition": "gated/sub-osc/note 60",
+     "peak": 0.839,
+     "late": 0,
+     "settle_peak": 0.891
+    },
+    {
+     "condition": "gated/sub-osc/note 84",
+     "peak": 0.842,
+     "late": 0,
+     "settle_peak": 0.913
+    },
+    {
+     "condition": "gated/sub-osc/note 108",
+     "peak": 0.897,
+     "late": 0,
+     "settle_peak": 0.9
+    }
+   ],
+   "tails": [
+    {
+     "case": 0,
+     "peak": 0.82,
+     "late": 0,
+     "final_second_peak": 0.82
+    },
+    {
+     "case": 1,
+     "peak": 0.843,
+     "late": 0,
+     "final_second_peak": 0.842
+    },
+    {
+     "case": 2,
+     "peak": 0.827,
+     "late": 0,
+     "final_second_peak": 0.827
+    },
+    {
+     "case": 3,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    },
+    {
+     "case": 4,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    },
+    {
+     "case": 5,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    }
+   ],
+   "stretch": 0.9999752395201073,
+   "anchored": true,
+   "host_glitches": {
+    "switch": 0,
+    "grid": 3,
+    "random": 0,
+    "tail": 0
+   }
+  },
+  {
+   "engine": 8,
+   "name": "plucked",
+   "stereo_capable": true,
+   "grid": {
+    "peak": 0.786,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 1959,
+    "over_ninety_blocks": 0
+   },
+   "random": {
+    "peak": 0.785,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 105,
+    "over_ninety_blocks": 0
+   },
+   "tail": {
+    "peak": 0.784,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 5,
+    "over_ninety_blocks": 0
+   },
+   "tail_worst_block": 69,
+   "switch_in_peak": 1.144,
+   "switch_in_late": 1,
+   "double_pending": 0,
+   "late_with_overhead": 1,
+   "conditions": [
+    {
+     "condition": "unpatched/regular/note 12",
+     "peak": 0.668,
+     "late": 0,
+     "settle_peak": 0.693
+    },
+    {
+     "condition": "unpatched/regular/note 36",
+     "peak": 0.668,
+     "late": 0,
+     "settle_peak": 0.699
+    },
+    {
+     "condition": "unpatched/regular/note 60",
+     "peak": 0.668,
+     "late": 0,
+     "settle_peak": 0.693
+    },
+    {
+     "condition": "unpatched/regular/note 84",
+     "peak": 0.668,
+     "late": 0,
+     "settle_peak": 0.695
+    },
+    {
+     "condition": "unpatched/regular/note 108",
+     "peak": 0.668,
+     "late": 0,
+     "settle_peak": 0.693
+    },
+    {
+     "condition": "unpatched/stereo/note 12",
+     "peak": 0.73,
+     "late": 0,
+     "settle_peak": 0.754
+    },
+    {
+     "condition": "unpatched/stereo/note 36",
+     "peak": 0.73,
+     "late": 0,
+     "settle_peak": 0.761
+    },
+    {
+     "condition": "unpatched/stereo/note 60",
+     "peak": 0.73,
+     "late": 0,
+     "settle_peak": 0.755
+    },
+    {
+     "condition": "unpatched/stereo/note 84",
+     "peak": 0.73,
+     "late": 0,
+     "settle_peak": 0.755
+    },
+    {
+     "condition": "unpatched/stereo/note 108",
+     "peak": 0.73,
+     "late": 0,
+     "settle_peak": 0.754
+    },
+    {
+     "condition": "unpatched/sub-osc/note 12",
+     "peak": 0.687,
+     "late": 0,
+     "settle_peak": 0.714
+    },
+    {
+     "condition": "unpatched/sub-osc/note 36",
+     "peak": 0.687,
+     "late": 0,
+     "settle_peak": 0.714
+    },
+    {
+     "condition": "unpatched/sub-osc/note 60",
+     "peak": 0.687,
+     "late": 0,
+     "settle_peak": 0.713
+    },
+    {
+     "condition": "unpatched/sub-osc/note 84",
+     "peak": 0.687,
+     "late": 0,
+     "settle_peak": 0.712
+    },
+    {
+     "condition": "unpatched/sub-osc/note 108",
+     "peak": 0.687,
+     "late": 0,
+     "settle_peak": 0.713
+    },
+    {
+     "condition": "triggered/regular/note 12",
+     "peak": 0.723,
+     "late": 0,
+     "settle_peak": 0.748
+    },
+    {
+     "condition": "triggered/regular/note 36",
+     "peak": 0.723,
+     "late": 0,
+     "settle_peak": 0.747
+    },
+    {
+     "condition": "triggered/regular/note 60",
+     "peak": 0.723,
+     "late": 0,
+     "settle_peak": 0.748
+    },
+    {
+     "condition": "triggered/regular/note 84",
+     "peak": 0.724,
+     "late": 0,
+     "settle_peak": 0.748
+    },
+    {
+     "condition": "triggered/regular/note 108",
+     "peak": 0.724,
+     "late": 0,
+     "settle_peak": 0.754
+    },
+    {
+     "condition": "triggered/stereo/note 12",
+     "peak": 0.785,
+     "late": 0,
+     "settle_peak": 0.789
+    },
+    {
+     "condition": "triggered/stereo/note 36",
+     "peak": 0.785,
+     "late": 0,
+     "settle_peak": 0.815
+    },
+    {
+     "condition": "triggered/stereo/note 60",
+     "peak": 0.785,
+     "late": 0,
+     "settle_peak": 0.81
+    },
+    {
+     "condition": "triggered/stereo/note 84",
+     "peak": 0.785,
+     "late": 0,
+     "settle_peak": 0.809
+    },
+    {
+     "condition": "triggered/stereo/note 108",
+     "peak": 0.786,
+     "late": 0,
+     "settle_peak": 0.81
+    },
+    {
+     "condition": "triggered/sub-osc/note 12",
+     "peak": 0.722,
+     "late": 0,
+     "settle_peak": 0.753
+    },
+    {
+     "condition": "triggered/sub-osc/note 36",
+     "peak": 0.722,
+     "late": 0,
+     "settle_peak": 0.747
+    },
+    {
+     "condition": "triggered/sub-osc/note 60",
+     "peak": 0.722,
+     "late": 0,
+     "settle_peak": 0.753
+    },
+    {
+     "condition": "triggered/sub-osc/note 84",
+     "peak": 0.723,
+     "late": 0,
+     "settle_peak": 0.749
+    },
+    {
+     "condition": "triggered/sub-osc/note 108",
+     "peak": 0.723,
+     "late": 0,
+     "settle_peak": 0.747
+    },
+    {
+     "condition": "gated/regular/note 12",
+     "peak": 0.721,
+     "late": 0,
+     "settle_peak": 0.751
+    },
+    {
+     "condition": "gated/regular/note 36",
+     "peak": 0.721,
+     "late": 0,
+     "settle_peak": 0.751
+    },
+    {
+     "condition": "gated/regular/note 60",
+     "peak": 0.721,
+     "late": 0,
+     "settle_peak": 0.752
+    },
+    {
+     "condition": "gated/regular/note 84",
+     "peak": 0.721,
+     "late": 0,
+     "settle_peak": 0.746
+    },
+    {
+     "condition": "gated/regular/note 108",
+     "peak": 0.721,
+     "late": 0,
+     "settle_peak": 0.746
+    },
+    {
+     "condition": "gated/stereo/note 12",
+     "peak": 0.783,
+     "late": 0,
+     "settle_peak": 0.808
+    },
+    {
+     "condition": "gated/stereo/note 36",
+     "peak": 0.783,
+     "late": 0,
+     "settle_peak": 0.813
+    },
+    {
+     "condition": "gated/stereo/note 60",
+     "peak": 0.783,
+     "late": 0,
+     "settle_peak": 0.813
+    },
+    {
+     "condition": "gated/stereo/note 84",
+     "peak": 0.783,
+     "late": 0,
+     "settle_peak": 0.808
+    },
+    {
+     "condition": "gated/stereo/note 108",
+     "peak": 0.783,
+     "late": 0,
+     "settle_peak": 0.807
+    },
+    {
+     "condition": "gated/sub-osc/note 12",
+     "peak": 0.721,
+     "late": 0,
+     "settle_peak": 0.745
+    },
+    {
+     "condition": "gated/sub-osc/note 36",
+     "peak": 0.721,
+     "late": 0,
+     "settle_peak": 0.751
+    },
+    {
+     "condition": "gated/sub-osc/note 60",
+     "peak": 0.721,
+     "late": 0,
+     "settle_peak": 0.746
+    },
+    {
+     "condition": "gated/sub-osc/note 84",
+     "peak": 0.721,
+     "late": 0,
+     "settle_peak": 0.746
+    },
+    {
+     "condition": "gated/sub-osc/note 108",
+     "peak": 0.721,
+     "late": 0,
+     "settle_peak": 0.747
+    }
+   ],
+   "tails": [
+    {
+     "case": 0,
+     "peak": 0.717,
+     "late": 0,
+     "final_second_peak": 0.717
+    },
+    {
+     "case": 1,
+     "peak": 0.722,
+     "late": 0,
+     "final_second_peak": 0.722
+    },
+    {
+     "case": 2,
+     "peak": 0.722,
+     "late": 0,
+     "final_second_peak": 0.722
+    },
+    {
+     "case": 3,
+     "peak": 0.779,
+     "late": 0,
+     "final_second_peak": 0.779
+    },
+    {
+     "case": 4,
+     "peak": 0.783,
+     "late": 0,
+     "final_second_peak": 0.783
+    },
+    {
+     "case": 5,
+     "peak": 0.784,
+     "late": 0,
+     "final_second_peak": 0.784
+    }
+   ],
+   "stretch": 0.9999743237460179,
+   "anchored": true,
+   "host_glitches": {
+    "switch": 0,
+    "grid": 1,
+    "random": 0,
+    "tail": 0
+   }
+  },
+  {
+   "engine": 9,
+   "name": "struck-drum",
+   "stereo_capable": true,
+   "grid": {
+    "peak": 0.82,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 2837,
+    "over_ninety_blocks": 0
+   },
+   "random": {
+    "peak": 0.822,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 314,
+    "over_ninety_blocks": 0
+   },
+   "tail": {
+    "peak": 0.791,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 3,
+    "over_ninety_blocks": 0
+   },
+   "tail_worst_block": 1087,
+   "switch_in_peak": 0.677,
+   "switch_in_late": 0,
+   "double_pending": 0,
+   "late_with_overhead": 0,
+   "conditions": [
+    {
+     "condition": "unpatched/regular/note 12",
+     "peak": 0.705,
+     "late": 0,
+     "settle_peak": 0.706
+    },
+    {
+     "condition": "unpatched/regular/note 36",
+     "peak": 0.704,
+     "late": 0,
+     "settle_peak": 0.705
+    },
+    {
+     "condition": "unpatched/regular/note 60",
+     "peak": 0.705,
+     "late": 0,
+     "settle_peak": 0.705
+    },
+    {
+     "condition": "unpatched/regular/note 84",
+     "peak": 0.705,
+     "late": 0,
+     "settle_peak": 0.705
+    },
+    {
+     "condition": "unpatched/regular/note 108",
+     "peak": 0.702,
+     "late": 0,
+     "settle_peak": 0.702
+    },
+    {
+     "condition": "unpatched/stereo/note 12",
+     "peak": 0.747,
+     "late": 0,
+     "settle_peak": 0.748
+    },
+    {
+     "condition": "unpatched/stereo/note 36",
+     "peak": 0.748,
+     "late": 0,
+     "settle_peak": 0.748
+    },
+    {
+     "condition": "unpatched/stereo/note 60",
+     "peak": 0.747,
+     "late": 0,
+     "settle_peak": 0.747
+    },
+    {
+     "condition": "unpatched/stereo/note 84",
+     "peak": 0.748,
+     "late": 0,
+     "settle_peak": 0.748
+    },
+    {
+     "condition": "unpatched/stereo/note 108",
+     "peak": 0.746,
+     "late": 0,
+     "settle_peak": 0.746
+    },
+    {
+     "condition": "unpatched/sub-osc/note 12",
+     "peak": 0.724,
+     "late": 0,
+     "settle_peak": 0.725
+    },
+    {
+     "condition": "unpatched/sub-osc/note 36",
+     "peak": 0.724,
+     "late": 0,
+     "settle_peak": 0.725
+    },
+    {
+     "condition": "unpatched/sub-osc/note 60",
+     "peak": 0.724,
+     "late": 0,
+     "settle_peak": 0.725
+    },
+    {
+     "condition": "unpatched/sub-osc/note 84",
+     "peak": 0.723,
+     "late": 0,
+     "settle_peak": 0.723
+    },
+    {
+     "condition": "unpatched/sub-osc/note 108",
+     "peak": 0.723,
+     "late": 0,
+     "settle_peak": 0.723
+    },
+    {
+     "condition": "triggered/regular/note 12",
+     "peak": 0.775,
+     "late": 0,
+     "settle_peak": 0.775
+    },
+    {
+     "condition": "triggered/regular/note 36",
+     "peak": 0.777,
+     "late": 0,
+     "settle_peak": 0.776
+    },
+    {
+     "condition": "triggered/regular/note 60",
+     "peak": 0.776,
+     "late": 0,
+     "settle_peak": 0.775
+    },
+    {
+     "condition": "triggered/regular/note 84",
+     "peak": 0.775,
+     "late": 0,
+     "settle_peak": 0.774
+    },
+    {
+     "condition": "triggered/regular/note 108",
+     "peak": 0.773,
+     "late": 0,
+     "settle_peak": 0.773
+    },
+    {
+     "condition": "triggered/stereo/note 12",
+     "peak": 0.818,
+     "late": 0,
+     "settle_peak": 0.817
+    },
+    {
+     "condition": "triggered/stereo/note 36",
+     "peak": 0.819,
+     "late": 0,
+     "settle_peak": 0.819
+    },
+    {
+     "condition": "triggered/stereo/note 60",
+     "peak": 0.82,
+     "late": 0,
+     "settle_peak": 0.82
+    },
+    {
+     "condition": "triggered/stereo/note 84",
+     "peak": 0.818,
+     "late": 0,
+     "settle_peak": 0.817
+    },
+    {
+     "condition": "triggered/stereo/note 108",
+     "peak": 0.817,
+     "late": 0,
+     "settle_peak": 0.816
+    },
+    {
+     "condition": "triggered/sub-osc/note 12",
+     "peak": 0.794,
+     "late": 0,
+     "settle_peak": 0.793
+    },
+    {
+     "condition": "triggered/sub-osc/note 36",
+     "peak": 0.795,
+     "late": 0,
+     "settle_peak": 0.795
+    },
+    {
+     "condition": "triggered/sub-osc/note 60",
+     "peak": 0.794,
+     "late": 0,
+     "settle_peak": 0.793
+    },
+    {
+     "condition": "triggered/sub-osc/note 84",
+     "peak": 0.795,
+     "late": 0,
+     "settle_peak": 0.794
+    },
+    {
+     "condition": "triggered/sub-osc/note 108",
+     "peak": 0.793,
+     "late": 0,
+     "settle_peak": 0.792
+    },
+    {
+     "condition": "gated/regular/note 12",
+     "peak": 0.777,
+     "late": 0,
+     "settle_peak": 0.777
+    },
+    {
+     "condition": "gated/regular/note 36",
+     "peak": 0.777,
+     "late": 0,
+     "settle_peak": 0.777
+    },
+    {
+     "condition": "gated/regular/note 60",
+     "peak": 0.78,
+     "late": 0,
+     "settle_peak": 0.779
+    },
+    {
+     "condition": "gated/regular/note 84",
+     "peak": 0.777,
+     "late": 0,
+     "settle_peak": 0.777
+    },
+    {
+     "condition": "gated/regular/note 108",
+     "peak": 0.777,
+     "late": 0,
+     "settle_peak": 0.776
+    },
+    {
+     "condition": "gated/stereo/note 12",
+     "peak": 0.821,
+     "late": 0,
+     "settle_peak": 0.821
+    },
+    {
+     "condition": "gated/stereo/note 36",
+     "peak": 0.822,
+     "late": 0,
+     "settle_peak": 0.821
+    },
+    {
+     "condition": "gated/stereo/note 60",
+     "peak": 0.82,
+     "late": 0,
+     "settle_peak": 0.82
+    },
+    {
+     "condition": "gated/stereo/note 84",
+     "peak": 0.82,
+     "late": 0,
+     "settle_peak": 0.82
+    },
+    {
+     "condition": "gated/stereo/note 108",
+     "peak": 0.82,
+     "late": 0,
+     "settle_peak": 0.819
+    },
+    {
+     "condition": "gated/sub-osc/note 12",
+     "peak": 0.797,
+     "late": 0,
+     "settle_peak": 0.797
+    },
+    {
+     "condition": "gated/sub-osc/note 36",
+     "peak": 0.798,
+     "late": 0,
+     "settle_peak": 0.797
+    },
+    {
+     "condition": "gated/sub-osc/note 60",
+     "peak": 0.797,
+     "late": 0,
+     "settle_peak": 0.796
+    },
+    {
+     "condition": "gated/sub-osc/note 84",
+     "peak": 0.798,
+     "late": 0,
+     "settle_peak": 0.797
+    },
+    {
+     "condition": "gated/sub-osc/note 108",
+     "peak": 0.796,
+     "late": 0,
+     "settle_peak": 0.796
+    }
+   ],
+   "tails": [
+    {
+     "case": 0,
+     "peak": 0.748,
+     "late": 0,
+     "final_second_peak": 0.748
+    },
+    {
+     "case": 1,
+     "peak": 0.748,
+     "late": 0,
+     "final_second_peak": 0.748
+    },
+    {
+     "case": 2,
+     "peak": 0.748,
+     "late": 0,
+     "final_second_peak": 0.748
+    },
+    {
+     "case": 3,
+     "peak": 0.791,
+     "late": 0,
+     "final_second_peak": 0.791
+    },
+    {
+     "case": 4,
+     "peak": 0.791,
+     "late": 0,
+     "final_second_peak": 0.791
+    },
+    {
+     "case": 5,
+     "peak": 0.791,
+     "late": 0,
+     "final_second_peak": 0.791
+    }
+   ],
+   "stretch": 0.9999737837896672,
+   "anchored": true,
+   "host_glitches": {
+    "switch": 0,
+    "grid": 0,
+    "random": 0,
+    "tail": 0
+   }
+  },
+  {
+   "engine": 10,
+   "name": "cymbal",
+   "stereo_capable": true,
+   "grid": {
+    "peak": 0.856,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 1944,
+    "over_ninety_blocks": 0
+   },
+   "random": {
+    "peak": 0.853,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 46,
+    "over_ninety_blocks": 0
+   },
+   "tail": {
+    "peak": 0.832,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 3,
+    "over_ninety_blocks": 0
+   },
+   "tail_worst_block": 9,
+   "switch_in_peak": 0.598,
+   "switch_in_late": 0,
+   "double_pending": 0,
+   "late_with_overhead": 0,
+   "conditions": [
+    {
+     "condition": "unpatched/regular/note 12",
+     "peak": 0.593,
+     "late": 0,
+     "settle_peak": 0.597
+    },
+    {
+     "condition": "unpatched/regular/note 36",
+     "peak": 0.595,
+     "late": 0,
+     "settle_peak": 0.599
+    },
+    {
+     "condition": "unpatched/regular/note 60",
+     "peak": 0.595,
+     "late": 0,
+     "settle_peak": 0.601
+    },
+    {
+     "condition": "unpatched/regular/note 84",
+     "peak": 0.598,
+     "late": 0,
+     "settle_peak": 0.603
+    },
+    {
+     "condition": "unpatched/regular/note 108",
+     "peak": 0.603,
+     "late": 0,
+     "settle_peak": 0.607
+    },
+    {
+     "condition": "unpatched/stereo/note 12",
+     "peak": 0.781,
+     "late": 0,
+     "settle_peak": 0.782
+    },
+    {
+     "condition": "unpatched/stereo/note 36",
+     "peak": 0.783,
+     "late": 0,
+     "settle_peak": 0.786
+    },
+    {
+     "condition": "unpatched/stereo/note 60",
+     "peak": 0.784,
+     "late": 0,
+     "settle_peak": 0.784
+    },
+    {
+     "condition": "unpatched/stereo/note 84",
+     "peak": 0.791,
+     "late": 0,
+     "settle_peak": 0.797
+    },
+    {
+     "condition": "unpatched/stereo/note 108",
+     "peak": 0.801,
+     "late": 0,
+     "settle_peak": 0.801
+    },
+    {
+     "condition": "unpatched/sub-osc/note 12",
+     "peak": 0.615,
+     "late": 0,
+     "settle_peak": 0.617
+    },
+    {
+     "condition": "unpatched/sub-osc/note 36",
+     "peak": 0.616,
+     "late": 0,
+     "settle_peak": 0.618
+    },
+    {
+     "condition": "unpatched/sub-osc/note 60",
+     "peak": 0.614,
+     "late": 0,
+     "settle_peak": 0.62
+    },
+    {
+     "condition": "unpatched/sub-osc/note 84",
+     "peak": 0.618,
+     "late": 0,
+     "settle_peak": 0.623
+    },
+    {
+     "condition": "unpatched/sub-osc/note 108",
+     "peak": 0.622,
+     "late": 0,
+     "settle_peak": 0.626
+    },
+    {
+     "condition": "triggered/regular/note 12",
+     "peak": 0.65,
+     "late": 0,
+     "settle_peak": 0.654
+    },
+    {
+     "condition": "triggered/regular/note 36",
+     "peak": 0.651,
+     "late": 0,
+     "settle_peak": 0.653
+    },
+    {
+     "condition": "triggered/regular/note 60",
+     "peak": 0.651,
+     "late": 0,
+     "settle_peak": 0.656
+    },
+    {
+     "condition": "triggered/regular/note 84",
+     "peak": 0.655,
+     "late": 0,
+     "settle_peak": 0.659
+    },
+    {
+     "condition": "triggered/regular/note 108",
+     "peak": 0.659,
+     "late": 0,
+     "settle_peak": 0.663
+    },
+    {
+     "condition": "triggered/stereo/note 12",
+     "peak": 0.84,
+     "late": 0,
+     "settle_peak": 0.838
+    },
+    {
+     "condition": "triggered/stereo/note 36",
+     "peak": 0.84,
+     "late": 0,
+     "settle_peak": 0.841
+    },
+    {
+     "condition": "triggered/stereo/note 60",
+     "peak": 0.842,
+     "late": 0,
+     "settle_peak": 0.841
+    },
+    {
+     "condition": "triggered/stereo/note 84",
+     "peak": 0.849,
+     "late": 0,
+     "settle_peak": 0.852
+    },
+    {
+     "condition": "triggered/stereo/note 108",
+     "peak": 0.856,
+     "late": 0,
+     "settle_peak": 0.856
+    },
+    {
+     "condition": "triggered/sub-osc/note 12",
+     "peak": 0.65,
+     "late": 0,
+     "settle_peak": 0.652
+    },
+    {
+     "condition": "triggered/sub-osc/note 36",
+     "peak": 0.65,
+     "late": 0,
+     "settle_peak": 0.653
+    },
+    {
+     "condition": "triggered/sub-osc/note 60",
+     "peak": 0.651,
+     "late": 0,
+     "settle_peak": 0.654
+    },
+    {
+     "condition": "triggered/sub-osc/note 84",
+     "peak": 0.654,
+     "late": 0,
+     "settle_peak": 0.659
+    },
+    {
+     "condition": "triggered/sub-osc/note 108",
+     "peak": 0.659,
+     "late": 0,
+     "settle_peak": 0.662
+    },
+    {
+     "condition": "gated/regular/note 12",
+     "peak": 0.649,
+     "late": 0,
+     "settle_peak": 0.65
+    },
+    {
+     "condition": "gated/regular/note 36",
+     "peak": 0.649,
+     "late": 0,
+     "settle_peak": 0.652
+    },
+    {
+     "condition": "gated/regular/note 60",
+     "peak": 0.648,
+     "late": 0,
+     "settle_peak": 0.653
+    },
+    {
+     "condition": "gated/regular/note 84",
+     "peak": 0.652,
+     "late": 0,
+     "settle_peak": 0.657
+    },
+    {
+     "condition": "gated/regular/note 108",
+     "peak": 0.657,
+     "late": 0,
+     "settle_peak": 0.659
+    },
+    {
+     "condition": "gated/stereo/note 12",
+     "peak": 0.836,
+     "late": 0,
+     "settle_peak": 0.839
+    },
+    {
+     "condition": "gated/stereo/note 36",
+     "peak": 0.836,
+     "late": 0,
+     "settle_peak": 0.838
+    },
+    {
+     "condition": "gated/stereo/note 60",
+     "peak": 0.839,
+     "late": 0,
+     "settle_peak": 0.838
+    },
+    {
+     "condition": "gated/stereo/note 84",
+     "peak": 0.844,
+     "late": 0,
+     "settle_peak": 0.844
+    },
+    {
+     "condition": "gated/stereo/note 108",
+     "peak": 0.855,
+     "late": 0,
+     "settle_peak": 0.855
+    },
+    {
+     "condition": "gated/sub-osc/note 12",
+     "peak": 0.648,
+     "late": 0,
+     "settle_peak": 0.65
+    },
+    {
+     "condition": "gated/sub-osc/note 36",
+     "peak": 0.65,
+     "late": 0,
+     "settle_peak": 0.651
+    },
+    {
+     "condition": "gated/sub-osc/note 60",
+     "peak": 0.648,
+     "late": 0,
+     "settle_peak": 0.653
+    },
+    {
+     "condition": "gated/sub-osc/note 84",
+     "peak": 0.651,
+     "late": 0,
+     "settle_peak": 0.655
+    },
+    {
+     "condition": "gated/sub-osc/note 108",
+     "peak": 0.656,
+     "late": 0,
+     "settle_peak": 0.66
+    }
+   ],
+   "tails": [
+    {
+     "case": 0,
+     "peak": 0.65,
+     "late": 0,
+     "final_second_peak": 0.649
+    },
+    {
+     "case": 1,
+     "peak": 0.65,
+     "late": 0,
+     "final_second_peak": 0.649
+    },
+    {
+     "case": 2,
+     "peak": 0.65,
+     "late": 0,
+     "final_second_peak": 0.649
+    },
+    {
+     "case": 3,
+     "peak": 0.832,
+     "late": 0,
+     "final_second_peak": 0.831
+    },
+    {
+     "case": 4,
+     "peak": 0.832,
+     "late": 0,
+     "final_second_peak": 0.831
+    },
+    {
+     "case": 5,
+     "peak": 0.832,
+     "late": 0,
+     "final_second_peak": 0.831
+    }
+   ],
+   "stretch": 0.9999737837896672,
+   "anchored": true,
+   "host_glitches": {
+    "switch": 0,
+    "grid": 0,
+    "random": 0,
+    "tail": 0
+   }
+  },
+  {
+   "engine": 11,
+   "name": "two-op-fm",
+   "stereo_capable": false,
+   "grid": {
+    "peak": 0.814,
+    "late": 13,
+    "late_states": 3,
+    "worst_state": 1226,
+    "over_ninety_blocks": 0
+   },
+   "random": {
+    "peak": 0.81,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 74,
+    "over_ninety_blocks": 0
+   },
+   "tail": {
+    "peak": 0.81,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 0,
+    "over_ninety_blocks": 0
+   },
+   "tail_worst_block": 11,
+   "switch_in_peak": 0.752,
+   "switch_in_late": 0,
+   "double_pending": 0,
+   "late_with_overhead": 17,
+   "conditions": [
+    {
+     "condition": "unpatched/regular/note 12",
+     "peak": 0.756,
+     "late": 0,
+     "settle_peak": 0.756
+    },
+    {
+     "condition": "unpatched/regular/note 36",
+     "peak": 0.756,
+     "late": 0,
+     "settle_peak": 0.756
+    },
+    {
+     "condition": "unpatched/regular/note 60",
+     "peak": 0.757,
+     "late": 0,
+     "settle_peak": 0.757
+    },
+    {
+     "condition": "unpatched/regular/note 84",
+     "peak": 0.757,
+     "late": 0,
+     "settle_peak": 0.757
+    },
+    {
+     "condition": "unpatched/regular/note 108",
+     "peak": 0.757,
+     "late": 0,
+     "settle_peak": 0.757
+    },
+    {
+     "condition": "unpatched/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/sub-osc/note 12",
+     "peak": 0.775,
+     "late": 3,
+     "settle_peak": 0.775
+    },
+    {
+     "condition": "unpatched/sub-osc/note 36",
+     "peak": 0.775,
+     "late": 0,
+     "settle_peak": 0.775
+    },
+    {
+     "condition": "unpatched/sub-osc/note 60",
+     "peak": 0.776,
+     "late": 0,
+     "settle_peak": 0.776
+    },
+    {
+     "condition": "unpatched/sub-osc/note 84",
+     "peak": 0.776,
+     "late": 0,
+     "settle_peak": 0.776
+    },
+    {
+     "condition": "unpatched/sub-osc/note 108",
+     "peak": 0.776,
+     "late": 0,
+     "settle_peak": 0.776
+    },
+    {
+     "condition": "triggered/regular/note 12",
+     "peak": 0.814,
+     "late": 0,
+     "settle_peak": 0.812
+    },
+    {
+     "condition": "triggered/regular/note 36",
+     "peak": 0.814,
+     "late": 0,
+     "settle_peak": 0.812
+    },
+    {
+     "condition": "triggered/regular/note 60",
+     "peak": 0.813,
+     "late": 0,
+     "settle_peak": 0.812
+    },
+    {
+     "condition": "triggered/regular/note 84",
+     "peak": 0.813,
+     "late": 0,
+     "settle_peak": 0.812
+    },
+    {
+     "condition": "triggered/regular/note 108",
+     "peak": 0.813,
+     "late": 0,
+     "settle_peak": 0.812
+    },
+    {
+     "condition": "triggered/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/sub-osc/note 12",
+     "peak": 0.813,
+     "late": 5,
+     "settle_peak": 0.811
+    },
+    {
+     "condition": "triggered/sub-osc/note 36",
+     "peak": 0.813,
+     "late": 0,
+     "settle_peak": 0.811
+    },
+    {
+     "condition": "triggered/sub-osc/note 60",
+     "peak": 0.812,
+     "late": 0,
+     "settle_peak": 0.811
+    },
+    {
+     "condition": "triggered/sub-osc/note 84",
+     "peak": 0.812,
+     "late": 0,
+     "settle_peak": 0.811
+    },
+    {
+     "condition": "triggered/sub-osc/note 108",
+     "peak": 0.812,
+     "late": 0,
+     "settle_peak": 0.811
+    },
+    {
+     "condition": "gated/regular/note 12",
+     "peak": 0.81,
+     "late": 0,
+     "settle_peak": 0.81
+    },
+    {
+     "condition": "gated/regular/note 36",
+     "peak": 0.81,
+     "late": 0,
+     "settle_peak": 0.81
+    },
+    {
+     "condition": "gated/regular/note 60",
+     "peak": 0.81,
+     "late": 0,
+     "settle_peak": 0.81
+    },
+    {
+     "condition": "gated/regular/note 84",
+     "peak": 0.81,
+     "late": 0,
+     "settle_peak": 0.81
+    },
+    {
+     "condition": "gated/regular/note 108",
+     "peak": 0.81,
+     "late": 0,
+     "settle_peak": 0.81
+    },
+    {
+     "condition": "gated/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/sub-osc/note 12",
+     "peak": 0.809,
+     "late": 5,
+     "settle_peak": 0.809
+    },
+    {
+     "condition": "gated/sub-osc/note 36",
+     "peak": 0.809,
+     "late": 0,
+     "settle_peak": 0.809
+    },
+    {
+     "condition": "gated/sub-osc/note 60",
+     "peak": 0.81,
+     "late": 0,
+     "settle_peak": 0.81
+    },
+    {
+     "condition": "gated/sub-osc/note 84",
+     "peak": 0.81,
+     "late": 0,
+     "settle_peak": 0.81
+    },
+    {
+     "condition": "gated/sub-osc/note 108",
+     "peak": 0.81,
+     "late": 0,
+     "settle_peak": 0.81
+    }
+   ],
+   "tails": [
+    {
+     "case": 0,
+     "peak": 0.81,
+     "late": 0,
+     "final_second_peak": 0.808
+    },
+    {
+     "case": 1,
+     "peak": 0.803,
+     "late": 0,
+     "final_second_peak": 0.801
+    },
+    {
+     "case": 2,
+     "peak": 0.803,
+     "late": 0,
+     "final_second_peak": 0.801
+    },
+    {
+     "case": 3,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    },
+    {
+     "case": 4,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    },
+    {
+     "case": 5,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    }
+   ],
+   "stretch": 0.9999740030945544,
+   "anchored": true,
+   "host_glitches": {
+    "switch": 0,
+    "grid": 3,
+    "random": 0,
+    "tail": 0
+   }
+  },
+  {
+   "engine": 12,
+   "name": "modal-resonator",
+   "stereo_capable": false,
+   "grid": {
+    "peak": 0.94,
+    "late": 42637,
+    "late_states": 906,
+    "worst_state": 810,
+    "over_ninety_blocks": 36939
+   },
+   "random": {
+    "peak": 0.941,
+    "late": 9604,
+    "late_states": 245,
+    "worst_state": 217,
+    "over_ninety_blocks": 6037
+   },
+   "tail": {
+    "peak": 0.904,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 0,
+    "over_ninety_blocks": 4409
+   },
+   "tail_worst_block": 9,
+   "switch_in_peak": 0.935,
+   "switch_in_late": 0,
+   "double_pending": 23035,
+   "late_with_overhead": 65535,
+   "conditions": [
+    {
+     "condition": "unpatched/regular/note 12",
+     "peak": 0.921,
+     "late": 945,
+     "settle_peak": 0.926
+    },
+    {
+     "condition": "unpatched/regular/note 36",
+     "peak": 0.921,
+     "late": 4814,
+     "settle_peak": 0.927
+    },
+    {
+     "condition": "unpatched/regular/note 60",
+     "peak": 0.922,
+     "late": 4471,
+     "settle_peak": 0.928
+    },
+    {
+     "condition": "unpatched/regular/note 84",
+     "peak": 0.921,
+     "late": 139,
+     "settle_peak": 0.927
+    },
+    {
+     "condition": "unpatched/regular/note 108",
+     "peak": 0.67,
+     "late": 22,
+     "settle_peak": 0.675
+    },
+    {
+     "condition": "unpatched/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/sub-osc/note 12",
+     "peak": 0.94,
+     "late": 4136,
+     "settle_peak": 0.946
+    },
+    {
+     "condition": "unpatched/sub-osc/note 36",
+     "peak": 0.94,
+     "late": 4329,
+     "settle_peak": 0.946
+    },
+    {
+     "condition": "unpatched/sub-osc/note 60",
+     "peak": 0.941,
+     "late": 4321,
+     "settle_peak": 0.947
+    },
+    {
+     "condition": "unpatched/sub-osc/note 84",
+     "peak": 0.94,
+     "late": 232,
+     "settle_peak": 0.947
+    },
+    {
+     "condition": "unpatched/sub-osc/note 108",
+     "peak": 0.606,
+     "late": 6,
+     "settle_peak": 0.612
+    },
+    {
+     "condition": "triggered/regular/note 12",
+     "peak": 0.904,
+     "late": 548,
+     "settle_peak": 0.909
+    },
+    {
+     "condition": "triggered/regular/note 36",
+     "peak": 0.905,
+     "late": 711,
+     "settle_peak": 0.909
+    },
+    {
+     "condition": "triggered/regular/note 60",
+     "peak": 0.905,
+     "late": 296,
+     "settle_peak": 0.909
+    },
+    {
+     "condition": "triggered/regular/note 84",
+     "peak": 0.906,
+     "late": 44,
+     "settle_peak": 0.91
+    },
+    {
+     "condition": "triggered/regular/note 108",
+     "peak": 0.57,
+     "late": 15,
+     "settle_peak": 0.575
+    },
+    {
+     "condition": "triggered/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/sub-osc/note 12",
+     "peak": 0.924,
+     "late": 3934,
+     "settle_peak": 0.929
+    },
+    {
+     "condition": "triggered/sub-osc/note 36",
+     "peak": 0.924,
+     "late": 4418,
+     "settle_peak": 0.929
+    },
+    {
+     "condition": "triggered/sub-osc/note 60",
+     "peak": 0.924,
+     "late": 4357,
+     "settle_peak": 0.93
+    },
+    {
+     "condition": "triggered/sub-osc/note 84",
+     "peak": 0.916,
+     "late": 27,
+     "settle_peak": 0.921
+    },
+    {
+     "condition": "triggered/sub-osc/note 108",
+     "peak": 0.673,
+     "late": 8,
+     "settle_peak": 0.678
+    },
+    {
+     "condition": "gated/regular/note 12",
+     "peak": 0.907,
+     "late": 461,
+     "settle_peak": 0.912
+    },
+    {
+     "condition": "gated/regular/note 36",
+     "peak": 0.907,
+     "late": 532,
+     "settle_peak": 0.912
+    },
+    {
+     "condition": "gated/regular/note 60",
+     "peak": 0.908,
+     "late": 527,
+     "settle_peak": 0.913
+    },
+    {
+     "condition": "gated/regular/note 84",
+     "peak": 0.907,
+     "late": 0,
+     "settle_peak": 0.911
+    },
+    {
+     "condition": "gated/regular/note 108",
+     "peak": 0.649,
+     "late": 5,
+     "settle_peak": 0.653
+    },
+    {
+     "condition": "gated/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/sub-osc/note 12",
+     "peak": 0.926,
+     "late": 4091,
+     "settle_peak": 0.931
+    },
+    {
+     "condition": "gated/sub-osc/note 36",
+     "peak": 0.926,
+     "late": 4424,
+     "settle_peak": 0.932
+    },
+    {
+     "condition": "gated/sub-osc/note 60",
+     "peak": 0.928,
+     "late": 4200,
+     "settle_peak": 0.932
+    },
+    {
+     "condition": "gated/sub-osc/note 84",
+     "peak": 0.927,
+     "late": 218,
+     "settle_peak": 0.933
+    },
+    {
+     "condition": "gated/sub-osc/note 108",
+     "peak": 0.675,
+     "late": 10,
+     "settle_peak": 0.674
+    }
+   ],
+   "tails": [
+    {
+     "case": 0,
+     "peak": 0.904,
+     "late": 0,
+     "final_second_peak": 0.903
+    },
+    {
+     "case": 1,
+     "peak": 0.904,
+     "late": 0,
+     "final_second_peak": 0.894
+    },
+    {
+     "case": 2,
+     "peak": 0.895,
+     "late": 0,
+     "final_second_peak": 0.894
+    },
+    {
+     "case": 3,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    },
+    {
+     "case": 4,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    },
+    {
+     "case": 5,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    }
+   ],
+   "stretch": 1.0031882973905006,
+   "anchored": true,
+   "host_glitches": {
+    "switch": 0,
+    "grid": 372,
+    "random": 130,
+    "tail": 1
+   }
+  },
+  {
+   "engine": 13,
+   "name": "particle-noise",
+   "stereo_capable": false,
+   "grid": {
+    "peak": 0.844,
+    "late": 3,
+    "late_states": 3,
+    "worst_state": 1617,
+    "over_ninety_blocks": 0
+   },
+   "random": {
+    "peak": 0.837,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 323,
+    "over_ninety_blocks": 0
+   },
+   "tail": {
+    "peak": 0.834,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 0,
+    "over_ninety_blocks": 0
+   },
+   "tail_worst_block": 8,
+   "switch_in_peak": 1.682,
+   "switch_in_late": 2,
+   "double_pending": 0,
+   "late_with_overhead": 11,
+   "conditions": [
+    {
+     "condition": "unpatched/regular/note 12",
+     "peak": 0.781,
+     "late": 0,
+     "settle_peak": 0.79
+    },
+    {
+     "condition": "unpatched/regular/note 36",
+     "peak": 0.782,
+     "late": 0,
+     "settle_peak": 0.771
+    },
+    {
+     "condition": "unpatched/regular/note 60",
+     "peak": 0.791,
+     "late": 0,
+     "settle_peak": 0.781
+    },
+    {
+     "condition": "unpatched/regular/note 84",
+     "peak": 0.791,
+     "late": 0,
+     "settle_peak": 0.782
+    },
+    {
+     "condition": "unpatched/regular/note 108",
+     "peak": 0.78,
+     "late": 0,
+     "settle_peak": 0.779
+    },
+    {
+     "condition": "unpatched/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/sub-osc/note 12",
+     "peak": 0.802,
+     "late": 1,
+     "settle_peak": 0.783
+    },
+    {
+     "condition": "unpatched/sub-osc/note 36",
+     "peak": 0.807,
+     "late": 0,
+     "settle_peak": 0.793
+    },
+    {
+     "condition": "unpatched/sub-osc/note 60",
+     "peak": 0.802,
+     "late": 0,
+     "settle_peak": 0.793
+    },
+    {
+     "condition": "unpatched/sub-osc/note 84",
+     "peak": 0.802,
+     "late": 0,
+     "settle_peak": 0.793
+    },
+    {
+     "condition": "unpatched/sub-osc/note 108",
+     "peak": 0.8,
+     "late": 0,
+     "settle_peak": 0.791
+    },
+    {
+     "condition": "triggered/regular/note 12",
+     "peak": 0.837,
+     "late": 0,
+     "settle_peak": 0.835
+    },
+    {
+     "condition": "triggered/regular/note 36",
+     "peak": 0.837,
+     "late": 0,
+     "settle_peak": 0.842
+    },
+    {
+     "condition": "triggered/regular/note 60",
+     "peak": 0.837,
+     "late": 0,
+     "settle_peak": 0.823
+    },
+    {
+     "condition": "triggered/regular/note 84",
+     "peak": 0.837,
+     "late": 0,
+     "settle_peak": 0.837
+    },
+    {
+     "condition": "triggered/regular/note 108",
+     "peak": 0.844,
+     "late": 0,
+     "settle_peak": 0.827
+    },
+    {
+     "condition": "triggered/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/sub-osc/note 12",
+     "peak": 0.843,
+     "late": 1,
+     "settle_peak": 0.834
+    },
+    {
+     "condition": "triggered/sub-osc/note 36",
+     "peak": 0.843,
+     "late": 0,
+     "settle_peak": 0.843
+    },
+    {
+     "condition": "triggered/sub-osc/note 60",
+     "peak": 0.836,
+     "late": 0,
+     "settle_peak": 0.834
+    },
+    {
+     "condition": "triggered/sub-osc/note 84",
+     "peak": 0.836,
+     "late": 0,
+     "settle_peak": 0.833
+    },
+    {
+     "condition": "triggered/sub-osc/note 108",
+     "peak": 0.837,
+     "late": 0,
+     "settle_peak": 0.836
+    },
+    {
+     "condition": "gated/regular/note 12",
+     "peak": 0.833,
+     "late": 0,
+     "settle_peak": 0.834
+    },
+    {
+     "condition": "gated/regular/note 36",
+     "peak": 0.84,
+     "late": 0,
+     "settle_peak": 0.833
+    },
+    {
+     "condition": "gated/regular/note 60",
+     "peak": 0.832,
+     "late": 0,
+     "settle_peak": 0.825
+    },
+    {
+     "condition": "gated/regular/note 84",
+     "peak": 0.835,
+     "late": 0,
+     "settle_peak": 0.833
+    },
+    {
+     "condition": "gated/regular/note 108",
+     "peak": 0.842,
+     "late": 0,
+     "settle_peak": 0.816
+    },
+    {
+     "condition": "gated/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/sub-osc/note 12",
+     "peak": 0.833,
+     "late": 1,
+     "settle_peak": 0.826
+    },
+    {
+     "condition": "gated/sub-osc/note 36",
+     "peak": 0.835,
+     "late": 0,
+     "settle_peak": 0.824
+    },
+    {
+     "condition": "gated/sub-osc/note 60",
+     "peak": 0.832,
+     "late": 0,
+     "settle_peak": 0.84
+    },
+    {
+     "condition": "gated/sub-osc/note 84",
+     "peak": 0.842,
+     "late": 0,
+     "settle_peak": 0.825
+    },
+    {
+     "condition": "gated/sub-osc/note 108",
+     "peak": 0.831,
+     "late": 0,
+     "settle_peak": 0.831
+    }
+   ],
+   "tails": [
+    {
+     "case": 0,
+     "peak": 0.834,
+     "late": 0,
+     "final_second_peak": 0.802
+    },
+    {
+     "case": 1,
+     "peak": 0.641,
+     "late": 0,
+     "final_second_peak": 0.614
+    },
+    {
+     "case": 2,
+     "peak": 0.641,
+     "late": 0,
+     "final_second_peak": 0.614
+    },
+    {
+     "case": 3,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    },
+    {
+     "case": 4,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    },
+    {
+     "case": 5,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    }
+   ],
+   "stretch": 0.9999731788108523,
+   "anchored": true,
+   "host_glitches": {
+    "switch": 0,
+    "grid": 4,
+    "random": 0,
+    "tail": 0
+   }
+  },
+  {
+   "engine": 14,
+   "name": "inharmonic-string",
+   "stereo_capable": false,
+   "grid": {
+    "peak": 0.889,
+    "late": 7,
+    "late_states": 3,
+    "worst_state": 3398,
+    "over_ninety_blocks": 0
+   },
+   "random": {
+    "peak": 0.872,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 327,
+    "over_ninety_blocks": 0
+   },
+   "tail": {
+    "peak": 0.838,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 2,
+    "over_ninety_blocks": 0
+   },
+   "tail_worst_block": 9,
+   "switch_in_peak": 1.272,
+   "switch_in_late": 2,
+   "double_pending": 0,
+   "late_with_overhead": 14,
+   "conditions": [
+    {
+     "condition": "unpatched/regular/note 12",
+     "peak": 0.809,
+     "late": 0,
+     "settle_peak": 0.824
+    },
+    {
+     "condition": "unpatched/regular/note 36",
+     "peak": 0.863,
+     "late": 0,
+     "settle_peak": 0.868
+    },
+    {
+     "condition": "unpatched/regular/note 60",
+     "peak": 0.859,
+     "late": 0,
+     "settle_peak": 0.864
+    },
+    {
+     "condition": "unpatched/regular/note 84",
+     "peak": 0.871,
+     "late": 0,
+     "settle_peak": 0.864
+    },
+    {
+     "condition": "unpatched/regular/note 108",
+     "peak": 0.859,
+     "late": 0,
+     "settle_peak": 0.863
+    },
+    {
+     "condition": "unpatched/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/sub-osc/note 12",
+     "peak": 0.852,
+     "late": 3,
+     "settle_peak": 0.858
+    },
+    {
+     "condition": "unpatched/sub-osc/note 36",
+     "peak": 0.87,
+     "late": 0,
+     "settle_peak": 0.876
+    },
+    {
+     "condition": "unpatched/sub-osc/note 60",
+     "peak": 0.87,
+     "late": 0,
+     "settle_peak": 0.875
+    },
+    {
+     "condition": "unpatched/sub-osc/note 84",
+     "peak": 0.869,
+     "late": 0,
+     "settle_peak": 0.873
+    },
+    {
+     "condition": "unpatched/sub-osc/note 108",
+     "peak": 0.867,
+     "late": 0,
+     "settle_peak": 0.875
+    },
+    {
+     "condition": "triggered/regular/note 12",
+     "peak": 0.827,
+     "late": 0,
+     "settle_peak": 0.808
+    },
+    {
+     "condition": "triggered/regular/note 36",
+     "peak": 0.867,
+     "late": 0,
+     "settle_peak": 0.871
+    },
+    {
+     "condition": "triggered/regular/note 60",
+     "peak": 0.853,
+     "late": 0,
+     "settle_peak": 0.847
+    },
+    {
+     "condition": "triggered/regular/note 84",
+     "peak": 0.856,
+     "late": 0,
+     "settle_peak": 0.839
+    },
+    {
+     "condition": "triggered/regular/note 108",
+     "peak": 0.843,
+     "late": 0,
+     "settle_peak": 0.833
+    },
+    {
+     "condition": "triggered/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/sub-osc/note 12",
+     "peak": 0.821,
+     "late": 2,
+     "settle_peak": 0.805
+    },
+    {
+     "condition": "triggered/sub-osc/note 36",
+     "peak": 0.887,
+     "late": 0,
+     "settle_peak": 0.886
+    },
+    {
+     "condition": "triggered/sub-osc/note 60",
+     "peak": 0.873,
+     "late": 0,
+     "settle_peak": 0.866
+    },
+    {
+     "condition": "triggered/sub-osc/note 84",
+     "peak": 0.862,
+     "late": 0,
+     "settle_peak": 0.856
+    },
+    {
+     "condition": "triggered/sub-osc/note 108",
+     "peak": 0.851,
+     "late": 0,
+     "settle_peak": 0.861
+    },
+    {
+     "condition": "gated/regular/note 12",
+     "peak": 0.826,
+     "late": 0,
+     "settle_peak": 0.816
+    },
+    {
+     "condition": "gated/regular/note 36",
+     "peak": 0.868,
+     "late": 0,
+     "settle_peak": 0.863
+    },
+    {
+     "condition": "gated/regular/note 60",
+     "peak": 0.856,
+     "late": 0,
+     "settle_peak": 0.85
+    },
+    {
+     "condition": "gated/regular/note 84",
+     "peak": 0.842,
+     "late": 0,
+     "settle_peak": 0.834
+    },
+    {
+     "condition": "gated/regular/note 108",
+     "peak": 0.842,
+     "late": 0,
+     "settle_peak": 0.873
+    },
+    {
+     "condition": "gated/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/sub-osc/note 12",
+     "peak": 0.813,
+     "late": 2,
+     "settle_peak": 0.804
+    },
+    {
+     "condition": "gated/sub-osc/note 36",
+     "peak": 0.889,
+     "late": 0,
+     "settle_peak": 0.888
+    },
+    {
+     "condition": "gated/sub-osc/note 60",
+     "peak": 0.875,
+     "late": 0,
+     "settle_peak": 0.869
+    },
+    {
+     "condition": "gated/sub-osc/note 84",
+     "peak": 0.862,
+     "late": 0,
+     "settle_peak": 0.853
+    },
+    {
+     "condition": "gated/sub-osc/note 108",
+     "peak": 0.853,
+     "late": 0,
+     "settle_peak": 0.869
+    }
+   ],
+   "tails": [
+    {
+     "case": 0,
+     "peak": 0.805,
+     "late": 0,
+     "final_second_peak": 0.791
+    },
+    {
+     "case": 1,
+     "peak": 0.822,
+     "late": 0,
+     "final_second_peak": 0.808
+    },
+    {
+     "case": 2,
+     "peak": 0.838,
+     "late": 0,
+     "final_second_peak": 0.825
+    },
+    {
+     "case": 3,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    },
+    {
+     "case": 4,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    },
+    {
+     "case": 5,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    }
+   ],
+   "stretch": 0.9999744152364053,
+   "anchored": true,
+   "host_glitches": {
+    "switch": 0,
+    "grid": 4,
+    "random": 0,
+    "tail": 0
+   }
+  },
+  {
+   "engine": 15,
+   "name": "dx7-bank-a",
+   "stereo_capable": false,
+   "grid": {
+    "peak": 0.948,
+    "late": 11765,
+    "late_states": 280,
+    "worst_state": 2080,
+    "over_ninety_blocks": 12853
+   },
+   "random": {
+    "peak": 0.949,
+    "late": 996,
+    "late_states": 50,
+    "worst_state": 211,
+    "over_ninety_blocks": 2114
+   },
+   "tail": {
+    "peak": 0.891,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 1,
+    "over_ninety_blocks": 0
+   },
+   "tail_worst_block": 11,
+   "switch_in_peak": 4.177,
+   "switch_in_late": 4,
+   "double_pending": 2241,
+   "late_with_overhead": 23211,
+   "conditions": [
+    {
+     "condition": "unpatched/regular/note 12",
+     "peak": 0.693,
+     "late": 0,
+     "settle_peak": 0.693
+    },
+    {
+     "condition": "unpatched/regular/note 36",
+     "peak": 0.694,
+     "late": 2,
+     "settle_peak": 0.695
+    },
+    {
+     "condition": "unpatched/regular/note 60",
+     "peak": 0.705,
+     "late": 1,
+     "settle_peak": 0.705
+    },
+    {
+     "condition": "unpatched/regular/note 84",
+     "peak": 0.695,
+     "late": 1,
+     "settle_peak": 0.696
+    },
+    {
+     "condition": "unpatched/regular/note 108",
+     "peak": 0.695,
+     "late": 0,
+     "settle_peak": 0.696
+    },
+    {
+     "condition": "unpatched/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/sub-osc/note 12",
+     "peak": 0.72,
+     "late": 0,
+     "settle_peak": 0.72
+    },
+    {
+     "condition": "unpatched/sub-osc/note 36",
+     "peak": 0.715,
+     "late": 0,
+     "settle_peak": 0.715
+    },
+    {
+     "condition": "unpatched/sub-osc/note 60",
+     "peak": 0.712,
+     "late": 0,
+     "settle_peak": 0.712
+    },
+    {
+     "condition": "unpatched/sub-osc/note 84",
+     "peak": 0.716,
+     "late": 0,
+     "settle_peak": 0.716
+    },
+    {
+     "condition": "unpatched/sub-osc/note 108",
+     "peak": 0.714,
+     "late": 1,
+     "settle_peak": 0.715
+    },
+    {
+     "condition": "triggered/regular/note 12",
+     "peak": 0.928,
+     "late": 0,
+     "settle_peak": 0.911
+    },
+    {
+     "condition": "triggered/regular/note 36",
+     "peak": 0.929,
+     "late": 23,
+     "settle_peak": 0.914
+    },
+    {
+     "condition": "triggered/regular/note 60",
+     "peak": 0.928,
+     "late": 0,
+     "settle_peak": 0.911
+    },
+    {
+     "condition": "triggered/regular/note 84",
+     "peak": 0.929,
+     "late": 0,
+     "settle_peak": 0.911
+    },
+    {
+     "condition": "triggered/regular/note 108",
+     "peak": 0.928,
+     "late": 34,
+     "settle_peak": 0.909
+    },
+    {
+     "condition": "triggered/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/sub-osc/note 12",
+     "peak": 0.948,
+     "late": 1151,
+     "settle_peak": 0.928
+    },
+    {
+     "condition": "triggered/sub-osc/note 36",
+     "peak": 0.947,
+     "late": 1147,
+     "settle_peak": 0.93
+    },
+    {
+     "condition": "triggered/sub-osc/note 60",
+     "peak": 0.948,
+     "late": 1134,
+     "settle_peak": 0.93
+    },
+    {
+     "condition": "triggered/sub-osc/note 84",
+     "peak": 0.948,
+     "late": 1016,
+     "settle_peak": 0.928
+    },
+    {
+     "condition": "triggered/sub-osc/note 108",
+     "peak": 0.948,
+     "late": 1008,
+     "settle_peak": 0.927
+    },
+    {
+     "condition": "gated/regular/note 12",
+     "peak": 0.93,
+     "late": 47,
+     "settle_peak": 0.917
+    },
+    {
+     "condition": "gated/regular/note 36",
+     "peak": 0.929,
+     "late": 17,
+     "settle_peak": 0.915
+    },
+    {
+     "condition": "gated/regular/note 60",
+     "peak": 0.929,
+     "late": 18,
+     "settle_peak": 0.917
+    },
+    {
+     "condition": "gated/regular/note 84",
+     "peak": 0.929,
+     "late": 26,
+     "settle_peak": 0.919
+    },
+    {
+     "condition": "gated/regular/note 108",
+     "peak": 0.93,
+     "late": 22,
+     "settle_peak": 0.917
+    },
+    {
+     "condition": "gated/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/sub-osc/note 12",
+     "peak": 0.948,
+     "late": 1337,
+     "settle_peak": 0.934
+    },
+    {
+     "condition": "gated/sub-osc/note 36",
+     "peak": 0.948,
+     "late": 1489,
+     "settle_peak": 0.938
+    },
+    {
+     "condition": "gated/sub-osc/note 60",
+     "peak": 0.949,
+     "late": 1492,
+     "settle_peak": 0.934
+    },
+    {
+     "condition": "gated/sub-osc/note 84",
+     "peak": 0.948,
+     "late": 1471,
+     "settle_peak": 0.937
+    },
+    {
+     "condition": "gated/sub-osc/note 108",
+     "peak": 0.948,
+     "late": 1324,
+     "settle_peak": 0.934
+    }
+   ],
+   "tails": [
+    {
+     "case": 0,
+     "peak": 0.885,
+     "late": 0,
+     "final_second_peak": 0.877
+    },
+    {
+     "case": 1,
+     "peak": 0.891,
+     "late": 0,
+     "final_second_peak": 0.877
+    },
+    {
+     "case": 2,
+     "peak": 0.877,
+     "late": 0,
+     "final_second_peak": 0.877
+    },
+    {
+     "case": 3,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    },
+    {
+     "case": 4,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    },
+    {
+     "case": 5,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    }
+   ],
+   "stretch": 1.0000733292806454,
+   "anchored": true,
+   "host_glitches": {
+    "switch": 1,
+    "grid": 187,
+    "random": 34,
+    "tail": 0
+   }
+  },
+  {
+   "engine": 16,
+   "name": "chords",
+   "stereo_capable": false,
+   "grid": {
+    "peak": 0.848,
+    "late": 15,
+    "late_states": 3,
+    "worst_state": 2634,
+    "over_ninety_blocks": 0
+   },
+   "random": {
+    "peak": 0.891,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 182,
+    "over_ninety_blocks": 0
+   },
+   "tail": {
+    "peak": 0.824,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 2,
+    "over_ninety_blocks": 0
+   },
+   "tail_worst_block": 9,
+   "switch_in_peak": 0.616,
+   "switch_in_late": 0,
+   "double_pending": 0,
+   "late_with_overhead": 22,
+   "conditions": [
+    {
+     "condition": "unpatched/regular/note 12",
+     "peak": 0.823,
+     "late": 0,
+     "settle_peak": 0.827
+    },
+    {
+     "condition": "unpatched/regular/note 36",
+     "peak": 0.828,
+     "late": 0,
+     "settle_peak": 0.813
+    },
+    {
+     "condition": "unpatched/regular/note 60",
+     "peak": 0.841,
+     "late": 0,
+     "settle_peak": 0.853
+    },
+    {
+     "condition": "unpatched/regular/note 84",
+     "peak": 0.771,
+     "late": 0,
+     "settle_peak": 0.837
+    },
+    {
+     "condition": "unpatched/regular/note 108",
+     "peak": 0.805,
+     "late": 0,
+     "settle_peak": 0.792
+    },
+    {
+     "condition": "unpatched/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/sub-osc/note 12",
+     "peak": 0.786,
+     "late": 3,
+     "settle_peak": 0.828
+    },
+    {
+     "condition": "unpatched/sub-osc/note 36",
+     "peak": 0.847,
+     "late": 0,
+     "settle_peak": 0.833
+    },
+    {
+     "condition": "unpatched/sub-osc/note 60",
+     "peak": 0.842,
+     "late": 0,
+     "settle_peak": 0.862
+    },
+    {
+     "condition": "unpatched/sub-osc/note 84",
+     "peak": 0.799,
+     "late": 0,
+     "settle_peak": 0.839
+    },
+    {
+     "condition": "unpatched/sub-osc/note 108",
+     "peak": 0.79,
+     "late": 0,
+     "settle_peak": 0.811
+    },
+    {
+     "condition": "triggered/regular/note 12",
+     "peak": 0.885,
+     "late": 0,
+     "settle_peak": 0.864
+    },
+    {
+     "condition": "triggered/regular/note 36",
+     "peak": 0.824,
+     "late": 0,
+     "settle_peak": 0.872
+    },
+    {
+     "condition": "triggered/regular/note 60",
+     "peak": 0.842,
+     "late": 0,
+     "settle_peak": 0.899
+    },
+    {
+     "condition": "triggered/regular/note 84",
+     "peak": 0.867,
+     "late": 0,
+     "settle_peak": 0.885
+    },
+    {
+     "condition": "triggered/regular/note 108",
+     "peak": 0.891,
+     "late": 0,
+     "settle_peak": 0.896
+    },
+    {
+     "condition": "triggered/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/sub-osc/note 12",
+     "peak": 0.823,
+     "late": 6,
+     "settle_peak": 0.867
+    },
+    {
+     "condition": "triggered/sub-osc/note 36",
+     "peak": 0.823,
+     "late": 0,
+     "settle_peak": 0.888
+    },
+    {
+     "condition": "triggered/sub-osc/note 60",
+     "peak": 0.844,
+     "late": 0,
+     "settle_peak": 0.898
+    },
+    {
+     "condition": "triggered/sub-osc/note 84",
+     "peak": 0.826,
+     "late": 0,
+     "settle_peak": 0.876
+    },
+    {
+     "condition": "triggered/sub-osc/note 108",
+     "peak": 0.831,
+     "late": 0,
+     "settle_peak": 0.848
+    },
+    {
+     "condition": "gated/regular/note 12",
+     "peak": 0.879,
+     "late": 0,
+     "settle_peak": 0.862
+    },
+    {
+     "condition": "gated/regular/note 36",
+     "peak": 0.882,
+     "late": 0,
+     "settle_peak": 0.875
+    },
+    {
+     "condition": "gated/regular/note 60",
+     "peak": 0.848,
+     "late": 0,
+     "settle_peak": 0.901
+    },
+    {
+     "condition": "gated/regular/note 84",
+     "peak": 0.882,
+     "late": 0,
+     "settle_peak": 0.92
+    },
+    {
+     "condition": "gated/regular/note 108",
+     "peak": 0.823,
+     "late": 0,
+     "settle_peak": 0.846
+    },
+    {
+     "condition": "gated/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/sub-osc/note 12",
+     "peak": 0.819,
+     "late": 6,
+     "settle_peak": 0.867
+    },
+    {
+     "condition": "gated/sub-osc/note 36",
+     "peak": 0.842,
+     "late": 0,
+     "settle_peak": 0.871
+    },
+    {
+     "condition": "gated/sub-osc/note 60",
+     "peak": 0.842,
+     "late": 0,
+     "settle_peak": 0.896
+    },
+    {
+     "condition": "gated/sub-osc/note 84",
+     "peak": 0.878,
+     "late": 0,
+     "settle_peak": 0.882
+    },
+    {
+     "condition": "gated/sub-osc/note 108",
+     "peak": 0.821,
+     "late": 0,
+     "settle_peak": 0.896
+    }
+   ],
+   "tails": [
+    {
+     "case": 0,
+     "peak": 0.652,
+     "late": 0,
+     "final_second_peak": 0.652
+    },
+    {
+     "case": 1,
+     "peak": 0.78,
+     "late": 0,
+     "final_second_peak": 0.779
+    },
+    {
+     "case": 2,
+     "peak": 0.824,
+     "late": 0,
+     "final_second_peak": 0.821
+    },
+    {
+     "case": 3,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    },
+    {
+     "case": 4,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    },
+    {
+     "case": 5,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    }
+   ],
+   "stretch": 0.9999735909527032,
+   "anchored": true,
+   "host_glitches": {
+    "switch": 0,
+    "grid": 3,
+    "random": 0,
+    "tail": 0
+   }
+  },
+  {
+   "engine": 17,
+   "name": "scanned",
+   "stereo_capable": false,
+   "grid": {
+    "peak": 0.812,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 2070,
+    "over_ninety_blocks": 0
+   },
+   "random": {
+    "peak": 0.798,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 165,
+    "over_ninety_blocks": 0
+   },
+   "tail": {
+    "peak": 0.71,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 0,
+    "over_ninety_blocks": 0
+   },
+   "tail_worst_block": 23,
+   "switch_in_peak": 0.488,
+   "switch_in_late": 0,
+   "double_pending": 0,
+   "late_with_overhead": 3,
+   "conditions": [
+    {
+     "condition": "unpatched/regular/note 12",
+     "peak": 0.677,
+     "late": 0,
+     "settle_peak": 0.677
+    },
+    {
+     "condition": "unpatched/regular/note 36",
+     "peak": 0.677,
+     "late": 0,
+     "settle_peak": 0.677
+    },
+    {
+     "condition": "unpatched/regular/note 60",
+     "peak": 0.677,
+     "late": 0,
+     "settle_peak": 0.687
+    },
+    {
+     "condition": "unpatched/regular/note 84",
+     "peak": 0.677,
+     "late": 0,
+     "settle_peak": 0.677
+    },
+    {
+     "condition": "unpatched/regular/note 108",
+     "peak": 0.646,
+     "late": 0,
+     "settle_peak": 0.678
+    },
+    {
+     "condition": "unpatched/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/sub-osc/note 12",
+     "peak": 0.684,
+     "late": 0,
+     "settle_peak": 0.665
+    },
+    {
+     "condition": "unpatched/sub-osc/note 36",
+     "peak": 0.696,
+     "late": 0,
+     "settle_peak": 0.693
+    },
+    {
+     "condition": "unpatched/sub-osc/note 60",
+     "peak": 0.691,
+     "late": 0,
+     "settle_peak": 0.682
+    },
+    {
+     "condition": "unpatched/sub-osc/note 84",
+     "peak": 0.696,
+     "late": 0,
+     "settle_peak": 0.696
+    },
+    {
+     "condition": "unpatched/sub-osc/note 108",
+     "peak": 0.696,
+     "late": 0,
+     "settle_peak": 0.693
+    },
+    {
+     "condition": "triggered/regular/note 12",
+     "peak": 0.739,
+     "late": 0,
+     "settle_peak": 0.736
+    },
+    {
+     "condition": "triggered/regular/note 36",
+     "peak": 0.758,
+     "late": 0,
+     "settle_peak": 0.736
+    },
+    {
+     "condition": "triggered/regular/note 60",
+     "peak": 0.807,
+     "late": 0,
+     "settle_peak": 0.736
+    },
+    {
+     "condition": "triggered/regular/note 84",
+     "peak": 0.783,
+     "late": 0,
+     "settle_peak": 0.736
+    },
+    {
+     "condition": "triggered/regular/note 108",
+     "peak": 0.764,
+     "late": 0,
+     "settle_peak": 0.73
+    },
+    {
+     "condition": "triggered/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/sub-osc/note 12",
+     "peak": 0.812,
+     "late": 0,
+     "settle_peak": 0.732
+    },
+    {
+     "condition": "triggered/sub-osc/note 36",
+     "peak": 0.803,
+     "late": 0,
+     "settle_peak": 0.728
+    },
+    {
+     "condition": "triggered/sub-osc/note 60",
+     "peak": 0.777,
+     "late": 0,
+     "settle_peak": 0.728
+    },
+    {
+     "condition": "triggered/sub-osc/note 84",
+     "peak": 0.756,
+     "late": 0,
+     "settle_peak": 0.728
+    },
+    {
+     "condition": "triggered/sub-osc/note 108",
+     "peak": 0.781,
+     "late": 0,
+     "settle_peak": 0.728
+    },
+    {
+     "condition": "gated/regular/note 12",
+     "peak": 0.779,
+     "late": 0,
+     "settle_peak": 0.735
+    },
+    {
+     "condition": "gated/regular/note 36",
+     "peak": 0.762,
+     "late": 0,
+     "settle_peak": 0.735
+    },
+    {
+     "condition": "gated/regular/note 60",
+     "peak": 0.807,
+     "late": 0,
+     "settle_peak": 0.735
+    },
+    {
+     "condition": "gated/regular/note 84",
+     "peak": 0.778,
+     "late": 0,
+     "settle_peak": 0.735
+    },
+    {
+     "condition": "gated/regular/note 108",
+     "peak": 0.772,
+     "late": 0,
+     "settle_peak": 0.727
+    },
+    {
+     "condition": "gated/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/sub-osc/note 12",
+     "peak": 0.807,
+     "late": 0,
+     "settle_peak": 0.729
+    },
+    {
+     "condition": "gated/sub-osc/note 36",
+     "peak": 0.798,
+     "late": 0,
+     "settle_peak": 0.729
+    },
+    {
+     "condition": "gated/sub-osc/note 60",
+     "peak": 0.77,
+     "late": 0,
+     "settle_peak": 0.728
+    },
+    {
+     "condition": "gated/sub-osc/note 84",
+     "peak": 0.782,
+     "late": 0,
+     "settle_peak": 0.728
+    },
+    {
+     "condition": "gated/sub-osc/note 108",
+     "peak": 0.776,
+     "late": 0,
+     "settle_peak": 0.726
+    }
+   ],
+   "tails": [
+    {
+     "case": 0,
+     "peak": 0.71,
+     "late": 0,
+     "final_second_peak": 0.61
+    },
+    {
+     "case": 1,
+     "peak": 0.632,
+     "late": 0,
+     "final_second_peak": 0.604
+    },
+    {
+     "case": 2,
+     "peak": 0.625,
+     "late": 0,
+     "final_second_peak": 0.604
+    },
+    {
+     "case": 3,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    },
+    {
+     "case": 4,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    },
+    {
+     "case": 5,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    }
+   ],
+   "stretch": 0.9999752395201073,
+   "anchored": true,
+   "host_glitches": {
+    "switch": 0,
+    "grid": 0,
+    "random": 0,
+    "tail": 0
+   }
+  },
+  {
+   "engine": 18,
+   "name": "chiptune",
+   "stereo_capable": false,
+   "grid": {
+    "peak": 0.856,
+    "late": 3,
+    "late_states": 1,
+    "worst_state": 1213,
+    "over_ninety_blocks": 0
+   },
+   "random": {
+    "peak": 0.849,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 349,
+    "over_ninety_blocks": 0
+   },
+   "tail": {
+    "peak": 0.397,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 0,
+    "over_ninety_blocks": 0
+   },
+   "tail_worst_block": 8,
+   "switch_in_peak": 0.739,
+   "switch_in_late": 0,
+   "double_pending": 0,
+   "late_with_overhead": 6,
+   "conditions": [
+    {
+     "condition": "unpatched/regular/note 12",
+     "peak": 0.733,
+     "late": 0,
+     "settle_peak": 0.749
+    },
+    {
+     "condition": "unpatched/regular/note 36",
+     "peak": 0.743,
+     "late": 0,
+     "settle_peak": 0.758
+    },
+    {
+     "condition": "unpatched/regular/note 60",
+     "peak": 0.761,
+     "late": 0,
+     "settle_peak": 0.781
+    },
+    {
+     "condition": "unpatched/regular/note 84",
+     "peak": 0.802,
+     "late": 0,
+     "settle_peak": 0.818
+    },
+    {
+     "condition": "unpatched/regular/note 108",
+     "peak": 0.846,
+     "late": 0,
+     "settle_peak": 0.866
+    },
+    {
+     "condition": "unpatched/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "unpatched/sub-osc/note 12",
+     "peak": 0.755,
+     "late": 3,
+     "settle_peak": 0.806
+    },
+    {
+     "condition": "unpatched/sub-osc/note 36",
+     "peak": 0.761,
+     "late": 0,
+     "settle_peak": 0.773
+    },
+    {
+     "condition": "unpatched/sub-osc/note 60",
+     "peak": 0.782,
+     "late": 0,
+     "settle_peak": 0.8
+    },
+    {
+     "condition": "unpatched/sub-osc/note 84",
+     "peak": 0.849,
+     "late": 0,
+     "settle_peak": 0.854
+    },
+    {
+     "condition": "unpatched/sub-osc/note 108",
+     "peak": 0.856,
+     "late": 0,
+     "settle_peak": 0.877
+    },
+    {
+     "condition": "triggered/regular/note 12",
+     "peak": 0.406,
+     "late": 0,
+     "settle_peak": 0.4
+    },
+    {
+     "condition": "triggered/regular/note 36",
+     "peak": 0.409,
+     "late": 0,
+     "settle_peak": 0.415
+    },
+    {
+     "condition": "triggered/regular/note 60",
+     "peak": 0.443,
+     "late": 0,
+     "settle_peak": 0.426
+    },
+    {
+     "condition": "triggered/regular/note 84",
+     "peak": 0.457,
+     "late": 0,
+     "settle_peak": 0.427
+    },
+    {
+     "condition": "triggered/regular/note 108",
+     "peak": 0.467,
+     "late": 0,
+     "settle_peak": 0.434
+    },
+    {
+     "condition": "triggered/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "triggered/sub-osc/note 12",
+     "peak": 0.428,
+     "late": 0,
+     "settle_peak": 0.421
+    },
+    {
+     "condition": "triggered/sub-osc/note 36",
+     "peak": 0.431,
+     "late": 0,
+     "settle_peak": 0.395
+    },
+    {
+     "condition": "triggered/sub-osc/note 60",
+     "peak": 0.455,
+     "late": 0,
+     "settle_peak": 0.445
+    },
+    {
+     "condition": "triggered/sub-osc/note 84",
+     "peak": 0.482,
+     "late": 0,
+     "settle_peak": 0.449
+    },
+    {
+     "condition": "triggered/sub-osc/note 108",
+     "peak": 0.491,
+     "late": 0,
+     "settle_peak": 0.454
+    },
+    {
+     "condition": "gated/regular/note 12",
+     "peak": 0.409,
+     "late": 0,
+     "settle_peak": 0.399
+    },
+    {
+     "condition": "gated/regular/note 36",
+     "peak": 0.413,
+     "late": 0,
+     "settle_peak": 0.38
+    },
+    {
+     "condition": "gated/regular/note 60",
+     "peak": 0.455,
+     "late": 0,
+     "settle_peak": 0.425
+    },
+    {
+     "condition": "gated/regular/note 84",
+     "peak": 0.457,
+     "late": 0,
+     "settle_peak": 0.431
+    },
+    {
+     "condition": "gated/regular/note 108",
+     "peak": 0.47,
+     "late": 0,
+     "settle_peak": 0.438
+    },
+    {
+     "condition": "gated/stereo/note 12",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 36",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 60",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 84",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/stereo/note 108",
+     "peak": 0.0,
+     "late": 0,
+     "settle_peak": 0.0
+    },
+    {
+     "condition": "gated/sub-osc/note 12",
+     "peak": 0.424,
+     "late": 0,
+     "settle_peak": 0.425
+    },
+    {
+     "condition": "gated/sub-osc/note 36",
+     "peak": 0.43,
+     "late": 0,
+     "settle_peak": 0.401
+    },
+    {
+     "condition": "gated/sub-osc/note 60",
+     "peak": 0.462,
+     "late": 0,
+     "settle_peak": 0.45
+    },
+    {
+     "condition": "gated/sub-osc/note 84",
+     "peak": 0.474,
+     "late": 0,
+     "settle_peak": 0.444
+    },
+    {
+     "condition": "gated/sub-osc/note 108",
+     "peak": 0.491,
+     "late": 0,
+     "settle_peak": 0.457
+    }
+   ],
+   "tails": [
+    {
+     "case": 0,
+     "peak": 0.397,
+     "late": 0,
+     "final_second_peak": 0.369
+    },
+    {
+     "case": 1,
+     "peak": 0.374,
+     "late": 0,
+     "final_second_peak": 0.368
+    },
+    {
+     "case": 2,
+     "peak": 0.376,
+     "late": 0,
+     "final_second_peak": 0.371
+    },
+    {
+     "case": 3,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    },
+    {
+     "case": 4,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    },
+    {
+     "case": 5,
+     "peak": 0.0,
+     "late": 0,
+     "final_second_peak": 0.0
+    }
+   ],
+   "stretch": 0.9999735909527032,
+   "anchored": true,
+   "host_glitches": {
+    "switch": 0,
+    "grid": 1,
+    "random": 0,
+    "tail": 0
+   }
+  },
+  {
+   "engine": 19,
+   "name": "fluted",
+   "stereo_capable": true,
+   "grid": {
+    "peak": 0.975,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 1649,
+    "over_ninety_blocks": 2430
+   },
+   "random": {
+    "peak": 0.975,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 96,
+    "over_ninety_blocks": 262
+   },
+   "tail": {
+    "peak": 0.973,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 3,
+    "over_ninety_blocks": 6
+   },
+   "tail_worst_block": 8,
+   "switch_in_peak": 0.931,
+   "switch_in_late": 0,
+   "double_pending": 0,
+   "late_with_overhead": 3234,
+   "conditions": [
+    {
+     "condition": "unpatched/regular/note 12",
+     "peak": 0.797,
+     "late": 0,
+     "settle_peak": 0.756
+    },
+    {
+     "condition": "unpatched/regular/note 36",
+     "peak": 0.756,
+     "late": 0,
+     "settle_peak": 0.756
+    },
+    {
+     "condition": "unpatched/regular/note 60",
+     "peak": 0.754,
+     "late": 0,
+     "settle_peak": 0.754
+    },
+    {
+     "condition": "unpatched/regular/note 84",
+     "peak": 0.754,
+     "late": 0,
+     "settle_peak": 0.754
+    },
+    {
+     "condition": "unpatched/regular/note 108",
+     "peak": 0.754,
+     "late": 0,
+     "settle_peak": 0.754
+    },
+    {
+     "condition": "unpatched/stereo/note 12",
+     "peak": 0.769,
+     "late": 0,
+     "settle_peak": 0.769
+    },
+    {
+     "condition": "unpatched/stereo/note 36",
+     "peak": 0.767,
+     "late": 0,
+     "settle_peak": 0.768
+    },
+    {
+     "condition": "unpatched/stereo/note 60",
+     "peak": 0.766,
+     "late": 0,
+     "settle_peak": 0.768
+    },
+    {
+     "condition": "unpatched/stereo/note 84",
+     "peak": 0.766,
+     "late": 0,
+     "settle_peak": 0.768
+    },
+    {
+     "condition": "unpatched/stereo/note 108",
+     "peak": 0.766,
+     "late": 0,
+     "settle_peak": 0.767
+    },
+    {
+     "condition": "unpatched/sub-osc/note 12",
+     "peak": 0.776,
+     "late": 0,
+     "settle_peak": 0.776
+    },
+    {
+     "condition": "unpatched/sub-osc/note 36",
+     "peak": 0.773,
+     "late": 0,
+     "settle_peak": 0.774
+    },
+    {
+     "condition": "unpatched/sub-osc/note 60",
+     "peak": 0.773,
+     "late": 0,
+     "settle_peak": 0.774
+    },
+    {
+     "condition": "unpatched/sub-osc/note 84",
+     "peak": 0.773,
+     "late": 0,
+     "settle_peak": 0.774
+    },
+    {
+     "condition": "unpatched/sub-osc/note 108",
+     "peak": 0.773,
+     "late": 0,
+     "settle_peak": 0.774
+    },
+    {
+     "condition": "triggered/regular/note 12",
+     "peak": 0.964,
+     "late": 0,
+     "settle_peak": 0.814
+    },
+    {
+     "condition": "triggered/regular/note 36",
+     "peak": 0.963,
+     "late": 0,
+     "settle_peak": 0.813
+    },
+    {
+     "condition": "triggered/regular/note 60",
+     "peak": 0.962,
+     "late": 0,
+     "settle_peak": 0.811
+    },
+    {
+     "condition": "triggered/regular/note 84",
+     "peak": 0.962,
+     "late": 0,
+     "settle_peak": 0.811
+    },
+    {
+     "condition": "triggered/regular/note 108",
+     "peak": 0.962,
+     "late": 0,
+     "settle_peak": 0.811
+    },
+    {
+     "condition": "triggered/stereo/note 12",
+     "peak": 0.975,
+     "late": 0,
+     "settle_peak": 0.825
+    },
+    {
+     "condition": "triggered/stereo/note 36",
+     "peak": 0.974,
+     "late": 0,
+     "settle_peak": 0.823
+    },
+    {
+     "condition": "triggered/stereo/note 60",
+     "peak": 0.973,
+     "late": 0,
+     "settle_peak": 0.822
+    },
+    {
+     "condition": "triggered/stereo/note 84",
+     "peak": 0.973,
+     "late": 0,
+     "settle_peak": 0.822
+    },
+    {
+     "condition": "triggered/stereo/note 108",
+     "peak": 0.973,
+     "late": 0,
+     "settle_peak": 0.822
+    },
+    {
+     "condition": "triggered/sub-osc/note 12",
+     "peak": 0.962,
+     "late": 0,
+     "settle_peak": 0.813
+    },
+    {
+     "condition": "triggered/sub-osc/note 36",
+     "peak": 0.961,
+     "late": 0,
+     "settle_peak": 0.811
+    },
+    {
+     "condition": "triggered/sub-osc/note 60",
+     "peak": 0.96,
+     "late": 0,
+     "settle_peak": 0.809
+    },
+    {
+     "condition": "triggered/sub-osc/note 84",
+     "peak": 0.96,
+     "late": 0,
+     "settle_peak": 0.809
+    },
+    {
+     "condition": "triggered/sub-osc/note 108",
+     "peak": 0.96,
+     "late": 0,
+     "settle_peak": 0.809
+    },
+    {
+     "condition": "gated/regular/note 12",
+     "peak": 0.96,
+     "late": 0,
+     "settle_peak": 0.812
+    },
+    {
+     "condition": "gated/regular/note 36",
+     "peak": 0.959,
+     "late": 0,
+     "settle_peak": 0.811
+    },
+    {
+     "condition": "gated/regular/note 60",
+     "peak": 0.957,
+     "late": 0,
+     "settle_peak": 0.81
+    },
+    {
+     "condition": "gated/regular/note 84",
+     "peak": 0.957,
+     "late": 0,
+     "settle_peak": 0.81
+    },
+    {
+     "condition": "gated/regular/note 108",
+     "peak": 0.957,
+     "late": 0,
+     "settle_peak": 0.81
+    },
+    {
+     "condition": "gated/stereo/note 12",
+     "peak": 0.97,
+     "late": 0,
+     "settle_peak": 0.823
+    },
+    {
+     "condition": "gated/stereo/note 36",
+     "peak": 0.968,
+     "late": 0,
+     "settle_peak": 0.821
+    },
+    {
+     "condition": "gated/stereo/note 60",
+     "peak": 0.968,
+     "late": 0,
+     "settle_peak": 0.821
+    },
+    {
+     "condition": "gated/stereo/note 84",
+     "peak": 0.968,
+     "late": 0,
+     "settle_peak": 0.821
+    },
+    {
+     "condition": "gated/stereo/note 108",
+     "peak": 0.968,
+     "late": 0,
+     "settle_peak": 0.821
+    },
+    {
+     "condition": "gated/sub-osc/note 12",
+     "peak": 0.958,
+     "late": 0,
+     "settle_peak": 0.81
+    },
+    {
+     "condition": "gated/sub-osc/note 36",
+     "peak": 0.957,
+     "late": 0,
+     "settle_peak": 0.809
+    },
+    {
+     "condition": "gated/sub-osc/note 60",
+     "peak": 0.955,
+     "late": 0,
+     "settle_peak": 0.808
+    },
+    {
+     "condition": "gated/sub-osc/note 84",
+     "peak": 0.955,
+     "late": 0,
+     "settle_peak": 0.808
+    },
+    {
+     "condition": "gated/sub-osc/note 108",
+     "peak": 0.955,
+     "late": 0,
+     "settle_peak": 0.808
+    }
+   ],
+   "tails": [
+    {
+     "case": 0,
+     "peak": 0.962,
+     "late": 0,
+     "final_second_peak": 0.811
+    },
+    {
+     "case": 1,
+     "peak": 0.962,
+     "late": 0,
+     "final_second_peak": 0.811
+    },
+    {
+     "case": 2,
+     "peak": 0.962,
+     "late": 0,
+     "final_second_peak": 0.811
+    },
+    {
+     "case": 3,
+     "peak": 0.973,
+     "late": 0,
+     "final_second_peak": 0.822
+    },
+    {
+     "case": 4,
+     "peak": 0.972,
+     "late": 0,
+     "final_second_peak": 0.822
+    },
+    {
+     "case": 5,
+     "peak": 0.972,
+     "late": 0,
+     "final_second_peak": 0.822
+    }
+   ],
+   "stretch": 0.9999737837896672,
+   "anchored": true,
+   "host_glitches": {
+    "switch": 0,
+    "grid": 0,
+    "random": 0,
+    "tail": 0
+   }
+  },
+  {
+   "engine": 20,
+   "name": "blown",
+   "stereo_capable": true,
+   "grid": {
+    "peak": 0.965,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 1634,
+    "over_ninety_blocks": 2430
+   },
+   "random": {
+    "peak": 0.965,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 13,
+    "over_ninety_blocks": 268
+   },
+   "tail": {
+    "peak": 0.959,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 3,
+    "over_ninety_blocks": 6
+   },
+   "tail_worst_block": 8,
+   "switch_in_peak": 0.884,
+   "switch_in_late": 0,
+   "double_pending": 0,
+   "late_with_overhead": 2704,
+   "conditions": [
+    {
+     "condition": "unpatched/regular/note 12",
+     "peak": 0.667,
+     "late": 0,
+     "settle_peak": 0.672
+    },
+    {
+     "condition": "unpatched/regular/note 36",
+     "peak": 0.668,
+     "late": 0,
+     "settle_peak": 0.674
+    },
+    {
+     "condition": "unpatched/regular/note 60",
+     "peak": 0.668,
+     "late": 0,
+     "settle_peak": 0.674
+    },
+    {
+     "condition": "unpatched/regular/note 84",
+     "peak": 0.668,
+     "late": 0,
+     "settle_peak": 0.674
+    },
+    {
+     "condition": "unpatched/regular/note 108",
+     "peak": 0.668,
+     "late": 0,
+     "settle_peak": 0.674
+    },
+    {
+     "condition": "unpatched/stereo/note 12",
+     "peak": 0.697,
+     "late": 0,
+     "settle_peak": 0.703
+    },
+    {
+     "condition": "unpatched/stereo/note 36",
+     "peak": 0.697,
+     "late": 0,
+     "settle_peak": 0.702
+    },
+    {
+     "condition": "unpatched/stereo/note 60",
+     "peak": 0.697,
+     "late": 0,
+     "settle_peak": 0.703
+    },
+    {
+     "condition": "unpatched/stereo/note 84",
+     "peak": 0.697,
+     "late": 0,
+     "settle_peak": 0.702
+    },
+    {
+     "condition": "unpatched/stereo/note 108",
+     "peak": 0.697,
+     "late": 0,
+     "settle_peak": 0.702
+    },
+    {
+     "condition": "unpatched/sub-osc/note 12",
+     "peak": 0.688,
+     "late": 0,
+     "settle_peak": 0.694
+    },
+    {
+     "condition": "unpatched/sub-osc/note 36",
+     "peak": 0.687,
+     "late": 0,
+     "settle_peak": 0.693
+    },
+    {
+     "condition": "unpatched/sub-osc/note 60",
+     "peak": 0.688,
+     "late": 0,
+     "settle_peak": 0.693
+    },
+    {
+     "condition": "unpatched/sub-osc/note 84",
+     "peak": 0.688,
+     "late": 0,
+     "settle_peak": 0.694
+    },
+    {
+     "condition": "unpatched/sub-osc/note 108",
+     "peak": 0.688,
+     "late": 0,
+     "settle_peak": 0.688
+    },
+    {
+     "condition": "triggered/regular/note 12",
+     "peak": 0.934,
+     "late": 0,
+     "settle_peak": 0.726
+    },
+    {
+     "condition": "triggered/regular/note 36",
+     "peak": 0.928,
+     "late": 0,
+     "settle_peak": 0.726
+    },
+    {
+     "condition": "triggered/regular/note 60",
+     "peak": 0.928,
+     "late": 0,
+     "settle_peak": 0.726
+    },
+    {
+     "condition": "triggered/regular/note 84",
+     "peak": 0.934,
+     "late": 0,
+     "settle_peak": 0.727
+    },
+    {
+     "condition": "triggered/regular/note 108",
+     "peak": 0.934,
+     "late": 0,
+     "settle_peak": 0.721
+    },
+    {
+     "condition": "triggered/stereo/note 12",
+     "peak": 0.965,
+     "late": 0,
+     "settle_peak": 0.759
+    },
+    {
+     "condition": "triggered/stereo/note 36",
+     "peak": 0.965,
+     "late": 0,
+     "settle_peak": 0.757
+    },
+    {
+     "condition": "triggered/stereo/note 60",
+     "peak": 0.965,
+     "late": 0,
+     "settle_peak": 0.757
+    },
+    {
+     "condition": "triggered/stereo/note 84",
+     "peak": 0.965,
+     "late": 0,
+     "settle_peak": 0.758
+    },
+    {
+     "condition": "triggered/stereo/note 108",
+     "peak": 0.965,
+     "late": 0,
+     "settle_peak": 0.757
+    },
+    {
+     "condition": "triggered/sub-osc/note 12",
+     "peak": 0.934,
+     "late": 0,
+     "settle_peak": 0.723
+    },
+    {
+     "condition": "triggered/sub-osc/note 36",
+     "peak": 0.929,
+     "late": 0,
+     "settle_peak": 0.727
+    },
+    {
+     "condition": "triggered/sub-osc/note 60",
+     "peak": 0.929,
+     "late": 0,
+     "settle_peak": 0.727
+    },
+    {
+     "condition": "triggered/sub-osc/note 84",
+     "peak": 0.935,
+     "late": 0,
+     "settle_peak": 0.727
+    },
+    {
+     "condition": "triggered/sub-osc/note 108",
+     "peak": 0.935,
+     "late": 0,
+     "settle_peak": 0.727
+    },
+    {
+     "condition": "gated/regular/note 12",
+     "peak": 0.924,
+     "late": 0,
+     "settle_peak": 0.725
+    },
+    {
+     "condition": "gated/regular/note 36",
+     "peak": 0.929,
+     "late": 0,
+     "settle_peak": 0.724
+    },
+    {
+     "condition": "gated/regular/note 60",
+     "peak": 0.929,
+     "late": 0,
+     "settle_peak": 0.724
+    },
+    {
+     "condition": "gated/regular/note 84",
+     "peak": 0.929,
+     "late": 0,
+     "settle_peak": 0.724
+    },
+    {
+     "condition": "gated/regular/note 108",
+     "peak": 0.929,
+     "late": 0,
+     "settle_peak": 0.724
+    },
+    {
+     "condition": "gated/stereo/note 12",
+     "peak": 0.961,
+     "late": 0,
+     "settle_peak": 0.755
+    },
+    {
+     "condition": "gated/stereo/note 36",
+     "peak": 0.96,
+     "late": 0,
+     "settle_peak": 0.755
+    },
+    {
+     "condition": "gated/stereo/note 60",
+     "peak": 0.96,
+     "late": 0,
+     "settle_peak": 0.755
+    },
+    {
+     "condition": "gated/stereo/note 84",
+     "peak": 0.96,
+     "late": 0,
+     "settle_peak": 0.755
+    },
+    {
+     "condition": "gated/stereo/note 108",
+     "peak": 0.961,
+     "late": 0,
+     "settle_peak": 0.755
+    },
+    {
+     "condition": "gated/sub-osc/note 12",
+     "peak": 0.93,
+     "late": 0,
+     "settle_peak": 0.724
+    },
+    {
+     "condition": "gated/sub-osc/note 36",
+     "peak": 0.924,
+     "late": 0,
+     "settle_peak": 0.725
+    },
+    {
+     "condition": "gated/sub-osc/note 60",
+     "peak": 0.924,
+     "late": 0,
+     "settle_peak": 0.725
+    },
+    {
+     "condition": "gated/sub-osc/note 84",
+     "peak": 0.93,
+     "late": 0,
+     "settle_peak": 0.724
+    },
+    {
+     "condition": "gated/sub-osc/note 108",
+     "peak": 0.93,
+     "late": 0,
+     "settle_peak": 0.724
+    }
+   ],
+   "tails": [
+    {
+     "case": 0,
+     "peak": 0.928,
+     "late": 0,
+     "final_second_peak": 0.707
+    },
+    {
+     "case": 1,
+     "peak": 0.915,
+     "late": 0,
+     "final_second_peak": 0.714
+    },
+    {
+     "case": 2,
+     "peak": 0.922,
+     "late": 0,
+     "final_second_peak": 0.708
+    },
+    {
+     "case": 3,
+     "peak": 0.959,
+     "late": 0,
+     "final_second_peak": 0.751
+    },
+    {
+     "case": 4,
+     "peak": 0.959,
+     "late": 0,
+     "final_second_peak": 0.751
+    },
+    {
+     "case": 5,
+     "peak": 0.959,
+     "late": 0,
+     "final_second_peak": 0.751
+    }
+   ],
+   "stretch": 0.9999748637023687,
+   "anchored": true,
+   "host_glitches": {
+    "switch": 0,
+    "grid": 0,
+    "random": 0,
+    "tail": 0
+   }
+  },
+  {
+   "engine": 21,
+   "name": "helix",
+   "stereo_capable": true,
+   "grid": {
+    "peak": 0.958,
+    "late": 38777,
+    "late_states": 812,
+    "worst_state": 1648,
+    "over_ninety_blocks": 32678
+   },
+   "random": {
+    "peak": 0.957,
+    "late": 4820,
+    "late_states": 167,
+    "worst_state": 12,
+    "over_ninety_blocks": 3363
+   },
+   "tail": {
+    "peak": 0.957,
+    "late": 47746,
+    "late_states": 3,
+    "worst_state": 4,
+    "over_ninety_blocks": 47844
+   },
+   "tail_worst_block": 11,
+   "switch_in_peak": 0.76,
+   "switch_in_late": 0,
+   "double_pending": 44575,
+   "late_with_overhead": 65535,
+   "conditions": [
+    {
+     "condition": "unpatched/regular/note 12",
+     "peak": 0.732,
+     "late": 8,
+     "settle_peak": 0.749
+    },
+    {
+     "condition": "unpatched/regular/note 36",
+     "peak": 0.732,
+     "late": 33,
+     "settle_peak": 0.748
+    },
+    {
+     "condition": "unpatched/regular/note 60",
+     "peak": 0.732,
+     "late": 35,
+     "settle_peak": 0.749
+    },
+    {
+     "condition": "unpatched/regular/note 84",
+     "peak": 0.732,
+     "late": 28,
+     "settle_peak": 0.749
+    },
+    {
+     "condition": "unpatched/regular/note 108",
+     "peak": 0.732,
+     "late": 9,
+     "settle_peak": 0.747
+    },
+    {
+     "condition": "unpatched/stereo/note 12",
+     "peak": 0.9,
+     "late": 0,
+     "settle_peak": 0.915
+    },
+    {
+     "condition": "unpatched/stereo/note 36",
+     "peak": 0.9,
+     "late": 0,
+     "settle_peak": 0.916
+    },
+    {
+     "condition": "unpatched/stereo/note 60",
+     "peak": 0.9,
+     "late": 44,
+     "settle_peak": 0.916
+    },
+    {
+     "condition": "unpatched/stereo/note 84",
+     "peak": 0.9,
+     "late": 0,
+     "settle_peak": 0.917
+    },
+    {
+     "condition": "unpatched/stereo/note 108",
+     "peak": 0.9,
+     "late": 0,
+     "settle_peak": 0.915
+    },
+    {
+     "condition": "unpatched/sub-osc/note 12",
+     "peak": 0.751,
+     "late": 0,
+     "settle_peak": 0.767
+    },
+    {
+     "condition": "unpatched/sub-osc/note 36",
+     "peak": 0.751,
+     "late": 43,
+     "settle_peak": 0.769
+    },
+    {
+     "condition": "unpatched/sub-osc/note 60",
+     "peak": 0.751,
+     "late": 29,
+     "settle_peak": 0.768
+    },
+    {
+     "condition": "unpatched/sub-osc/note 84",
+     "peak": 0.751,
+     "late": 20,
+     "settle_peak": 0.768
+    },
+    {
+     "condition": "unpatched/sub-osc/note 108",
+     "peak": 0.751,
+     "late": 30,
+     "settle_peak": 0.769
+    },
+    {
+     "condition": "triggered/regular/note 12",
+     "peak": 0.789,
+     "late": 6,
+     "settle_peak": 0.804
+    },
+    {
+     "condition": "triggered/regular/note 36",
+     "peak": 0.789,
+     "late": 15,
+     "settle_peak": 0.803
+    },
+    {
+     "condition": "triggered/regular/note 60",
+     "peak": 0.789,
+     "late": 29,
+     "settle_peak": 0.803
+    },
+    {
+     "condition": "triggered/regular/note 84",
+     "peak": 0.789,
+     "late": 48,
+     "settle_peak": 0.802
+    },
+    {
+     "condition": "triggered/regular/note 108",
+     "peak": 0.789,
+     "late": 6,
+     "settle_peak": 0.803
+    },
+    {
+     "condition": "triggered/stereo/note 12",
+     "peak": 0.958,
+     "late": 3928,
+     "settle_peak": 0.972
+    },
+    {
+     "condition": "triggered/stereo/note 36",
+     "peak": 0.957,
+     "late": 4388,
+     "settle_peak": 0.971
+    },
+    {
+     "condition": "triggered/stereo/note 60",
+     "peak": 0.957,
+     "late": 4527,
+     "settle_peak": 0.971
+    },
+    {
+     "condition": "triggered/stereo/note 84",
+     "peak": 0.956,
+     "late": 4292,
+     "settle_peak": 0.971
+    },
+    {
+     "condition": "triggered/stereo/note 108",
+     "peak": 0.957,
+     "late": 4206,
+     "settle_peak": 0.97
+    },
+    {
+     "condition": "triggered/sub-osc/note 12",
+     "peak": 0.788,
+     "late": 24,
+     "settle_peak": 0.802
+    },
+    {
+     "condition": "triggered/sub-osc/note 36",
+     "peak": 0.788,
+     "late": 47,
+     "settle_peak": 0.803
+    },
+    {
+     "condition": "triggered/sub-osc/note 60",
+     "peak": 0.788,
+     "late": 32,
+     "settle_peak": 0.803
+    },
+    {
+     "condition": "triggered/sub-osc/note 84",
+     "peak": 0.787,
+     "late": 12,
+     "settle_peak": 0.805
+    },
+    {
+     "condition": "triggered/sub-osc/note 108",
+     "peak": 0.788,
+     "late": 0,
+     "settle_peak": 0.803
+    },
+    {
+     "condition": "gated/regular/note 12",
+     "peak": 0.785,
+     "late": 39,
+     "settle_peak": 0.801
+    },
+    {
+     "condition": "gated/regular/note 36",
+     "peak": 0.785,
+     "late": 68,
+     "settle_peak": 0.801
+    },
+    {
+     "condition": "gated/regular/note 60",
+     "peak": 0.785,
+     "late": 76,
+     "settle_peak": 0.801
+    },
+    {
+     "condition": "gated/regular/note 84",
+     "peak": 0.785,
+     "late": 72,
+     "settle_peak": 0.801
+    },
+    {
+     "condition": "gated/regular/note 108",
+     "peak": 0.786,
+     "late": 11,
+     "settle_peak": 0.8
+    },
+    {
+     "condition": "gated/stereo/note 12",
+     "peak": 0.954,
+     "late": 4063,
+     "settle_peak": 0.964
+    },
+    {
+     "condition": "gated/stereo/note 36",
+     "peak": 0.954,
+     "late": 4426,
+     "settle_peak": 0.968
+    },
+    {
+     "condition": "gated/stereo/note 60",
+     "peak": 0.954,
+     "late": 4196,
+     "settle_peak": 0.965
+    },
+    {
+     "condition": "gated/stereo/note 84",
+     "peak": 0.954,
+     "late": 4339,
+     "settle_peak": 0.97
+    },
+    {
+     "condition": "gated/stereo/note 108",
+     "peak": 0.954,
+     "late": 4290,
+     "settle_peak": 0.969
+    },
+    {
+     "condition": "gated/sub-osc/note 12",
+     "peak": 0.785,
+     "late": 14,
+     "settle_peak": 0.799
+    },
+    {
+     "condition": "gated/sub-osc/note 36",
+     "peak": 0.785,
+     "late": 25,
+     "settle_peak": 0.8
+    },
+    {
+     "condition": "gated/sub-osc/note 60",
+     "peak": 0.785,
+     "late": 60,
+     "settle_peak": 0.802
+    },
+    {
+     "condition": "gated/sub-osc/note 84",
+     "peak": 0.785,
+     "late": 67,
+     "settle_peak": 0.801
+    },
+    {
+     "condition": "gated/sub-osc/note 108",
+     "peak": 0.785,
+     "late": 12,
+     "settle_peak": 0.802
+    }
+   ],
+   "tails": [
+    {
+     "case": 0,
+     "peak": 0.787,
+     "late": 0,
+     "final_second_peak": 0.787
+    },
+    {
+     "case": 1,
+     "peak": 0.789,
+     "late": 0,
+     "final_second_peak": 0.787
+    },
+    {
+     "case": 2,
+     "peak": 0.789,
+     "late": 0,
+     "final_second_peak": 0.787
+    },
+    {
+     "case": 3,
+     "peak": 0.956,
+     "late": 15913,
+     "final_second_peak": 0.955
+    },
+    {
+     "case": 4,
+     "peak": 0.957,
+     "late": 15918,
+     "final_second_peak": 0.955
+    },
+    {
+     "case": 5,
+     "peak": 0.957,
+     "late": 15915,
+     "final_second_peak": 0.955
+    }
+   ],
+   "stretch": 1.0114988821199693,
+   "anchored": true,
+   "host_glitches": {
+    "switch": 0,
+    "grid": 853,
+    "random": 168,
+    "tail": 1068
+   }
+  },
+  {
+   "engine": 22,
+   "name": "fold",
+   "stereo_capable": true,
+   "grid": {
+    "peak": 0.869,
+    "late": 4,
+    "late_states": 1,
+    "worst_state": 1945,
+    "over_ninety_blocks": 0
+   },
+   "random": {
+    "peak": 0.87,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 358,
+    "over_ninety_blocks": 0
+   },
+   "tail": {
+    "peak": 0.868,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 3,
+    "over_ninety_blocks": 0
+   },
+   "tail_worst_block": 9,
+   "switch_in_peak": 2.723,
+   "switch_in_late": 8,
+   "double_pending": 3,
+   "late_with_overhead": 13,
+   "conditions": [
+    {
+     "condition": "unpatched/regular/note 12",
+     "peak": 0.77,
+     "late": 4,
+     "settle_peak": 0.775
+    },
+    {
+     "condition": "unpatched/regular/note 36",
+     "peak": 0.77,
+     "late": 0,
+     "settle_peak": 0.775
+    },
+    {
+     "condition": "unpatched/regular/note 60",
+     "peak": 0.77,
+     "late": 0,
+     "settle_peak": 0.775
+    },
+    {
+     "condition": "unpatched/regular/note 84",
+     "peak": 0.773,
+     "late": 0,
+     "settle_peak": 0.778
+    },
+    {
+     "condition": "unpatched/regular/note 108",
+     "peak": 0.773,
+     "late": 0,
+     "settle_peak": 0.779
+    },
+    {
+     "condition": "unpatched/stereo/note 12",
+     "peak": 0.811,
+     "late": 0,
+     "settle_peak": 0.816
+    },
+    {
+     "condition": "unpatched/stereo/note 36",
+     "peak": 0.811,
+     "late": 0,
+     "settle_peak": 0.816
+    },
+    {
+     "condition": "unpatched/stereo/note 60",
+     "peak": 0.811,
+     "late": 0,
+     "settle_peak": 0.816
+    },
+    {
+     "condition": "unpatched/stereo/note 84",
+     "peak": 0.814,
+     "late": 0,
+     "settle_peak": 0.819
+    },
+    {
+     "condition": "unpatched/stereo/note 108",
+     "peak": 0.814,
+     "late": 0,
+     "settle_peak": 0.82
+    },
+    {
+     "condition": "unpatched/sub-osc/note 12",
+     "peak": 0.789,
+     "late": 0,
+     "settle_peak": 0.795
+    },
+    {
+     "condition": "unpatched/sub-osc/note 36",
+     "peak": 0.789,
+     "late": 0,
+     "settle_peak": 0.795
+    },
+    {
+     "condition": "unpatched/sub-osc/note 60",
+     "peak": 0.789,
+     "late": 0,
+     "settle_peak": 0.795
+    },
+    {
+     "condition": "unpatched/sub-osc/note 84",
+     "peak": 0.792,
+     "late": 0,
+     "settle_peak": 0.798
+    },
+    {
+     "condition": "unpatched/sub-osc/note 108",
+     "peak": 0.792,
+     "late": 0,
+     "settle_peak": 0.798
+    },
+    {
+     "condition": "triggered/regular/note 12",
+     "peak": 0.83,
+     "late": 0,
+     "settle_peak": 0.834
+    },
+    {
+     "condition": "triggered/regular/note 36",
+     "peak": 0.83,
+     "late": 0,
+     "settle_peak": 0.833
+    },
+    {
+     "condition": "triggered/regular/note 60",
+     "peak": 0.83,
+     "late": 0,
+     "settle_peak": 0.833
+    },
+    {
+     "condition": "triggered/regular/note 84",
+     "peak": 0.833,
+     "late": 0,
+     "settle_peak": 0.836
+    },
+    {
+     "condition": "triggered/regular/note 108",
+     "peak": 0.831,
+     "late": 0,
+     "settle_peak": 0.837
+    },
+    {
+     "condition": "triggered/stereo/note 12",
+     "peak": 0.868,
+     "late": 0,
+     "settle_peak": 0.873
+    },
+    {
+     "condition": "triggered/stereo/note 36",
+     "peak": 0.868,
+     "late": 0,
+     "settle_peak": 0.871
+    },
+    {
+     "condition": "triggered/stereo/note 60",
+     "peak": 0.868,
+     "late": 0,
+     "settle_peak": 0.871
+    },
+    {
+     "condition": "triggered/stereo/note 84",
+     "peak": 0.87,
+     "late": 0,
+     "settle_peak": 0.873
+    },
+    {
+     "condition": "triggered/stereo/note 108",
+     "peak": 0.869,
+     "late": 0,
+     "settle_peak": 0.875
+    },
+    {
+     "condition": "triggered/sub-osc/note 12",
+     "peak": 0.828,
+     "late": 0,
+     "settle_peak": 0.833
+    },
+    {
+     "condition": "triggered/sub-osc/note 36",
+     "peak": 0.828,
+     "late": 0,
+     "settle_peak": 0.832
+    },
+    {
+     "condition": "triggered/sub-osc/note 60",
+     "peak": 0.828,
+     "late": 0,
+     "settle_peak": 0.831
+    },
+    {
+     "condition": "triggered/sub-osc/note 84",
+     "peak": 0.83,
+     "late": 0,
+     "settle_peak": 0.834
+    },
+    {
+     "condition": "triggered/sub-osc/note 108",
+     "peak": 0.829,
+     "late": 0,
+     "settle_peak": 0.836
+    },
+    {
+     "condition": "gated/regular/note 12",
+     "peak": 0.826,
+     "late": 0,
+     "settle_peak": 0.831
+    },
+    {
+     "condition": "gated/regular/note 36",
+     "peak": 0.826,
+     "late": 0,
+     "settle_peak": 0.831
+    },
+    {
+     "condition": "gated/regular/note 60",
+     "peak": 0.826,
+     "late": 0,
+     "settle_peak": 0.831
+    },
+    {
+     "condition": "gated/regular/note 84",
+     "peak": 0.829,
+     "late": 0,
+     "settle_peak": 0.833
+    },
+    {
+     "condition": "gated/regular/note 108",
+     "peak": 0.829,
+     "late": 0,
+     "settle_peak": 0.834
+    },
+    {
+     "condition": "gated/stereo/note 12",
+     "peak": 0.864,
+     "late": 0,
+     "settle_peak": 0.868
+    },
+    {
+     "condition": "gated/stereo/note 36",
+     "peak": 0.864,
+     "late": 0,
+     "settle_peak": 0.869
+    },
+    {
+     "condition": "gated/stereo/note 60",
+     "peak": 0.864,
+     "late": 0,
+     "settle_peak": 0.87
+    },
+    {
+     "condition": "gated/stereo/note 84",
+     "peak": 0.867,
+     "late": 0,
+     "settle_peak": 0.871
+    },
+    {
+     "condition": "gated/stereo/note 108",
+     "peak": 0.868,
+     "late": 0,
+     "settle_peak": 0.872
+    },
+    {
+     "condition": "gated/sub-osc/note 12",
+     "peak": 0.824,
+     "late": 0,
+     "settle_peak": 0.829
+    },
+    {
+     "condition": "gated/sub-osc/note 36",
+     "peak": 0.824,
+     "late": 0,
+     "settle_peak": 0.829
+    },
+    {
+     "condition": "gated/sub-osc/note 60",
+     "peak": 0.824,
+     "late": 0,
+     "settle_peak": 0.83
+    },
+    {
+     "condition": "gated/sub-osc/note 84",
+     "peak": 0.826,
+     "late": 0,
+     "settle_peak": 0.831
+    },
+    {
+     "condition": "gated/sub-osc/note 108",
+     "peak": 0.827,
+     "late": 0,
+     "settle_peak": 0.831
+    }
+   ],
+   "tails": [
+    {
+     "case": 0,
+     "peak": 0.83,
+     "late": 0,
+     "final_second_peak": 0.828
+    },
+    {
+     "case": 1,
+     "peak": 0.83,
+     "late": 0,
+     "final_second_peak": 0.828
+    },
+    {
+     "case": 2,
+     "peak": 0.83,
+     "late": 0,
+     "final_second_peak": 0.828
+    },
+    {
+     "case": 3,
+     "peak": 0.868,
+     "late": 0,
+     "final_second_peak": 0.866
+    },
+    {
+     "case": 4,
+     "peak": 0.868,
+     "late": 0,
+     "final_second_peak": 0.866
+    },
+    {
+     "case": 5,
+     "peak": 0.868,
+     "late": 0,
+     "final_second_peak": 0.866
+    }
+   ],
+   "stretch": 0.9999640645753521,
+   "anchored": true,
+   "host_glitches": {
+    "switch": 1,
+    "grid": 1,
+    "random": 0,
+    "tail": 0
+   }
+  },
+  {
+   "engine": 23,
+   "name": "wave-scan",
+   "stereo_capable": true,
+   "grid": {
+    "peak": 0.901,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 1675,
+    "over_ninety_blocks": 51
+   },
+   "random": {
+    "peak": 0.901,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 133,
+    "over_ninety_blocks": 38
+   },
+   "tail": {
+    "peak": 0.899,
+    "late": 0,
+    "late_states": 0,
+    "worst_state": 3,
+    "over_ninety_blocks": 0
+   },
+   "tail_worst_block": 11,
+   "switch_in_peak": 0.646,
+   "switch_in_late": 0,
+   "double_pending": 0,
+   "late_with_overhead": 297,
+   "conditions": [
+    {
+     "condition": "unpatched/regular/note 12",
+     "peak": 0.829,
+     "late": 0,
+     "settle_peak": 0.83
+    },
+    {
+     "condition": "unpatched/regular/note 36",
+     "peak": 0.829,
+     "late": 0,
+     "settle_peak": 0.83
+    },
+    {
+     "condition": "unpatched/regular/note 60",
+     "peak": 0.829,
+     "late": 0,
+     "settle_peak": 0.83
+    },
+    {
+     "condition": "unpatched/regular/note 84",
+     "peak": 0.829,
+     "late": 0,
+     "settle_peak": 0.83
+    },
+    {
+     "condition": "unpatched/regular/note 108",
+     "peak": 0.829,
+     "late": 0,
+     "settle_peak": 0.829
+    },
+    {
+     "condition": "unpatched/stereo/note 12",
+     "peak": 0.843,
+     "late": 0,
+     "settle_peak": 0.843
+    },
+    {
+     "condition": "unpatched/stereo/note 36",
+     "peak": 0.843,
+     "late": 0,
+     "settle_peak": 0.844
+    },
+    {
+     "condition": "unpatched/stereo/note 60",
+     "peak": 0.843,
+     "late": 0,
+     "settle_peak": 0.843
+    },
+    {
+     "condition": "unpatched/stereo/note 84",
+     "peak": 0.843,
+     "late": 0,
+     "settle_peak": 0.844
+    },
+    {
+     "condition": "unpatched/stereo/note 108",
+     "peak": 0.843,
+     "late": 0,
+     "settle_peak": 0.843
+    },
+    {
+     "condition": "unpatched/sub-osc/note 12",
+     "peak": 0.848,
+     "late": 0,
+     "settle_peak": 0.848
+    },
+    {
+     "condition": "unpatched/sub-osc/note 36",
+     "peak": 0.848,
+     "late": 0,
+     "settle_peak": 0.849
+    },
+    {
+     "condition": "unpatched/sub-osc/note 60",
+     "peak": 0.848,
+     "late": 0,
+     "settle_peak": 0.849
+    },
+    {
+     "condition": "unpatched/sub-osc/note 84",
+     "peak": 0.848,
+     "late": 0,
+     "settle_peak": 0.849
+    },
+    {
+     "condition": "unpatched/sub-osc/note 108",
+     "peak": 0.848,
+     "late": 0,
+     "settle_peak": 0.848
+    },
+    {
+     "condition": "triggered/regular/note 12",
+     "peak": 0.889,
+     "late": 0,
+     "settle_peak": 0.888
+    },
+    {
+     "condition": "triggered/regular/note 36",
+     "peak": 0.889,
+     "late": 0,
+     "settle_peak": 0.887
+    },
+    {
+     "condition": "triggered/regular/note 60",
+     "peak": 0.887,
+     "late": 0,
+     "settle_peak": 0.887
+    },
+    {
+     "condition": "triggered/regular/note 84",
+     "peak": 0.887,
+     "late": 0,
+     "settle_peak": 0.887
+    },
+    {
+     "condition": "triggered/regular/note 108",
+     "peak": 0.887,
+     "late": 0,
+     "settle_peak": 0.887
+    },
+    {
+     "condition": "triggered/stereo/note 12",
+     "peak": 0.901,
+     "late": 0,
+     "settle_peak": 0.898
+    },
+    {
+     "condition": "triggered/stereo/note 36",
+     "peak": 0.901,
+     "late": 0,
+     "settle_peak": 0.898
+    },
+    {
+     "condition": "triggered/stereo/note 60",
+     "peak": 0.9,
+     "late": 0,
+     "settle_peak": 0.898
+    },
+    {
+     "condition": "triggered/stereo/note 84",
+     "peak": 0.899,
+     "late": 0,
+     "settle_peak": 0.898
+    },
+    {
+     "condition": "triggered/stereo/note 108",
+     "peak": 0.899,
+     "late": 0,
+     "settle_peak": 0.898
+    },
+    {
+     "condition": "triggered/sub-osc/note 12",
+     "peak": 0.887,
+     "late": 0,
+     "settle_peak": 0.885
+    },
+    {
+     "condition": "triggered/sub-osc/note 36",
+     "peak": 0.887,
+     "late": 0,
+     "settle_peak": 0.885
+    },
+    {
+     "condition": "triggered/sub-osc/note 60",
+     "peak": 0.887,
+     "late": 0,
+     "settle_peak": 0.885
+    },
+    {
+     "condition": "triggered/sub-osc/note 84",
+     "peak": 0.885,
+     "late": 0,
+     "settle_peak": 0.885
+    },
+    {
+     "condition": "triggered/sub-osc/note 108",
+     "peak": 0.885,
+     "late": 0,
+     "settle_peak": 0.885
+    },
+    {
+     "condition": "gated/regular/note 12",
+     "peak": 0.885,
+     "late": 0,
+     "settle_peak": 0.885
+    },
+    {
+     "condition": "gated/regular/note 36",
+     "peak": 0.885,
+     "late": 0,
+     "settle_peak": 0.885
+    },
+    {
+     "condition": "gated/regular/note 60",
+     "peak": 0.885,
+     "late": 0,
+     "settle_peak": 0.885
+    },
+    {
+     "condition": "gated/regular/note 84",
+     "peak": 0.885,
+     "late": 0,
+     "settle_peak": 0.885
+    },
+    {
+     "condition": "gated/regular/note 108",
+     "peak": 0.885,
+     "late": 0,
+     "settle_peak": 0.885
+    },
+    {
+     "condition": "gated/stereo/note 12",
+     "peak": 0.897,
+     "late": 0,
+     "settle_peak": 0.897
+    },
+    {
+     "condition": "gated/stereo/note 36",
+     "peak": 0.897,
+     "late": 0,
+     "settle_peak": 0.897
+    },
+    {
+     "condition": "gated/stereo/note 60",
+     "peak": 0.897,
+     "late": 0,
+     "settle_peak": 0.897
+    },
+    {
+     "condition": "gated/stereo/note 84",
+     "peak": 0.897,
+     "late": 0,
+     "settle_peak": 0.897
+    },
+    {
+     "condition": "gated/stereo/note 108",
+     "peak": 0.897,
+     "late": 0,
+     "settle_peak": 0.897
+    },
+    {
+     "condition": "gated/sub-osc/note 12",
+     "peak": 0.883,
+     "late": 0,
+     "settle_peak": 0.883
+    },
+    {
+     "condition": "gated/sub-osc/note 36",
+     "peak": 0.883,
+     "late": 0,
+     "settle_peak": 0.883
+    },
+    {
+     "condition": "gated/sub-osc/note 60",
+     "peak": 0.883,
+     "late": 0,
+     "settle_peak": 0.883
+    },
+    {
+     "condition": "gated/sub-osc/note 84",
+     "peak": 0.883,
+     "late": 0,
+     "settle_peak": 0.883
+    },
+    {
+     "condition": "gated/sub-osc/note 108",
+     "peak": 0.883,
+     "late": 0,
+     "settle_peak": 0.883
+    }
+   ],
+   "tails": [
+    {
+     "case": 0,
+     "peak": 0.888,
+     "late": 0,
+     "final_second_peak": 0.886
+    },
+    {
+     "case": 1,
+     "peak": 0.888,
+     "late": 0,
+     "final_second_peak": 0.886
+    },
+    {
+     "case": 2,
+     "peak": 0.888,
+     "late": 0,
+     "final_second_peak": 0.886
+    },
+    {
+     "case": 3,
+     "peak": 0.899,
+     "late": 0,
+     "final_second_peak": 0.897
+    },
+    {
+     "case": 4,
+     "peak": 0.899,
+     "late": 0,
+     "final_second_peak": 0.897
+    },
+    {
+     "case": 5,
+     "peak": 0.899,
+     "late": 0,
+     "final_second_peak": 0.897
+    }
+   ],
+   "stretch": 0.9999778334622984,
+   "anchored": true,
+   "host_glitches": {
+    "switch": 0,
+    "grid": 0,
+    "random": 0,
+    "tail": 0
+   }
+  }
+ ],
+ "clock_ratio": 1.0026404994036497,
+ "ladder": [
+  {
+   "load": 0.8,
+   "peak": 0.802,
+   "late": 0,
+   "late_with_overhead": 0,
+   "host_glitches": 0
+  },
+  {
+   "load": 0.82,
+   "peak": 0.822,
+   "late": 0,
+   "late_with_overhead": 0,
+   "host_glitches": 0
+  },
+  {
+   "load": 0.84,
+   "peak": 0.842,
+   "late": 0,
+   "late_with_overhead": 0,
+   "host_glitches": 0
+  },
+  {
+   "load": 0.86,
+   "peak": 0.862,
+   "late": 0,
+   "late_with_overhead": 0,
+   "host_glitches": 12
+  },
+  {
+   "load": 0.88,
+   "peak": 0.882,
+   "late": 0,
+   "late_with_overhead": 0,
+   "host_glitches": 58
+  },
+  {
+   "load": 0.9,
+   "peak": 0.902,
+   "late": 0,
+   "late_with_overhead": 0,
+   "host_glitches": 134
+  },
+  {
+   "load": 0.92,
+   "peak": 0.922,
+   "late": 4711,
+   "late_with_overhead": 6004,
+   "host_glitches": 366
+  },
+  {
+   "load": 0.94,
+   "peak": 0.942,
+   "late": 4765,
+   "late_with_overhead": 6021,
+   "host_glitches": 470
+  },
+  {
+   "load": 0.96,
+   "peak": 0.962,
+   "late": 4786,
+   "late_with_overhead": 6048,
+   "host_glitches": 418
+  },
+  {
+   "load": 0.98,
+   "peak": 0.982,
+   "late": 4786,
+   "late_with_overhead": 6072,
+   "host_glitches": 377
+  },
+  {
+   "load": 1.0,
+   "peak": 1.002,
+   "late": 4786,
+   "late_with_overhead": 6098,
+   "host_glitches": 336
+  },
+  {
+   "load": 1.02,
+   "peak": 1.022,
+   "late": 4786,
+   "late_with_overhead": 6109,
+   "host_glitches": 396
+  },
+  {
+   "load": 1.04,
+   "peak": 1.042,
+   "late": 4786,
+   "late_with_overhead": 6140,
+   "host_glitches": 308
+  },
+  {
+   "load": 1.06,
+   "peak": 1.062,
+   "late": 4786,
+   "late_with_overhead": 6166,
+   "host_glitches": 239
+  },
+  {
+   "load": 1.08,
+   "peak": 1.082,
+   "late": 4786,
+   "late_with_overhead": 6186,
+   "host_glitches": 211
+  },
+  {
+   "load": 1.1,
+   "peak": 1.102,
+   "late": 4786,
+   "late_with_overhead": 6214,
+   "host_glitches": 168
+  },
+  {
+   "load": 1.12,
+   "peak": 1.122,
+   "late": 4786,
+   "late_with_overhead": 6245,
+   "host_glitches": 122
+  },
+  {
+   "load": 1.14,
+   "peak": 1.142,
+   "late": 4786,
+   "late_with_overhead": 6259,
+   "host_glitches": 124
+  },
+  {
+   "load": 1.16,
+   "peak": 1.162,
+   "late": 4786,
+   "late_with_overhead": 6286,
+   "host_glitches": 97
+  },
+  {
+   "load": 1.18,
+   "peak": 1.182,
+   "late": 4786,
+   "late_with_overhead": 6310,
+   "host_glitches": 164
+  },
+  {
+   "load": 1.2,
+   "peak": 1.202,
+   "late": 4786,
+   "late_with_overhead": 6333,
+   "host_glitches": 93
+  }
+ ],
+ "end": {
+  "type": "end",
+  "failure_mask": 3,
+  "blocks": 6346670,
+  "max_sweep_overhead": 0.831,
+  "max_entry_lag_frames": 23,
+  "mean_sweep_overhead": 0.089
+ }
+}

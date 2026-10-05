@@ -1,0 +1,30 @@
+{
+  "group": 1,
+  "engines": [
+    "csaw",
+    "scale-stack",
+    "diatonic-chord",
+    "bowed",
+    "morph",
+    "brass",
+    "granular-formant",
+    "plucked",
+    "struck-drum",
+    "cymbal",
+    "two-op-fm",
+    "modal-resonator",
+    "particle-noise",
+    "inharmonic-string",
+    "dx7-bank-a",
+    "chords",
+    "scanned",
+    "chiptune",
+    "fluted",
+    "blown",
+    "helix",
+    "fold",
+    "saw-swarm"
+  ],
+  "sourceRevision": "9b2b40306ff5343166a2b0c797703c7f3a8db992",
+  "sourceDirty": false
+}
