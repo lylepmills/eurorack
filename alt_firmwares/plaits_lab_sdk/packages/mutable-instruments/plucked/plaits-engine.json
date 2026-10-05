@@ -31,8 +31,8 @@
     },
     {
       "id": "morph",
-      "label": "Spread",
-      "description": "Offsets each round-robin voice by a fixed interval, building a small chord. Unison, the module, at noon."
+      "label": "Chord",
+      "description": "Picks a chord from the chord table; each strike plays its next tone. Unison, the module, fully counter-clockwise."
     },
     {
       "id": "macro",
@@ -45,6 +45,9 @@
     "aux": "Mono: the raw noise excitation only, silent between strikes. Stereo: dropped in favor of panning each voice to a fixed round-robin position."
   },
   "trigger": "Plucks the next voice in the three-string round robin.",
+  "sharedModules": [
+    "chord-bank"
+  ],
   "source": {
     "root": "../../../../..",
     "header": "plaits/dsp/engine2/plucked_engine.h",

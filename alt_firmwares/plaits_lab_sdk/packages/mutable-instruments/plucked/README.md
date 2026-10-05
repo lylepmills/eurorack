@@ -31,12 +31,16 @@ metallic rattle at the top. COLOR is Pluck — how much of one string period
 gets struck with fresh noise, from a narrow flick to most of the cycle, read
 once at the strike.
 
-Spread and Stretch are the two new ones, both stock at noon. Spread offsets
-each round-robin voice by a fixed interval, so three strikes build a small
-arpeggiated chord as they decay together — unison, exactly the module, at
-noon. Stretch scales how far Damping's stochastic detuning reaches: fully off at
-the bottom, easing up to the module's own ceiling at exactly noon, and
-further than a real PLUK goes above it.
+Chord and Stretch are the two new ones. Chord (MORPH) picks a chord from the
+module's selected chord table — the same shared tables as Chords and String
+Machine, editable in Plaits Palette — and successive strikes play its tones in
+turn, so the ringing strings build an arpeggiated chord as they decay together.
+Fully counter-clockwise is unison, exactly the module; the table spans the rest
+of the knob. Tones are the table's pitches as written, a four-tone chord cycles
+over four strikes, and a new chord starts on its first tone. Stretch, stock at
+noon, scales how far Damping's stochastic detuning reaches: fully off at the
+bottom, easing up to the module's own ceiling at exactly noon, and further than
+a real PLUK goes above it.
 
 ## Rate and delay length
 

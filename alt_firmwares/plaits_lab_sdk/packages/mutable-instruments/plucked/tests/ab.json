@@ -1,6 +1,6 @@
 {
   "shape": "PLUCKED",
-  "note": "Braids' TIMBRE is Damping and its COLOR is Pluck, so p1 maps to the engine's TIMBRE and p2 to its HARMONICS. MORPH and MACRO sit at noon in every case -- Spread is unison there (the module's own always-unison round robin) and Stretch reproduces Braids' own ceiling exactly, so these cases compare the same sound the module makes. This is a triggered/decaying model: every case sets triggerHz so both sides render a whole, matched number of strikes rather than one side catching a hit mid-decay. NOTE CHOICE MATTERS HERE: Braids runs its loop filter size/period times per output sample, a ratio that sweeps (1, 2] across each power-of-two band while the port always runs exactly 1 (engine header, DELAY-LINE MODEL item 1), so fidelity varies with WHERE a note sits in that ladder, not just with register. notes 21/45/69 are all A's and all sit at ratio 1.17; `ladder-worst` (note 54, ratio 1.97) samples the other end and is the worst case in the file. `low-register` drops `cents` because the port cannot reach that fundamental at all -- a real gap against a module that plays it in tune, not a shared limit (DELAY-LINE MODEL item 2).",
+  "note": "Braids' TIMBRE is Damping and its COLOR is Pluck, so p1 maps to the engine's TIMBRE and p2 to its HARMONICS. MORPH sits fully counter-clockwise and MACRO at noon in every case -- Chord is unison there (the module's own always-unison round robin) and Stretch reproduces Braids' own ceiling exactly, so these cases compare the same sound the module makes. This is a triggered/decaying model: every case sets triggerHz so both sides render a whole, matched number of strikes rather than one side catching a hit mid-decay. NOTE CHOICE MATTERS HERE: Braids runs its loop filter size/period times per output sample, a ratio that sweeps (1, 2] across each power-of-two band while the port always runs exactly 1 (engine header, DELAY-LINE MODEL item 1), so fidelity varies with WHERE a note sits in that ladder, not just with register. notes 21/45/69 are all A's and all sit at ratio 1.17; `ladder-worst` (note 54, ratio 1.97) samples the other end and is the worst case in the file. `low-register` drops `cents` because the port cannot reach that fundamental at all -- a real gap against a module that plays it in tune, not a shared limit (DELAY-LINE MODEL item 2).",
   "cases": [
     {
       "id": "stock-mid",
@@ -15,7 +15,7 @@
       "engine": {
         "timbre": 0.5,
         "harmonics": 0.5,
-        "morph": 0.5,
+        "morph": 0.0,
         "macro": 0.5
       },
       "tolerance": {
@@ -37,7 +37,7 @@
       "engine": {
         "timbre": 0.0,
         "harmonics": 0.5,
-        "morph": 0.5,
+        "morph": 0.0,
         "macro": 0.5
       },
       "tolerance": {
@@ -59,7 +59,7 @@
       "engine": {
         "timbre": 1.0,
         "harmonics": 0.5,
-        "morph": 0.5,
+        "morph": 0.0,
         "macro": 0.5
       },
       "tolerance": {
@@ -80,7 +80,7 @@
       "engine": {
         "timbre": 0.6,
         "harmonics": 0.0,
-        "morph": 0.5,
+        "morph": 0.0,
         "macro": 0.5
       },
       "tolerance": {
@@ -102,7 +102,7 @@
       "engine": {
         "timbre": 0.6,
         "harmonics": 1.0,
-        "morph": 0.5,
+        "morph": 0.0,
         "macro": 0.5
       },
       "tolerance": {
@@ -124,7 +124,7 @@
       "engine": {
         "timbre": 0.5,
         "harmonics": 0.5,
-        "morph": 0.5,
+        "morph": 0.0,
         "macro": 0.5
       },
       "tolerance": {
@@ -146,7 +146,7 @@
       "engine": {
         "timbre": 0.5,
         "harmonics": 0.5,
-        "morph": 0.5,
+        "morph": 0.0,
         "macro": 0.5
       },
       "tolerance": {
@@ -168,7 +168,7 @@
       "engine": {
         "timbre": 0.5,
         "harmonics": 0.5,
-        "morph": 0.5,
+        "morph": 0.0,
         "macro": 0.5
       },
       "tolerance": {

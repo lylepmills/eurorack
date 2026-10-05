@@ -70,7 +70,7 @@ AUDITED_BRAIDS_CONTROLS = {
     "morph": ["Fuzz", "Shape", "Tone", "Drive"],
     "noise-bank": ["Model", "Color", "Shape", "Drive"],
     "particle-burst": ["Scatter", "Density", "Chord width", "Decay"],
-    "plucked": ["Pluck", "Damping", "Spread", "Stretch"],
+    "plucked": ["Pluck", "Damping", "Chord", "Stretch"],
     "question-mark": ["Static", "Speed", "Bed", "Grit"],
     "raw-fm": ["Ratio", "Index", "Character", "Depth"],
     "ring-mod": ["Detune 1", "Detune 2", "Depth", "Drive"],

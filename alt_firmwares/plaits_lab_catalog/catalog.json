@@ -2656,7 +2656,7 @@
       "controls": [
         "Pluck",
         "Damping",
-        "Spread",
+        "Chord",
         "Stretch"
       ],
       "outputs": [
@@ -2671,6 +2671,9 @@
           "plaits/dsp/engine2/plucked_engine.cc"
         ]
       },
+      "sharedModules": [
+        "chord-bank"
+      ],
       "postProcessing": {
         "alreadyEnveloped": false,
         "outGain": 1.537,
@@ -4675,7 +4678,7 @@
       "controls": {
         "harmonics": "How much of one string period gets struck with noise, from a narrow flick to most of the cycle.",
         "timbre": "Below noon, extra muting under the decay. Above noon, random skipped filter passes stretch and detune it toward metal.",
-        "morph": "Offsets each round-robin voice by a fixed interval, building a small chord. Unison, the module, at noon.",
+        "morph": "Picks a chord from the chord table; each strike plays its next tone. Unison, the module, fully counter-clockwise.",
         "macro": "How far Damping's random detuning reaches: off at the bottom, the module's ceiling at noon, past it above."
       },
       "trigger": "Plucks the next voice in the three-string round robin."

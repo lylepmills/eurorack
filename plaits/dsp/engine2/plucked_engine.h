@@ -171,15 +171,22 @@
 // invisible to every tests/ab.json case (all of which set triggerHz > 0).
 //
 // THE FOURTH MACRO.
-//   MORPH  Spread   Braids' three voices always strike at whatever note is
-//                    currently played -- unison, always. This port lets
-//                    MORPH offset each round-robin slot by a fixed interval
-//                    (`voice_index * spread`, +/-7 semitones at the
-//                    extremes, 0 -- unison, exactly the module -- at noon),
-//                    so three successive strikes build a small arpeggiated
-//                    chord as they decay together. Neither the module nor
+//   MORPH  Chord    Braids' three voices always strike at whatever note is
+//                    currently played -- unison, always. Here MORPH picks a
+//                    chord from the module's selected chord table (the shared
+//                    chord bank, editable in Plaits Palette), and successive
+//                    strikes play its tones in turn, so the three ringing
+//                    strings build an arpeggiated chord. Fully CCW is unison,
+//                    exactly the module; the table spans the rest of the
+//                    knob. Tones are the table's own pitches, as written, and
+//                    a chord of four tones cycles over four strikes (the
+//                    fourth re-plucks the oldest string). A new chord starts
+//                    on its first tone. Neither the module nor
 //                    inharmonic-string (also always-unison round robin,
-//                    string_engine.cc:71-77) can do this.
+//                    string_engine.cc:71-77) can do this. Chosen by ear on
+//                    hardware (2026-10-05) over a continuous spread, stepped
+//                    fifth/fourth stacks, a fixed chord list, and table
+//                    variants that dropped or folded tones.
 //   MACRO  Stretch  Scales how far `update_probability` is allowed to fall
 //                    below "always filter" -- 0 disables the stochastic
 //                    detuning entirely at every TIMBRE setting (a clean,
@@ -291,9 +298,6 @@ const float kPluckedWidthGain = 1.5f;
 const float kPluckedWidthBase = 8192.0f;
 const float kPluckedWidthFull = 65536.0f;
 
-// MORPH: Spread, +/-7 semitones per round-robin step at the extremes.
-const float kPluckedMaxSpread = 7.0f;
-
 // MACRO: Stretch, scales how far below 1.0 the update-probability fraction
 // may fall. 1.0 at macro=0.5 reproduces Braids' own ceiling exactly.
 const float kPluckedMaxStretch = 2.5f;
@@ -302,67 +306,9 @@ const float kPluckedMaxStretch = 2.5f;
 // stereo-position idiom.
 extern const float kPluckedPan[kNumPluckVoices];
 
-// What MORPH does to the three round-robin voices. The shipped CONTINUOUS
-// spread offsets voice k by k * spread semitones, which has two problems: the
-// module's own sound (unison) sits in a +/-0.36% window at noon, and equal
-// steps can only ever build SYMMETRIC stacks -- 0/3/6, 0/4/8, 0/3.7/7.4 --
-// never a major or minor triad. The two stepped modes fix both, and are
-// selectable per instance so one firmware can compare them.
-enum PluckedMorph {
-  // Shipped behaviour: continuous +/-7 semitones per round-robin step.
-  PLUCKED_MORPH_CONTINUOUS = 0,
-  // The same k * step structure, with the step snapped to consonant stacks --
-  // fifths and fourths, either direction. Five positions, so unison captures
-  // +/-12.5% of travel instead of +/-0.36%.
-  PLUCKED_MORPH_STACKS,
-  // Voice k plays tone k of a chord shape: unison at noon, open and minor
-  // shapes counter-clockwise, open and major shapes clockwise. Nine positions,
-  // unison captures +/-6.25%. Voice 0 is always the played note, so V/OCT
-  // keeps meaning the root.
-  PLUCKED_MORPH_CHORDS,
-  // LISTENING PROTOTYPES (2026-10-05). Both put unison at fully CCW and
-  // sequence a chord's tones strike by strike from its first tone, restarting
-  // whenever the chord changes; the round robin still decides which string
-  // rings. CHORDS_CCW: the nine CHORDS shapes, unison first, then dark to
-  // bright.
-  PLUCKED_MORPH_CHORDS_CCW,
-  // TABLE: the module's selected chord table (the editable Palette tables),
-  // with unison prepended. How a chord becomes strikes is set by
-  // set_table_voicing().
-  PLUCKED_MORPH_TABLE
-};
-
-// TABLE mode: what to do with a chord of four distinct tones, given three
-// strings. ARPEGGIATE cycles every tone (a fourth strike re-plucks the oldest
-// string); FIRST_THREE drops the fourth tone; OMIT_FIFTH drops the fifth when
-// there is one, keeping the chord's colour tone.
-enum PluckedFourTone {
-  PLUCKED_FOUR_TONE_ARPEGGIATE = 0,
-  PLUCKED_FOUR_TONE_FIRST_THREE,
-  PLUCKED_FOUR_TONE_OMIT_FIFTH
-};
-
-// TABLE mode: AS_WRITTEN keeps the table's pitches (up to about two octaves
-// above the played note); FOLDED drops every tone into the octave above it.
-enum PluckedRange {
-  PLUCKED_RANGE_AS_WRITTEN = 0,
-  PLUCKED_RANGE_FOLDED
-};
-
 class PluckedEngine : public Engine {
  public:
-  PluckedEngine()
-      : morph_mode_(PLUCKED_MORPH_CONTINUOUS),
-        four_tone_(PLUCKED_FOUR_TONE_ARPEGGIATE),
-        range_(PLUCKED_RANGE_AS_WRITTEN) { }
-
-  // Set at registration, which runs before Voice::Init calls Init(); neither
-  // Init() nor Reset() touches it.
-  void set_morph_mode(PluckedMorph mode) { morph_mode_ = mode; }
-  void set_table_voicing(PluckedFourTone four_tone, PluckedRange range) {
-    four_tone_ = four_tone;
-    range_ = range;
-  }
+  PluckedEngine() { }
   ~PluckedEngine() { }
 
   virtual void Init(stmlib::BufferAllocator* allocator);
@@ -381,18 +327,14 @@ class PluckedEngine : public Engine {
   float min_period_[kNumPluckVoices];
   float excitation_remaining_[kNumPluckVoices];
 
+  // MORPH's chord: the knob's slot (0 = unison, then the table), refreshed
+  // every block so the hysteresis tracks the knob, and the tones a strike
+  // draws from as ratios of the played note. Returns how many.
+  int SelectChord(const EngineParameters& parameters, float* ratios);
+
   int active_voice_;
-  float active_offset_semitones_;
-  PluckedMorph morph_mode_;
-  stmlib::HysteresisQuantizer2 stack_quantizer_;
-  stmlib::HysteresisQuantizer2 chord_quantizer_;
   bool ever_struck_;
 
-  // CHORDS_CCW / TABLE state. The strike's pitch is a ratio of the played
-  // note's frequency (active_ratio_) rather than a semitone offset.
-  int SelectSequence(const EngineParameters& parameters, float* ratios);
-  PluckedFourTone four_tone_;
-  PluckedRange range_;
   ChordBank chords_;
   stmlib::HysteresisQuantizer2 slot_quantizer_;
   int slot_count_;
