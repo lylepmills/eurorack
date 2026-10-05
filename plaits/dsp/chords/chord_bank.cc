@@ -167,6 +167,26 @@ void ChordBank::set_chord(float parameter, uint8_t chord_set_option) {
   }
 }
 
+int ChordBank::table_size(uint8_t chord_set_option) {
+  if (chord_set_option >= PLAITS_CHORD_TABLE_COUNT_REF) {
+    chord_set_option = 0;
+  }
+  return PLAITS_CHORD_TABLE_SIZES_REF[chord_set_option];
+}
+
+void ChordBank::set_chord_index(int index, uint8_t chord_set_option) {
+  if (chord_set_option >= PLAITS_CHORD_TABLE_COUNT_REF) {
+    chord_set_option = 0;
+  }
+  const int size = PLAITS_CHORD_TABLE_SIZES_REF[chord_set_option];
+  CONSTRAIN(index, 0, size - 1);
+  const int chord_index = PLAITS_CHORD_TABLE_OFFSETS_REF[chord_set_option] +
+      index;
+  if (chord_index_ != chord_index) {
+    UpdateRatios(chord_index);
+  }
+}
+
 void ChordBank::Reset() {
   chord_set_option_ = 0xff;
   chord_index_ = -1;

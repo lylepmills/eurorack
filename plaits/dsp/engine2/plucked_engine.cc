@@ -57,6 +57,22 @@ inline float PluckedPeriod(float note) {
   return period;
 }
 
+// The same, for a strike given as a ratio of the played note's frequency.
+inline float PluckedPeriodFromFrequency(float frequency) {
+  float period = 1.0f / max(frequency, 1e-7f);
+  CONSTRAIN(period, kPluckedMinPeriod, kPluckedDelaySize - 4.0f);
+  return period;
+}
+
+// CHORDS_CCW: the CHORDS shapes in knob order, unison first, then the
+// counter-clockwise shapes (dark) and the clockwise ones (bright).
+const int kPluckedChordCcwOrder[kPluckedChordCount] = {
+  4, 0, 1, 2, 3, 5, 6, 7, 8
+};
+
+// A fifth, folded into [1, 2): 2^(7/12).
+const float kPluckedFifthRatio = 1.4983071f;
+
 // Mirrors the shift search at digital_oscillator.cc:1099-1105: the smallest
 // power-of-two buffer Braids would pick for this pitch, which is >= the true
 // period but not equal to it (a coarse, power-of-two-only quantisation).
@@ -66,8 +82,8 @@ inline float PluckedPeriod(float note) {
 // measured 10-15% short at COLOR extremes and read audibly duller/quieter
 // through the harmonic-rich mid band than Braids in every case, corrected by
 // this.
-inline float PluckedQuantizedSize(float note) {
-  float doubled_increment = NoteToFrequency(note) * 4294967296.0f;
+inline float PluckedQuantizedSizeFromFrequency(float frequency) {
+  float doubled_increment = frequency * 4294967296.0f;
   float size = 1024.0f;
   while (doubled_increment > 8388608.0f) {
     doubled_increment *= 0.5f;
@@ -75,6 +91,10 @@ inline float PluckedQuantizedSize(float note) {
   }
   CONSTRAIN(size, 8.0f, static_cast<float>(kPluckedDelaySize));
   return size;
+}
+
+inline float PluckedQuantizedSize(float note) {
+  return PluckedQuantizedSizeFromFrequency(NoteToFrequency(note));
 }
 
 }  // namespace
@@ -85,6 +105,8 @@ void PluckedEngine::Init(BufferAllocator* allocator) {
   // between strikes.
   stack_quantizer_.Init(kPluckedStackCount, 0.2f, true);
   chord_quantizer_.Init(kPluckedChordCount, 0.2f, true);
+  chords_.Init(allocator);
+  slot_count_ = 0;
   for (int v = 0; v < kNumPluckVoices; ++v) {
     delay_line_[v].Init(allocator->Allocate<float>(kPluckedDelaySize));
   }
@@ -100,9 +122,90 @@ void PluckedEngine::Reset() {
   }
   active_voice_ = 0;
   active_offset_semitones_ = 0.0f;
+  chords_.Reset();
+  slot_ = -1;
+  tone_counter_ = 0;
+  active_ratio_ = 1.0f;
   ever_struck_ = false;
   loss_frac_ = 0.0f;
   update_probability_frac_ = 1.0f;
+}
+
+// CHORDS_CCW / TABLE: the knob's slot, refreshed every block so the
+// hysteresis tracks the knob, and the tones a strike can draw from (as ratios
+// of the played note). Returns how many.
+int PluckedEngine::SelectSequence(
+    const EngineParameters& parameters, float* ratios) {
+  const int slot_count = morph_mode_ == PLUCKED_MORPH_CHORDS_CCW
+      ? kPluckedChordCount
+      : ChordBank::table_size(parameters.chord_set_option) + 1;
+  if (slot_count != slot_count_) {
+    slot_count_ = slot_count;
+    slot_quantizer_.Init(slot_count, 0.075f, false);
+  }
+  const int slot = slot_quantizer_.Process(parameters.morph * 1.02f);
+  if (slot != slot_) {
+    slot_ = slot;
+    tone_counter_ = 0;
+  }
+
+  if (morph_mode_ == PLUCKED_MORPH_CHORDS_CCW) {
+    const float* shape = kPluckedChord[kPluckedChordCcwOrder[slot]];
+    for (int v = 0; v < kNumPluckVoices; ++v) {
+      ratios[v] = SemitonesToRatio(shape[v]);
+    }
+    return kNumPluckVoices;
+  }
+
+  if (slot == 0) {
+    ratios[0] = 1.0f;
+    return 1;
+  }
+  chords_.set_chord_index(slot - 1, parameters.chord_set_option);
+  int count = chords_.num_notes();
+  CONSTRAIN(count, 1, kChordNumNotes);
+  // A one-tone chord ("Octave" in the stock table) would only repeat the
+  // unison slot below it; sound its stored octave as a second tone.
+  if (count == 1 && chords_.ratio(kChordNumNotes - 1) > 1.01f) {
+    ratios[0] = chords_.ratio(0);
+    ratios[1] = chords_.ratio(kChordNumNotes - 1);
+    count = 2;
+    return count;
+  }
+  for (int i = 0; i < count; ++i) {
+    float ratio = chords_.ratio(i);
+    if (range_ == PLUCKED_RANGE_FOLDED) {
+      while (ratio > 2.0001f) {
+        ratio *= 0.5f;
+      }
+    }
+    ratios[i] = ratio;
+  }
+  if (count == kChordNumNotes) {
+    if (four_tone_ == PLUCKED_FOUR_TONE_FIRST_THREE) {
+      count = 3;
+    } else if (four_tone_ == PLUCKED_FOUR_TONE_OMIT_FIFTH) {
+      // Drop the fifth, the least characteristic tone. A chord without one
+      // (minor 9th, 6/9...) keeps all four and arpeggiates them, since any
+      // tone dropped there would be one that defines it.
+      int fifth = -1;
+      for (int i = 0; i < count; ++i) {
+        float folded = ratios[i];
+        while (folded >= 2.0f) folded *= 0.5f;
+        if (fabsf(folded - kPluckedFifthRatio) < 0.01f) {
+          fifth = i;
+          break;
+        }
+      }
+      if (fifth >= 0) {
+        for (int i = fifth; i < count - 1; ++i) {
+          ratios[i] = ratios[i + 1];
+        }
+        count = 3;
+      }
+    }
+  }
+  return count;
 }
 
 void PluckedEngine::Render(
@@ -162,6 +265,11 @@ void PluckedEngine::Render(
       ? stack_quantizer_.Process(parameters.morph) : 0;
   const int chord_index = morph_mode_ == PLUCKED_MORPH_CHORDS
       ? chord_quantizer_.Process(parameters.morph) : 0;
+  const bool ratio_mode = morph_mode_ == PLUCKED_MORPH_CHORDS_CCW ||
+      morph_mode_ == PLUCKED_MORPH_TABLE;
+  float sequence[kChordNumNotes];
+  const int sequence_length = ratio_mode
+      ? SelectSequence(parameters, sequence) : 0;
 
   // TRIGGER_UNPATCHED has no Braids equivalent (the module always strikes
   // from its own trigger). Without this the engine renders pure SILENCE
@@ -175,7 +283,10 @@ void PluckedEngine::Render(
 
   if (rising_edge || self_strike) {
     active_voice_ = (active_voice_ + 1) % kNumPluckVoices;
-    if (morph_mode_ == PLUCKED_MORPH_STACKS) {
+    if (ratio_mode) {
+      active_ratio_ = sequence[tone_counter_ % sequence_length];
+      ++tone_counter_;
+    } else if (morph_mode_ == PLUCKED_MORPH_STACKS) {
       active_offset_semitones_ = kPluckedStackStep[stack_index] *
           static_cast<float>(active_voice_);
     } else if (morph_mode_ == PLUCKED_MORPH_CHORDS) {
@@ -184,8 +295,9 @@ void PluckedEngine::Render(
       active_offset_semitones_ = spread * static_cast<float>(active_voice_);
     }
 
-    const float struck_period = PluckedPeriod(
-        parameters.note + active_offset_semitones_);
+    const float struck_period = ratio_mode
+        ? PluckedPeriodFromFrequency(frequency * active_ratio_)
+        : PluckedPeriod(parameters.note + active_offset_semitones_);
     period_[active_voice_] = struck_period;
     min_period_[active_voice_] = struck_period * 0.5f;
 
@@ -196,8 +308,9 @@ void PluckedEngine::Render(
     float excitation_fraction = (kPluckedWidthBase + width) /
         kPluckedWidthFull;
     CONSTRAIN(excitation_fraction, 0.0f, 1.0f);
-    const float quantized_size = PluckedQuantizedSize(
-        parameters.note + active_offset_semitones_);
+    const float quantized_size = ratio_mode
+        ? PluckedQuantizedSizeFromFrequency(frequency * active_ratio_)
+        : PluckedQuantizedSize(parameters.note + active_offset_semitones_);
     excitation_remaining_[active_voice_] = max(
         1.0f, excitation_fraction * quantized_size);
     ever_struck_ = true;
@@ -208,8 +321,9 @@ void PluckedEngine::Render(
   // at most an octave above where it was struck, unclamped downward. The
   // other two voices stay frozen at whatever pitch they were struck with.
   {
-    float tracked = PluckedPeriod(
-        parameters.note + active_offset_semitones_);
+    float tracked = ratio_mode
+        ? PluckedPeriodFromFrequency(frequency * active_ratio_)
+        : PluckedPeriod(parameters.note + active_offset_semitones_);
     tracked = max(tracked, min_period_[active_voice_]);
     period_[active_voice_] = tracked;
   }
@@ -226,8 +340,8 @@ void PluckedEngine::Render(
     if (parameters.frequency_offset) {
       float instantaneous_frequency =
           frequency + parameters.frequency_offset[i];
-      instantaneous_frequency *=
-          SemitonesToRatio(active_offset_semitones_);
+      instantaneous_frequency *= ratio_mode
+          ? active_ratio_ : SemitonesToRatio(active_offset_semitones_);
       instantaneous_frequency = max(instantaneous_frequency, 1e-7f);
       float tracked_period = 1.0f / instantaneous_frequency;
       CONSTRAIN(

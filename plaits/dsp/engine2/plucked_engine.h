@@ -250,6 +250,8 @@
 
 #include "stmlib/dsp/hysteresis_quantizer.h"
 
+#include "plaits/dsp/chords/chord_bank.h"
+
 #include "plaits/dsp/engine/engine.h"
 #include "plaits/dsp/physical_modelling/delay_line.h"
 
@@ -317,16 +319,50 @@ enum PluckedMorph {
   // shapes counter-clockwise, open and major shapes clockwise. Nine positions,
   // unison captures +/-6.25%. Voice 0 is always the played note, so V/OCT
   // keeps meaning the root.
-  PLUCKED_MORPH_CHORDS
+  PLUCKED_MORPH_CHORDS,
+  // LISTENING PROTOTYPES (2026-10-05). Both put unison at fully CCW and
+  // sequence a chord's tones strike by strike from its first tone, restarting
+  // whenever the chord changes; the round robin still decides which string
+  // rings. CHORDS_CCW: the nine CHORDS shapes, unison first, then dark to
+  // bright.
+  PLUCKED_MORPH_CHORDS_CCW,
+  // TABLE: the module's selected chord table (the editable Palette tables),
+  // with unison prepended. How a chord becomes strikes is set by
+  // set_table_voicing().
+  PLUCKED_MORPH_TABLE
+};
+
+// TABLE mode: what to do with a chord of four distinct tones, given three
+// strings. ARPEGGIATE cycles every tone (a fourth strike re-plucks the oldest
+// string); FIRST_THREE drops the fourth tone; OMIT_FIFTH drops the fifth when
+// there is one, keeping the chord's colour tone.
+enum PluckedFourTone {
+  PLUCKED_FOUR_TONE_ARPEGGIATE = 0,
+  PLUCKED_FOUR_TONE_FIRST_THREE,
+  PLUCKED_FOUR_TONE_OMIT_FIFTH
+};
+
+// TABLE mode: AS_WRITTEN keeps the table's pitches (up to about two octaves
+// above the played note); FOLDED drops every tone into the octave above it.
+enum PluckedRange {
+  PLUCKED_RANGE_AS_WRITTEN = 0,
+  PLUCKED_RANGE_FOLDED
 };
 
 class PluckedEngine : public Engine {
  public:
-  PluckedEngine() : morph_mode_(PLUCKED_MORPH_CONTINUOUS) { }
+  PluckedEngine()
+      : morph_mode_(PLUCKED_MORPH_CONTINUOUS),
+        four_tone_(PLUCKED_FOUR_TONE_ARPEGGIATE),
+        range_(PLUCKED_RANGE_AS_WRITTEN) { }
 
   // Set at registration, which runs before Voice::Init calls Init(); neither
   // Init() nor Reset() touches it.
   void set_morph_mode(PluckedMorph mode) { morph_mode_ = mode; }
+  void set_table_voicing(PluckedFourTone four_tone, PluckedRange range) {
+    four_tone_ = four_tone;
+    range_ = range;
+  }
   ~PluckedEngine() { }
 
   virtual void Init(stmlib::BufferAllocator* allocator);
@@ -351,6 +387,18 @@ class PluckedEngine : public Engine {
   stmlib::HysteresisQuantizer2 stack_quantizer_;
   stmlib::HysteresisQuantizer2 chord_quantizer_;
   bool ever_struck_;
+
+  // CHORDS_CCW / TABLE state. The strike's pitch is a ratio of the played
+  // note's frequency (active_ratio_) rather than a semitone offset.
+  int SelectSequence(const EngineParameters& parameters, float* ratios);
+  PluckedFourTone four_tone_;
+  PluckedRange range_;
+  ChordBank chords_;
+  stmlib::HysteresisQuantizer2 slot_quantizer_;
+  int slot_count_;
+  int slot_;
+  int tone_counter_;
+  float active_ratio_;
 
   float loss_frac_;
   float update_probability_frac_;

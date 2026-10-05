@@ -75,6 +75,14 @@ class ChordBank {
   
   void set_chord(float parameter, uint8_t chord_set_option);
 
+  // Number of chords in a table (an out-of-range option reads table 0, as
+  // set_chord does).
+  static int table_size(uint8_t chord_set_option);
+
+  // Selects chord `index` of a table directly, for an engine that maps its
+  // own control onto the table instead of using set_chord's quantizer.
+  void set_chord_index(int index, uint8_t chord_set_option);
+
 #ifdef PLAITS_CHORD_RUNTIME_TABLE
   // Host builds only — see the long comment in chord_bank.cc. Repoints every
   // ChordBank at caller-owned chord tables instead of the compiled-in ones, so
