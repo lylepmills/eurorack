@@ -897,7 +897,7 @@ with the source inside it is the failure the `development` sentinel exists to
 catch, caught earlier.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-6c8bf17df0df` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-8fa4953f290d` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a new
 image, use `wrangler containers info <application-id>` and wait until
@@ -1045,6 +1045,38 @@ target.
 | September 27, 2026 (Wave Scan's phase as a uint32 accumulator: exact LFO-range rates, ~6% fewer instructions; Virtual Analog Variant carries the Virtual Analog symbol) | `4cd0b0a00f91` | `rev-4cd0b0a00f91` |
 | September 28, 2026 (Virtual Analog Variant at the stock median loudness; catalog gains written to firmware at full precision, moving 58 rebalanced engines to their catalog level; idle containers sleep; Speech warm-up route) | `797849cf613d` | `rev-797849cf613d` |
 | October 2, 2026 (CPU headroom: every catalog engine under the 0.985 overrun line on the module; sine table in SRAM and slow-flash-data on hot objects, each with a builder fallback; loop-invariant hoisting; Speech encoder rotated to v25) | `6c8bf17df0df` | `rev-6c8bf17df0df` |
+| October 5, 2026 (scale bank up to twelve degrees per scale: Chromatic, the diminished and bebop scales; Speech encoder rotated to v26) | `8fa4953f290d` | `rev-8fa4953f290d` |
+
+The October 5 twelve-degree scale release shipped at `rev-8fa4953f290d`. It
+carries one firmware change: `kScaleVoicesMaxDegrees` 7 -> 12 (`8fa4953f`), so a
+scale-bank entry may hold any 12-TET pitch-class set up to Chromatic; the
+recipe validators (`generate_engine_config.py`, `contract.ts`) follow, and a
+test reads the header so the two cannot drift. No engine digest moved. Each
+Scale grows 20 -> 28 B, so a scale-engine palette's stock eight-scale bank
+costs 64 B more (measured: 180,468 -> 180,532 B against `rev-6c8bf17df0df`);
+stock-24 (228,196 B) and the Sync In reference (204,740 / 224,036 B) are
+byte-identical.
+
+Checks before production:
+- `smoke:staging` passed, compiler-stamped (gate build
+  `f3fc3fbcac53717b765dcdc06490848ac0ce0eececd5e40ee4027d7e0b3407b1`,
+  14,302,124-byte WAV), and a staged audition build (`11f5e42d1ff4...`: Diatonic
+  Chord, Scale Stack and both wavetable scale engines with Chromatic, Diminished
+  W/H and H/W, Major and Major pentatonic). Lyle flashed both: all good, and he
+  approved production.
+- The staging site, deployed from the website branch, built a Chromatic +
+  Diminished W/H palette end to end against the staging builder.
+
+Production went in two deploys: the image (Worker `9689f987`), then, once
+`containers info` showed the new image only with `starting == 0` (about 18
+minutes), the `speech-encoder-v26` rotation as a Worker-only deploy (Worker
+`f5ee9cd0`). One `/v1/health` probe then reported the Worker, pool and
+`speech-encoder-v26` all at `8fa4953f290d`. Production canary build
+`11f5e42d1ff4e9b8141a36723940f3c280723f094dcba06b1e3f20be667560b7` succeeded,
+compiler-stamped (7,606,508-byte WAV, SHA-256
+`c2cc2c8828c9a981ef5718ca18d22b94a0ca6d62bafd5c44d138d417bd6653c3`, identical
+to the staged WAV Lyle flashed). `rev-6c8bf17df0df` is the immediate rollback
+image.
 
 The October 2 CPU-headroom release shipped at `rev-6c8bf17df0df`. It brings
 every catalog engine under the 0.985 overrun line on the module in normal
