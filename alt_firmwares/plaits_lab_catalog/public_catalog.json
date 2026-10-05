@@ -210,14 +210,14 @@
         "tone": "green"
       },
       "version": "1.0.0",
-      "digest": "sha256:3a402576ca949d68d7c0b31a81565ce352e8f6c1a1c64d5294139c0d49aff814",
-      "documentationDigest": "sha256:88a50d2e624e15b03a4ee649bf570e8a3b92f645b710138c6ce06676573a3860",
+      "digest": "sha256:1da739e9ab72b6f8e5616b3a549e96683b5eabb43f8f8f98f58b9dbe411b0020",
+      "documentationDigest": "sha256:6b060d78228cedd5a80272714d2166e183db155b043adc651dd8396580d7aa15",
       "manual": {
         "controls": {
           "harmonics": "Selects the carrier-to-modulator frequency ratio.",
           "timbre": "Raises the FM index from a pure carrier to bright sidebands.",
           "morph": "Feeds the modulator back into itself for increasingly complex spectra.",
-          "macro": "Detunes the modulator continuously around the selected ratio."
+          "macro": "Detunes the modulator up to a semitone either side of the selected ratio. In tune at noon."
         },
         "trigger": "Restarts the internal envelope when TRIG is patched."
       },
@@ -2579,21 +2579,24 @@
       "controls": [
         "Pluck",
         "Damping",
-        "Spread",
+        "Chord",
         "Stretch"
       ],
       "outputs": [
         "All three round-robin voices, summed.",
         "Mono: the raw noise excitation only, silent between strikes. Stereo: dropped in favor of panning each voice to a fixed round-robin position."
       ],
+      "sharedModules": [
+        "chord-bank"
+      ],
       "version": "1.0.0",
-      "digest": "sha256:2ec43f399858b6b9b89e40211815d37e7421bfcf682bcb2484850e275db722fb",
-      "documentationDigest": "sha256:1082d19848134bcb23c39bc832b49b89eb096a9fef29345d4a6dda0a3dfba9c0",
+      "digest": "sha256:84751c04417af038fdbe4efe5dd9f7302f7923de7764c8485cf4fa772cf2364f",
+      "documentationDigest": "sha256:a575e95afe9aa24f3b429b4e47a2da3e82f45defb6a812cacbbd8e50b971bc93",
       "manual": {
         "controls": {
           "harmonics": "How much of one string period gets struck with noise, from a narrow flick to most of the cycle.",
           "timbre": "Below noon, extra muting under the decay. Above noon, random skipped filter passes stretch and detune it toward metal.",
-          "morph": "Offsets each round-robin voice by a fixed interval, building a small chord. Unison, the module, at noon.",
+          "morph": "Picks a chord from the chord table; each strike plays its next tone. Unison, the module, fully counter-clockwise.",
           "macro": "How far Damping's random detuning reaches: off at the bottom, the module's ceiling at noon, past it above."
         },
         "trigger": "Plucks the next voice in the three-string round robin."
@@ -2711,7 +2714,7 @@
         "Mono: the two noise-ring-modulated partials alone, without the direct tone or the harmonics sum. Stereo: a second, independently-filtered noise realization for the right channel, sharing the same tonal partials as the left."
       ],
       "version": "1.0.0",
-      "digest": "sha256:52f799989c1ff4e3d895280623be930370511dd0b6f04d58e7bec643fa695268",
+      "digest": "sha256:10f4f0040b39a4a3d6c88b6365814cd6202651a8b677a811dba78e7f833f4441",
       "documentationDigest": "sha256:6cc152d8d4474949df039e6fa49429cdfafb75e617cf6a4d7b2d17957843edfd",
       "manual": {
         "controls": {
@@ -2835,7 +2838,7 @@
         "Mono: the complementary crossfade, always favoring the side MAIN does not. Stereo: a second, independent raw-noise stream and a small opposing offset on Color."
       ],
       "version": "1.0.0",
-      "digest": "sha256:ae5015182f82c2d1c65ddf8ed91a130bac76ff659a7591ad871534f9bb49069f",
+      "digest": "sha256:4a9480564aeb28c8194c43537e549471644a5fd61d61c9657551d828c52f5f45",
       "documentationDigest": "sha256:75a5d9765d30b1df47b8c462cfd32ce5c8b15afbe507e84f96640eb4d2258f89",
       "manual": {
         "controls": {
