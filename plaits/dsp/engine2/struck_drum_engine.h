@@ -498,11 +498,12 @@ const float kStruckDrumStereoBlend = 0.15f;
 
 class StruckDrumEngine : public Engine {
  public:
-  StruckDrumEngine() : morph_cubic_(false) { }
+  StruckDrumEngine() : morph_cubic_(true) { }
   ~StruckDrumEngine() { }
 
-  // MORPH's response: false is the shipped linear sweep; true bends it into a
-  // cubic around noon, 0.5 + 0.5 * (2m - 1)^3 of the same range. Same
+  // MORPH's response: true (the default since 2026-10-05, chosen by ear on
+  // hardware) bends it into a cubic around noon, 0.5 + 0.5 * (2m - 1)^3 of the
+  // same range; false is the original linear sweep. Same
   // endpoints, still continuous with no flat zone, but the module's own voicing
   // at noon stops being a needle to thread -- see the MORPH comment in Render().
   // Set at registration, before Init(); neither Init() nor Reset() touches it.

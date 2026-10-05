@@ -62,7 +62,9 @@
   plucked_continuous_.set_morph_mode(PLUCKED_MORPH_CONTINUOUS); \
   plucked_stacks_.set_morph_mode(PLUCKED_MORPH_STACKS); \
   plucked_chords_.set_morph_mode(PLUCKED_MORPH_CHORDS); \
+  struck_drum_linear_.set_morph_cubic(false); \
   struck_drum_cubic_.set_morph_cubic(true); \
+  cymbal_linear_.set_morph_cubic(false); \
   cymbal_cubic_.set_morph_cubic(true); \
   (registry).RegisterInstance(&plucked_continuous_, false, 1.0f, 1.0f); \
   (registry).RegisterInstance(&plucked_stacks_, false, 1.0f, 1.0f); \
