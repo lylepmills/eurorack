@@ -128,7 +128,7 @@ const sharedWaveLibraryEngineIds = new Set([
 export const minScaleBankSize = 1;
 export const maxScaleBankSize = 16;
 export const minScaleDegrees = 2;
-export const maxScaleDegrees = 7;
+export const maxScaleDegrees = 12;
 export const scaleUnitsPerSemitone = 128;
 export const scaleUnitsPerOctave = 12 * scaleUnitsPerSemitone;
 

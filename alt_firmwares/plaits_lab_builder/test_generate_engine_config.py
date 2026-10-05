@@ -896,7 +896,7 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertEqual(build.scale_bank, DEFAULT_SCALE_BANK)
         self.assertIn("#define PLAITS_SCALE_BANK_COUNT 8", config)
         self.assertIn(
-            "{ { 0, 256, 512, 896, 1152, 0, 0 }, 5 }",
+            "{ { 0, 256, 512, 896, 1152, 0, 0, 0, 0, 0, 0, 0 }, 5 }",
             config,
         )
 
@@ -924,8 +924,55 @@ class GenerateEngineConfigTest(unittest.TestCase):
         config = render_config(build)
         self.assertEqual([scale["id"] for scale in build.scale_bank], ["just-five", "whole-tone"])
         self.assertIn("#define PLAITS_SCALE_BANK_COUNT 2", config)
-        self.assertIn("{ { 0, 261, 637, 899, 1393, 0, 0 }, 5 }", config)
+        self.assertIn("{ { 0, 261, 637, 899, 1393, 0, 0, 0, 0, 0, 0, 0 }, 5 }", config)
         self.assertLess(config.index("0, 261, 637"), config.index("0, 256, 512, 768"))
+
+    def test_v16_scale_bank_accepts_chromatic_and_rejects_a_thirteenth_degree(self) -> None:
+        chromatic = {
+            "id": "chromatic",
+            "name": "Chromatic",
+            "description": "All twelve semitones.",
+            "pitches": [step * 128 for step in range(12)],
+            "tuning": "12-TET",
+            "source": "Rubato",
+        }
+        diminished = {
+            "id": "diminished-whole-half",
+            "name": "Diminished (W/H)",
+            "description": "Alternating whole and half steps.",
+            "pitches": [0, 256, 384, 640, 768, 1024, 1152, 1408],
+            "tuning": "12-TET",
+            "source": "Rubato",
+        }
+        recipe = self.calibration_recipe(16, False)
+        recipe["resources"]["scaleBank"] = [chromatic, diminished]
+        config = render_config(validate_recipe(recipe))
+        self.assertIn(
+            "{ { 0, 128, 256, 384, 512, 640, 768, 896, 1024, 1152, 1280, 1408 }, 12 }",
+            config)
+        self.assertIn(
+            "{ { 0, 256, 384, 640, 768, 1024, 1152, 1408, 0, 0, 0, 0 }, 8 }", config)
+
+        # Thirteen degrees can only be reached with a microtonal step, and the
+        # firmware's Scale struct has no slot for it.
+        too_many = dict(chromatic)
+        too_many["pitches"] = [*chromatic["pitches"], 1472]
+        too_many["tuning"] = "Microtonal"
+        recipe = self.calibration_recipe(16, False)
+        recipe["resources"]["scaleBank"] = [too_many]
+        with self.assertRaisesRegex(ValueError, "2 to 12"):
+            validate_recipe(recipe)
+
+    def test_scale_degree_cap_matches_the_firmware_struct(self) -> None:
+        # render_config pads every entry to MAX_SCALE_DEGREES; a wider pad than
+        # Scale::pitches fails to compile, a narrower cap rejects scales the
+        # firmware could hold. Keep the two in lockstep.
+        from generate_engine_config import MAX_SCALE_DEGREES
+        header = (FIXTURES.parents[1] / "plaits" / "dsp" / "engine2" /
+                  "scale_voices.h").read_text()
+        match = re.search(r"const int kScaleVoicesMaxDegrees = (\d+);", header)
+        self.assertIsNotNone(match)
+        self.assertEqual(int(match.group(1)), MAX_SCALE_DEGREES)
 
     def test_v16_scale_bank_defaults_when_absent_and_rejects_invalid_data(self) -> None:
         recipe = self.calibration_recipe(16, False)

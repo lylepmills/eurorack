@@ -156,9 +156,10 @@
 #endif
 
 // Scale bank shared by the Diatonic Chord and Scale Stack engines. Pitches use
-// Braids' native 1/128-semitone units; each entry contains seven padded pitch
-// slots followed by the actual degree count. Hosted builds replace this bank
-// from the recipe. Ordinary builds retain the original eight shipped scales.
+// Braids' native 1/128-semitone units; each entry contains twelve padded pitch
+// slots (kScaleVoicesMaxDegrees, so any 12-TET pitch-class set fits) followed
+// by the actual degree count. Hosted builds replace this bank from the recipe.
+// Ordinary builds retain the original eight shipped scales.
 #ifndef PLAITS_SCALE_BANK_COUNT
 #define PLAITS_SCALE_BANK_COUNT 8
 #endif
@@ -166,14 +167,14 @@
 #ifndef PLAITS_SCALE_BANK
 #define PLAITS_SCALE_BANK \
   { \
-    { { 0, 256, 512, 640, 896, 1152, 1408 }, 7 }, \
-    { { 0, 256, 384, 640, 896, 1024, 1280 }, 7 }, \
-    { { 0, 256, 384, 640, 896, 1152, 1280 }, 7 }, \
-    { { 0, 256, 512, 640, 896, 1152, 1280 }, 7 }, \
-    { { 0, 256, 384, 640, 896, 1024, 1408 }, 7 }, \
-    { { 0, 256, 384, 640, 896, 1152, 1408 }, 7 }, \
-    { { 0, 256, 512, 896, 1152, 0, 0 }, 5 }, \
-    { { 0, 256, 512, 768, 1024, 1280, 0 }, 6 }, \
+    { { 0, 256, 512, 640, 896, 1152, 1408, 0, 0, 0, 0, 0 }, 7 }, \
+    { { 0, 256, 384, 640, 896, 1024, 1280, 0, 0, 0, 0, 0 }, 7 }, \
+    { { 0, 256, 384, 640, 896, 1152, 1280, 0, 0, 0, 0, 0 }, 7 }, \
+    { { 0, 256, 512, 640, 896, 1152, 1280, 0, 0, 0, 0, 0 }, 7 }, \
+    { { 0, 256, 384, 640, 896, 1024, 1408, 0, 0, 0, 0, 0 }, 7 }, \
+    { { 0, 256, 384, 640, 896, 1152, 1408, 0, 0, 0, 0, 0 }, 7 }, \
+    { { 0, 256, 512, 896, 1152, 0, 0, 0, 0, 0, 0, 0 }, 5 }, \
+    { { 0, 256, 512, 768, 1024, 1280, 0, 0, 0, 0, 0, 0 }, 6 }, \
   }
 #endif
 

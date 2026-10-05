@@ -1540,6 +1540,20 @@ test("version 16 validates, normalizes, and hashes the scale bank", async () => 
   const mismatched = structuredClone(recipe);
   mismatched.resources.scaleBank[1].tuning = "12-TET";
   assert.throws(() => normalizeRecipe(mismatched), /tuning label/);
+
+  // Twelve degrees (Chromatic) is the firmware's kScaleVoicesMaxDegrees; a
+  // thirteenth needs a microtonal step and has no slot in the Scale struct.
+  const chromatic = structuredClone(recipe);
+  chromatic.resources.scaleBank[0] = {
+    ...chromatic.resources.scaleBank[0],
+    pitches: Array.from({ length: 12 }, (_, step) => step * 128),
+    tuning: "12-TET",
+  };
+  assert.equal(normalizeRecipe(chromatic).resources.scaleBank?.[0].pitches.length, 12);
+  const thirteen = structuredClone(chromatic);
+  thirteen.resources.scaleBank[0].pitches.push(1472);
+  thirteen.resources.scaleBank[0].tuning = "Microtonal";
+  assert.throws(() => normalizeRecipe(thirteen), /2 to 12 strictly ascending/);
 });
 
 test("version 17 carries bounded Speech banks and hashes their LPC frames", async () => {
