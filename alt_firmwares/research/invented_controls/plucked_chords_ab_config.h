@@ -35,6 +35,12 @@
 #define PLAITS_BANK_SIZES { 7 }
 #define PLAITS_ENGINE_ROWS { 0, 1, 2, 3, 4, 5, 6 }
 
+// Button + HARMONICS selects the chord table only on engines in this mask
+// (ui.cc LockHarmonicsPotForContext). Rows 1-6 read the table; row 0 is the
+// fixed list. Without it the stock default 0x40c0 applies, which here would
+// enable only row 6.
+#define PLAITS_CHORD_ENGINE_MASK 0x0000007eu
+
 #define PLAITS_HAS_SPEECH_ENGINE 0
 #define PLAITS_HAS_LPC_WORDS_ENGINE 0
 #define PLAITS_HAS_CHIPTUNE_ENGINE 0
