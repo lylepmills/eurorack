@@ -4184,7 +4184,7 @@
         "harmonics": "Selects the carrier-to-modulator frequency ratio.",
         "timbre": "Raises the FM index from a pure carrier to bright sidebands.",
         "morph": "Feeds the modulator back into itself for increasingly complex spectra.",
-        "macro": "Detunes the modulator continuously around the selected ratio."
+        "macro": "Detunes the modulator up to a semitone either side of the selected ratio. In tune at noon."
       },
       "trigger": "Restarts the internal envelope when TRIG is patched."
     },

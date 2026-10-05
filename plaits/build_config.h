@@ -282,7 +282,14 @@
 // knob at all. (The CV path is unaffected: Voice::Render centres macro at
 // exactly 0.5f and adds the CV, so an unpatched or 0 V input is already exact.)
 //
-// This selects the DEFAULT span for those five; twist_tuning.h defines the
+// Outcome (2026-09/10): Two-op FM ships NARROW (+/-1 semitone), set in
+// FMEngine's constructor rather than here. Virtual Analog Dual and Crossfade
+// were retired in favour of Virtual Analog Variant and still read this flag.
+// Phase Distortion and Wave Paraphonic kept their original spans and no
+// longer have the hook.
+//
+// This selects the DEFAULT span for the engines that still read it;
+// twist_tuning.h defines the
 // modes and each engine instance can be overridden by a generated config
 // calling set_twist_tuning(), so one firmware can carry the same engine more
 // than once for an A/B.

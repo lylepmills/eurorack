@@ -40,7 +40,11 @@ namespace plaits {
   
 class FMEngine : public Engine {
  public:
-  FMEngine() : twist_tuning_(kDefaultTwistTuning) { }
+  // NARROW by default since 2026-10: TWIST detunes the modulator +/-1
+  // semitone around the HARMONICS ratio instead of +/-12, chosen by ear
+  // (fm_engine.cc). The build-wide PLAITS_BUILD_TWIST_TUNING_RANGE no longer
+  // applies to this engine; set_twist_tuning() still overrides per instance.
+  FMEngine() : twist_tuning_(TWIST_TUNING_NARROW) { }
   ~FMEngine() { }
 
   // Which TWIST span this INSTANCE uses. Registration runs before Voice::Init
