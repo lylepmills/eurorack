@@ -897,7 +897,7 @@ with the source inside it is the failure the `development` sentinel exists to
 catch, caught earlier.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-8fa4953f290d` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-5812b65ebd9a` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a new
 image, use `wrangler containers info <application-id>` and wait until
@@ -1046,6 +1046,47 @@ target.
 | September 28, 2026 (Virtual Analog Variant at the stock median loudness; catalog gains written to firmware at full precision, moving 58 rebalanced engines to their catalog level; idle containers sleep; Speech warm-up route) | `797849cf613d` | `rev-797849cf613d` |
 | October 2, 2026 (CPU headroom: every catalog engine under the 0.985 overrun line on the module; sine table in SRAM and slow-flash-data on hot objects, each with a builder fallback; loop-invariant hoisting; Speech encoder rotated to v25) | `6c8bf17df0df` | `rev-6c8bf17df0df` |
 | October 5, 2026 (scale bank up to twelve degrees per scale: Chromatic, the diminished and bebop scales; Speech encoder rotated to v26) | `8fa4953f290d` | `rev-8fa4953f290d` |
+| October 6, 2026 (Plucked's MORPH walks the shared chord table, unison fully CCW; cubic MORPH on Struck Drum and Cymbal; Two-op FM's TWIST +/-1 semitone; a tighter square sub-oscillator loop; Speech encoder rotated to v27) | `5812b65ebd9a` | `rev-5812b65ebd9a` |
+
+The October 6 release shipped at `rev-5812b65ebd9a`. It answers the beta
+tester's TWIST/MORPH report with four control changes, each chosen by ear on
+hardware:
+- Plucked's MORPH (an invented control: Braids' PLUK has two knobs) picks a
+  chord from the shared chord table, so it reads the same Palette-editable
+  tables as Chords and String Machine. Unison, the module, is fully CCW; the
+  table spans the rest. Strikes play the chord's tones in turn. At MORPH 0 the
+  engine is byte-identical to the shipped engine at noon. Catalog
+  `sharedModules: ["chord-bank"]` puts it in PLAITS_CHORD_ENGINE_MASK, so
+  button + HARMONICS selects the table on it (`bb25c126`).
+- Struck Drum and Cymbal: MORPH's response is cubic about noon, widening the
+  window around the module's own voicing from +/-0.10% / +/-0.30% of travel to
+  +/-6.4% / +/-9.1% (`1e839387`).
+- Two-op FM: TWIST detunes +/-1 semitone instead of +/-12. Chosen on
+  2026-09-20 but never enabled until now (`105f3688`).
+- The square sub-oscillator's render loop: -53 instructions a block and
+  -192 B of flash, output-identical (`427bcb4c`).
+
+Checks before production:
+- Host tests, both firmware layouts (stock 1,676 B spare, experimental 2,508),
+  builder tests (276 Python, 76 node), catalog validation, the Plucked package
+  check (`--full`, `--arm`).
+- On-module overrun sweep, mono and stereo groups (`overrun_sweep_2026-10-05_
+  next_*`): every peak under the 0.985 onset; changed engines 0.75-0.86.
+- `smoke:staging` passed, compiler-stamped (build
+  `c86ac5909e1cef39c7da0bfd6780c9f8449128532d674d215098f23d8d379240`); Lyle
+  flashed it (boot, navigation, audio, custom Speech bank) and a staging
+  listening palette with the four changed engines, and approved production.
+
+Production went in two deploys: the image (Worker `6c5072a4`), then, once the
+pool showed the new image only with `starting == 0` (about 7 minutes), the
+`speech-encoder-v27` rotation as a Worker-only deploy (Worker `bdfdcaae`). One
+`/v1/health` probe then reported the Worker, pool and `speech-encoder-v27` all
+at `5812b65ebd9a`. Production canary build
+`0f4ab044654577270e7668866f9c94df0ccc57483e0b45c6190009bcded7cd77` succeeded,
+compiler-stamped (4,336,556-byte WAV, SHA-256
+`77f66b2e8640a18369a70c3b1c62b6077b1c5e82ece28a5c792f1dcadb8b6418`). The website
+pin, flash re-anchor, chord audition and previews landed as rubato-audio
+`b523c54b`. `rev-8fa4953f290d` is the immediate rollback image.
 
 The October 5 twelve-degree scale release shipped at `rev-8fa4953f290d`. It
 carries one firmware change: `kScaleVoicesMaxDegrees` 7 -> 12 (`8fa4953f`), so a
