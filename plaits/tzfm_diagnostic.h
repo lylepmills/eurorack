@@ -123,6 +123,16 @@ class TzfmDiagnostic {
     patch->chord_set_option = 0;
     patch->hold_on_trigger_option = 0;
     patch->attenuverter_mode = 0;
+#ifdef PLAITS_TZFM_DIAGNOSTIC_MACROS
+    // Some engines spend their CPU on the fourth macro rather than on
+    // HARMONICS/TIMBRE/MORPH (Supersaw Chords' stack size), and the sweep above
+    // would leave it at the neutral 0.5. A registry may pin it per slot, so
+    // the same engine can be measured at several settings in one pass.
+    static const float macros[PLAITS_ENGINE_COUNT] =
+        PLAITS_TZFM_DIAGNOSTIC_MACROS;
+    patch->locked_frequency_pot_option = 1;
+    patch->freqlock_param = macros[engine_];
+#endif
 
     modulations->engine = 0.0f;
     modulations->note = 0.0f;

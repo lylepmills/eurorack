@@ -1,4 +1,6 @@
+import contextlib
 import importlib.util
+import io
 import array
 import pathlib
 import unittest
@@ -98,6 +100,15 @@ class DecoderTest(unittest.TestCase):
                           for field in range(10))
         return [6000.0, 6400.0, 6206.0] + values + [6500.0]
 
+    @staticmethod
+    def supersaw_frame(group):
+        values = []
+        for engine in range(3):
+            values.append(5000.0 + 50.0 * engine)
+            values.extend(2500.0 + engine * 10.0 + field
+                          for field in range(10))
+        return [6000.0, 6100.0 + 20.0 * group, 6203.0] + values + [6500.0]
+
     def test_decodes_last_complete_frame(self):
         group = 4
         frame = self.group_four_frame()
@@ -191,6 +202,21 @@ class DecoderTest(unittest.TestCase):
         self.assertEqual(len(results), 6)
         self.assertEqual(results[0]["name"], "Analog Percussion")
         self.assertEqual(results[-1]["name"], "Acid")
+
+    def test_decodes_supersaw_groups_with_their_own_fm_labels(self):
+        for group, label in ((16, "TZFM"), (17, "Fast exponential FM")):
+            decoded, results = decoder.decode_frequencies(
+                self.supersaw_frame(group))
+            self.assertEqual(decoded, group)
+            self.assertEqual(
+                [result["name"] for result in results],
+                ["Supersaw Chords x1", "Supersaw Chords x2",
+                 "Supersaw Chords x3"])
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                decoder.print_report(decoded, results)
+            self.assertTrue(
+                output.getvalue().startswith(f"{label} diagnostic group"))
 
     def test_rejects_incomplete_frame(self):
         with self.assertRaisesRegex(ValueError, "no complete"):

@@ -35,6 +35,7 @@ CC_FILES       = algorithms.cc \
 		natural_speech_engine.cc \
 		helix_engine.cc \
 		skins_engine.cc \
+		chords_supersaw_engine.cc \
 		circuit_zaps_engine.cc \
 		metalwork_engine.cc \
 		hi_hat_engine.cc \

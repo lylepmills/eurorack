@@ -65,7 +65,21 @@ MODEL_NAMES = {
         "Analog Percussion", "Skins", "Circuit Zaps", "Metalwork",
         "ZxPulse48k", "Acid",
     ],
+    # Groups 16 and 17 measure one engine at three fourth-macro settings
+    # (PLAITS_TZFM_DIAGNOSTIC_MACROS). Their 6420/6440 Hz metadata tones sit
+    # well clear of both the 6203 Hz count tone and the 6500 Hz end marker.
+    16: [
+        "Supersaw Chords x1", "Supersaw Chords x2", "Supersaw Chords x3",
+    ],
+    17: [
+        "Supersaw Chords x1", "Supersaw Chords x2", "Supersaw Chords x3",
+    ],
 }
+
+# Groups whose stage 1 drives signed linear TZFM. Every other group measures
+# Fast exponential FM. Group numbers are allocated in order, so this cannot be
+# a threshold: group 16 is TZFM although it is above the exponential groups.
+TZFM_GROUPS = {1, 2, 3, 4, 7, 16}
 
 FIELD_NAMES = [
     "slow_peak", "fast_peak", "slow_over90", "fast_over90",
@@ -312,7 +326,7 @@ def verdict(result: dict[str, int]) -> str:
 
 
 def print_report(group: int, results: list[dict[str, int]]) -> None:
-    label = "Fast exponential FM" if group >= 8 else "TZFM"
+    label = "TZFM" if group in TZFM_GROUPS else "Fast exponential FM"
     print(f"{label} diagnostic group {group}")
     print("| # | Model | Slow peak | Fast peak | Slow >90 | Fast >90 | "
           "Slow miss | Fast miss | O/R | R/S | U/F | Lag | Verdict |")

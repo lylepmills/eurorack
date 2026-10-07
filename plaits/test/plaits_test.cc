@@ -115,6 +115,7 @@
 #include "plaits/dsp/engine2/analog_percussion_engine.h"
 #include "plaits/dsp/engine2/acid_engine.h"
 #include "plaits/dsp/engine2/bubbletime_engine.h"
+#include "plaits/dsp/engine2/chords_supersaw_engine.h"
 #include "plaits/dsp/engine2/circuit_zaps_engine.h"
 #include "plaits/dsp/engine2/freshets_formant_engine.h"
 #include "plaits/dsp/engine2/metalwork_engine.h"
@@ -442,6 +443,7 @@ void ValidateLinearTzfmEngineCoverage() {
   ValidateLinearTzfmEngine<WaveTerrainEngine>("Wave Terrain");
   ValidateLinearTzfmEngine<SwarmEngine>("Swarm");
   ValidateLinearTzfmEngine<AcidEngine>("Acid");
+  ValidateLinearTzfmEngine<ChordsSupersawEngine>("Supersaw Chords");
 }
 
 template<typename T>
@@ -611,6 +613,8 @@ void ValidateFastExponentialFmEngineCoverage() {
   ValidateFastExponentialFmEngine<MetalworkEngine>("Metalwork");
   ValidateFastExponentialFmEngine<ZxPulse48kEngine>("ZxPulse48k");
   ValidateFastExponentialFmEngine<AcidEngine>("Acid");
+  ValidateFastExponentialFmEngine<ChordsSupersawEngine>(
+      "Supersaw Chords");
 }
 
 void TestVariableShapeOscillator() {
@@ -4469,6 +4473,7 @@ void ValidateFmCapabilityPolicy() {
   SkinsEngine skins;
   CircuitZapsEngine circuit_zaps;
   MetalworkEngine metalwork;
+  ChordsSupersawEngine chords_supersaw;
   Engine* linear_engines[] = {
     &waveshaping,
     &two_op_fm,
@@ -4651,6 +4656,7 @@ void ValidateFmCapabilityPolicy() {
     &acid,
     &skins,
     &metalwork,
+    &chords_supersaw,
   };
   for (size_t i = 0;
        i < sizeof(pending_exponential_engines) /
