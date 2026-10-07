@@ -133,9 +133,12 @@ COPY --chown=builder:builder . /workspace
 RUN test -f /workspace/stmlib/dsp/dsp.h \
     && test -f /workspace/stm_audio_bootloader/fsk/packet_decoder.h \
     || { echo "Submodule content missing. Run 'git submodule update --init stmlib stm_audio_bootloader' before docker build." >&2; exit 1; }
-# Fail the image build if a source unit started reading the recipe config
-# (engine_config.h / build_config.h) without being added to RECIPE_CONFIG_OBJS —
-# otherwise it would silently compile with default options instead of the recipe's.
+# Fail the image build if a source unit reads the recipe config without being in
+# RECIPE_CONFIG_OBJS — by including engine_config.h / build_config.h, or by
+# reaching a header that uses a recipe macro without including them (engine.h,
+# whose EngineParameters and vtable change shape with Sync In and the FM
+# options). Such a unit would silently compile with default options instead of
+# the recipe's.
 RUN cd /workspace && python3 alt_firmwares/plaits_lab_builder/check_config_scope.py
 
 RUN c++ -std=c++11 -O2 -w -I /workspace \
@@ -189,7 +192,9 @@ ENV PATH="/usr/local/arm-4.8.3/bin:${PATH}" \
 
 # Only the units listed in plaits/makefile's RECIPE_CONFIG_OBJS see the generated
 # engine_config.h; every other object is recipe-independent. Warm ccache with one
-# default build at image time so a novel recipe recompiles only those seven units.
+# default build at image time so a novel recipe recompiles only the units on that
+# list (every engine, since engine.h reads recipe options, plus voice, UI and
+# settings) and hits the cache for the rest.
 # The cache is baked into the image and owned by the build user so it is readable
 # when the server runs unprivileged.
 RUN mkdir -p /opt/ccache && chown -R builder:builder /opt/ccache
