@@ -40,9 +40,10 @@ test("the Worker and compiler catalogs contain the same approved IDs", async () 
     approvedEngineIds,
     compilerCatalog.engines.map((engine: { id: string }) => engine.id),
   );
-  // 97 while VA Variant stages beside the Dual and Crossfade models it
-  // retires (catalog.json retiredEngines); 95 once those two are removed.
-  assert.equal(approvedEngineIds.length, 97);
+  // 98 while VA Variant stages beside the Dual and Crossfade models it
+  // retires (catalog.json retiredEngines), with Supersaw Chords; 96 once
+  // those two are removed.
+  assert.equal(approvedEngineIds.length, 98);
 });
 
 test("schema 24 carries distinct per-slot Wavetable data", async () => {
