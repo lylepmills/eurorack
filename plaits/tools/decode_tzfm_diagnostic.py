@@ -68,6 +68,8 @@ MODEL_NAMES = {
     # Groups 16 and 17 measure one engine at three fourth-macro settings
     # (PLAITS_TZFM_DIAGNOSTIC_MACROS). Their 6420/6440 Hz metadata tones sit
     # well clear of both the 6203 Hz count tone and the 6500 Hz end marker.
+    # Supersaw Chords was declined on these results and its FM path removed;
+    # the registry configs and that path are in commit 66929699.
     16: [
         "Supersaw Chords x1", "Supersaw Chords x2", "Supersaw Chords x3",
     ],

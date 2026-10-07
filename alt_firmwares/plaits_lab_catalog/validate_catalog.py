@@ -154,6 +154,7 @@ AUDITED_REMAINING_METADATA_DIGESTS = {
     # Acid: software gauntlet and stereo hardware CPU diagnostics audited
     # during the 2026-09-01 community review.
     "acid": "sha256:386fa01e192a0ccbff3389892faf757e1fa1c311611feeb495ec2133847eb189",
+    "chords-supersaw": "sha256:521749b73050034751d892a8b7454a154977e8080a49ecec772c2c0eac80995c",
 }
 
 REMAINING_FIXED_PAIR_ENGINES = {

@@ -177,7 +177,8 @@
       "bubbletime",
       "zxphase48k",
       "zxpulse48k",
-      "acid"
+      "acid",
+      "chords-supersaw"
     ]
   },
   "engines": [
@@ -4140,6 +4141,51 @@
       "artwork": {
         "color": "#009a98"
       }
+    },
+    {
+      "id": "chords-supersaw",
+      "packageId": "community/chords-supersaw",
+      "name": "Supersaw Chords",
+      "author": "Dirk Hoppmann",
+      "origin": "Community",
+      "family": "Polyphonic",
+      "description": "Chords on unevenly detuned saw stacks, with a saturator on TIMBRE and the detune spread on MORPH.",
+      "tags": [
+        "chord",
+        "polyphonic",
+        "harmony",
+        "supersaw",
+        "detune",
+        "pad",
+        "drive",
+        "community"
+      ],
+      "controls": [
+        "Chord",
+        "Drive",
+        "Detune spread",
+        "Stack size"
+      ],
+      "outputs": [
+        "Mono: the whole chord. Stereo: the left side of the detune spread.",
+        "Mono: the root voice, boosted. Stereo: the right side of the detune spread."
+      ],
+      "source": {
+        "header": "plaits/dsp/engine2/chords_supersaw_engine.h",
+        "className": "ChordsSupersawEngine",
+        "member": "chords_supersaw_engine_",
+        "files": [
+          "plaits/dsp/engine2/chords_supersaw_engine.cc"
+        ]
+      },
+      "sharedModules": [
+        "chord-bank"
+      ],
+      "postProcessing": {
+        "alreadyEnveloped": false,
+        "outGain": 0.8,
+        "auxGain": 0.8
+      }
     }
   ],
   "manuals": {
@@ -5015,6 +5061,15 @@
         "macro": "Moves from a narrow pulse through saw at noon to square clockwise."
       },
       "trigger": "Patched TRIG drives Plaits' shared envelope and accent sweep. Unpatched, the voice drones with every control still live."
+    },
+    "chords-supersaw": {
+      "controls": {
+        "harmonics": "Selects the chord from the shared chord bank, as in the stock model.",
+        "timbre": "Drives the mix into a soft limiter. Adds harmonics and density, not level.",
+        "morph": "Spreads each chord tone's oscillators apart, from a tight stack to a wide supersaw.",
+        "macro": "Oscillators per chord tone, one to three. Turning it down also buys back CPU."
+      },
+      "trigger": "A rising TRIG restarts every saw from the same spread of phases, so each note opens wide rather than as one loud edge. Unpatched, the chord drones."
     }
   },
   "presets": {

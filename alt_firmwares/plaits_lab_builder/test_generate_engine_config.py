@@ -35,10 +35,10 @@ class GenerateEngineConfigTest(unittest.TestCase):
         return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
 
     def test_catalog_matches_the_approved_product_catalog(self) -> None:
-        # 97 while Virtual Analog Variant stages alongside the Dual and
-        # Crossfade models it unifies; 95 once those two retire behind the
-        # website's recipe alias.
-        self.assertEqual(len(CATALOG), 97)
+        # 98 while Virtual Analog Variant stages alongside the Dual and
+        # Crossfade models it unifies (and with Supersaw Chords); 96 once those
+        # two retire behind the website's recipe alias.
+        self.assertEqual(len(CATALOG), 98)
 
     def test_lpc_words_emits_its_prosody_behavior_mask(self) -> None:
         recipe = self.load("default_recipe.json")

@@ -443,7 +443,6 @@ void ValidateLinearTzfmEngineCoverage() {
   ValidateLinearTzfmEngine<WaveTerrainEngine>("Wave Terrain");
   ValidateLinearTzfmEngine<SwarmEngine>("Swarm");
   ValidateLinearTzfmEngine<AcidEngine>("Acid");
-  ValidateLinearTzfmEngine<ChordsSupersawEngine>("Supersaw Chords");
 }
 
 template<typename T>
@@ -613,8 +612,6 @@ void ValidateFastExponentialFmEngineCoverage() {
   ValidateFastExponentialFmEngine<MetalworkEngine>("Metalwork");
   ValidateFastExponentialFmEngine<ZxPulse48kEngine>("ZxPulse48k");
   ValidateFastExponentialFmEngine<AcidEngine>("Acid");
-  ValidateFastExponentialFmEngine<ChordsSupersawEngine>(
-      "Supersaw Chords");
 }
 
 void TestVariableShapeOscillator() {
@@ -4656,7 +4653,6 @@ void ValidateFmCapabilityPolicy() {
     &acid,
     &skins,
     &metalwork,
-    &chords_supersaw,
   };
   for (size_t i = 0;
        i < sizeof(pending_exponential_engines) /
@@ -4682,6 +4678,23 @@ void ValidateFmCapabilityPolicy() {
     if (intentionally_block_rate_engines[i]->linear_tzfm_capable()
         || intentionally_block_rate_engines[i]->fast_fm_capable()) {
       fprintf(stderr, "An intentionally block-rate engine was FM-qualified\n");
+      abort();
+    }
+  }
+
+  // Measured on hardware and declined for CPU, not semantics: Supersaw Chords'
+  // audio-rate FM path overran the deadline at two and three saws per chord
+  // tone in both Fast FM and linear TZFM (2026-10-07, diagnostic groups 16 and
+  // 17; that path was then removed). It keeps control-rate pitch FM.
+  Engine* over_budget_audio_rate_fm_engines[] = {
+    &chords_supersaw,
+  };
+  for (size_t i = 0;
+       i < sizeof(over_budget_audio_rate_fm_engines) /
+           sizeof(over_budget_audio_rate_fm_engines[0]); ++i) {
+    if (over_budget_audio_rate_fm_engines[i]->linear_tzfm_capable()
+        || over_budget_audio_rate_fm_engines[i]->fast_fm_capable()) {
+      fprintf(stderr, "An over-budget engine was FM-qualified\n");
       abort();
     }
   }

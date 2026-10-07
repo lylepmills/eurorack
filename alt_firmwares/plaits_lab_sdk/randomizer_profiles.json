@@ -619,6 +619,11 @@
       "timbre": "broad-texture",
       "morph": "patient-structure"
     },
+    "chords-supersaw": {
+      "status": "seeded",
+      "timbre": "broad-texture",
+      "morph": "pitch-interval"
+    },
     "wavetable-chord": {
       "status": "seeded",
       "timbre": "pitch-interval",

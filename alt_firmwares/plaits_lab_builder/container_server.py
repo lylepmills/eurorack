@@ -911,6 +911,7 @@ STEREO_MACROS = {
     "zxphase48k": "ZXPHASE48K",
     "zxpulse48k": "ZXPULSE48K",
     "acid": "ACID",
+    "chords-supersaw": "CHORDS_SUPERSAW",
 }
 ALL_STEREO_MACROS = frozenset(STEREO_MACROS.values())
 
