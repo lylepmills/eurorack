@@ -4183,8 +4183,8 @@
       ],
       "postProcessing": {
         "alreadyEnveloped": false,
-        "outGain": 0.8,
-        "auxGain": 0.8
+        "outGain": 0.983,
+        "auxGain": 0.983
       }
     }
   ],
