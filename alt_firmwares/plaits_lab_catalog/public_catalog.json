@@ -4125,6 +4125,53 @@
       "implementation": {
         "className": "AcidEngine"
       }
+    },
+    {
+      "id": "chords-supersaw",
+      "packageId": "community/chords-supersaw",
+      "name": "Supersaw Chords",
+      "author": "Dirk Hoppmann",
+      "origin": "Community",
+      "family": "Polyphonic",
+      "description": "Chords on unevenly detuned saw stacks, with a saturator on TIMBRE and the detune spread on MORPH.",
+      "tags": [
+        "chord",
+        "polyphonic",
+        "harmony",
+        "supersaw",
+        "detune",
+        "pad",
+        "drive",
+        "community"
+      ],
+      "controls": [
+        "Chord",
+        "Drive",
+        "Detune spread",
+        "Stack size"
+      ],
+      "outputs": [
+        "Mono: the whole chord. Stereo: the left side of the detune spread.",
+        "Mono: the root voice, boosted. Stereo: the right side of the detune spread."
+      ],
+      "sharedModules": [
+        "chord-bank"
+      ],
+      "version": "1.0.0",
+      "digest": "sha256:1f6fdd4a902f755c46a7c77d8df756b19b7e2ed32431f19ccaf78dc9f414d266",
+      "documentationDigest": "sha256:71145855f2ee0ff96064ed9043ca35738a86ef340863a11d230cac435520a5f0",
+      "manual": {
+        "controls": {
+          "harmonics": "Selects the chord from the shared chord bank, as in the stock model.",
+          "timbre": "Drives the mix into a soft limiter. Adds harmonics and density, not level.",
+          "morph": "Spreads each chord tone's oscillators apart, from a tight stack to a wide supersaw.",
+          "macro": "Oscillators per chord tone, one to three. Turning it down also buys back CPU."
+        },
+        "trigger": "A rising TRIG restarts every saw from the same spread of phases, so each note opens wide rather than as one loud edge. Unpatched, the chord drones."
+      },
+      "implementation": {
+        "className": "ChordsSupersawEngine"
+      }
     }
   ],
   "fmCapabilities": {
