@@ -606,6 +606,7 @@ class PackageTests(unittest.TestCase):
             plaits_lab.init_command(SimpleNamespace(
                 output=str(package), from_engine="blank", author="Test Author",
                 package_id="test-author/bright-wave", slug="bright-wave", name="Bright Wave",
+                color="#3A7BD5",
             ))
             loaded = plaits_lab.load_package(str(package))
             self.assertEqual(loaded["manifest"]["packageType"], "community")
@@ -1107,7 +1108,8 @@ class PackageTests(unittest.TestCase):
         with redirect_stdout(io.StringIO()):
             plaits_lab.init_command(SimpleNamespace(
                 output=str(pkg_dir), from_engine="blank", author="T",
-                package_id=f"test-author/{slug}", slug=slug, name=slug.title()))
+                package_id=f"test-author/{slug}", slug=slug, name=slug.title(),
+                color="#3A7BD5"))
         return plaits_lab.load_package(str(pkg_dir))
 
     def _capture_docker_run(self, fn) -> tuple[list[str], str]:
@@ -1152,6 +1154,54 @@ class PackageTests(unittest.TestCase):
         self.assertIn(f"{package['repo_root']}:/workspace:ro", cmd)
         self.assertIn(f"{package['directory']}:/contributor:ro", cmd)
         self.assertIn("cannot link the sanitizers", printed)
+
+    def test_submit_requires_a_colour_before_any_build_work(self) -> None:
+        # Every CLI submission made without `init --color` reached review with no
+        # palette colour and rendered grey until a maintainer picked one. Submit
+        # now refuses up front -- before Docker or the sanitizer build -- and
+        # names the command that fixes it.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            pkg_dir = Path(temp_dir) / "no-colour"
+            with redirect_stdout(io.StringIO()) as printed:
+                plaits_lab.init_command(SimpleNamespace(
+                    output=str(pkg_dir), from_engine="blank", author="T",
+                    package_id="test-author/no-colour", slug="no-colour", name="No Colour"))
+            self.assertIn(" color ", printed.getvalue())
+            args = SimpleNamespace(package=str(pkg_dir), compiler=None, output=None,
+                                   docker_image="img:test", native=False, bundle_only=True)
+            ran: list[object] = []
+            real_run = plaits_lab.subprocess.run
+            plaits_lab.subprocess.run = lambda *a, **k: ran.append(a)
+            try:
+                with self.assertRaises(plaits_lab.PackageError) as context:
+                    plaits_lab.submit_command(args)
+            finally:
+                plaits_lab.subprocess.run = real_run
+            self.assertIn("colour", str(context.exception))
+            self.assertIn(f"color {pkg_dir} #RRGGBB", str(context.exception))
+            self.assertEqual(ran, [])
+
+    def test_color_command_sets_the_manifest_colour_where_init_writes_it(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            pkg_dir = Path(temp_dir) / "late-colour"
+            with redirect_stdout(io.StringIO()):
+                plaits_lab.init_command(SimpleNamespace(
+                    output=str(pkg_dir), from_engine="chords", author="T",
+                    package_id="test-author/late-colour", slug="late-colour", name=None))
+                with self.assertRaises(plaits_lab.PackageError):
+                    plaits_lab.color_command(SimpleNamespace(package=str(pkg_dir), color="blue"))
+                plaits_lab.color_command(SimpleNamespace(package=str(pkg_dir), color="#8B2B12"))
+            manifest = json.loads((pkg_dir / "plaits-engine.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["artwork"], {"color": "#8B2B12"})
+            keys = list(manifest)
+            self.assertEqual(keys.index("artwork"), keys.index("origin") + 1)
+            plaits_lab.require_artwork_color(manifest, str(pkg_dir))
+            # Setting it again replaces rather than duplicating.
+            with redirect_stdout(io.StringIO()):
+                plaits_lab.color_command(SimpleNamespace(package=str(pkg_dir), color="#009A98"))
+            manifest = json.loads((pkg_dir / "plaits-engine.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["artwork"], {"color": "#009A98"})
+            self.assertEqual(list(manifest).count("artwork"), 1)
 
     def test_submit_delegates_with_a_writable_output_mount(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

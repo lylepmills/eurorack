@@ -1623,6 +1623,31 @@ def init_command(args: argparse.Namespace) -> int:
     )
     load_package(str(output))
     print(f"created {package_id}@0.1.0 in {output}")
+    if not getattr(args, "color", None):
+        print(f"before submitting, choose the model's colour: "
+              f"{cli_invocation()} color {args.output} #RRGGBB")
+    return 0
+
+
+def color_command(args: argparse.Namespace) -> int:
+    require(HEX_COLOR_PATTERN.fullmatch(args.color) is not None,
+            "the colour must be a #RRGGBB hex string, e.g. #3A7BD5")
+    manifest_path = Path(args.package).resolve() / "plaits-engine.json"
+    manifest = read_json(manifest_path)
+    require(isinstance(manifest, dict), "plaits-engine.json must contain an object")
+    # Re-insert after origin, where init writes it, so a manifest edited by this
+    # command reads the same as one created with --color.
+    updated: dict[str, Any] = {}
+    for key, value in manifest.items():
+        if key == "artwork":
+            continue
+        updated[key] = value
+        if key == "origin":
+            updated["artwork"] = {"color": args.color}
+    updated.setdefault("artwork", {"color": args.color})
+    manifest_path.write_text(json.dumps(updated, indent=2) + "\n", encoding="utf-8")
+    load_package(args.package)
+    print(f"set {updated.get('id', 'package')} colour to {args.color}")
     return 0
 
 
@@ -2162,8 +2187,25 @@ def whoami_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def require_artwork_color(manifest: dict[str, Any], package_arg: str) -> None:
+    """A submitted engine must carry its palette colour.
+
+    Without one the model has no identity in the editor: it renders in the
+    catalog's grey fallback until a maintainer hand-picks a colour for it, which
+    is what happened to every CLI submission made without `init --color`. Asked
+    for here, before the sanitizer build, so the contributor learns it in a
+    second rather than after minutes of compiling.
+    """
+    color = manifest.get("artwork", {}).get("color")
+    require(isinstance(color, str) and HEX_COLOR_PATTERN.fullmatch(color) is not None,
+            "choose your model's colour before submitting -- it is how the model "
+            "appears in the palette editor. Run "
+            f"`{cli_invocation()} color {package_arg} #RRGGBB`.")
+
+
 def submit_command(args: argparse.Namespace) -> int:
     package = load_package(args.package)
+    require_artwork_color(package["manifest"], args.package)
     default_name = f"{package['manifest'].get('catalogId', 'package')}.plaits-package.zip"
     output = Path(args.output or default_name).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -2938,8 +2980,15 @@ def build_parser() -> argparse.ArgumentParser:
     init_parser.add_argument("--package-id")
     init_parser.add_argument("--slug")
     init_parser.add_argument("--name")
-    init_parser.add_argument("--color", help="the model's colour in the palette editor, #RRGGBB")
+    init_parser.add_argument("--color", help="the model's colour in the palette editor, #RRGGBB "
+                             "(required before submitting; `color` sets it later)")
     init_parser.set_defaults(handler=init_command)
+
+    color_parser = subparsers.add_parser(
+        "color", help="set the model's colour in the palette editor (required to submit)")
+    color_parser.add_argument("package")
+    color_parser.add_argument("color", help="#RRGGBB")
+    color_parser.set_defaults(handler=color_command)
 
     check_parser = subparsers.add_parser("check", help="validate and compile an engine package")
     check_parser.add_argument("package")

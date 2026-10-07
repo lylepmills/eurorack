@@ -144,6 +144,7 @@ validation rejects a new engine whose review is missing.
 
 ```sh
 $SDK check ./$PKG/my-engine --full
+$SDK color ./$PKG/my-engine '#3A7BD5'   # once; or pass --color to init
 $SDK submit ./$PKG/my-engine
 ```
 
@@ -155,7 +156,10 @@ invalid duration, silent output, or excessive DC. The
 bundle contains the exact source, deterministic preview WAVs, content digest,
 and per-scenario peak/RMS/DC/silence/realtime metrics.
 
-`submit` runs those same checks, then shows you exactly what is about to
+`submit` first requires the model's colour: it is how the model appears in
+the palette editor, so a package without `artwork.color` is refused before any
+build work. Set it with `init --color` or `$SDK color <package> '#RRGGBB'`. It
+then runs those same checks, and shows you exactly what is about to
 leave your machine — package, license, digest, bundle size, and the ownership
 affirmation — and uploads only after you type `submit` to confirm. It is the
 only way to submit: the contributor center follows submissions, it does not
