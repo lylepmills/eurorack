@@ -897,7 +897,7 @@ with the source inside it is the failure the `development` sentinel exists to
 catch, caught earlier.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-bcb8f2b07d1e` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-c27d1e69306b` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a new
 image, use `wrangler containers info <application-id>` and wait until
@@ -1048,6 +1048,47 @@ target.
 | October 5, 2026 (scale bank up to twelve degrees per scale: Chromatic, the diminished and bebop scales; Speech encoder rotated to v26) | `8fa4953f290d` | `rev-8fa4953f290d` |
 | October 6, 2026 (Plucked's MORPH walks the shared chord table, unison fully CCW; cubic MORPH on Struck Drum and Cymbal; Two-op FM's TWIST +/-1 semitone; a tighter square sub-oscillator loop; Speech encoder rotated to v27) | `5812b65ebd9a` | `rev-5812b65ebd9a` |
 | October 8, 2026 (community Supersaw Chords by Dirk Hoppmann; recipe config force-included into every unit that reaches engine.h, fixing BubbleTime, ZxPhase48k and Natural Speech in Sync-In/FM builds; Speech encoder rotated to v28) | `bcb8f2b07d1e` | `rev-bcb8f2b07d1e` |
+| October 8, 2026 (Disastrous Peace 1.0.1: "I maj7" arpeggiates 3 notes, as Plaits compiles it; Speech encoder rotated to v29) | `c27d1e69306b` | `rev-c27d1e69306b` |
+
+The second October 8 release shipped at `rev-c27d1e69306b` (source; master
+moved to `04171929` with the pointer commit). One data change, no firmware
+source: the chord catalog's Disastrous Peace gave chord 13 ("I maj7", cents
+1200/700/1600/2300) an arpeggio length of 4 where Plaits compiles 3 (Mutable's
+count skips the 12.00 note, as the catalog already did for Joe's other 12.00
+chords). The table is 1.0.1 with a new digest, and a new generator test pins
+the three stock catalog tables to `chord_bank.cc`'s compiled-in defaults.
+Because the builder accepts a published table only byte for byte, the website
+re-sync went out in the same window (rubato-audio `fd9a4eac`), after an
+earlier website change (`ca99a22b`) made saved configurations holding an
+older release of a published table load as the current one.
+
+Checks before production:
+- Host tests (125 + 52 + 6 + 14 builder Python, 76 node), `catalog:check`,
+  `contract:check`, `tsc`.
+- Hardware gate by equivalence, not a flash: the mixed fixture recipe built in
+  `rev-bcb8f2b07d1e` (live, hardware-auditioned that day) and in this image
+  differs in exactly one byte of the 203,616-byte binary, the arpeggio-length
+  entry 4 -> 3. The Sync In reference pair is unchanged (204,500 / 223,844 B).
+- `smoke:staging` passed, compiler-stamped (build
+  `87d02fb6f707a2d3b23d4fd18805f66a7eb5757f36e0ed3f23c441cf9f5a42ec`,
+  14,302,124-byte WAV, SHA-256
+  `99dcb2de55a7640ab0f6620b78aa1316ed96a0ba2b26f9a1326162dba2bdcd05`). Its
+  first run, submitted while the staging pool still served the old image, was
+  rejected by the container ("unavailable published chord table"): the
+  Worker already had the new catalog. It passed once the pool settled.
+
+Production went in two deploys: the image (Worker `07b3b711`), then, once the
+pool showed the new image with `starting == 0` and `active == 0` (about 18
+minutes), the `speech-encoder-v29` rotation as a Worker-only deploy (Worker
+`e872b535`; staging `9d1ce2bb` got the same rotation). One `/v1/health` probe
+then reported the Worker, pool and `speech-encoder-v29` all at
+`c27d1e69306b`. Production canary build
+`f1b5d2a621fbb034691c358c2e1b545db3d55f84b4b09f4c518cfdb0a3672b0e` succeeded,
+compiler-stamped (14,302,124-byte WAV, SHA-256
+`46847899d6f6a8d798e83788043f24a544dba801bc00a2919a2147e99f366d7c`; its recipe
+differs from the staged one only in the custom Speech bank's encoded frames,
+from the v28 vs v29 encoder). `rev-bcb8f2b07d1e` is the immediate rollback
+image.
 
 The October 8 release shipped at `rev-bcb8f2b07d1e` (source; master moved to
 `219960210074` with the pointer commit). Two changes:
