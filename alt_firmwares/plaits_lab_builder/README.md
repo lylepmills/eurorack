@@ -897,7 +897,7 @@ with the source inside it is the failure the `development` sentinel exists to
 catch, caught earlier.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-5812b65ebd9a` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-bcb8f2b07d1e` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a new
 image, use `wrangler containers info <application-id>` and wait until
@@ -1047,6 +1047,53 @@ target.
 | October 2, 2026 (CPU headroom: every catalog engine under the 0.985 overrun line on the module; sine table in SRAM and slow-flash-data on hot objects, each with a builder fallback; loop-invariant hoisting; Speech encoder rotated to v25) | `6c8bf17df0df` | `rev-6c8bf17df0df` |
 | October 5, 2026 (scale bank up to twelve degrees per scale: Chromatic, the diminished and bebop scales; Speech encoder rotated to v26) | `8fa4953f290d` | `rev-8fa4953f290d` |
 | October 6, 2026 (Plucked's MORPH walks the shared chord table, unison fully CCW; cubic MORPH on Struck Drum and Cymbal; Two-op FM's TWIST +/-1 semitone; a tighter square sub-oscillator loop; Speech encoder rotated to v27) | `5812b65ebd9a` | `rev-5812b65ebd9a` |
+| October 8, 2026 (community Supersaw Chords by Dirk Hoppmann; recipe config force-included into every unit that reaches engine.h, fixing BubbleTime, ZxPhase48k and Natural Speech in Sync-In/FM builds; Speech encoder rotated to v28) | `bcb8f2b07d1e` | `rev-bcb8f2b07d1e` |
+
+The October 8 release shipped at `rev-bcb8f2b07d1e` (source; master moved to
+`219960210074` with the pointer commit). Two changes:
+- Supersaw Chords (`community/chords-supersaw` 1.0.0, Dirk Hoppmann, MIT): a
+  Chords fork with up to three detuned band-limited saws per chord tone. One
+  maintainer fix: the phase scatter on a trigger is a fixed table instead of
+  random, because the bounded sync fallback restarts engines through that
+  trigger and random phases never locked to the master (cycle correlation
+  0.01 -> 1.000). Gain 0.983 from the K-weighted loudness sweep. Fast FM and
+  linear TZFM were measured on hardware (diagnostic groups 16/17) and declined:
+  the FM path overran at two and three saws per tone; it was removed.
+- `RECIPE_CONFIG_OBJS` now force-includes the recipe config into every unit
+  that reaches `engine.h` (PR #51): BubbleTime, ZxPhase48k, Natural Speech and
+  resonator were compiled without it, so in Sync-In and FM builds their
+  `EngineParameters` (40 B, `stereo` at 35) disagreed with `voice.cc`'s (44 B,
+  `stereo` at 41) and their vtables ended at `stereo_capable`, leaving the
+  hard-sync slots holding table data. `check_config_scope.py` now treats any
+  unit that reaches a recipe macro as requiring the config.
+
+Checks before production:
+- Host tests (plaits_test, 285 builder Python, 76 node, SDK 71), catalog
+  validation, the package check (`--full`, `--arm`).
+- On-module product overrun sweep (stereo, group 9, csaw / chords-supersaw /
+  chords): Supersaw Chords grid 0.820, random 0.810, 0 late; stock Chords on the
+  same image 0.857 / 0.901.
+- `smoke:staging` passed, compiler-stamped (build
+  `e24a467b81e3ded7cc97572f59cf287ec5324dffb8f2b8c0143c3442d7397801`, 14,302,124-byte
+  WAV, SHA-256 `41dffbb4c664ef965929a9930f3e9f257ada3644dba53142688c4345ab812f84`).
+  Flashed via ES-8 with MODEL as Sync In: Lyle confirmed boot, navigation, the
+  three Speech engines and the custom bank; BubbleTime and ZxPhase48k locked to
+  a 110 Hz clock into Sync In without faulting; ZxPhase48k's AUX followed the
+  mono setting (+10.9 dB, corr -0.04) where it had read a stray byte before. A
+  staged Supersaw Chords audition (build `74f900b8…`) played with AUX mono
+  honoured.
+
+Production went in two deploys: the image (Worker `a9ee5dca`), then, once the
+pool showed the new image only with `starting == 0` and `active == 0` (about 13
+minutes), the `speech-encoder-v28` rotation as a Worker-only deploy (Worker
+`9bd6a89b`). One `/v1/health` probe then reported the Worker, pool and
+`speech-encoder-v28` all at `bcb8f2b07d1e`. Production canary build
+`74f900b8f9494a6afa323c9f423a18b1dff6f058ba71f2f65070ae0ddeb8024f` succeeded,
+compiler-stamped (6,360,812-byte WAV, SHA-256
+`24f0f1fb32cecb195aff0ffdc19282d9700ea89c418d3b008c82f17be5337fcb`, byte-identical
+to the staged audition played on hardware). The website pin, flash re-anchor
+(stock-24 227,924 B), chord audition, previews, colour and mark landed as
+rubato-audio `833e028b`. `rev-5812b65ebd9a` is the immediate rollback image.
 
 The October 6 release shipped at `rev-5812b65ebd9a`. It answers the beta
 tester's TWIST/MORPH report with four control changes, each chosen by ear on
