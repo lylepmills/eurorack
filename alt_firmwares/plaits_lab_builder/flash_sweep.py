@@ -89,14 +89,16 @@ NEW = ARGV or [
 # KEEP THESE IN SYNC with website/src/components/plaits-palette/flash-budget.ts.
 # They are a snapshot of someone else's table, so they rot on every flash-meter
 # re-calibration; a control that silently drifts is worse than no control. These
-# are the d554b7f46dc0 values (2026-08-05). If a run reports a large control
+# are the values flash-budget.ts carries after the rev-bcb8f2b07d1e re-anchor
+# (2026-10-08); the d554b7f46dc0 snapshot they replaced had rotted by 144 B and
+# raised a false drift warning on that release. If a run reports a large control
 # gap, re-read that file before believing the engine you actually came to
 # measure.
 STEREO_DEFAULT = ['toy', 'bowed', 'csaw', 'ring-mod', 'vowel-fof',
                   'digital-modulation', 'clap', 'analog-percussion',
                   'freshets-formant', 'bubbletime', 'zxphase48k', 'zxpulse48k',
                   'acid', 'harmonic', 'glisson']
-STEREO_CONTROLS = {'harmonic': 2_512, 'glisson': 432}
+STEREO_CONTROLS = {'harmonic': 2_368, 'glisson': 480}
 
 # The MONO sweep's controls, same idea: engines whose marginal flash-budget.ts
 # already records, measured in the same pair as the new engines. If they
@@ -108,7 +110,7 @@ STEREO_CONTROLS = {'harmonic': 2_512, 'glisson': 432}
 # Schema 27 moved the shared articulation/navigation base and re-anchored
 # Speech's full-context marginal at 23,120 B. Keep this diagnostic snapshot in
 # sync with website/src/components/plaits-palette/flash-budget.ts.
-CONTROLS = {'speech': 23_120, 'reed-pipe': 2_000, 'spectral-spiral': 2_032}
+CONTROLS = {'speech': 23_120, 'reed-pipe': 1_920, 'spectral-spiral': 2_000}
 
 
 def build_size(tag, recipe):
