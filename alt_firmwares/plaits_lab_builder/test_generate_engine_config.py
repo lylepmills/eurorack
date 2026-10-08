@@ -2178,6 +2178,28 @@ class GenerateEngineConfigTest(unittest.TestCase):
         self.assertIn("#define PLAITS_BANK_SIZES { 8, 7, 8 }", config)
         self.assertIn("#define PLAITS_HAS_SPEECH_ENGINE 0", config)
 
+    def test_stock_chord_tables_match_the_firmware_defaults(self) -> None:
+        # The first three catalog tables are the three Plaits ships with, whose
+        # cents and arpeggio lengths chord_bank.cc compiles in as its defaults.
+        # The arpeggio lengths follow Mutable's rule (a note counts unless it is
+        # 0.01, 7.01, 11.99 or 12.00 semitones). Disastrous Peace's "I maj7"
+        # was catalogued as 4 when the firmware's 3 is right (fixed in 1.0.1).
+        source = (FIXTURES / "../../plaits/dsp/chords/chord_bank.cc").read_text(encoding="utf-8")
+        default = source[source.index("#ifndef PLAITS_CHORD_CENTS"):source.index("#endif")]
+        numbers = lambda name: [int(value) for value in re.findall(
+            r"-?\d+", re.search(rf"#define {name} \{{(.*?)\}}\s*(?:#|$)", default, re.S).group(1))]
+        cents = numbers("PLAITS_CHORD_CENTS")
+        stock = DEFAULT_CHORD_TABLES[:3]
+        self.assertEqual([table["id"] for table in stock], ["original", "jon-butler", "joe-mcmullen"])
+        chords = [chord for table in stock for chord in table["chords"]]
+        self.assertEqual(numbers("PLAITS_CHORD_TABLE_SIZES"), [len(table["chords"]) for table in stock])
+        self.assertEqual([cents[index:index + 4] for index in range(0, len(cents), 4)],
+                         [chord["voices"] for chord in chords])
+        self.assertEqual(numbers("PLAITS_CHORD_ARP_LENGTHS"), [chord["arpLength"] for chord in chords])
+        mutable = lambda voices: sum(voice not in (1, 701, 1199, 1200) for voice in voices)
+        self.assertEqual([mutable(chord["voices"]) for chord in chords],
+                         [chord["arpLength"] for chord in chords])
+
     def test_local_chord_tables_are_rendered_as_bounded_numeric_data(self) -> None:
         public = self.load("../plaits_lab_catalog/public_catalog.json")
         chord_catalog = self.load("../plaits_lab_chord_tables/catalog.json")
