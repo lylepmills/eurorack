@@ -1068,7 +1068,8 @@ Checks before production:
 - Hardware gate by equivalence, not a flash: the mixed fixture recipe built in
   `rev-bcb8f2b07d1e` (live, hardware-auditioned that day) and in this image
   differs in exactly one byte of the 203,616-byte binary, the arpeggio-length
-  entry 4 -> 3. The Sync In reference pair is unchanged (204,500 / 223,844 B).
+  entry 4 -> 3. The Sync In reference pair is unchanged (204,500 / 223,844 B). Lyle
+  waived the flash audition for this data-only change.
 - `smoke:staging` passed, compiler-stamped (build
   `87d02fb6f707a2d3b23d4fd18805f66a7eb5757f36e0ed3f23c441cf9f5a42ec`,
   14,302,124-byte WAV, SHA-256
