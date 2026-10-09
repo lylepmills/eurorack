@@ -4685,7 +4685,9 @@ void ValidateFmCapabilityPolicy() {
   // Measured on hardware and declined for CPU, not semantics: Supersaw Chords'
   // audio-rate FM path overran the deadline at two and three saws per chord
   // tone in both Fast FM and linear TZFM (2026-10-07, diagnostic groups 16 and
-  // 17; that path was then removed). It keeps control-rate pitch FM.
+  // 17). Plaits builds keep control-rate pitch FM only; the per-sample path
+  // exists solely behind PLAITS_BUILD_EXTENDED_TZFM, for Palette targets
+  // (877f9520), which this stock-configuration test never compiles.
   Engine* over_budget_audio_rate_fm_engines[] = {
     &chords_supersaw,
   };
