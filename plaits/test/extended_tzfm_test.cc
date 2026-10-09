@@ -102,6 +102,7 @@
 #include "plaits/dsp/engine2/wave_terrain_engine.h"
 #include "plaits/dsp/engine2/wavetable_chord_engine.h"
 #include "plaits/dsp/engine2/wavetable_scale_stack_engine.h"
+#include "plaits/dsp/engine2/chords_supersaw_engine.h"
 #include "plaits/dsp/engine2/z_filter_engine.h"
 #include "plaits/dsp/engine2/zxphase48k_engine.h"
 #include "plaits/dsp/engine2/zxpulse48k_engine.h"
@@ -388,6 +389,7 @@ int main() {
   Test<ZxPhase48kEngine>("zxphase48k", -1, true);
   Test<ZxPulse48kEngine>("zxpulse48k", -1, true);
   Test<AcidEngine>("acid", -1, true);
+  Test<ChordsSupersawEngine>("chords-supersaw", -1, true);
   // Wave Terrain needs a bank, so its baseline audio is covered by the host
   // parity suite; include its unchanged eligibility in the whole-catalog count.
   WaveTerrainEngine terrain;
@@ -400,7 +402,9 @@ int main() {
   // unconditionally as both its parents do and passes the strict through-zero
   // checks above (signed_difference well past the 0.01 floor, and FM reverses
   // phase rather than rectifying).
-  Check(tzfm_count == (PLAITS_BUILD_EXTENDED_TZFM ? 77 : 30), "catalog", "TZFM target count");
+  // Supersaw Chords (2026-10-09) qualifies on Palette targets only; the stock
+  // Plaits policy declines it for CPU.
+  Check(tzfm_count == (PLAITS_BUILD_EXTENDED_TZFM ? 78 : 30), "catalog", "TZFM target count");
   // 34 at the time this suite was written, plus Circuit Zaps (010025d), plus
   // Virtual Analog Variant.
   Check(fast_count == 36, "catalog", "Plaits Fast FM qualification must stay unchanged");

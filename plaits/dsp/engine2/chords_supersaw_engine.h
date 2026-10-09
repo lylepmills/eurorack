@@ -198,6 +198,59 @@ class SupersawVoice {
     next_sample_ = next_sample;
   }
 
+#if PLAITS_BUILD_EXTENDED_TZFM
+  // Audio-rate FM for the plain saw (the model's fixed shape), on Palette's
+  // higher-compute targets only: on a Plaits module this path overran the
+  // deadline at two and three saws per tone (2026-10-07), so stock recipes
+  // never compile it. scale[] holds a per-sample multiplier on the
+  // interpolated frequency. A negative value runs the ramp backwards for
+  // through-zero FM: it then wraps at 0 instead of 1, and the step there rises
+  // by 2g instead of falling.
+  inline void RenderSawModulated(
+      float frequency,
+      float gain,
+      const float* scale,
+      float* out,
+      size_t size) {
+    CONSTRAIN(frequency, 1.0e-7f, 0.49f);
+
+    stmlib::ParameterInterpolator fm(&frequency_, frequency, size);
+    stmlib::ParameterInterpolator gain_modulation(&gain_, gain, size);
+
+    float phase = phase_;
+    float next_sample = next_sample_;
+
+    for (size_t i = 0; i < size; ++i) {
+      float this_sample = next_sample;
+      next_sample = 0.0f;
+
+      float f = fm.Next() * scale[i];
+      CONSTRAIN(f, -0.49f, 0.49f);
+      const float g = gain_modulation.Next();
+
+      phase += f;
+      if (phase >= 1.0f) {
+        phase -= 1.0f;
+        const float t = phase / f;
+        const float discontinuity = -2.0f * g;
+        this_sample += stmlib::ThisBlepSample(t) * discontinuity;
+        next_sample += stmlib::NextBlepSample(t) * discontinuity;
+      } else if (phase < 0.0f) {
+        phase += 1.0f;
+        const float t = (phase - 1.0f) / f;
+        const float discontinuity = 2.0f * g;
+        this_sample += stmlib::ThisBlepSample(t) * discontinuity;
+        next_sample += stmlib::NextBlepSample(t) * discontinuity;
+      }
+      next_sample += (2.0f * phase - 1.0f) * g;
+      *out++ += this_sample;
+    }
+
+    phase_ = phase;
+    next_sample_ = next_sample;
+  }
+#endif
+
  private:
   float phase_;
   float next_sample_;
@@ -221,6 +274,11 @@ class ChordsSupersawEngine : public Engine {
   virtual bool stereo_capable() const {
     return PLAITS_STEREO_CHORDS_SUPERSAW;
   }
+#if PLAITS_BUILD_EXTENDED_TZFM
+  // Qualified separately from the stock Plaits catalog's CPU policy, which
+  // declines audio-rate FM for this engine (see ValidateFmCapabilityPolicy).
+  virtual bool linear_tzfm_capable() const { return true; }
+#endif
   // No HardSync() hook: the bounded sync fallback follows its reset with a
   // synthetic TRIGGER_RISING_EDGE, and the trigger handler already restarts
   // every oscillator from the fixed scatter in ScatterPhases().

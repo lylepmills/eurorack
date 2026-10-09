@@ -35,6 +35,7 @@
 
 #include <algorithm>
 
+#include "plaits/build_config.h"
 #include "plaits/dsp/dsp.h"
 #include "plaits/resources.h"
 
@@ -183,6 +184,27 @@ void ChordsSupersawEngine::Render(
   }
 
   const float f0 = NoteToFrequency(parameters.note) * 0.998f;
+
+#if PLAITS_BUILD_EXTENDED_TZFM
+  // Audio-rate FM arrives as absolute per-sample offsets on the base pitch.
+  // Every oscillator follows the root, so one ratio per sample moves the whole
+  // chord. Exponential FM never asks for a negative frequency; linear TZFM may,
+  // and then the saws run backwards.
+  float fm_scale[kMaxBlockSize];
+  const bool modulated = parameters.frequency_offset;
+  if (modulated) {
+    const float base = NoteToFrequency(parameters.note);
+    const float inverse_base = 1.0f / base;
+    const bool signed_fm = parameters.extended_tzfm_active();
+    for (size_t i = 0; i < size; ++i) {
+      float scale = (base + parameters.frequency_offset[i]) * inverse_base;
+      if (!signed_fm && scale < 0.0f) {
+        scale = 0.0f;
+      }
+      fm_scale[i] = scale;
+    }
+  }
+#endif
   // MORPH: the detune spread, squared so the first part of the travel covers
   // slow beating and the top reaches a full supersaw.
   const float detune_semitones = morph_lp_ * morph_lp_ * kSupersawMaxDetune;
@@ -231,6 +253,17 @@ void ChordsSupersawEngine::Render(
         destination = mono_destination;
       }
 
+#if PLAITS_BUILD_EXTENDED_TZFM
+      if (modulated) {
+        voice_[note][rank].RenderSawModulated(
+            frequency,
+            rank < unison ? unison_gain * rank_gain : 0.0f,
+            fm_scale,
+            destination,
+            size);
+        continue;
+      }
+#endif
       voice_[note][rank].Render(
           kSupersawFixedShape,
           kSupersawFixedShapeAmount,
