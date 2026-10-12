@@ -25,6 +25,7 @@
 #include "plaits/dsp/dsp.h"
 #include "plaits/build_config.h"
 #include "plaits/drivers/audio_rate_fm_resampler.h"
+#include "plaits/patch_detector.h"
 #include "plaits/dsp/fast_semitone_ratio.h"
 #include "plaits/pot_controller.h"
 #include "plaits/resources.h"
@@ -4197,6 +4198,61 @@ void TestExperimentalEngines() {
   printf("Synthesis engine tests passed.\n");
 }
 
+void ValidatePatchDetector() {
+  const int streak = PatchDetector::kPatchedStreak;
+  PatchDetector detector;
+
+  // Power-up: the first window decides on its own, either way.
+  detector.Init();
+  if (!detector.Process(true)) {
+    fprintf(stderr, "A cable patched at power-up waited for a streak\n");
+    abort();
+  }
+  detector.Init();
+  if (detector.Process(false)) {
+    fprintf(stderr, "An empty jack at power-up counted as patched\n");
+    abort();
+  }
+
+  // Insertion: patched only on the streak's last window.
+  for (int i = 1; i <= streak; ++i) {
+    if (detector.Process(true) != (i == streak)) {
+      fprintf(stderr, "Mismatch window %d of %d gave the wrong state\n",
+          i, streak);
+      abort();
+    }
+  }
+
+  // Removal: one clean window is enough.
+  if (detector.Process(false)) {
+    fprintf(stderr, "A clean window left the jack patched\n");
+    abort();
+  }
+
+  // Contact bounce: bad windows broken up by clean ones never add up.
+  for (int burst = 0; burst < 20; ++burst) {
+    for (int i = 0; i < streak - 1; ++i) {
+      if (detector.Process(true)) {
+        fprintf(stderr, "A broken streak counted as patched\n");
+        abort();
+      }
+    }
+    if (detector.Process(false)) {
+      fprintf(stderr, "A clean window counted as patched\n");
+      abort();
+    }
+  }
+
+  // A patched cable stays patched however long it stays in.
+  for (int i = 0; i < streak + 100; ++i) {
+    detector.Process(true);
+  }
+  if (!detector.patched()) {
+    fprintf(stderr, "A long-patched jack dropped out\n");
+    abort();
+  }
+}
+
 void ValidateParameterRandomizer() {
   const ParameterRandomizerProfile profile = {
     0.25f, 0.55f, 0.000009f, 0.000006f, 0.60f
@@ -4750,6 +4806,8 @@ int main(void) {
   // EnumerateWavetables();
   
   // TestLPGAttackDecay();
+  printf("Validating jack patch detection...\n");
+  ValidatePatchDetector();
   printf("Validating unpatched attenuverter modes...\n");
   ValidateParameterRandomizer();
   printf("Validating custom Speech bank level matching...\n");

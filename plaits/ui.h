@@ -40,6 +40,7 @@
 #include "plaits/drivers/sync_input.h"
 #include "plaits/drivers/switches.h"
 #include "plaits/dsp/voice.h"
+#include "plaits/patch_detector.h"
 #include "plaits/pitch_range.h"
 #include "plaits/pot_controller.h"
 #include "plaits/settings.h"
@@ -254,6 +255,7 @@ class Ui {
 
   int normalization_detection_count_;
   int normalization_detection_mismatches_[kNumNormalizedChannels];
+  PatchDetector patch_detectors_[kNumNormalizedChannels];
   uint32_t normalization_probe_state_;
 
   int pwm_counter_;

@@ -174,6 +174,9 @@ void Ui::Init(Patch* patch, Modulations* modulations, Settings* settings) {
       &normalization_detection_mismatches_[0],
       &normalization_detection_mismatches_[5],
       0);
+  for (int i = 0; i < kNumNormalizedChannels; ++i) {
+    patch_detectors_[i].Init();
+  }
 
   pwm_counter_ = 0;
   fill(&press_time_[0], &press_time_[SWITCH_LAST], 0);
@@ -1223,7 +1226,8 @@ void Ui::DetectNormalization() {
     normalization_detection_count_ = 0;
     bool* destination = &modulations_->frequency_patched;
     for (int i = 0; i < kNumNormalizedChannels; ++i) {
-      destination[i] = normalization_detection_mismatches_[i] >= 2;
+      destination[i] = patch_detectors_[i].Process(
+          normalization_detection_mismatches_[i] >= 2);
       normalization_detection_mismatches_[i] = 0;
     }
   }
