@@ -34,8 +34,11 @@ PUBLIC_CATALOG_PATH = BUILDER_DIR.parent / "plaits_lab_catalog/public_catalog.js
 # Plaits panel's build-time quick-retune shortcut. 24 renames the fourth
 # synthesis control from MACRO to TWIST everywhere the guide prints it (panel
 # labels, the option-menu value names, the locked-FREQUENCY prose, the scale
-# and wavetable pages); the catalog key stays `macro`.
-MANUAL_CONTRACT = 24
+# and wavetable pages); the catalog key stays `macro`. 25 rewrites the
+# unpatched-attenuverter note for the shared Near/Far reach: CCW now keeps most
+# values close to the knob and occasionally reaches far, instead of staying in
+# a restrained range.
+MANUAL_CONTRACT = 25
 BANKS = (
     {"id": "green", "name": "GREEN", "start": 0, "color": "#4F9868"},
     {"id": "red", "name": "RED", "start": 8, "color": "#C6534B"},
@@ -96,9 +99,10 @@ MENU_LIGHTS = (
 
 ATTENUVERTER_OPTIONS_NOTE = (
     "LIGHT 8 changes what unpatched TIMBRE and MORPH attenuverters do: Default behavior preserves the original behavior, "
-    "Drift moves continuously, and Step picks a new held offset on each physical TRIG. In Drift or Step, CCW selects "
-    "restrained movement close to the knob setting and CW selects broader, farther-reaching movement; both directions are "
-    "bipolar. Moving farther from center increases the range, and in Drift also the speed. Patched CV and each model's "
+    "Drift moves continuously, and Step picks a new held offset on each physical TRIG. In Drift or Step, both directions are "
+    "bipolar and reach the same range: CCW keeps most values close to the knob setting and only occasionally reaches far, "
+    "while CW spreads them across the whole range. Moving farther from center increases the range, and in Drift also the "
+    "speed. Patched CV and each model's "
     "dedicated attenuverter behavior always take priority. "
 )
 

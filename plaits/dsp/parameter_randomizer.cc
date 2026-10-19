@@ -8,6 +8,27 @@ namespace {
 
 const float kDeadZone = 0.07f;
 
+// Near Drift reads Lorenz z and Far Drift reads Lorenz x, whose natural
+// amplitudes differ: the rms of SoftBipolar(z - 25, 0.05) is 0.876 of
+// SoftBipolar(x, 0.08)'s. Both then peak near 0.8 (Lorenz x stays within
+// about +/-20, and SoftBipolar(20, 0.08) is 0.8), so dividing by that bound
+// lets Drift reach as far as Step's held values do.
+const float kNearDriftNorm = 0.876f;
+const float kDriftPeak = 0.8f;
+
+// Quantiles of the Near Drift source above (clamped to +/-1) at 0, 1/32 ...
+// 1, measured over 64 seeded orbits and 6.3M samples. Mapping the source
+// through them spreads it evenly over -1..1, as Step's random value already
+// is, so Near Step and Near Drift share one distribution. The map is
+// monotonic, so Drift keeps its motion.
+const float kNearDriftQuantiles[33] = {
+  -1.0000f, -0.9386f, -0.8955f, -0.8602f, -0.8277f, -0.7964f, -0.7652f,
+  -0.7336f, -0.7007f, -0.6660f, -0.6289f, -0.5885f, -0.5441f, -0.4941f,
+  -0.4371f, -0.3706f, -0.2911f, -0.1935f, -0.0695f, 0.0824f, 0.2183f,
+  0.3345f, 0.4328f, 0.5159f, 0.5858f, 0.6452f, 0.6969f, 0.7432f, 0.7860f,
+  0.8272f, 0.8696f, 0.9188f, 1.0000f,
+};
+
 inline float Absolute(float value) {
   return value < 0.0f ? -value : value;
 }
@@ -56,32 +77,54 @@ float ParameterRandomizer::Position(float amount) {
       : (magnitude - kDeadZone) / (1.0f - kDeadZone);
 }
 
+// One range law for both sides. Depth (the squared distance from the dead
+// zone) scales the reach, and the reach opens with depth toward whichever end
+// the offset heads for, so at full depth either side can travel from the knob
+// setting to either end. What tells the sides apart is how often a value goes
+// far: Near cubes its evenly spread source, so 46% of values land within a
+// tenth of the reach and 9% beyond three quarters, while Far spreads them
+// across the whole reach.
 float ParameterRandomizer::ApplyVoltage(
     float base,
     float amount,
-    float voltage,
-    const ParameterRandomizerProfile& profile) {
+    float voltage) {
   const float position = Position(amount);
   const float excursion = position * position;
   if (excursion <= 0.0f) {
     return base;
   }
-
-  const bool near = amount < 0.0f;
-  if (near) {
-    voltage *= 0.55f;
+  if (amount < 0.0f) {
+    voltage = voltage * voltage * voltage;
   }
-  const float span = near ? profile.near_span : profile.far_span;
   const float symmetric_headroom = base < 1.0f - base ? base : 1.0f - base;
   const float directional_headroom = voltage < 0.0f ? base : 1.0f - base;
-  const float release = near
-      ? 0.0f
-      : profile.far_center_release * excursion;
   const float headroom = symmetric_headroom +
-      (directional_headroom - symmetric_headroom) * release;
-  float value = base + voltage * headroom * span * excursion;
+      (directional_headroom - symmetric_headroom) * excursion;
+  float value = base + voltage * headroom * excursion;
   CONSTRAIN(value, 0.0f, 1.0f);
   return value;
+}
+
+float ParameterRandomizer::NearEven(float source) {
+  const float* q = kNearDriftQuantiles;
+  if (source <= q[0]) {
+    return -1.0f;
+  }
+  if (source >= q[32]) {
+    return 1.0f;
+  }
+  int low = 0;
+  int high = 32;
+  while (high - low > 1) {
+    const int middle = (low + high) >> 1;
+    if (q[middle] <= source) {
+      low = middle;
+    } else {
+      high = middle;
+    }
+  }
+  const float fraction = (source - q[low]) / (q[low + 1] - q[low]);
+  return -1.0f + 2.0f * (static_cast<float>(low) + fraction) / 32.0f;
 }
 
 float ParameterRandomizer::NextBipolar() {
@@ -96,9 +139,12 @@ float ParameterRandomizer::NextBipolar() {
 
 float ParameterRandomizer::DriftVoltage(int parameter, float amount) const {
   const int offset = parameter * 2;
-  return amount < 0.0f
-      ? SoftBipolar(orbit_[offset].z - 25.0f, 0.05f) / 0.55f
+  float voltage = amount < 0.0f
+      ? SoftBipolar(orbit_[offset].z - 25.0f, 0.05f) / kNearDriftNorm
       : SoftBipolar(orbit_[offset + 1].x, 0.08f);
+  voltage /= kDriftPeak;
+  CONSTRAIN(voltage, -1.0f, 1.0f);
+  return amount < 0.0f ? NearEven(voltage) : voltage;
 }
 
 void ParameterRandomizer::Process(
@@ -134,7 +180,7 @@ void ParameterRandomizer::Process(
       voltage = DriftVoltage(parameter, amount[parameter]);
     }
     *destination[parameter] = ApplyVoltage(
-        base[parameter], amount[parameter], voltage, *profile[parameter]);
+        base[parameter], amount[parameter], voltage);
   }
 }
 

@@ -1,69 +1,45 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "parameterArchetypes": {
     "balanced": {
       "topology": "continuous",
-      "nearSpan": 0.25,
-      "farSpan": 0.55,
       "nearRate": 0.000009,
-      "farRate": 0.000006,
-      "farCenterRelease": 0.60
+      "farRate": 0.000006
     },
     "broad-texture": {
       "topology": "continuous",
-      "nearSpan": 0.32,
-      "farSpan": 0.72,
       "nearRate": 0.000012,
-      "farRate": 0.000008,
-      "farCenterRelease": 0.80
+      "farRate": 0.000008
     },
     "patient-structure": {
       "topology": "identity-sensitive",
-      "nearSpan": 0.20,
-      "farSpan": 0.46,
       "nearRate": 0.000006,
-      "farRate": 0.000003,
-      "farCenterRelease": 0.45
+      "farRate": 0.000003
     },
     "stepped-identity": {
       "topology": "stepped",
-      "nearSpan": 0.18,
-      "farSpan": 0.40,
       "nearRate": 0.000005,
-      "farRate": 0.000003,
-      "farCenterRelease": 0.35
+      "farRate": 0.000003
     },
     "centered": {
       "topology": "center-significant",
-      "nearSpan": 0.22,
-      "farSpan": 0.50,
       "nearRate": 0.000007,
-      "farRate": 0.000004,
-      "farCenterRelease": 0.30
+      "farRate": 0.000004
     },
     "pitch-interval": {
       "topology": "pitch-like",
-      "nearSpan": 0.16,
-      "farSpan": 0.42,
       "nearRate": 0.000006,
-      "farRate": 0.000003,
-      "farCenterRelease": 0.40
+      "farRate": 0.000003
     },
     "event-rate": {
       "topology": "event-rate",
-      "nearSpan": 0.24,
-      "farSpan": 0.58,
       "nearRate": 0.000008,
-      "farRate": 0.000005,
-      "farCenterRelease": 0.60
+      "farRate": 0.000005
     },
     "threshold-guarded": {
       "topology": "threshold-sensitive",
-      "nearSpan": 0.18,
-      "farSpan": 0.38,
       "nearRate": 0.000005,
-      "farRate": 0.000003,
-      "farCenterRelease": 0.25
+      "farRate": 0.000003
     }
   },
   "fallback": {
@@ -77,21 +53,15 @@
       "timbre": {
         "archetype": "balanced",
         "overrides": {
-          "nearSpan": 0.26,
-          "farSpan": 0.58,
           "nearRate": 0.000010,
-          "farRate": 0.000007,
-          "farCenterRelease": 0.70
+          "farRate": 0.000007
         }
       },
       "morph": {
         "archetype": "broad-texture",
         "overrides": {
-          "nearSpan": 0.30,
-          "farSpan": 0.68,
           "nearRate": 0.000007,
-          "farRate": 0.000004,
-          "farCenterRelease": 0.75
+          "farRate": 0.000004
         }
       }
     },
@@ -245,21 +215,15 @@
       "timbre": {
         "archetype": "balanced",
         "overrides": {
-          "nearSpan": 0.22,
-          "farSpan": 0.50,
           "nearRate": 0.000009,
-          "farRate": 0.000006,
-          "farCenterRelease": 0.55
+          "farRate": 0.000006
         }
       },
       "morph": {
         "archetype": "broad-texture",
         "overrides": {
-          "nearSpan": 0.30,
-          "farSpan": 0.66,
           "nearRate": 0.000007,
-          "farRate": 0.000004,
-          "farCenterRelease": 0.70
+          "farRate": 0.000004
         }
       }
     },
@@ -268,21 +232,15 @@
       "timbre": {
         "archetype": "stepped-identity",
         "overrides": {
-          "nearSpan": 0.23,
-          "farSpan": 0.52,
           "nearRate": 0.000007,
-          "farRate": 0.000004,
-          "farCenterRelease": 0.55
+          "farRate": 0.000004
         }
       },
       "morph": {
         "archetype": "stepped-identity",
         "overrides": {
-          "nearSpan": 0.21,
-          "farSpan": 0.44,
           "nearRate": 0.000005,
-          "farRate": 0.000003,
-          "farCenterRelease": 0.45
+          "farRate": 0.000003
         }
       }
     },
@@ -291,21 +249,15 @@
       "timbre": {
         "archetype": "broad-texture",
         "overrides": {
-          "nearSpan": 0.34,
-          "farSpan": 0.80,
           "nearRate": 0.000014,
-          "farRate": 0.000009,
-          "farCenterRelease": 0.85
+          "farRate": 0.000009
         }
       },
       "morph": {
         "archetype": "broad-texture",
         "overrides": {
-          "nearSpan": 0.30,
-          "farSpan": 0.66,
           "nearRate": 0.000010,
-          "farRate": 0.000006,
-          "farCenterRelease": 0.75
+          "farRate": 0.000006
         }
       }
     },

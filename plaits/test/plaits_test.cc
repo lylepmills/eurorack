@@ -4254,9 +4254,7 @@ void ValidatePatchDetector() {
 }
 
 void ValidateParameterRandomizer() {
-  const ParameterRandomizerProfile profile = {
-    0.25f, 0.55f, 0.000009f, 0.000006f, 0.60f
-  };
+  const ParameterRandomizerProfile profile = { 0.000009f, 0.000006f };
   ParameterRandomizer randomizer;
   randomizer.Init();
 
@@ -4313,6 +4311,45 @@ void ValidateParameterRandomizer() {
       &timbre, &morph);
   if (timbre == held_timbre && morph == held_morph) {
     fprintf(stderr, "Step mode did not choose a new trigger value\n");
+    abort();
+  }
+
+  // Near and Far share one reach: at full depth both can move inward from an
+  // endpoint (Near used to stay inside the smaller distance to either end, so
+  // it could not move from one at all), and both reach the far end.
+  float near_from_zero = 0.0f;
+  float far_from_zero = 0.0f;
+  // Near cubes its evenly spread source, Far does not: at a centred base with
+  // full depth the reach is 0.5 either way, so a tenth of it is 0.05. Near
+  // should land there about 46% of the time and Far about 10%.
+  int near_close = 0;
+  int far_close = 0;
+  const int triggers = 4000;
+  for (int i = 0; i < triggers; ++i) {
+    randomizer.Trigger();
+    randomizer.Process(
+        ATTENUVERTER_MODE_STEP, true, true,
+        0.0f, 0.0f, -1.0f, 1.0f, profile, profile,
+        &timbre, &morph);
+    near_from_zero = timbre > near_from_zero ? timbre : near_from_zero;
+    far_from_zero = morph > far_from_zero ? morph : far_from_zero;
+    randomizer.Process(
+        ATTENUVERTER_MODE_STEP, true, true,
+        0.5f, 0.5f, -1.0f, 1.0f, profile, profile,
+        &timbre, &morph);
+    near_close += fabsf(timbre - 0.5f) < 0.05f;
+    far_close += fabsf(morph - 0.5f) < 0.05f;
+  }
+  if (near_from_zero < 0.9f || far_from_zero < 0.9f) {
+    fprintf(stderr, "Near or Far did not reach across from an endpoint\n");
+    abort();
+  }
+  const float near_share = static_cast<float>(near_close) / triggers;
+  const float far_share = static_cast<float>(far_close) / triggers;
+  if (near_share < 0.40f || near_share > 0.52f ||
+      far_share < 0.07f || far_share > 0.13f) {
+    fprintf(stderr, "Near/Far distributions are wrong: %f %f\n",
+            near_share, far_share);
     abort();
   }
 }

@@ -117,15 +117,17 @@ patched trigger, so sustained engines respond to Strike too.
 
 The live page also auditions the firmware's **unpatched-attenuverter Drift
 mode** for TIMBRE and MORPH. A small zone around noon is off. Both sides remain
-bipolar: CCW selects restrained movement close to the knob setting, while CW
-selects broader, farther-reaching movement. Moving farther from center
-increases both excursion and speed. The modulation follows continuous chaotic
-control orbits with no targets, clocks, or connection to Strike.
-`randomizer_profiles.json` resolves reusable parameter archetypes and per-model
-overrides at compile time. Every catalog model has an explicit profile; the
-page labels it as seeded until it has had a listening pass. Virtual Analog,
-Fold, Vowel FOF, and Granular Cloud are currently tuned; the other 77
-profiles remain seeded starting points. This page is a tuning aid for the
+bipolar and reach the same range: CCW keeps most movement close to the knob
+setting and only occasionally reaches far, while CW spreads movement across
+the whole range. Moving farther from center increases both excursion and
+speed. The modulation follows continuous chaotic control orbits with no
+targets, clocks, or connection to Strike. The range law is the same for every
+model; `randomizer_profiles.json` resolves reusable parameter archetypes and
+per-model overrides of the Near and Far Drift speeds at compile time (schema 2;
+schema 1 also tuned each model's spans). Every catalog model has an explicit
+profile; the page labels it as seeded until it has had a listening pass.
+Virtual Analog, Fold, Vowel FOF, and Granular Cloud have tuned speeds; the
+other profiles remain seeded starting points. This page is a tuning aid for the
 shipped firmware's continuous Drift behavior. Runtime mode selection and
 trigger-driven Step remain available on the module. Recipe schema 18 also lets
 Plaits Palette choose Stock, Drift, or Step as the installed firmware's

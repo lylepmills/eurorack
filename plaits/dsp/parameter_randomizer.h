@@ -16,12 +16,11 @@ enum AttenuverterMode {
   ATTENUVERTER_MODE_LAST
 };
 
+// Per-model Drift speeds. The range law is the same for every model (see
+// ApplyVoltage); only how fast each side's orbit moves is tuned per model.
 struct ParameterRandomizerProfile {
-  float near_span;
-  float far_span;
   float near_rate;
   float far_rate;
-  float far_center_release;
 };
 
 struct EngineRandomizerProfile {
@@ -59,11 +58,8 @@ class ParameterRandomizer {
 
   static void Advance(ChaosOrbit* orbit, float dt);
   static float Position(float amount);
-  static float ApplyVoltage(
-      float base,
-      float amount,
-      float voltage,
-      const ParameterRandomizerProfile& profile);
+  static float ApplyVoltage(float base, float amount, float voltage);
+  static float NearEven(float source);
   float NextBipolar();
   float DriftVoltage(int parameter, float amount) const;
 

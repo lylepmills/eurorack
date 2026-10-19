@@ -2020,9 +2020,7 @@ def resolved_randomizer_parameter(engine_id: str, parameter: str) -> tuple[float
         **RANDOMIZER_REGISTRY["parameterArchetypes"][archetype],
         **overrides,
     }
-    return tuple(float(profile[field]) for field in (
-        "nearSpan", "farSpan", "nearRate", "farRate", "farCenterRelease",
-    ))
+    return tuple(float(profile[field]) for field in ("nearRate", "farRate"))
 
 
 def cpp_bool(value: bool) -> str:
@@ -2135,7 +2133,8 @@ def render_config(recipe: BuildRecipe) -> str:
 
     # Resolve the catalog's semantic archetypes into a compact firmware table.
     # Only numeric profiles reached by this palette are emitted; duplicate
-    # archetypes and duplicate slots share one five-float record.
+    # archetypes and duplicate slots share one two-float record (the Near and
+    # Far Drift speeds; the range law itself is the same for every model).
     randomizer_profiles: list[tuple[float, ...]] = []
     randomizer_profile_index: dict[tuple[float, ...], int] = {}
     randomizer_pairs: list[tuple[int, int]] = []

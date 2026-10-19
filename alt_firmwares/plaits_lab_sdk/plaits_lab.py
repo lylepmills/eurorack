@@ -1082,17 +1082,17 @@ WASM_EXPORTS = ('["_init","_render","_set_params","_set_randomizer_amounts",'
                '"_current_timbre","_current_morph"]')
 
 RANDOMIZER_PROFILES_PATH = SDK_DIR / "randomizer_profiles.json"
-RANDOMIZER_PROFILE_FIELDS = (
-    "nearSpan", "farSpan", "nearRate", "farRate", "farCenterRelease",
-)
+# Only the Drift speeds are tuned per model: the range law is the same for
+# every model (schema 2; schema 1 also carried per-model spans).
+RANDOMIZER_PROFILE_FIELDS = ("nearRate", "farRate")
 
 
 def load_randomizer_profile_registry() -> dict[str, Any]:
     """Load and validate the firmware Drift tuning-profile registry."""
     registry = read_json(RANDOMIZER_PROFILES_PATH)
     require(isinstance(registry, dict), "randomizer_profiles.json must contain an object")
-    require(registry.get("schemaVersion") == 1,
-            "randomizer_profiles.json schemaVersion must be 1")
+    require(registry.get("schemaVersion") == 2,
+            "randomizer_profiles.json schemaVersion must be 2")
     archetypes = registry.get("parameterArchetypes")
     require(isinstance(archetypes, dict) and archetypes,
             "randomizer_profiles.json must define parameterArchetypes")
@@ -1108,14 +1108,8 @@ def load_randomizer_profile_registry() -> dict[str, Any]:
         for field in RANDOMIZER_PROFILE_FIELDS:
             require(isinstance(profile[field], (int, float)),
                     f"randomizer archetype {name!r} {field} must be numeric")
-        require(0.0 <= profile["nearSpan"] <= 1.0,
-                f"randomizer archetype {name!r} nearSpan must be in [0, 1]")
-        require(0.0 <= profile["farSpan"] <= 1.0,
-                f"randomizer archetype {name!r} farSpan must be in [0, 1]")
         require(profile["nearRate"] > 0.0 and profile["farRate"] > 0.0,
                 f"randomizer archetype {name!r} rates must be positive")
-        require(0.0 <= profile["farCenterRelease"] <= 1.0,
-                f"randomizer archetype {name!r} farCenterRelease must be in [0, 1]")
 
     fallback = registry.get("fallback")
     models = registry.get("models")
@@ -1157,12 +1151,8 @@ def resolve_randomizer_parameter_profile(
         overrides = reference["overrides"]
     profile = dict(registry["parameterArchetypes"][archetype_name])
     profile.update(overrides)
-    require(0.0 <= profile["nearSpan"] <= 1.0 and 0.0 <= profile["farSpan"] <= 1.0,
-            f"resolved randomizer archetype {archetype_name!r} spans must be in [0, 1]")
     require(profile["nearRate"] > 0.0 and profile["farRate"] > 0.0,
             f"resolved randomizer archetype {archetype_name!r} rates must be positive")
-    require(0.0 <= profile["farCenterRelease"] <= 1.0,
-            f"resolved randomizer archetype {archetype_name!r} farCenterRelease must be in [0, 1]")
     profile["archetype"] = archetype_name
     return profile
 
@@ -1201,11 +1191,8 @@ def compile_wasm(package: dict[str, Any], output: Path) -> None:
         f"{randomizer_cpp_number(randomizer_profile[parameter][json_field])}"
         for parameter in ("timbre", "morph")
         for field, json_field in (
-            ("NEAR_SPAN", "nearSpan"),
-            ("FAR_SPAN", "farSpan"),
             ("NEAR_RATE", "nearRate"),
             ("FAR_RATE", "farRate"),
-            ("FAR_CENTER_RELEASE", "farCenterRelease"),
         )
     ]
     command = [

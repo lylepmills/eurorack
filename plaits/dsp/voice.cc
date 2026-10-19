@@ -48,7 +48,7 @@ static const EngineRandomizerProfile kEngineRandomizerProfiles[] =
     PLAITS_ENGINE_RANDOMIZER_PROFILE_INDICES;
 #else
 static const ParameterRandomizerProfile kRandomizerProfiles[] = {
-  { 0.25f, 0.55f, 0.000009f, 0.000006f, 0.60f },
+  { 0.000009f, 0.000006f },
 };
 #endif
 

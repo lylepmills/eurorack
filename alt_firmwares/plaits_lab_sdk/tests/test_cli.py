@@ -904,8 +904,10 @@ class PackageTests(unittest.TestCase):
         self.assertIn("Both directions remain bipolar", html)
         self.assertNotIn("Audition prototype", html)
         self.assertIn("RandomizerRateMultiplier", harness)
-        self.assertIn("far_center_release", harness)
-        self.assertIn("PLAITS_LAB_RANDOMIZER_TIMBRE_NEAR_SPAN", harness)
+        self.assertIn("kNearDriftQuantiles", harness)
+        self.assertNotIn("far_center_release", harness)
+        self.assertIn("PLAITS_LAB_RANDOMIZER_TIMBRE_NEAR_RATE", harness)
+        self.assertNotIn("PLAITS_LAB_RANDOMIZER_TIMBRE_NEAR_SPAN", harness)
         self.assertIn("current_timbre", harness)
         worklet = (plaits_lab.SDK_DIR / "audition_worklet.js").read_text(encoding="utf-8")
         self.assertIn("'randomization'", worklet)
@@ -934,7 +936,8 @@ class PackageTests(unittest.TestCase):
         self.assertEqual(registry["models"]["vowel-fof"]["status"], "tuned")
         self.assertEqual(registry["models"]["granular-cloud"]["status"], "tuned")
         vowel = plaits_lab.randomizer_profile_for_catalog_id("vowel-fof")
-        self.assertEqual(vowel["timbre"]["farSpan"], 0.52)
+        self.assertNotIn("farSpan", vowel["timbre"])
+        self.assertEqual(vowel["timbre"]["nearRate"], 0.000007)
         self.assertEqual(vowel["morph"]["nearRate"], 0.000005)
         chords = plaits_lab.randomizer_profile_for_catalog_id("chords")
         self.assertEqual(chords["status"], "seeded")
@@ -973,8 +976,9 @@ class PackageTests(unittest.TestCase):
             plaits_lab.subprocess.run = real_run
 
         command = captured["command"]
-        self.assertIn("-DPLAITS_LAB_RANDOMIZER_TIMBRE_NEAR_SPAN=0.18f", command)
-        self.assertIn("-DPLAITS_LAB_RANDOMIZER_MORPH_FAR_SPAN=0.4f", command)
+        self.assertIn("-DPLAITS_LAB_RANDOMIZER_TIMBRE_NEAR_RATE=5e-06f", command)
+        self.assertIn("-DPLAITS_LAB_RANDOMIZER_MORPH_FAR_RATE=3e-06f", command)
+        self.assertFalse(any("_SPAN=" in str(part) for part in command))
 
     def test_dev_session_accepts_builtin_catalog_id(self) -> None:
         session = plaits_lab.DevSession("chords", None)

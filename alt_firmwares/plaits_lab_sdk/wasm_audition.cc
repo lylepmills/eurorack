@@ -47,12 +47,11 @@ float g_randomizer_morph = 0.0f;
 // excursion grows quadratically while orbit speed grows only linearly.
 const float kRandomizerDeadZone = 0.07f;
 
+// Per-model Drift speeds; the range law is the same for every model (see
+// RandomizedParameter).
 struct ParameterRandomizerProfile {
-  float near_span;
-  float far_span;
   float near_rate;
   float far_rate;
-  float far_center_release;
 };
 
 struct RandomizerProfile {
@@ -62,26 +61,11 @@ struct RandomizerProfile {
 
 // plaits_lab.py resolves catalog-driven archetypes and per-model overrides into
 // these compile-time values. Defaults keep direct harness builds conservative.
-#ifndef PLAITS_LAB_RANDOMIZER_TIMBRE_NEAR_SPAN
-#define PLAITS_LAB_RANDOMIZER_TIMBRE_NEAR_SPAN 0.25f
-#endif
-#ifndef PLAITS_LAB_RANDOMIZER_TIMBRE_FAR_SPAN
-#define PLAITS_LAB_RANDOMIZER_TIMBRE_FAR_SPAN 0.55f
-#endif
 #ifndef PLAITS_LAB_RANDOMIZER_TIMBRE_NEAR_RATE
 #define PLAITS_LAB_RANDOMIZER_TIMBRE_NEAR_RATE 0.000009f
 #endif
 #ifndef PLAITS_LAB_RANDOMIZER_TIMBRE_FAR_RATE
 #define PLAITS_LAB_RANDOMIZER_TIMBRE_FAR_RATE 0.000006f
-#endif
-#ifndef PLAITS_LAB_RANDOMIZER_TIMBRE_FAR_CENTER_RELEASE
-#define PLAITS_LAB_RANDOMIZER_TIMBRE_FAR_CENTER_RELEASE 0.60f
-#endif
-#ifndef PLAITS_LAB_RANDOMIZER_MORPH_NEAR_SPAN
-#define PLAITS_LAB_RANDOMIZER_MORPH_NEAR_SPAN 0.22f
-#endif
-#ifndef PLAITS_LAB_RANDOMIZER_MORPH_FAR_SPAN
-#define PLAITS_LAB_RANDOMIZER_MORPH_FAR_SPAN 0.50f
 #endif
 #ifndef PLAITS_LAB_RANDOMIZER_MORPH_NEAR_RATE
 #define PLAITS_LAB_RANDOMIZER_MORPH_NEAR_RATE 0.000006f
@@ -89,24 +73,15 @@ struct RandomizerProfile {
 #ifndef PLAITS_LAB_RANDOMIZER_MORPH_FAR_RATE
 #define PLAITS_LAB_RANDOMIZER_MORPH_FAR_RATE 0.000003f
 #endif
-#ifndef PLAITS_LAB_RANDOMIZER_MORPH_FAR_CENTER_RELEASE
-#define PLAITS_LAB_RANDOMIZER_MORPH_FAR_CENTER_RELEASE 0.55f
-#endif
 
 const RandomizerProfile kRandomizerProfile = {
   {
-    PLAITS_LAB_RANDOMIZER_TIMBRE_NEAR_SPAN,
-    PLAITS_LAB_RANDOMIZER_TIMBRE_FAR_SPAN,
     PLAITS_LAB_RANDOMIZER_TIMBRE_NEAR_RATE,
     PLAITS_LAB_RANDOMIZER_TIMBRE_FAR_RATE,
-    PLAITS_LAB_RANDOMIZER_TIMBRE_FAR_CENTER_RELEASE,
   },
   {
-    PLAITS_LAB_RANDOMIZER_MORPH_NEAR_SPAN,
-    PLAITS_LAB_RANDOMIZER_MORPH_FAR_SPAN,
     PLAITS_LAB_RANDOMIZER_MORPH_NEAR_RATE,
     PLAITS_LAB_RANDOMIZER_MORPH_FAR_RATE,
-    PLAITS_LAB_RANDOMIZER_MORPH_FAR_CENTER_RELEASE,
   },
 };
 
@@ -181,32 +156,62 @@ float RandomizerRateMultiplier(float amount) {
   return 0.65f + 1.35f * RandomizerPosition(amount);
 }
 
+// The firmware's Near Drift normalisation and quantile map
+// (plaits/dsp/parameter_randomizer.cc); keep the two in step.
+const float kNearDriftNorm = 0.876f;
+const float kDriftPeak = 0.8f;
+const float kNearDriftQuantiles[33] = {
+  -1.0000f, -0.9386f, -0.8955f, -0.8602f, -0.8277f, -0.7964f, -0.7652f,
+  -0.7336f, -0.7007f, -0.6660f, -0.6289f, -0.5885f, -0.5441f, -0.4941f,
+  -0.4371f, -0.3706f, -0.2911f, -0.1935f, -0.0695f, 0.0824f, 0.2183f,
+  0.3345f, 0.4328f, 0.5159f, 0.5858f, 0.6452f, 0.6969f, 0.7432f, 0.7860f,
+  0.8272f, 0.8696f, 0.9188f, 1.0000f,
+};
+
+float NearEven(float source) {
+  const float* q = kNearDriftQuantiles;
+  if (source <= q[0]) return -1.0f;
+  if (source >= q[32]) return 1.0f;
+  int low = 0;
+  int high = 32;
+  while (high - low > 1) {
+    const int middle = (low + high) >> 1;
+    if (q[middle] <= source) low = middle; else high = middle;
+  }
+  const float fraction = (source - q[low]) / (q[low + 1] - q[low]);
+  return -1.0f + 2.0f * (static_cast<float>(low) + fraction) / 32.0f;
+}
+
+// The firmware's range law (ParameterRandomizer::ApplyVoltage): one reach for
+// both sides, opening with depth toward the end the offset heads for; Near
+// cubes its evenly spread source, so most values stay close to the knob
+// setting and a few go far, while Far spreads them across the whole reach.
 float RandomizedParameter(
     float base,
     float amount,
     const ChaosOrbit& near_orbit,
-    const ChaosOrbit& far_orbit,
-    const ParameterRandomizerProfile& profile) {
+    const ChaosOrbit& far_orbit) {
   const float excursion = RandomizerExcursion(amount);
   if (excursion <= 0.0f) return base;
   const bool near = amount < 0.0f;
   // Near reads a compact z-axis undulation. Far reads the broad bipolar x-axis
   // motion between the orbit's two lobes.
-  const float voltage = near
-      ? SoftBipolar(near_orbit.z - 25.0f, 0.05f)
+  float voltage = near
+      ? SoftBipolar(near_orbit.z - 25.0f, 0.05f) / kNearDriftNorm
       : SoftBipolar(far_orbit.x, 0.08f);
-  const float span = near ? profile.near_span : profile.far_span;
+  voltage /= kDriftPeak;
+  if (voltage < -1.0f) voltage = -1.0f;
+  if (voltage > 1.0f) voltage = 1.0f;
+  if (near) {
+    voltage = NearEven(voltage);
+    voltage = voltage * voltage * voltage;
+  }
   const float symmetric_headroom = base < 1.0f - base ? base : 1.0f - base;
   const float directional_headroom =
       voltage < 0.0f ? base : 1.0f - base;
-  // Near is always local and symmetric. Far begins that way, then strong knob
-  // settings progressively release toward the available directional range.
-  const float release = near
-      ? 0.0f
-      : profile.far_center_release * excursion;
   const float headroom = symmetric_headroom +
-      (directional_headroom - symmetric_headroom) * release;
-  float value = base + voltage * headroom * span * excursion;
+      (directional_headroom - symmetric_headroom) * excursion;
+  float value = base + voltage * headroom * excursion;
   if (value < 0.0f) value = 0.0f;
   if (value > 1.0f) value = 1.0f;
   return value;
@@ -348,10 +353,10 @@ void render(int size) {
           &g_morph_far, kRandomizerProfile.morph.far_rate * morph_rate);
       g_params.timbre = RandomizedParameter(
           g_base_timbre, g_randomizer_timbre,
-          g_timbre_near, g_timbre_far, kRandomizerProfile.timbre);
+          g_timbre_near, g_timbre_far);
       g_params.morph = RandomizedParameter(
           g_base_morph, g_randomizer_morph,
-          g_morph_near, g_morph_far, kRandomizerProfile.morph);
+          g_morph_near, g_morph_far);
       g_params.trigger = g_retrigger
           ? static_cast<TriggerState>(TRIGGER_HIGH | TRIGGER_RISING_EDGE)
           : TRIGGER_UNPATCHED;
