@@ -897,7 +897,7 @@ with the source inside it is the failure the `development` sentinel exists to
 catch, caught earlier.
 
 The production compiler image is
-`plaits-lab-build-service-firmwarebuilder:rev-c27d1e69306b` (immutable
+`plaits-lab-build-service-firmwarebuilder:rev-90b238cc09c3` (immutable
 commit-derived tags replaced the date-based convention; the table below is the
 full history — keep this line in step with its last row). After deploying a new
 image, use `wrangler containers info <application-id>` and wait until
@@ -1049,6 +1049,49 @@ target.
 | October 6, 2026 (Plucked's MORPH walks the shared chord table, unison fully CCW; cubic MORPH on Struck Drum and Cymbal; Two-op FM's TWIST +/-1 semitone; a tighter square sub-oscillator loop; Speech encoder rotated to v27) | `5812b65ebd9a` | `rev-5812b65ebd9a` |
 | October 8, 2026 (community Supersaw Chords by Dirk Hoppmann; recipe config force-included into every unit that reaches engine.h, fixing BubbleTime, ZxPhase48k and Natural Speech in Sync-In/FM builds; Speech encoder rotated to v28) | `bcb8f2b07d1e` | `rev-bcb8f2b07d1e` |
 | October 8, 2026 (Disastrous Peace 1.0.1: "I maj7" arpeggiates 3 notes, as Plaits compiles it; Speech encoder rotated to v29) | `c27d1e69306b` | `rev-c27d1e69306b` |
+| October 18, 2026 (unpatched-attenuverter Drift/Step: both sides share one reach and Near is cubed, so it stays close and occasionally reaches far; per-model spans retired, speeds kept; jack detection debounced over 8 probe windows; manual contract 25; Speech encoder rotated to v30) | `90b238cc09c3` | `rev-90b238cc09c3` |
+
+The October 18 release shipped at `rev-90b238cc09c3` (source; master moved
+to the pointer commit, then the Speech rotation). Three firmware changes:
+
+- The unpatched-attenuverter Drift/Step range law. Near and Far share one
+  reach that opens with depth toward the end the offset heads for, so at full
+  depth either side can travel from the knob setting to either end (Near used
+  to stay inside the smaller distance to either end, so it could not move from
+  one). Near cubes its evenly spread source; its Drift source is first
+  respread through 33 measured quantiles. Measured on the host: Near Step lands
+  within a tenth of the reach 47% of the time and Far 10%; Drift 50% and 4%.
+  `randomizer_profiles.json` went to schema 2 and keeps only the per-model
+  Drift speeds. The guide's attenuverter note changed (manual contract 25).
+- Jack detection's 8-window debounce (`3c5d340f`), already on master.
+- Supersaw Chords' target-gated FM path (`877f9520`), byte-identical for
+  Plaits; its digest moved, so the allowlist and the website snapshot moved
+  with it.
+
+Checks before production:
+- Host tests (`plaits_test`, 286 builder Python, 76 node, SDK 80 of 81: the
+  one failure, a stale 97-model count in `test_qemu_audit.py`, also fails on
+  the previous master), `catalog:check`, `contract:check`, `tsc`.
+- The mixed fixture recipe, built in both release images: 200,964 ->
+  201,172 B text (+208), BSS 26,044 -> 26,060 (+16, the debounce's RAM).
+- `smoke:staging` passed, compiler-stamped (build
+  `f7b08a40dc6317a35c446424d771365ca13db51fb3b5ca26d9601c30edf558f1`,
+  14,302,124-byte WAV, SHA-256
+  `400a721ecebd628f33c0b16350fb41a95c6523d3500b832dbe63aa27edf03d38`).
+- Hardware: Lyle gave the go-ahead for production after the staging gate; no
+  flash audition of the staged WAV is recorded for this release.
+
+Production went in two deploys: the image (Worker `0977e84e`), then, once the
+pool showed the new image with `starting == 0` and `active == 0` (about 20
+minutes), the `speech-encoder-v30` rotation as a Worker-only deploy (Worker
+`825d0f79`; staging `c9eb39dc` got the same rotation). The first `/v1/health`
+probe, taken while the pool still showed an instance starting, reported the
+pool at `c27d1e69306b`; once it settled, one probe reported the Worker, pool
+and `speech-encoder-v30` all at `90b238cc09c3`. Production canary build
+`a86c5451224ff3f89f22d7e8a62b55ce4d7fc6f55480bff997c31b5ef3252cf1` succeeded,
+compiler-stamped (14,302,124-byte WAV, SHA-256
+`9a895a6d6c056debd23ac50ced1c47d8dfa6453b08706f72cafb7c4d9570880a`).
+`rev-c27d1e69306b` is the immediate rollback image.
 
 The second October 8 release shipped at `rev-c27d1e69306b` (source; master
 moved to `04171929` with the pointer commit). One data change, no firmware
