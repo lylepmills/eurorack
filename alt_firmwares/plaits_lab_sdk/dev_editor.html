@@ -473,7 +473,9 @@ async function strikeLive() {
   if (!audio.running) await ensureLive();   // Strike turns audition on if it isn't — the click is the gesture.
   if (audio.running && audio.node) {
     audio.node.port.postMessage({ type: 'trigger' });
-    liveStatus('Strike sent; the continuous random voltages keep running independently.');
+    liveStatus(Number($('live-env').value) === 1
+      ? 'Strike sent with TRIG patched; the continuous random voltages keep running independently.'
+      : 'Strike sent, but Sustained leaves TRIG unpatched (a drone). Choose Envelope: Plucked to strike with TRIG patched.');
   }
 }
 $('live-strike').addEventListener('click', strikeLive);

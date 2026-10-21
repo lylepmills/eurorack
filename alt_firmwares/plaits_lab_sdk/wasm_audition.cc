@@ -233,8 +233,19 @@ bool g_block_already = false;  // did the last block self-envelope?
 // silence; SUSTAINED mode holds it open (a continuous drone for tweaking).
 // Engines that shape their own amplitude (already_enveloped, e.g. the drums)
 // bypass it so we never double-envelope them.
+//
+// PLUCKED is also TRIG patched, as on hardware and in render_model.cc: between
+// strikes the engine sees TRIGGER_LOW, not TRIGGER_UNPATCHED. Engines with a
+// distinct unpatched behavior otherwise never fell silent between strikes:
+// the snares free-ran and the struck bell and drum droned.
+// A PLUCKED strike holds TRIG high like a sequencer gate, since gate-aware
+// engines (the DX7 banks, reed pipe) only sound while it is high.
+#ifndef PLAITS_LAB_STRIKE_GATE_SAMPLES
+#define PLAITS_LAB_STRIKE_GATE_SAMPLES 2400
+#endif
 enum EnvMode { ENV_SUSTAINED = 0, ENV_PLUCKED = 1 };
 int g_env_mode = ENV_SUSTAINED;
+int g_gate_remaining = 0;
 float g_env = 1.0f;
 const float kEnvDecay = 0.99976f;  // ~0.6 s to -60 dB at 48 kHz
 
@@ -281,6 +292,7 @@ void init() {
   g_block_fill = 0;
   g_block_pos = 0;
   g_retrigger = false;
+  g_gate_remaining = 0;
   g_block_already = false;
   g_env = 1.0f;
   g_env_mode = ENV_SUSTAINED;
@@ -329,6 +341,7 @@ void set_randomizer_amounts(float timbre, float morph) {
 // In plucked mode this also re-opens the LPG envelope.
 void trigger() {
   g_retrigger = true;
+  g_gate_remaining = PLAITS_LAB_STRIKE_GATE_SAMPLES;
   if (g_env_mode == ENV_PLUCKED) g_env = 1.0f;
 }
 
@@ -357,10 +370,16 @@ void render(int size) {
       g_params.morph = RandomizedParameter(
           g_base_morph, g_randomizer_morph,
           g_morph_near, g_morph_far);
-      g_params.trigger = g_retrigger
-          ? static_cast<TriggerState>(TRIGGER_HIGH | TRIGGER_RISING_EDGE)
-          : TRIGGER_UNPATCHED;
+      if (g_retrigger) {
+        g_params.trigger = TRIGGER_HIGH | TRIGGER_RISING_EDGE;
+      } else if (g_env_mode == ENV_PLUCKED) {
+        g_params.trigger = g_gate_remaining > 0 ? TRIGGER_HIGH : TRIGGER_LOW;
+      } else {
+        g_params.trigger = TRIGGER_UNPATCHED;
+      }
       g_retrigger = false;
+      g_gate_remaining -= static_cast<int>(kBlockSize);
+      if (g_gate_remaining < 0) g_gate_remaining = 0;
       bool already = false;
       g_engine->Render(g_params, g_block_main, g_block_aux, kBlockSize, &already);
       g_block_already = already;
