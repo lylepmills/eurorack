@@ -1,0 +1,23 @@
+{
+  "slug": "PlaitsLabTestBench",
+  "name": "Plaits Lab Test Bench",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Plaits Lab",
+  "author": "Matt Policastro",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "PlaitsLabEngine",
+      "name": "Plaits Lab Engine",
+      "description": "One Plaits Lab package behind Plaits' controls and jacks, for testing it in a patch without flashing hardware. The package is chosen at build time.",
+      "tags": ["Oscillator", "Voice"]
+    }
+  ]
+}
