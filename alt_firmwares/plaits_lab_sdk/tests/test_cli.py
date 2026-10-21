@@ -1057,25 +1057,28 @@ class PackageTests(unittest.TestCase):
         html = (plaits_lab.SDK_DIR / "dev_editor.html").read_text(encoding="utf-8")
         self.assertIn("monitor-stereo-opt", html)
 
-    def test_wasm_compiler_prefers_em_plus_plus_beside_emcc(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            emcc, emxx = Path(directory) / "emcc", Path(directory) / "em++"
-            emcc.touch()
-            real_which = plaits_lab.shutil.which
-            plaits_lab.shutil.which = lambda name: str(emcc) if name == "emcc" else None
-            try:
-                self.assertEqual(plaits_lab.wasm_compiler_path(), str(emcc))
-                emxx.touch()
-                self.assertEqual(plaits_lab.wasm_compiler_path(), str(emxx))
-            finally:
-                plaits_lab.shutil.which = real_which
+    def test_wasm_compiler_prefers_em_plus_plus(self) -> None:
+        # em++ is looked up on PATH (Windows emsdk ships em++.bat), with emcc
+        # as the fallback for a toolchain that somehow lacks it.
+        found: dict[str, str] = {}
+        real_which = plaits_lab.shutil.which
+        plaits_lab.shutil.which = found.get
+        try:
+            self.assertIsNone(plaits_lab.wasm_compiler_path())
+            found["emcc"] = "/emsdk/emcc"
+            self.assertEqual(plaits_lab.wasm_compiler_path(), "/emsdk/emcc")
+            found["em++"] = "C:\\emsdk\\em++.bat"
+            self.assertEqual(plaits_lab.wasm_compiler_path(), "C:\\emsdk\\em++.bat")
+        finally:
+            plaits_lab.shutil.which = real_which
 
     def test_compile_wasm_without_emcc_reports_clearly(self) -> None:
         # Live audition is OPTIONAL: with no emcc on PATH the wasm build must fail
         # with a clear, actionable error rather than a raw traceback.
         package = plaits_lab.builtin_package("chords")
         real_which = plaits_lab.shutil.which
-        plaits_lab.shutil.which = lambda name: None if name == "emcc" else real_which(name)
+        plaits_lab.shutil.which = (
+            lambda name: None if name in ("emcc", "em++") else real_which(name))
         try:
             self.assertIsNone(plaits_lab.wasm_compiler_path())
             with self.assertRaises(plaits_lab.PackageError) as ctx:

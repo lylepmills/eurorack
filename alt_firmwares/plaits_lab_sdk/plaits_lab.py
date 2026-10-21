@@ -1074,11 +1074,9 @@ def compile_renderer(
 def wasm_compiler_path() -> str | None:
     # Link as C++: recent Emscripten (6.0.13, 2026-10) no longer links the C++
     # runtime when driven as emcc, so every engine's typeinfo is left undefined.
-    emcc = shutil.which("emcc")
-    if emcc is None:
-        return None
-    emxx = Path(emcc).with_name("em++")
-    return str(emxx) if emxx.exists() else emcc
+    # Look em++ up on PATH rather than beside emcc: Windows emsdk ships it as
+    # em++.bat, which shutil.which finds through PATHEXT.
+    return shutil.which("em++") or shutil.which("emcc")
 
 
 # Emscripten exports the audition harness surface the AudioWorklet drives.
