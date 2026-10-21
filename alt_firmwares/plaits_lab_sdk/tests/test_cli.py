@@ -1017,6 +1017,19 @@ class PackageTests(unittest.TestCase):
         html = (plaits_lab.SDK_DIR / "dev_editor.html").read_text(encoding="utf-8")
         self.assertIn("monitor-stereo-opt", html)
 
+    def test_wasm_compiler_prefers_em_plus_plus_beside_emcc(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            emcc, emxx = Path(directory) / "emcc", Path(directory) / "em++"
+            emcc.touch()
+            real_which = plaits_lab.shutil.which
+            plaits_lab.shutil.which = lambda name: str(emcc) if name == "emcc" else None
+            try:
+                self.assertEqual(plaits_lab.wasm_compiler_path(), str(emcc))
+                emxx.touch()
+                self.assertEqual(plaits_lab.wasm_compiler_path(), str(emxx))
+            finally:
+                plaits_lab.shutil.which = real_which
+
     def test_compile_wasm_without_emcc_reports_clearly(self) -> None:
         # Live audition is OPTIONAL: with no emcc on PATH the wasm build must fail
         # with a clear, actionable error rather than a raw traceback.
