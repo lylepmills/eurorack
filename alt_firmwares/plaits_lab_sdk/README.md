@@ -134,6 +134,10 @@ Plaits Palette choose Stock, Drift, or Step as the installed firmware's
 Starting Option; this is a firmware preference, not part of an engine-package
 contract.
 
+**Patching in VCV Rack.** To sequence, modulate or patch TRIG into a package,
+build it into the single-engine VCV Rack 2 test bench; see
+[`vcv/README.md`](vcv/README.md).
+
 ## Validation and submission
 
 Every engine is reviewed for **Fast FM, linear TZFM, and hard sync** before it
