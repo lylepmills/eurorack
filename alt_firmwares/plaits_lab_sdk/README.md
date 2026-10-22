@@ -143,19 +143,27 @@ engine, with familiar controls and a dedicated **TWIST** knob for the fourth
 synthesis control. Rack testing is recommended when those interactions matter
 to your engine; it is not a submission requirement.
 
-After the [Rack setup](vcv/README.md#prerequisites), run these from the eurorack
-repository root, replacing `my-engine` and the Rack SDK path:
+After the [Rack setup](vcv/README.md#prerequisites), open Rack once, save any
+open patch and quit it. Run these from the eurorack repository root, replacing
+`my-engine` and the Rack SDK path:
 
 ```sh
-make -C alt_firmwares/plaits_lab_sdk/vcv PACKAGE=../packages/community/my-engine test
-make -C alt_firmwares/plaits_lab_sdk/vcv PACKAGE=../packages/community/my-engine RACK_DIR="/absolute/path/to/Rack-SDK" dist
+make -C alt_firmwares/plaits_lab_sdk/vcv PACKAGE=../packages/community/my-engine test &&
+make -C alt_firmwares/plaits_lab_sdk/vcv PACKAGE=../packages/community/my-engine RACK_DIR="/absolute/path/to/Rack-SDK" install
 ```
 
 The first command checks the wrapper and your engine without needing Rack.
-The second builds a plugin for your OS and architecture. On Windows, use the
+If it passes, the second builds the plugin and installs it in Rack's default
+user folder. Reopen Rack and add **Palette Lab Engine**, under **Palette Lab**.
+On Windows, use the
 **MSYS2 MinGW 64-bit shell**, add `PYTHON=python` to both commands, and use an
-SDK path such as `/c/Rack-SDK`. See the [Palette Lab guide](vcv/README.md) for
-installation, a first patch, a listening checklist, and the rebuild/restart loop.
+SDK path such as `/c/Rack-SDK`. For custom user folders and a first patch, see
+the [Palette Lab guide](vcv/README.md).
+
+After each engine edit, save your patch, quit Rack, rerun these commands and
+reopen the saved patch. Its cables and knob settings stay in place. Rack loads
+new code on restart; it does not automatically reload like the browser audition.
+No version bump or `clean` is needed for normal source or header edits.
 
 Try both outputs, low and high notes where pitch is meaningful, all four
 controls, patched and unpatched TRIG, LEVEL, and positive/negative CV amounts.

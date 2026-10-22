@@ -21,14 +21,19 @@ configurations.
 
 ## Build, test, install
 
-From this directory:
+Open Rack once to initialize its user folder, save any open patch, then quit
+Rack. From this directory, replace `my-engine` and the absolute Rack SDK path:
 
 ```sh
-make PACKAGE=../packages/community/<name> test                     # no Rack SDK needed
-make RACK_DIR=<Rack-SDK> PACKAGE=../packages/community/<name> dist   # the plugin
-make RACK_DIR=<Rack-SDK> PACKAGE=chords dist                          # a built-in, by catalog ID
-make RACK_DIR=<Rack-SDK> clean                                        # remove build output
+make PACKAGE=../packages/community/my-engine test &&
+make PACKAGE=../packages/community/my-engine RACK_DIR="/absolute/path/to/Rack-SDK" install
 ```
+
+The first command tests the wrapper and your engine without the Rack SDK.
+If it passes, `install` builds and packages the plugin, then copies the
+`.vcvplugin` into Rack's default user folder. Open Rack after it finishes.
+On Windows, use the MSYS2 MinGW 64-bit shell, add `PYTHON=python` to both
+commands, and use an SDK path such as `/c/Rack-SDK`.
 
 `PACKAGE` is a package directory or a built-in catalog ID. Quote a path that
 contains spaces: `make PACKAGE="/path/to/my engines/example" test`.
@@ -37,10 +42,17 @@ The build tracks included headers and keeps compiled objects separate for each
 package. Switching packages does not need `clean`. Keep the Rack SDK path free
 of spaces because Rack's own makefiles require that.
 
-`dist` produces `dist/PlaitsLabTestBench-<version>-<platform>.vcvplugin`. Put
-it in the `plugins-<platform>` folder inside Rack's user folder (**Help → Open
-user folder**) and restart Rack. The module is **Palette Lab Engine**, under the
-brand **Palette Lab**; the panel shows your package's name. The original plugin
+For a custom Rack user folder, add `RACK_USER_DIR="/absolute/path/to/your/Rack2"`
+to the install command. Use **Help → Open user folder** in Rack to find the
+right directory. Pass that directory, not its `plugins-<platform>` subfolder.
+
+For a manual install, replace `install` with `dist`. This produces
+`dist/PlaitsLabTestBench-<version>-<platform>.vcvplugin`; with Rack closed, copy
+it into the `plugins-<platform>` folder inside Rack's user folder, then reopen
+Rack. A built-in engine can be selected with e.g. `PACKAGE=chords`.
+
+The module is **Palette Lab Engine**, under the brand **Palette Lab**; the panel
+shows your package's name. The original plugin
 and module slugs (`PlaitsLabTestBench` / `PlaitsLabEngine`) are retained so
 existing Rack patches still load.
 
@@ -63,13 +75,33 @@ and restart Rack.
 4. Sweep HARMONICS, TIMBRE, MORPH and TWIST. Hover for the engine-specific
    control names. Add an LFO or other CV source to TIMBRE or MORPH and try
    the corresponding attenuverter on both sides of noon.
+5. Save your patch so you can compare changes using the same connections and
+   settings. A newly scaffolded blank engine plays a starter sine wave;
+   replace the code in `Render()` with your own synthesis algorithm.
+
+## After each engine edit
 
 This is a source-development tool: your engine is compiled into the plugin.
-After editing it, rerun the test and dist commands with the same `PACKAGE`
-and `RACK_DIR` arguments, quit Rack, replace the installed plugin package, and
-reopen your saved patch. Rack
-loads the new code on restart. Rebuilding alone does not update a running Rack.
-Each build replaces the same module; it does not add another engine to a menu.
+
+1. Edit and save your engine's source.
+2. Save your test patch and **quit Rack completely**.
+3. From this directory, rerun the same commands with your package and SDK path:
+
+   ```sh
+   make PACKAGE=../packages/community/my-engine test &&
+   make PACKAGE=../packages/community/my-engine RACK_DIR="/absolute/path/to/Rack-SDK" install
+   ```
+
+   Keep `PYTHON=python` on Windows and `RACK_USER_DIR` if you use a custom
+   user folder. Wait for both commands to finish successfully.
+4. Open Rack and load the saved test patch. The updated engine uses the
+   existing module, cables and knob settings.
+
+No version bump or `clean` is needed for normal source or header edits. Rack
+loads the new code at startup; saving C++ or rebuilding while it is open does
+not update that running session. Each build replaces the same module for every
+instance; it does not add another engine to a menu. A different package ID shows
+**ENGINE CHANGED** on existing patches, as described below.
 
 ## Listening checklist for contributors
 
