@@ -11,12 +11,13 @@ configurations.
 ## Prerequisites
 
 - VCV Rack 2, and the [Rack SDK](https://vcvrack.com/manual/Building#Building-Rack-plugins)
-  for your platform.
-- Python 3, `make`, `jq`, and a C++11 compiler:
-  - **macOS:** Xcode command-line tools, then `brew install jq`.
-  - **Linux:** your distribution's build tools, plus `jq`.
+  for your OS and CPU architecture. Rack Free is sufficient.
+- Python 3, `make`, `jq`, `zstd`, and a C++11 compiler:
+  - **macOS:** Xcode command-line tools, then `brew install jq zstd`.
+  - **Linux:** your distribution's build tools, plus `jq` and `zstd`.
   - **Windows:** the MSYS2 MinGW 64-bit shell, set up as in VCV's plugin
-    guide, then `pacman -S jq`.
+    guide (including `make`, Python, `jq` and `zstd`). Use this shell for the
+    commands below, and add `PYTHON=python` if Python is named `python` there.
 
 ## Build, test, install
 
@@ -46,6 +47,51 @@ existing Rack patches still load.
 The plugin is unsigned. If macOS refuses to load it, run
 `xattr -dr com.apple.quarantine` on the extracted `PlaitsLabTestBench` folder
 and restart Rack.
+
+## First patch
+
+1. Add **Palette Lab Engine** from the **Palette Lab** brand in Rack's module
+   browser. Check the engine name at the top of the panel against the package
+   you built.
+2. Add Rack's **Audio** module and select your audio device. Connect OUT to an
+   audio input, then listen to AUX separately too: the two outputs can have
+   different roles. Begin at a low monitoring level.
+3. Add **MIDI-CV**, select a MIDI source, and connect its V/OCT output to
+   Palette Lab's V/OCT input. For triggered playing, connect its GATE output
+   to TRIG. Compare that with TRIG unplugged; the engine receives different
+   trigger states in each case.
+4. Sweep HARMONICS, TIMBRE, MORPH and TWIST. Hover for the engine-specific
+   control names. Add an LFO or other CV source to TIMBRE or MORPH and try
+   the corresponding attenuverter on both sides of noon.
+
+This is a source-development tool: your engine is compiled into the plugin.
+After editing it, rerun the test and dist commands with the same `PACKAGE`
+and `RACK_DIR` arguments, quit Rack, replace the installed plugin package, and
+reopen your saved patch. Rack
+loads the new code on restart. Rebuilding alone does not update a running Rack.
+Each build replaces the same module; it does not add another engine to a menu.
+
+## Listening checklist for contributors
+
+- **Controls and outputs:** listen to OUT and AUX throughout the intended pitch
+  range. Sweep every control through its ends and midpoint, including TWIST.
+  Check for unintended silence, clicks or sudden level changes, while allowing
+  for sounds the engine deliberately makes.
+- **Triggers and level:** compare unplugged TRIG, short pulses and held gates.
+  Patch LEVEL and vary it. Check the engine's attack, tail and retrigger behavior.
+- **Modulation:** patch HARMONICS, TIMBRE, MORPH and FM individually. For the
+  three attenuverters, check zero, positive and negative amounts. Unplug them
+  again to hear any internal-envelope modulation with TRIG patched.
+- **LPG:** use **Edit LPG response/decay** to try both extremes. For an engine
+  with its own envelope, compare **Engine's own envelope** and **Plaits LPG**
+  when TRIG is patched.
+
+In your package's existing `README.md`, note the OS/Rack version, engine
+version, patch connections, useful settings and any limitations you found.
+This gives a reviewer a listening recipe; it is not a required pass/fail form.
+Add reproducible cases to `tests/scenarios.json` where supported. Continue with
+the SDK's `check --full` and hardware CPU probe before publication; a good Rack
+patch does not establish the hardware's timing or flash budget.
 
 ## What it models
 
@@ -95,7 +141,7 @@ edits to the same engine while developing it.
 ## What it does not model
 
 - Rubato's firmware options: gate and velocity TRIG responses, LEVEL to decay,
-  hold-on-trigger, MODEL CV, linear TZFM, fast FM, stereo, Drift.
+  hold-on-trigger, MODEL CV, linear TZFM, fast FM, hard sync, stereo, Drift.
 - Polyphony.
 - Banks, model switching and Palette configurations.
 - Hardware CPU and flash budgets. Use `check --full`, `qemu/estimate.py` and a

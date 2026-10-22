@@ -134,9 +134,39 @@ Plaits Palette choose Stock, Drift, or Step as the installed firmware's
 Starting Option; this is a firmware preference, not part of an engine-package
 contract.
 
-**Patching in VCV Rack.** To sequence, modulate or patch TRIG into a package,
-build it into the single-engine VCV Rack 2 test bench; see
-[`vcv/README.md`](vcv/README.md).
+## Patch your engine in Palette Lab (optional)
+
+Use the browser audition for quick edit-and-listen work, then **Palette Lab**
+when you want to hear your engine in a real VCV Rack patch: sequenced pitches,
+external modulation, triggers and LEVEL control. Each build contains your one
+engine, with familiar controls and a dedicated **TWIST** knob for the fourth
+synthesis control. Rack testing is recommended when those interactions matter
+to your engine; it is not a submission requirement.
+
+After the [Rack setup](vcv/README.md#prerequisites), run these from the eurorack
+repository root, replacing `my-engine` and the Rack SDK path:
+
+```sh
+make -C alt_firmwares/plaits_lab_sdk/vcv PACKAGE=../packages/community/my-engine test
+make -C alt_firmwares/plaits_lab_sdk/vcv PACKAGE=../packages/community/my-engine RACK_DIR="/absolute/path/to/Rack-SDK" dist
+```
+
+The first command checks the wrapper and your engine without needing Rack.
+The second builds a plugin for your OS and architecture. On Windows, use the
+**MSYS2 MinGW 64-bit shell**, add `PYTHON=python` to both commands, and use an
+SDK path such as `/c/Rack-SDK`. See the [Palette Lab guide](vcv/README.md) for
+installation, a first patch, a listening checklist, and the rebuild/restart loop.
+
+Try both outputs, low and high notes where pitch is meaningful, all four
+controls, patched and unpatched TRIG, LEVEL, and positive/negative CV amounts.
+Record useful patch settings and any surprising behavior in your package's
+`README.md`; turn reproducible cases into `tests/scenarios.json` scenarios
+where that format can express them.
+
+Palette Lab checks sound and patch behavior. Continue with `check --full` for
+sanitizers and scenarios, and the hardware step for CPU/flash measurements.
+It does not exercise every firmware feature: stereo, Drift, fast FM, linear
+TZFM and hard sync remain outside this test bench's scope.
 
 ## Validation and submission
 
@@ -161,6 +191,12 @@ scenario, measure CPU cost against a stock engine (see below), and reject
 invalid duration, silent output, or excessive DC. The
 bundle contains the exact source, deterministic preview WAVs, content digest,
 and per-scenario peak/RMS/DC/silence/realtime metrics.
+
+If you tested in Palette Lab, include a short listening note in your package's
+`README.md`: OS and Rack version, engine version, patch connections, useful
+control settings, and the results you heard. The README travels with the source
+bundle; no separate Rack upload is needed. Manual listening notes complement
+the automated checks and the maintainer's hardware/capability review.
 
 `submit` first requires the model's colour: it is how the model appears in
 the palette editor, so a package without `artwork.color` is refused before any
