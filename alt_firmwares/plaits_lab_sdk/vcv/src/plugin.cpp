@@ -240,7 +240,7 @@ struct PlaitsLabEngineWidget : ModuleWidget {
     PanelLabels* labels = new PanelLabels;
     labels->box.size = box.size;
     labels->labels = {
-      {"plaits lab", 30.48f, 5.4f, 12.f, false, "", 39.f, true},
+      {"palette lab", 30.48f, 5.4f, 12.f, false, "", 39.f, true},
       {lab::LabVoice::name(), 30.48f, 15.2f, 11.f, false, "", 53.f},
       {"FREQUENCY", 11.94f, 42.3f, 8.f, false},
       {"HARMONICS", 48.11f, 42.3f, 8.f, false},

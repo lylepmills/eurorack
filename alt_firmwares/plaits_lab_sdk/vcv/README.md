@@ -1,12 +1,12 @@
-# Plaits Lab Test Bench (VCV Rack 2)
+# Palette Lab Test Bench (VCV Rack 2)
 
 Builds one Plaits Lab package into a VCV Rack 2 module with Plaits' controls
 and jacks, so you can patch it without flashing hardware: sequence it, modulate
 it, and hear it with TRIG patched. The browser audition (`dev`) is quicker for
 turning knobs; the test bench is for patches.
 
-It is a test bench, not a Palette. Each build holds one package, with no banks,
-no model switching, and no Palette configurations.
+Each build holds one engine package, with no banks, model switching or Palette
+configurations.
 
 ## Prerequisites
 
@@ -38,8 +38,10 @@ of spaces because Rack's own makefiles require that.
 
 `dist` produces `dist/PlaitsLabTestBench-<version>-<platform>.vcvplugin`. Put
 it in the `plugins-<platform>` folder inside Rack's user folder (**Help → Open
-user folder**) and restart Rack. The module is **Plaits Lab Engine**, under the
-brand **Plaits Lab**; the panel shows your package's name.
+user folder**) and restart Rack. The module is **Palette Lab Engine**, under the
+brand **Palette Lab**; the panel shows your package's name. The original plugin
+and module slugs (`PlaitsLabTestBench` / `PlaitsLabEngine`) are retained so
+existing Rack patches still load.
 
 The plugin is unsigned. If macOS refuses to load it, run
 `xattr -dr com.apple.quarantine` on the extracted `PlaitsLabTestBench` folder
