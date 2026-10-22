@@ -219,7 +219,7 @@ struct PanelLabels : TransparentWidget {
         const float available = mm2px(label.max_width_mm);
         if (width > available) nvgFontSize(args.vg, label.size * available / width);
       }
-      nvgFillColor(args.vg, mismatch ? nvgRGB(0xff, 0xbb, 0x55) : swapped ? nvgRGB(0x2a, 0x5d, 0xb0)
+      nvgFillColor(args.vg, mismatch ? nvgRGB(0xa5, 0x52, 0x14) : swapped ? nvgRGB(0x2a, 0x5d, 0xb0)
           : label.light ? nvgRGB(0xf2, 0xf0, 0xea) : nvgRGB(0x2b, 0x2b, 0x2b));
       Vec p = mm2px(Vec(label.x, label.y));
       nvgText(args.vg, p.x, p.y, text.c_str(), NULL);
@@ -240,58 +240,62 @@ struct PlaitsLabEngineWidget : ModuleWidget {
     PanelLabels* labels = new PanelLabels;
     labels->box.size = box.size;
     labels->labels = {
-      {lab::LabVoice::name(), 30.48f, 8.5f, 15.f, true, "", 53.f},
-      {"PLAITS LAB", 30.48f, 14.5f, 8.f, true, "", 53.f, true},
-      {"FREQUENCY", 15.24f, 23.f, 8.f, false},
-      {"HARMONICS", 45.72f, 23.f, 8.f, false},
-      {"TIMBRE", 12.f, 43.f, 8.f, false, "LPG RESPONSE"},
-      {"TWIST", 30.48f, 44.5f, 7.f, false},
-      {"MORPH", 48.96f, 43.f, 8.f, false, "LPG DECAY"},
-      {"TIMBRE", 10.16f, 58.f, 7.f, false},
-      {"FM", 30.48f, 58.f, 7.f, false},
-      {"MORPH", 50.8f, 58.f, 7.f, false},
-      {"TIMBRE", 7.62f, 72.5f, 6.5f, false},
-      {"FM", 22.86f, 72.5f, 6.5f, false},
-      {"MORPH", 38.1f, 72.5f, 6.5f, false},
-      {"HARMONICS", 53.34f, 72.5f, 6.f, false},
-      {"TRIG", 7.62f, 86.5f, 7.f, false},
-      {"LEVEL", 22.86f, 86.5f, 7.f, false},
-      {"V/OCT", 38.1f, 86.5f, 7.f, false},
-      {"OUT", 42.55f, 106.8f, 7.f, false},
-      {"AUX", 54.0f, 106.8f, 7.f, false},
+      {"plaits lab", 30.48f, 5.4f, 12.f, false, "", 39.f, true},
+      {lab::LabVoice::name(), 30.48f, 15.2f, 11.f, false, "", 53.f},
+      {"FREQUENCY", 11.94f, 42.3f, 8.f, false},
+      {"HARMONICS", 48.11f, 42.3f, 8.f, false},
+      {"TIMBRE", 10.76f, 67.6f, 8.f, false, "LPG RESPONSE"},
+      {"TWIST", 30.48f, 42.3f, 7.f, false},
+      {"MORPH", 49.44f, 67.6f, 8.f, false, "LPG DECAY"},
+      {"FM", 30.25f, 72.8f, 8.f, false},
+      {"TIMBRE", 18.77f, 91.0f, 6.f, false},
+      {"FM", 30.22f, 91.0f, 6.f, false},
+      {"MORPH", 41.67f, 91.0f, 6.f, false},
+      {"HARMO", 53.11f, 91.0f, 6.f, false},
+      {"TRIG", 7.33f, 105.4f, 7.5f, false},
+      {"LEVEL", 18.77f, 105.4f, 7.5f, false},
+      {"V/OCT", 30.22f, 105.4f, 7.5f, false},
+      {"OUT", 41.67f, 105.4f, 7.5f, true},
+      {"AUX", 53.11f, 105.4f, 7.5f, true},
+      {"TEST BENCH", 30.48f, 124.3f, 6.f, false},
     };
     labels->lpg_mode = &lpg_mode;
     labels->module = module;
     addChild(labels);
 
     addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, 0)));
+    addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, 0)));
+    addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
     addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 
-    addParam(createParamCentered<RoundLargeBlackKnob>(mm2px(Vec(15.24, 31.0)), module, M::FREQ_PARAM));
-    addParam(createParamCentered<RoundLargeBlackKnob>(mm2px(Vec(45.72, 31.0)), module, M::HARMONICS_PARAM));
-    addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(12.0, 50.0)), module, M::TIMBRE_PARAM));
-    addParam(createParamCentered<Trimpot>(mm2px(Vec(30.48, 50.0)), module, M::MACRO_PARAM));
-    addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(48.96, 50.0)), module, M::MORPH_PARAM));
-    addParam(createParamCentered<Trimpot>(mm2px(Vec(10.16, 63.0)), module, M::TIMBRE_CV_PARAM));
-    addParam(createParamCentered<Trimpot>(mm2px(Vec(30.48, 63.0)), module, M::FREQ_CV_PARAM));
-    addParam(createParamCentered<Trimpot>(mm2px(Vec(50.8, 63.0)), module, M::MORPH_CV_PARAM));
-    ParamWidget* response = createParamCentered<Rogan1PSBlue>(mm2px(Vec(12.0, 50.0)), module, M::LPG_COLOUR_PARAM);
+    // Hardware control centres, rounded to 0.01 mm. The original panel artwork
+    // is not bundled; the matching physical arrangement is drawn independently.
+    addParam(createParamCentered<Rogan3PSWhite>(mm2px(Vec(11.94, 28.99)), module, M::FREQ_PARAM));
+    addParam(createParamCentered<Rogan3PSWhite>(mm2px(Vec(48.11, 28.99)), module, M::HARMONICS_PARAM));
+    addParam(createParamCentered<Rogan1PSWhite>(mm2px(Vec(10.76, 56.38)), module, M::TIMBRE_PARAM));
+    addParam(createParamCentered<Trimpot>(mm2px(Vec(30.48, 49.5)), module, M::MACRO_PARAM));
+    addParam(createParamCentered<Rogan1PSWhite>(mm2px(Vec(49.44, 56.38)), module, M::MORPH_PARAM));
+    addParam(createParamCentered<Trimpot>(mm2px(Vec(10.91, 80.63)), module, M::TIMBRE_CV_PARAM));
+    addParam(createParamCentered<Trimpot>(mm2px(Vec(30.25, 80.63)), module, M::FREQ_CV_PARAM));
+    addParam(createParamCentered<Trimpot>(mm2px(Vec(49.59, 80.63)), module, M::MORPH_CV_PARAM));
+    ParamWidget* response = createParamCentered<Rogan1PSBlue>(mm2px(Vec(10.76, 56.38)), module, M::LPG_COLOUR_PARAM);
     response->hide();
     addParam(response);
-    ParamWidget* decay = createParamCentered<Rogan1PSBlue>(mm2px(Vec(48.96, 50.0)), module, M::LPG_DECAY_PARAM);
+    ParamWidget* decay = createParamCentered<Rogan1PSBlue>(mm2px(Vec(49.44, 56.38)), module, M::LPG_DECAY_PARAM);
     decay->hide();
     addParam(decay);
 
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(7.62, 79.0)), module, M::TIMBRE_INPUT));
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(22.86, 79.0)), module, M::FREQ_INPUT));
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(38.1, 79.0)), module, M::MORPH_INPUT));
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(53.34, 79.0)), module, M::HARMONICS_INPUT));
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(7.62, 93.0)), module, M::TRIGGER_INPUT));
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(22.86, 93.0)), module, M::LEVEL_INPUT));
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(38.1, 93.0)), module, M::NOTE_INPUT));
+    // Leave the MODEL CV position empty: this build contains a single engine.
+    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(18.77, 96.49)), module, M::TIMBRE_INPUT));
+    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(30.22, 96.49)), module, M::FREQ_INPUT));
+    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(41.67, 96.49)), module, M::MORPH_INPUT));
+    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(53.11, 96.49)), module, M::HARMONICS_INPUT));
+    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(7.33, 111.09)), module, M::TRIGGER_INPUT));
+    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(18.77, 111.09)), module, M::LEVEL_INPUT));
+    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(30.22, 111.09)), module, M::NOTE_INPUT));
 
-    addOutput(createOutputCentered<DarkPJ301MPort>(mm2px(Vec(42.55, 113.5)), module, M::OUT_OUTPUT));
-    addOutput(createOutputCentered<DarkPJ301MPort>(mm2px(Vec(54.0, 113.5)), module, M::AUX_OUTPUT));
+    addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(41.67, 111.09)), module, M::OUT_OUTPUT));
+    addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(53.11, 111.09)), module, M::AUX_OUTPUT));
   }
 
   void SetLpgMode(bool editing) {

@@ -70,8 +70,14 @@ chooses **Engine's own envelope** (the default, as the hardware does it) or
 **Plaits LPG**. In **Plaits LPG** mode the engine runs untriggered and the gate
 strikes it. The setting is saved with the patch.
 
-The panel keeps the familiar HARMONICS, TIMBRE and MORPH labels. TWIST is a
-separate knob for the SDK's fourth synthesis control (`macro` in engine code);
+The 12 HP panel follows the hardware's knob and jack positions, with white
+Rogan knobs, three attenuverters and two rows of jacks. The MODEL CV position
+is empty because each build contains one engine. OUT and AUX share the bottom
+row with TRIG, LEVEL and V/OCT. Existing patches retain their parameter and
+port IDs, so their settings and cable connections survive the layout change.
+
+TWIST is a small, dedicated centre knob for the SDK's fourth synthesis control
+(`macro` in engine code);
 its midpoint is neutral for stock models. Tooltips show each control's
 engine-specific name and description from `plaits-engine.json`. For example,
 Chords' TWIST tooltip describes voice-group balance. Long engine names are
@@ -116,3 +122,9 @@ edits to the same engine while developing it.
 The source here is MIT-licensed, like the SDK. A built plugin also links the
 Rack SDK (GPL-3.0-or-later) and contains your package's engine under its own
 license. Keep builds for local use; this is not a VCV Library plugin.
+
+The panel is original artwork, also under MIT. The physical arrangement was
+checked against [Audible Instruments' Macro Oscillator 2](https://github.com/VCVRack/AudibleInstruments/blob/v2/src/Plaits.cpp).
+Its [panel artwork is distributed by permission](https://github.com/VCVRack/AudibleInstruments/blob/v2/LICENSE.md),
+so its SVG, model icons and decorative graphics are not included here.
+The knobs and jacks use Rack's built-in component library.

@@ -1,6 +1,7 @@
 Plaits Lab Test Bench (VCV Rack plugin)
 
 The plugin source in this directory: Copyright 2026 Matt Policastro, MIT.
+Panel artwork and subsequent modifications: Copyright 2026 Lyle Mills, MIT.
 A built plugin also contains, each under the MIT license from its own source:
 the Plaits DSP and stmlib by Emilie Gillet (Mutable Instruments), the Plaits Lab
 SDK by Lyle Mills (Rubato Audio), and the built package's engine, whose
