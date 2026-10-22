@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 //
 // Rack-free checks of LabVoice at the engine's own 48 kHz: output range, jack
-// scaling, the patched-TRIG states the browser audition cannot reach, and the
-// LPG's decay. They hold for any package; run them with `make test`.
+// scaling, TRIG states and LPG decay, using a known probe oscillator. Selected
+// packages have a separate smoke test; their waveforms need not track pitch.
 
 #include <algorithm>
 #include <cmath>
@@ -11,14 +11,17 @@
 #include <vector>
 
 #include "lab_voice.h"
+#include "probe_engine.h"
 
 using namespace plaits_lab_vcv;
 
 namespace {
 
 int failures = 0;
+int checks = 0;
 
 void Check(bool ok, const char* what) {
+  ++checks;
   std::printf("%s  %s\n", ok ? "ok  " : "FAIL", what);
   if (!ok) ++failures;
 }
@@ -62,6 +65,40 @@ int main() {
 
   {
     LabVoice voice;
+    Controls c;
+    Inputs in;
+    float out[kBlockSize], aux[kBlockSize];
+    c.macro = 0.25f;
+    in.v_oct = 1.0f;
+    in.harmonics = 1.0f;
+    voice.Render(c, in, out, aux);
+    voice.Render(c, in, out, aux);  // let the pitch input's two-block average settle
+    const plaits::EngineParameters p = plaits::LastProbeParameters();
+    Check(p.note == 72.0f, "1 V/oct reaches the engine as 12 semitones");
+    Check(std::fabs(p.harmonics - 0.7f) < 1e-6f, "HARMONICS CV scales at 5 V");
+    Check(p.macro == 0.25f, "TWIST reaches the fourth engine control");
+    Check(p.trigger == plaits::TRIGGER_UNPATCHED, "unpatched TRIG reaches the engine");
+    in.trigger_patched = true;
+    voice.Render(c, in, out, aux);
+    Check(plaits::LastProbeParameters().trigger == plaits::TRIGGER_LOW,
+          "patched-low TRIG reaches the engine");
+    in.trigger = 5.0f;
+    int rising_edges = 0;
+    for (int block = 0; block < 12; ++block) {
+      voice.Render(c, in, out, aux);
+      if (plaits::LastProbeParameters().trigger & plaits::TRIGGER_RISING_EDGE) ++rising_edges;
+    }
+    Check(rising_edges == 1, "a held trigger produces exactly one rising edge");
+    Check(plaits::LastProbeParameters().trigger == plaits::TRIGGER_HIGH,
+          "held TRIG reaches the engine as high");
+    in.trigger = 0.0f;
+    for (int block = 0; block < 12; ++block) voice.Render(c, in, out, aux);
+    Check(plaits::LastProbeParameters().trigger == plaits::TRIGGER_LOW,
+          "released TRIG returns to low");
+  }
+
+  {
+    LabVoice voice;
     const std::vector<float> x = Run(&voice, controls, unpatched, 1.0f);
     bool finite = true;
     float peak = 0.0f;
@@ -79,8 +116,7 @@ int main() {
     up.note += 12.0f;
     Inputs octave = unpatched;
     octave.v_oct = 1.0f;
-    // AUX: MAIN may carry fixed-frequency processing, such as a band-pass, that
-    // does not transpose.
+    // The probe is a sine oscillator; zero crossings measure its pitch exactly.
     std::vector<float> base_aux, knob_aux, cv_aux;
     Run(&base_voice, controls, unpatched, 1.0f, &base_aux);
     Run(&knob_voice, up, unpatched, 1.0f, &knob_aux);
@@ -108,7 +144,7 @@ int main() {
   }
 
   {
-    // Plaits LPG mode: DECAY shapes every strike, whatever the engine does.
+    // A sustained probe lets us measure the wrapper's LPG independently.
     float tail[2];
     for (int long_decay = 0; long_decay < 2; ++long_decay) {
       LabVoice voice;
@@ -131,6 +167,6 @@ int main() {
     Check(tail[1] > 0.02f && tail[1] > 4.0f * tail[0], "Plaits LPG: DECAY lengthens the strike");
   }
 
-  std::printf("%s\n", failures ? "FAILED" : "all passed");
+  std::printf("voice tests: %d/%d passed\n", checks - failures, checks);
   return failures ? 1 : 0;
 }

@@ -23,15 +23,18 @@ no model switching, and no Palette configurations.
 From this directory:
 
 ```sh
-make RACK_DIR=<Rack-SDK> PACKAGE=../packages/community/<name> test   # Rack-free checks
+make PACKAGE=../packages/community/<name> test                     # no Rack SDK needed
 make RACK_DIR=<Rack-SDK> PACKAGE=../packages/community/<name> dist   # the plugin
 make RACK_DIR=<Rack-SDK> PACKAGE=chords dist                          # a built-in, by catalog ID
 make RACK_DIR=<Rack-SDK> clean                                        # remove build output
 ```
 
-`PACKAGE` is a package directory or a built-in catalog ID. `sources.py` asks
-the SDK for its sources, engine class and `postProcessing`, so any package that
-passes `check` builds.
+`PACKAGE` is a package directory or a built-in catalog ID. Quote a path that
+contains spaces: `make PACKAGE="/path/to/my engines/example" test`.
+`sources.py` asks the SDK for its sources, engine class and `postProcessing`.
+The build tracks included headers and keeps compiled objects separate for each
+package. Switching packages does not need `clean`. Keep the Rack SDK path free
+of spaces because Rack's own makefiles require that.
 
 `dist` produces `dist/PlaitsLabTestBench-<version>-<platform>.vcvplugin`. Put
 it in the `plugins-<platform>` folder inside Rack's user folder (**Help → Open
@@ -67,8 +70,19 @@ chooses **Engine's own envelope** (the default, as the hardware does it) or
 **Plaits LPG**. In **Plaits LPG** mode the engine runs untriggered and the gate
 strikes it. The setting is saved with the patch.
 
-The panel and tooltips use the package's own names and descriptions for
-HARMONICS, TIMBRE, MORPH and MACRO, from its `plaits-engine.json`.
+The panel keeps the familiar HARMONICS, TIMBRE and MORPH labels. TWIST is a
+separate knob for the SDK's fourth synthesis control (`macro` in engine code);
+its midpoint is neutral for stock models. Tooltips show each control's
+engine-specific name and description from `plaits-engine.json`. For example,
+Chords' TWIST tooltip describes voice-group balance. Long engine names are
+fitted to the panel header.
+
+Patches save the engine's package ID. Rebuilding the same module for another
+engine shows **ENGINE CHANGED** on an existing patch; its controls and cables
+remain in place. After checking the new sound, right-click **Use <engine> for
+this patch** to acknowledge it. Saving alone keeps the warning. Older patches
+without an engine ID load as before. This warns about a different engine, not
+edits to the same engine while developing it.
 
 ## What it does not model
 
@@ -81,11 +95,21 @@ HARMONICS, TIMBRE, MORPH and MACRO, from its `plaits-engine.json`.
 
 ## Tests
 
-- `make test` runs the voice through `tests/test_lab_voice.cc`, without Rack.
-  It checks output range, pitch tracking, patched TRIG and the gate's decay,
-  and holds for any package.
+- `make test` needs Python and a C++ compiler, with no Rack SDK or `jq`.
+  `tests/test_lab_voice.cc` checks CV scaling, TRIG states, pitch tracking and
+  LPG decay using a predictable probe oscillator. These assertions do not
+  assume that every engine's output is a pitched oscillator.
+- `tests/test_package.cc` separately compiles your selected package and checks
+  both outputs' bounds across control sweeps, unpatched/patched TRIG, LEVEL
+  and LPG modes. It reports RMS for inspection; it makes no universal
+  assumptions about tuning, silence or decay. Run the SDK's `check --full`
+  for the package's own scenarios and sanitizer checks.
 - From the SDK directory, `python3 -m unittest tests.test_vcv_sources` checks
-  `sources.py`.
+  the source resolver, quoted labels/names, a real build under a path containing
+  spaces, header-only edits, package switching and failed package resolution.
+- With the Rack SDK installed, `make RACK_DIR=<Rack-SDK> PACKAGE=chords test-rack`
+  tests the actual module's saved-engine identity, legacy patches and warning
+  acknowledgement without opening a Rack window.
 
 ## Licensing
 

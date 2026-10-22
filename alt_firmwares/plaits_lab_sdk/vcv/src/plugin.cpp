@@ -7,12 +7,11 @@
 
 #include <rack.hpp>
 
-#include <cctype>
 #include <vector>
 
 #include "lab_voice.h"
 
-// The package's own control names (sources.py), or Plaits' defaults.
+// Engine-specific names belong in tooltips; panel labels stay familiar.
 #ifndef PLAITS_LAB_LABEL_HARMONICS
 #define PLAITS_LAB_LABEL_HARMONICS "Harmonics"
 #endif
@@ -23,7 +22,7 @@
 #define PLAITS_LAB_LABEL_MORPH "Morph"
 #endif
 #ifndef PLAITS_LAB_LABEL_MACRO
-#define PLAITS_LAB_LABEL_MACRO "Macro"
+#define PLAITS_LAB_LABEL_MACRO "Twist"
 #endif
 #ifndef PLAITS_LAB_DESCRIPTION_HARMONICS
 #define PLAITS_LAB_DESCRIPTION_HARMONICS ""
@@ -43,11 +42,8 @@ namespace lab = plaits_lab_vcv;
 
 Plugin* pluginInstance;
 
-static std::string Upper(std::string text) {
-  for (size_t i = 0; i < text.size(); i++) {
-    text[i] = std::toupper(static_cast<unsigned char>(text[i]));
-  }
-  return text;
+static std::string ControlName(const std::string& panel, const std::string& engine) {
+  return panel == engine ? panel : panel + ": " + engine;
 }
 
 struct PlaitsLabEngine : Module {
@@ -80,30 +76,58 @@ struct PlaitsLabEngine : Module {
   lab::LabVoice voice;
   dsp::SampleRateConverter<2> converter;
   dsp::DoubleRingBuffer<dsp::Frame<2>, 256> buffer;
+  std::string patchEngineId = PLAITS_LAB_ENGINE_ID;
+  std::string patchEngineName = lab::LabVoice::name();
+
+  bool engineChanged() const { return patchEngineId != PLAITS_LAB_ENGINE_ID; }
+
+  void acceptCurrentEngine() {
+    patchEngineId = PLAITS_LAB_ENGINE_ID;
+    patchEngineName = lab::LabVoice::name();
+  }
+
+  json_t* dataToJson() override {
+    json_t* root = json_object();
+    // Preserve a mismatch across saves until the author acknowledges it.
+    json_object_set_new(root, "engineId", json_string(patchEngineId.c_str()));
+    json_object_set_new(root, "engineName", json_string(patchEngineName.c_str()));
+    return root;
+  }
+
+  void dataFromJson(json_t* root) override {
+    acceptCurrentEngine();
+    const char* id = json_string_value(json_object_get(root, "engineId"));
+    const char* name = json_string_value(json_object_get(root, "engineName"));
+    // Older patches did not save an identity; keep them usable.
+    if (id && *id) {
+      patchEngineId = id;
+      patchEngineName = name && *name ? name : id;
+    }
+  }
 
   PlaitsLabEngine() {
     config(PARAMS_LEN, INPUTS_LEN, OUTPUTS_LEN);
     configParam(FREQ_PARAM, -4.f, 4.f, 0.f, "Frequency", " semitones", 0.f, 12.f);
-    configParam(HARMONICS_PARAM, 0.f, 1.f, 0.5f, PLAITS_LAB_LABEL_HARMONICS, "%", 0.f, 100.f)
+    configParam(HARMONICS_PARAM, 0.f, 1.f, 0.5f, ControlName("Harmonics", PLAITS_LAB_LABEL_HARMONICS), "%", 0.f, 100.f)
         ->description = PLAITS_LAB_DESCRIPTION_HARMONICS;
-    configParam(TIMBRE_PARAM, 0.f, 1.f, 0.5f, PLAITS_LAB_LABEL_TIMBRE, "%", 0.f, 100.f)
+    configParam(TIMBRE_PARAM, 0.f, 1.f, 0.5f, ControlName("Timbre", PLAITS_LAB_LABEL_TIMBRE), "%", 0.f, 100.f)
         ->description = PLAITS_LAB_DESCRIPTION_TIMBRE;
-    configParam(MORPH_PARAM, 0.f, 1.f, 0.5f, PLAITS_LAB_LABEL_MORPH, "%", 0.f, 100.f)
+    configParam(MORPH_PARAM, 0.f, 1.f, 0.5f, ControlName("Morph", PLAITS_LAB_LABEL_MORPH), "%", 0.f, 100.f)
         ->description = PLAITS_LAB_DESCRIPTION_MORPH;
-    configParam(MACRO_PARAM, 0.f, 1.f, 0.5f, PLAITS_LAB_LABEL_MACRO, "%", 0.f, 100.f)
+    configParam(MACRO_PARAM, 0.f, 1.f, 0.5f, ControlName("Twist", PLAITS_LAB_LABEL_MACRO), "%", 0.f, 100.f)
         ->description = PLAITS_LAB_DESCRIPTION_MACRO;
-    configParam(TIMBRE_CV_PARAM, -1.f, 1.f, 0.f, std::string(PLAITS_LAB_LABEL_TIMBRE) + " CV amount", "%", 0.f, 100.f);
+    configParam(TIMBRE_CV_PARAM, -1.f, 1.f, 0.f, "Timbre CV amount", "%", 0.f, 100.f);
     configParam(FREQ_CV_PARAM, -1.f, 1.f, 0.f, "FM amount", "%", 0.f, 100.f);
-    configParam(MORPH_CV_PARAM, -1.f, 1.f, 0.f, std::string(PLAITS_LAB_LABEL_MORPH) + " CV amount", "%", 0.f, 100.f);
+    configParam(MORPH_CV_PARAM, -1.f, 1.f, 0.f, "Morph CV amount", "%", 0.f, 100.f);
     // Hidden settings, as on the hardware: see the widget's context menu.
     configParam(LPG_COLOUR_PARAM, 0.f, 1.f, 0.5f, "Lowpass gate response", "%", 0.f, 100.f)
         ->description = "From VCA (CCW) to low-pass filter (CW).";
     configParam(LPG_DECAY_PARAM, 0.f, 1.f, 0.5f, "Lowpass gate decay", "%", 0.f, 100.f);
     configSwitch(PLAITS_LPG_PARAM, 0.f, 1.f, 0.f, "With TRIG patched", {"Engine's own envelope", "Plaits LPG"});
-    configInput(TIMBRE_INPUT, PLAITS_LAB_LABEL_TIMBRE);
+    configInput(TIMBRE_INPUT, ControlName("Timbre", PLAITS_LAB_LABEL_TIMBRE));
     configInput(FREQ_INPUT, "FM");
-    configInput(MORPH_INPUT, PLAITS_LAB_LABEL_MORPH);
-    configInput(HARMONICS_INPUT, PLAITS_LAB_LABEL_HARMONICS);
+    configInput(MORPH_INPUT, ControlName("Morph", PLAITS_LAB_LABEL_MORPH));
+    configInput(HARMONICS_INPUT, ControlName("Harmonics", PLAITS_LAB_LABEL_HARMONICS));
     configInput(TRIGGER_INPUT, "Trigger");
     configInput(LEVEL_INPUT, "Level");
     configInput(NOTE_INPUT, "Pitch (1V/oct)");
@@ -166,15 +190,18 @@ struct PlaitsLabEngine : Module {
 struct PanelLabels : TransparentWidget {
   struct Label {
     Label(std::string text, float x, float y, float size, bool light,
-          std::string lpg_text = "")
-        : text(text), x(x), y(y), size(size), light(light), lpg_text(lpg_text) {}
+          std::string lpg_text = "", float max_width_mm = 0.f, bool engine_status = false)
+        : text(text), x(x), y(y), size(size), light(light), lpg_text(lpg_text), max_width_mm(max_width_mm), engine_status(engine_status) {}
     std::string text;
     float x, y, size;
     bool light;
     std::string lpg_text;  // shown instead while editing the LPG, if set
+    float max_width_mm;
+    bool engine_status;
   };
   std::vector<Label> labels;
   const bool* lpg_mode = NULL;
+  const PlaitsLabEngine* module = NULL;
 
   void draw(const DrawArgs& args) override {
     std::shared_ptr<window::Font> font = APP->window->uiFont;
@@ -184,11 +211,18 @@ struct PanelLabels : TransparentWidget {
     const bool editing = lpg_mode && *lpg_mode;
     for (const Label& label : labels) {
       const bool swapped = editing && !label.lpg_text.empty();
+      const bool mismatch = label.engine_status && module && module->engineChanged();
       nvgFontSize(args.vg, label.size);
-      nvgFillColor(args.vg, swapped ? nvgRGB(0x2a, 0x5d, 0xb0)
+      const std::string text = mismatch ? "ENGINE CHANGED" : swapped ? label.lpg_text : label.text;
+      if (label.max_width_mm > 0.f) {
+        const float width = nvgTextBounds(args.vg, 0, 0, text.c_str(), NULL, NULL);
+        const float available = mm2px(label.max_width_mm);
+        if (width > available) nvgFontSize(args.vg, label.size * available / width);
+      }
+      nvgFillColor(args.vg, mismatch ? nvgRGB(0xff, 0xbb, 0x55) : swapped ? nvgRGB(0x2a, 0x5d, 0xb0)
           : label.light ? nvgRGB(0xf2, 0xf0, 0xea) : nvgRGB(0x2b, 0x2b, 0x2b));
       Vec p = mm2px(Vec(label.x, label.y));
-      nvgText(args.vg, p.x, p.y, (swapped ? label.lpg_text : label.text).c_str(), NULL);
+      nvgText(args.vg, p.x, p.y, text.c_str(), NULL);
     }
   }
 };
@@ -203,27 +237,23 @@ struct PlaitsLabEngineWidget : ModuleWidget {
     setModule(module);
     setPanel(createPanel(asset::plugin(pluginInstance, "res/PlaitsLabEngine.svg")));
 
-    const std::string harmonics = Upper(PLAITS_LAB_LABEL_HARMONICS);
-    const std::string timbre = Upper(PLAITS_LAB_LABEL_TIMBRE);
-    const std::string morph = Upper(PLAITS_LAB_LABEL_MORPH);
-    const std::string macro = Upper(PLAITS_LAB_LABEL_MACRO);
     PanelLabels* labels = new PanelLabels;
     labels->box.size = box.size;
     labels->labels = {
-      {lab::LabVoice::name(), 30.48f, 8.5f, 15.f, true},
-      {"PLAITS LAB", 30.48f, 14.5f, 8.f, true},
+      {lab::LabVoice::name(), 30.48f, 8.5f, 15.f, true, "", 53.f},
+      {"PLAITS LAB", 30.48f, 14.5f, 8.f, true, "", 53.f, true},
       {"FREQUENCY", 15.24f, 23.f, 8.f, false},
-      {harmonics, 45.72f, 23.f, 8.f, false},
-      {timbre, 12.f, 43.f, 8.f, false, "LPG RESPONSE"},
-      {macro, 30.48f, 44.5f, 7.f, false},
-      {morph, 48.96f, 43.f, 8.f, false, "LPG DECAY"},
-      {timbre, 10.16f, 58.f, 7.f, false},
+      {"HARMONICS", 45.72f, 23.f, 8.f, false},
+      {"TIMBRE", 12.f, 43.f, 8.f, false, "LPG RESPONSE"},
+      {"TWIST", 30.48f, 44.5f, 7.f, false},
+      {"MORPH", 48.96f, 43.f, 8.f, false, "LPG DECAY"},
+      {"TIMBRE", 10.16f, 58.f, 7.f, false},
       {"FM", 30.48f, 58.f, 7.f, false},
-      {morph, 50.8f, 58.f, 7.f, false},
-      {timbre, 7.62f, 72.5f, 6.5f, false},
+      {"MORPH", 50.8f, 58.f, 7.f, false},
+      {"TIMBRE", 7.62f, 72.5f, 6.5f, false},
       {"FM", 22.86f, 72.5f, 6.5f, false},
-      {morph, 38.1f, 72.5f, 6.5f, false},
-      {harmonics, 53.34f, 72.5f, 6.f, false},
+      {"MORPH", 38.1f, 72.5f, 6.5f, false},
+      {"HARMONICS", 53.34f, 72.5f, 6.f, false},
       {"TRIG", 7.62f, 86.5f, 7.f, false},
       {"LEVEL", 22.86f, 86.5f, 7.f, false},
       {"V/OCT", 38.1f, 86.5f, 7.f, false},
@@ -231,6 +261,7 @@ struct PlaitsLabEngineWidget : ModuleWidget {
       {"AUX", 54.0f, 106.8f, 7.f, false},
     };
     labels->lpg_mode = &lpg_mode;
+    labels->module = module;
     addChild(labels);
 
     addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, 0)));
@@ -275,6 +306,13 @@ struct PlaitsLabEngineWidget : ModuleWidget {
 
   void appendContextMenu(Menu* menu) override {
     PlaitsLabEngine* module = dynamic_cast<PlaitsLabEngine*>(this->module);
+    if (!module) return;
+    if (module->engineChanged()) {
+      menu->addChild(new MenuSeparator);
+      menu->addChild(createMenuLabel("Saved with " + module->patchEngineName));
+      menu->addChild(createMenuItem("Use " + std::string(lab::LabVoice::name()) + " for this patch", "",
+          [=]() { module->acceptCurrentEngine(); }));
+    }
     menu->addChild(new MenuSeparator);
     menu->addChild(createBoolMenuItem("Edit LPG response/decay", "",
         [=]() { return lpg_mode; },

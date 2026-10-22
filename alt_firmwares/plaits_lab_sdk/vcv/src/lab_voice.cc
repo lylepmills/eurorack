@@ -111,7 +111,7 @@ struct LabVoice::State {
   float aux_buffer[kBlockSize];
 };
 
-LabVoice::LabVoice() : state_(new State) {
+LabVoice::LabVoice() : state_(new State()) {
   State& s = *state_;
   BufferAllocator allocator(s.allocator_memory, sizeof(s.allocator_memory));
   s.engine.Init(&allocator);

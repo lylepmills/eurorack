@@ -72,6 +72,7 @@ class SourcesTest(unittest.TestCase):
             package = blank_package(directory)
             manifest_path = package / "plaits-engine.json"
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["name"] = awkward
             for control in manifest["controls"]:
                 if control["id"] == "timbre":
                     control["description"] = awkward
@@ -83,7 +84,7 @@ class SourcesTest(unittest.TestCase):
                                capture_output=True, text=True, check=True).stdout,
                 encoding="utf-8")
             (build / "probe.cc").write_text(
-                '#include <cstdio>\nint main() { std::fputs(PLAITS_LAB_DESCRIPTION_TIMBRE, stdout); }\n',
+                '#include <cstdio>\nint main() { std::puts(PLAITS_LAB_ENGINE_NAME); std::fputs(PLAITS_LAB_DESCRIPTION_TIMBRE, stdout); }\n',
                 encoding="utf-8")
             (build / "Makefile").write_text(
                 "include package.mk\nprobe: probe.cc\n\t$(CXX) $(PLAITS_LAB_FLAGS) probe.cc -o probe\n",
@@ -91,7 +92,50 @@ class SourcesTest(unittest.TestCase):
             subprocess.run(["make", "-s", "-C", str(build), f"CXX={compiler}", "probe"],
                            capture_output=True, text=True, check=True)
             printed = subprocess.run([str(build / "probe")], capture_output=True, text=True, check=True)
-        self.assertEqual(printed.stdout, awkward)
+        self.assertEqual(printed.stdout, awkward + "\n" + awkward)
+
+    def test_real_build_paths_headers_and_package_switches(self) -> None:
+        if shutil.which("c++") is None or shutil.which("make") is None:
+            self.skipTest("needs make and a C++ compiler")
+        with tempfile.TemporaryDirectory(prefix="vcv build ") as directory:
+            package = blank_package(directory)
+            manifest = json.loads((package / "plaits-engine.json").read_text())
+            build = Path(directory) / "build"
+            build.mkdir()
+
+            def run(selected: str | Path) -> subprocess.CompletedProcess:
+                return subprocess.run([
+                    "make", "-s", "-j2", "-f", str(SDK_DIR / "vcv/Makefile"),
+                    f"SOURCE_TOOL={SOURCES}", f"PACKAGE={selected}", "test",
+                ], cwd=build, capture_output=True, text=True, timeout=120)
+
+            first = run(package)
+            self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
+            self.assertIn("voice tests: 17/17 passed", first.stdout)
+            self.assertIn("Test Bench Probe: OUT/AUX bounds", first.stdout)
+            self.assertIn("package smoke: 4 checks passed", first.stdout)
+
+            # An edited header must rebuild, even when no .cc file changed.
+            header = package / manifest["source"]["root"] / manifest["source"]["header"]
+            original = header.read_text()
+            header.write_text(original + '\n#error header_dependency_probe\n')
+            changed = run(package)
+            self.assertNotEqual(changed.returncode, 0)
+            self.assertIn("header_dependency_probe", changed.stderr)
+            header.write_text(original)
+
+            # Complex FM is a valid engine despite its non-octave zero crossings.
+            other = run("dx7-bank-a")
+            self.assertEqual(other.returncode, 0, other.stdout + other.stderr)
+            self.assertIn("6-Op FM Bank A: OUT/AUX bounds", other.stdout)
+            again = run(package)
+            self.assertEqual(again.returncode, 0, again.stdout + again.stderr)
+            self.assertIn("Test Bench Probe: OUT/AUX bounds", again.stdout)
+            self.assertNotIn("6-Op FM Bank A: OUT/AUX bounds", again.stdout)
+
+            invalid = run("no-such-engine")
+            self.assertNotEqual(invalid.returncode, 0)
+            self.assertNotIn("package smoke:", invalid.stdout)
 
 
 if __name__ == "__main__":
