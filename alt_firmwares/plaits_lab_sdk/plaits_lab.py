@@ -2472,7 +2472,7 @@ def render_local_hardware_config(
     # keeps the default 24-slot / 3-bank layout (build_config.h) and exposes 23
     # null engines. Keep the 3-bank layout (a <3-bank PLAITS_BANK_SIZES array is
     # untested — bank_navigation.h only tests 3-4 banks): the engine sits in bank 0
-    # (green), banks red/amber empty — the tested single-populated-bank pattern
+    # (amber/yellow), banks green/red empty — the tested single-populated-bank pattern
     # ({N,0,0}). ENGINE_ROWS is one row per engine (bank 0, front to back).
     engine_count = len(selected)  # the local build carries the contributor's engine(s) alone
     bank_sizes = [engine_count, 0, 0]

@@ -373,8 +373,9 @@ And one that does *not*: **table lookups are cheap here** — the cheapest thing
 measured, around 1 cycle per instruction. Replacing a LUT with polynomial
 arithmetic to "avoid memory" made an engine slower, not faster.
 
-The contributor center uploads that bundle as a private draft. Publication is
-an explicit sequence: `draft → in-review → checks-passed → hardware-beta →
+The SDK CLI's `submit` command uploads the bundle as a private draft and sends
+it for review; the contributor center tracks its progress. Publication is an
+explicit sequence: `draft → in-review → checks-passed → hardware-beta →
 published`. Maintainers can reject at any review gate. Package IDs and semantic
 versions are unique, and published versions are immutable.
 

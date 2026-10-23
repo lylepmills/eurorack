@@ -156,9 +156,10 @@ shipping branch and should be treated as research, not release-ready firmware.
 #### Work required to resume
 
 1. Decide exactly which engines count as chord-capable and how each voice maps
-   to the four input jacks. The current shared chord machinery is used by
-   Chords, String Machine, Chiptune, Helix, and Wave Paraphonic; audit all five
-   rather than modifying only the stock Chords engine.
+   to the four input jacks. The shared `ChordBank` machinery is currently used
+   by Chords, String Machine, Chiptune, Helix, Wave Paraphonic, Plucked,
+   Bubbletime, Supersaw Chords, and ZXPulse48k. Re-audit all `ChordBank`
+   consumers when resuming this work.
 2. Gate the reinterpretation on both chord mode and a valid extra calibration
    signature. Preserve the ordinary MODEL/HARMONICS/LEVEL paths everywhere
    else.
