@@ -47,7 +47,8 @@
 namespace rings {
 
 const int32_t kMaxStringSynthPolyphony = 4;
-const int32_t kStringSynthVoices = 12;
+// Originally 12, now set to max(polyphony * (chord_size + 1)) which at polyphony 4 is 16
+const int32_t kStringSynthVoices = 16;
 const int32_t kMaxChordSize = 8;
 const int32_t kNumHarmonics = 3;
 const int32_t kNumFormants = 3;

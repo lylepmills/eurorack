@@ -32,7 +32,7 @@
 
 namespace rings {
 
-const uint8_t kNumModeOptions = 5;
+const uint8_t kNumModeOptions = 6;
 const uint8_t kNumWaveformExciterOptions = 3;
 const uint8_t kNumChordTableOptions = 3;
 const uint8_t kNumStrumHoldOptions = 2;
@@ -82,7 +82,7 @@ void Settings::InitState() {
 void Settings::SwitchModeOption() {
   uint8_t new_option = (ModeOption() + 1) % kNumModeOptions;
   mutable_state()->mode_option = new_option;
-  mutable_state()->easter_egg = new_option == 4;
+  mutable_state()->easter_egg = new_option >= 4;
 }
 
 void Settings::SwitchWaveformExciterOption() {
