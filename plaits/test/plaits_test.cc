@@ -1817,6 +1817,30 @@ void ValidateLpgColourFold() {
     exit(1);
   }
 
+  // The curve: at every vactrol state and COLOUR the high pass cutoff is the
+  // low pass cutoff reflected in octaves, so the two sides close at the same
+  // rate in time.
+  for (int c = 0; c <= 4; ++c) {
+    const float hf = static_cast<float>(c) / 4.0f;
+    LPGEnvelope low_pass;
+    LPGEnvelope high_pass;
+    low_pass.Init();
+    high_pass.Init();
+    high_pass.set_high_pass(true);
+    for (int step = 0; step < 400; ++step) {
+      const float level = step < 100 ? 1.0f : 0.0f;
+      low_pass.ProcessLP(level, 0.02f, 0.01f, hf);
+      high_pass.ProcessLP(level, 0.02f, 0.01f, hf);
+      const float product = low_pass.frequency() * high_pass.frequency();
+      if (fabsf(product / kLpgHighPassMirror - 1.0f) > 1e-5f) {
+        fprintf(stderr,
+                "High pass cutoff %.6f is not the low pass %.6f reflected\n",
+                high_pass.frequency(), low_pass.frequency());
+        exit(1);
+      }
+    }
+  }
+
   // The direction: at matching distance from the centre the high pass side
   // must pass less bass than the low pass side, and than the plain VCA.
   float* vca = new float[size];

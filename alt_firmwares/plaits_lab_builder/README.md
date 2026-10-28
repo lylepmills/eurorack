@@ -128,7 +128,8 @@ a shared Wave Tables library with per-engine routes.
 Schema 30 adds `highPassGate`, an off-by-default Advanced option on either
 panel. It folds the hidden COLOUR control: the left half stays the stock low
 pass gate, a 5% flat detent at the centre is a plain VCA, and the right half is
-a high pass gate whose notes thin to a click as they decay. The seam is free:
+a high pass gate, the low pass cutoff reflected in octaves, whose notes thin as
+they decay. The seam is free:
 the gate's bleed is exactly 1 at the VCA point for every vactrol state, so
 swapping the state variable filter's low pass output for its high pass output
 there changes no sample. The four COLOUR lights then show filter amount from

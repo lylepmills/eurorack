@@ -52,9 +52,13 @@ namespace plaits {
 // pays nothing for them; only their call sites are gated.
 const float kLpgColourDetent = 0.05f;
 
-// A fully open high pass gate passes the whole band, so its floor sits well
-// below the low pass law's 0.003 (which is a cutoff there, not a floor).
-const float kLpgHighPassFloor = 0.0005f;
+// The high pass cutoff is the low pass cutoff reflected in octaves about the
+// geometric centre of the low pass gate's sweep (0.003 shut, 0.303 open, about
+// 1.45 kHz): f_hp = kLpgHighPassMirror / f_lp. Each octave the low pass gate
+// closes, the high pass gate closes by one too, from the bottom up, so the two
+// halves of COLOUR travel the same curve in time. The high pass gate therefore
+// opens to about 140 Hz rather than to DC.
+const float kLpgHighPassMirror = 0.003f * 0.303f;
 
 // The VCA-likeness (the stock firmware's hf term) at a folded COLOUR position.
 inline float LpgColourToHf(float colour) {
@@ -140,19 +144,15 @@ class LPGEnvelope {
     vactrol_state_ += vactrol_coefficient * vactrol_error;
     
     gain_ = vactrol_state_;
+    frequency_ = 0.003f + 0.3f * vactrol_state_4 + hf * 0.04f;
 #if PLAITS_BUILD_HIGH_PASS_GATE
     if (high_pass_) {
-      // Mirror of the low pass law: the passband shrinks by the same amount
-      // as the vactrol closes, but from the bottom up, so a decaying note
-      // thins to a click instead of dulling to a thump. COLOUR keeps some of
-      // the band open at the ceiling the way it lifts the floor below.
-      frequency_ = kLpgHighPassFloor +
-          (0.3f - hf * 0.04f) * (1.0f - vactrol_state_4);
-    } else
-#endif  // PLAITS_BUILD_HIGH_PASS_GATE
-    {
-      frequency_ = 0.003f + 0.3f * vactrol_state_4 + hf * 0.04f;
+      // The low pass law reflected in octaves (see kLpgHighPassMirror): a
+      // decaying note thins instead of dulling, and COLOUR, which lifts the
+      // low pass floor, lowers the high pass ceiling by the same interval.
+      frequency_ = kLpgHighPassMirror / frequency_;
     }
+#endif  // PLAITS_BUILD_HIGH_PASS_GATE
     hf_bleed_ = (tail_2 + (1.0f - tail_2) * hf) * hf * hf;
   }
   

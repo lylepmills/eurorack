@@ -110,7 +110,7 @@ HIGH_PASS_GATE_MODEL_INPUT_VALUE = "LPG colour (LPG->VCA->HPG)"
 HIGH_PASS_GATE_NOTE = (
     "This build folds the hidden COLOUR control (hold a model button and turn TIMBRE). "
     "Its left half is the familiar low pass gate, its centre is a plain VCA with a small flat spot so it can be found by hand, "
-    "and its right half is a high pass gate, whose notes thin to a click as they decay instead of dulling. "
+    "and its right half is a high pass gate, whose notes thin as they decay instead of dulling. "
     "The four COLOUR lights show how much filter is in the gate rather than where the knob sits: the low pass side fills from one end, "
     "the high pass side from the other, and the VCA centre is dark. LIGHT 5's LPG colour setting sends MODEL CV across the same three-way range. "
 )
