@@ -1,0 +1,10 @@
+[
+  { "id": "hero", "name": "Short thud to long, deep boom", "durationSeconds": 6, "note": 34, "triggerHz": 2,
+    "controls": { "harmonics": [0.5, 0.5], "timbre": [0.1, 0.9], "morph": [0.25, 0.75], "macro": [0.5, 0.5] } },
+  { "id": "attack", "name": "Body alone to full click and noise", "durationSeconds": 5, "note": 36, "triggerHz": 2,
+    "controls": { "harmonics": [0.0, 1.0], "timbre": [0.4, 0.4], "morph": [0.45, 0.45], "macro": [0.5, 0.5] } },
+  { "id": "shape", "name": "Pure sine through the reference VCO to driven", "durationSeconds": 5, "note": 33, "triggerHz": 2,
+    "controls": { "harmonics": [0.45, 0.45], "timbre": [0.5, 0.5], "morph": [0.55, 0.55], "macro": [0.0, 1.0] } },
+  { "id": "drone", "name": "Unpatched VCO drone", "durationSeconds": 3, "note": 36, "triggerHz": 0,
+    "controls": { "harmonics": [0.5, 0.5], "timbre": [0.5, 0.5], "morph": [0.6, 0.6], "macro": [0.5, 0.5] } }
+]

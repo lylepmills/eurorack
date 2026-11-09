@@ -1,0 +1,12 @@
+[
+  { "id": "hero", "name": "606 closed hat opening into a 909-style crash", "durationSeconds": 8, "note": 66, "triggerHz": 2,
+    "controls": { "harmonics": [0.0, 1.0], "timbre": [0.55, 0.55], "morph": [0.05, 0.95], "macro": [0.5, 0.5] } },
+  { "id": "closed", "name": "Closed hats from 606 to 909", "durationSeconds": 4, "note": 66, "triggerHz": 8,
+    "controls": { "harmonics": [0.0, 1.0], "timbre": [0.6, 0.6], "morph": [0.08, 0.08], "macro": [0.5, 0.5] } },
+  { "id": "ride", "name": "909-style ride, dark to bright", "durationSeconds": 6, "note": 64, "triggerHz": 3,
+    "controls": { "harmonics": [0.85, 0.85], "timbre": [0.2, 0.9], "morph": [0.7, 0.7], "macro": [0.5, 0.5] } },
+  { "id": "spread", "name": "Open 606 hat, narrow to wide spread", "durationSeconds": 5, "note": 64, "triggerHz": 3,
+    "controls": { "harmonics": [0.15, 0.15], "timbre": [0.5, 0.5], "morph": [0.45, 0.45], "macro": [0.0, 1.0] } },
+  { "id": "drone", "name": "Unpatched metal", "durationSeconds": 3, "note": 64, "triggerHz": 0,
+    "controls": { "harmonics": [0.5, 0.5], "timbre": [0.5, 0.5], "morph": [0.6, 0.6], "macro": [0.5, 0.5] } }
+]

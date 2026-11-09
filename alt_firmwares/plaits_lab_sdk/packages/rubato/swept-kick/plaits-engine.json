@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "rubato/swept-kick",
+  "catalogId": "swept-kick",
+  "version": "0.1.0",
+  "name": "Swept Kick",
+  "author": "Lyle Mills",
+  "origin": "Rubato Lab",
+  "license": "MIT",
+  "description": "909-style kick: a waveshaped VCO swept down by its own pitch envelope, under a separate click-and-noise attack.",
+  "family": "Percussion",
+  "tags": ["drum", "kick", "909", "percussion", "pitch envelope"],
+  "controls": [
+    { "id": "harmonics", "label": "Attack", "description": "Mixes the click and noise burst over the body. Off at zero; the noise grows in after the click." },
+    { "id": "timbre", "label": "Tune", "description": "Sets the pitch sweep, from a short drop of under an octave to a longer boom falling from five times the note." },
+    { "id": "morph", "label": "Decay", "description": "Sets the body's decay from a 60 ms thump to a two-second tail." },
+    { "id": "macro", "label": "Shape", "description": "Noon is the waveshaped triangle VCO; counter-clockwise cleans it to a sine, clockwise drives it." }
+  ],
+  "outputs": { "main": "Mono: the complete kick. Stereo: left channel, with the body centred and its own attack noise.", "aux": "Mono: the click and noise attack alone. Stereo: right channel, with independent attack noise." },
+  "trigger": "Strikes the kick and restarts its VCO and pitch sweep. Unpatched, the VCO drones at the note with Decay as its level.",
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/swept_kick_engine.h",
+    "files": ["plaits/dsp/engine2/swept_kick_engine.cc"],
+    "className": "SweptKickEngine"
+  },
+  "postProcessing": { "alreadyEnveloped": true, "outGain": 1.0, "auxGain": 1.0 },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Original Rubato Lab prototype"
+}

@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "sdk": "plaits-engine-cpp-v1",
+  "packageType": "builtin-reference",
+  "id": "rubato/hats-rides",
+  "catalogId": "hats-rides",
+  "version": "0.1.0",
+  "name": "Hats & Rides",
+  "author": "Lyle Mills",
+  "origin": "Rubato Lab",
+  "license": "MIT",
+  "description": "606 and 909-style hats, rides and crashes: analog squares crossfading into a dense cluster read through a 6-bit sample stage.",
+  "family": "Percussion",
+  "tags": ["drum", "hat", "cymbal", "ride", "606", "909", "percussion", "metallic"],
+  "controls": [
+    { "id": "harmonics", "label": "Model", "description": "Crossfades 606-style analog squares into a 909-style ring-modulated cluster and its 6-bit sample stage." },
+    { "id": "timbre", "label": "Tone", "description": "Sets the filters, from dark and woody to bright and thin." },
+    { "id": "morph", "label": "Decay", "description": "Runs from a closed hat through open hat and ride to a crash, with more strike wash as it opens." },
+    { "id": "macro", "label": "Spread", "description": "Spreads the oscillators around their reference ratios; narrower is more bell-like, wider more diffuse." }
+  ],
+  "outputs": { "main": "Mono: the complete hat or cymbal. Stereo: left channel, with offset filters and its own noise.", "aux": "Mono: the band-passed body before the high pass and sample stage. Stereo: right channel." },
+  "trigger": "Strikes the hat or cymbal. Unpatched, the metal sounds continuously with Decay as its level.",
+  "source": {
+    "root": "../../../../..",
+    "header": "plaits/dsp/engine2/hats_rides_engine.h",
+    "files": ["plaits/dsp/engine2/hats_rides_engine.cc"],
+    "className": "HatsRidesEngine"
+  },
+  "postProcessing": { "alreadyEnveloped": true, "outGain": 1.0, "auxGain": 1.0 },
+  "scenarios": "tests/scenarios.json",
+  "upstream": "Original Rubato Lab prototype"
+}
