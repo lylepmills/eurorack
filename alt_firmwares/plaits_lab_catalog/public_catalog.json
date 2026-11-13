@@ -1152,7 +1152,7 @@
       "controls": [
         "Terrain",
         "Path radius",
-        "Path offset",
+        "X offset",
         "Y offset"
       ],
       "outputs": [
@@ -1165,8 +1165,8 @@
         "tone": "amber"
       },
       "version": "1.0.0",
-      "digest": "sha256:76881b3e0b3d7074c49209c2b706d71273f2f833209423a79fd90c7f441c21b8",
-      "documentationDigest": "sha256:7b9ccd6024fe03393363a66f7ad9d8039cf32deb1dd5a4639fe8e74611345d16",
+      "digest": "sha256:310772c372fd704fa7fe3069c779286c8b6c99eee5f584902180342171d569c3",
+      "documentationDigest": "sha256:55ca430f2314f36ed9ee35ea188674a6ac66ded9a5db96634b224f7efb373830",
       "manual": {
         "controls": {
           "harmonics": "Selects the terrain or waveform family used by the two-dimensional scan.",
