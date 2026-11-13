@@ -1815,21 +1815,21 @@
         "Frequency spread",
         "Coupling",
         "Cluster order",
-        "Phase lag"
+        "Temperature"
       ],
       "outputs": [
         "Mono: first circular moment. Stereo: left spread of the seven oscillators.",
         "Mono: second circular moment. Stereo: right spread of the seven oscillators."
       ],
       "version": "1.0.0",
-      "digest": "sha256:529c64134d00ade961ed8a5c6b52dc62eaa90fc1ee7d892d06fb3e247795ac85",
-      "documentationDigest": "sha256:7a758a2ed344c63a681d0ee3b9780ddd6ee7063fe3c7f7bc2859b8d4cc23b7bf",
+      "digest": "sha256:e4a5cd0df63e7115988247b73636b1ee28009baa12025e168080964cd94e481b",
+      "documentationDigest": "sha256:0dc3ffedef73417e49c1753ea5dcd00b4ea219edd47f78c354bb130bc8e359c9",
       "manual": {
         "controls": {
           "harmonics": "Spreads the seven oscillators' natural frequencies.",
           "timbre": "Raises mean-field coupling from dispersion toward synchronization.",
           "morph": "Moves attraction from a single cluster toward antipodal two-cluster order.",
-          "macro": "Adds phase lag and frustration to the coupling field."
+          "macro": "Jostles every oscillator at random: off at zero, a shimmer around a steady pitch at noon, rough beating higher up, and the flock dissolving at the top."
         },
         "trigger": "Scatters the oscillator phases."
       },
