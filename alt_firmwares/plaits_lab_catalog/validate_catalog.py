@@ -127,7 +127,7 @@ AUDITED_REMAINING_METADATA_DIGESTS = {
     "attractor": "sha256:8876de4803dacb7ffd801b56e4cffcbd9ee27d5ece2d14b84f8b0ec2faecd6c0",
     "undertow": "sha256:355e1efde585a8822ff8c8aaa1f53b25798e32b4878d24233d872f425f3a80a6",
     "reed-pipe": "sha256:08eb4b2000fff1efcd710089749689b251ed74e8d682f7ab325c01563e5d9476",
-    "phase-flock": "sha256:881288d0c617006b8718438b5f1f917716b872bb9ee7f7b08838eab759a6ee1c",
+    "phase-flock": "sha256:ded6ef2c36c94eadb1bd37606605cd882114b6b1359574cefa8da34e630423e1",
     "rulefield": "sha256:1463741d326d01c87240f534c4a955986f7252bcb0907ef70a5b07ff8b43c9b0",
     "spectral-spiral": "sha256:16ccf227fdceea2257d2bb262ef4deeeb1ef50313ec6dba150fad36dce72d86c",
     "bytebeat": "sha256:cdd0f83830b959013dc0b5cebf635def32475b97d3ad36d5ff682db008df4ebf",

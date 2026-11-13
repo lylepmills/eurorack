@@ -11,6 +11,7 @@
 
 #include "plaits/dsp/oscillator/sine_oscillator.h"
 #include "stmlib/dsp/units.h"
+#include "stmlib/utils/random.h"
 
 namespace plaits {
 
@@ -122,10 +123,36 @@ void PhaseFlockEngine::Render(
       0.045f,
       base_frequency * 1.8f * parameters.timbre * parameters.timbre);
   const float cluster_mix = parameters.morph;
-  // A phase lag turns perfect attraction into a travelling/frustrated flock.
-  // Its exactly neutral midpoint matches the firmware's fourth-macro idiom.
-  const float lag = (parameters.macro - 0.5f) * 0.90f;
-  const float lag_normalization = 1.0f / (1.0f + fabsf(lag));
+  // TWIST is temperature: a random kick to every oscillator's phase at each
+  // coupling update, which competes with the coupling as noise does in the
+  // stochastic Kuramoto model. The flock stays locked while the phase
+  // diffusion is under about half the coupling strength; in this engine's
+  // units (kicks of sigma cycles every kFlockCouplingInterval samples) that
+  // threshold is sigma = sqrt(2 * coupling / pi), which at full TIMBRE is
+  // 1.07 * sqrt(base frequency). Full TWIST reaches 2.5 times it, so even a
+  // fully coupled flock dissolves. The kicks also move the flock as a whole,
+  // widening the tone's line in proportion to sigma squared, so the knob is
+  // exponential: sigma doubles every sixth of its travel, from 1/64 of the
+  // maximum just above zero (barely there), through an eighth at noon (an
+  // audible shimmer around a steady pitch) and a third at three quarters
+  // (rough), to the full amount at the end, where the flock dissolves. It is
+  // exactly off at zero. Scaling with the square root of
+  // the frequency keeps the diffusion per note cycle, and so the sound, the
+  // same at every pitch. The kicks turn the phase directly rather than the
+  // frequency: the increment is clamped at zero, and noisy increments would
+  // be clipped into a sharp pitch drift.
+  //
+  // (This replaces a phase lag, the Sakaguchi term, which only ever
+  // transposed a locked flock, by up to -10.5 / +6.4 semitones at full
+  // coupling, and changed the texture only at the edge of locking.)
+  const float temperature = parameters.macro <= 0.0f
+      ? 0.0f
+      : SemitonesToRatio(72.0f * (parameters.macro - 1.0f));
+  float kick_scale = temperature * 2.68f * \
+      Sqrt(base_frequency) * 3.4641016f;  // sqrt(12): unit-variance uniform
+  if (kick_scale > 0.9f) {
+    kick_scale = 0.9f;
+  }
   const float normalization = 1.0f / \
       static_cast<float>(kNumPhaseFlockOscillators);
 
@@ -211,18 +238,11 @@ void PhaseFlockEngine::Render(
         // and produce output at the full audio rate.
         const float attraction_1 = mean_sine * cosine[i] - \
             mean_cosine * sine[i];
-        const float quadrature_1 = mean_cosine * cosine[i] + \
-            mean_sine * sine[i];
         const float attraction_2 = mean_sine_2 * cosine_2[i] - \
             mean_cosine_2 * sine_2[i];
-        const float quadrature_2 = mean_cosine_2 * cosine_2[i] + \
-            mean_sine_2 * sine_2[i];
         const float attraction = attraction_1 + \
             (0.5f * attraction_2 - attraction_1) * cluster_mix;
-        const float quadrature = quadrature_1 + \
-            (0.5f * quadrature_2 - quadrature_1) * cluster_mix;
-        const float correction = (attraction - lag * quadrature) * \
-            lag_normalization;
+        const float correction = attraction;
         float increment = natural_frequency[i] + coupling * correction;
 #if PLAITS_BUILD_FREQUENCY_OFFSET_FM
         if (parameters.frequency_offset) {
@@ -249,7 +269,20 @@ void PhaseFlockEngine::Render(
         const float c = cosine_[i];
         sine_[i] = s * rotation_cosine[i] + c * rotation_sine[i];
         cosine_[i] = c * rotation_cosine[i] - s * rotation_sine[i];
-        if (sample == 0) {
+        if (kick_scale > 0.0f) {
+          const float kick = kick_scale * (Random::GetFloat() - 0.5f);
+          float kick_sine;
+          float kick_cosine;
+          SineCosineNoWrap(fabsf(kick), &kick_sine, &kick_cosine);
+          if (kick < 0.0f) {
+            kick_sine = -kick_sine;
+          }
+          const float ks = sine_[i];
+          const float kc = cosine_[i];
+          sine_[i] = ks * kick_cosine + kc * kick_sine;
+          cosine_[i] = kc * kick_cosine - ks * kick_sine;
+        }
+        if (sample == 0 || kick_scale > 0.0f) {
           const float state_norm = 1.5f - 0.5f * (
               sine_[i] * sine_[i] + cosine_[i] * cosine_[i]);
           sine_[i] *= state_norm;
