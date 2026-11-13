@@ -100,11 +100,22 @@ void AttractorEngine::Render(
   const float base_frequency = NoteToFrequency(parameters.note);
   const float skew = (parameters.macro - 0.5f) * 0.78f;
 
-  // TIMBRE moves from a damped limit cycle into broad chaotic excursions.
-  const float damping = 0.355f - 0.185f * parameters.timbre;
   // HARMONICS changes how many lobes of the sine coupling are visited.
   const float argument_scale = 0.68f + \
       0.92f * parameters.harmonics * parameters.harmonics;
+  // TIMBRE moves from a damped limit cycle into broad chaotic excursions.
+  // Rescaling time by argument_scale turns this flow into Thomas' attractor
+  // with damping / argument_scale as its single parameter, and the motion
+  // dies out (a stable fixed point: silence) once that ratio passes about
+  // 0.33 -- measured 0.324 to 0.338 up to note 72, rising to 0.36 at note 96
+  // where the explicit steps grow. A damping fixed in absolute terms left a
+  // third of the HARMONICS x TIMBRE plane silent, so damping is set as a
+  // fraction of argument_scale instead: TIMBRE runs from just inside the
+  // moving side of that boundary (a small limit cycle, never silence) into
+  // chaos, and HARMONICS sets how deep into chaos the end of the sweep goes.
+  const float chaos_floor = 0.19f - 0.10f * parameters.harmonics;
+  const float damping = argument_scale * \
+      (0.315f + (chaos_floor - 0.315f) * parameters.timbre);
 
   for (size_t i = 0; i < size; ++i) {
     float frequency = base_frequency;

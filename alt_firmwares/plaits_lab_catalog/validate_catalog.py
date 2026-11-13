@@ -45,7 +45,7 @@ AUDITED_STOCK_CONTROLS = {
     "dx7-bank-a": ["Patch", "Brightness / carrier tilt", "Envelope", "Network detune"],
     "dx7-bank-b": ["Patch", "Brightness / carrier tilt", "Envelope", "Network detune"],
     "dx7-bank-c": ["Patch", "Brightness / carrier tilt", "Envelope", "Network detune"],
-    "wave-terrain": ["Terrain", "Path radius", "Path offset", "Y offset"],
+    "wave-terrain": ["Terrain", "Path radius", "X offset", "Y offset"],
     "string-machine": ["Chord", "Filter and chorus", "Waveform and registration", "Ensemble amount"],
     "chiptune": ["Chord", "Arpeggio or inversion", "Pulse width and sync", "Register preset"],
 }
