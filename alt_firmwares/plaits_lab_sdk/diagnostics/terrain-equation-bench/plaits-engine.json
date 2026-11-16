@@ -29,7 +29,7 @@
     },
     {
       "id": "morph",
-      "label": "Path offset",
+      "label": "X offset",
       "description": "Matches Wave Terrain's horizontal scan offset."
     },
     {
